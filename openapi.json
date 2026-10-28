@@ -50537,6 +50537,355 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/security/oidc-domains": {
+      "get": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Sign-in domains",
+        "description": "Every email domain that routes sign-in to a provider, with the DNS record that proves it and whether it is verified. Administrators only.",
+        "operationId": "list_oidc_domains",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_OidcDomainItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      },
+      "post": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Add a sign-in domain",
+        "description": "Adds an email domain for a provider added on screen and answers the DNS TXT record that proves it; the domain routes sign-in only once that record is checked. Administrators only; audited.",
+        "operationId": "create_oidc_domain",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOidcDomainBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Added, not yet verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OidcDomainItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such provider added on screen",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The domain already routes to a provider (`domain_taken`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a domain name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/security/oidc-domains/{id}": {
+      "delete": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Remove a sign-in domain",
+        "description": "The domain no longer routes sign-in, and its SSO-only rule ends. Administrators only; audited.",
+        "operationId": "delete_oidc_domain",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The sign-in domain",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such sign-in domain",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "hard_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/security/oidc-domains/{id}/verify": {
+      "post": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Check a sign-in domain's DNS record",
+        "description": "Looks up the domain's `_attome-verify` TXT record now (at most 5 seconds) and marks the domain verified when it holds the expected value; otherwise answers why in `last_error`. A domain already verified stays verified. Administrators only; audited.",
+        "operationId": "verify_oidc_domain",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The sign-in domain",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Checked; `verified_at` says whether it is verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OidcDomainItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such sign-in domain",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/api/v1/admin/security/oidc-presets": {
       "get": {
         "tags": [
@@ -71781,11 +72130,18 @@
           "auth"
         ],
         "summary": "Sign out",
-        "description": "Invalidates the presented session server-side (Plan 1.6a): denylists the\naccess token's `jti` for its remaining lifetime and revokes the refresh\ntoken row, then clears both cookies. Malformed/absent/already-expired\ntokens are not an error — logout always succeeds.",
+        "description": "Invalidates the presented session server-side (Plan 1.6a): denylists the\naccess token's `jti` for its remaining lifetime and revokes the refresh\ntoken row, then clears both cookies. Malformed/absent/already-expired\ntokens are not an error — logout always succeeds. A session that came\nfrom an OIDC provider with an end-session endpoint answers its URL as\n`redirect` (Q1-T10), and the browser goes there next.",
         "operationId": "logout",
         "responses": {
           "200": {
-            "description": "Success"
+            "description": "Signed out; `redirect`, when present, is the provider's sign-out page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogoutResponse"
+                }
+              }
+            }
           },
           "422": {
             "description": "Request failed validation",
@@ -72444,6 +72800,62 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/auth/oidc/discover": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "P-api-contract Phase 1 — this file's slice of the workspace OpenAPI document. Separate per file\nbecause `#[utoipa::path]` generates a `__path_*` type with the handler's\nown visibility, and these handlers are module-private — the crate's\n`openapi()` merges every fragment back into one document.\nFind the sign-in provider for an email",
+        "description": "Email-first sign-in: answers the key of the provider whose verified domain\nthe email is on, or `null`, so the sign-in page can send the person\nstraight to it. Always 200 and the same shape, and it never looks at user\naccounts, so it tells nobody whether an account exists. Only domains of\nproviders added on screen route; rate limited as a credential route. No\nsession.",
+        "operationId": "oidc_discover",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OidcDiscoverRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The provider's key, or `null`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OidcDiscoverResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit-exempt": {
+          "note": "looks up which provider an email domain routes to; changes nothing",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "credential",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/auth/oidc/providers": {
       "get": {
         "tags": [
@@ -72486,6 +72898,80 @@
         "x-privilege": "public",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/auth/oidc/{provider}/backchannel-logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Receive a back-channel logout",
+        "description": "OpenID Connect Back-Channel Logout 1.0: the provider posts a signed logout\ntoken naming a provider session (`sid`) or a person (`sub`), and every\nAttome session signed in through that provider for it ends at once: the\nrefresh families are revoked and the person's live access tokens stop, in\none transaction. The token is checked against the provider's published\nkeys, issuer, audience, an `iat` within five minutes, the back-channel\nlogout event and no `nonce`; a token id already used is refused. A token\nthat names nobody Attome knows still answers 200. Sessions from a\npassword or another provider are not touched. No session; audited.",
+        "operationId": "oidc_backchannel_logout",
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "description": "The OIDC provider's key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/BackchannelLogoutForm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The sessions the token names have ended"
+          },
+          "400": {
+            "description": "A logout token that fails verification, or one already used",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such provider",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "logout"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/auth/oidc/{provider}/callback": {
@@ -148469,6 +148955,19 @@
           }
         }
       },
+      "BackchannelLogoutForm": {
+        "type": "object",
+        "description": "Q1-T10: a provider's back-channel logout request\n(`application/x-www-form-urlencoded`).",
+        "required": [
+          "logout_token"
+        ],
+        "properties": {
+          "logout_token": {
+            "type": "string",
+            "description": "The signed logout token."
+          }
+        }
+      },
       "Backlog": {
         "type": "object",
         "required": [
@@ -158241,6 +158740,29 @@
           }
         }
       },
+      "CreateOidcDomainBody": {
+        "type": "object",
+        "description": "What to add.",
+        "required": [
+          "provider_id",
+          "domain"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string",
+            "description": "The email domain, such as `example.sa`."
+          },
+          "provider_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A provider added on screen (configured providers do not route by\ndomain)."
+          },
+          "sso_only": {
+            "type": "boolean",
+            "description": "Whether people on the domain must sign in through the provider."
+          }
+        }
+      },
       "CreateOidcProviderBody": {
         "type": "object",
         "description": "A new provider. `client_secret` is write-only.",
@@ -160364,12 +160886,28 @@
                     "null"
                   ]
                 },
+                "row_version": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int64",
+                  "description": "A mass operation's `row_version`, for the `If-Match` of its pause,\nresume, cancel and undo routes; other kinds have none."
+                },
                 "rows_done": {
                   "type": [
                     "integer",
                     "null"
                   ],
                   "format": "int64"
+                },
+                "seconds_left": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int64",
+                  "description": "While a mass operation works: the seconds left at the estimated\nspeed."
                 },
                 "started_by": {
                   "type": [
@@ -175475,6 +176013,18 @@
           }
         }
       },
+      "LogoutResponse": {
+        "type": "object",
+        "description": "Q1-T10: what sign-out answers. `redirect` is set when the session came\nfrom an OIDC provider with an end-session endpoint: the browser goes\nthere so the provider ends its session too, and comes back to the app.",
+        "properties": {
+          "redirect": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "LookupMeta": {
         "type": "object",
         "description": "The per-lookup-field value inside `EntityRecordResponse::lookups`. Declared\nonly so the generated contract (and any client generated from it) sees the\nreal shape instead of an opaque object — `resolve_lookup_meta` below builds\nthese with `json!`, so nothing constructs this type at runtime.",
@@ -181172,6 +181722,102 @@
           }
         }
       },
+      "OidcDiscoverRequest": {
+        "type": "object",
+        "description": "Q1-T6: the email typed on the sign-in page.",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string"
+          }
+        }
+      },
+      "OidcDiscoverResponse": {
+        "type": "object",
+        "description": "Q1-T6: the provider that email's verified domain signs in through, or\n`null`. The same answer shape whether or not anyone has that email.",
+        "properties": {
+          "provider": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "OidcDomainItem": {
+        "type": "object",
+        "description": "One sign-in domain, with the DNS record that proves it.",
+        "required": [
+          "id",
+          "domain",
+          "provider_id",
+          "provider_key",
+          "verification_record_name",
+          "verification_record_value",
+          "sso_only",
+          "created_at",
+          "row_version"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "last_checked_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why the last check did not verify it."
+          },
+          "provider_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "provider_key": {
+            "type": "string"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "sso_only": {
+            "type": "boolean",
+            "description": "People with an email on this domain must sign in through the provider."
+          },
+          "verification_record_name": {
+            "type": "string",
+            "description": "The TXT record to publish: its name and its value."
+          },
+          "verification_record_value": {
+            "type": "string"
+          },
+          "verified_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When the record was found; `null` until then. A verified domain stays\nverified when a later check fails."
+          }
+        }
+      },
       "OidcLinkBody": {
         "type": "object",
         "required": [
@@ -181743,12 +182389,28 @@
               "null"
             ]
           },
+          "row_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "A mass operation's `row_version`, for the `If-Match` of its pause,\nresume, cancel and undo routes; other kinds have none."
+          },
           "rows_done": {
             "type": [
               "integer",
               "null"
             ],
             "format": "int64"
+          },
+          "seconds_left": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "While a mass operation works: the seconds left at the estimated\nspeed."
           },
           "started_by": {
             "type": [
@@ -195804,6 +196466,112 @@
                   "items": {
                     "$ref": "#/components/schemas/TemplatePrompt"
                   }
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_OidcDomainItem": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One sign-in domain, with the DNS record that proves it.",
+              "required": [
+                "id",
+                "domain",
+                "provider_id",
+                "provider_key",
+                "verification_record_name",
+                "verification_record_value",
+                "sso_only",
+                "created_at",
+                "row_version"
+              ],
+              "properties": {
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "domain": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "last_checked_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "last_error": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Why the last check did not verify it."
+                },
+                "provider_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "provider_key": {
+                  "type": "string"
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "sso_only": {
+                  "type": "boolean",
+                  "description": "People with an email on this domain must sign in through the provider."
+                },
+                "verification_record_name": {
+                  "type": "string",
+                  "description": "The TXT record to publish: its name and its value."
+                },
+                "verification_record_value": {
+                  "type": "string"
+                },
+                "verified_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "description": "When the record was found; `null` until then. A verified domain stays\nverified when a later check fails."
                 }
               }
             }
@@ -231607,8 +232375,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-version-adapters": [],
-  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -231660,5 +232426,7 @@
         ]
       }
     }
-  }
+  },
+  "x-version-adapters": [],
+  "x-api-version": "2026-10"
 }

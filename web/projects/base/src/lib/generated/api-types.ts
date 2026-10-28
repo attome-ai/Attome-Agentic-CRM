@@ -10205,6 +10205,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/security/oidc-domains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sign-in domains
+         * @description Every email domain that routes sign-in to a provider, with the DNS record that proves it and whether it is verified. Administrators only.
+         */
+        get: operations["list_oidc_domains"];
+        put?: never;
+        /**
+         * Add a sign-in domain
+         * @description Adds an email domain for a provider added on screen and answers the DNS TXT record that proves it; the domain routes sign-in only once that record is checked. Administrators only; audited.
+         */
+        post: operations["create_oidc_domain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/oidc-domains/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a sign-in domain
+         * @description The domain no longer routes sign-in, and its SSO-only rule ends. Administrators only; audited.
+         */
+        delete: operations["delete_oidc_domain"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/oidc-domains/{id}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check a sign-in domain's DNS record
+         * @description Looks up the domain's `_attome-verify` TXT record now (at most 5 seconds) and marks the domain verified when it holds the expected value; otherwise answers why in `last_error`. A domain already verified stays verified. Administrators only; audited.
+         */
+        post: operations["verify_oidc_domain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/security/oidc-presets": {
         parameters: {
             query?: never;
@@ -14445,7 +14509,9 @@ export interface paths {
          * @description Invalidates the presented session server-side (Plan 1.6a): denylists the
          *     access token's `jti` for its remaining lifetime and revokes the refresh
          *     token row, then clears both cookies. Malformed/absent/already-expired
-         *     tokens are not an error — logout always succeeds.
+         *     tokens are not an error — logout always succeeds. A session that came
+         *     from an OIDC provider with an end-session endpoint answers its URL as
+         *     `redirect` (Q1-T10), and the browser goes there next.
          */
         post: operations["logout"];
         delete?: never;
@@ -14654,6 +14720,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/oidc/discover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * P-api-contract Phase 1 — this file's slice of the workspace OpenAPI document. Separate per file
+         *     because `#[utoipa::path]` generates a `__path_*` type with the handler's
+         *     own visibility, and these handlers are module-private — the crate's
+         *     `openapi()` merges every fragment back into one document.
+         *     Find the sign-in provider for an email
+         * @description Email-first sign-in: answers the key of the provider whose verified domain
+         *     the email is on, or `null`, so the sign-in page can send the person
+         *     straight to it. Always 200 and the same shape, and it never looks at user
+         *     accounts, so it tells nobody whether an account exists. Only domains of
+         *     providers added on screen route; rate limited as a credential route. No
+         *     session.
+         */
+        post: operations["oidc_discover"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/oidc/providers": {
         parameters: {
             query?: never;
@@ -14674,6 +14769,34 @@ export interface paths {
         get: operations["oidc_providers"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/oidc/{provider}/backchannel-logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Receive a back-channel logout
+         * @description OpenID Connect Back-Channel Logout 1.0: the provider posts a signed logout
+         *     token naming a provider session (`sid`) or a person (`sub`), and every
+         *     Attome session signed in through that provider for it ends at once: the
+         *     refresh families are revoked and the person's live access tokens stop, in
+         *     one transaction. The token is checked against the provider's published
+         *     keys, issuer, audience, an `iat` within five minutes, the back-channel
+         *     logout event and no `nonce`; a token id already used is refused. A token
+         *     that names nobody Attome knows still answers 200. Sessions from a
+         *     password or another provider are not touched. No session; audited.
+         */
+        post: operations["oidc_backchannel_logout"];
         delete?: never;
         options?: never;
         head?: never;
@@ -32337,6 +32460,14 @@ export interface components {
             /** Format: uuid */
             vendor_id?: string | null;
         };
+        /**
+         * @description Q1-T10: a provider's back-channel logout request
+         *     (`application/x-www-form-urlencoded`).
+         */
+        BackchannelLogoutForm: {
+            /** @description The signed logout token. */
+            logout_token: string;
+        };
         Backlog: {
             action_type: string;
             /** Format: date-time */
@@ -36080,6 +36211,19 @@ export interface components {
             name: string;
             target: string;
         };
+        /** @description What to add. */
+        CreateOidcDomainBody: {
+            /** @description The email domain, such as `example.sa`. */
+            domain: string;
+            /**
+             * Format: uuid
+             * @description A provider added on screen (configured providers do not route by
+             *     domain).
+             */
+            provider_id: string;
+            /** @description Whether people on the domain must sign in through the provider. */
+            sso_only?: boolean;
+        };
         /** @description A new provider. `client_secret` is write-only. */
         CreateOidcProviderBody: {
             /** @description Claim names and provider settings (`email`, `groups`, `mfa_acr`, ...). */
@@ -36927,8 +37071,20 @@ export interface components {
                 id: string;
                 kind: string;
                 reason?: string | null;
+                /**
+                 * Format: int64
+                 * @description A mass operation's `row_version`, for the `If-Match` of its pause,
+                 *     resume, cancel and undo routes; other kinds have none.
+                 */
+                row_version?: number | null;
                 /** Format: int64 */
                 rows_done?: number | null;
+                /**
+                 * Format: int64
+                 * @description While a mass operation works: the seconds left at the estimated
+                 *     speed.
+                 */
+                seconds_left?: number | null;
                 /**
                  * Format: uuid
                  * @description Who started it; an index build has no starter on record.
@@ -42995,6 +43151,14 @@ export interface components {
             password: string;
         };
         /**
+         * @description Q1-T10: what sign-out answers. `redirect` is set when the session came
+         *     from an OIDC provider with an end-session endpoint: the browser goes
+         *     there so the provider ends its session too, and comes back to the app.
+         */
+        LogoutResponse: {
+            redirect?: string | null;
+        };
+        /**
          * @description The per-lookup-field value inside `EntityRecordResponse::lookups`. Declared
          *     only so the generated contract (and any client generated from it) sees the
          *     real shape instead of an opaque object — `resolve_lookup_meta` below builds
@@ -45097,6 +45261,45 @@ export interface components {
             requires_approval: boolean;
             to_state: string;
         };
+        /** @description Q1-T6: the email typed on the sign-in page. */
+        OidcDiscoverRequest: {
+            email: string;
+        };
+        /**
+         * @description Q1-T6: the provider that email's verified domain signs in through, or
+         *     `null`. The same answer shape whether or not anyone has that email.
+         */
+        OidcDiscoverResponse: {
+            provider?: string | null;
+        };
+        /** @description One sign-in domain, with the DNS record that proves it. */
+        OidcDomainItem: {
+            /** Format: date-time */
+            created_at: string;
+            domain: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            last_checked_at?: string | null;
+            /** @description Why the last check did not verify it. */
+            last_error?: string | null;
+            /** Format: uuid */
+            provider_id: string;
+            provider_key: string;
+            /** Format: int64 */
+            row_version: number;
+            /** @description People with an email on this domain must sign in through the provider. */
+            sso_only: boolean;
+            /** @description The TXT record to publish: its name and its value. */
+            verification_record_name: string;
+            verification_record_value: string;
+            /**
+             * Format: date-time
+             * @description When the record was found; `null` until then. A verified domain stays
+             *     verified when a later check fails.
+             */
+            verified_at?: string | null;
+        };
         OidcLinkBody: {
             /** @description The account's TOTP or recovery code, when it has MFA enabled. */
             code?: string | null;
@@ -45347,8 +45550,20 @@ export interface components {
             id: string;
             kind: string;
             reason?: string | null;
+            /**
+             * Format: int64
+             * @description A mass operation's `row_version`, for the `If-Match` of its pause,
+             *     resume, cancel and undo routes; other kinds have none.
+             */
+            row_version?: number | null;
             /** Format: int64 */
             rows_done?: number | null;
+            /**
+             * Format: int64
+             * @description While a mass operation works: the seconds left at the estimated
+             *     speed.
+             */
+            seconds_left?: number | null;
             /**
              * Format: uuid
              * @description Who started it; an index build has no starter on record.
@@ -50662,6 +50877,47 @@ export interface components {
                 label_ar?: string | null;
                 label_en: string;
                 prompts: components["schemas"]["TemplatePrompt"][];
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_OidcDomainItem: {
+            items: {
+                /** Format: date-time */
+                created_at: string;
+                domain: string;
+                /** Format: uuid */
+                id: string;
+                /** Format: date-time */
+                last_checked_at?: string | null;
+                /** @description Why the last check did not verify it. */
+                last_error?: string | null;
+                /** Format: uuid */
+                provider_id: string;
+                provider_key: string;
+                /** Format: int64 */
+                row_version: number;
+                /** @description People with an email on this domain must sign in through the provider. */
+                sso_only: boolean;
+                /** @description The TXT record to publish: its name and its value. */
+                verification_record_name: string;
+                verification_record_value: string;
+                /**
+                 * Format: date-time
+                 * @description When the record was found; `null` until then. A verified domain stays
+                 *     verified when a later check fails.
+                 */
+                verified_at?: string | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -95007,6 +95263,222 @@ export interface operations {
             };
         };
     };
+    list_oidc_domains: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_OidcDomainItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_oidc_domain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOidcDomainBody"];
+            };
+        };
+        responses: {
+            /** @description Added, not yet verified */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OidcDomainItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such provider added on screen */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The domain already routes to a provider (`domain_taken`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a domain name */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_oidc_domain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The sign-in domain */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such sign-in domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    verify_oidc_domain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The sign-in domain */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Checked; `verified_at` says whether it is verified */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OidcDomainItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such sign-in domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_oidc_presets: {
         parameters: {
             query?: never;
@@ -107891,12 +108363,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Success */
+            /** @description Signed out; `redirect`, when present, is the provider's sign-out page */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["LogoutResponse"];
+                };
             };
             /** @description Request failed validation */
             422: {
@@ -108298,6 +108772,39 @@ export interface operations {
             };
         };
     };
+    oidc_discover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OidcDiscoverRequest"];
+            };
+        };
+        responses: {
+            /** @description The provider's key, or `null` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OidcDiscoverResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     oidc_providers: {
         parameters: {
             query?: never;
@@ -108318,6 +108825,49 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    oidc_backchannel_logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The OIDC provider's key */
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["BackchannelLogoutForm"];
+            };
+        };
+        responses: {
+            /** @description The sessions the token names have ended */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A logout token that fails verification, or one already used */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such provider */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
