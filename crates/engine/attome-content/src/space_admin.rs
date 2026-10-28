@@ -44,6 +44,9 @@ fn expected_row_version(headers: &HeaderMap) -> Result<i64, AppError> {
     })
 }
 
+/// List content spaces
+///
+/// Every space that is not deleted, by name. Content administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/content/spaces",
@@ -69,6 +72,11 @@ async fn list_spaces(
     Ok(Json(rows))
 }
 
+/// Create a content space
+///
+/// A space with its name, description, whether a publish in it waits for approval, and its kind
+/// (`standard`, or `marketing`, which starts with the landing page templates; fixed once created).
+/// Content administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/content/spaces",
@@ -152,11 +160,14 @@ async fn create_space(
     Ok((StatusCode::CREATED, Json(row)))
 }
 
+/// Get a content space
+///
+/// One space's settings and `row_version`. Content administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/content/spaces/{id}",
     tag = "admin-content",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The space")),
     responses(
         (status = 200, description = "Success", body = ContentSpace),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -181,11 +192,15 @@ async fn get_space(
     Ok(Json(row))
 }
 
+/// Change a content space
+///
+/// Changes the fields given; an empty description clears it. Requires `If-Match:
+/// "<row_version>"`. Content administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/content/spaces/{id}",
     tag = "admin-content",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The space")),
     request_body = UpdateSpaceBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -324,11 +339,14 @@ async fn update_space(
     Ok(Json(space))
 }
 
+/// Delete a content space
+///
+/// Marks the space deleted. Content administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/content/spaces/{id}",
     tag = "admin-content",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The space")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Success"),
@@ -377,11 +395,14 @@ async fn delete_space(
 
 // ── Space <-> Template allow-list ────────────────────────────────────────────
 
+/// List a space's allowed templates
+///
+/// The templates a new page in this space may start from. Content administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/content/spaces/{id}/templates",
     tag = "admin-content",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The space")),
     responses(
         (status = 200, description = "Success", body = Vec<Uuid>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -404,11 +425,15 @@ async fn get_space_templates(
     Ok(Json(ids))
 }
 
+/// Set a space's allowed templates
+///
+/// Replaces the templates a new page in this space may start from. Content administrators only.
+/// Audited.
 #[utoipa::path(
     put,
     path = "/api/v1/admin/content/spaces/{id}/templates",
     tag = "admin-content",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The space")),
     request_body = SpaceTemplatesBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -420,7 +445,7 @@ async fn get_space_templates(
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-/// Full-set replace of the space's allowed templates.
+// Full-set replace of the space's allowed templates.
 async fn set_space_templates(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<area::Communication>>,

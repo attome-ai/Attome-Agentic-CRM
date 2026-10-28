@@ -45,6 +45,9 @@ fn expected_row_version(headers: &HeaderMap) -> Result<i64, AppError> {
     })
 }
 
+/// List content templates
+///
+/// Every page template that is not deleted, by name. Content administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/content/templates",
@@ -70,6 +73,10 @@ async fn list_templates(
     Ok(Json(rows))
 }
 
+/// Create a content template
+///
+/// A page template: its name, description and the blocks a page made from it starts with. Content
+/// administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/content/templates",
@@ -146,11 +153,14 @@ async fn create_template(
     Ok((StatusCode::CREATED, Json(row)))
 }
 
+/// Get a content template
+///
+/// One template with its blocks and `row_version`. Content administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/content/templates/{id}",
     tag = "admin-content",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The template")),
     responses(
         (status = 200, description = "Success", body = ContentTemplate),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -176,11 +186,15 @@ async fn get_template(
     Ok(Json(row))
 }
 
+/// Change a content template
+///
+/// Changes the name, description or blocks given;
+/// Requires `If-Match: "<row_version>"`. Content administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/content/templates/{id}",
     tag = "admin-content",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The template")),
     request_body = UpdateTemplateBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -273,11 +287,14 @@ async fn update_template(
     Ok(Json(template))
 }
 
+/// Delete a content template
+///
+/// Marks the template deleted. Content administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/content/templates/{id}",
     tag = "admin-content",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The template")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Success"),

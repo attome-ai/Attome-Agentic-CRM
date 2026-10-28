@@ -79,6 +79,11 @@ struct ListQuery {
 
 // ── List / create ──────────────────────────────────────────────────────────
 
+/// List content pages
+///
+/// The pages of one space that are not deleted: the root pages, or the children of one page, or the
+/// pages whose name contains the search text anywhere in the tree; one-based pages. Content
+/// administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/content/pages",
@@ -160,6 +165,10 @@ async fn list_pages(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
+/// Create a content page
+///
+/// A draft page in a space, under a parent page or at the root, with its title and URL path,
+/// optionally from a template. Content administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/content/pages",
@@ -299,11 +308,15 @@ pub(crate) async fn load_page(db: &attome_db::DbPool, id: Uuid) -> Result<PageDe
         .ok_or(AppError::NotFound)
 }
 
+/// Get a content page
+///
+/// One page: its draft and published blocks, SEO fields, status, publishing schedule and
+/// `row_version`. Content administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/content/pages/{id}",
     tag = "admin-content",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The page")),
     responses(
         (status = 200, description = "Success", body = PageDetail),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -371,11 +384,15 @@ async fn get_page_as_page(
     )))
 }
 
+/// Change a content page
+///
+/// Changes the title, URL path, blocks or SEO fields given. Requires `If-Match: "<row_version>"`;
+/// a missing or stale one is refused. Content administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/content/pages/{id}",
     tag = "admin-content",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The page")),
     request_body = UpdatePageBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -388,9 +405,9 @@ async fn get_page_as_page(
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-/// Requires an `If-Match: "<row_version>"` header on every call (D-079's
-/// contract) — a missing or stale header is a 422, never an unguarded
-/// last-write-wins update.
+// Requires an `If-Match: "<row_version>"` header on every call (D-079's
+// contract) — a missing or stale header is a 422, never an unguarded
+// last-write-wins update.
 async fn update_page(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<area::Communication>>,
@@ -511,11 +528,14 @@ async fn update_page(
     Ok(Json(page))
 }
 
+/// Delete a content page
+///
+/// Marks the page deleted. Content administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/content/pages/{id}",
     tag = "admin-content",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The page")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Success"),
@@ -566,11 +586,14 @@ async fn delete_page(
 
 // ── Hierarchy ───────────────────────────────────────────────────────────────
 
+/// List a page's ancestors
+///
+/// The pages above this one, furthest first, for a breadcrumb. Content administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/content/pages/{id}/ancestors",
     tag = "admin-content",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The page")),
     responses(
         (status = 200, description = "Success", body = Vec<AncestorRow>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -589,11 +612,15 @@ async fn get_ancestors(
     Ok(Json(rows))
 }
 
+/// Move a content page
+///
+/// Puts the page under another parent, or at the root; a move under the page itself or one of its
+/// descendants is refused. Content administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/content/pages/{id}/move",
     tag = "admin-content",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The page")),
     request_body = MovePageBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -858,11 +885,15 @@ async fn publish_page(
 
 // ── Scheduled publishing ────────────────────────────────────────────────────
 
+/// Schedule a page's publishing
+///
+/// Sets or clears (`null`) when the page is published and unpublished; a background sweep changes
+/// its status when the time passes. Requires `If-Match`. Content administrators only. Audited.
 #[utoipa::path(
     put,
     path = "/api/v1/admin/content/pages/{id}/schedule",
     tag = "admin-content",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The page")),
     request_body = SchedulePageBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -875,11 +906,11 @@ async fn publish_page(
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-/// Sets (or clears, via `null`) `publish_at`/`unpublish_at` — the sweep
-/// (`attome_content::scheduling::sweep_scheduled_transitions`,
-/// `EngineJob::ContentScheduledPublishSweep`) is what actually flips
-/// `status` once one of these passes `NOW()`; this endpoint only records the
-/// schedule. Requires `If-Match` (D-079's contract), same as `update_page`.
+// Sets (or clears, via `null`) `publish_at`/`unpublish_at` — the sweep
+// (`attome_content::scheduling::sweep_scheduled_transitions`,
+// `EngineJob::ContentScheduledPublishSweep`) is what actually flips
+// `status` once one of these passes `NOW()`; this endpoint only records the
+// schedule. Requires `If-Match` (D-079's contract), same as `update_page`.
 async fn schedule_page(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<area::Communication>>,
@@ -948,11 +979,14 @@ async fn schedule_page(
 
 // ── Related pages ───────────────────────────────────────────────────────────
 
+/// List a page's related pages
+///
+/// The pages linked to this one as related that are not deleted. Content administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/content/pages/{id}/related",
     tag = "admin-content",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The page")),
     responses(
         (status = 200, description = "Success", body = Vec<PageSummary>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -979,11 +1013,15 @@ async fn get_related_pages(
     Ok(Json(rows))
 }
 
+/// Set a page's related pages
+///
+/// Replaces the page's related pages with the ones given; each link works both ways. A page cannot be
+/// related to itself. Content administrators only. Audited.
 #[utoipa::path(
     put,
     path = "/api/v1/admin/content/pages/{id}/related",
     tag = "admin-content",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The page")),
     request_body = RelatedPagesBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -995,9 +1033,9 @@ async fn get_related_pages(
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-/// Full-set replace, symmetric: writes both (id, related) and (related, id)
-/// for every entry, so a read for either page's related list is a
-/// single-direction query (D-369).
+// Full-set replace, symmetric: writes both (id, related) and (related, id)
+// for every entry, so a read for either page's related list is a
+// single-direction query (D-369).
 async fn set_related_pages(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<area::Communication>>,
@@ -1087,11 +1125,15 @@ async fn set_related_pages(
 
 // ── Staleness / analytics (M37 Phase 2, D-452) ──────────────────────────────
 
+/// Set a page's review date
+///
+/// Sets the date the page should be reviewed by, or clears it with `null`; a reminder goes out when it
+/// comes. Requires `If-Match`. Content administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/content/pages/{id}/review-by",
     tag = "admin-content",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The page")),
     request_body = ReviewByBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -1104,16 +1146,16 @@ async fn set_related_pages(
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-/// Sets (or clears, via `null`) `review_by` — full replace (no empty-string
-/// sentinel to resolve, unlike `seo_title`/`seo_description`), requiring
-/// `If-Match` like every other page mutation (D-079). `PATCH`, not `PUT`
-/// (unlike `schedule_page`'s otherwise-identical shape): `ApiService` (the
-/// Angular client both surfaces share) has no `If-Match`-capable `put`, only
-/// `patch` — `schedule_page` predates this endpoint and has no Angular
-/// caller yet either, so this one follows the client capability that
-/// actually exists rather than repeating the same gap.
-/// `EngineJob::ContentReviewReminderSweep` reads this column, never writes
-/// it; nothing else touches it.
+// Sets (or clears, via `null`) `review_by` — full replace (no empty-string
+// sentinel to resolve, unlike `seo_title`/`seo_description`), requiring
+// `If-Match` like every other page mutation (D-079). `PATCH`, not `PUT`
+// (unlike `schedule_page`'s otherwise-identical shape): `ApiService` (the
+// Angular client both surfaces share) has no `If-Match`-capable `put`, only
+// `patch` — `schedule_page` predates this endpoint and has no Angular
+// caller yet either, so this one follows the client capability that
+// actually exists rather than repeating the same gap.
+// `EngineJob::ContentReviewReminderSweep` reads this column, never writes
+// it; nothing else touches it.
 async fn set_review_by(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<area::Communication>>,
@@ -1170,11 +1212,15 @@ async fn set_review_by(
     Ok(Json(page))
 }
 
+/// Read a page's statistics
+///
+/// Views, retrievals by search and AI, helpful and unhelpful votes and when it was last useful, as
+/// the statistics rollup job counted them. Content administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/content/pages/{id}/stats",
     tag = "admin-content",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The page")),
     responses(
         (status = 200, description = "Success — zeroed row if the rollup has never run for this page", body = PageStats),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -1183,8 +1229,8 @@ async fn set_review_by(
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-/// Reads `content_page_stats` — maintained only by
-/// `EngineJob::ContentPageStatsRollup`, never by this route.
+// Reads `content_page_stats` — maintained only by
+// `EngineJob::ContentPageStatsRollup`, never by this route.
 async fn page_stats(
     State(state): State<EngineState>,
     _ctx: Authorized<Privilege<area::Communication>>,
