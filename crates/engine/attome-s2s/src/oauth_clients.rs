@@ -291,6 +291,11 @@ async fn audit_issue(state: &EngineState, claims: &AccessClaims) -> Result<(), A
     auditor.write(event).await.map(|_| ())
 }
 
+/// Get an S2S access token
+///
+/// The OAuth 2.0 token endpoint for S2S clients: client credentials, or a workload's own identity token
+/// from a trusted provider (RFC 7523), give a ten-minute access token for the client's service user,
+/// checked like a signed call (status, idle limit, IP allow-list, rate and concurrency limits).
 #[utoipa::path(
     post,
     path = "/api/v1/oauth/token",

@@ -444,8 +444,9 @@ pub async fn pull(
     })
 }
 
-/// B18-T5: the device's next page of its offline profile, with the records it
-/// must drop.
+/// Pull offline changes
+///
+/// The device's next page of its offline profile's records, with the records it must drop.
 #[utoipa::path(
     post,
     path = "/api/v1/offline/pull",

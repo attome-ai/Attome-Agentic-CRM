@@ -126,11 +126,14 @@ async fn actual_cost_for_programs(
     Ok(Some(cost))
 }
 
+/// Read a programme's summary
+///
+/// The programme's figures rolled up from its projects, computed when read.
 #[utoipa::path(
     get,
     path = "/api/v1/program/{id}/summary",
     tag = "project",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The programme")),
     responses(
         (status = 200, description = "Success", body = ProgramSummaryResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -180,11 +183,14 @@ async fn program_summary(
     }))
 }
 
+/// Read a portfolio's summary
+///
+/// The portfolio's figures rolled up from its programmes and their projects, computed when read.
 #[utoipa::path(
     get,
     path = "/api/v1/portfolio/{id}/summary",
     tag = "project",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The portfolio")),
     responses(
         (status = 200, description = "Success", body = PortfolioSummaryResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

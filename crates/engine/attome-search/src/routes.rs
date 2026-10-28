@@ -1304,12 +1304,10 @@ struct RelatedKnowledgeResponse {
 
 const MAX_RELATED_KNOWLEDGE_LIMIT: i64 = 20;
 
-/// M37 Phase 2 (D-452) — semantic related-page suggestions for the content
-/// admin UI, distinct from `attome-content`'s manual `related_page_ids`
-/// full-set-replace endpoint. Admin-gated like every content-authoring
-/// surface, even though the query itself only ever returns page ids: this is
-/// an authoring tool, not a retrieval-serving route, and has no reason to be
-/// reachable by a caller who cannot already manage content.
+/// Suggest related knowledge pages
+///
+/// Pages semantically close to one page, for content authors to pick related pages from. AI
+/// administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/search/knowledge/related",

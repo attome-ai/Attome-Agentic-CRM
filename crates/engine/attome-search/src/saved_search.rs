@@ -126,6 +126,9 @@ async fn load_visible_query_text(
         .map_err(AppError::internal)
 }
 
+/// Run a saved search
+///
+/// Runs a saved search now, under the caller's own access.
 #[utoipa::path(
     get,
     path = "/api/v1/search/saved/{id}/run",

@@ -306,6 +306,9 @@ pub async fn serve(
     Ok(SuggestResponse { items })
 }
 
+/// Suggest search terms
+///
+/// Completions for what the caller has typed, from a suggestion table rebuilt periodically.
 #[utoipa::path(
     get,
     path = "/api/v1/search/suggest",

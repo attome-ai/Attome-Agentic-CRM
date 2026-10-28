@@ -192,6 +192,10 @@ fn retry_secs(window: Duration, state: &token_window::WindowState) -> i64 {
     window.saturating_sub(state.elapsed).as_secs().max(1) as i64
 }
 
+/// Check a portal login for a trusted server
+///
+/// For a portal's own trusted server, over S2S: checks a portal user's credentials and answers with
+/// the decision; a refusal is an outcome, not an error.
 #[utoipa::path(
     post,
     path = "/api/v1/s2s/webportals/{keyword}/login",
@@ -510,10 +514,11 @@ pub struct AccountChanges {
 
 type ChangeRow = (Uuid, Option<String>, String, i32, i64);
 
-/// D-779 item 8: what changed about the portal's accounts since `since`
-/// (a password change, reset, disable or log out everywhere bumps the
-/// credential epoch; erasure removes the account), so a trusted server can
-/// revoke its own sessions within one pull. Same caller rules as the login.
+/// List portal account changes
+///
+/// What changed about the portal's accounts since a time (a password change, reset, disable or sign-out
+/// everywhere moves the credential epoch; erasure removes the account), so a trusted server can end
+/// its own sessions within one pull.
 #[utoipa::path(
     get,
     path = "/api/v1/s2s/webportals/{keyword}/accounts/changes",
@@ -761,8 +766,9 @@ async fn notify_account(
     Ok(())
 }
 
-/// D-780: the account's email (masked) and MFA state, for the player's own
-/// account screen.
+/// Read a portal account for a trusted server
+///
+/// The account's email (masked) and MFA state, for the user's own account screen.
 #[utoipa::path(
     get,
     path = "/api/v1/s2s/webportals/{keyword}/accounts/{user_id}",
@@ -798,10 +804,11 @@ async fn account_info(
     }))
 }
 
-/// D-780: adds an email to the account once its owner opens the link sent to
-/// it (the portal's `auth/email/verify`), after the password again. When
-/// another account of the portal has the address, its owner gets a notice
-/// instead and the answer is the same `sent`.
+/// Add an email to a portal account
+///
+/// After the password again, sends a link to the new address; it is added only when its owner opens
+/// it. When another account of the portal has the address, its owner is told instead, with the same
+/// answer.
 #[utoipa::path(
     post,
     path = "/api/v1/s2s/webportals/{keyword}/accounts/{user_id}/email",
@@ -914,8 +921,10 @@ async fn account_email(
     Ok(Json(result))
 }
 
-/// D-780: starts turning MFA on (after the password again): a new secret for
-/// the player's authenticator app, in force once a code from it confirms it.
+/// Start MFA for a portal account
+///
+/// After the password again, a new secret for the user's authenticator app, in force once a code from
+/// it confirms it.
 #[utoipa::path(
     post,
     path = "/api/v1/s2s/webportals/{keyword}/accounts/{user_id}/mfa/enroll",
@@ -991,8 +1000,9 @@ async fn account_mfa_enroll(
     }))
 }
 
-/// D-780: a code from the authenticator app turns MFA on; the recovery codes
-/// come back once.
+/// Confirm MFA for a portal account
+///
+/// A code from the authenticator app turns MFA on; the recovery codes come back once.
 #[utoipa::path(
     post,
     path = "/api/v1/s2s/webportals/{keyword}/accounts/{user_id}/mfa/confirm",
@@ -1063,8 +1073,9 @@ async fn account_mfa_confirm(
     }))
 }
 
-/// D-780: turns MFA off after the password and a current code (refused while
-/// the portal requires MFA).
+/// Turn MFA off for a portal account
+///
+/// After the password and a current code; refused while the portal requires MFA.
 #[utoipa::path(
     post,
     path = "/api/v1/s2s/webportals/{keyword}/accounts/{user_id}/mfa/disable",

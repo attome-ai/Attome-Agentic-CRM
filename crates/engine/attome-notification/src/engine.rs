@@ -56,12 +56,10 @@ struct DispatchCreated {
     id: Uuid,
 }
 
-/// Manually triggers a multi-channel notification (F163/F164/F172). This is
-/// the direct-API-call path F165 leans on until Workflow Engine ships and
-/// can call it automatically post-event (see `crate::dispatch`'s module
-/// doc). Admin-gated for now, same reasoning as the other engine admin
-/// surfaces (`s2s_admin.rs`/`license_admin.rs`) — there is no finer-grained
-/// "who may send a notification" privilege model yet.
+/// Send a notification
+///
+/// Sends a notification over its channels (in-app, email, SMS, push, chat), from a template or with
+/// its own text, to a person or everyone. Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/notification/dispatch",

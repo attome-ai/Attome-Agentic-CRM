@@ -403,8 +403,9 @@ pub async fn push(
     Ok(PushResult { results })
 }
 
-/// B18-T7: applies a device's queued changes in order, once each, through
-/// the same path as an online edit.
+/// Push offline changes
+///
+/// Applies a device's queued changes in order, each once, through the same path as an online edit.
 #[utoipa::path(
     post,
     path = "/api/v1/offline/push",

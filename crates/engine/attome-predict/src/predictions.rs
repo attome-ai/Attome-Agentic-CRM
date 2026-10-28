@@ -192,10 +192,9 @@ async fn record_visible(
         .map_err(AppError::internal)
 }
 
-/// `GET /api/v1/predictions?regarding_entity=&regarding_id=` — latest
-/// predictions for one record, newest first. Powers the record banner and
-/// the dashboard widget (`attome-dashboard`'s widget registry entry reads this
-/// same endpoint via a widget's `config.regarding_entity`/`regarding_id`).
+/// Read a record's predictions
+///
+/// The latest predictions about one record, newest first, for its banner and dashboard widget.
 #[utoipa::path(
     get,
     path = "/api/v1/predictions",

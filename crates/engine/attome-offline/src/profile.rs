@@ -374,8 +374,10 @@ pub async fn resolve(
     }))
 }
 
-/// B18-T4: the caller's offline profile with entity metadata (no sensitive
-/// attribute) and the rules a device evaluates before it syncs.
+/// Read my offline profile
+///
+/// The caller's offline profile: the entity metadata a device needs (no sensitive attribute) and the
+/// rules a device checks before it syncs.
 #[utoipa::path(
     get,
     path = "/api/v1/offline/profile",

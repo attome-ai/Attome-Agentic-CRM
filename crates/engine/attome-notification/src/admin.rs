@@ -39,6 +39,9 @@ struct ReadRequest {
     id: Uuid,
 }
 
+/// Read my notifications
+///
+/// The signed-in person's latest in-app notifications and how many are unread.
 #[utoipa::path(
     post,
     path = "/api/v1/notification/poll",
@@ -86,6 +89,9 @@ async fn poll(
     }))
 }
 
+/// Mark a notification read
+///
+/// Marks one of the caller's notifications read.
 #[utoipa::path(
     post,
     path = "/api/v1/notification/read",
@@ -117,6 +123,9 @@ async fn mark_read(
     inbox.mark_read(claims.sub, body.id).await
 }
 
+/// Clear my notifications
+///
+/// Clears the caller's in-app notifications.
 #[utoipa::path(
     post,
     path = "/api/v1/notification/clear",

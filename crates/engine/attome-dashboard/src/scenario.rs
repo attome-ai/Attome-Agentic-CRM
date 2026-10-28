@@ -441,16 +441,14 @@ pub async fn do_evaluate(
     Ok(results)
 }
 
-/// `POST /api/v1/scenarios/{id}/evaluate` — see this module's doc comment
-/// for exactly what this does and does not compute. `dashboard_scenario.update`:
-/// reuses the entity's own generic update privilege for this bespoke
-/// business action (it writes new `dashboard_scenario_result` rows), same
-/// convention `MetricUpdate`/`DecisionUpdate` already use in this crate.
+/// Evaluate a scenario
+///
+/// Computes the scenario's metrics and stores the results. Needs update rights on scenarios. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/scenarios/{id}/evaluate",
     tag = "dashboard",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The scenario")),
     responses(
         (status = 200, description = "Success — see each result's `status`/`note`. `ok` appears \
             for a formula-backed metric that resolves against this scenario's assumptions \
@@ -716,18 +714,15 @@ pub async fn do_compare(
     })
 }
 
-/// `GET /api/v1/scenarios/{id}/compare?with=uuid1,uuid2` — N scenarios x
-/// metrics comparison matrix (plan §3.1). A straightforward read over the
-/// entities `scenario_seed.rs` provisions: the metric column set is the
-/// union of every `dashboard_scenario_metric` row referenced by any scenario being
-/// compared; each cell is that scenario's most recent `evaluate` result for
-/// that metric, or an explicit `not_evaluated` placeholder when it never ran
-/// one. `dashboard_scenario.read`.
+/// Compare scenarios
+///
+/// This scenario and the ones in `with`, against every metric any of them uses: each cell is that
+/// scenario's latest evaluated value, or `not_evaluated`. Needs read rights on scenarios.
 #[utoipa::path(
     get,
     path = "/api/v1/scenarios/{id}/compare",
     tag = "dashboard",
-    params(("id" = Uuid, Path), CompareQuery),
+    params(("id" = Uuid, Path, description = "The scenario"), CompareQuery),
     responses(
         (status = 200, description = "Success", body = CompareResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -868,17 +863,15 @@ struct CloneResponse {
     id: Uuid,
 }
 
-/// `POST /api/v1/scenarios/{id}/clone` — branch a new scenario off this one
-/// (plan §3.1's "branching" + "versioning ... + a clone operation";
-/// `attome-api` has no generic clone primitive to reuse — confirmed by
-/// inspection — so this follows the one established bespoke-clone pattern in
-/// this crate, `lifecycle.rs::do_clone`/`clone_dashboard`).
+/// Branch a scenario
+///
+/// A new scenario copied from this one, to change and compare. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/scenarios/{id}/clone",
     operation_id = "clone_scenario",
     tag = "dashboard",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The scenario")),
     responses(
         (status = 201, description = "Success", body = CloneResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

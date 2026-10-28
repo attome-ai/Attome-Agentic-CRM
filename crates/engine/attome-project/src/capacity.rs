@@ -378,6 +378,10 @@ async fn count_matching_resources(
     .map_err(AppError::internal)
 }
 
+/// Read resource capacity
+///
+/// Per resource and period: the capacity there is, how much is allocated, how much was logged, and
+/// whether the resource is over-committed. Computed when read.
 #[utoipa::path(
     get,
     path = "/api/v1/resources/capacity",

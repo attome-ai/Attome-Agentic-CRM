@@ -725,7 +725,9 @@ pub fn check_subscription(
     }
 }
 
-/// Registers (or moves to the caller) one push address.
+/// Register a push address
+///
+/// Registers one browser push address for the caller, or moves it to the caller.
 #[utoipa::path(
     post,
     path = "/api/v1/push/subscriptions",
@@ -784,12 +786,14 @@ pub(crate) async fn register(
     Ok(Json(Subscription { id }))
 }
 
+/// Remove a push address
+///
 /// Removes one of the caller's push addresses.
 #[utoipa::path(
     delete,
     path = "/api/v1/push/subscriptions/{id}",
     tag = "notification",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The push subscription")),
     extensions(("x-audit-exempt" = json!(x_audit_exempt(
         ExemptReason::UserPreference,
         None,
@@ -820,7 +824,9 @@ pub(crate) async fn unregister(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// The key a browser subscribes with; 404 while Web Push is not configured.
+/// Get the Web Push key
+///
+/// The public key a browser subscribes with; 404 while Web Push is not configured.
 #[utoipa::path(
     get,
     path = "/api/v1/push/vapid-public-key",

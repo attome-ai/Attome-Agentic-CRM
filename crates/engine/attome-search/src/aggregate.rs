@@ -498,6 +498,10 @@ async fn enforce_cost_ceiling(
 
 // ── Public route ─────────────────────────────────────────────────────────────
 
+/// Aggregate one entity's records
+///
+/// Counts, sums, averages, minimums and maximums over one entity's records grouped by its fields,
+/// validated against its metadata and limited to the records the caller may read.
 #[utoipa::path(
     post,
     path = "/api/v1/search/aggregate",
@@ -513,13 +517,13 @@ async fn enforce_cost_ceiling(
         (status = 422, description = "Invalid entity, group_by, metric, or filter"),
     ),
 )]
-/// Bare `RecordScoped`, and one of only two routes entitled to it (D-353,
-/// counted by `route_authz.rs`'s ratchet): the entity is not a path segment
-/// but a body field (`entity` / `entity_logical_name`), and it is resolved
-/// against the database — `resolve_entity` accepts either an id or a
-/// logicalname — so there is nothing for `RecordScoped<Read>` to read off the
-/// matched route. `run_aggregate` makes the `ctx.require(&logicalname,
-/// "read")` call itself, immediately after that resolution.
+// Bare `RecordScoped`, and one of only two routes entitled to it (D-353,
+// counted by `route_authz.rs`'s ratchet): the entity is not a path segment
+// but a body field (`entity` / `entity_logical_name`), and it is resolved
+// against the database — `resolve_entity` accepts either an id or a
+// logicalname — so there is nothing for `RecordScoped<Read>` to read off the
+// matched route. `run_aggregate` makes the `ctx.require(&logicalname,
+// "read")` call itself, immediately after that resolution.
 async fn aggregate(
     State(state): State<EngineState>,
     ctx: Authorized<RecordScoped>,
