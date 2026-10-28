@@ -224,6 +224,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Compare agent performance
+         * @description One row per agent over the date range, from the nightly rollup: tasks done and resolved, hand-offs,
+         *     tokens and cost, with resolution, accuracy, hand-off rate and cost per task worked out at read time.
+         *     AI administrators only.
+         */
         get: operations["get_performance"];
         put?: never;
         post?: never;
@@ -242,6 +248,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Rebuild agent performance for past days
+         * @description Queues a job that rebuilds the per-agent daily rollup for the days from `from` to `to` from the
+         *     outcome, message and price ledgers. AI administrators only. Audited.
+         */
         post: operations["post_backfill"];
         delete?: never;
         options?: never;
@@ -257,8 +268,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/ai/agents/{agent}/usage` — what a published agent
-         *     object did today against its daily limits (AH4-T4, V2-D487).
+         * Read an agent's usage today
+         * @description What a published agent object did today against each of its daily limits. Administrators only.
          */
         get: operations["agent_usage"];
         put?: never;
@@ -277,8 +288,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/ai/agents/{id}/autonomy` — every non-read action with
-         *     the level it runs at for this agent.
+         * List an agent's autonomy levels
+         * @description Every action other than a read, with the level it runs at for this agent: the level an
+         *     administrator set, or the built-in rule. AI administrators only.
          */
         get: operations["list_agent_autonomy"];
         put?: never;
@@ -296,7 +308,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/ai/agents/{id}/autonomy/proposals` — open proposals. */
+        /**
+         * List an agent's open autonomy proposals
+         * @description Raises of an action's level that the agent's measured agreement earned, waiting for a person to
+         *     accept or reject them, newest first. AI administrators only.
+         */
         get: operations["list_autonomy_proposals"];
         put?: never;
         post?: never;
@@ -314,12 +330,18 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** `PUT /api/v1/admin/ai/agents/{id}/autonomy/{action_id}` — sets the level. */
+        /**
+         * Set an agent's autonomy level for an action
+         * @description Sets how far the agent may go with the action without a person (suggest, ask first, act on
+         *     review, act with undo, act and report, automatic), with its undo window, daily limit, money cap and
+         *     whether only records it owns; a level the action does not allow is 422. AI administrators only.
+         *     Audited.
+         */
         put: operations["set_agent_autonomy"];
         post?: never;
         /**
-         * `DELETE /api/v1/admin/ai/agents/{id}/autonomy/{action_id}` — back to the
-         *     built-in rule.
+         * Clear an agent's autonomy level for an action
+         * @description The action goes back to its built-in rule for this agent. AI administrators only. Audited.
          */
         delete: operations["clear_agent_autonomy"];
         options?: never;
@@ -334,6 +356,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read an agent's behaviour
+         * @description The agent's status and `row_version`, its baseline, its last 24 hours of activity and the last
+         *     time it was stopped automatically, with the reason. Switching it back on is an ordinary update of
+         *     the agent. AI administrators only.
+         */
         get: operations["get_behaviour"];
         put?: never;
         post?: never;
@@ -353,8 +381,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/admin/ai/agents/{id}/go-live` — moves a `testing`
-         *     definition to `active`, refused below the agreement threshold.
+         * Take an agent out of trial
+         * @description Moves an agent definition from `testing` to `active` when it agreed with what people did at least
+         *     as often as `min_agreement`; below it the call is refused. AI administrators only. Audited.
          */
         post: operations["agent_go_live"];
         delete?: never;
@@ -370,6 +399,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read an agent's daily performance
+         * @description The agent's rollup day by day over the range, for charts. AI administrators only.
+         */
         get: operations["get_performance_daily"];
         put?: never;
         post?: never;
@@ -388,6 +421,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Roll back an agent
+         * @description Ends the agent's live sessions, then queues the undo of everything its sessions changed since
+         *     `since`; 202 with the run's id. Administrators or holders of `ai_agent.supervise`. Audited.
+         */
         post: operations["post_rollback"];
         delete?: never;
         options?: never;
@@ -402,6 +440,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Preview rolling back an agent
+         * @description The undo steps for everything the agent's sessions changed since `since`, as the caller, writing
+         *     nothing. `since` must be in the past and inside the audit retention window. Administrators or
+         *     holders of `ai_agent.supervise`.
+         */
         get: operations["get_rollback_preview"];
         put?: never;
         post?: never;
@@ -418,6 +462,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List what is behind an agent's figure
+         * @description The outcome rows (tasks or hand-offs) behind one day's number for the agent, keyset paged. AI
+         *     administrators only.
+         */
         get: operations["get_runs"];
         put?: never;
         post?: never;
@@ -434,6 +483,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read an agent's trial report
+         * @description While an agent definition is in `testing`, its writes and outside calls are recorded, not run, and
+         *     compared with what a person did to the same record within 24 hours; this is how often it agreed,
+         *     overall and per action. AI administrators only.
+         */
         get: operations["agent_trial_report"];
         put?: never;
         post?: never;
@@ -452,7 +507,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** `POST /api/v1/admin/ai/autonomy/proposals/{id}/accept`. */
+        /**
+         * Accept an autonomy proposal
+         * @description Raises the agent's level for the action to what the proposal names and closes it. AI
+         *     administrators only. Audited.
+         */
         post: operations["accept_autonomy_proposal"];
         delete?: never;
         options?: never;
@@ -469,7 +528,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** `POST /api/v1/admin/ai/autonomy/proposals/{id}/reject`. */
+        /**
+         * Reject an autonomy proposal
+         * @description Closes the proposal and leaves the agent's level as it is. AI administrators only. Audited.
+         */
         post: operations["reject_autonomy_proposal"];
         delete?: never;
         options?: never;
@@ -485,9 +547,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/ai/bot-analytics` — deployment-wide chatbot figures for
-         *     one window: turns, tool calls by type, handoffs by reason, deflection and
-         *     thumbs. Aggregates only; the formulas are `01-architecture.md`'s C10-B.
+         * Read chatbot analytics
+         * @description Deployment-wide chatbot figures for one window, optionally one surface: turns, tool calls by
+         *     type, hand-offs by reason, deflection and thumbs up or down. Aggregates only. AI administrators
+         *     only.
          */
         get: operations["get_bot_analytics"];
         put?: never;
@@ -506,10 +569,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/ai/compliance-report` — models in use, their
-         *     approvals, token spend, acceptance rates, and outcomes recorded without
-         *     provenance. `system.admin`-gated: this bundles per-organization AI usage
-         *     and cost data, the same sensitivity class as the rest of `/admin/`.
+         * Read the AI compliance report
+         * @description The models in use and their approvals, token spend, acceptance rates, and outcomes recorded
+         *     without provenance. AI administrators only.
          */
         get: operations["get_compliance_report"];
         put?: never;
@@ -527,7 +589,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/ai/eval-runs/{id}` */
+        /**
+         * Get an eval run
+         * @description One run of an eval suite: its status, score and outcome, the suite version it ran, who started it
+         *     and when it finished. AI administrators only.
+         */
         get: operations["get_eval_run"];
         put?: never;
         post?: never;
@@ -546,7 +612,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** `POST /api/v1/admin/ai/eval-suites/{suite}/cases/from-message` */
+        /**
+         * Add an eval case from a message
+         * @description Turns an answer that went wrong into a test case: the input is the person's message it replied to,
+         *     the expectation is what the administrator says should have happened (tools, text it must or must
+         *     not contain). AI administrators only. Audited.
+         */
         post: operations["case_from_message"];
         delete?: never;
         options?: never;
@@ -563,7 +634,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** `POST /api/v1/admin/ai/eval-suites/{suite}/runs` */
+        /**
+         * Run an eval suite
+         * @description Records a run of the suite's newest version and returns at once; each case then runs in the
+         *     background as one turn of a fresh session of the suite's agent, where a write is only proposed,
+         *     and is graded. AI administrators only. Audited.
+         */
         post: operations["start_eval_run"];
         delete?: never;
         options?: never;
@@ -578,7 +654,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/ai/evidence` */
+        /**
+         * Read the AI evidence trail
+         * @description What AI did, for an auditor, over a period (the last 30 days by default), oldest first and keyset
+         *     paged: either every action an agent session invoked, with its outcome and the person it acted for
+         *     (results left out), or every model-written suggestion with its model, prompt version and what a
+         *     person did with it. AI administrators only.
+         */
         get: operations["evidence"];
         put?: never;
         post?: never;
@@ -597,6 +679,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Run a follow-up rule now
+         * @description Queues one scan of an active follow-up rule now instead of at its next scheduled time; 202. AI
+         *     administrators only. Audited.
+         */
         post: operations["run_followup_rule"];
         delete?: never;
         options?: never;
@@ -639,7 +726,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** `POST /api/v1/admin/ai/preview/summary` */
+        /**
+         * Preview a record summary prompt
+         * @description Exactly what a model would receive to summarise the record, built by the same code as
+         *     `record.summarize` as the calling administrator, without calling a model. Nothing is generated,
+         *     cached or spent. AI administrators only.
+         */
         post: operations["preview_summary"];
         delete?: never;
         options?: never;
@@ -655,12 +747,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/ai/prompts` — every prompt_version this build ships.
-         *     Admin-gated like every other admin-surface read in this workspace
-         *     (`security-model`'s documented convention: `attome-api/src/admin/` and
-         *     siblings require `system.admin` on every route including reads). Prompts
-         *     are code (see `prompt_registry.rs`'s doc comment) — this route is
-         *     deliberately read-only; there is no corresponding `POST`/`PUT`.
+         * List the shipped prompts
+         * @description Every prompt version this build ships, per action, with its text. Prompts are code, so there is
+         *     no route to change one. AI administrators only.
          */
         get: operations["list_prompts"];
         put?: never;
@@ -679,8 +768,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/ai/prompts/diff?from=..&to=..` — a line diff between
-         *     two shipped prompt_versions.
+         * Compare two shipped prompts
+         * @description A line diff between two prompt versions this build ships. AI administrators only.
          */
         get: operations["diff_prompts"];
         put?: never;
@@ -700,6 +789,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Set an AI provider's API key
+         * @description Sets or replaces the provider's API key, stored encrypted and never returned. AI administrators
+         *     only. Audited.
+         */
         post: operations["set_credential"];
         delete?: never;
         options?: never;
@@ -716,6 +810,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Fetch an AI provider's models
+         * @description Asks the provider for the models it offers, with the provider's own credential, and returns the
+         *     list; it writes no catalogue rows (an operator adds the ones wanted, which then wait for
+         *     approval). Needs update rights on the provider, since it spends the operator's quota. AI
+         *     administrators only.
+         */
         post: operations["fetch_models"];
         delete?: never;
         options?: never;
@@ -731,8 +832,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * `GET /api/v1/admin/ai/runtime-switch` — every surface: what the
-         *     configuration allows, what the runtime switch says, and the effect.
+         * Read the AI runtime switches
+         * @description For every AI surface: what the configuration allows, what the runtime switch says, and the
+         *     effect. AI administrators only.
          */
         get: operations["get_runtime_switch"];
         put?: never;
@@ -752,11 +854,10 @@ export interface paths {
         };
         get?: never;
         /**
-         * `PUT /api/v1/admin/ai/runtime-switch/{surface}` — turn one AI surface off,
-         *     or back on, without a restart (row A-85). It can only narrow: turning a
-         *     surface on restores what the configuration allows, never more. A running
-         *     conversation turn stops at its next step; nothing already dispatched is
-         *     undone.
+         * Switch an AI surface off or on
+         * @description Turns one AI surface off, or back on, without a restart. It only narrows: on restores what the
+         *     configuration allows, never more. A running turn stops at its next step; nothing already
+         *     dispatched is undone. AI administrators only. Audited.
          */
         put: operations["put_runtime_switch"];
         post?: never;
@@ -773,7 +874,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/ai/spend` */
+        /**
+         * Read AI spend
+         * @description What generation has cost this rolling month against each money cap (the deployment, each capped
+         *     feature, each agent that ran), from the counters the budget guard enforces, and where the month is
+         *     heading. AI administrators only.
+         */
         get: operations["spend_report"];
         put?: never;
         post?: never;
@@ -790,7 +896,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/ai/status` */
+        /**
+         * Read the AI status page
+         * @description The generation model's card and whether it is approved, what is switched off, how turns ended over
+         *     the last day, and the latest switch changes as an incident timeline. AI administrators only.
+         */
         get: operations["ai_status"];
         put?: never;
         post?: never;
@@ -807,7 +917,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/ai/switches` — every scope that has been switched. */
+        /**
+         * List AI scope switches
+         * @description Every agent, model, provider, tool or channel that has been switched, off ones first, with who did
+         *     it, when and why. AI administrators only.
+         */
         get: operations["list_switches"];
         put?: never;
         post?: never;
@@ -826,8 +940,9 @@ export interface paths {
         };
         get?: never;
         /**
-         * `PUT /api/v1/admin/ai/switches/{kind}/{key}` — turns one scope off, or
-         *     back on (by a different administrator from the one who turned it off).
+         * Switch an AI scope off or on
+         * @description Turns one agent, model, provider, tool or channel off (with an optional reason), or back on; turning it back on
+         *     takes a different administrator from the one who turned it off. AI administrators only. Audited.
          */
         put: operations["put_switch"];
         post?: never;
@@ -844,6 +959,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read the work share between agents and people
+         * @description Per process over the date range: the completions agents and people made, the hand-offs between
+         *     them, the agents' share, and the counts per day for a trend. AI administrators only.
+         */
         get: operations["get_work_share"];
         put?: never;
         post?: never;
@@ -862,6 +982,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Rebuild the work share for past days
+         * @description Queues a job that recounts the work share for the date range from the change feed. AI
+         *     administrators only. Audited.
+         */
         post: operations["post_rebuild"];
         delete?: never;
         options?: never;
@@ -876,6 +1001,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List what is behind a work-share figure
+         * @description The change events behind one process's number on one day (ids, records and times only), newest
+         *     first and keyset paged, while the change feed still keeps them. AI administrators only.
+         */
         get: operations["get_work_share_events"];
         put?: never;
         post?: never;
@@ -892,10 +1022,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/ai/write-policies` — the active policies. */
+        /**
+         * List AI write approval policies
+         * @description The active policies that make an agent's write of an action (optionally on one entity) wait for a
+         *     second person. AI administrators only.
+         */
         get: operations["list_write_policies"];
         put?: never;
-        /** `POST /api/v1/admin/ai/write-policies` — requires approval for an action. */
+        /**
+         * Require approval for an agent's writes
+         * @description From now on an agent's write of the action, optionally only on one entity, waits for a second
+         *     person's approval after the person it acts for confirms it. AI administrators only. Audited.
+         */
         post: operations["create_write_policy"];
         delete?: never;
         options?: never;
@@ -913,7 +1051,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** `DELETE /api/v1/admin/ai/write-policies/{id}` — deactivates a policy. */
+        /**
+         * Remove an AI write approval policy
+         * @description Deactivates the policy; the writes it covered run once confirmed again. AI administrators only.
+         *     Audited.
+         */
         delete: operations["deactivate_policy"];
         options?: never;
         head?: never;
@@ -1881,6 +2023,52 @@ export interface paths {
          * @description Create a calendar. Administrators only. Audited.
          */
         post: operations["create_calendar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/calendars/packs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the country holiday packs
+         * @description Z12-T7: the official holiday packs this server carries, with the source
+         *     each one cites and the year it was last reviewed. Administrators only.
+         */
+        get: operations["list_packs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/calendars/packs/{code}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply a country holiday pack
+         * @description Z12-T7: creates the country's calendar, or updates the active calendar
+         *     whose `country_code` matches, with the pack's holiday rules. An existing
+         *     calendar keeps its name, working days and hours; only rules that differ
+         *     are written, so applying twice changes nothing the second time. Recorded
+         *     in the open changeset as calendar and rule writes. Administrators only.
+         *     Audited.
+         */
+        post: operations["apply_pack"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5150,8 +5338,20 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List event subscriptions
+         * @description The webhook and audit subscriptions that are not deleted, newest first, one-based pages,
+         *     optionally only one kind or only active ones. Integration administrators only.
+         */
         get: operations["list_subscriptions"];
         put?: never;
+        /**
+         * Create an event subscription
+         * @description A webhook or audit subscription: which entities, operations and named events it matches, the
+         *     target URL (http or https, screened against private addresses now and at every send), retry class,
+         *     payload shape and owner. The signing secret is generated here and returned once, in the plain and
+         *     the Standard Webhooks form; it is stored encrypted. Integration administrators only. Audited.
+         */
         post: operations["create_subscription"];
         delete?: never;
         options?: never;
@@ -5166,12 +5366,27 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get an event subscription
+         * @description One subscription's settings and filters, without its secret. Integration administrators only.
+         */
         get: operations["get_subscription"];
         put?: never;
         post?: never;
+        /**
+         * Delete an event subscription
+         * @description Marks the subscription deleted and inactive, so it matches nothing more; its delivery log stays.
+         *     Integration administrators only. Audited.
+         */
         delete: operations["delete_subscription"];
         options?: never;
         head?: never;
+        /**
+         * Change an event subscription
+         * @description Changes the fields given (name, active, filters, target URL, retry class, attempts, payload
+         *     shape, target authentication) when `row_version` is the stored one; a stale version is 409.
+         *     Integration administrators only. Audited.
+         */
         patch: operations["update_subscription"];
         trace?: never;
     };
@@ -5182,6 +5397,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List a subscription's deliveries
+         * @description The delivery log of one subscription, newest first, one-based pages, optionally only one status:
+         *     attempts, the last error and HTTP status, and when it was delivered. Integration administrators only.
+         */
         get: operations["list_event_deliveries"];
         put?: never;
         post?: never;
@@ -5200,7 +5420,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Sends again every delivery the subscription matched since `from` (M13-T4): delivered, failed and dead-lettered ones go back to pending with their attempts reset, at most 10,000. Each keeps its event id, so a receiver that deduplicates on `webhook-id` sees a retry, not a new event. */
+        /**
+         * Replay a subscription's deliveries
+         * @description Sends again every delivery the subscription matched since `from` (M13-T4): delivered, failed and dead-lettered ones go back to pending with their attempts reset, at most 10,000. Each keeps its event id, so a receiver that deduplicates on `webhook-id` sees a retry, not a new event.
+         */
         post: operations["event_subscription_replay"];
         delete?: never;
         options?: never;
@@ -5217,6 +5440,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Rotate a subscription's signing secret
+         * @description Generates a new signing secret, stores it encrypted and returns it once; deliveries are signed
+         *     with it from now on. Integration administrators only. Audited as a credential rotation.
+         */
         post: operations["rotate_secret"];
         delete?: never;
         options?: never;
@@ -5233,7 +5461,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Queues one test delivery to the subscription's target (M13-T4): entity `attome_test`, operation `test`, signed like every delivery. Its outcome shows in the delivery log. */
+        /**
+         * Send a test delivery
+         * @description Queues one test delivery to the subscription's target (M13-T4): entity `attome_test`, operation `test`, signed like every delivery. Its outcome shows in the delivery log.
+         */
         post: operations["event_subscription_send_test"];
         delete?: never;
         options?: never;
@@ -5359,7 +5590,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Reads an asset's certification, `stale` when its definition changed. */
+        /**
+         * Get an asset's certification
+         * @description Who certified the asset and when, and `stale` when its definition (an entity's columns and
+         *     active attributes) has changed since. Anyone holding a role in the asset's domain, or
+         *     `system.admin`.
+         */
         get: operations["governance_get_certification"];
         put?: never;
         /**
@@ -5382,10 +5618,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/governance/domains` — `system.admin` only. */
+        /**
+         * List data domains
+         * @description The data domains of the accountability register, with each one's steward and deputy, one-based
+         *     pages. Compliance administrators only.
+         */
         get: operations["list_domains"];
         put?: never;
-        /** `POST /api/v1/admin/governance/domains` — `system.admin` only. */
+        /**
+         * Create a data domain
+         * @description A named data domain with an optional description, steward and deputy (each an active user).
+         *     Compliance administrators only. Audited.
+         */
         post: operations["create_domain"];
         delete?: never;
         options?: never;
@@ -5400,14 +5644,23 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/governance/domains/{id}` — `system.admin` only. */
+        /**
+         * Get a data domain
+         * @description One domain: its name, description, steward, deputy and `row_version`. Compliance administrators
+         *     only.
+         */
         get: operations["get_domain"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** `PATCH /api/v1/admin/governance/domains/{id}` — `system.admin` only. */
+        /**
+         * Change a data domain
+         * @description Changes the fields given (name, description, steward, deputy) when `row_version` is the stored
+         *     one; an empty description clears it, and a steward or deputy can be replaced but not cleared.
+         *     Compliance administrators only. Audited.
+         */
         patch: operations["update_domain"];
         trace?: never;
     };
@@ -5421,13 +5674,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * `POST /api/v1/admin/governance/domains/{id}/entities` — `system.admin`
-         *     only. Assigns every named entity's `domain_ref` to this domain
-         *     (re-assigning it away from any prior domain it belonged to — an entity
-         *     has at most one domain). Every name is validated against the live
-         *     metadata registry first (never interpolated from unvalidated input,
-         *     guidelines §4); the whole call is rejected if any name is unknown, rather
-         *     than partially applying.
+         * Assign entities to a data domain
+         * @description Moves every named entity into this domain, out of any domain it was in (an entity has at most
+         *     one). Every name is checked against the live metadata first, and one unknown name refuses the
+         *     whole call. Compliance administrators only. Audited.
          */
         post: operations["assign_entities"];
         delete?: never;
@@ -5447,11 +5697,9 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * `DELETE /api/v1/admin/governance/domains/{id}/entities/{entity_logicalname}`
-         *     — `system.admin` only. Clears the entity's `domain_ref` back to
-         *     unassigned, but only if it currently belongs to exactly this domain (a
-         *     stale unassign against the wrong domain id is a no-op `404`, not a
-         *     silent success against whichever domain the entity actually has).
+         * Remove an entity from a data domain
+         * @description Leaves the entity in no domain, but only if it is in this one; against another domain the call is
+         *     404 and changes nothing. Compliance administrators only. Audited.
          */
         delete: operations["unassign_entity"];
         options?: never;
@@ -5488,7 +5736,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** `GET /api/v1/admin/governance/domains/{id}/report` — `system.admin` only. */
+        /**
+         * Read a data domain's accountability report
+         * @description The domain's steward and deputy, its entities and their data classification, the legal holds on
+         *     them and the data subject requests that touched them. Compliance administrators only.
+         */
         get: operations["get_report"];
         put?: never;
         post?: never;
@@ -5505,7 +5757,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lists a domain's governance roles. */
+        /**
+         * List a domain's governance roles
+         * @description Who holds which governance role in the domain (owner, steward, deputy, custodian, consumer). Anyone
+         *     holding a role in the domain, or `system.admin`.
+         */
         get: operations["governance_list_roles"];
         /**
          * Gives a person a governance role in a domain.
@@ -5514,7 +5770,11 @@ export interface paths {
          */
         put: operations["governance_put_role"];
         post?: never;
-        /** Takes a governance role away. */
+        /**
+         * Take a governance role away
+         * @description The person named in the query no longer holds that role in the domain. The domain's owner or
+         *     steward, or `system.admin`. Audited.
+         */
         delete: operations["governance_delete_role"];
         options?: never;
         head?: never;
@@ -5554,7 +5814,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Reads a governance policy. */
+        /**
+         * Get a governance policy
+         * @description One policy: its English and Arabic name and text, its version and its enforcement links. Anyone
+         *     holding a role in its domain, or `system.admin`; anyone else gets 404.
+         */
         get: operations["governance_get_policy"];
         put?: never;
         post?: never;
@@ -5580,7 +5844,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lists a policy's exceptions. */
+        /**
+         * List a policy's exceptions
+         * @description The exceptions asked for on the policy, with their status (requested, approved, rejected,
+         *     expired) and who asked. Anyone holding a role in its domain, or `system.admin`.
+         */
         get: operations["governance_list_exceptions"];
         put?: never;
         /**
@@ -7797,6 +8065,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Heavy operations
+         * @description AA10-T7: mass operations, bulk operations, bulk transforms, staged and
+         *     file imports in one list, newest first, keyset paged; on the first page
+         *     an administrator also sees the indexes being built now. Administrators
+         *     see everyone's operations; anyone else sees only the ones they started.
+         */
+        get: operations["list_heavy_operations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/ops/metrics/catalogue": {
         parameters: {
             query?: never;
@@ -8660,8 +8951,21 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List S2S clients
+         * @description The machine clients that are not deleted, one-based pages, optionally only one status. Security
+         *     administrators only.
+         */
         get: operations["list_clients"];
         put?: never;
+        /**
+         * Register an S2S client
+         * @description A machine client: its immutable slug, name, limits (requests a minute, concurrent requests,
+         *     allowed CIDRs, payload size) and the user account it acts as. Without one, the client gets a
+         *     service user of its own with no role, so it can do nothing until granted one. An administrator
+         *     without `system.admin` cannot bind a client to a user holding it. Security administrators only.
+         *     Audited.
+         */
         post: operations["create_client"];
         delete?: never;
         options?: never;
@@ -8676,12 +8980,28 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get an S2S client
+         * @description One client's settings, its keys (public id, slot, last four characters, status; never the
+         *     secret), its entity permissions and its service user. Security administrators only.
+         */
         get: operations["get_client"];
         put?: never;
         post?: never;
+        /**
+         * Revoke an S2S client
+         * @description Marks the client revoked and deleted and revokes all its active keys in the same transaction,
+         *     so it cannot authenticate again. Security administrators only. Audited as a credential revocation.
+         */
         delete: operations["delete_client"];
         options?: never;
         head?: never;
+        /**
+         * Change an S2S client
+         * @description Changes the fields given: name, description, status, the service user it acts as, its limits,
+         *     whether it may act as a user, and its other settings. The service user can be re-pointed but not
+         *     cleared. Security administrators only. Audited.
+         */
         patch: operations["update_client"];
         trace?: never;
     };
@@ -8694,6 +9014,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Generate an S2S key
+         * @description A new key in the `primary` or `secondary` slot, which must have no active key (revoke it first).
+         *     The secret is returned once and stored encrypted; two slots let a key be replaced without a gap.
+         *     Security administrators only. Audited.
+         */
         post: operations["generate_key"];
         delete?: never;
         options?: never;
@@ -8711,6 +9037,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Revoke an S2S key
+         * @description Revokes the key in one slot; requests signed with it are refused from now on. Security
+         *     administrators only. Audited.
+         */
         delete: operations["revoke_key"];
         options?: never;
         head?: never;
@@ -8724,6 +9055,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Read an S2S client's access log
+         * @description The client's requests, newest first, at most 200 a call, optionally after a time or for one
+         *     correlation id. Security administrators only.
+         */
         get: operations["list_logs"];
         put?: never;
         post?: never;
@@ -8740,8 +9076,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List an S2S client's entity permissions
+         * @description Per entity, what the client may do: read, create, update, delete, export and bulk. Security
+         *     administrators only.
+         */
         get: operations["list_permissions"];
         put?: never;
+        /**
+         * Set an S2S client's permission on an entity
+         * @description Sets what the client may do on one entity (read, create, update, delete, export, bulk), replacing
+         *     what it had there. Security administrators only. Audited.
+         */
         post: operations["set_permission"];
         delete?: never;
         options?: never;
@@ -8759,6 +9105,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Remove an S2S client's permission on an entity
+         * @description The client may do nothing more on that entity. Security administrators only. Audited.
+         */
         delete: operations["delete_permission"];
         options?: never;
         head?: never;
@@ -8772,8 +9122,19 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List an S2S client's identity-provider trusts
+         * @description The issuers whose tokens the client's workload may exchange for an access token (RFC 7523):
+         *     issuer, audience, subject and JWKS URL. Security administrators only.
+         */
         get: operations["list_trusts"];
         put?: never;
+        /**
+         * Add an identity-provider trust to an S2S client
+         * @description Lets a workload signed in to the customer's own identity provider (an exact issuer, audience and
+         *     subject, keys from an `https` JWKS URL) get this deployment's access token for the client without
+         *     holding a secret of ours. Security administrators only. Audited.
+         */
         post: operations["create_trust"];
         delete?: never;
         options?: never;
@@ -8791,6 +9152,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Remove an identity-provider trust
+         * @description Tokens from that issuer and subject are no longer exchanged for the client. Security administrators
+         *     only. Audited.
+         */
         delete: operations["delete_trust"];
         options?: never;
         head?: never;
@@ -25083,8 +25449,19 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List workflow definitions
+         * @description The workflow definitions that are not deleted, optionally only active or inactive ones, one-based
+         *     pages. Automation administrators only.
+         */
         get: operations["list_definitions"];
         put?: never;
+        /**
+         * Create a workflow definition
+         * @description A definition with a unique logical name and a kind (`flow` by default, or `journey`, `nurture`,
+         *     `sequence`; fixed once created). It has no version yet. Recorded in the open changeset.
+         *     Automation administrators only. Audited.
+         */
         post: operations["create_definition"];
         delete?: never;
         options?: never;
@@ -25099,12 +25476,26 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get a workflow definition
+         * @description One definition with its versions. Automation administrators only.
+         */
         get: operations["get_definition"];
         put?: never;
         post?: never;
+        /**
+         * Delete a workflow definition
+         * @description Marks it deleted and inactive, so it starts no more runs. Recorded in the open changeset.
+         *     Automation administrators only. Audited.
+         */
         delete: operations["delete_definition"];
         options?: never;
         head?: never;
+        /**
+         * Change a workflow definition
+         * @description Renames it or switches it on or off when `row_version` is the stored one. Recorded in the open
+         *     changeset; another layer's definition is 409. Automation administrators only. Audited.
+         */
         patch: operations["update_definition"];
         trace?: never;
     };
@@ -25117,6 +25508,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Add a draft version
+         * @description A new draft version, numbered after the highest, with the graph given (an empty graph
+         *     otherwise). Recorded in the open changeset. Automation administrators only. Audited.
+         */
         post: operations["create_version"];
         delete?: never;
         options?: never;
@@ -25131,6 +25527,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get a workflow version
+         * @description One version: its number, status (draft or published) and graph. Automation administrators only.
+         */
         get: operations["get_version"];
         put?: never;
         post?: never;
@@ -25138,8 +25538,10 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Draft-only graph edit — the `row_version` CAS this plan's design review
-         *     settled on for concurrent editor sessions (P-workflow-engine.md §4.3).
+         * Edit a draft version's graph
+         * @description Replaces the graph of a draft version when `row_version` is the stored one, so two editors cannot
+         *     overwrite each other; a published version or a stale version is 409. Recorded in the open
+         *     changeset. Automation administrators only. Audited.
          */
         patch: operations["update_version_graph"];
         trace?: never;
@@ -25154,11 +25556,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * draft -> published. Graph validation (cycle/port-type check) and
-         *     `node_schema_hash` computation (P-workflow-engine.md §4.3/§5 step 4) run
-         *     here, before the status flip — a bad graph fails fast with an actionable
-         *     error, never a silent partial-publish. `workflow_trigger_index`'s
-         *     `entry` rows are rebuilt in the same transaction (§5 step 6).
+         * Publish a workflow version
+         * @description Checks the graph (no cycles, ports of matching types) and refuses a bad one with what is wrong,
+         *     then makes the draft the published version and rebuilds its triggers in the same transaction.
+         *     Recorded in the open changeset. Automation administrators only. Audited.
          */
         post: operations["publish_version"];
         delete?: never;
@@ -25176,7 +25577,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Replays a version over the flow's latest finished runs (M4-T3): each run's trigger input and approval decisions go through the simulation of this version, and every node whose outcome differs from what the run really did is reported. Nothing is written. */
+        /**
+         * Replay a version over recent runs
+         * @description Replays a version over the flow's latest finished runs (M4-T3): each run's trigger input and approval decisions go through the simulation of this version, and every node whose outcome differs from what the run really did is reported. Nothing is written.
+         */
         post: operations["workflow_replay_draft"];
         delete?: never;
         options?: never;
@@ -25193,6 +25597,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Simulate a workflow version
+         * @description Runs the version's graph in memory against the trigger payload given and returns every node's
+         *     trace. Nothing is written, sent or requested, whatever the nodes are, and a draft that is still
+         *     being edited can be simulated. Automation administrators only.
+         */
         post: operations["simulate_version"];
         delete?: never;
         options?: never;
@@ -25207,8 +25617,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List workflow runs
+         * @description Runs newest first, optionally only one status or only the runs about one record, one-based pages.
+         *     Automation administrators only.
+         */
         get: operations["list_instances"];
         put?: never;
+        /**
+         * Start a workflow run
+         * @description Starts the published, active version of the workflow named, with the context given and
+         *     optionally the record it is about. Automation administrators only. Audited.
+         */
         post: operations["start_manual"];
         delete?: never;
         options?: never;
@@ -25223,6 +25643,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Get a workflow run
+         * @description One run: its version, status, context, node data and each step's runs (round, status, attempts,
+         *     last error). Automation administrators only.
+         */
         get: operations["get_instance"];
         put?: never;
         post?: never;
@@ -25241,6 +25666,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Cancel a workflow run
+         * @description Cancels a queued, running, waiting or paused run when `row_version` is the stored one; a finished
+         *     or changed run is 409. Automation administrators only. Audited.
+         */
         post: operations["cancel_instance"];
         delete?: never;
         options?: never;
@@ -25257,6 +25687,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Move a run to another version
+         * @description Moves a waiting or paused run to a published version of its flow, each waiting step to the step
+         *     of the same id; a step missing from the target is 422. Send the run's `row_version`. Automation
+         *     administrators only. Audited.
+         */
         post: operations["workflow_instance_move"];
         delete?: never;
         options?: never;
@@ -25271,6 +25707,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Preview moving a run to another version
+         * @description Where each waiting step of the run would land in the target version (a published version of the
+         *     same flow). Changes nothing. Automation administrators only.
+         */
         get: operations["workflow_instance_move_preview"];
         put?: never;
         post?: never;
@@ -25289,6 +25730,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Pause a workflow run
+         * @description No step of a running or waiting run runs until it is resumed. Send the run's `row_version`.
+         *     Automation administrators only. Audited.
+         */
         post: operations["workflow_instance_pause"];
         delete?: never;
         options?: never;
@@ -25305,6 +25751,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Resume a paused workflow run
+         * @description The run continues where it stopped. Send the run's `row_version`. Automation administrators only.
+         *     Audited.
+         */
         post: operations["workflow_instance_resume"];
         delete?: never;
         options?: never;
@@ -25321,6 +25772,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Retry a failed workflow run
+         * @description Runs a failed run again from its failed step, with that step's attempts reset, when `row_version` is
+         *     the stored one. Automation administrators only. Audited.
+         */
         post: operations["workflow_instance_retry"];
         delete?: never;
         options?: never;
@@ -29273,6 +29729,16 @@ export interface components {
         AppliedFilter: {
             filter: components["schemas"]["Filter"];
             origin: components["schemas"]["FilterOrigin"];
+        };
+        /** @description What applying a pack did. */
+        AppliedPack: {
+            /** Format: uuid */
+            calendar_id: string;
+            /** @description The calendar was created by this apply (not found by country). */
+            created: boolean;
+            /** @description Holiday rules added or changed; 0 when the calendar already matched. */
+            rules_changed: number;
+            seasons_changed: number;
         };
         /** @description The newest `succeeded` plan the drift was computed against. */
         AppliedRef: {
@@ -34870,6 +35336,49 @@ export interface components {
                 /** @description The record's own state/status label, for display only. */
                 state: string;
                 title: string;
+            }[];
+            /**
+             * @description Opaque and signed: send it back verbatim as `cursor` for the next
+             *     page. A cursor this deployment did not issue is a 400
+             *     `invalid_cursor`.
+             */
+            next_cursor?: string | null;
+            /**
+             * Format: int64
+             * @description Exact size of the whole window, when the route counts it (first page
+             *     only); absent otherwise.
+             */
+            total?: number | null;
+        };
+        /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
+        CursorPage_OperationSummary: {
+            items: {
+                /** @description What it does within its kind: `update`, `delete`, `upsert`, `trim`... */
+                action?: string | null;
+                /** Format: date-time */
+                created_at: string;
+                /** @description The entity it works on (an index build: its table). */
+                entity: string;
+                /** Format: int64 */
+                estimated_rows?: number | null;
+                /** Format: date-time */
+                finished_at?: string | null;
+                /** Format: uuid */
+                id: string;
+                kind: string;
+                reason?: string | null;
+                /** Format: int64 */
+                rows_done?: number | null;
+                /**
+                 * Format: uuid
+                 * @description Who started it; an index build has no starter on record.
+                 */
+                started_by?: string | null;
+                /**
+                 * @description The operation's own status word (`running`, `done`, `completed`,
+                 *     `approved`, `applied`...), as its own status route reports it.
+                 */
+                status: string;
             }[];
             /**
              * @description Opaque and signed: send it back verbatim as `cursor` for the next
@@ -42137,6 +42646,15 @@ export interface components {
             projects: components["schemas"]["ProjectSection"][];
         };
         ModuleItem: {
+            /**
+             * Format: int64
+             * @description Y4-T5: the people who changed a record of the module's entities in
+             *     the last 30 days, from the audit log; `None` when it could not be
+             *     read.
+             */
+            active_users_30d?: number | null;
+            /** @description Y4-T5: the modules that must be on while this one is on. */
+            depends_on: string[];
             enabled: boolean;
             /**
              * @description Always true since D-778 (no licence is checked); kept so the wire
@@ -42144,6 +42662,11 @@ export interface components {
              */
             licensed: boolean;
             name: string;
+            /**
+             * @description Y4-T5: the version its engine ships at (Y4-T1 manifest); `None` for a
+             *     module no registered engine owns.
+             */
+            version?: string | null;
         };
         /** @description An account that changes territory. */
         Move: {
@@ -43243,6 +43766,40 @@ export interface components {
             /** @default false */
             write_owner_subtree: boolean;
         };
+        /**
+         * @description One long-running operation, whatever started it: a mass operation
+         *     (`mass`), a bulk create/update/delete (`bulk`), a bulk field transform
+         *     (`bulk_transform`), a staged import (`staged_import`), a file import
+         *     (`import`) or an index being built right now (`index_build`).
+         */
+        OperationSummary: {
+            /** @description What it does within its kind: `update`, `delete`, `upsert`, `trim`... */
+            action?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** @description The entity it works on (an index build: its table). */
+            entity: string;
+            /** Format: int64 */
+            estimated_rows?: number | null;
+            /** Format: date-time */
+            finished_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            reason?: string | null;
+            /** Format: int64 */
+            rows_done?: number | null;
+            /**
+             * Format: uuid
+             * @description Who started it; an index build has no starter on record.
+             */
+            started_by?: string | null;
+            /**
+             * @description The operation's own status word (`running`, `done`, `completed`,
+             *     `approved`, `applied`...), as its own status route reports it.
+             */
+            status: string;
+        };
         /** @description One node, from its heartbeat in the metrics store. */
         OpsNode: {
             /** @description It stored its metrics in the last three minutes. */
@@ -43548,6 +44105,23 @@ export interface components {
             public_key: string;
             /** Format: date-time */
             retired_at?: string | null;
+        };
+        /** @description A pack as the list shows it. */
+        PackSummary: {
+            /** @description The code `apply` takes, such as `sa`. */
+            code: string;
+            country_code: string;
+            /** @description The holidays, by name. */
+            holidays: string[];
+            name: string;
+            name_ar: string;
+            /**
+             * Format: int32
+             * @description The year the dates and spans were last checked against the source.
+             */
+            reviewed_for_year: number;
+            source_url: string;
+            tz: string;
         };
         /** @description One package. */
         PackageBody: {
@@ -64138,6 +64712,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The `ai_provider` record */
                 id: string;
             };
             cookie?: never;
@@ -64209,6 +64784,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The `ai_provider` record */
                 id: string;
             };
             cookie?: never;
@@ -67933,6 +68509,103 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_packs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The packs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackSummary"][];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    apply_pack: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The pack, such as `sa` */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the apply did */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppliedPack"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such pack */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another layer owns the calendar or one of its rules */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -78718,6 +79391,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The subscription */
                 id: string;
             };
             cookie?: never;
@@ -78767,6 +79441,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The subscription */
                 id: string;
             };
             cookie?: never;
@@ -78816,6 +79491,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The subscription */
                 id: string;
             };
             cookie?: never;
@@ -78885,6 +79561,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The subscription */
                 id: string;
             };
             cookie?: never;
@@ -78925,6 +79602,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The subscription */
                 id: string;
             };
             cookie?: never;
@@ -78978,6 +79656,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The subscription */
                 id: string;
             };
             cookie?: never;
@@ -79027,6 +79706,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The subscription */
                 id: string;
             };
             cookie?: never;
@@ -79546,6 +80226,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The domain */
                 id: string;
             };
             cookie?: never;
@@ -79595,6 +80276,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The domain */
                 id: string;
             };
             cookie?: never;
@@ -79666,6 +80348,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The domain */
                 id: string;
             };
             cookie?: never;
@@ -79728,7 +80411,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The domain */
                 id: string;
+                /** @description The entity's logical name */
                 entity_logicalname: string;
             };
             cookie?: never;
@@ -79776,6 +80461,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The domain */
                 id: string;
             };
             cookie?: never;
@@ -79829,6 +80515,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The domain */
                 id: string;
             };
             cookie?: never;
@@ -79878,6 +80565,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The domain */
                 id: string;
             };
             cookie?: never;
@@ -79927,6 +80615,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The domain */
                 id: string;
             };
             cookie?: never;
@@ -79994,6 +80683,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The domain */
                 id: string;
             };
             cookie?: never;
@@ -80151,6 +80841,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The policy */
                 id: string;
             };
             cookie?: never;
@@ -80194,6 +80885,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The policy */
                 id: string;
             };
             cookie?: never;
@@ -80250,6 +80942,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The policy */
                 id: string;
             };
             cookie?: never;
@@ -80321,6 +81014,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The policy */
                 id: string;
             };
             cookie?: never;
@@ -80361,6 +81055,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The policy */
                 id: string;
             };
             cookie?: never;
@@ -86809,6 +87504,52 @@ export interface operations {
             };
         };
     };
+    list_heavy_operations: {
+        parameters: {
+            query?: {
+                /**
+                 * @description The previous response's `next_cursor`, verbatim; omit for the first
+                 *     page.
+                 */
+                cursor?: string;
+                /** @description 1 to `MAX_PAGE_SIZE`; default `DEFAULT_PAGE_SIZE`. */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One keyset page of operations; `total` is not counted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage_OperationSummary"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A malformed cursor or page size */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     metric_catalogue: {
         parameters: {
             query?: never;
@@ -89387,6 +90128,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The client's id (not its slug) */
                 client_db_id: string;
             };
             cookie?: never;
@@ -89436,6 +90178,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The client's id (not its slug) */
                 client_db_id: string;
             };
             cookie?: never;
@@ -89485,6 +90228,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The client's id (not its slug) */
                 client_db_id: string;
             };
             cookie?: never;
@@ -89538,6 +90282,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The client's id (not its slug) */
                 client_db_id: string;
             };
             cookie?: never;
@@ -89591,7 +90336,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The client's id (not its slug) */
                 client_db_id: string;
+                /** @description `primary` or `secondary` */
                 slot: string;
             };
             cookie?: never;
@@ -89650,6 +90397,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The client's id (not its slug) */
                 client_db_id: string;
             };
             cookie?: never;
@@ -89699,6 +90447,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The client's id (not its slug) */
                 client_db_id: string;
             };
             cookie?: never;
@@ -89748,6 +90497,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The client's id (not its slug) */
                 client_db_id: string;
             };
             cookie?: never;
@@ -89801,7 +90551,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The client's id (not its slug) */
                 client_db_id: string;
+                /** @description The entity's logical name */
                 entity_name: string;
             };
             cookie?: never;
@@ -89851,6 +90603,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The client's id (not its slug) */
                 client_db_id: string;
             };
             cookie?: never;
@@ -89900,6 +90653,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The client's id (not its slug) */
                 client_db_id: string;
             };
             cookie?: never;
@@ -89971,7 +90725,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The client's id (not its slug) */
                 client_db_id: string;
+                /** @description The trust */
                 trust_id: string;
             };
             cookie?: never;
@@ -138049,6 +138805,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The definition */
                 id: string;
             };
             cookie?: never;
@@ -138098,6 +138855,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The definition */
                 id: string;
             };
             cookie?: never;
@@ -138156,6 +138914,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The definition */
                 id: string;
             };
             cookie?: never;
@@ -138218,6 +138977,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The definition */
                 id: string;
             };
             cookie?: never;
@@ -138280,7 +139040,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The definition */
                 id: string;
+                /** @description The version */
                 version_id: string;
             };
             cookie?: never;
@@ -138330,7 +139092,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The definition */
                 id: string;
+                /** @description The version */
                 version_id: string;
             };
             cookie?: never;
@@ -138393,7 +139157,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The definition */
                 id: string;
+                /** @description The version */
                 version_id: string;
             };
             cookie?: never;
@@ -138452,7 +139218,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The definition */
                 id: string;
+                /** @description The version */
                 version_id: string;
             };
             cookie?: never;
@@ -138515,7 +139283,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The definition */
                 id: string;
+                /** @description The version */
                 version_id: string;
             };
             cookie?: never;
@@ -138676,6 +139446,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The run */
                 id: string;
             };
             cookie?: never;
@@ -138725,6 +139496,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The run */
                 id: string;
             };
             cookie?: never;
@@ -138778,6 +139550,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The run */
                 id: string;
             };
             cookie?: never;
@@ -138852,6 +139625,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                /** @description The run */
                 id: string;
             };
             cookie?: never;
@@ -138910,6 +139684,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The run */
                 id: string;
             };
             cookie?: never;
@@ -138963,6 +139738,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The run */
                 id: string;
             };
             cookie?: never;
@@ -139016,6 +139792,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The run */
                 id: string;
             };
             cookie?: never;

@@ -805,6 +805,8 @@
         "tags": [
           "ai"
         ],
+        "summary": "Compare agent performance",
+        "description": "One row per agent over the date range, from the nightly rollup: tasks done and resolved, hand-offs,\ntokens and cost, with resolution, accuracy, hand-off rate and cost per task worked out at read time.\nAI administrators only.",
         "operationId": "get_performance",
         "parameters": [
           {
@@ -891,6 +893,8 @@
         "tags": [
           "ai"
         ],
+        "summary": "Rebuild agent performance for past days",
+        "description": "Queues a job that rebuilds the per-agent daily rollup for the days from `from` to `to` from the\noutcome, message and price ledgers. AI administrators only. Audited.",
         "operationId": "post_backfill",
         "requestBody": {
           "content": {
@@ -974,7 +978,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`GET /api/v1/admin/ai/agents/{agent}/usage` — what a published agent\nobject did today against its daily limits (AH4-T4, V2-D487).",
+        "summary": "Read an agent's usage today",
+        "description": "What a published agent object did today against each of its daily limits. Administrators only.",
         "operationId": "agent_usage",
         "parameters": [
           {
@@ -1051,7 +1056,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`GET /api/v1/admin/ai/agents/{id}/autonomy` — every non-read action with\nthe level it runs at for this agent.",
+        "summary": "List an agent's autonomy levels",
+        "description": "Every action other than a read, with the level it runs at for this agent: the level an\nadministrator set, or the built-in rule. AI administrators only.",
         "operationId": "list_agent_autonomy",
         "parameters": [
           {
@@ -1118,7 +1124,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`GET /api/v1/admin/ai/agents/{id}/autonomy/proposals` — open proposals.",
+        "summary": "List an agent's open autonomy proposals",
+        "description": "Raises of an action's level that the agent's measured agreement earned, waiting for a person to\naccept or reject them, newest first. AI administrators only.",
         "operationId": "list_autonomy_proposals",
         "parameters": [
           {
@@ -1185,7 +1192,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`PUT /api/v1/admin/ai/agents/{id}/autonomy/{action_id}` — sets the level.",
+        "summary": "Set an agent's autonomy level for an action",
+        "description": "Sets how far the agent may go with the action without a person (suggest, ask first, act on\nreview, act with undo, act and report, automatic), with its undo window, daily limit, money cap and\nwhether only records it owns; a level the action does not allow is 422. AI administrators only.\nAudited.",
         "operationId": "set_agent_autonomy",
         "parameters": [
           {
@@ -1308,7 +1316,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`DELETE /api/v1/admin/ai/agents/{id}/autonomy/{action_id}` — back to the\nbuilt-in rule.",
+        "summary": "Clear an agent's autonomy level for an action",
+        "description": "The action goes back to its built-in rule for this agent. AI administrators only. Audited.",
         "operationId": "clear_agent_autonomy",
         "parameters": [
           {
@@ -1396,6 +1405,8 @@
         "tags": [
           "ai"
         ],
+        "summary": "Read an agent's behaviour",
+        "description": "The agent's status and `row_version`, its baseline, its last 24 hours of activity and the last\ntime it was stopped automatically, with the reason. Switching it back on is an ordinary update of\nthe agent. AI administrators only.",
         "operationId": "get_behaviour",
         "parameters": [
           {
@@ -1462,7 +1473,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`POST /api/v1/admin/ai/agents/{id}/go-live` — moves a `testing`\ndefinition to `active`, refused below the agreement threshold.",
+        "summary": "Take an agent out of trial",
+        "description": "Moves an agent definition from `testing` to `active` when it agreed with what people did at least\nas often as `min_agreement`; below it the call is refused. AI administrators only. Audited.",
         "operationId": "agent_go_live",
         "parameters": [
           {
@@ -1578,6 +1590,8 @@
         "tags": [
           "ai"
         ],
+        "summary": "Read an agent's daily performance",
+        "description": "The agent's rollup day by day over the range, for charts. AI administrators only.",
         "operationId": "get_performance_daily",
         "parameters": [
           {
@@ -1674,6 +1688,8 @@
         "tags": [
           "ai"
         ],
+        "summary": "Roll back an agent",
+        "description": "Ends the agent's live sessions, then queues the undo of everything its sessions changed since\n`since`; 202 with the run's id. Administrators or holders of `ai_agent.supervise`. Audited.",
         "operationId": "post_rollback",
         "parameters": [
           {
@@ -1769,6 +1785,8 @@
         "tags": [
           "ai"
         ],
+        "summary": "Preview rolling back an agent",
+        "description": "The undo steps for everything the agent's sessions changed since `since`, as the caller, writing\nnothing. `since` must be in the past and inside the audit retention window. Administrators or\nholders of `ai_agent.supervise`.",
         "operationId": "get_rollback_preview",
         "parameters": [
           {
@@ -1855,6 +1873,8 @@
         "tags": [
           "ai"
         ],
+        "summary": "List what is behind an agent's figure",
+        "description": "The outcome rows (tasks or hand-offs) behind one day's number for the agent, keyset paged. AI\nadministrators only.",
         "operationId": "get_runs",
         "parameters": [
           {
@@ -1959,6 +1979,8 @@
         "tags": [
           "action"
         ],
+        "summary": "Read an agent's trial report",
+        "description": "While an agent definition is in `testing`, its writes and outside calls are recorded, not run, and\ncompared with what a person did to the same record within 24 hours; this is how often it agreed,\noverall and per action. AI administrators only.",
         "operationId": "agent_trial_report",
         "parameters": [
           {
@@ -2025,7 +2047,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`POST /api/v1/admin/ai/autonomy/proposals/{id}/accept`.",
+        "summary": "Accept an autonomy proposal",
+        "description": "Raises the agent's level for the action to what the proposal names and closes it. AI\nadministrators only. Audited.",
         "operationId": "accept_autonomy_proposal",
         "parameters": [
           {
@@ -2121,7 +2144,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`POST /api/v1/admin/ai/autonomy/proposals/{id}/reject`.",
+        "summary": "Reject an autonomy proposal",
+        "description": "Closes the proposal and leaves the agent's level as it is. AI administrators only. Audited.",
         "operationId": "reject_autonomy_proposal",
         "parameters": [
           {
@@ -2207,7 +2231,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`GET /api/v1/admin/ai/bot-analytics` — deployment-wide chatbot figures for\none window: turns, tool calls by type, handoffs by reason, deflection and\nthumbs. Aggregates only; the formulas are `01-architecture.md`'s C10-B.",
+        "summary": "Read chatbot analytics",
+        "description": "Deployment-wide chatbot figures for one window, optionally one surface: turns, tool calls by\ntype, hand-offs by reason, deflection and thumbs up or down. Aggregates only. AI administrators\nonly.",
         "operationId": "get_bot_analytics",
         "parameters": [
           {
@@ -2303,7 +2328,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`GET /api/v1/admin/ai/compliance-report` — models in use, their\napprovals, token spend, acceptance rates, and outcomes recorded without\nprovenance. `system.admin`-gated: this bundles per-organization AI usage\nand cost data, the same sensitivity class as the rest of `/admin/`.",
+        "summary": "Read the AI compliance report",
+        "description": "The models in use and their approvals, token spend, acceptance rates, and outcomes recorded\nwithout provenance. AI administrators only.",
         "operationId": "get_compliance_report",
         "responses": {
           "200": {
@@ -2358,7 +2384,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`GET /api/v1/admin/ai/eval-runs/{id}`",
+        "summary": "Get an eval run",
+        "description": "One run of an eval suite: its status, score and outcome, the suite version it ran, who started it\nand when it finished. AI administrators only.",
         "operationId": "get_eval_run",
         "parameters": [
           {
@@ -2435,7 +2462,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`POST /api/v1/admin/ai/eval-suites/{suite}/cases/from-message`",
+        "summary": "Add an eval case from a message",
+        "description": "Turns an answer that went wrong into a test case: the input is the person's message it replied to,\nthe expectation is what the administrator says should have happened (tools, text it must or must\nnot contain). AI administrators only. Audited.",
         "operationId": "case_from_message",
         "parameters": [
           {
@@ -2551,7 +2579,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`POST /api/v1/admin/ai/eval-suites/{suite}/runs`",
+        "summary": "Run an eval suite",
+        "description": "Records a run of the suite's newest version and returns at once; each case then runs in the\nbackground as one turn of a fresh session of the suite's agent, where a write is only proposed,\nand is graded. AI administrators only. Audited.",
         "operationId": "start_eval_run",
         "parameters": [
           {
@@ -2647,7 +2676,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`GET /api/v1/admin/ai/evidence`",
+        "summary": "Read the AI evidence trail",
+        "description": "What AI did, for an auditor, over a period (the last 30 days by default), oldest first and keyset\npaged: either every action an agent session invoked, with its outcome and the person it acted for\n(results left out), or every model-written suggestion with its model, prompt version and what a\nperson did with it. AI administrators only.",
         "operationId": "evidence",
         "parameters": [
           {
@@ -2771,6 +2801,8 @@
         "tags": [
           "ai"
         ],
+        "summary": "Run a follow-up rule now",
+        "description": "Queues one scan of an active follow-up rule now instead of at its next scheduled time; 202. AI\nadministrators only. Audited.",
         "operationId": "run_followup_rule",
         "parameters": [
           {
@@ -2941,7 +2973,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`POST /api/v1/admin/ai/preview/summary`",
+        "summary": "Preview a record summary prompt",
+        "description": "Exactly what a model would receive to summarise the record, built by the same code as\n`record.summarize` as the calling administrator, without calling a model. Nothing is generated,\ncached or spent. AI administrators only.",
         "operationId": "preview_summary",
         "requestBody": {
           "content": {
@@ -3021,7 +3054,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`GET /api/v1/admin/ai/prompts` — every prompt_version this build ships.\nAdmin-gated like every other admin-surface read in this workspace\n(`security-model`'s documented convention: `attome-api/src/admin/` and\nsiblings require `system.admin` on every route including reads). Prompts\nare code (see `prompt_registry.rs`'s doc comment) — this route is\ndeliberately read-only; there is no corresponding `POST`/`PUT`.",
+        "summary": "List the shipped prompts",
+        "description": "Every prompt version this build ships, per action, with its text. Prompts are code, so there is\nno route to change one. AI administrators only.",
         "operationId": "list_prompts",
         "responses": {
           "200": {
@@ -3076,7 +3110,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`GET /api/v1/admin/ai/prompts/diff?from=..&to=..` — a line diff between\ntwo shipped prompt_versions.",
+        "summary": "Compare two shipped prompts",
+        "description": "A line diff between two prompt versions this build ships. AI administrators only.",
         "operationId": "diff_prompts",
         "parameters": [
           {
@@ -3161,11 +3196,14 @@
         "tags": [
           "admin-ai-providers"
         ],
+        "summary": "Set an AI provider's API key",
+        "description": "Sets or replaces the provider's API key, stored encrypted and never returned. AI administrators\nonly. Audited.",
         "operationId": "set_credential",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The `ai_provider` record",
             "required": true,
             "schema": {
               "type": "string",
@@ -3275,11 +3313,14 @@
         "tags": [
           "admin-ai-providers"
         ],
+        "summary": "Fetch an AI provider's models",
+        "description": "Asks the provider for the models it offers, with the provider's own credential, and returns the\nlist; it writes no catalogue rows (an operator adds the ones wanted, which then wait for\napproval). Needs update rights on the provider, since it spends the operator's quota. AI\nadministrators only.",
         "operationId": "fetch_models",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The `ai_provider` record",
             "required": true,
             "schema": {
               "type": "string",
@@ -3365,7 +3406,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`GET /api/v1/admin/ai/runtime-switch` — every surface: what the\nconfiguration allows, what the runtime switch says, and the effect.",
+        "summary": "Read the AI runtime switches",
+        "description": "For every AI surface: what the configuration allows, what the runtime switch says, and the\neffect. AI administrators only.",
         "operationId": "get_runtime_switch",
         "responses": {
           "200": {
@@ -3420,7 +3462,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`PUT /api/v1/admin/ai/runtime-switch/{surface}` — turn one AI surface off,\nor back on, without a restart (row A-85). It can only narrow: turning a\nsurface on restores what the configuration allows, never more. A running\nconversation turn stops at its next step; nothing already dispatched is\nundone.",
+        "summary": "Switch an AI surface off or on",
+        "description": "Turns one AI surface off, or back on, without a restart. It only narrows: on restores what the\nconfiguration allows, never more. A running turn stops at its next step; nothing already\ndispatched is undone. AI administrators only. Audited.",
         "operationId": "put_runtime_switch",
         "parameters": [
           {
@@ -3525,7 +3568,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`GET /api/v1/admin/ai/spend`",
+        "summary": "Read AI spend",
+        "description": "What generation has cost this rolling month against each money cap (the deployment, each capped\nfeature, each agent that ran), from the counters the budget guard enforces, and where the month is\nheading. AI administrators only.",
         "operationId": "spend_report",
         "responses": {
           "200": {
@@ -3580,7 +3624,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`GET /api/v1/admin/ai/status`",
+        "summary": "Read the AI status page",
+        "description": "The generation model's card and whether it is approved, what is switched off, how turns ended over\nthe last day, and the latest switch changes as an incident timeline. AI administrators only.",
         "operationId": "ai_status",
         "responses": {
           "200": {
@@ -3635,7 +3680,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`GET /api/v1/admin/ai/switches` — every scope that has been switched.",
+        "summary": "List AI scope switches",
+        "description": "Every agent, model, provider, tool or channel that has been switched, off ones first, with who did\nit, when and why. AI administrators only.",
         "operationId": "list_switches",
         "responses": {
           "200": {
@@ -3690,7 +3736,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`PUT /api/v1/admin/ai/switches/{kind}/{key}` — turns one scope off, or\nback on (by a different administrator from the one who turned it off).",
+        "summary": "Switch an AI scope off or on",
+        "description": "Turns one agent, model, provider, tool or channel off (with an optional reason), or back on; turning it back on\ntakes a different administrator from the one who turned it off. AI administrators only. Audited.",
         "operationId": "put_switch",
         "parameters": [
           {
@@ -3797,6 +3844,8 @@
         "tags": [
           "ai"
         ],
+        "summary": "Read the work share between agents and people",
+        "description": "Per process over the date range: the completions agents and people made, the hand-offs between\nthem, the agents' share, and the counts per day for a trend. AI administrators only.",
         "operationId": "get_work_share",
         "parameters": [
           {
@@ -3883,6 +3932,8 @@
         "tags": [
           "ai"
         ],
+        "summary": "Rebuild the work share for past days",
+        "description": "Queues a job that recounts the work share for the date range from the change feed. AI\nadministrators only. Audited.",
         "operationId": "post_rebuild",
         "requestBody": {
           "content": {
@@ -3966,6 +4017,8 @@
         "tags": [
           "ai"
         ],
+        "summary": "List what is behind a work-share figure",
+        "description": "The change events behind one process's number on one day (ids, records and times only), newest\nfirst and keyset paged, while the change feed still keeps them. AI administrators only.",
         "operationId": "get_work_share_events",
         "parameters": [
           {
@@ -4079,7 +4132,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`GET /api/v1/admin/ai/write-policies` — the active policies.",
+        "summary": "List AI write approval policies",
+        "description": "The active policies that make an agent's write of an action (optionally on one entity) wait for a\nsecond person. AI administrators only.",
         "operationId": "list_write_policies",
         "responses": {
           "200": {
@@ -4132,7 +4186,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`POST /api/v1/admin/ai/write-policies` — requires approval for an action.",
+        "summary": "Require approval for an agent's writes",
+        "description": "From now on an agent's write of the action, optionally only on one entity, waits for a second\nperson's approval after the person it acts for confirms it. AI administrators only. Audited.",
         "operationId": "create_write_policy",
         "requestBody": {
           "content": {
@@ -4216,7 +4271,8 @@
         "tags": [
           "action"
         ],
-        "summary": "`DELETE /api/v1/admin/ai/write-policies/{id}` — deactivates a policy.",
+        "summary": "Remove an AI write approval policy",
+        "description": "Deactivates the policy; the writes it covered run once confirmed again. AI administrators only.\nAudited.",
         "operationId": "deactivate_policy",
         "parameters": [
           {
@@ -9505,6 +9561,161 @@
             {
               "category": "business_event",
               "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/calendars/packs": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List the country holiday packs",
+        "description": "Z12-T7: the official holiday packs this server carries, with the source\neach one cites and the year it was last reviewed. Administrators only.",
+        "operationId": "list_packs",
+        "responses": {
+          "200": {
+            "description": "The packs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PackSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/calendars/packs/{code}/apply": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Apply a country holiday pack",
+        "description": "Z12-T7: creates the country's calendar, or updates the active calendar\nwhose `country_code` matches, with the pack's holiday rules. An existing\ncalendar keeps its name, working days and hours; only rules that differ\nare written, so applying twice changes nothing the second time. Recorded\nin the open changeset as calendar and rule writes. Administrators only.\nAudited.",
+        "operationId": "apply_pack",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "description": "The pack, such as `sa`",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What the apply did",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppliedPack"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such pack",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another layer owns the calendar or one of its rules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
             }
           ],
           "policy": "entity_policy"
@@ -27147,6 +27358,8 @@
         "tags": [
           "admin-events"
         ],
+        "summary": "List event subscriptions",
+        "description": "The webhook and audit subscriptions that are not deleted, newest first, one-based pages,\noptionally only one kind or only active ones. Integration administrators only.",
         "operationId": "list_subscriptions",
         "parameters": [
           {
@@ -27240,6 +27453,8 @@
         "tags": [
           "admin-events"
         ],
+        "summary": "Create an event subscription",
+        "description": "A webhook or audit subscription: which entities, operations and named events it matches, the\ntarget URL (http or https, screened against private addresses now and at every send), retry class,\npayload shape and owner. The signing secret is generated here and returned once, in the plain and\nthe Standard Webhooks form; it is stored encrypted. Integration administrators only. Audited.",
         "operationId": "create_subscription",
         "requestBody": {
           "content": {
@@ -27323,11 +27538,14 @@
         "tags": [
           "admin-events"
         ],
+        "summary": "Get an event subscription",
+        "description": "One subscription's settings and filters, without its secret. Integration administrators only.",
         "operationId": "get_subscription",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The subscription",
             "required": true,
             "schema": {
               "type": "string",
@@ -27396,11 +27614,14 @@
         "tags": [
           "admin-events"
         ],
+        "summary": "Delete an event subscription",
+        "description": "Marks the subscription deleted and inactive, so it matches nothing more; its delivery log stays.\nIntegration administrators only. Audited.",
         "operationId": "delete_subscription",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The subscription",
             "required": true,
             "schema": {
               "type": "string",
@@ -27476,11 +27697,14 @@
         "tags": [
           "admin-events"
         ],
+        "summary": "Change an event subscription",
+        "description": "Changes the fields given (name, active, filters, target URL, retry class, attempts, payload\nshape, target authentication) when `row_version` is the stored one; a stale version is 409.\nIntegration administrators only. Audited.",
         "operationId": "update_subscription",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The subscription",
             "required": true,
             "schema": {
               "type": "string",
@@ -27580,11 +27804,14 @@
         "tags": [
           "admin-events"
         ],
+        "summary": "List a subscription's deliveries",
+        "description": "The delivery log of one subscription, newest first, one-based pages, optionally only one status:\nattempts, the last error and HTTP status, and when it was delivered. Integration administrators only.",
         "operationId": "list_event_deliveries",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The subscription",
             "required": true,
             "schema": {
               "type": "string",
@@ -27675,12 +27902,14 @@
         "tags": [
           "admin-events"
         ],
+        "summary": "Replay a subscription's deliveries",
         "description": "Sends again every delivery the subscription matched since `from` (M13-T4): delivered, failed and dead-lettered ones go back to pending with their attempts reset, at most 10,000. Each keeps its event id, so a receiver that deduplicates on `webhook-id` sees a retry, not a new event.",
         "operationId": "event_subscription_replay",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The subscription",
             "required": true,
             "schema": {
               "type": "string",
@@ -27770,11 +27999,14 @@
         "tags": [
           "admin-events"
         ],
+        "summary": "Rotate a subscription's signing secret",
+        "description": "Generates a new signing secret, stores it encrypted and returns it once; deliveries are signed\nwith it from now on. Integration administrators only. Audited as a credential rotation.",
         "operationId": "rotate_secret",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The subscription",
             "required": true,
             "schema": {
               "type": "string",
@@ -27854,12 +28086,14 @@
         "tags": [
           "admin-events"
         ],
+        "summary": "Send a test delivery",
         "description": "Queues one test delivery to the subscription's target (M13-T4): entity `attome_test`, operation `test`, signed like every delivery. Its outcome shows in the delivery log.",
         "operationId": "event_subscription_send_test",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The subscription",
             "required": true,
             "schema": {
               "type": "string",
@@ -28328,7 +28562,8 @@
         "tags": [
           "admin"
         ],
-        "summary": "Reads an asset's certification, `stale` when its definition changed.",
+        "summary": "Get an asset's certification",
+        "description": "Who certified the asset and when, and `stale` when its definition (an entity's columns and\nactive attributes) has changed since. Anyone holding a role in the asset's domain, or\n`system.admin`.",
         "operationId": "governance_get_certification",
         "parameters": [
           {
@@ -28506,7 +28741,8 @@
         "tags": [
           "admin"
         ],
-        "summary": "`GET /api/v1/admin/governance/domains` — `system.admin` only.",
+        "summary": "List data domains",
+        "description": "The data domains of the accountability register, with each one's steward and deputy, one-based\npages. Compliance administrators only.",
         "operationId": "list_domains",
         "parameters": [
           {
@@ -28592,7 +28828,8 @@
         "tags": [
           "admin"
         ],
-        "summary": "`POST /api/v1/admin/governance/domains` — `system.admin` only.",
+        "summary": "Create a data domain",
+        "description": "A named data domain with an optional description, steward and deputy (each an active user).\nCompliance administrators only. Audited.",
         "operationId": "create_domain",
         "requestBody": {
           "content": {
@@ -28676,12 +28913,14 @@
         "tags": [
           "admin"
         ],
-        "summary": "`GET /api/v1/admin/governance/domains/{id}` — `system.admin` only.",
+        "summary": "Get a data domain",
+        "description": "One domain: its name, description, steward, deputy and `row_version`. Compliance administrators\nonly.",
         "operationId": "get_domain",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The domain",
             "required": true,
             "schema": {
               "type": "string",
@@ -28750,12 +28989,14 @@
         "tags": [
           "admin"
         ],
-        "summary": "`PATCH /api/v1/admin/governance/domains/{id}` — `system.admin` only.",
+        "summary": "Change a data domain",
+        "description": "Changes the fields given (name, description, steward, deputy) when `row_version` is the stored\none; an empty description clears it, and a steward or deputy can be replaced but not cleared.\nCompliance administrators only. Audited.",
         "operationId": "update_domain",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The domain",
             "required": true,
             "schema": {
               "type": "string",
@@ -28865,12 +29106,14 @@
         "tags": [
           "admin"
         ],
-        "summary": "`POST /api/v1/admin/governance/domains/{id}/entities` — `system.admin`\nonly. Assigns every named entity's `domain_ref` to this domain\n(re-assigning it away from any prior domain it belonged to — an entity\nhas at most one domain). Every name is validated against the live\nmetadata registry first (never interpolated from unvalidated input,\nguidelines §4); the whole call is rejected if any name is unknown, rather\nthan partially applying.",
+        "summary": "Assign entities to a data domain",
+        "description": "Moves every named entity into this domain, out of any domain it was in (an entity has at most\none). Every name is checked against the live metadata first, and one unknown name refuses the\nwhole call. Compliance administrators only. Audited.",
         "operationId": "assign_entities",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The domain",
             "required": true,
             "schema": {
               "type": "string",
@@ -28973,12 +29216,14 @@
         "tags": [
           "admin"
         ],
-        "summary": "`DELETE /api/v1/admin/governance/domains/{id}/entities/{entity_logicalname}`\n— `system.admin` only. Clears the entity's `domain_ref` back to\nunassigned, but only if it currently belongs to exactly this domain (a\nstale unassign against the wrong domain id is a no-op `404`, not a\nsilent success against whichever domain the entity actually has).",
+        "summary": "Remove an entity from a data domain",
+        "description": "Leaves the entity in no domain, but only if it is in this one; against another domain the call is\n404 and changes nothing. Compliance administrators only. Audited.",
         "operationId": "unassign_entity",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The domain",
             "required": true,
             "schema": {
               "type": "string",
@@ -28988,6 +29233,7 @@
           {
             "name": "entity_logicalname",
             "in": "path",
+            "description": "The entity's logical name",
             "required": true,
             "schema": {
               "type": "string"
@@ -29066,6 +29312,7 @@
           {
             "name": "id",
             "in": "path",
+            "description": "The domain",
             "required": true,
             "schema": {
               "type": "string",
@@ -29155,12 +29402,14 @@
         "tags": [
           "admin"
         ],
-        "summary": "`GET /api/v1/admin/governance/domains/{id}/report` — `system.admin` only.",
+        "summary": "Read a data domain's accountability report",
+        "description": "The domain's steward and deputy, its entities and their data classification, the legal holds on\nthem and the data subject requests that touched them. Compliance administrators only.",
         "operationId": "get_report",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The domain",
             "required": true,
             "schema": {
               "type": "string",
@@ -29231,12 +29480,14 @@
         "tags": [
           "admin"
         ],
-        "summary": "Lists a domain's governance roles.",
+        "summary": "List a domain's governance roles",
+        "description": "Who holds which governance role in the domain (owner, steward, deputy, custodian, consumer). Anyone\nholding a role in the domain, or `system.admin`.",
         "operationId": "governance_list_roles",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The domain",
             "required": true,
             "schema": {
               "type": "string",
@@ -29312,6 +29563,7 @@
           {
             "name": "id",
             "in": "path",
+            "description": "The domain",
             "required": true,
             "schema": {
               "type": "string",
@@ -29409,12 +29661,14 @@
         "tags": [
           "admin"
         ],
-        "summary": "Takes a governance role away.",
+        "summary": "Take a governance role away",
+        "description": "The person named in the query no longer holds that role in the domain. The domain's owner or\nsteward, or `system.admin`. Audited.",
         "operationId": "governance_delete_role",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The domain",
             "required": true,
             "schema": {
               "type": "string",
@@ -29677,12 +29931,14 @@
         "tags": [
           "admin"
         ],
-        "summary": "Reads a governance policy.",
+        "summary": "Get a governance policy",
+        "description": "One policy: its English and Arabic name and text, its version and its enforcement links. Anyone\nholding a role in its domain, or `system.admin`; anyone else gets 404.",
         "operationId": "governance_get_policy",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The policy",
             "required": true,
             "schema": {
               "type": "string",
@@ -29748,6 +30004,7 @@
           {
             "name": "id",
             "in": "path",
+            "description": "The policy",
             "required": true,
             "schema": {
               "type": "string",
@@ -29845,6 +30102,7 @@
           {
             "name": "id",
             "in": "path",
+            "description": "The policy",
             "required": true,
             "schema": {
               "type": "string",
@@ -29954,12 +30212,14 @@
         "tags": [
           "admin"
         ],
-        "summary": "Lists a policy's exceptions.",
+        "summary": "List a policy's exceptions",
+        "description": "The exceptions asked for on the policy, with their status (requested, approved, rejected,\nexpired) and who asked. Anyone holding a role in its domain, or `system.admin`.",
         "operationId": "governance_list_exceptions",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The policy",
             "required": true,
             "schema": {
               "type": "string",
@@ -30025,6 +30285,7 @@
           {
             "name": "id",
             "in": "path",
+            "description": "The policy",
             "required": true,
             "schema": {
               "type": "string",
@@ -40532,6 +40793,83 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/operations": {
+      "get": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Heavy operations",
+        "description": "AA10-T7: mass operations, bulk operations, bulk transforms, staged and\nfile imports in one list, newest first, keyset paged; on the first page\nan administrator also sees the indexes being built now. Administrators\nsee everyone's operations; anyone else sees only the ones they started.",
+        "operationId": "list_heavy_operations",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "The previous response's `next_cursor`, verbatim; omit for the first\npage.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "1 to `MAX_PAGE_SIZE`; default `DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One keyset page of operations; `total` is not counted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CursorPage_OperationSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A malformed cursor or page size",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/ops/metrics/catalogue": {
       "get": {
         "tags": [
@@ -44482,6 +44820,8 @@
         "tags": [
           "admin-security"
         ],
+        "summary": "List S2S clients",
+        "description": "The machine clients that are not deleted, one-based pages, optionally only one status. Security\nadministrators only.",
         "operationId": "list_clients",
         "parameters": [
           {
@@ -44576,6 +44916,8 @@
         "tags": [
           "admin-security"
         ],
+        "summary": "Register an S2S client",
+        "description": "A machine client: its immutable slug, name, limits (requests a minute, concurrent requests,\nallowed CIDRs, payload size) and the user account it acts as. Without one, the client gets a\nservice user of its own with no role, so it can do nothing until granted one. An administrator\nwithout `system.admin` cannot bind a client to a user holding it. Security administrators only.\nAudited.",
         "operationId": "create_client",
         "requestBody": {
           "content": {
@@ -44659,11 +45001,14 @@
         "tags": [
           "admin-security"
         ],
+        "summary": "Get an S2S client",
+        "description": "One client's settings, its keys (public id, slot, last four characters, status; never the\nsecret), its entity permissions and its service user. Security administrators only.",
         "operationId": "get_client",
         "parameters": [
           {
             "name": "client_db_id",
             "in": "path",
+            "description": "The client's id (not its slug)",
             "required": true,
             "schema": {
               "type": "string",
@@ -44732,11 +45077,14 @@
         "tags": [
           "admin-security"
         ],
+        "summary": "Revoke an S2S client",
+        "description": "Marks the client revoked and deleted and revokes all its active keys in the same transaction,\nso it cannot authenticate again. Security administrators only. Audited as a credential revocation.",
         "operationId": "delete_client",
         "parameters": [
           {
             "name": "client_db_id",
             "in": "path",
+            "description": "The client's id (not its slug)",
             "required": true,
             "schema": {
               "type": "string",
@@ -44812,11 +45160,14 @@
         "tags": [
           "admin-security"
         ],
+        "summary": "Change an S2S client",
+        "description": "Changes the fields given: name, description, status, the service user it acts as, its limits,\nwhether it may act as a user, and its other settings. The service user can be re-pointed but not\ncleared. Security administrators only. Audited.",
         "operationId": "update_client",
         "parameters": [
           {
             "name": "client_db_id",
             "in": "path",
+            "description": "The client's id (not its slug)",
             "required": true,
             "schema": {
               "type": "string",
@@ -44906,11 +45257,14 @@
         "tags": [
           "admin-security"
         ],
+        "summary": "Generate an S2S key",
+        "description": "A new key in the `primary` or `secondary` slot, which must have no active key (revoke it first).\nThe secret is returned once and stored encrypted; two slots let a key be replaced without a gap.\nSecurity administrators only. Audited.",
         "operationId": "generate_key",
         "parameters": [
           {
             "name": "client_db_id",
             "in": "path",
+            "description": "The client's id (not its slug)",
             "required": true,
             "schema": {
               "type": "string",
@@ -45000,11 +45354,14 @@
         "tags": [
           "admin-security"
         ],
+        "summary": "Revoke an S2S key",
+        "description": "Revokes the key in one slot; requests signed with it are refused from now on. Security\nadministrators only. Audited.",
         "operationId": "revoke_key",
         "parameters": [
           {
             "name": "client_db_id",
             "in": "path",
+            "description": "The client's id (not its slug)",
             "required": true,
             "schema": {
               "type": "string",
@@ -45014,6 +45371,7 @@
           {
             "name": "slot",
             "in": "path",
+            "description": "`primary` or `secondary`",
             "required": true,
             "schema": {
               "type": "string"
@@ -45090,11 +45448,14 @@
         "tags": [
           "admin-security"
         ],
+        "summary": "Read an S2S client's access log",
+        "description": "The client's requests, newest first, at most 200 a call, optionally after a time or for one\ncorrelation id. Security administrators only.",
         "operationId": "list_logs",
         "parameters": [
           {
             "name": "client_db_id",
             "in": "path",
+            "description": "The client's id (not its slug)",
             "required": true,
             "schema": {
               "type": "string",
@@ -45204,11 +45565,14 @@
         "tags": [
           "admin-security"
         ],
+        "summary": "List an S2S client's entity permissions",
+        "description": "Per entity, what the client may do: read, create, update, delete, export and bulk. Security\nadministrators only.",
         "operationId": "list_permissions",
         "parameters": [
           {
             "name": "client_db_id",
             "in": "path",
+            "description": "The client's id (not its slug)",
             "required": true,
             "schema": {
               "type": "string",
@@ -45280,11 +45644,14 @@
         "tags": [
           "admin-security"
         ],
+        "summary": "Set an S2S client's permission on an entity",
+        "description": "Sets what the client may do on one entity (read, create, update, delete, export, bulk), replacing\nwhat it had there. Security administrators only. Audited.",
         "operationId": "set_permission",
         "parameters": [
           {
             "name": "client_db_id",
             "in": "path",
+            "description": "The client's id (not its slug)",
             "required": true,
             "schema": {
               "type": "string",
@@ -45374,11 +45741,14 @@
         "tags": [
           "admin-security"
         ],
+        "summary": "Remove an S2S client's permission on an entity",
+        "description": "The client may do nothing more on that entity. Security administrators only. Audited.",
         "operationId": "delete_permission",
         "parameters": [
           {
             "name": "client_db_id",
             "in": "path",
+            "description": "The client's id (not its slug)",
             "required": true,
             "schema": {
               "type": "string",
@@ -45388,6 +45758,7 @@
           {
             "name": "entity_name",
             "in": "path",
+            "description": "The entity's logical name",
             "required": true,
             "schema": {
               "type": "string"
@@ -45464,11 +45835,14 @@
         "tags": [
           "admin-security"
         ],
+        "summary": "List an S2S client's identity-provider trusts",
+        "description": "The issuers whose tokens the client's workload may exchange for an access token (RFC 7523):\nissuer, audience, subject and JWKS URL. Security administrators only.",
         "operationId": "list_trusts",
         "parameters": [
           {
             "name": "client_db_id",
             "in": "path",
+            "description": "The client's id (not its slug)",
             "required": true,
             "schema": {
               "type": "string",
@@ -45537,11 +45911,14 @@
         "tags": [
           "admin-security"
         ],
+        "summary": "Add an identity-provider trust to an S2S client",
+        "description": "Lets a workload signed in to the customer's own identity provider (an exact issuer, audience and\nsubject, keys from an `https` JWKS URL) get this deployment's access token for the client without\nholding a secret of ours. Security administrators only. Audited.",
         "operationId": "create_trust",
         "parameters": [
           {
             "name": "client_db_id",
             "in": "path",
+            "description": "The client's id (not its slug)",
             "required": true,
             "schema": {
               "type": "string",
@@ -45651,11 +46028,14 @@
         "tags": [
           "admin-security"
         ],
+        "summary": "Remove an identity-provider trust",
+        "description": "Tokens from that issuer and subject are no longer exchanged for the client. Security administrators\nonly. Audited.",
         "operationId": "delete_trust",
         "parameters": [
           {
             "name": "client_db_id",
             "in": "path",
+            "description": "The client's id (not its slug)",
             "required": true,
             "schema": {
               "type": "string",
@@ -45665,6 +46045,7 @@
           {
             "name": "trust_id",
             "in": "path",
+            "description": "The trust",
             "required": true,
             "schema": {
               "type": "string",
@@ -124164,6 +124545,8 @@
         "tags": [
           "workflow"
         ],
+        "summary": "List workflow definitions",
+        "description": "The workflow definitions that are not deleted, optionally only active or inactive ones, one-based\npages. Automation administrators only.",
         "operationId": "list_definitions",
         "parameters": [
           {
@@ -124258,6 +124641,8 @@
         "tags": [
           "workflow"
         ],
+        "summary": "Create a workflow definition",
+        "description": "A definition with a unique logical name and a kind (`flow` by default, or `journey`, `nurture`,\n`sequence`; fixed once created). It has no version yet. Recorded in the open changeset.\nAutomation administrators only. Audited.",
         "operationId": "create_definition",
         "requestBody": {
           "content": {
@@ -124351,11 +124736,14 @@
         "tags": [
           "workflow"
         ],
+        "summary": "Get a workflow definition",
+        "description": "One definition with its versions. Automation administrators only.",
         "operationId": "get_definition",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The definition",
             "required": true,
             "schema": {
               "type": "string",
@@ -124424,11 +124812,14 @@
         "tags": [
           "workflow"
         ],
+        "summary": "Delete a workflow definition",
+        "description": "Marks it deleted and inactive, so it starts no more runs. Recorded in the open changeset.\nAutomation administrators only. Audited.",
         "operationId": "delete_definition",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The definition",
             "required": true,
             "schema": {
               "type": "string",
@@ -124514,11 +124905,14 @@
         "tags": [
           "workflow"
         ],
+        "summary": "Change a workflow definition",
+        "description": "Renames it or switches it on or off when `row_version` is the stored one. Recorded in the open\nchangeset; another layer's definition is 409. Automation administrators only. Audited.",
         "operationId": "update_definition",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The definition",
             "required": true,
             "schema": {
               "type": "string",
@@ -124618,11 +125012,14 @@
         "tags": [
           "workflow"
         ],
+        "summary": "Add a draft version",
+        "description": "A new draft version, numbered after the highest, with the graph given (an empty graph\notherwise). Recorded in the open changeset. Automation administrators only. Audited.",
         "operationId": "create_version",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The definition",
             "required": true,
             "schema": {
               "type": "string",
@@ -124722,11 +125119,14 @@
         "tags": [
           "workflow"
         ],
+        "summary": "Get a workflow version",
+        "description": "One version: its number, status (draft or published) and graph. Automation administrators only.",
         "operationId": "get_version",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The definition",
             "required": true,
             "schema": {
               "type": "string",
@@ -124736,6 +125136,7 @@
           {
             "name": "version_id",
             "in": "path",
+            "description": "The version",
             "required": true,
             "schema": {
               "type": "string",
@@ -124804,12 +125205,14 @@
         "tags": [
           "workflow"
         ],
-        "summary": "Draft-only graph edit — the `row_version` CAS this plan's design review\nsettled on for concurrent editor sessions (P-workflow-engine.md §4.3).",
+        "summary": "Edit a draft version's graph",
+        "description": "Replaces the graph of a draft version when `row_version` is the stored one, so two editors cannot\noverwrite each other; a published version or a stale version is 409. Recorded in the open\nchangeset. Automation administrators only. Audited.",
         "operationId": "update_version_graph",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The definition",
             "required": true,
             "schema": {
               "type": "string",
@@ -124819,6 +125222,7 @@
           {
             "name": "version_id",
             "in": "path",
+            "description": "The version",
             "required": true,
             "schema": {
               "type": "string",
@@ -124918,12 +125322,14 @@
         "tags": [
           "workflow"
         ],
-        "summary": "draft -> published. Graph validation (cycle/port-type check) and\n`node_schema_hash` computation (P-workflow-engine.md §4.3/§5 step 4) run\nhere, before the status flip — a bad graph fails fast with an actionable\nerror, never a silent partial-publish. `workflow_trigger_index`'s\n`entry` rows are rebuilt in the same transaction (§5 step 6).",
+        "summary": "Publish a workflow version",
+        "description": "Checks the graph (no cycles, ports of matching types) and refuses a bad one with what is wrong,\nthen makes the draft the published version and rebuilds its triggers in the same transaction.\nRecorded in the open changeset. Automation administrators only. Audited.",
         "operationId": "publish_version",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The definition",
             "required": true,
             "schema": {
               "type": "string",
@@ -124933,6 +125339,7 @@
           {
             "name": "version_id",
             "in": "path",
+            "description": "The version",
             "required": true,
             "schema": {
               "type": "string",
@@ -125022,12 +125429,14 @@
         "tags": [
           "workflow"
         ],
+        "summary": "Replay a version over recent runs",
         "description": "Replays a version over the flow's latest finished runs (M4-T3): each run's trigger input and approval decisions go through the simulation of this version, and every node whose outcome differs from what the run really did is reported. Nothing is written.",
         "operationId": "workflow_replay_draft",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The definition",
             "required": true,
             "schema": {
               "type": "string",
@@ -125037,6 +125446,7 @@
           {
             "name": "version_id",
             "in": "path",
+            "description": "The version",
             "required": true,
             "schema": {
               "type": "string",
@@ -125132,11 +125542,14 @@
         "tags": [
           "workflow"
         ],
+        "summary": "Simulate a workflow version",
+        "description": "Runs the version's graph in memory against the trigger payload given and returns every node's\ntrace. Nothing is written, sent or requested, whatever the nodes are, and a draft that is still\nbeing edited can be simulated. Automation administrators only.",
         "operationId": "simulate_version",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The definition",
             "required": true,
             "schema": {
               "type": "string",
@@ -125146,6 +125559,7 @@
           {
             "name": "version_id",
             "in": "path",
+            "description": "The version",
             "required": true,
             "schema": {
               "type": "string",
@@ -125231,6 +125645,8 @@
         "tags": [
           "workflow"
         ],
+        "summary": "List workflow runs",
+        "description": "Runs newest first, optionally only one status or only the runs about one record, one-based pages.\nAutomation administrators only.",
         "operationId": "list_instances",
         "parameters": [
           {
@@ -125335,6 +125751,8 @@
         "tags": [
           "workflow"
         ],
+        "summary": "Start a workflow run",
+        "description": "Starts the published, active version of the workflow named, with the context given and\noptionally the record it is about. Automation administrators only. Audited.",
         "operationId": "start_manual",
         "requestBody": {
           "content": {
@@ -125416,11 +125834,14 @@
         "tags": [
           "workflow"
         ],
+        "summary": "Get a workflow run",
+        "description": "One run: its version, status, context, node data and each step's runs (round, status, attempts,\nlast error). Automation administrators only.",
         "operationId": "get_instance",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The run",
             "required": true,
             "schema": {
               "type": "string",
@@ -125491,11 +125912,14 @@
         "tags": [
           "workflow"
         ],
+        "summary": "Cancel a workflow run",
+        "description": "Cancels a queued, running, waiting or paused run when `row_version` is the stored one; a finished\nor changed run is 409. Automation administrators only. Audited.",
         "operationId": "cancel_instance",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The run",
             "required": true,
             "schema": {
               "type": "string",
@@ -125583,11 +126007,14 @@
         "tags": [
           "workflow"
         ],
+        "summary": "Move a run to another version",
+        "description": "Moves a waiting or paused run to a published version of its flow, each waiting step to the step\nof the same id; a step missing from the target is 422. Send the run's `row_version`. Automation\nadministrators only. Audited.",
         "operationId": "workflow_instance_move",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The run",
             "required": true,
             "schema": {
               "type": "string",
@@ -125697,11 +126124,14 @@
         "tags": [
           "workflow"
         ],
+        "summary": "Preview moving a run to another version",
+        "description": "Where each waiting step of the run would land in the target version (a published version of the\nsame flow). Changes nothing. Automation administrators only.",
         "operationId": "workflow_instance_move_preview",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The run",
             "required": true,
             "schema": {
               "type": "string",
@@ -125792,11 +126222,14 @@
         "tags": [
           "workflow"
         ],
+        "summary": "Pause a workflow run",
+        "description": "No step of a running or waiting run runs until it is resumed. Send the run's `row_version`.\nAutomation administrators only. Audited.",
         "operationId": "workflow_instance_pause",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The run",
             "required": true,
             "schema": {
               "type": "string",
@@ -125886,11 +126319,14 @@
         "tags": [
           "workflow"
         ],
+        "summary": "Resume a paused workflow run",
+        "description": "The run continues where it stopped. Send the run's `row_version`. Automation administrators only.\nAudited.",
         "operationId": "workflow_instance_resume",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The run",
             "required": true,
             "schema": {
               "type": "string",
@@ -125980,11 +126416,14 @@
         "tags": [
           "workflow"
         ],
+        "summary": "Retry a failed workflow run",
+        "description": "Runs a failed run again from its failed step, with that step's attempts reset, when `row_version` is\nthe stored one. Automation administrators only. Audited.",
         "operationId": "workflow_instance_retry",
         "parameters": [
           {
             "name": "id",
             "in": "path",
+            "description": "The run",
             "required": true,
             "schema": {
               "type": "string",
@@ -144557,6 +144996,35 @@
           }
         }
       },
+      "AppliedPack": {
+        "type": "object",
+        "description": "What applying a pack did.",
+        "required": [
+          "calendar_id",
+          "created",
+          "rules_changed",
+          "seasons_changed"
+        ],
+        "properties": {
+          "calendar_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created": {
+            "type": "boolean",
+            "description": "The calendar was created by this apply (not found by country)."
+          },
+          "rules_changed": {
+            "type": "integer",
+            "description": "Holiday rules added or changed; 0 when the calendar already matched.",
+            "minimum": 0
+          },
+          "seasons_changed": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
       "AppliedRef": {
         "type": "object",
         "description": "The newest `succeeded` plan the drift was computed against.",
@@ -158916,6 +159384,107 @@
                 },
                 "title": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Opaque and signed: send it back verbatim as `cursor` for the next\npage. A cursor this deployment did not issue is a 400\n`invalid_cursor`."
+          },
+          "total": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Exact size of the whole window, when the route counts it (first page\nonly); absent otherwise."
+          }
+        }
+      },
+      "CursorPage_OperationSummary": {
+        "type": "object",
+        "description": "The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only.",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One long-running operation, whatever started it: a mass operation\n(`mass`), a bulk create/update/delete (`bulk`), a bulk field transform\n(`bulk_transform`), a staged import (`staged_import`), a file import\n(`import`) or an index being built right now (`index_build`).",
+              "required": [
+                "id",
+                "kind",
+                "entity",
+                "status",
+                "created_at"
+              ],
+              "properties": {
+                "action": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "What it does within its kind: `update`, `delete`, `upsert`, `trim`..."
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "entity": {
+                  "type": "string",
+                  "description": "The entity it works on (an index build: its table)."
+                },
+                "estimated_rows": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int64"
+                },
+                "finished_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "rows_done": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int64"
+                },
+                "started_by": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Who started it; an index build has no starter on record."
+                },
+                "status": {
+                  "type": "string",
+                  "description": "The operation's own status word (`running`, `done`, `completed`,\n`approved`, `applied`...), as its own status route reports it."
                 }
               }
             }
@@ -177356,9 +177925,25 @@
         "required": [
           "name",
           "enabled",
-          "licensed"
+          "licensed",
+          "depends_on"
         ],
         "properties": {
+          "active_users_30d": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Y4-T5: the people who changed a record of the module's entities in\nthe last 30 days, from the audit log; `None` when it could not be\nread."
+          },
+          "depends_on": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Y4-T5: the modules that must be on while this one is on."
+          },
           "enabled": {
             "type": "boolean"
           },
@@ -177368,6 +177953,13 @@
           },
           "name": {
             "type": "string"
+          },
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Y4-T5: the version its engine ships at (Y4-T1 manifest); `None` for a\nmodule no registered engine owns."
           }
         }
       },
@@ -180201,6 +180793,80 @@
           }
         }
       },
+      "OperationSummary": {
+        "type": "object",
+        "description": "One long-running operation, whatever started it: a mass operation\n(`mass`), a bulk create/update/delete (`bulk`), a bulk field transform\n(`bulk_transform`), a staged import (`staged_import`), a file import\n(`import`) or an index being built right now (`index_build`).",
+        "required": [
+          "id",
+          "kind",
+          "entity",
+          "status",
+          "created_at"
+        ],
+        "properties": {
+          "action": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What it does within its kind: `update`, `delete`, `upsert`, `trim`..."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "entity": {
+            "type": "string",
+            "description": "The entity it works on (an index build: its table)."
+          },
+          "estimated_rows": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rows_done": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "started_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Who started it; an index build has no starter on record."
+          },
+          "status": {
+            "type": "string",
+            "description": "The operation's own status word (`running`, `done`, `completed`,\n`approved`, `applied`...), as its own status route reports it."
+          }
+        }
+      },
       "OpsNode": {
         "type": "object",
         "description": "One node, from its heartbeat in the metrics store.",
@@ -181055,6 +181721,53 @@
               "null"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "PackSummary": {
+        "type": "object",
+        "description": "A pack as the list shows it.",
+        "required": [
+          "code",
+          "country_code",
+          "name",
+          "name_ar",
+          "tz",
+          "holidays",
+          "source_url",
+          "reviewed_for_year"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "The code `apply` takes, such as `sa`."
+          },
+          "country_code": {
+            "type": "string"
+          },
+          "holidays": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The holidays, by name."
+          },
+          "name": {
+            "type": "string"
+          },
+          "name_ar": {
+            "type": "string"
+          },
+          "reviewed_for_year": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The year the dates and spans were last checked against the source."
+          },
+          "source_url": {
+            "type": "string"
+          },
+          "tz": {
+            "type": "string"
           }
         }
       },
@@ -229997,7 +230710,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-api-version": "2026-10",
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -230050,5 +230763,5 @@
       }
     }
   },
-  "x-version-adapters": []
+  "x-api-version": "2026-10"
 }
