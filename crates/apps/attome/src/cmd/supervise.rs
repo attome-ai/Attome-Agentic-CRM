@@ -26,6 +26,11 @@
 //! - Ctrl+C, SIGTERM or a Windows stop closes the server's stdin, waits for
 //!   it to drain, and exits.
 
+#![allow(
+    clippy::print_stdout,
+    reason = "a command-line command reports to standard output, and passes the server's through"
+)]
+
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::time::Duration;

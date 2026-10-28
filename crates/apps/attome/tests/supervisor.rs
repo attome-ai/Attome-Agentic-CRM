@@ -10,6 +10,10 @@
     clippy::unwrap_used,
     reason = "test helpers: a failed setup step should panic with its message"
 )]
+#![allow(
+    clippy::disallowed_methods,
+    reason = "the test's own thread waits for the supervisor; no async runtime runs here"
+)]
 
 use std::collections::BTreeSet;
 use std::io::{Read, Write};
