@@ -1,27 +1,29 @@
 <div class="page-header">
   <div>
-    <h2>Module Management</h2>
-    <p class="subtitle">Choose what this deployment shows: the base platform modules, then each installed project and its areas.</p>
+    <h2>{{ 'moduleMgmt.title' | translate }}</h2>
+    <p class="subtitle">{{ 'moduleMgmt.subtitle' | translate }}</p>
   </div>
 </div>
 
 @if (loading()) {
-<p class="state-msg">Loading module configuration…</p>
+<p class="state-msg">{{ 'moduleMgmt.loading' | translate }}</p>
 } @else {
 <section class="mm-section">
   <div class="card master-row">
     <div class="master-copy">
-      <h3>Base platform</h3>
-      <p>The platform's own modules. Turning one off hides its pages and blocks its API. Turning this off leaves the core module only; your selection is preserved.</p>
+      <h3>{{ 'moduleMgmt.baseTitle' | translate }}</h3>
+      <p>{{ 'moduleMgmt.baseHelp' | translate }}</p>
     </div>
-    <label class="switch" title="Activate or deactivate all base modules">
+    <label class="switch" [title]="'moduleMgmt.baseSwitch' | translate">
       <input type="checkbox" [checked]="enabled()" (change)="setMaster($event)">
       <span class="slider"></span>
     </label>
   </div>
 
-  <xrm-toggle-option-grid title="Base modules" [options]="moduleOptions()" [disabled]="!enabled()"
+  <xrm-toggle-option-grid [title]="'moduleMgmt.baseModules' | translate" [options]="moduleOptions()" [disabled]="!enabled()"
+    [enableAllLabel]="'moduleMgmt.enableAll' | translate" [disableAllLabel]="'moduleMgmt.disableAll' | translate"
     (optionChange)="toggle($event)" (setAll)="selectAll($event)" />
+  @if (refused(); as message) { <p class="error-msg" role="alert" data-testid="mm-refused">{{ message }}</p> }
 </section>
 
 @for (project of projects(); track project.id) {
@@ -29,29 +31,30 @@
   <div class="card master-row">
     <div class="master-copy">
       <h3>{{ project.name }}</h3>
-      <p>Installed project. Turning it or an area off hides it from the sidebar and dashboard; its records and API stay available.</p>
+      <p>{{ 'moduleMgmt.projectHelp' | translate }}</p>
     </div>
-    <label class="switch" [title]="'Show or hide ' + project.name">
+    <label class="switch" [title]="'moduleMgmt.projectSwitch' | translate: { name: project.name }">
       <input type="checkbox" [checked]="project.is_active" (change)="setProject(project.id, $event)">
       <span class="slider"></span>
     </label>
   </div>
 
   @if (project.areas.length) {
-  <xrm-toggle-option-grid [title]="project.name + ' areas'" [options]="areaOptions(project)"
+  <xrm-toggle-option-grid [title]="'moduleMgmt.projectAreas' | translate: { name: project.name }" [options]="areaOptions(project)"
     [disabled]="!project.is_active"
+    [enableAllLabel]="'moduleMgmt.enableAll' | translate" [disableAllLabel]="'moduleMgmt.disableAll' | translate"
     (optionChange)="toggleArea(project.id, $event)" (setAll)="selectAllAreas(project.id, $event)" />
   }
 </section>
 } @empty {
-<p class="state-msg">No projects are installed. A project appears here once its bundle is applied.</p>
+<p class="state-msg">{{ 'moduleMgmt.noProjects' | translate }}</p>
 }
 
 @if (error()) { <p class="error-msg">{{ error() }}</p> }
-@if (saved()) { <p class="success-msg">Configuration applied immediately.</p> }
+@if (saved()) { <p class="success-msg">{{ 'moduleMgmt.applied' | translate }}</p> }
 <div class="btn-row">
   <button class="btn-primary" type="button" (click)="save()" [disabled]="saving()">
-    {{ saving() ? 'Applying…' : 'Apply changes' }}
+    {{ (saving() ? 'moduleMgmt.applying' : 'moduleMgmt.apply') | translate }}
   </button>
 </div>
 }

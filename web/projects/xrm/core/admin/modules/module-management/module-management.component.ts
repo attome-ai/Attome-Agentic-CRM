@@ -1,22 +1,36 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { concat, forkJoin, last, Observable } from 'rxjs';
-import { ApiError } from '@attome/base';
+import { ApiError, LangService, TranslatePipe } from '@attome/base';
 import {
   AdminService, ModuleAdminService, ModuleConfiguration, ProjectSection, RuntimeModule, SidebarAdminItem,
 } from '@attome/xrm/core/admin/data';
 import { ToggleOption, ToggleOptionChange, ToggleOptionGridComponent } from '@attome/xrm/core/generic/components';
 
+/** Y4-T5: the switched-on modules that need `name` on. Pure. */
+export function dependantsOf(name: string, modules: readonly RuntimeModule[]): string[] {
+  return modules
+    .filter(module => module.enabled && module.name !== name && (module.depends_on ?? []).includes(name))
+    .map(module => module.name);
+}
+
+/**
+ * Module Management: the base platform modules (Y4-T5: with each one's
+ * version, what it needs, who used it in 30 days, and a switch that will not
+ * turn off a module another switched-on module needs), then each installed
+ * project and its areas.
+ */
 @Component({
   selector: 'xrm-module-management',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ToggleOptionGridComponent],
+  imports: [ToggleOptionGridComponent, TranslatePipe],
   styleUrls: ['../../../../styles/admin-page.css', './module-management.component.css'],
   templateUrl: './module-management.component.html',
 })
 export class ModuleManagementComponent {
   private readonly service = inject(ModuleAdminService);
   private readonly admin = inject(AdminService);
+  readonly lang = inject(LangService);
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -26,13 +40,24 @@ export class ModuleManagementComponent {
   readonly projects = signal<ProjectSection[]>([]);
   readonly error = signal<string | null>(null);
   readonly saved = signal(false);
-  readonly moduleOptions = computed<ToggleOption[]>(() => this.modules().map(module => ({
-    id: module.name,
-    title: this.displayName(module.name),
-    description: this.moduleDescription(module.name),
-    icon: this.iconClass(module.name),
-    active: module.enabled,
-  })));
+  /** Why the last switch-off was refused, or `null`. */
+  readonly refused = signal<string | null>(null);
+  readonly moduleOptions = computed<ToggleOption[]>(() => {
+    this.lang.current();
+    const modules = this.modules();
+    return modules.map(module => {
+      const neededBy = dependantsOf(module.name, modules);
+      return {
+        id: module.name,
+        title: this.displayName(module.name),
+        description: this.moduleDescription(module.name),
+        detail: this.moduleDetail(module, neededBy),
+        icon: this.iconClass(module.name),
+        active: module.enabled,
+        locked: module.enabled && neededBy.length > 0,
+      };
+    });
+  });
 
   /** Project and area visibility as loaded, to send only what changed. */
   private loadedActive = new Map<string, boolean>();
@@ -47,7 +72,7 @@ export class ModuleManagementComponent {
     return project.areas.map(area => ({
       id: area.id,
       title: area.name,
-      description: `Show ${area.name} in the sidebar and dashboard.`,
+      description: this.lang.translate('moduleMgmt.areaDesc', { name: area.name }),
       icon: this.sidebarItems.get(area.id)?.icon || 'las la-folder',
       active: area.is_active,
     }));
@@ -139,36 +164,9 @@ export class ModuleManagementComponent {
   displayName(name: string): string { return name.replaceAll('_', ' '); }
 
   moduleDescription(name: string): string {
-    const descriptions: Record<string, string> = {
-      core: 'Foundational platform services and shared capabilities.',
-      workflow: 'Business process orchestration and workflow execution.',
-      state: 'Lifecycle states, transitions, and status management.',
-      audit: 'Change history and traceability across the platform.',
-      notification: 'User alerts, events, and notification delivery.',
-      search: 'Fast indexing and discovery across XRM records.',
-      report: 'Operational reporting and data summaries.',
-      document: 'Document storage, organization, and retrieval.',
-      ai: 'AI-assisted features and intelligent processing.',
-      integration: 'Connections to external systems and services.',
-      localization: 'Languages, translations, and regional settings.',
-      view: 'Reusable data views and presentation configurations.',
-      config: 'System-wide configuration and runtime settings.',
-      bot: 'Conversational bots and automated interactions.',
-      automation: 'Rules, scheduled tasks, and automated actions.',
-      s2s: 'Secure service-to-service authentication and access.',
-      license: 'Licensing, entitlements, and module availability.',
-      content: 'Custom pages, block-based editor, and published site content.',
-      project: 'Customer and project delivery: projects, hierarchical work items, deliverables, issues and risks, change requests, and team communication.',
-      service: 'Work intake and service management: the unified work inbox and the service-desk ticket it triages into.',
-      dashboard: 'Dashboards, pages, sections and widgets, the security-scoped query engine, and the metric/scorecard layer.',
-      grc: 'Governance, risk and compliance: regulations, requirements, controls, assessments, findings, evidence, a risk register, and governed policies.',
-      process: 'Process intelligence: event-log extraction, directly-follows discovery, variant clustering, and cycle-time analysis (read-only).',
-      docgen: 'Document generation: merge-field HTML/PDF templates rendered against a permission-filtered record.',
-      predict: 'Predictive intelligence: SLA-breach prediction trained from labelled ticket history and scored on a schedule.',
-      omnichannel: 'Omnichannel engagement: the channel-connector contract and the public web-chat widget.',
-    };
-
-    return descriptions[name] ?? 'Optional platform capability.';
+    const key = `moduleMgmt.desc.${name}`;
+    const text = this.lang.translate(key);
+    return text === key ? this.lang.translate('moduleMgmt.desc.other') : text;
   }
 
   iconClass(name: string): string {
@@ -209,7 +207,34 @@ export class ModuleManagementComponent {
     this.saved.set(false);
   }
 
+  /** Version, what the module needs and who used it, as one line. */
+  moduleDetail(module: RuntimeModule, neededBy: string[]): string {
+    const parts: string[] = [];
+    if (module.version) parts.push(this.lang.translate('moduleMgmt.version', { version: module.version }));
+    if (module.depends_on?.length) {
+      parts.push(this.lang.translate('moduleMgmt.needs', { modules: module.depends_on.map(n => this.displayName(n)).join(this.lang.translate('moduleMgmt.listSep')) }));
+    }
+    if (neededBy.length) {
+      parts.push(this.lang.translate('moduleMgmt.neededBy', { modules: neededBy.map(n => this.displayName(n)).join(this.lang.translate('moduleMgmt.listSep')) }));
+    }
+    if (typeof module.active_users_30d === 'number') {
+      parts.push(this.lang.translate('moduleMgmt.activeUsers', { count: module.active_users_30d }));
+    }
+    return parts.join(' · ');
+  }
+
   toggle(change: ToggleOptionChange): void {
+    if (!change.active) {
+      const neededBy = dependantsOf(change.id, this.modules());
+      if (neededBy.length) {
+        this.refused.set(this.lang.translate('moduleMgmt.refused', {
+          module: this.displayName(change.id),
+          modules: neededBy.map(n => this.displayName(n)).join(this.lang.translate('moduleMgmt.listSep')),
+        }));
+        return;
+      }
+    }
+    this.refused.set(null);
     this.modules.update(items => items.map(item =>
       item.name === change.id ? { ...item, enabled: change.active } : item));
     this.saved.set(false);

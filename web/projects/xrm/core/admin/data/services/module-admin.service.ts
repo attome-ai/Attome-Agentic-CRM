@@ -7,6 +7,12 @@ export interface RuntimeModule {
   enabled: boolean;
   /** Always true since D-778: no licence is checked. */
   licensed: boolean;
+  /** Y4-T5: its engine's version; absent when no engine owns the module. */
+  version?: string | null;
+  /** Y4-T5: the modules that must be on while this one is on. */
+  depends_on?: string[];
+  /** Y4-T5: people who changed its records in 30 days; absent when unknown. */
+  active_users_30d?: number | null;
 }
 
 /** One sidebar area of an installed project (vertical), e.g. Game Ops → Bans. */

@@ -6,6 +6,10 @@ export interface ToggleOption {
   description: string;
   icon: string;
   active: boolean;
+  /** A second, smaller line (Y4-T5: version, dependencies, usage). */
+  detail?: string;
+  /** The switch cannot be changed (Y4-T5: another module needs this one). */
+  locked?: boolean;
 }
 
 export interface ToggleOptionChange {

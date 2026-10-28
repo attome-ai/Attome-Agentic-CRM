@@ -1,11 +1,13 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   AdminService, ModuleAdminService, type ModuleConfiguration, type SidebarAdminItem,
 } from '@attome/xrm/core/admin/data';
-import { ModuleManagementComponent } from './module-management.component';
+import { ModuleManagementComponent, dependantsOf } from './module-management.component';
 
 describe('ModuleManagementComponent', () => {
   const svc = {
@@ -55,6 +57,13 @@ describe('ModuleManagementComponent', () => {
       providers: [
         { provide: ModuleAdminService, useValue: svc },
         { provide: AdminService, useValue: admin },
+        {
+          provide: LangService,
+          useValue: {
+            translate: (key: string, params?: Record<string, unknown>) => (params ? `${key} ${JSON.stringify(params)}` : key),
+            current: signal('en'),
+          },
+        },
       ],
     });
     TestBed.overrideComponent(ModuleManagementComponent, { set: { template: '' } });
@@ -120,5 +129,56 @@ describe('ModuleManagementComponent', () => {
     expect(admin.updateSidebarItem).toHaveBeenCalledWith('game-ops', expect.objectContaining({
       is_active: false, row_version: 3,
     }));
+  });
+
+  // Y4-T5: versions, dependencies and usage, and the dependency refusal.
+  const WITH_DEPS: ModuleConfiguration = {
+    enabled: true,
+    modules: [
+      { name: 'project', enabled: true, licensed: true, version: '0.1.0', depends_on: [], active_users_30d: 4 },
+      { name: 'service', enabled: true, licensed: true, version: '0.1.0', depends_on: ['project'], active_users_30d: 2 },
+      { name: 'grc', enabled: false, licensed: true, version: '0.1.0', depends_on: ['project'], active_users_30d: null },
+    ],
+    projects: [],
+  };
+
+  it('dependantsOf names only the switched-on modules that need it', () => {
+    expect(dependantsOf('project', WITH_DEPS.modules)).toEqual(['service']);
+    expect(dependantsOf('service', WITH_DEPS.modules)).toEqual([]);
+  });
+
+  it('refuses to switch off a module a switched-on module needs, naming it', () => {
+    const fixture = mount(WITH_DEPS);
+    const c = fixture.componentInstance;
+
+    c.toggle({ id: 'project', active: false });
+
+    expect(c.modules().find(m => m.name === 'project')?.enabled).toBe(true);
+    expect(c.refused()).toContain('moduleMgmt.refused');
+    expect(c.refused()).toContain('service');
+    c.save();
+    expect(svc.updateModuleConfiguration).toHaveBeenCalledWith(true, ['project', 'service']);
+  });
+
+  it('allows it once the dependants are off, and locks the switch until then', () => {
+    const fixture = mount(WITH_DEPS);
+    const c = fixture.componentInstance;
+    expect(c.moduleOptions().find(o => o.id === 'project')?.locked).toBe(true);
+
+    c.toggle({ id: 'service', active: false });
+    expect(c.moduleOptions().find(o => o.id === 'project')?.locked).toBe(false);
+    c.toggle({ id: 'project', active: false });
+
+    expect(c.refused()).toBeNull();
+    expect(c.modules().find(m => m.name === 'project')?.enabled).toBe(false);
+  });
+
+  it('shows the version, what a module needs and its users in 30 days', () => {
+    const fixture = mount(WITH_DEPS);
+    const detail = fixture.componentInstance.moduleOptions().find(o => o.id === 'service')?.detail ?? '';
+
+    expect(detail).toContain('moduleMgmt.version {"version":"0.1.0"}');
+    expect(detail).toContain('moduleMgmt.needs');
+    expect(detail).toContain('moduleMgmt.activeUsers {"count":2}');
   });
 });

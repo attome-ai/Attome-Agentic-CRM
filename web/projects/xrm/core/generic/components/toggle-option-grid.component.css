@@ -12,6 +12,7 @@
 .option-icon { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:9px; background:color-mix(in srgb,var(--color-accent) 14%,transparent); color:var(--color-accent); font-size:21px; }
 .option-title { color:var(--color-text-primary); }
 .option-description { grid-column:1 / -1; margin:0; color:var(--color-text-secondary); font-size:12px; }
+.option-detail { grid-column:1 / -1; margin:0; color:var(--color-text-secondary); font-size:11px; }
 .switch { position:relative; display:inline-block; width:46px; height:26px; flex:0 0 auto; }
 .switch input { opacity:0; width:0; height:0; }
 .slider { position:absolute; inset:0; cursor:pointer; border-radius:99px; background:var(--color-border); transition:.15s; }

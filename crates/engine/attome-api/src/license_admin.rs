@@ -177,19 +177,85 @@ struct ModuleItem {
     /// Always true since D-778 (no licence is checked); kept so the wire
     /// shape stays additive (D-678).
     licensed: bool,
+    /// Y4-T5: the version its engine ships at (Y4-T1 manifest); `None` for a
+    /// module no registered engine owns.
+    version: Option<&'static str>,
+    /// Y4-T5: the modules that must be on while this one is on.
+    depends_on: Vec<&'static str>,
+    /// Y4-T5: the people who changed a record of the module's entities in
+    /// the last 30 days, from the audit log; `None` when it could not be
+    /// read.
+    active_users_30d: Option<i64>,
 }
 
-/// One row per known module: selected in the configuration, and granted by
-/// the signed licence.
-fn module_items(selected: &[String], signed: &ModuleSet) -> Vec<ModuleItem> {
+/// One row per known module: selected in the configuration, granted by
+/// the signed licence, and what its engines' manifests declare.
+fn module_items(
+    selected: &[String],
+    signed: &ModuleSet,
+    manifests: &[attome_core::module_manifest::EngineManifest],
+    usage: Option<&std::collections::HashMap<&'static str, i64>>,
+) -> Vec<ModuleItem> {
     MODULE_MAP
         .iter()
-        .map(|(name, id)| ModuleItem {
-            name,
-            enabled: selected.iter().any(|selected| selected == name),
-            licensed: signed.has(*id),
+        .map(|(name, id)| {
+            let own: Vec<_> = manifests.iter().filter(|m| m.module == *name).collect();
+            let mut depends_on: Vec<&'static str> = own
+                .iter()
+                .flat_map(|m| m.depends_on.iter().copied())
+                .collect();
+            depends_on.sort_unstable();
+            depends_on.dedup();
+            ModuleItem {
+                name,
+                enabled: selected.iter().any(|selected| selected == name),
+                licensed: signed.has(*id),
+                version: own.first().map(|m| m.version),
+                depends_on,
+                active_users_30d: usage.map(|u| u.get(name).copied().unwrap_or(0)),
+            }
         })
         .collect()
+}
+
+/// Y4-T5: per module, the distinct people who changed one of its entities'
+/// records in the last 30 days (`audit_header` is partitioned by
+/// `created_at`, so the window reads the latest partitions only). `None`
+/// when the audit log cannot be read; the page then shows no figure.
+async fn module_usage(state: &EngineState) -> Option<std::collections::HashMap<&'static str, i64>> {
+    let entities: Vec<String> = state
+        .engine_manifests
+        .iter()
+        .flat_map(|m| m.entities.iter().map(|e| (*e).to_owned()))
+        .collect();
+    let rows: Vec<(String, Uuid)> = match sqlx::query_as(
+        "SELECT entity_name::text, user_id FROM audit_header           WHERE created_at > now() - interval '30 days' AND user_id IS NOT NULL             AND entity_name = ANY($1)           GROUP BY entity_name, user_id",
+    )
+    .bind(&entities)
+    .fetch_all(&state.base.db)
+    .await
+    {
+        Ok(rows) => rows,
+        Err(error) => {
+            tracing::warn!(%error, "module usage: the audit log could not be read");
+            return None;
+        }
+    };
+    let mut users: std::collections::HashMap<&'static str, std::collections::HashSet<Uuid>> =
+        std::collections::HashMap::new();
+    for (entity, user) in rows {
+        for manifest in state.engine_manifests.iter() {
+            if manifest.entities.contains(&entity.as_str()) {
+                users.entry(manifest.module).or_default().insert(user);
+            }
+        }
+    }
+    Some(
+        users
+            .into_iter()
+            .map(|(module, set)| (module, i64::try_from(set.len()).unwrap_or(i64::MAX)))
+            .collect(),
+    )
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -267,7 +333,12 @@ async fn get_module_configuration(
 
     Ok(Json(ModuleConfigurationResponse {
         enabled,
-        modules: module_items(&selected, &signed),
+        modules: module_items(
+            &selected,
+            &signed,
+            &state.engine_manifests,
+            module_usage(&state).await.as_ref(),
+        ),
         projects: project_sections(&state.base.db).await?,
     }))
 }
@@ -351,7 +422,12 @@ async fn update_module_configuration(
 
     Ok(Json(ModuleConfigurationResponse {
         enabled: request.enabled,
-        modules: module_items(&modules, &signed),
+        modules: module_items(
+            &modules,
+            &signed,
+            &state.engine_manifests,
+            module_usage(&state).await.as_ref(),
+        ),
         projects: project_sections(&state.base.db).await?,
     }))
 }

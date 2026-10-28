@@ -114,6 +114,10 @@ A new deployment starts with the smallest set of modules: the platform basics (r
 flows, audit, notifications, search, reports, documents, views and dashboards) and the app it is
 for, `--app sales` (the default), `--app service` or `--app both`, plus whatever its `--pack`s
 need. Turn more on later in Module Management; `--app all` starts with every module.
+Module Management (`/xrm/admin/modules`) shows each module's version, the modules it needs, and how
+many people changed its records in the last 30 days (from the audit log). A module that a switched-on
+module needs cannot be switched off until that one is off; the page names it, and the server refuses
+such a configuration too.
 
 `attome service install --dry-run` prints the steps without doing them. `attome sovereignty report`
 lists where copies of the data live and every outside destination the configuration names.

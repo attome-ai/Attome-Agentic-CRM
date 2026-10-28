@@ -14,9 +14,10 @@
           <i [class]="option.icon + ' option-icon'" aria-hidden="true"></i>
           <strong class="option-title">{{ option.title }}</strong>
           <p class="option-description">{{ option.description }}</p>
+          @if (option.detail) { <p class="option-detail" [attr.data-detail]="option.id">{{ option.detail }}</p> }
         </div>
         <label class="switch" [title]="(option.active ? 'Disable ' : 'Enable ') + option.title">
-          <input type="checkbox" [checked]="option.active" [disabled]="disabled()"
+          <input type="checkbox" [checked]="option.active" [disabled]="disabled() || !!option.locked"
                  (change)="changeOption(option.id, $event)">
           <span class="slider"></span>
         </label>
