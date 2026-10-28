@@ -746,6 +746,9 @@ SELECT id, kind, action, entity, status, rows_done, estimated_rows, started_by, 
 ORDER BY created_at DESC, id DESC
 LIMIT $5";
 
+/// One live index build: entity, blocks done, blocks total, start, backend pid.
+type IndexBuildRow = (String, Option<i64>, Option<i64>, Option<DateTime<Utc>>, i32);
+
 /// The indexes PostgreSQL is building now. They have no history table: an
 /// index build is a `CREATE INDEX CONCURRENTLY` whose only record is
 /// `pg_stat_progress_create_index` while it runs, so a finished build is not
@@ -817,18 +820,17 @@ async fn list_operations(
     };
 
     if after.is_none() && ctx.is_admin {
-        let builds: Vec<(String, Option<i64>, Option<i64>, Option<DateTime<Utc>>, i32)> =
-            match sqlx::query_as(INDEX_BUILDS_SQL)
-                .fetch_all(&state.base.db_migrator)
-                .await
-            {
-                Ok(builds) => builds,
-                Err(error) => {
-                    // The list still answers; only the live builds are missing.
-                    tracing::warn!(%error, "operations: index builds could not be read");
-                    Vec::new()
-                }
-            };
+        let builds: Vec<IndexBuildRow> = match sqlx::query_as(INDEX_BUILDS_SQL)
+            .fetch_all(&state.base.db_migrator)
+            .await
+        {
+            Ok(builds) => builds,
+            Err(error) => {
+                // The list still answers; only the live builds are missing.
+                tracing::warn!(%error, "operations: index builds could not be read");
+                Vec::new()
+            }
+        };
         let mut live: Vec<OperationSummary> = builds
             .into_iter()
             .map(|(entity, done, total, started, pid)| {

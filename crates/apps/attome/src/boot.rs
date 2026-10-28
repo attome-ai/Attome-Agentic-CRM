@@ -129,6 +129,12 @@ pub async fn apply_schema_migrations(
     tracing::info!("schema ensured");
     attome_db::run_migrations(&migration_db, &MIGRATOR).await?;
     tracing::info!("migrations applied");
+    // The tables a migration created belong to the bootstrap role until
+    // handed to the migrator, which owns the schema (0009).
+    let reassigned = attome_db::assign_schema_ownership(&migration_db).await?;
+    if reassigned > 0 {
+        tracing::info!(reassigned, "schema objects handed to the migrator role");
+    }
     Ok(migration_db)
 }
 

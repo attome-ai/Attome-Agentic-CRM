@@ -2018,6 +2018,7 @@ mod tests {
             authorization_endpoint: authorization_endpoint.to_owned(),
             token_endpoint: token_endpoint.to_owned(),
             jwks_uri: jwks_uri.to_owned(),
+            end_session_endpoint: None,
         }
     }
 

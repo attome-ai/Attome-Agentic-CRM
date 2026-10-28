@@ -78,8 +78,8 @@ pub use error::{
     set_statement_timeout_hook, set_tx_retry_hooks, sqlstate,
 };
 pub use migrate::{
-    MIGRATION_LOCK_TIMEOUT, SchemaState, run_migrations, run_migrations_with_migrator_lock_budget,
-    schema_state,
+    MIGRATION_LOCK_TIMEOUT, MIGRATOR_ROLE, SchemaState, assign_schema_ownership, run_migrations,
+    run_migrations_with_migrator_lock_budget, schema_state,
 };
 pub use pool::{
     create_direct_pool, create_long_pool, create_migrator_connection, create_migrator_pool,

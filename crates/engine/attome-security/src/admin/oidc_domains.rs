@@ -149,18 +149,24 @@ pub async fn txt_values(name: &str) -> Result<Vec<String>, String> {
             .map_err(|e| format!("the DNS resolver could not be set up: {e}"))?;
         builder.options_mut().timeout = std::time::Duration::from_secs(5);
         builder.options_mut().attempts = 1;
-        let resolver = builder.build();
+        let resolver = builder
+            .build()
+            .map_err(|e| format!("the DNS resolver could not be set up: {e}"))?;
         let found = resolver
             .txt_lookup(name)
             .await
             .map_err(|e| format!("no TXT record found at {name}: {e}"))?;
         Ok(found
+            .answers()
             .iter()
-            .map(|txt| {
-                txt.txt_data()
-                    .iter()
-                    .map(|part| String::from_utf8_lossy(part))
-                    .collect::<String>()
+            .filter_map(|record| match record.data() {
+                hickory_resolver::proto::rr::RData::TXT(txt) => Some(
+                    txt.txt_data
+                        .iter()
+                        .map(|part| String::from_utf8_lossy(part))
+                        .collect::<String>(),
+                ),
+                _ => None,
             })
             .collect())
     };

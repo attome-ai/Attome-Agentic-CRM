@@ -309,6 +309,80 @@ pub async fn schema_state(pool: &PgPool) -> Result<SchemaState, sqlx::Error> {
     })
 }
 
+/// The role that owns the schema's tables, sequences and views (migration
+/// 0009: it ALTERs them when an entity evolves, and the migrator pool reads
+/// what it owns).
+pub const MIGRATOR_ROLE: &str = "attome_migrator";
+
+/// Hands every table, sequence and view in the current schema that the
+/// connected (bootstrap) role owns to [`MIGRATOR_ROLE`]; returns how many.
+///
+/// Migrations run as the bootstrap role, so a table a migration after 0009
+/// creates belongs to it, and the migrator pool cannot read it: the platform
+/// changeset's export of `calendar_holiday_rule` failed at boot with
+/// `permission denied` (release check, 2026-10-28). Run after every
+/// migration pass, so a new table never stays the bootstrap role's. Tables
+/// first: a sequence a column owns moves with its table, and only an
+/// unlinked one is altered on its own. A no-op once caught up, and when the
+/// role does not exist or the connection already is it.
+pub async fn assign_schema_ownership(pool: &PgPool) -> Result<u32, sqlx::Error> {
+    let (is_migrator, has_role): (bool, bool) = sqlx::query_as(
+        "SELECT current_user = $1, EXISTS (SELECT 1 FROM pg_roles WHERE rolname = $1)",
+    )
+    .bind(MIGRATOR_ROLE)
+    .fetch_one(pool)
+    .await?;
+    if is_migrator || !has_role {
+        return Ok(0);
+    }
+    let tables: Vec<String> = sqlx::query_scalar(
+        "SELECT tablename::text FROM pg_tables \
+          WHERE schemaname = current_schema() AND tableowner = current_user \
+          ORDER BY tablename",
+    )
+    .fetch_all(pool)
+    .await?;
+    let views: Vec<String> = sqlx::query_scalar(
+        "SELECT viewname::text FROM pg_views \
+          WHERE schemaname = current_schema() AND viewowner = current_user \
+          ORDER BY viewname",
+    )
+    .fetch_all(pool)
+    .await?;
+    let owner = crate::ident::quote_ident(MIGRATOR_ROLE);
+    for table in &tables {
+        let table = crate::ident::quote_ident(table);
+        sqlx::query(&format!("ALTER TABLE {table} OWNER TO {owner}"))
+            .execute(pool)
+            .await?;
+    }
+    for view in &views {
+        let view = crate::ident::quote_ident(view);
+        sqlx::query(&format!("ALTER VIEW {view} OWNER TO {owner}"))
+            .execute(pool)
+            .await?;
+    }
+    let sequences: Vec<String> = sqlx::query_scalar(
+        "SELECT s.relname::text FROM pg_class s \
+           JOIN pg_namespace n ON n.oid = s.relnamespace \
+          WHERE s.relkind = 'S' AND n.nspname = current_schema() \
+            AND s.relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user) \
+            AND NOT EXISTS (SELECT 1 FROM pg_depend d \
+                             WHERE d.classid = 'pg_class'::regclass AND d.objid = s.oid \
+                               AND d.deptype IN ('a', 'i')) \
+          ORDER BY s.relname",
+    )
+    .fetch_all(pool)
+    .await?;
+    for sequence in &sequences {
+        let sequence = crate::ident::quote_ident(sequence);
+        sqlx::query(&format!("ALTER SEQUENCE {sequence} OWNER TO {owner}"))
+            .execute(pool)
+            .await?;
+    }
+    Ok(u32::try_from(tables.len() + views.len() + sequences.len()).unwrap_or(u32::MAX))
+}
+
 #[cfg(test)]
 mod tests {
     use super::{DDL_LOCK_ATTEMPTS, MIGRATOR_LOCK_BUDGET};

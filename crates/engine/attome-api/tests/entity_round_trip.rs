@@ -10896,7 +10896,13 @@ async fn cascade_chain(
     leaf_rule: &str,
 ) -> [String; 3] {
     let (top, top_id) = create_entity(app, cookie, "a7_top").await;
-    create_field(app, cookie, &top_id, r#"{"logicalname":"title","name":"Title","field_type":"text"}"#).await;
+    create_field(
+        app,
+        cookie,
+        &top_id,
+        r#"{"logicalname":"title","name":"Title","field_type":"text"}"#,
+    )
+    .await;
     let (mid, mid_id) = create_entity(app, cookie, "a7_mid").await;
     create_field(
         app,
@@ -10918,7 +10924,8 @@ async fn cascade_chain(
 }
 
 async fn cascade_record(app: &axum::Router, cookie: &str, entity: &str, body: String) -> String {
-    let (status, json) = cascade_call(app, cookie, "POST", format!("/api/v1/{entity}"), Some(body)).await;
+    let (status, json) =
+        cascade_call(app, cookie, "POST", format!("/api/v1/{entity}"), Some(body)).await;
     assert_eq!(status, StatusCode::CREATED, "{json:?}");
     json["id"].as_str().expect("id").to_owned()
 }
@@ -10936,18 +10943,36 @@ fn cascade_depth_three_levels_delete_and_restore() {
         let m = cascade_record(&app, &cookie, &mid, format!(r#"{{"top_ref":"{t}"}}"#)).await;
         let l = cascade_record(&app, &cookie, &leaf, format!(r#"{{"mid_ref":"{m}"}}"#)).await;
 
-        let (status, _) = cascade_call(&app, &cookie, "DELETE", format!("/api/v1/{top}/{t}"), None).await;
+        let (status, _) =
+            cascade_call(&app, &cookie, "DELETE", format!("/api/v1/{top}/{t}"), None).await;
         assert_eq!(status, StatusCode::NO_CONTENT);
         for (entity, id) in [(&mid, &m), (&leaf, &l)] {
-            let (status, _) = cascade_call(&app, &cookie, "GET", format!("/api/v1/{entity}/{id}"), None).await;
-            assert_eq!(status, StatusCode::NOT_FOUND, "{entity} must be deactivated two levels down");
+            let (status, _) =
+                cascade_call(&app, &cookie, "GET", format!("/api/v1/{entity}/{id}"), None).await;
+            assert_eq!(
+                status,
+                StatusCode::NOT_FOUND,
+                "{entity} must be deactivated two levels down"
+            );
         }
 
-        let (status, body) = cascade_call(&app, &cookie, "POST", format!("/api/v1/{top}/{t}/restore"), None).await;
+        let (status, body) = cascade_call(
+            &app,
+            &cookie,
+            "POST",
+            format!("/api/v1/{top}/{t}/restore"),
+            None,
+        )
+        .await;
         assert!(status.is_success(), "{body:?}");
         for (entity, id) in [(&mid, &m), (&leaf, &l)] {
-            let (status, _) = cascade_call(&app, &cookie, "GET", format!("/api/v1/{entity}/{id}"), None).await;
-            assert_eq!(status, StatusCode::OK, "{entity} must come back with the restore");
+            let (status, _) =
+                cascade_call(&app, &cookie, "GET", format!("/api/v1/{entity}/{id}"), None).await;
+            assert_eq!(
+                status,
+                StatusCode::OK,
+                "{entity} must come back with the restore"
+            );
         }
     })
 }
@@ -10965,16 +10990,21 @@ fn cascade_depth_restrict_at_level_two_blocks_the_delete() {
         let m = cascade_record(&app, &cookie, &mid, format!(r#"{{"top_ref":"{t}"}}"#)).await;
         cascade_record(&app, &cookie, &leaf, format!(r#"{{"mid_ref":"{m}"}}"#)).await;
 
-        let (status, body) = cascade_call(&app, &cookie, "DELETE", format!("/api/v1/{top}/{t}"), None).await;
+        let (status, body) =
+            cascade_call(&app, &cookie, "DELETE", format!("/api/v1/{top}/{t}"), None).await;
         assert_eq!(status, StatusCode::CONFLICT, "{body:?}");
         assert_eq!(body["error"], "cascade_restricted");
         assert!(
-            body["message"].as_str().unwrap_or_default().contains(&format!("{leaf}.mid_ref")),
+            body["message"]
+                .as_str()
+                .unwrap_or_default()
+                .contains(&format!("{leaf}.mid_ref")),
             "the message names the blocking path: {body:?}"
         );
         // Nothing moved: the delete rolled back whole.
         for (entity, id) in [(&top, &t), (&mid, &m)] {
-            let (status, _) = cascade_call(&app, &cookie, "GET", format!("/api/v1/{entity}/{id}"), None).await;
+            let (status, _) =
+                cascade_call(&app, &cookie, "GET", format!("/api/v1/{entity}/{id}"), None).await;
             assert_eq!(status, StatusCode::OK, "{entity} must still be live");
         }
     })
@@ -10993,22 +11023,55 @@ fn cascade_preview_shows_the_tree_before_a_delete() {
         let m = cascade_record(&app, &cookie, &mid, format!(r#"{{"top_ref":"{t}"}}"#)).await;
         let l = cascade_record(&app, &cookie, &leaf, format!(r#"{{"mid_ref":"{m}"}}"#)).await;
 
-        let (status, impact) = cascade_call(&app, &cookie, "POST", format!("/api/v1/{top}/{t}/impact?action=delete"), None).await;
+        let (status, impact) = cascade_call(
+            &app,
+            &cookie,
+            "POST",
+            format!("/api/v1/{top}/{t}/impact?action=delete"),
+            None,
+        )
+        .await;
         assert_eq!(status, StatusCode::OK, "{impact:?}");
         assert_eq!(impact["blocked"], false);
         let groups = impact["groups"].as_array().expect("groups");
-        let find = |entity: &str| groups.iter().find(|g| g["entity"] == entity).cloned().expect("group");
+        let find = |entity: &str| {
+            groups
+                .iter()
+                .find(|g| g["entity"] == entity)
+                .cloned()
+                .expect("group")
+        };
         assert_eq!(find(&mid)["effect"], "deactivated");
         assert_eq!(find(&leaf)["first"][0], l.as_str());
-        assert!(find(&leaf)["path"].as_str().unwrap_or_default().contains(&format!("{mid}.top_ref -> {leaf}.mid_ref")));
+        assert!(
+            find(&leaf)["path"]
+                .as_str()
+                .unwrap_or_default()
+                .contains(&format!("{mid}.top_ref -> {leaf}.mid_ref"))
+        );
 
-        let (status, merge) = cascade_call(&app, &cookie, "POST", format!("/api/v1/{top}/{t}/impact?action=merge"), None).await;
+        let (status, merge) = cascade_call(
+            &app,
+            &cookie,
+            "POST",
+            format!("/api/v1/{top}/{t}/impact?action=merge"),
+            None,
+        )
+        .await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(merge["groups"][0]["effect"], "repointed");
-        let (status, _) = cascade_call(&app, &cookie, "POST", format!("/api/v1/{top}/{t}/impact?action=explode"), None).await;
+        let (status, _) = cascade_call(
+            &app,
+            &cookie,
+            "POST",
+            format!("/api/v1/{top}/{t}/impact?action=explode"),
+            None,
+        )
+        .await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
         // Nothing changed.
-        let (status, _) = cascade_call(&app, &cookie, "GET", format!("/api/v1/{leaf}/{l}"), None).await;
+        let (status, _) =
+            cascade_call(&app, &cookie, "GET", format!("/api/v1/{leaf}/{l}"), None).await;
         assert_eq!(status, StatusCode::OK);
     })
 }
@@ -11022,11 +11085,29 @@ fn polymorphic_lookup_accepts_only_allowed_live_targets() {
         let state = system.state().clone();
         let app = full_app(system);
         let (account, account_id) = create_entity(&app, &cookie, "a8_account").await;
-        create_field(&app, &cookie, &account_id, r#"{"logicalname":"title","name":"Title","field_type":"text"}"#).await;
+        create_field(
+            &app,
+            &cookie,
+            &account_id,
+            r#"{"logicalname":"title","name":"Title","field_type":"text"}"#,
+        )
+        .await;
         let (other, other_id) = create_entity(&app, &cookie, "a8_other").await;
-        create_field(&app, &cookie, &other_id, r#"{"logicalname":"title","name":"Title","field_type":"text"}"#).await;
+        create_field(
+            &app,
+            &cookie,
+            &other_id,
+            r#"{"logicalname":"title","name":"Title","field_type":"text"}"#,
+        )
+        .await;
         let (task, task_id) = create_entity(&app, &cookie, "a8_task").await;
-        create_field(&app, &cookie, &task_id, r#"{"logicalname":"regarding_entity","name":"Regarding type","field_type":"text"}"#).await;
+        create_field(
+            &app,
+            &cookie,
+            &task_id,
+            r#"{"logicalname":"regarding_entity","name":"Regarding type","field_type":"text"}"#,
+        )
+        .await;
         create_field(
             &app,
             &cookie,
@@ -11039,20 +11120,51 @@ fn polymorphic_lookup_accepts_only_allowed_live_targets() {
         let o = cascade_record(&app, &cookie, &other, r#"{"title":"o"}"#.into()).await;
 
         // An allowed, live, readable target.
-        let (status, body) = cascade_call(&app, &cookie, "POST", format!("/api/v1/{task}"),
-            Some(format!(r#"{{"regarding_entity":"{account}","regarding_id":"{a}"}}"#))).await;
+        let (status, body) = cascade_call(
+            &app,
+            &cookie,
+            "POST",
+            format!("/api/v1/{task}"),
+            Some(format!(
+                r#"{{"regarding_entity":"{account}","regarding_id":"{a}"}}"#
+            )),
+        )
+        .await;
         assert_eq!(status, StatusCode::CREATED, "{body:?}");
         // The wrong entity.
-        let (status, _) = cascade_call(&app, &cookie, "POST", format!("/api/v1/{task}"),
-            Some(format!(r#"{{"regarding_entity":"{other}","regarding_id":"{o}"}}"#))).await;
+        let (status, _) = cascade_call(
+            &app,
+            &cookie,
+            "POST",
+            format!("/api/v1/{task}"),
+            Some(format!(
+                r#"{{"regarding_entity":"{other}","regarding_id":"{o}"}}"#
+            )),
+        )
+        .await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
         // A record that does not exist.
-        let (status, _) = cascade_call(&app, &cookie, "POST", format!("/api/v1/{task}"),
-            Some(format!(r#"{{"regarding_entity":"{account}","regarding_id":"{}"}}"#, Uuid::now_v7()))).await;
+        let (status, _) = cascade_call(
+            &app,
+            &cookie,
+            "POST",
+            format!("/api/v1/{task}"),
+            Some(format!(
+                r#"{{"regarding_entity":"{account}","regarding_id":"{}"}}"#,
+                Uuid::now_v7()
+            )),
+        )
+        .await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
         // Half a pair.
-        let (status, _) = cascade_call(&app, &cookie, "POST", format!("/api/v1/{task}"),
-            Some(format!(r#"{{"regarding_id":"{a}"}}"#))).await;
+        let (status, _) = cascade_call(
+            &app,
+            &cookie,
+            "POST",
+            format!("/api/v1/{task}"),
+            Some(format!(r#"{{"regarding_id":"{a}"}}"#)),
+        )
+        .await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     })
 }
