@@ -81,11 +81,15 @@ async fn client_exists(state: &EngineState, client_db_id: Uuid) -> Result<(), Ap
     found.map(|_| ()).ok_or(AppError::NotFound)
 }
 
+/// List an S2S client's identity-provider trusts
+///
+/// The issuers whose tokens the client's workload may exchange for an access token (RFC 7523):
+/// issuer, audience, subject and JWKS URL. Security administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/s2s/clients/{client_db_id}/trusts",
     tag = "admin-security",
-    params(("client_db_id" = Uuid, Path)),
+    params(("client_db_id" = Uuid, Path, description = "The client's id (not its slug)")),
     responses(
         (status = 200, description = "Every trust of the client", body = PaginatedResponse<TrustItem>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -134,11 +138,16 @@ async fn list_trusts(
     )))
 }
 
+/// Add an identity-provider trust to an S2S client
+///
+/// Lets a workload signed in to the customer's own identity provider (an exact issuer, audience and
+/// subject, keys from an `https` JWKS URL) get this deployment's access token for the client without
+/// holding a secret of ours. Security administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/s2s/clients/{client_db_id}/trusts",
     tag = "admin-security",
-    params(("client_db_id" = Uuid, Path)),
+    params(("client_db_id" = Uuid, Path, description = "The client's id (not its slug)")),
     request_body = CreateTrustBody,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Credential, AuditOperation::Create)])))),
     responses(
@@ -227,11 +236,15 @@ async fn create_trust(
     ))
 }
 
+/// Remove an identity-provider trust
+///
+/// Tokens from that issuer and subject are no longer exchanged for the client. Security administrators
+/// only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/s2s/clients/{client_db_id}/trusts/{trust_id}",
     tag = "admin-security",
-    params(("client_db_id" = Uuid, Path), ("trust_id" = Uuid, Path)),
+    params(("client_db_id" = Uuid, Path, description = "The client's id (not its slug)"), ("trust_id" = Uuid, Path, description = "The trust")),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Credential, AuditOperation::Revoke)])))),
     responses(
         (status = 204, description = "The trust is removed"),

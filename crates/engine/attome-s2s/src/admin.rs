@@ -298,6 +298,10 @@ fn default_page_size() -> i64 {
 
 // ── Handlers: Clients ─────────────────────────────────────────────────────────
 
+/// List S2S clients
+///
+/// The machine clients that are not deleted, one-based pages, optionally only one status. Security
+/// administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/s2s/clients",
@@ -414,6 +418,13 @@ async fn list_clients(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
+/// Register an S2S client
+///
+/// A machine client: its immutable slug, name, limits (requests a minute, concurrent requests,
+/// allowed CIDRs, payload size) and the user account it acts as. Without one, the client gets a
+/// service user of its own with no role, so it can do nothing until granted one. An administrator
+/// without `system.admin` cannot bind a client to a user holding it. Security administrators only.
+/// Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/s2s/clients",
@@ -583,11 +594,15 @@ async fn create_client(
     ))
 }
 
+/// Get an S2S client
+///
+/// One client's settings, its keys (public id, slot, last four characters, status; never the
+/// secret), its entity permissions and its service user. Security administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/s2s/clients/{client_db_id}",
     tag = "admin-security",
-    params(("client_db_id" = Uuid, Path)),
+    params(("client_db_id" = Uuid, Path, description = "The client's id (not its slug)")),
     responses(
         (status = 200, description = "Success", body = ClientDetail),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -688,11 +703,16 @@ async fn get_client(
     }))
 }
 
+/// Change an S2S client
+///
+/// Changes the fields given: name, description, status, the service user it acts as, its limits,
+/// whether it may act as a user, and its other settings. The service user can be re-pointed but not
+/// cleared. Security administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/s2s/clients/{client_db_id}",
     tag = "admin-security",
-    params(("client_db_id" = Uuid, Path)),
+    params(("client_db_id" = Uuid, Path, description = "The client's id (not its slug)")),
     request_body = UpdateClientBody,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Credential, AuditOperation::Update)])))),
     responses(
@@ -879,11 +899,15 @@ async fn update_client(
     get_client(State(state), ctx, Path(client_db_id)).await
 }
 
+/// Revoke an S2S client
+///
+/// Marks the client revoked and deleted and revokes all its active keys in the same transaction,
+/// so it cannot authenticate again. Security administrators only. Audited as a credential revocation.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/s2s/clients/{client_db_id}",
     tag = "admin-security",
-    params(("client_db_id" = Uuid, Path)),
+    params(("client_db_id" = Uuid, Path, description = "The client's id (not its slug)")),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Credential, AuditOperation::Revoke)])))),
     responses(
         (status = 200, description = "Success", body = serde_json::Value),
@@ -945,11 +969,16 @@ async fn delete_client(
 
 // ── Handlers: Keys ────────────────────────────────────────────────────────────
 
+/// Generate an S2S key
+///
+/// A new key in the `primary` or `secondary` slot, which must have no active key (revoke it first).
+/// The secret is returned once and stored encrypted; two slots let a key be replaced without a gap.
+/// Security administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/s2s/clients/{client_db_id}/keys",
     tag = "admin-security",
-    params(("client_db_id" = Uuid, Path)),
+    params(("client_db_id" = Uuid, Path, description = "The client's id (not its slug)")),
     request_body = GenerateKeyBody,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Credential, AuditOperation::Create)])))),
     responses(
@@ -1099,13 +1128,17 @@ async fn generate_key(
     ))
 }
 
+/// Revoke an S2S key
+///
+/// Revokes the key in one slot; requests signed with it are refused from now on. Security
+/// administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/s2s/clients/{client_db_id}/keys/{slot}",
     tag = "admin-security",
     params(
-        ("client_db_id" = Uuid, Path),
-        ("slot" = String, Path),
+        ("client_db_id" = Uuid, Path, description = "The client's id (not its slug)"),
+        ("slot" = String, Path, description = "`primary` or `secondary`"),
     ),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Credential, AuditOperation::Revoke)])))),
     responses(
@@ -1168,11 +1201,15 @@ async fn revoke_key(
 
 // ── Handlers: Permissions ─────────────────────────────────────────────────────
 
+/// List an S2S client's entity permissions
+///
+/// Per entity, what the client may do: read, create, update, delete, export and bulk. Security
+/// administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/s2s/clients/{client_db_id}/permissions",
     tag = "admin-security",
-    params(("client_db_id" = Uuid, Path)),
+    params(("client_db_id" = Uuid, Path, description = "The client's id (not its slug)")),
     responses(
         (status = 200, description = "Success", body = Vec<PermissionItem>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -1189,11 +1226,15 @@ async fn list_permissions(
     Ok(Json(fetch_permissions(&state.base.db, client_db_id).await?))
 }
 
+/// Set an S2S client's permission on an entity
+///
+/// Sets what the client may do on one entity (read, create, update, delete, export, bulk), replacing
+/// what it had there. Security administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/s2s/clients/{client_db_id}/permissions",
     tag = "admin-security",
-    params(("client_db_id" = Uuid, Path)),
+    params(("client_db_id" = Uuid, Path, description = "The client's id (not its slug)")),
     request_body = SetPermissionBody,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Credential, AuditOperation::Update)])))),
     responses(
@@ -1272,13 +1313,16 @@ async fn set_permission(
     }))
 }
 
+/// Remove an S2S client's permission on an entity
+///
+/// The client may do nothing more on that entity. Security administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/s2s/clients/{client_db_id}/permissions/{entity_name}",
     tag = "admin-security",
     params(
-        ("client_db_id" = Uuid, Path),
-        ("entity_name" = String, Path),
+        ("client_db_id" = Uuid, Path, description = "The client's id (not its slug)"),
+        ("entity_name" = String, Path, description = "The entity's logical name"),
     ),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Credential, AuditOperation::Revoke)])))),
     responses(
@@ -1330,12 +1374,16 @@ async fn delete_permission(
 
 // ── Handlers: Access log ──────────────────────────────────────────────────────
 
+/// Read an S2S client's access log
+///
+/// The client's requests, newest first, at most 200 a call, optionally after a time or for one
+/// correlation id. Security administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/s2s/clients/{client_db_id}/logs",
     tag = "admin-security",
     params(
-        ("client_db_id" = Uuid, Path),
+        ("client_db_id" = Uuid, Path, description = "The client's id (not its slug)"),
         LogQuery,
     ),
     responses(
