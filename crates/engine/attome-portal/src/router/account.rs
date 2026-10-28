@@ -121,6 +121,12 @@ fn email_lower(raw: &str) -> String {
     raw.trim().to_lowercase()
 }
 
+/// Sign up to a web portal
+///
+/// Asks for an account with an email, a password and the portal's current consent versions. The
+/// answer is 202 whatever happened (a verification link, a notice to an existing account, or nothing),
+/// so it reveals no account. A password that fails the policy, a consent that does not match, or a
+/// failed CAPTCHA is 422.
 #[utoipa::path(
     post,
     path = "/{keyword}/api/v1/auth/signup",
@@ -270,6 +276,10 @@ fn sqlx_err(e: sqlx::Error) -> AppError {
     AppError::internal(e)
 }
 
+/// Verify a portal signup
+///
+/// Creates the account from the emailed verification link; sign in with the password given at signup.
+/// An invalid, used or expired link, or a portal whose signup closed, is 422.
 #[utoipa::path(
     post,
     path = "/{keyword}/api/v1/auth/signup/verify",
@@ -326,9 +336,10 @@ async fn signup_verify(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// D-780: the emailed link that adds an address to an account (asked for
-/// through the portal's trusted server). The address is written, verified,
-/// only now; the address it replaces, if any, is told.
+/// Verify an added email address
+///
+/// The emailed link that adds an address to a portal account: the address is written, verified, only
+/// now, and the address it replaces, if any, is told.
 #[utoipa::path(
     post,
     path = "/{keyword}/api/v1/auth/email/verify",

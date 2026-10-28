@@ -105,6 +105,10 @@ fn failed(portal: &PortalDetail) -> Result<Response, AppError> {
     redirect(&format!("/{}/login?error=oidc", portal.keyword))
 }
 
+/// Start signing in with an identity provider
+///
+/// Redirects (303) to one of the portal's OIDC providers, after binding the flow to this portal,
+/// provider and browser so a sign-in cannot be planted in someone else's browser.
 #[utoipa::path(
     get,
     path = "/{keyword}/api/v1/auth/oidc/{provider}/start",
@@ -178,6 +182,11 @@ impl std::fmt::Debug for CallbackQuery {
     }
 }
 
+/// Finish signing in with an identity provider
+///
+/// Where the provider sends the browser back. Redirects (303) to the portal app: home when signed in,
+/// a page that finishes a pending link or MFA step, or the login page with one error, whatever went
+/// wrong.
 #[utoipa::path(
     get,
     path = "/{keyword}/api/v1/auth/oidc/{provider}/callback",
@@ -422,6 +431,10 @@ async fn refused(
     Err(AppError::Unauthorized)
 }
 
+/// Link an identity provider to a portal account
+///
+/// Finishes a pending link with proof of the existing account and signs in; an unknown, used or
+/// expired link, or a failed proof, is 401.
 #[utoipa::path(
     post,
     path = "/{keyword}/api/v1/auth/oidc/link",
@@ -505,6 +518,10 @@ async fn link(
     }
 }
 
+/// Finish an identity provider sign-in with MFA
+///
+/// Sends the MFA code for a provider sign-in that needs one and signs in; an unknown, used or expired
+/// step, or a wrong code, is 401.
 #[utoipa::path(
     post,
     path = "/{keyword}/api/v1/auth/oidc/mfa",

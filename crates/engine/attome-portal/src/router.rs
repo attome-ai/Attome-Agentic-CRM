@@ -773,6 +773,11 @@ fn mfa_required_response() -> Response {
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
+/// Sign in to a web portal
+///
+/// Checks the portal user's email or username and password and sets the portal's session cookies;
+/// an account with MFA answers 401 `mfa_required` until the code is sent too. Rate limited per portal
+/// and per account, failing closed. An unknown or disabled portal is 404.
 #[utoipa::path(
     post,
     path = "/{keyword}/api/v1/auth/login",
@@ -921,6 +926,10 @@ async fn login(
     }
 }
 
+/// Refresh a portal session
+///
+/// Rotates the refresh token and sets new session cookies; a missing, expired or reused refresh token
+/// is 401, and a reused one ends its whole family.
 #[utoipa::path(
     post,
     path = "/{keyword}/api/v1/auth/refresh",
@@ -997,6 +1006,9 @@ async fn refresh_session(
     }
 }
 
+/// Sign out of a web portal
+///
+/// Ends the session and clears the portal's cookies.
 #[utoipa::path(
     post,
     path = "/{keyword}/api/v1/auth/logout",
@@ -1039,6 +1051,10 @@ async fn logout(
     Ok(response)
 }
 
+/// Accept a portal invitation
+///
+/// Sets the invited user's password from the invitation token; the account becomes active and its
+/// email verified. An invalid or expired invitation, or a password that fails the policy, is 422.
 #[utoipa::path(
     post,
     operation_id = "portal_accept_invitation",
@@ -1094,6 +1110,10 @@ async fn accept_invitation(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Ask for a portal password reset
+///
+/// Emails a reset link when the address has an account; the answer is the same either way, so it
+/// tells nobody whether an account exists. Rate limited. 503 when email is not configured.
 #[utoipa::path(
     post,
     path = "/{keyword}/api/v1/auth/reset-request",
@@ -1161,6 +1181,10 @@ async fn reset_request(
     Ok(Json(PortalAck { ok: true }))
 }
 
+/// Reset a portal password
+///
+/// Sets a new password from a reset link's token and ends every existing session; an invalid or
+/// expired link, or a password that fails the policy, is 422. Rate limited.
 #[utoipa::path(
     post,
     path = "/{keyword}/api/v1/auth/reset-confirm",
@@ -1216,6 +1240,10 @@ async fn reset_confirm(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Start MFA enrolment
+///
+/// A pending TOTP secret for the signed-in portal user to add to an authenticator app; it takes
+/// effect only once confirmed with a code.
 #[utoipa::path(
     post,
     operation_id = "portal_mfa_enroll",
@@ -1266,6 +1294,10 @@ async fn mfa_enroll(
     }))
 }
 
+/// Confirm MFA enrolment
+///
+/// Turns MFA on with a code from the pending secret and returns new recovery codes, shown once. A
+/// wrong code, or no pending enrolment, is 422.
 #[utoipa::path(
     post,
     operation_id = "portal_mfa_confirm",
@@ -1320,6 +1352,9 @@ async fn mfa_confirm(
     Ok(Json(RecoveryCodes { recovery_codes }))
 }
 
+/// Replace MFA recovery codes
+///
+/// A new set of recovery codes, shown once, for an authenticator code; the old set stops working.
 #[utoipa::path(
     post,
     path = "/{keyword}/api/v1/auth/mfa/recovery-codes",
@@ -1378,6 +1413,10 @@ async fn mfa_recovery_codes(
     Ok(Json(RecoveryCodes { recovery_codes }))
 }
 
+/// Turn MFA off
+///
+/// Turns the portal user's MFA off for an authenticator code; refused (422) on a portal that requires
+/// MFA.
 #[utoipa::path(
     post,
     operation_id = "portal_mfa_disable",
