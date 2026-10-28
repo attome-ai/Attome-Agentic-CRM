@@ -57,7 +57,7 @@ describe('EntityListComponent — registered cell renderers', () => {
         { provide: LangService, useValue: { translate: (key: string) => key, intlLocale: () => 'en-US', isRtl: () => false } },
         { provide: QueryService, useValue: { execute } },
         { provide: ViewAdminService, useValue: { listAvailable: vi.fn(() => of([VIEW])) } },
-        { provide: EntityService, useValue: {} },
+        { provide: EntityService, useValue: { getSchema: vi.fn(() => of(null)) } },
         { provide: DialogService, useValue: {} },
         { provide: BulkJobRunner, useValue: {} },
         { provide: CurrencyService, useValue: { preferredCurrency: signal('USD'), getPreferredCurrency: () => 'USD' } },
