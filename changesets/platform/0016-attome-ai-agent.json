@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:2723fd2164b60cb3ebc9bf27d1ec79540d795f5972c227bb0bec0c39f6e87eab",
+  "checksum": "sha256:c17420f29333f38b75cec8f4933b7ead50811d4f3cedae75d70b190a344a45d8",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-agent.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -361,6 +361,7 @@
               "help.answer",
               "identity.broker_steps",
               "identity.explain_signin_failure",
+              "identity.propose_oidc_provider",
               "import.error_rows",
               "import.propose_mapping",
               "import.start",

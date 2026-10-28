@@ -73,6 +73,7 @@ pub mod meeting;
 pub mod memory;
 pub mod model_edit;
 pub mod nl_query;
+pub mod oidc_assist;
 /// AB2-T12: the cluster's status and a switchover proposal.
 pub mod ops_cluster;
 /// AB4-T12: drill freshness and one drill's evidence, read only.
@@ -167,6 +168,8 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(governance::descriptors());
     all.extend(master::descriptors());
     all.extend(identity_assist::descriptors());
+    // Q1-T13: a draft for adding a sign-in provider, never saved.
+    all.extend(oidc_assist::descriptors());
     all.extend(expression::descriptors());
     all.push(extract_document::descriptor());
     all.push(ai_field::descriptor());
@@ -267,6 +270,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(governance::executors());
     all.extend(master::executors());
     all.extend(identity_assist::executors());
+    all.extend(oidc_assist::executors());
     all.extend(expression::executors());
     all.push(Box::new(extract_document::DocumentExtract));
     all.push(Box::new(ai_field::RecordAiField));

@@ -39,7 +39,7 @@
               "expression.validate", "flow_template.adapt", "followup.remind_owner", "followup.send_message",
               "fulfilment.hold.explain", "fulfilment.sourcing.propose", "fulfilment.status.read",
               "governance.draft_policy", "governance.list_overdue", "governance.propose_domains", "graph.traverse",
-              "handoff.to_person", "help.answer", "identity.broker_steps", "identity.explain_signin_failure", "import.error_rows",
+              "handoff.to_person", "help.answer", "identity.broker_steps", "identity.explain_signin_failure", "identity.propose_oidc_provider", "import.error_rows",
               "import.propose_mapping", "import.start", "import.status", "inbox.file_message", "knowledge.answer",
               "lead.book_meeting", "lead.send_message", "lineage.downstream", "lineage.impact", "lineage.upstream",
               "master.preview_ranking", "master.propose_release", "master.xref", "mcp.call.consequential",
