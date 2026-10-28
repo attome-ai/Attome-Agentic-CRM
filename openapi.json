@@ -50455,6 +50455,83 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/security/oidc-providers/{id}/health": {
+      "get": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Sign-in provider health",
+        "description": "The provider's last sign-in failure and its failures per kind since this node started (discovery, key set, token exchange, a refused ID token, clock skew). Per node; the `oidc_provider_failures_total` metric is the deployment-wide view. Administrators only.",
+        "operationId": "oidc_provider_health",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The provider's id, or a configured provider's key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OidcProviderHealthItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such provider",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/api/v1/admin/security/organizations": {
       "get": {
         "tags": [
@@ -178090,6 +178167,42 @@
           },
           "supports_forced_reauth": {
             "type": "boolean"
+          }
+        }
+      },
+      "OidcProviderHealthItem": {
+        "type": "object",
+        "description": "Q1-T12: a provider's sign-in failures on the node that answers.",
+        "required": [
+          "key",
+          "failures",
+          "node"
+        ],
+        "properties": {
+          "failures": {
+            "type": "object",
+            "description": "Failures per kind since this node started."
+          },
+          "key": {
+            "type": "string"
+          },
+          "last_failure_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "last_failure_kind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`discovery`, `jwks`, `token_exchange`, `id_token_rejected` or\n`clock_skew`."
+          },
+          "node": {
+            "type": "string",
+            "description": "The node these numbers are from; each node keeps its own, and\n`oidc_provider_failures_total` adds them up."
           }
         }
       },

@@ -14,7 +14,9 @@
 use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx, x_audit};
 use attome_audit::{AuditCategory, AuditOperation};
 use attome_auth::oidc_presets::{MfaClaim, OidcPreset, PRESETS, PresetKind};
-use attome_auth::oidc_registry::{announce_change, seal_secret, secret_fingerprint};
+use attome_auth::oidc_registry::{
+    ProviderHealth, announce_change, health, seal_secret, secret_fingerprint,
+};
 use attome_core::EngineState;
 use attome_server::authz::{Admin, Authorized};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
@@ -742,13 +744,77 @@ pub(super) async fn delete_provider(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Q1-T12: a provider's sign-in failures on the node that answers.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct OidcProviderHealthItem {
+    pub key: String,
+    /// `discovery`, `jwks`, `token_exchange`, `id_token_rejected` or
+    /// `clock_skew`.
+    pub last_failure_kind: Option<&'static str>,
+    pub last_failure_at: Option<DateTime<Utc>>,
+    /// Failures per kind since this node started.
+    #[schema(value_type = Object)]
+    pub failures: std::collections::BTreeMap<&'static str, u64>,
+    /// The node these numbers are from; each node keeps its own, and
+    /// `oidc_provider_failures_total` adds them up.
+    pub node: String,
+}
+
+/// Sign-in provider health
+///
+/// The provider's last sign-in failure and its failures per kind since this node started (discovery, key set, token exchange, a refused ID token, clock skew). Per node; the `oidc_provider_failures_total` metric is the deployment-wide view. Administrators only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/security/oidc-providers/{id}/health",
+    operation_id = "oidc_provider_health",
+    tag = "admin-security",
+    params(("id" = String, Path, description = "The provider's id, or a configured provider's key")),
+    responses(
+        (status = 200, description = "Success", body = OidcProviderHealthItem),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such provider", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn provider_health(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path(id): Path<String>,
+) -> Result<Json<OidcProviderHealthItem>, AppError> {
+    let key = if configured(&state, &id) {
+        id
+    } else {
+        let id: Uuid = id.parse().map_err(|_| AppError::NotFound)?;
+        sqlx::query_scalar("SELECT key FROM oidc_provider WHERE id = $1 AND NOT is_deleted")
+            .bind(id)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?
+            .ok_or(AppError::NotFound)?
+    };
+    let ProviderHealth {
+        last_failure_kind,
+        last_failure_at,
+        failures,
+    } = health(&key);
+    Ok(Json(OidcProviderHealthItem {
+        key,
+        last_failure_kind,
+        last_failure_at,
+        failures,
+        node: attome_server::metrics_store::node_name(state.base.config.app.port),
+    }))
+}
+
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(
     list_providers,
     list_presets,
     create_provider,
     update_provider,
-    delete_provider
+    delete_provider,
+    provider_health
 ))]
 struct ApiDocFragment;
 
@@ -767,6 +833,10 @@ pub(super) fn routes() -> Router<EngineState> {
             axum::routing::patch(update_provider).delete(delete_provider),
         )
         .route("/api/v1/admin/security/oidc-presets", get(list_presets))
+        .route(
+            "/api/v1/admin/security/oidc-providers/{id}/health",
+            get(provider_health),
+        )
 }
 
 #[cfg(test)]

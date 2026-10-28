@@ -771,6 +771,30 @@ groups:
             `sum by (reason) (rate(http_rejections_total{layer="{{ $labels.layer }}"}[5m]))`
             names the reason.
 
+      - alert: OidcProviderFailureSpike
+        # Q1-T12: oidc_provider_failures_total{provider, kind}, counted at
+        # discovery, the key set, the token exchange and ID-token checks.
+        # A provider failing ten times its hourly rate, and at least once a
+        # minute, for five minutes is the provider down, a rotated key or
+        # secret, or a clock drifting: people cannot sign in through it.
+        expr: |
+          sum by (provider) (rate(oidc_provider_failures_total[5m]))
+            > 10 * sum by (provider) (rate(oidc_provider_failures_total[1h]))
+          and sum by (provider) (rate(oidc_provider_failures_total[5m])) > 1 / 60
+        for: 5m
+        labels:
+          severity: warning
+          owner: security
+        annotations:
+          runbook_url: "observability/runbooks/OidcProviderFailureSpike.md"
+          summary: "Sign-ins through {{ $labels.provider }} are failing"
+          description: >
+            Sign-in failures through the {{ $labels.provider }} provider have
+            run above ten times their one-hour average, and over one a
+            minute, for 5 minutes.
+            `sum by (kind) (rate(oidc_provider_failures_total{provider="{{ $labels.provider }}"}[5m]))`
+            names the step that fails.
+
       # ── D-344 — durability-capability gate (amends D-167) ──────────────────
       #
       # These are NOT readiness alerts. /health/ready still watches only

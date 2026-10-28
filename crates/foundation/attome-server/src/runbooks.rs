@@ -58,6 +58,7 @@ runbooks!(
     "NodeStoppedReporting",
     "ObjectStorageDown",
     "ObjectStorageProbeLatencyHigh",
+    "OidcProviderFailureSpike",
     "PartitionBloatMetricMissing",
     "PartitionedTableDeadTupleRatioHigh",
     "PlatformJobFailures",

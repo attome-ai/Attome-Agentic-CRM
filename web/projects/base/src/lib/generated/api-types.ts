@@ -9742,6 +9742,26 @@ export interface paths {
         patch: operations["update_oidc_provider"];
         trace?: never;
     };
+    "/api/v1/admin/security/oidc-providers/{id}/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sign-in provider health
+         * @description The provider's last sign-in failure and its failures per kind since this node started (discovery, key set, token exchange, a refused ID token, clock skew). Per node; the `oidc_provider_failures_total` metric is the deployment-wide view. Administrators only.
+         */
+        get: operations["oidc_provider_health"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/security/organizations": {
         parameters: {
             query?: never;
@@ -42645,6 +42665,24 @@ export interface components {
             mfa_claim: string;
             scopes: string[];
             supports_forced_reauth: boolean;
+        };
+        /** @description Q1-T12: a provider's sign-in failures on the node that answers. */
+        OidcProviderHealthItem: {
+            /** @description Failures per kind since this node started. */
+            failures: Record<string, never>;
+            key: string;
+            /** Format: date-time */
+            last_failure_at?: string | null;
+            /**
+             * @description `discovery`, `jwks`, `token_exchange`, `id_token_rejected` or
+             *     `clock_skew`.
+             */
+            last_failure_kind?: string | null;
+            /**
+             * @description The node these numbers are from; each node keeps its own, and
+             *     `oidc_provider_failures_total` adds them up.
+             */
+            node: string;
         };
         /**
          * @description P2.8 step 5 — public provider directory for the Angular login page's
@@ -92411,6 +92449,56 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    oidc_provider_health: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The provider's id, or a configured provider's key */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OidcProviderHealthItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such provider */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -306,6 +306,29 @@ async fn create_never_returns_secret() {
         .expect("the new provider signs in");
     assert_eq!(entry.config.client_secret.expose(), SECRET);
 
+    // Q1-T12: its health, by id, and a configured provider's by key.
+    let id = created["id"].as_str().unwrap();
+    let (status, health) = call(
+        &app,
+        &admin,
+        "GET",
+        &format!("/api/v1/admin/security/oidc-providers/{id}/health"),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{health}");
+    assert_eq!(health["key"], body["key"]);
+    assert_eq!(health["failures"], json!({}));
+    let (status, _) = call(
+        &app,
+        &admin,
+        "GET",
+        "/api/v1/admin/security/oidc-providers/configured/health",
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
     // A new secret is accepted and still not shown; the fingerprint moves.
     let id = created["id"].as_str().unwrap();
     let (status, changed) = call(

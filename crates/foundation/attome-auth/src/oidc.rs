@@ -747,7 +747,9 @@ pub async fn complete_login(
     let state: OidcState = serde_json::from_str(&raw_state)
         .map_err(|_| AppError::internal("corrupt oidc state entry"))?;
 
-    let discovery = fetch_discovery(cache_redis, provider_key, &provider.issuer).await?;
+    let discovery = fetch_discovery(cache_redis, provider_key, &provider.issuer)
+        .await
+        .inspect_err(|_| crate::oidc_registry::record_failure(provider_key, "discovery"))?;
 
     let params = [
         ("grant_type", "authorization_code"),
@@ -767,7 +769,7 @@ pub async fn complete_login(
     // redirecting or stalling token endpoint cannot re-receive the client
     // secret at another host, nor hold the request open, nor buffer an
     // unbounded body.
-    let token_response = tokio::time::timeout(HTTP_TIMEOUT, async {
+    let exchanged = tokio::time::timeout(HTTP_TIMEOUT, async {
         let response = token_request
             .send()
             .await
@@ -779,7 +781,11 @@ pub async fn complete_login(
             .map_err(|_| AppError::internal("oidc token response is not valid JSON"))
     })
     .await
-    .map_err(|_| AppError::internal("oidc token exchange timed out"))??;
+    .map_err(|_| AppError::internal("oidc token exchange timed out"))
+    .and_then(|result| result);
+    // Q1-T12: a refused or failed exchange counts against the provider.
+    let token_response = exchanged
+        .inspect_err(|_| crate::oidc_registry::record_failure(provider_key, "token_exchange"))?;
 
     let mut identity = verify_id_token(
         cache_redis,
@@ -843,10 +849,52 @@ async fn verify_id_token_inner(
     let header = jsonwebtoken::decode_header(id_token).map_err(|_| AppError::Unauthorized)?;
     let kid = header.kid.clone().ok_or(AppError::Unauthorized)?;
 
-    let discovery = fetch_discovery(redis, provider_key, &provider.issuer).await?;
-    let jwk = resolve_signing_key(redis, provider_key, &discovery.jwks_uri, &kid).await?;
+    let discovery = fetch_discovery(redis, provider_key, &provider.issuer)
+        .await
+        .inspect_err(|_| crate::oidc_registry::record_failure(provider_key, "discovery"))?;
+    let jwk = resolve_signing_key(redis, provider_key, &discovery.jwks_uri, &kid)
+        .await
+        .inspect_err(|_| crate::oidc_registry::record_failure(provider_key, "jwks"))?;
 
-    verify_claims(&jwk, &header, provider, id_token, expected_nonce)
+    verify_claims(&jwk, &header, provider, id_token, expected_nonce).inspect_err(|_| {
+        crate::oidc_registry::record_failure(
+            provider_key,
+            rejection_kind(id_token, chrono::Utc::now()),
+        )
+    })
+}
+
+/// Q1-T12: why an ID token was refused, for the provider's health only: its
+/// clock disagreeing with ours (`exp` already past, `iat` or `nbf` ahead of
+/// now by more than the leeway) or anything else. Reads the payload without
+/// verifying it; nothing is decided from this but a metric label.
+fn rejection_kind(id_token: &str, now: chrono::DateTime<chrono::Utc>) -> &'static str {
+    use base64::Engine as _;
+    let claims = id_token
+        .split('.')
+        .nth(1)
+        .and_then(|payload| {
+            base64::engine::general_purpose::URL_SAFE_NO_PAD
+                .decode(payload)
+                .ok()
+        })
+        .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok());
+    let Some(claims) = claims else {
+        return "id_token_rejected";
+    };
+    let at = |name: &str| claims.get(name).and_then(serde_json::Value::as_i64);
+    let now = now.timestamp();
+    let leeway = 60;
+    let expired = at("exp").is_some_and(|exp| exp + leeway < now);
+    let early = [at("iat"), at("nbf")]
+        .into_iter()
+        .flatten()
+        .any(|t| t > now + leeway);
+    if expired || early {
+        "clock_skew"
+    } else {
+        "id_token_rejected"
+    }
 }
 
 /// The pure (no I/O) half of ID-token verification — split out from
@@ -1431,6 +1479,38 @@ mod tests {
         assert!(idp_mfa_of(&keycloak, serde_json::json!({"acr": "2"})));
         assert!(!idp_mfa_of(&keycloak, serde_json::json!({"acr": "1"})));
         assert!(!idp_mfa_of(&keycloak, serde_json::json!({"acr": 2})));
+    }
+
+    /// Q1-T12: an expired or future-dated token reads as clock skew.
+    #[test]
+    fn rejection_kind_tells_clock_skew_apart() {
+        use base64::Engine as _;
+        let token = |claims: serde_json::Value| {
+            let b64 = base64::engine::general_purpose::URL_SAFE_NO_PAD;
+            format!(
+                "{}.{}.sig",
+                b64.encode(b"{}"),
+                b64.encode(claims.to_string())
+            )
+        };
+        let now = chrono::Utc::now();
+        let t = now.timestamp();
+        assert_eq!(
+            rejection_kind(&token(serde_json::json!({"exp": t - 3600})), now),
+            "clock_skew"
+        );
+        assert_eq!(
+            rejection_kind(
+                &token(serde_json::json!({"exp": t + 600, "iat": t + 3600})),
+                now
+            ),
+            "clock_skew"
+        );
+        assert_eq!(
+            rejection_kind(&token(serde_json::json!({"exp": t + 600, "iat": t})), now),
+            "id_token_rejected"
+        );
+        assert_eq!(rejection_kind("not-a-jwt", now), "id_token_rejected");
     }
 
     /// Q1-T11: a provider added on screen starts from the standard methods.

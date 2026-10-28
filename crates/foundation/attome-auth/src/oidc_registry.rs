@@ -290,6 +290,59 @@ pub fn secret_fingerprint(secret: &str) -> String {
     hex::encode(Sha256::digest(secret.as_bytes()))[..8].to_owned()
 }
 
+/// Q1-T12: why a sign-in through a provider failed.
+pub const FAILURE_KINDS: [&str; 5] = [
+    "discovery",
+    "jwks",
+    "token_exchange",
+    "id_token_rejected",
+    "clock_skew",
+];
+
+/// Q1-T12: one provider's failures on this node since it started: per kind,
+/// and the last one. Observational: per node, kept in memory, gone on
+/// restart; the counter `oidc_provider_failures_total` is the durable view.
+#[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize)]
+pub struct ProviderHealth {
+    pub last_failure_kind: Option<&'static str>,
+    pub last_failure_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub failures: std::collections::BTreeMap<&'static str, u64>,
+}
+
+fn health_store() -> &'static std::sync::Mutex<HashMap<String, ProviderHealth>> {
+    static STORE: std::sync::OnceLock<std::sync::Mutex<HashMap<String, ProviderHealth>>> =
+        std::sync::OnceLock::new();
+    STORE.get_or_init(Default::default)
+}
+
+/// Q1-T12: counts a failed sign-in step for `provider_key` (`kind` is one of
+/// [`FAILURE_KINDS`]) and records it as the provider's last failure.
+pub fn record_failure(provider_key: &str, kind: &'static str) {
+    metrics::counter!(
+        "oidc_provider_failures_total",
+        "provider" => provider_key.to_owned(),
+        "kind" => kind
+    )
+    .increment(1);
+    let mut store = health_store()
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    let health = store.entry(provider_key.to_owned()).or_default();
+    *health.failures.entry(kind).or_insert(0) += 1;
+    health.last_failure_kind = Some(kind);
+    health.last_failure_at = Some(chrono::Utc::now());
+}
+
+/// Q1-T12: `provider_key`'s failures on this node since it started.
+pub fn health(provider_key: &str) -> ProviderHealth {
+    health_store()
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .get(provider_key)
+        .cloned()
+        .unwrap_or_default()
+}
+
 /// The providers every sign-in reads, swapped whole on a rebuild.
 pub struct OidcRegistry {
     snapshot: ArcSwap<Vec<ProviderEntry>>,
@@ -462,6 +515,21 @@ mod tests {
         assert!(seal_secret(&KeyRing::default(), sealed.id, "s3cret").is_err());
         assert_eq!(secret_fingerprint("s3cret").len(), 8);
         assert_ne!(secret_fingerprint("s3cret"), secret_fingerprint("other"));
+    }
+
+    #[test]
+    fn failure_is_recorded_in_snapshot() {
+        let key = format!("health-{}", Uuid::now_v7().simple());
+        assert_eq!(health(&key), ProviderHealth::default());
+        record_failure(&key, "discovery");
+        record_failure(&key, "jwks");
+        record_failure(&key, "jwks");
+        let snapshot = health(&key);
+        assert_eq!(snapshot.last_failure_kind, Some("jwks"));
+        assert!(snapshot.last_failure_at.is_some());
+        assert_eq!(snapshot.failures.get("jwks"), Some(&2));
+        assert_eq!(snapshot.failures.get("discovery"), Some(&1));
+        assert!(health("another-provider").failures.is_empty());
     }
 
     #[test]
