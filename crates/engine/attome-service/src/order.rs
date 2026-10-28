@@ -646,8 +646,9 @@ pub async fn search_catalog(
     .map_err(AppError::internal)
 }
 
-/// The service catalog (G3-T3): active offerings, searched in Arabic or
-/// English across name, description and category.
+/// Browse the service catalogue
+///
+/// The active service offerings, searched in Arabic or English across name, description and category.
 #[utoipa::path(
     get,
     path = "/api/v1/service-catalog",
@@ -761,7 +762,9 @@ pub async fn my_orders(db: &DbPool, user_id: Uuid) -> Result<Vec<OrderView>, App
     Ok(views)
 }
 
-/// The caller's orders and where each item stands (G3-T3).
+/// List my service orders
+///
+/// The caller's service orders and where each item stands.
 #[utoipa::path(
     get,
     path = "/api/v1/service-orders/mine",

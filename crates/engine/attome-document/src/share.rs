@@ -602,12 +602,17 @@ async fn open_link(
         .map_err(AppError::internal)
 }
 
+/// Download a shared file
+///
+/// Redirects (303) to a five-minute download URL for the file a share link names, counting against the
+/// link's download limit; a link with a password is opened with POST instead. An unknown, revoked,
+/// expired or used-up link is 404. No session; rate limited.
 #[utoipa::path(
     get,
     path = "/api/v1/shared-files/{token}",
     tag = "entity",
     operation_id = "download_shared_file",
-    params(("token" = String, Path)),
+    params(("token" = String, Path, description = "The share link's token")),
     responses(
         (status = 303, description = "To a five-minute download URL"),
         (status = 401, description = "The link needs a password: open it with POST", body = ErrorResponse),
@@ -629,12 +634,17 @@ async fn download_shared_file(
         .into_response())
 }
 
+/// Download a password-protected shared file
+///
+/// Checks the link's password and answers the five-minute download URL as JSON, counting against the
+/// link's download limit. An unknown, revoked, expired or used-up link is 404. No session; rate
+/// limited.
 #[utoipa::path(
     post,
     path = "/api/v1/shared-files/{token}",
     tag = "entity",
     operation_id = "open_shared_file",
-    params(("token" = String, Path)),
+    params(("token" = String, Path, description = "The share link's token")),
     request_body = OpenShareLinkRequest,
     responses(
         (status = 200, description = "A five-minute download URL", body = SharedFileUrl),

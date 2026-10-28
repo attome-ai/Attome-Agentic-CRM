@@ -322,6 +322,10 @@ async fn cached(state: &EngineState) -> Result<StatusPage, AppError> {
     Ok(page)
 }
 
+/// Read the public status page
+///
+/// The overall status, each public component, the open incidents and the planned maintenance, rebuilt
+/// at most every 30 seconds. No session.
 #[utoipa::path(
     get,
     path = "/api/v1/status",
@@ -332,7 +336,7 @@ async fn cached(state: &EngineState) -> Result<StatusPage, AppError> {
         (status = 404, description = "The service module is not licensed", body = ErrorResponse),
     ),
 )]
-/// The public status page (no sign-in), rebuilt at most every 30 seconds.
+// The public status page (no sign-in), rebuilt at most every 30 seconds.
 async fn get_status(State(state): State<EngineState>) -> Result<Response, AppError> {
     if state
         .modules
@@ -452,6 +456,9 @@ type Row2 = Option<(
     DateTime<Utc>,
 )>;
 
+/// Subscribe to status updates
+///
+/// Asks to receive status updates by email; a confirmation link is sent. No session.
 #[utoipa::path(
     post,
     path = "/api/v1/status/subscribe",
@@ -465,7 +472,7 @@ type Row2 = Option<(
         (status = 422, description = "Not an email address", body = ErrorResponse),
     ),
 )]
-/// Asks to receive status updates by email: a confirmation link is sent.
+// Asks to receive status updates by email: a confirmation link is sent.
 async fn post_subscribe(
     State(state): State<EngineState>,
     Json(body): Json<StatusSubscribe>,
@@ -569,6 +576,9 @@ pub fn action_page(path: &str, token: &str, en: &str, ar: &str) -> String {
     )
 }
 
+/// Open a subscription confirmation
+///
+/// The confirmation page for an emailed link; its button confirms. No session.
 #[utoipa::path(
     get,
     path = "/api/v1/status/confirm",
@@ -577,7 +587,7 @@ pub fn action_page(path: &str, token: &str, en: &str, ar: &str) -> String {
     params(StatusToken),
     responses((status = 200, description = "A page with a confirm button", content_type = "text/html")),
 )]
-/// The confirmation page; its button confirms.
+// The confirmation page; its button confirms.
 async fn get_confirm(Query(q): Query<StatusToken>) -> axum::response::Html<String> {
     axum::response::Html(action_page(
         "/api/v1/status/confirm",
@@ -587,6 +597,9 @@ async fn get_confirm(Query(q): Query<StatusToken>) -> axum::response::Html<Strin
     ))
 }
 
+/// Confirm a status subscription
+///
+/// Confirms the subscription the token names. No session.
 #[utoipa::path(
     post,
     path = "/api/v1/status/confirm",
@@ -599,7 +612,7 @@ async fn get_confirm(Query(q): Query<StatusToken>) -> axum::response::Html<Strin
         (status = 404, description = "The link is not valid", body = ErrorResponse),
     ),
 )]
-/// Confirms a subscription.
+// Confirms a subscription.
 async fn post_confirm(
     State(state): State<EngineState>,
     axum::Form(form): axum::Form<StatusToken>,
@@ -625,6 +638,9 @@ async fn post_confirm(
     ))
 }
 
+/// Open an unsubscribe link
+///
+/// The unsubscribe page for an emailed link; its button unsubscribes. No session.
 #[utoipa::path(
     get,
     path = "/api/v1/status/unsubscribe",
@@ -633,7 +649,7 @@ async fn post_confirm(
     params(StatusToken),
     responses((status = 200, description = "A page with an unsubscribe button", content_type = "text/html")),
 )]
-/// The unsubscribe page; its button unsubscribes.
+// The unsubscribe page; its button unsubscribes.
 async fn get_unsubscribe(Query(q): Query<StatusToken>) -> axum::response::Html<String> {
     axum::response::Html(action_page(
         "/api/v1/status/unsubscribe",
@@ -643,6 +659,9 @@ async fn get_unsubscribe(Query(q): Query<StatusToken>) -> axum::response::Html<S
     ))
 }
 
+/// Unsubscribe from status updates
+///
+/// Stops the subscriber's emails. No session.
 #[utoipa::path(
     post,
     path = "/api/v1/status/unsubscribe",
@@ -655,7 +674,7 @@ async fn get_unsubscribe(Query(q): Query<StatusToken>) -> axum::response::Html<S
         (status = 404, description = "The link is not valid", body = ErrorResponse),
     ),
 )]
-/// Stops a subscriber's emails.
+// Stops a subscriber's emails.
 async fn post_unsubscribe(
     State(state): State<EngineState>,
     axum::Form(form): axum::Form<StatusToken>,

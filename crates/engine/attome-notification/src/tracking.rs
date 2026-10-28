@@ -337,7 +337,10 @@ fn user_agent(headers: &HeaderMap) -> Option<String> {
         .map(str::to_owned)
 }
 
-/// Counts an open (D16-T1). Always answers the pixel, whatever the token.
+/// Count an email open
+///
+/// Counts an open for the signed token and always answers the tracking pixel, whatever the token, so
+/// it reveals nothing. No session.
 #[utoipa::path(
     get,
     path = "/api/v1/track/open/{token}",

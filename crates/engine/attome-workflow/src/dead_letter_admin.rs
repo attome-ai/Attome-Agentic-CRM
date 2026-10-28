@@ -78,6 +78,10 @@ impl std::fmt::Debug for TriggerReplayResult {
     }
 }
 
+/// List workflow trigger dead letters
+///
+/// The change-feed events whose workflow entry triggers the dispatcher gave up on, with the last
+/// error, one-based pages. Automation administrators only.
 #[utoipa::path(
     get,
     operation_id = "workflow_list_trigger_dead_letters",
@@ -140,6 +144,10 @@ async fn load(state: &EngineState, event_id: Uuid) -> Result<TriggerDeadLetter, 
     .ok_or(AppError::NotFound)
 }
 
+/// Replay a workflow trigger dead letter
+///
+/// Starts the entry triggers the event matches again; a trigger that already started for the event
+/// is not started twice. Automation administrators only. Audited.
 #[utoipa::path(
     post,
     operation_id = "workflow_replay_trigger_dead_letter",
@@ -242,6 +250,10 @@ pub async fn replay(
     Ok(dispatched)
 }
 
+/// Discard a workflow trigger dead letter
+///
+/// Drops the event from the dead letters without starting anything. Automation administrators only.
+/// Audited.
 #[utoipa::path(
     delete,
     operation_id = "workflow_discard_trigger_dead_letter",

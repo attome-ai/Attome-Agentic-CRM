@@ -401,14 +401,15 @@ pub fn parse_receipt_body(body: &[u8]) -> Option<(String, DeliveryStatus, Option
     sms_twilio::parse_receipt(&form)
 }
 
-/// J4-T1: a provider's delivery receipt for one message. The token names the
-/// ledger row; a bad or expired one is 404, as is a receipt for a different
-/// provider message.
+/// Receive an SMS delivery receipt
+///
+/// A provider's delivery receipt for one message; the token names the message, and a bad or expired
+/// one, or a receipt for another provider message, is 404. No session.
 #[utoipa::path(
     post,
     path = "/api/v1/sms/receipts/{token}",
     tag = "integration",
-    params(("token" = String, Path)),
+    params(("token" = String, Path, description = "The receipt token sent with the message")),
     extensions(("x-audit-exempt" = json!(x_audit_exempt(
         ExemptReason::Telemetry,
         None,
