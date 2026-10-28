@@ -221,7 +221,7 @@ async fn send(
         .method(method)
         .uri(uri)
         .header("cookie", cookie);
-    let req = match body {
+    let req = match &body {
         Some(body) => builder
             .header("content-type", "application/json")
             .body(Body::from(body.to_string())),
@@ -234,6 +234,8 @@ async fn send(
         .await
         .expect("body");
     let json = serde_json::from_slice(&bytes).unwrap_or(Value::Null);
+    // S2-T10: an example for the API document, when ATTOME_CAPTURE_EXAMPLES is set.
+    attome_testkit::examples::capture_example(method, uri, body.as_ref(), status.as_u16(), &json);
     (status, json)
 }
 

@@ -326,7 +326,10 @@ async fn send(
         .await
         .unwrap();
     let status = res.status();
-    (status, body_json(res).await)
+    let json = body_json(res).await;
+    // S2-T10: an example for the API document, when ATTOME_CAPTURE_EXAMPLES is set.
+    attome_testkit::examples::capture_example(method, uri, body, status.as_u16(), &json);
+    (status, json)
 }
 
 async fn patch(

@@ -5,6 +5,12 @@
 //   npm run generate:api -- --features a,b       # ...with optional cargo features built in
 //   npm run generate:api -- --spec <path>        # reuse an already-printed document
 //   OPENAPI_FEATURES=a,b npm run generate:api    # same as --features, via env
+//   npm run generate:api -- --examples <dir>     # examples from another directory
+//
+// S2-T10: request and response examples captured by integration tests
+// (`ATTOME_CAPTURE_EXAMPLES`, attome-testkit's `examples`) and committed under
+// docs/api/examples are set on the matching operations every time, so the
+// document keeps them whoever regenerates it.
 //
 // Two artifacts, both committed, both generated — never hand-edit either:
 //   openapi.json                                     (repo root)
@@ -18,7 +24,7 @@
 // database, no config file, no listener, no live authenticated server.
 //
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -35,6 +41,8 @@ const OUT_SDK = join(ANGULAR, 'projects', 'sdk', 'src', 'lib', 'generated', 'api
 
 const args = process.argv.slice(2);
 const specArg = args.indexOf('--spec');
+const examplesArg = args.indexOf('--examples');
+const EXAMPLES = examplesArg >= 0 ? resolve(args[examplesArg + 1]) : join(ROOT, 'docs', 'api', 'examples');
 
 /**
  * Cargo features for the `--print-openapi` build: `--features a,b`,
@@ -81,12 +89,70 @@ function sortOperationExtensions(doc) {
   }
 }
 
+/** The captured examples in `dir`, or none when it does not exist. */
+function readExamples(dir) {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .filter((f) => f.endsWith('.json'))
+    .sort()
+    .map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')));
+}
+
+/** A path template as a matcher: `{x}` is one segment. */
+function templateMatcher(template) {
+  const pattern = template
+    .split('/')
+    .map((seg) => (/^\{[^}]+\}$/.test(seg) ? '[^/]+' : seg.replace(/[.*+?^$()|[\]\\]/g, '\\$&')))
+    .join('/');
+  const literal = template.split('/').filter((s) => s && !s.startsWith('{')).length;
+  return { template, literal, re: new RegExp(`^${pattern}$`) };
+}
+
+/**
+ * Sets each example on its operation: the template that matches the captured
+ * path with the most literal segments wins (`/calendars/packs` over
+ * `/calendars/{id}`), and the first example of an operation and status wins.
+ * Returns how many were set.
+ */
+function applyExamples(doc, examples) {
+  const matchers = Object.keys(doc.paths ?? {}).map(templateMatcher);
+  const seen = new Set();
+  let set = 0;
+  for (const ex of examples) {
+    const path = String(ex.uri ?? '').split('?')[0];
+    const method = String(ex.method ?? '').toLowerCase();
+    const hits = matchers.filter((m) => m.re.test(path)).sort((a, b) => b.literal - a.literal);
+    const op = hits.length ? doc.paths[hits[0].template]?.[method] : undefined;
+    if (!op) continue;
+    const key = `${method} ${hits[0].template} ${ex.status}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const reqJson = op.requestBody?.content?.['application/json'];
+    if (reqJson && ex.request != null && reqJson.example === undefined) reqJson.example = ex.request;
+    const resJson = op.responses?.[String(ex.status)]?.content?.['application/json'];
+    if (resJson && ex.response != null) {
+      resJson.example = ex.response;
+      set += 1;
+    }
+  }
+  return set;
+}
+
+const examples = readExamples(EXAMPLES);
+
 if (specArg >= 0) {
   // An already-printed document is taken as-is: whoever printed it chose the
   // feature set, and this is the path a container-built document arrives by.
   const from = resolve(args[specArg + 1]);
-  writeFileSync(SPEC, readFileSync(from));
-  console.log(`openapi.json <- ${from}`);
+  if (examples.length) {
+    const doc = JSON.parse(readFileSync(from, 'utf8'));
+    const n = applyExamples(doc, examples);
+    writeFileSync(SPEC, `${JSON.stringify(doc, null, 2)}\n`, { encoding: 'utf8' });
+    console.log(`openapi.json <- ${from} (${n} examples)`);
+  } else {
+    writeFileSync(SPEC, readFileSync(from));
+    console.log(`openapi.json <- ${from}`);
+  }
 } else {
   const features = requestedFeatures();
   const cargoArgs = ['run', '-q', '-p', 'attome', '--bin', 'attome'];
@@ -99,6 +165,7 @@ if (specArg >= 0) {
   });
   const doc = JSON.parse(json);
   sortOperationExtensions(doc);
+  const exampleCount = applyExamples(doc, examples);
 
   // Normalise to LF and a trailing newline so the committed file is stable
   // across platforms — otherwise a regenerate-and-diff shows line-ending noise.
@@ -106,7 +173,8 @@ if (specArg >= 0) {
   writeFileSync(SPEC, pretty, { encoding: 'utf8' });
   console.log(
     `openapi.json <- ${Object.keys(doc.paths).length} paths` +
-      (features.length ? ` (features: ${features.join(',')})` : ''),
+      (features.length ? ` (features: ${features.join(',')})` : '') +
+      (exampleCount ? `, ${exampleCount} examples` : ''),
   );
 }
 

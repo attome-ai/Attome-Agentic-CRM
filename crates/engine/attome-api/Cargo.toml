@@ -85,7 +85,7 @@ uuid.workspace                = true
 [dev-dependencies]
 attome-docgen.workspace      = true
 attome-search.workspace      = true
-attome-testkit               = { workspace = true, features = ["app-config"] }
+attome-testkit               = { workspace = true, features = ["app-config", "examples"] }
 hmac.workspace               = true
 proptest.workspace           = true
 rmp-serde.workspace          = true

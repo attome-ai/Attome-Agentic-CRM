@@ -16,6 +16,7 @@ attome-jobs     = { workspace = true, optional = true }
 attome-types    = { workspace = true, optional = true }
 chrono          = { workspace = true, optional = true }
 serde           = { workspace = true, optional = true }
+serde_json      = { workspace = true, optional = true }
 sqlx.workspace  = true
 tokio.workspace = true
 tracing            = { workspace = true, optional = true }
@@ -32,6 +33,8 @@ query-counter = ["dep:tracing", "dep:tracing-subscriber"]
 app-config = ["dep:attome-config"]
 # Z7-T7: `jobs`, run a registered job at once and move schedule time.
 jobs = ["dep:attome-jobs", "dep:attome-types", "dep:chrono", "dep:serde"]
+# S2-T10: `examples`, request/response examples captured from tests.
+examples = ["dep:serde_json"]
 
 [lints]
 workspace = true

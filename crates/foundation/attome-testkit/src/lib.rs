@@ -45,6 +45,11 @@ pub mod query_counter;
 #[cfg(feature = "jobs")]
 pub mod jobs;
 
+/// S2-T10: request and response examples for the API document (feature
+/// `examples`).
+#[cfg(feature = "examples")]
+pub mod examples;
+
 use sqlx::Connection;
 use sqlx::postgres::{PgConnection, PgPoolOptions};
 use uuid::Uuid;
