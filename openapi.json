@@ -101990,6 +101990,101 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/ops/status": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "The platform's status",
+        "description": "AB11-T2: each component's state, open incidents and maintenance not yet\nover. Any signed-in user; internal items need `ops.read`.",
+        "operationId": "get_ops_status",
+        "responses": {
+          "200": {
+            "description": "Component states, incidents and maintenance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusSnapshot"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/ops/status/banner": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "The status notice for the signed-in user",
+        "description": "AB11-T2: the most severe open incident, else maintenance starting within\n24 hours, titled in the `Accept-Language` language; `204` when there is\nnothing to say.",
+        "operationId": "get_ops_status_banner",
+        "responses": {
+          "200": {
+            "description": "The notice to show",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusBanner"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Nothing to show"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/ops/upgrades": {
       "get": {
         "tags": [
@@ -153759,6 +153854,31 @@
           }
         }
       },
+      "ComponentStatus": {
+        "type": "object",
+        "description": "One component's state.",
+        "required": [
+          "key",
+          "name_en",
+          "name_ar",
+          "state"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "name_ar": {
+            "type": "string"
+          },
+          "name_en": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "description": "`operational`, `degraded`, `down` or `unknown`."
+          }
+        }
+      },
       "ComposeRequest": {
         "type": "object",
         "required": [
@@ -164992,6 +165112,14 @@
             "default": "asc",
             "example": "asc"
           },
+          "order_near": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A2-T3: `\"lat,lng\"`: sort by distance from this point, nearest first\n(`order_dir: desc` for farthest first). `order_by` must name a\ngeolocation field; rows without a point come last (first for\n`desc`). One page only:\nnot with `after_id` or `seek` (422), and no `next_cursor`.",
+            "example": "24.7136,46.6753"
+          },
           "page": {
             "type": "integer",
             "format": "int64",
@@ -166719,7 +166847,7 @@
           },
           "op": {
             "type": "string",
-            "description": "One of: `contains`, `starts_with`, `ends_with`, `contains_any`,\n`contains_all`, `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`,\n`is_null`, `is_not_null`. `starts_with`/`ends_with` are text-only,\nlike `contains`; `neq` excludes a stored NULL (SQL `<>`), exactly like\nevery other comparison — `is_null` is the only way to match one. The\nfour were added by D-607 (advanced find, B-R10 Phase A): the entity\ngrid had offered them since C-28 while the server refused them. For a\nmulti-select Choice:\n`contains` tests one option, `contains_any` matches any supplied\noption, and `contains_all` matches every supplied option. `in` matches\nany of a non-empty string array by typed equality (not valid for a\nmulti-select Choice). `is_null` takes no value and matches a stored\nNULL — the only way to express a NULL bucket (dashboard 10/10 Phase 0\nspike S1). `under` and `above` (A17-T2) take a record id for a lookup\ninto a tree (an entity with one parent lookup to itself) and match\nthat record and everything below it, or above it, up to 32 levels.\n`tagged` (B4-T4) takes a tag id on the `id` field and matches the\nrecords carrying that tag (a personal tag only for its owner).",
+            "description": "One of: `contains`, `starts_with`, `ends_with`, `contains_any`,\n`contains_all`, `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`,\n`is_null`, `is_not_null`. `starts_with`/`ends_with` are text-only,\nlike `contains`; `neq` excludes a stored NULL (SQL `<>`), exactly like\nevery other comparison — `is_null` is the only way to match one. The\nfour were added by D-607 (advanced find, B-R10 Phase A): the entity\ngrid had offered them since C-28 while the server refused them. For a\nmulti-select Choice:\n`contains` tests one option, `contains_any` matches any supplied\noption, and `contains_all` matches every supplied option. `in` matches\nany of a non-empty string array by typed equality (not valid for a\nmulti-select Choice). `is_null` takes no value and matches a stored\nNULL — the only way to express a NULL bucket (dashboard 10/10 Phase 0\nspike S1). `under` and `above` (A17-T2) take a record id for a lookup\ninto a tree (an entity with one parent lookup to itself) and match\nthat record and everything below it, or above it, up to 32 levels.\n`tagged` (B4-T4) takes a tag id on the `id` field and matches the\nrecords carrying that tag (a personal tag only for its owner).\n`within_km` (A2-T3) takes `\"lat,lng,km\"` (or `{lat, lng, km}`) on a\ngeolocation field and matches the points at most `km` kilometres\naway; a geolocation field takes no other operator but `is_null` and\n`is_not_null`.",
             "example": "eq"
           },
           "value": {
@@ -169962,6 +170090,56 @@
           }
         }
       },
+      "IncidentSummary": {
+        "type": "object",
+        "description": "An open incident.",
+        "required": [
+          "id",
+          "title_en",
+          "audience",
+          "state",
+          "impact",
+          "components",
+          "started_at"
+        ],
+        "properties": {
+          "audience": {
+            "type": "string",
+            "description": "`internal` or `public`."
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "impact": {
+            "type": "string",
+            "description": "`degraded`, `partial` or `major`."
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "state": {
+            "type": "string",
+            "description": "`investigating`, `identified` or `monitoring`."
+          },
+          "title_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title_en": {
+            "type": "string"
+          }
+        }
+      },
       "InclusionProof": {
         "type": "object",
         "description": "One event's inclusion proof.",
@@ -172881,6 +173059,50 @@
             "type": "string"
           },
           "scopes": {
+            "type": "string"
+          }
+        }
+      },
+      "MaintenanceSummary": {
+        "type": "object",
+        "description": "Maintenance not yet over.",
+        "required": [
+          "id",
+          "title_en",
+          "audience",
+          "components",
+          "starts_at",
+          "ends_at"
+        ],
+        "properties": {
+          "audience": {
+            "type": "string"
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ends_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "title_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title_en": {
             "type": "string"
           }
         }
@@ -219694,6 +219916,48 @@
           }
         }
       },
+      "StatusBanner": {
+        "type": "object",
+        "description": "The one notice for a signed-in user.",
+        "required": [
+          "kind",
+          "id",
+          "title",
+          "starts_at"
+        ],
+        "properties": {
+          "ends_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "impact": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "An incident's impact; absent for maintenance."
+          },
+          "kind": {
+            "type": "string",
+            "description": "`incident` or `maintenance`."
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "title": {
+            "type": "string",
+            "description": "The title in the caller's language (English when there is no Arabic)."
+          }
+        }
+      },
       "StatusComponent": {
         "type": "object",
         "description": "One component.",
@@ -219858,6 +220122,40 @@
         "properties": {
           "enrolled": {
             "type": "boolean"
+          }
+        }
+      },
+      "StatusSnapshot": {
+        "type": "object",
+        "description": "What `GET /api/v1/ops/status` answers.",
+        "required": [
+          "components",
+          "incidents",
+          "maintenance",
+          "computed_at"
+        ],
+        "properties": {
+          "components": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComponentStatus"
+            }
+          },
+          "computed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "incidents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IncidentSummary"
+            }
+          },
+          "maintenance": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MaintenanceSummary"
+            }
           }
         }
       },

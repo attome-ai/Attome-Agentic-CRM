@@ -20589,6 +20589,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ops/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The platform's status
+         * @description AB11-T2: each component's state, open incidents and maintenance not yet
+         *     over. Any signed-in user; internal items need `ops.read`.
+         */
+        get: operations["get_ops_status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/status/banner": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The status notice for the signed-in user
+         * @description AB11-T2: the most severe open incident, else maintenance starting within
+         *     24 hours, titled in the `Accept-Language` language; `204` when there is
+         *     nothing to say.
+         */
+        get: operations["get_ops_status_banner"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ops/upgrades": {
         parameters: {
             query?: never;
@@ -33021,6 +33064,14 @@ export interface components {
              */
             outcomes_without_provenance: number;
         };
+        /** @description One component's state. */
+        ComponentStatus: {
+            key: string;
+            name_ar: string;
+            name_en: string;
+            /** @description `operational`, `degraded`, `down` or `unknown`. */
+            state: string;
+        };
         ComposeRequest: {
             /**
              * @description J1-T2: the record's own files to send with an email, by file key (at
@@ -37574,6 +37625,15 @@ export interface components {
              */
             order_dir: string;
             /**
+             * @description A2-T3: `"lat,lng"`: sort by distance from this point, nearest first
+             *     (`order_dir: desc` for farthest first). `order_by` must name a
+             *     geolocation field; rows without a point come last (first for
+             *     `desc`). One page only:
+             *     not with `after_id` or `seek` (422), and no `next_cursor`.
+             * @example 24.7136,46.6753
+             */
+            order_near?: string | null;
+            /**
              * Format: int64
              * @description One-based — the first page is `page=1` (D-347). Unlike the platform's
              *     `GET` list endpoints, which clamp an out-of-range page, this one rejects
@@ -38296,6 +38356,10 @@ export interface components {
              *     that record and everything below it, or above it, up to 32 levels.
              *     `tagged` (B4-T4) takes a tag id on the `id` field and matches the
              *     records carrying that tag (a personal tag only for its owner).
+             *     `within_km` (A2-T3) takes `"lat,lng,km"` (or `{lat, lng, km}`) on a
+             *     geolocation field and matches the points at most `km` kilometres
+             *     away; a geolocation field takes no other operator but `is_null` and
+             *     `is_not_null`.
              * @example eq
              */
             op: string;
@@ -39562,6 +39626,22 @@ export interface components {
             id: string;
             name: string;
         };
+        /** @description An open incident. */
+        IncidentSummary: {
+            /** @description `internal` or `public`. */
+            audience: string;
+            components: string[];
+            /** Format: uuid */
+            id: string;
+            /** @description `degraded`, `partial` or `major`. */
+            impact: string;
+            /** Format: date-time */
+            started_at: string;
+            /** @description `investigating`, `identified` or `monitoring`. */
+            state: string;
+            title_ar?: string | null;
+            title_en: string;
+        };
         /** @description One event's inclusion proof. */
         InclusionProof: {
             /** @description Where the batch root is anchored when external anchoring is on. */
@@ -40692,6 +40772,19 @@ export interface components {
             id: string;
             provider: string;
             scopes: string;
+        };
+        /** @description Maintenance not yet over. */
+        MaintenanceSummary: {
+            audience: string;
+            components: string[];
+            /** Format: date-time */
+            ends_at: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            starts_at: string;
+            title_ar?: string | null;
+            title_en: string;
         };
         /** @description How it was resolved. */
         MajorIncidentResolveBody: {
@@ -58587,6 +58680,21 @@ export interface components {
              */
             document_id: string;
         };
+        /** @description The one notice for a signed-in user. */
+        StatusBanner: {
+            /** Format: date-time */
+            ends_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @description An incident's impact; absent for maintenance. */
+            impact?: string | null;
+            /** @description `incident` or `maintenance`. */
+            kind: string;
+            /** Format: date-time */
+            starts_at: string;
+            /** @description The title in the caller's language (English when there is no Arabic). */
+            title: string;
+        };
         /** @description One component. */
         StatusComponent: {
             /** Format: uuid */
@@ -58628,6 +58736,14 @@ export interface components {
         };
         StatusResponseBody: {
             enrolled: boolean;
+        };
+        /** @description What `GET /api/v1/ops/status` answers. */
+        StatusSnapshot: {
+            components: components["schemas"]["ComponentStatus"][];
+            /** Format: date-time */
+            computed_at: string;
+            incidents: components["schemas"]["IncidentSummary"][];
+            maintenance: components["schemas"]["MaintenanceSummary"][];
         };
         /** @description A subscription request. */
         StatusSubscribe: {
@@ -123945,6 +124061,71 @@ export interface operations {
             };
             /** @description Caller lacks ops.read */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_ops_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Component states, incidents and maintenance */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusSnapshot"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_ops_status_banner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The notice to show */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusBanner"];
+                };
+            };
+            /** @description Nothing to show */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
