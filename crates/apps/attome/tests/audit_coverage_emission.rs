@@ -6456,6 +6456,16 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 None,
             )
         }
+        // L1-T8: a new version of a reference code's mapping.
+        "POST /api/v1/admin/data/code-maps" => request(
+            "POST",
+            "/api/v1/admin/data/code-maps",
+            t,
+            Some(json!({
+                "source_system": uniq("erp"), "code_list": "country",
+                "code": "03", "value": "EG",
+            })),
+        ),
         // ── state models (audit-10-10 Phase 3.7 part G) ─────────────────────
         "POST /api/v1/admin/state-models" => {
             let entity = state_model_entity(fx).await;

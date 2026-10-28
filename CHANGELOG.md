@@ -781,6 +781,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `ATTOME_LISTEN_PROTOCOL_INFO` (Windows, the base64 `WSAPROTOCOL_INFOW` from
   `WSADuplicateSocketW`, or `-` to read it from stdin) is set, so a supervisor can hand the same
   socket to the next version; otherwise it binds as before.
+- Reference code mappings (L1-T8): `POST /api/v1/admin/data/code-maps` maps a source system's code
+  in one of its code lists to the value stored here, always as a new version; earlier versions are
+  kept and `GET /api/v1/admin/data/code-maps` lists the mappings in effect, or with `history=true`
+  every version. A data mapping field with `code_map: {source_system, code_list}` stores the newest
+  version in effect for each imported code; a code with no mapping rejects its record. Migration 0324.
 - Zero-downtime restart (AB7-T4): `attome supervise --token-file <path>` holds the listening socket
   and runs `attome serve` on it; `POST /restart` on its loopback control address, with the token in
   `X-Supervisor-Token`, starts the new server, waits for it to report ready and only then drains

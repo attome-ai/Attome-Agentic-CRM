@@ -24,6 +24,9 @@ use uuid::Uuid;
 
 use crate::import_choice_match::ChoiceMatcher;
 
+/// L1-T8: versioned reference-data code mappings.
+pub mod code_map;
+
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 pub struct DataMappingField {
     pub source: String,
@@ -40,6 +43,50 @@ pub struct DataMappingField {
     /// to match the source value against.
     #[serde(default)]
     pub lookup_match_field: Option<String>,
+    /// L1-T8: the cell is a source system's code in one of its code lists,
+    /// stored as the value it maps to now ([`code_map`]). An unmapped code
+    /// rejects the record.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub code_map: Option<CodeMapRef>,
+}
+
+/// The code list a mapped field's codes come from.
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+pub struct CodeMapRef {
+    pub source_system: String,
+    pub code_list: String,
+}
+
+/// `value` as the code it is: text as is, a number as written. Pure.
+fn code_of(value: &Value) -> Option<String> {
+    match value {
+        Value::String(text) => Some(text.trim().to_owned()),
+        Value::Number(number) => Some(number.to_string()),
+        _ => None,
+    }
+}
+
+/// A mapped cell through its code list; null and empty cells stay as they
+/// are.
+async fn map_cell(
+    db: &attome_db::DbPool,
+    field: &DataMappingField,
+    codes: &CodeMapRef,
+    value: &Value,
+) -> Result<Value, AppError> {
+    if value.is_null() || value.as_str().is_some_and(|t| t.trim().is_empty()) {
+        return Ok(value.clone());
+    }
+    let code = code_of(value).ok_or_else(|| {
+        AppError::Validation(format!("{}: a code must be text or a number", field.target))
+    })?;
+    match code_map::map_code(db, &codes.source_system, &codes.code_list, &code).await? {
+        Some(mapped) => Ok(Value::String(mapped)),
+        None => Err(AppError::Validation(format!(
+            "{}: code {code:?} has no current mapping in {}'s {} list",
+            field.target, codes.source_system, codes.code_list
+        ))),
+    }
 }
 
 fn default_lookup_resolution() -> String {
@@ -143,6 +190,14 @@ pub(crate) async fn apply_mapping_to_record(
     for field in fields {
         let Some(raw_value) = source_obj.get(&field.source) else {
             continue;
+        };
+        let mapped;
+        let raw_value = match &field.code_map {
+            Some(codes) => {
+                mapped = map_cell(db, field, codes, raw_value).await?;
+                &mapped
+            }
+            None => raw_value,
         };
         let value = if field.lookup_resolution == "by_id" {
             raw_value.clone()

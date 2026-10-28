@@ -1087,3 +1087,144 @@ async fn duplicate_mapping_name_is_a_409_conflict_not_a_500() {
         "renaming onto a live mapping's name must be a 409 too"
     );
 }
+
+/// L1-T8: a code-mapping edit writes a new version and keeps the old one;
+/// the newest version in effect is what an import stores, and a code with no
+/// mapping rejects only its own record.
+#[tokio::test]
+async fn mapping_edit_creates_new_version() {
+    let system = skip_if_no_db!(test_system().await);
+    let db = system.state().base.db.clone();
+    let state = system.state().clone();
+    let (_admin_id, _admin_email, admin_cookie) = seed_user(&system, true).await;
+    let app = full_app(system);
+    let source_system = format!("erp_{}", Uuid::now_v7().simple());
+
+    for value in ["EG", "SA"] {
+        let res = app
+            .clone()
+            .oneshot(req(
+                "POST",
+                "/api/v1/admin/data/code-maps",
+                &admin_cookie,
+                Some(&json!({
+                    "source_system": source_system, "code_list": "country",
+                    "code": "03", "value": value,
+                })),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::CREATED, "map 03 to {value}");
+    }
+    let list = |history: bool| {
+        format!(
+            "/api/v1/admin/data/code-maps?source_system={source_system}&code_list=country&history={history}"
+        )
+    };
+    let res = app
+        .clone()
+        .oneshot(req("GET", &list(true), &admin_cookie, None))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let history = body_json(res).await;
+    assert_eq!(history["total"], 2, "the old version is kept: {history}");
+    assert_eq!(history["items"][0]["version"], 2);
+    assert_eq!(history["items"][1]["value"], "EG");
+    let res = app
+        .clone()
+        .oneshot(req("GET", &list(false), &admin_cookie, None))
+        .await
+        .unwrap();
+    let current = body_json(res).await;
+    assert_eq!(current["total"], 1, "{current}");
+    assert_eq!(current["items"][0]["value"], "SA");
+    assert_eq!(
+        attome_records::data_mapping::code_map::map_code(&db, &source_system, "country", "03")
+            .await
+            .unwrap()
+            .as_deref(),
+        Some("SA"),
+        "the newest version is used"
+    );
+
+    // An import mapping the code list: 03 maps, 99 has no mapping.
+    let target_name = format!("dm_codes_{}", Uuid::now_v7().simple());
+    let res = app
+        .clone()
+        .oneshot(req(
+            "POST",
+            "/api/v1/admin/entities",
+            &admin_cookie,
+            Some(&json!({ "logicalname": target_name, "name": "Code Mapping Target" })),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::CREATED);
+    let entity_id: Uuid = body_json(res).await["id"]
+        .as_str()
+        .unwrap()
+        .parse()
+        .unwrap();
+    let res = app
+        .clone()
+        .oneshot(req(
+            "POST",
+            &format!("/api/v1/admin/entities/{entity_id}/fields"),
+            &admin_cookie,
+            Some(&json!({ "logicalname": "country", "name": "country", "field_type": "text" })),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::CREATED);
+    sync_registry(&state).await;
+    let res = app
+        .clone()
+        .oneshot(req(
+            "POST",
+            "/api/v1/admin/data/mappings",
+            &admin_cookie,
+            Some(&json!({
+                "name": format!("dm-codes-{}", Uuid::now_v7()),
+                "target_entity": target_name,
+                "source_kind": "json",
+                "fields": [{
+                    "source": "country_code", "target": "country",
+                    "code_map": { "source_system": source_system, "code_list": "country" },
+                }],
+            })),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::CREATED, "create mapping");
+    let mapping_id = body_json(res).await["id"].as_str().unwrap().to_owned();
+    let (_user_id, _email, caller_cookie) = seed_scoped_user(
+        &db,
+        &app,
+        &admin_cookie,
+        &target_name,
+        &["read", "create", "update", "delete", "bulk"],
+    )
+    .await;
+    let res = app
+        .clone()
+        .oneshot(req(
+            "POST",
+            &format!("/api/v1/{target_name}/staged-import"),
+            &caller_cookie,
+            Some(&json!({
+                "operation": "create",
+                "mapping_ref": mapping_id,
+                "records": [
+                    { "data": { "country_code": "03" } },
+                    { "data": { "country_code": "99" } },
+                ],
+            })),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::ACCEPTED);
+    let result = body_json(res).await;
+    assert_eq!(result["passed"], 1, "{result}");
+    assert_eq!(result["rejected"], 1, "the unmapped code: {result}");
+}

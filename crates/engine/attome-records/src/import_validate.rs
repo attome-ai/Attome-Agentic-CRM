@@ -772,6 +772,7 @@ pub async fn validate(state: &EngineState, job_id: Uuid) -> Result<ValidateCount
             transform: None,
             lookup_resolution: "by_id".into(),
             lookup_match_field: None,
+            code_map: None,
         })
         .collect();
     let choices = load_choice_matchers(&state.base.db, &table, &attrs, &choice_fields).await?;

@@ -18,7 +18,7 @@ use attome_audit::{
     AuditCategory, AuditEvent, AuditOperation, AuditRequestContext, AuditSource, audit_service,
 };
 use attome_core::EngineState;
-use attome_records::data_mapping::DataMappingField;
+use attome_records::data_mapping::{DataMappingField, code_map};
 use attome_records::entity_crud;
 use attome_records::entity_mutation;
 use attome_server::authz::{Authorized, Privilege, area};
@@ -82,6 +82,10 @@ fn validate_fields(
                 "field.lookup_resolution must be by_id, by_natural_key, or by_label, got: {}",
                 field.lookup_resolution
             )));
+        }
+        if let Some(codes) = &field.code_map {
+            code_map::validate_part("field.code_map.source_system", &codes.source_system)?;
+            code_map::validate_part("field.code_map.code_list", &codes.code_list)?;
         }
         if field.lookup_resolution == "by_natural_key"
             && field
@@ -488,6 +492,144 @@ async fn delete_mapping(
     Ok(StatusCode::NO_CONTENT)
 }
 
+// ── L1-T8: reference-data code mappings ────────────────────────────────────
+
+#[derive(Deserialize, ToSchema)]
+struct SetCodeMapBody {
+    source_system: String,
+    code_list: String,
+    code: String,
+    /// What the code maps to; null retires the code from this version on.
+    value: Option<String>,
+    /// When this version takes effect; now when absent.
+    valid_from: Option<DateTime<Utc>>,
+}
+
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct ListCodeMapsQuery {
+    /// The source system whose codes these are.
+    source_system: String,
+    /// The code list within it.
+    code_list: String,
+    /// Every version of every code instead of the mappings in effect now.
+    #[serde(default)]
+    history: bool,
+    /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
+    page: Option<i64>,
+    /// Rows per page.
+    page_size: Option<i64>,
+}
+
+/// Map a reference code
+///
+/// L1-T8: writes a new version of one source code's mapping; earlier versions are kept, and imports use the newest version in effect. A null `value` retires the code. Administrators only. Audited.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/data/code-maps",
+    tag = "admin",
+    request_body = SetCodeMapBody,
+    responses(
+        (status = 201, description = "The new version", body = code_map::CodeMapVersion),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 409, description = "Another edit of this code won the version number; retry", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Configuration, AuditOperation::Create)])))),
+)]
+async fn set_code_map(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<area::DataModel>>,
+    Json(body): Json<SetCodeMapBody>,
+) -> Result<(StatusCode, Json<code_map::CodeMapVersion>), AppError> {
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let row = code_map::set_in_tx(
+        &mut tx,
+        body.source_system.trim(),
+        body.code_list.trim(),
+        body.code.trim(),
+        body.value.as_deref().map(str::trim),
+        body.valid_from,
+        ctx.user_id,
+    )
+    .await?;
+    let (user_ctx, org_ref) = entity_crud::fetch_audit_ctx(&state, ctx.user_id).await;
+    audit_service(&state)
+        .write_in_tx(
+            &mut tx,
+            AuditEvent {
+                organization_ref: org_ref,
+                category: AuditCategory::Configuration,
+                entity_name: Some("reference_code_map".to_owned()),
+                record_id: Some(row.id),
+                operation: AuditOperation::Create,
+                version_before: None,
+                version_after: None,
+                user_context: user_ctx,
+                changed_on: Utc::now(),
+                source: AuditSource::Api,
+                request_context: AuditRequestContext::default(),
+                correlation_id: None,
+                batch_id: None,
+                event_name: Some("reference_code_mapped".to_owned()),
+                event_comment: Some(format!(
+                    "{}/{}/{} v{}",
+                    row.source_system, row.code_list, row.code, row.version
+                )),
+                changed_fields: vec![],
+                snapshot_json: None,
+            },
+        )
+        .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok((StatusCode::CREATED, Json(row)))
+}
+
+/// List reference code mappings
+///
+/// L1-T8: one code list's mappings in effect now, one per code (retired codes left out), or with `history` every version. Administrators only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/data/code-maps",
+    tag = "admin",
+    params(ListCodeMapsQuery),
+    responses(
+        (status = 200, description = "Success", body = PaginatedResponse<code_map::CodeMapVersion>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_code_maps(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
+    Query(query): Query<ListCodeMapsQuery>,
+) -> Result<Json<PaginatedResponse<code_map::CodeMapVersion>>, AppError> {
+    let PageWindow {
+        page,
+        page_size,
+        offset,
+    } = PageWindow::resolve(
+        query.page,
+        query.page_size,
+        PageBase::One,
+        DEFAULT_PAGE_SIZE,
+    );
+    let (items, total) = code_map::list(
+        &state.base.db,
+        query.source_system.trim(),
+        query.code_list.trim(),
+        query.history,
+        page_size,
+        offset,
+    )
+    .await?;
+    Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route(
@@ -497,6 +639,10 @@ pub fn routes() -> Router<EngineState> {
         .route(
             "/api/v1/admin/data/mappings/{id}",
             get(get_mapping).put(update_mapping).delete(delete_mapping),
+        )
+        .route(
+            "/api/v1/admin/data/code-maps",
+            post(set_code_map).get(list_code_maps),
         )
 }
 
@@ -508,7 +654,9 @@ pub fn routes() -> Router<EngineState> {
     list_mappings,
     get_mapping,
     update_mapping,
-    delete_mapping
+    delete_mapping,
+    set_code_map,
+    list_code_maps
 ))]
 struct ApiDocFragment;
 
