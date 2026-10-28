@@ -39,6 +39,9 @@ use attome_types::AppError;
 use sqlx::{Connection, PgConnection, Postgres, Transaction};
 use uuid::Uuid;
 
+/// Y7-T3: the outbox's daily partitions and their retention.
+pub mod partitions;
+
 /// Operations the feed carries. Kept as a typed enum rather than bare strings
 /// so a new operation is a compile error at every match site instead of a
 /// silently-ignored row, and so the wire values can never drift from

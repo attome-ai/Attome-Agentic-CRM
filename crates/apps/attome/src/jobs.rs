@@ -2206,6 +2206,14 @@ async fn dispatch_platform_job(
         }
         EngineJob::PruneChangeFeed => {
             prune_change_feed(&db, &config).await?;
+            // Y7-T3: partition DDL, so the migrator pool (D-117).
+            maintain_change_feed_partitions(
+                &db,
+                &db_migrator.0,
+                &config,
+                chrono::Utc::now().date_naive(),
+            )
+            .await?;
         }
         // Audit 10/10 plan item 2.6 (D-539 ruling 6) — see this variant's doc
         // comment in attome_jobs::job. Business logic lives in attome-audit.
@@ -2614,6 +2622,32 @@ pub async fn prune_change_feed(
     let deleted = attome_core::change_feed::prune(&mut conn, retention).await?;
     if deleted > 0 {
         tracing::info!(deleted, "change feed prune: run complete");
+    }
+    Ok(())
+}
+
+/// Y7-T3: the outbox's daily partitions, after the row prune above. The
+/// days ahead of `today` are created, days past `change_feed.retention_days`
+/// that no consumer still needs are dropped (both DDL, on `ddl`, the
+/// migrator pool), and the applied rows of events now gone are deleted.
+pub async fn maintain_change_feed_partitions(
+    db: &DbPool,
+    ddl: &DbPool,
+    config: &AppConfig,
+    today: chrono::NaiveDate,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    use attome_core::change_feed::partitions;
+    let retention_days = u32::try_from(config.change_feed.retention_days).unwrap_or(u32::MAX);
+    let created = partitions::ensure_ahead(ddl, today).await?;
+    let dropped = partitions::drop_expired(ddl, today, retention_days).await?;
+    let applied = partitions::prune_applied(db).await?;
+    if created > 0 || !dropped.is_empty() || applied > 0 {
+        tracing::info!(
+            created,
+            dropped = dropped.len(),
+            applied,
+            "change feed partitions: run complete"
+        );
     }
     Ok(())
 }

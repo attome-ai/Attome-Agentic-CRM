@@ -76,6 +76,11 @@ The feed keeps changes for `change_feed.retention_days` (30 by default). A curso
 older than that gets `410 resync_needed`, never a silent gap. Copy the data again, then continue
 from the new export's `stream_token`, or from a new `latest` token for a delta.
 
+The feed is stored one day per partition. The daily prune creates the next three days ahead, and
+removes a whole day once it is past the retention period and every consumer has finished with
+it. A day that still holds a change some consumer has not read is kept, with a warning in the
+log, until that consumer catches up or is expired.
+
 ## The platform's own consumers
 
 Workflows, search, master data, the data catalogue, data quality, the ledger, service and sales

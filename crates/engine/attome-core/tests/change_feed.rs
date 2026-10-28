@@ -537,3 +537,84 @@ async fn a_flow_write_names_its_run_on_the_change_event() {
         ]
     );
 }
+
+/// Y7-T3: a fake clock in the year 2000, so the cutoff covers only this
+/// test's partitions and never the shared database's real days. A day past
+/// retention is dropped unless it holds an event no consumer has processed;
+/// a row of a day that had no partition yet moves out of the default
+/// partition when the day gets one.
+#[tokio::test]
+async fn change_feed_retention_drops_expired_days_with_a_fake_clock() {
+    use attome_core::change_feed::partitions;
+    let db = skip_if_no_db!(test_db().await);
+    let _serial = serialize().await;
+    let day = |s: &str| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").unwrap();
+    let start = day("2000-01-20");
+    let later = day("2000-02-20");
+
+    // What an interrupted earlier run may have left in the year 2000.
+    sqlx::query("DELETE FROM entity_change_event WHERE created_at < '2001-01-01'")
+        .execute(&db)
+        .await
+        .unwrap();
+    partitions::drop_expired(&db, later, 14).await.unwrap();
+
+    // An unprocessed event of 2000-01-21, before that day has a partition.
+    let held: Uuid = sqlx::query_scalar(
+        "INSERT INTO entity_change_event (entity_logicalname, record_id, operation, created_at) \
+         VALUES ($1, $2, 'update', '2000-01-21 10:00:00+00') RETURNING id",
+    )
+    .bind(entity_name())
+    .bind(Uuid::now_v7())
+    .fetch_one(&db)
+    .await
+    .unwrap();
+
+    assert_eq!(partitions::ensure_ahead(&db, start).await.unwrap(), 4);
+    assert_eq!(partitions::ensure_ahead(&db, start).await.unwrap(), 0);
+    let home: String = sqlx::query_scalar(
+        "SELECT tableoid::regclass::text FROM entity_change_event WHERE id = $1",
+    )
+    .bind(held)
+    .fetch_one(&db)
+    .await
+    .unwrap();
+    assert_eq!(home, partitions::partition_name(day("2000-01-21")));
+
+    // A month later, with 14 days' retention: every 2000-01 day is past it,
+    // but the 21st still holds the unprocessed event.
+    let mut dropped = partitions::drop_expired(&db, later, 14).await.unwrap();
+    dropped.sort();
+    assert_eq!(
+        dropped,
+        ["2000-01-20", "2000-01-22", "2000-01-23"]
+            .map(|d| partitions::partition_name(day(d)))
+            .to_vec()
+    );
+
+    // Once the event is gone the day goes too, and so do applied rows that
+    // named it.
+    sqlx::query("INSERT INTO change_consumer_applied (consumer, event_id) VALUES ($1, $2)")
+        .bind(consumer_name("y7t3"))
+        .bind(held)
+        .execute(&db)
+        .await
+        .unwrap();
+    sqlx::query("DELETE FROM entity_change_event WHERE id = $1")
+        .bind(held)
+        .execute(&db)
+        .await
+        .unwrap();
+    assert_eq!(
+        partitions::drop_expired(&db, later, 14).await.unwrap(),
+        vec![partitions::partition_name(day("2000-01-21"))]
+    );
+    assert!(partitions::prune_applied(&db).await.unwrap() >= 1);
+    let left: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM change_consumer_applied WHERE event_id = $1")
+            .bind(held)
+            .fetch_one(&db)
+            .await
+            .unwrap();
+    assert_eq!(left, 0);
+}
