@@ -476,6 +476,11 @@ mod geo_json_types {
     fn a_point_is_normalised_and_range_checked() {
         let stored = attome_field::normalize(&FieldType::Geolocation, &json!("٢٤.٥, 46.25"), None);
         assert_eq!(stored, Some(json!({"lat": 24.5, "lng": 46.25})));
+        let extra = json!({"lat": 24.5, "lng": 46.25, "note": "x"});
+        assert_eq!(
+            attome_field::normalize(&FieldType::Geolocation, &extra, None),
+            Some(json!({"lat": 24.5, "lng": 46.25}))
+        );
         assert!(
             attome_field::validate(
                 &FieldType::Geolocation,

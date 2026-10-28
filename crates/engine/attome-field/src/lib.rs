@@ -175,6 +175,11 @@ pub fn phone_e164(text: &str) -> String {
 /// IBAN) and a number sent as text get Western digits. Free text keeps its
 /// own digits: rewriting what a person wrote is not normalisation.
 pub fn normalize(field_type: &FieldType, value: &Value, options: Option<&Value>) -> Option<Value> {
+    // A2-T3: a point object keeps only its `lat` and `lng`.
+    if *field_type == FieldType::Geolocation && value.is_object() {
+        let shaped = geolocation_of(value)?;
+        return (shaped != *value).then_some(shaped);
+    }
     let text = value.as_str()?;
     let changed = match field_type {
         FieldType::Text => {
