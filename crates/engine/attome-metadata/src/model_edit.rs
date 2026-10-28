@@ -96,6 +96,41 @@ pub struct EditRequest {
     pub commands: Vec<Value>,
 }
 
+/// Y11-T14: a building agent works in the customer layer only. Inside an
+/// agent's scope (`attome_core::agent_scope`, set by the server around the
+/// agent's action, never read from the request) an edit of an object the
+/// platform or an app owns is refused with 403 and logged. Every edit saves
+/// into the customer layer, so the target's owner is the only check.
+async fn refuse_agent_outside_customer_layer(
+    db: &DbPool,
+    kind: &dyn Kind,
+    id: Uuid,
+) -> Result<(), AppError> {
+    let Some(agent) = attome_core::agent_scope::current() else {
+        return Ok(());
+    };
+    let owner: Option<String> =
+        sqlx::query_scalar("SELECT owner_layer FROM metadata_object WHERE id = $1")
+            .bind(id)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?;
+    match owner {
+        Some(owner) if owner != Layer::Customer.as_str() => {
+            tracing::warn!(
+                agent_session = %agent.session_id,
+                action = %agent.action_id,
+                kind = %kind.name().as_str(),
+                object = %id,
+                owner_layer = %owner,
+                "agent edit refused: building agents change the customer layer only"
+            );
+            Err(AppError::Forbidden)
+        }
+        _ => Ok(()),
+    }
+}
+
 /// Applies an edit to the object's draft, creating the object on its first
 /// edit, inside the caller's transaction.
 pub async fn edit(
@@ -116,6 +151,7 @@ pub async fn edit(
         .map(serde_json::from_value)
         .collect::<Result<_, _>>()
         .map_err(|error| AppError::Validation(format!("a command is malformed: {error}")))?;
+    refuse_agent_outside_customer_layer(db, kind, id).await?;
     let name = match store::read(db, id, None).await {
         Ok(existing) if existing.kind != kind.name().as_str() => return Err(AppError::NotFound),
         Ok(existing) => existing.name,

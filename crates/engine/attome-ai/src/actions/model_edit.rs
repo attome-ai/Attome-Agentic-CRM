@@ -8,7 +8,9 @@
 //! uses, under the same rule: the caller must be an administrator. Nothing
 //! is published. An agent never saves on its own: every agent invocation
 //! stops at confirmation and the human applies it (`agent_must_confirm`), so
-//! a run-mode agent cannot change metadata.
+//! a run-mode agent cannot change metadata. Y11-T14: inside the agent's
+//! scope the edit is refused with 403 when the item belongs to the platform
+//! or an app; an agent builds in the customer layer only.
 //!
 //! Beside them (N12-T1), two read tools per kind: `model.<kind>.describe`
 //! (the kind's description and document schema, for every kind) and

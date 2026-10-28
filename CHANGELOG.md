@@ -768,6 +768,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   the read-only tools `expression.validate` and `expression.spec`.
 
 ### Security
+- A building agent may edit only the customer's own metadata items: a `model.<kind>.edit` on an item
+  the platform or an app owns, run by the agent itself (an administrator's autonomy level can allow
+  that), is refused with 403 and logged (Y11-T14). A proposal a person confirms is that person's edit.
 - Administration is delegated by area (Q12-T2): 732 administration routes take their area privilege
   (`admin.users`, `admin.roles`, `admin.security`, `admin.data_model`, `admin.automation`, `admin.ai`,
   `admin.integrations`, `admin.communication`, `admin.reports`, `admin.compliance`, `admin.audit`,
