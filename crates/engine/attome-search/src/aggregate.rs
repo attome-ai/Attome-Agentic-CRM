@@ -8,12 +8,11 @@
 //! nothing in the platform had it before this.
 //!
 //! Lives in `attome-search`, not `attome-report`, per that plan's own engine
-//! placement — so this public `POST /api/v1/search/aggregate` route is
-//! license-gated by `MODULE_SEARCH`. It is not the dashboard entitlement:
-//! D-523 entitles dashboard widget aggregation by `MODULE_DASHBOARD`, through
-//! the dashboard module's own data routes calling [`run_structured_aggregate`]
-//! in-process. The `MODULE_REPORT` gate this comment used to cite belonged to
-//! the Report-hosted dashboards D-479 sunset.
+//! placement. It has no route of its own: S4-T11 removed the public
+//! `POST /api/v1/search/aggregate` in favour of `POST /api/v1/query/run`
+//! aggregates. D-523 entitles dashboard widget aggregation by
+//! `MODULE_DASHBOARD`, through the dashboard module's own data routes calling
+//! [`run_structured_aggregate`] in-process.
 //!
 //! ## One scope for every read (dashboard 10/10 Phase 2.2)
 //!
@@ -21,11 +20,10 @@
 //! covers: entity read privilege, the field whitelist (sensitive fields
 //! without a grant are absent), compiled filters, the live-row predicate
 //! (`attome_core::live_row_predicate` — NULL `is_active` counts as live) and
-//! the record-level RLS predicate. The public route, the structured dashboard
-//! aggregation and the records twin all start from it, which is what makes
-//! "the records behind a number are the rows the number counted" structural
-//! rather than a convention. Inactive rows no longer count on the public
-//! route either — a behavior change for totals that used to include them.
+//! the record-level RLS predicate. The structured dashboard aggregation and
+//! the records twin both start from it, which is what makes "the records
+//! behind a number are the rows the number counted" structural rather than a
+//! convention.
 use attome_core::chart_view_metadata::DateBucket;
 use attome_core::data_definition::{
     DataDefinition, MAX_GROUP_LIMIT, MeasureFn, SortOrder, date_trunc_unit, system_column_type,
@@ -34,10 +32,8 @@ use attome_core::filter::{FieldCastError, FilterSchema};
 use attome_core::{EngineState, Filter, parameter_cast, quote_ident, text_array_literal};
 use attome_db::DbPool;
 use attome_security::SecurityContextExt;
-use attome_server::authz::{Authorized, RecordScoped};
 use attome_server::security::SecurityContext;
 use attome_types::AppError;
-use axum::{Json, Router, extract::State, routing::post};
 use chrono::{DateTime, Datelike, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -77,119 +73,6 @@ const AGGREGATE_COST_CEILING: f64 = 100_000.0;
 /// (this endpoint has a hard bucket-count + cost ceiling that report SQL
 /// does not).
 const AGGREGATE_STATEMENT_TIMEOUT_MS: i64 = 2000;
-
-// ── Request/response ─────────────────────────────────────────────────────────
-
-#[derive(Deserialize, ToSchema)]
-pub struct AggregateRequest {
-    /// Entity UUID (`entity_info.id`) — same dual resolution as
-    /// `query/execute`'s `ExecuteQueryRequest`.
-    entity_logical_name: Option<Uuid>,
-    /// Fallback: entity logicalname string.
-    entity: Option<String>,
-    /// Field to bucket on. `None` runs the metric over every row the
-    /// filters/RLS admit as a single ungrouped total (e.g. a Metric widget's
-    /// "Total Revenue" — `SUM(amount)` with no `GROUP BY`) — the response
-    /// carries exactly one bucket with `label: null`.
-    group_by: Option<String>,
-    /// A13-T2: a second field to bucket on within each `group_by` bucket
-    /// (needs `group_by`); each bucket then carries `label_2`.
-    #[serde(default)]
-    then_by: Option<String>,
-    /// Required unless `metric_fn == "count"`.
-    metric_field: Option<String>,
-    /// One of: `count`, `sum`, `avg`, `min`, `max`.
-    #[schema(example = "sum")]
-    metric_fn: String,
-    #[serde(default)]
-    filters: Vec<Filter>,
-    /// `"value_desc"` (default), `"value_asc"`, `"label_asc"`, `"label_desc"`.
-    /// Ties break on the label, so equal values never swap between runs.
-    #[serde(default = "value_desc")]
-    #[schema(default = "value_desc", example = "value_desc")]
-    order: String,
-}
-
-impl std::fmt::Debug for AggregateRequest {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AggregateRequest").finish_non_exhaustive()
-    }
-}
-fn value_desc() -> String {
-    "value_desc".to_owned()
-}
-
-#[derive(Serialize, ToSchema)]
-pub struct AggregateBucket {
-    /// `null` for rows whose `group_by` field is itself NULL. Always a
-    /// display string (or null) — the group_by column is cast to `text` in
-    /// SQL rather than decoded per its native type, since a bucket label is
-    /// for display, not further computation.
-    label: Option<String>,
-    /// A13-T2: the `then_by` value, when the request named one.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    label_2: Option<String>,
-    value: f64,
-}
-
-impl std::fmt::Debug for AggregateBucket {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AggregateBucket").finish_non_exhaustive()
-    }
-}
-
-#[derive(Serialize, ToSchema)]
-pub struct AggregateResponse {
-    entity_logical_name: String,
-    group_by: Option<String>,
-    metric_fn: String,
-    buckets: Vec<AggregateBucket>,
-    bucket_count: i64,
-    /// Honest-cap contract mirroring `attome-search::routes`'s `Total::AtLeast`
-    /// reasoning: `true` means real groups exist past [`MAX_GROUP_BUCKETS`],
-    /// not that the count happens to equal the cap.
-    truncated: bool,
-}
-
-impl std::fmt::Debug for AggregateResponse {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AggregateResponse").finish_non_exhaustive()
-    }
-}
-
-// ── Entity resolution ─────────────────────────────────────────────────────────
-
-async fn resolve_entity(
-    db: &DbPool,
-    entity_logical_name: Option<Uuid>,
-    entity: Option<&str>,
-) -> Result<(Uuid, String), AppError> {
-    if let Some(id) = entity_logical_name {
-        let row: Option<(Uuid, String)> = sqlx::query_as(
-            "SELECT id, logicalname FROM entity_info \
-             WHERE id = $1 AND (is_active IS NULL OR is_active = true) AND logicalname IS NOT NULL",
-        )
-        .bind(id)
-        .fetch_optional(db)
-        .await
-        .map_err(AppError::internal)?;
-        return row.ok_or(AppError::NotFound);
-    }
-    if let Some(name) = entity {
-        let row: Option<(Uuid, String)> = sqlx::query_as(
-            "SELECT id, logicalname FROM entity_info \
-             WHERE logicalname = $1 AND (is_active IS NULL OR is_active = true)",
-        )
-        .bind(name)
-        .fetch_optional(db)
-        .await
-        .map_err(AppError::internal)?;
-        return row.ok_or(AppError::NotFound);
-    }
-    Err(AppError::Validation(
-        "entity_logical_name or entity is required".into(),
-    ))
-}
 
 /// `field_type_int -> data_type` string, by storage type
 /// (`FieldType::storage`, U9). Currency reads as `number` here (this
@@ -494,184 +377,6 @@ async fn enforce_cost_ceiling(
         )));
     }
     Ok(())
-}
-
-// ── Public route ─────────────────────────────────────────────────────────────
-
-/// Aggregate one entity's records
-///
-/// Counts, sums, averages, minimums and maximums over one entity's records grouped by its fields,
-/// validated against its metadata and limited to the records the caller may read.
-#[utoipa::path(
-    post,
-    path = "/api/v1/search/aggregate",
-    tag = "search",
-    request_body = AggregateRequest,
-    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
-        attome_audit::security::ExemptReason::ReadOnly,
-        None,
-        "computes grouped metric buckets over a read privilege check; persists nothing",
-    )))),
-    responses(
-        (status = 200, description = "Grouped metric buckets", body = AggregateResponse),
-        (status = 422, description = "Invalid entity, group_by, metric, or filter"),
-    ),
-)]
-// Bare `RecordScoped`, and one of only two routes entitled to it (D-353,
-// counted by `route_authz.rs`'s ratchet): the entity is not a path segment
-// but a body field (`entity` / `entity_logical_name`), and it is resolved
-// against the database — `resolve_entity` accepts either an id or a
-// logicalname — so there is nothing for `RecordScoped<Read>` to read off the
-// matched route. `run_aggregate` makes the `ctx.require(&logicalname,
-// "read")` call itself, immediately after that resolution.
-async fn aggregate(
-    State(state): State<EngineState>,
-    ctx: Authorized<RecordScoped>,
-    Json(body): Json<AggregateRequest>,
-) -> Result<Json<AggregateResponse>, AppError> {
-    run_aggregate(&state, &ctx, body).await.map(Json)
-}
-
-/// Running an aggregation, with every transport concern removed — `pub` so
-/// integration tests (and any future in-process caller, same reasoning as
-/// `query_exec::execute_stored_query`) exercise the real code path rather
-/// than a re-implementation of it.
-#[expect(
-    clippy::expect_used,
-    reason = "each expect() here guards an invariant its message states"
-)]
-pub async fn run_aggregate(
-    state: &EngineState,
-    ctx: &SecurityContext,
-    body: AggregateRequest,
-) -> Result<AggregateResponse, AppError> {
-    let db = state.base.readonly_query_pool(ctx.user_id).await;
-    let (_entity_id, logicalname) =
-        resolve_entity(db, body.entity_logical_name, body.entity.as_deref()).await?;
-
-    if !matches!(
-        body.metric_fn.as_str(),
-        "count" | "sum" | "avg" | "min" | "max"
-    ) {
-        ctx.require(&logicalname, "read")?;
-        return Err(AppError::Validation(format!(
-            "unsupported metric_fn: {}",
-            body.metric_fn
-        )));
-    }
-    if body.metric_fn != "count" && body.metric_field.is_none() {
-        ctx.require(&logicalname, "read")?;
-        return Err(AppError::Validation(
-            "metric_field is required unless metric_fn is \"count\"".into(),
-        ));
-    }
-
-    let scope = AggregateScope::build(state, ctx, &logicalname, &body.filters).await?;
-
-    if body.then_by.is_some() && body.group_by.is_none() {
-        return Err(AppError::Validation("then_by needs group_by".into()));
-    }
-    for (key, group_by) in [("group_by", &body.group_by), ("then_by", &body.then_by)] {
-        let Some(group_by) = group_by else {
-            continue;
-        };
-        if scope.is_multi_choice(group_by) {
-            return Err(AppError::Validation(format!(
-                "{key} does not support multi-select Choice fields"
-            )));
-        }
-        if scope.data_type(group_by).is_none() {
-            return Err(AppError::Validation(format!(
-                "unknown {key} field: {group_by}"
-            )));
-        }
-    }
-
-    let metric_expr = match body.metric_fn.as_str() {
-        "count" => "COUNT(*)::float8".to_owned(),
-        fn_name => {
-            let field = body.metric_field.as_ref().expect("checked above");
-            let data_type = scope
-                .data_type(field)
-                .ok_or_else(|| AppError::Validation(format!("unknown field: {field}")))?;
-            if parameter_cast(data_type) != Some("numeric") {
-                return Err(AppError::Validation(format!(
-                    "metric_field must be numeric for {fn_name}: {field}"
-                )));
-            }
-            format!(
-                "{}(t.{})::float8",
-                fn_name.to_uppercase(),
-                quote_ident(field)
-            )
-        }
-    };
-
-    let where_sql = scope.where_sql(&[]);
-    let dir = match body.order.as_str() {
-        "value_asc" => "value ASC NULLS LAST, label ASC NULLS FIRST",
-        "label_asc" => "label ASC NULLS FIRST",
-        "label_desc" => "label DESC NULLS LAST",
-        _ => "value DESC NULLS LAST, label ASC NULLS FIRST",
-    };
-
-    let table = quote_ident(&logicalname);
-    let sql = match &body.group_by {
-        Some(group_by) => {
-            let group_by_sql = quote_ident(group_by);
-            let (then_sql, group_cols) = match &body.then_by {
-                Some(then_by) => (format!("t.{}::text", quote_ident(then_by)), "1, 2"),
-                None => ("NULL::text".to_owned(), "1"),
-            };
-            format!(
-                "SELECT t.{group_by_sql}::text AS label, {then_sql} AS label_2, \
-                        {metric_expr} AS value \
-                 FROM {table} t {where_sql} \
-                 GROUP BY {group_cols} ORDER BY {dir}, label_2 ASC NULLS FIRST LIMIT {}",
-                MAX_GROUP_BUCKETS + 1
-            )
-        }
-        // No GROUP BY at all — a single ungrouped total, capped to exactly
-        // one row so the same `split_at_cap`/`truncated` machinery below
-        // stays correct without a special case (a real aggregate never
-        // produces a second row here, so `truncated` is always `false`).
-        None => {
-            format!(
-                "SELECT NULL::text AS label, NULL::text AS label_2, {metric_expr} AS value \
-                 FROM {table} t {where_sql}"
-            )
-        }
-    };
-
-    let mut tx = begin_bounded(db).await?;
-    enforce_cost_ceiling(&mut tx, &sql, &scope.params).await?;
-
-    let mut q = sqlx::query_as::<_, (Option<String>, Option<String>, Option<f64>)>(&sql);
-    for param in &scope.params {
-        q = q.bind(param);
-    }
-    let rows = q.fetch_all(&mut *tx).await.map_err(AppError::internal)?;
-    tx.commit().await.map_err(AppError::internal)?;
-
-    let (rows, truncated) = split_at_cap(rows, MAX_GROUP_BUCKETS);
-    let buckets: Vec<AggregateBucket> = rows
-        .into_iter()
-        .map(|(label, label_2, value)| AggregateBucket {
-            label,
-            label_2,
-            value: value.unwrap_or(0.0),
-        })
-        .collect();
-    let bucket_count = buckets.len() as i64;
-
-    Ok(AggregateResponse {
-        entity_logical_name: logicalname,
-        group_by: body.group_by,
-        metric_fn: body.metric_fn,
-        buckets,
-        bucket_count,
-        truncated,
-    })
 }
 
 // ── Structured aggregation (dashboard Class A, D-522) ────────────────────────
@@ -1498,21 +1203,6 @@ pub async fn run_structured_records(
         next_cursor,
         drill_filters: drill_filters.map(|_| filters),
     })
-}
-
-pub fn routes() -> Router<EngineState> {
-    Router::new().route("/api/v1/search/aggregate", post(aggregate))
-}
-
-/// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
-/// document, merged in `engine.rs::openapi()`.
-#[derive(utoipa::OpenApi)]
-#[openapi(paths(aggregate))]
-#[derive(Debug)]
-pub struct ApiDocFragment;
-
-pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
-    <ApiDocFragment as utoipa::OpenApi>::openapi()
 }
 
 #[cfg(test)]

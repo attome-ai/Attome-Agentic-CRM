@@ -36,9 +36,9 @@ export interface WidgetDataSource {
   order_by?: string;
   order_dir?: 'asc' | 'desc';
   /** Metric widgets only — `count` reuses the entity list's honest `total`
-   * (no aggregation capability needed); `aggregate` calls `search/aggregate`
-   * with `metric_fn`/`metric_field` below and no `group_by` (a single
-   * unbucketed total). */
+   * (no aggregation capability needed); `aggregate` runs a `query/run`
+   * aggregate with `metric_fn`/`metric_field` below and no `group_by` (a
+   * single unbucketed total). */
   metric_mode?: MetricMode;
   /** Buckets (chart) widgets, and `metric_mode: 'aggregate'` Metric widgets. */
   metric_fn?: 'count' | 'sum' | 'avg' | 'min' | 'max';

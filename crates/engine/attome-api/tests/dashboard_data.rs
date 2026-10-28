@@ -1120,32 +1120,6 @@ async fn lookup_buckets_show_target_names_only_to_callers_who_can_read_them() {
     );
 }
 
-/// The public route got the same live-row rule (a documented behavior change).
-#[tokio::test]
-async fn the_public_aggregate_route_no_longer_counts_inactive_rows() {
-    let system = skip_if_no_db!(test_system(&[]).await);
-    let (_, admin_cookie) = seed_user(&system, true).await;
-    let db = system.state().base.db.clone();
-    let (deals, _) = provision_deals(&system).await;
-    let expected = seed_ground_truth(&db, &deals).await;
-    let app = full_app(system);
-    let res = app
-        .oneshot(req(
-            "POST",
-            "/api/v1/search/aggregate",
-            Some(&admin_cookie),
-            Some(&json!({ "entity": deals, "metric_fn": "count" })),
-        ))
-        .await
-        .unwrap();
-    assert_eq!(res.status(), StatusCode::OK);
-    let body = body_json(res).await;
-    assert_eq!(
-        body["buckets"][0]["value"],
-        expected.values().sum::<i64>() as f64
-    );
-}
-
 // ── Dashboard data routes (Phase 2.3) ───────────────────────────────────────
 
 struct DataDashboard {
@@ -1569,9 +1543,9 @@ async fn timezone_precedence_is_page_then_user_then_utc() {
 }
 
 /// D-523: a licence with the dashboard module but not search still gets
-/// widget data, while the public search aggregation stays hidden.
+/// widget data.
 #[tokio::test]
-async fn a_dashboard_only_licence_gets_widget_data_but_not_search_aggregate() {
+async fn a_dashboard_only_licence_gets_widget_data() {
     let system = skip_if_no_db!(test_system(&[]).await);
     let (admin_id, admin_cookie) = seed_user(&system, true).await;
     let db = system.state().base.db.clone();
@@ -1604,18 +1578,6 @@ async fn a_dashboard_only_licence_gets_widget_data_but_not_search_aggregate() {
     let (status, body) = widget_data(&app, &admin_cookie, &dashboard, json!({})).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body["structured"]["buckets"][0]["values"][0], 1.0);
-
-    let res = app
-        .clone()
-        .oneshot(req(
-            "POST",
-            "/api/v1/search/aggregate",
-            Some(&admin_cookie),
-            Some(&json!({ "entity": deals, "metric_fn": "count" })),
-        ))
-        .await
-        .unwrap();
-    assert_eq!(res.status(), StatusCode::FORBIDDEN);
 }
 
 /// The page route returns every widget in layout order and contains one

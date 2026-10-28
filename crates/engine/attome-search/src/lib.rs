@@ -65,9 +65,9 @@ pub mod vector;
 
 pub use access_cache::{AccessMap, AccessMapCache, ResultsCacheKey};
 pub use aggregate::{
-    AggregateBucket, AggregateRequest, AggregateResponse, AggregateScope, BucketKey, DrillTarget,
-    MAX_GROUP_BUCKETS, RecordColumn, StructuredAggregate, StructuredBucket, StructuredRecords,
-    key_filters, run_structured_aggregate, run_structured_records,
+    AggregateScope, BucketKey, DrillTarget, MAX_GROUP_BUCKETS, RecordColumn, StructuredAggregate,
+    StructuredBucket, StructuredRecords, key_filters, run_structured_aggregate,
+    run_structured_records,
 };
 pub use backfill::Backfill;
 pub use corpus::knowledge::{ArticleChunk, Passage, chunk_article, expand};

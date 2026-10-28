@@ -45,11 +45,9 @@ impl EngineModel for SearchModel {
 
     /// The query surface, gated by `MODULE_SEARCH` through `ModelRegistry` —
     /// an unlicensed deployment 404s every route here while the drain and the
-    /// backfill keep running. `aggregate::routes()` merged in alongside the
-    /// full-text search route — same license gate, same reasoning (a
-    /// dashboard aggregation widget is a query, not indexing/drain work).
-    /// `graph::routes()` (M38 Phase 1) is the same shape again: a traversal
-    /// is retrieval, gated the same way the text and aggregation routes are.
+    /// backfill keep running. `graph::routes()` (M38 Phase 1) is merged in
+    /// alongside the full-text search route: a traversal is retrieval, gated
+    /// the same way the text route is.
     /// `saved_search::routes()` (the "run" action) and `suggest::routes()`
     /// (M11 gap list) are retrieval too, by the same reasoning — entity
     /// registration for `saved_search` itself happens in `saved_search::
@@ -58,7 +56,6 @@ impl EngineModel for SearchModel {
     /// need a full re-seed).
     fn routes(&self) -> Router<EngineState> {
         crate::routes::routes()
-            .merge(crate::aggregate::routes())
             .merge(crate::graph::routes())
             .merge(crate::saved_search::routes())
             .merge(crate::suggest::routes())
@@ -71,7 +68,6 @@ impl EngineModel for SearchModel {
 /// document, merged in by `server::openapi::document`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = <crate::routes::ApiDocFragment as utoipa::OpenApi>::openapi();
-    doc.merge(crate::aggregate::openapi_fragment());
     doc.merge(crate::graph::openapi_fragment());
     doc.merge(<crate::saved_search::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<crate::suggest::ApiDocFragment as utoipa::OpenApi>::openapi());

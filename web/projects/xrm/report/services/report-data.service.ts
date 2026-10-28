@@ -3,13 +3,13 @@ import { Observable } from 'rxjs';
 import { ApiComponents, ApiService } from '@attome/base';
 import { DateRangeConfig } from '../types';
 
-// Wire shapes come from the generated OpenAPI contract (M26 R-15 — same
-// migration `dashboard.service.ts`/`metric.service.ts` already made; the old
-// hand-mirrored interfaces here duplicated `attome-search::aggregate`'s
-// `AggregateRequest`/`AggregateResponse`/`AggregateBucket` field-for-field).
-export type AggregateRequest  = ApiComponents['schemas']['AggregateRequest'];
-export type AggregateBucket   = ApiComponents['schemas']['AggregateBucket'];
-export type AggregateResponse = ApiComponents['schemas']['AggregateResponse'];
+// Wire shapes come from the generated OpenAPI contract (M26 R-15). S4-T11
+// removed `POST /api/v1/search/aggregate`; grouped measures run as
+// `POST /api/v1/query/run` QuerySpecs with `group_by` and `aggregates`, and
+// the answer's `groups` carry each group's `keys` and `values` by alias.
+export type QueryRunRequest = ApiComponents['schemas']['RunRequest'];
+export type QueryRunResponse = ApiComponents['schemas']['RunResponse'];
+export type AggregateResult = ApiComponents['schemas']['AggregateResult'];
 
 @Injectable({ providedIn: 'root' })
 export class ReportDataService {
@@ -21,12 +21,10 @@ export class ReportDataService {
   // deleted) — `attome-dashboard`'s own widget registry
   // (`GET /api/v1/attome-dashboard/widget-types`) is the one remaining catalog.
 
-  /** `attome-search::aggregate` — GROUP BY with COUNT/SUM/AVG/MIN/MAX, license-gated
-   * by `search` independently of `report` (see that endpoint's own doc comment
-   * for why: a `report`-only license still gets List/Table/count-style Metric
-   * widgets, just not GROUP BY-backed charts). */
-  aggregate(req: AggregateRequest): Observable<AggregateResponse> {
-    return this.api.post<AggregateResponse>('/api/v1/search/aggregate', req);
+  /** An aggregate QuerySpec through `query/run`: GROUP BY with count, sum,
+   * avg, min, max or count_distinct, over the records the caller may read. */
+  aggregate(spec: Record<string, unknown>): Observable<AggregateResult> {
+    return this.api.post<AggregateResult>('/api/v1/query/run', { spec });
   }
 }
 
@@ -74,7 +72,7 @@ export function resolveDateRange(range: DateRangeConfig | undefined): { from: st
 /** Appends the resolved date-range bound (if any) to an existing filter list
  * as two `gte`/`lt` `Filter` entries against `dateField` — the shared step
  * every widget's data-fetch call takes before hitting `query/execute` or
- * `search/aggregate`. */
+ * `query/run`. */
 export function withDateRangeFilters(
   filters: { field: string; op: string; value?: string }[],
   dateField: string | undefined,

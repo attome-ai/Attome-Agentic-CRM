@@ -6,7 +6,7 @@ export type {
 } from './services/metric.service';
 export { ReportDataService }                 from './services/report-data.service';
 export { resolveDateRange, withDateRangeFilters } from './services/report-data.service';
-export type { AggregateRequest, AggregateResponse, AggregateBucket } from './services/report-data.service';
+export type { QueryRunRequest, QueryRunResponse, AggregateResult } from './services/report-data.service';
 // `DashboardTemplateGalleryComponent` moved to `@attome/xrm/dashboard` and
 // `DashboardVariableBusService` (+ its types) to `@attome/xrm/dashboard/data`
 // — R-10 step 1 (M26-dashboard-remediation): new-module UI/state belongs in

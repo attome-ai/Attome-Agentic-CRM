@@ -4162,6 +4162,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   smoke test.
 
 ### Breaking
+- `POST /api/v1/search/aggregate` is removed (S4-T11). Send the same measure to
+  `POST /api/v1/query/run` as a QuerySpec with `group_by` (`then_by` is a second group field) and
+  `aggregates` (`metric_fn`/`metric_field` become `{"func", "field", "alias"}`); the answer's
+  `groups` give each group's `keys` and its `values` by alias. `@attome/xrm/report`'s
+  `ReportDataService.aggregate` now takes a QuerySpec, and the `AggregateRequest`,
+  `AggregateResponse` and `AggregateBucket` types are replaced by `QueryRunRequest`,
+  `QueryRunResponse` and `AggregateResult`. Dashboard widgets are unchanged.
 - A sign-in provider added on screen signs in only people whose email domain is verified for it
   (Q1-T6): add the domain under `/api/v1/admin/security/oidc-domains`, publish its TXT record and
   check it. Until then its sign-ins end on the login page with `domain_not_verified`. Configured

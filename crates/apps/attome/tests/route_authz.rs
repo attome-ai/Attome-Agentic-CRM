@@ -99,13 +99,11 @@ const DYNAMIC_ACTION: &str = "Dynamic";
 /// number in the same commit — the test fails when the count drops below it
 /// too, so the ratchet cannot quietly rust in the loose direction either.
 ///
-/// Two of the seven are the routes whose entity is genuinely not a path
-/// segment at all, so there is nothing for the extractor to resolve:
+/// One of them is a route whose entity is genuinely not a path segment at
+/// all, so there is nothing for the extractor to resolve:
 ///
 /// - `query_exec::execute` — the entity comes from the stored query row, and
 ///   a multi-entity query has several.
-/// - `aggregate::aggregate` — the entity is a body field, resolved against
-///   the database (by id *or* logicalname) before the `require` can be made.
 ///
 /// Raised from 1 to 2 deliberately (SEC-6, 2026-08-24): four handlers had
 /// drifted in under the old ceiling. Three were converted in the same commit
@@ -139,10 +137,14 @@ const DYNAMIC_ACTION: &str = "Dynamic";
 /// the body, as `execute` does, and each record is filtered by the caller's
 /// record-level access before it is returned.
 ///
+/// Lowered from 6 to 5 (S4-T11, 2026-10-28): `aggregate::aggregate`, whose
+/// entity was a body field, was deleted with `POST /api/v1/search/aggregate`
+/// (`query/run` aggregates replace it).
+///
 /// If this ever reaches 0, delete the constant and both halves of
 /// `bare_record_scoped_routes_ratchet_downward` rather than leaving a floor
 /// nothing can trip.
-const MAX_BARE_RECORD_SCOPED: usize = 6;
+const MAX_BARE_RECORD_SCOPED: usize = 5;
 
 /// Routes carrying neither an `Authorized<P>` policy nor a `require_*` call,
 /// each with the reason it is safe. Verified by reading every handler.

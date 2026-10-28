@@ -24,7 +24,6 @@
   "error-shape POST /api/v1/query/execute",
   "error-shape POST /api/v1/sales/opportunities/{id}/sync",
   "error-shape POST /api/v1/scan/act",
-  "error-shape POST /api/v1/search/aggregate",
   "error-shape POST /scim/v2/Groups",
   "error-shape POST /scim/v2/Users",
   "error-shape PUT /scim/v2/Users/{id}",

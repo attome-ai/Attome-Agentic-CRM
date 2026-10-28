@@ -4,9 +4,10 @@
 //! a total never counts a record the caller cannot read, and a group key or
 //! measured field goes through the same field gate as a selected one.
 //!
-//! What search/aggregate offers and this shape does not (for S4-T11): Hijri
-//! month and year buckets, and an `other` bucket gathering the groups past
-//! the limit.
+//! S4-T11: this replaced the public `search/aggregate` route, which offered
+//! nothing this shape lacks. Hijri month and year buckets and an `other`
+//! bucket gathering the groups past the limit remain the dashboard
+//! library's (`attome_search::run_structured_aggregate`), not a route's.
 //!
 //! P1-T2: `totals` adds total rows, computed by the database over the same
 //! filtered rows (`GROUP BY ROLLUP` for a summary's subtotals, `CUBE` for a
