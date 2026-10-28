@@ -121,6 +121,7 @@ pub async fn calendar(
 #[utoipa::path(
     get,
     path = "/api/v1/service/oncall/schedules/{id}/calendar",
+    operation_id = "get_oncall_calendar",
     tag = "service",
     params(("id" = Uuid, Path, description = "The on-call schedule"), CalendarQuery),
     responses(
