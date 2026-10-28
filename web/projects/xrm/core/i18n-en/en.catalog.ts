@@ -1129,6 +1129,9 @@ export const xrmEn = {
   },
   // U6 (D-601) — <xrm-record-history-panel>.
   systemStatus: {
+    incident: 'Service notice: {title}',
+    maintenance: 'Planned maintenance: {title}',
+    dismiss: 'Dismiss this notice',
     readOnly: 'Changes are paused for now. You can still read everything; try again in a few minutes.',
     files: 'File uploads and downloads are unavailable right now.',
     email: 'Emails are delayed; they will go out once the service is back.',
