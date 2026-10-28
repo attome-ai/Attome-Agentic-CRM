@@ -1,0 +1,146 @@
+{
+  "country_code": "AE",
+  "name": "United Arab Emirates",
+  "name_ar": "الإمارات العربية المتحدة",
+  "tz": "Asia/Dubai",
+  "working_days": [
+    "mon",
+    "tue",
+    "wed",
+    "thu",
+    "fri"
+  ],
+  "hours": {
+    "mon": [
+      {
+        "start_minute": 480,
+        "end_minute": 960
+      }
+    ],
+    "tue": [
+      {
+        "start_minute": 480,
+        "end_minute": 960
+      }
+    ],
+    "wed": [
+      {
+        "start_minute": 480,
+        "end_minute": 960
+      }
+    ],
+    "thu": [
+      {
+        "start_minute": 480,
+        "end_minute": 960
+      }
+    ],
+    "fri": [
+      {
+        "start_minute": 480,
+        "end_minute": 960
+      }
+    ]
+  },
+  "source_url": "https://u.ae/information-and-services/public-holidays-and-religious-affairs/public-holidays",
+  "reviewed_for_year": 2026,
+  "holiday_rules": [
+    {
+      "name": "New Year's Day",
+      "name_ar": "رأس السنة الميلادية",
+      "rule": {
+        "kind": "fixed",
+        "month": 1,
+        "day": 1,
+        "span_days": 1
+      },
+      "needs_sighting": false,
+      "source_url": "https://u.ae/information-and-services/public-holidays-and-religious-affairs/public-holidays"
+    },
+    {
+      "name": "Ramadan 30",
+      "name_ar": "30 رمضان",
+      "rule": {
+        "kind": "hijri",
+        "month": 9,
+        "day": 30,
+        "span_days": 1
+      },
+      "needs_sighting": true,
+      "source_url": "https://u.ae/information-and-services/public-holidays-and-religious-affairs/public-holidays"
+    },
+    {
+      "name": "Eid al-Fitr",
+      "name_ar": "عيد الفطر",
+      "rule": {
+        "kind": "hijri",
+        "month": 10,
+        "day": 1,
+        "span_days": 3
+      },
+      "needs_sighting": true,
+      "source_url": "https://u.ae/information-and-services/public-holidays-and-religious-affairs/public-holidays"
+    },
+    {
+      "name": "Arafat Day",
+      "name_ar": "يوم عرفة",
+      "rule": {
+        "kind": "hijri",
+        "month": 12,
+        "day": 9,
+        "span_days": 1
+      },
+      "needs_sighting": true,
+      "source_url": "https://u.ae/information-and-services/public-holidays-and-religious-affairs/public-holidays"
+    },
+    {
+      "name": "Eid al-Adha",
+      "name_ar": "عيد الأضحى",
+      "rule": {
+        "kind": "hijri",
+        "month": 12,
+        "day": 10,
+        "span_days": 3
+      },
+      "needs_sighting": true,
+      "source_url": "https://u.ae/information-and-services/public-holidays-and-religious-affairs/public-holidays"
+    },
+    {
+      "name": "Hijri New Year",
+      "name_ar": "رأس السنة الهجرية",
+      "rule": {
+        "kind": "hijri",
+        "month": 1,
+        "day": 1,
+        "span_days": 1
+      },
+      "needs_sighting": false,
+      "source_url": "https://u.ae/information-and-services/public-holidays-and-religious-affairs/public-holidays"
+    },
+    {
+      "name": "Prophet's Birthday",
+      "name_ar": "المولد النبوي",
+      "rule": {
+        "kind": "hijri",
+        "month": 3,
+        "day": 12,
+        "span_days": 1
+      },
+      "needs_sighting": false,
+      "source_url": "https://u.ae/information-and-services/public-holidays-and-religious-affairs/public-holidays"
+    },
+    {
+      "name": "National Day",
+      "name_ar": "عيد الاتحاد",
+      "rule": {
+        "kind": "fixed",
+        "month": 12,
+        "day": 2,
+        "span_days": 2
+      },
+      "needs_sighting": false,
+      "source_url": "https://u.ae/information-and-services/public-holidays-and-religious-affairs/public-holidays"
+    }
+  ],
+  "seasons": []
+}

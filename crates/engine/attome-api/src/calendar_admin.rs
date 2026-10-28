@@ -41,7 +41,7 @@ use attome_records::query_admin::{
 
 #[derive(sqlx::FromRow, Serialize, ToSchema)]
 pub(crate) struct CalendarDetail {
-    id: Uuid,
+    pub(crate) id: Uuid,
     name: String,
     description: Option<String>,
     tz: String,
@@ -351,7 +351,7 @@ pub(crate) async fn retire_calendar_in_tx(
 
 /// The recorded op for a calendar row: target `{calendar: <name>}` (D-404:
 /// calendars are keyed by name alone).
-fn calendar_op(op: Op, row: &CalendarDetail) -> Result<RecordedOp, AppError> {
+pub(crate) fn calendar_op(op: Op, row: &CalendarDetail) -> Result<RecordedOp, AppError> {
     hooks::recorded(
         op,
         "calendar",
@@ -492,7 +492,7 @@ async fn ensure_not_referenced_by_sla_policies(
 /// (D-517), so an SLA calculation's recorded hash can be matched to the
 /// change that produced it. Best-effort, same posture as every
 /// `write_business_event` caller.
-async fn audit_calendar_change(
+pub(crate) async fn audit_calendar_change(
     state: &EngineState,
     actor: Uuid,
     calendar_id: Uuid,
@@ -1483,7 +1483,9 @@ fn this_year() -> i32 {
 
 /// A holiday rule as given: it parses, a sighted rule is a Hijri one, and it
 /// expands for this year and the next.
-fn check_rule(def: &HolidayRuleDef) -> Result<attome_core::calendar::rules::HolidayRule, String> {
+pub(crate) fn check_rule(
+    def: &HolidayRuleDef,
+) -> Result<attome_core::calendar::rules::HolidayRule, String> {
     use attome_core::calendar::rules::{HolidayRule, expand};
     if def.name.trim().is_empty() || def.name.len() > 200 {
         return Err("a holiday rule has a name of at most 200 characters".into());
@@ -1503,7 +1505,7 @@ fn check_rule(def: &HolidayRuleDef) -> Result<attome_core::calendar::rules::Holi
 }
 
 /// A season as given: it parses and expands for this year.
-fn check_season(def: &SeasonDef) -> Result<(), String> {
+pub(crate) fn check_season(def: &SeasonDef) -> Result<(), String> {
     use attome_core::calendar::rules::{Season, expand_season};
     if def.name.trim().is_empty() || def.name.len() > 200 {
         return Err("a season has a name of at most 200 characters".into());
@@ -1698,7 +1700,7 @@ pub(crate) async fn retire_season_in_tx(
 
 /// The recorded op for a rule: target `{calendar, rule}` (a rule is
 /// identified by its name within its calendar).
-async fn rule_op(
+pub(crate) async fn rule_op(
     tx: &mut attome_db::Tx<'_>,
     op: Op,
     row: &RuleDetail,
@@ -1714,7 +1716,7 @@ async fn rule_op(
 }
 
 /// The recorded op for a season: target `{calendar, season}`.
-async fn season_op(
+pub(crate) async fn season_op(
     tx: &mut attome_db::Tx<'_>,
     op: Op,
     row: &SeasonDetail,
@@ -3084,6 +3086,8 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/hijri-months/{year}/{month}",
             axum::routing::put(correct_hijri_month),
         )
+        // Z12-T7: country holiday packs.
+        .merge(crate::calendar_packs::routes())
 }
 
 /// Z12-T10: one business-time question for a calendar.

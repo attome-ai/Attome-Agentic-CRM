@@ -512,3 +512,132 @@ async fn parent_cycle_rejected() {
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
 }
+
+// ── Z12-T7: country holiday packs ───────────────────────────────────────────
+
+/// Retires every Saudi calendar earlier tests left, so the pack's lookup by
+/// country starts from none (this target runs with one test thread).
+async fn clear_saudi_calendars(db: &PgPool) {
+    sqlx::query(
+        "UPDATE calendar SET is_active = false, is_default = false, \
+                name = name || '-retired-' || id::text \
+          WHERE (country_code = 'SA' OR name = 'Saudi Arabia') AND is_active = true",
+    )
+    .execute(db)
+    .await
+    .expect("retire earlier Saudi calendars");
+}
+
+#[tokio::test]
+async fn apply_sa_pack_creates_calendar() {
+    let system = skip_if_no_db!(test_system().await);
+    let db = system.state().base.db.clone();
+    let cookie = session_cookie(seed_admin(&db).await);
+    let app = full_app(system);
+    clear_saudi_calendars(&db).await;
+
+    let (status, packs) = send(&app, "GET", "/api/v1/admin/calendars/packs", &cookie, None).await;
+    assert_eq!(status, StatusCode::OK, "{packs}");
+    assert!(packs.as_array().unwrap().iter().any(|p| p["code"] == "sa"));
+
+    let (status, applied) = send(
+        &app,
+        "POST",
+        "/api/v1/admin/calendars/packs/sa/apply",
+        &cookie,
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{applied}");
+    assert_eq!(applied["created"], true);
+    assert_eq!(applied["rules_changed"], 4);
+    let calendar: Uuid = applied["calendar_id"].as_str().unwrap().parse().unwrap();
+
+    let (status, detail) = send(
+        &app,
+        "GET",
+        &format!("/api/v1/admin/calendars/{calendar}"),
+        &cookie,
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{detail}");
+    assert_eq!(detail["name"], "Saudi Arabia");
+    assert_eq!(detail["country_code"], "SA");
+
+    let names: Vec<String> = sqlx::query_scalar(
+        "SELECT name FROM calendar_holiday_rule WHERE calendar_id = $1 AND is_active = true ORDER BY name",
+    )
+    .bind(calendar)
+    .fetch_all(&db)
+    .await
+    .unwrap();
+    assert_eq!(
+        names,
+        ["Eid al-Adha", "Eid al-Fitr", "Founding Day", "National Day"]
+    );
+    let year = chrono::Utc::now().year();
+    let holidays = holidays_of(&db, calendar).await;
+    for (month, day) in [(2, 22), (9, 23)] {
+        let date = NaiveDate::from_ymd_opt(year, month, day).unwrap();
+        assert!(holidays.contains(&date), "{date} is a holiday");
+    }
+}
+
+#[tokio::test]
+async fn reapply_pack_is_idempotent() {
+    let system = skip_if_no_db!(test_system().await);
+    let db = system.state().base.db.clone();
+    let cookie = session_cookie(seed_admin(&db).await);
+    let app = full_app(system);
+    clear_saudi_calendars(&db).await;
+
+    let (status, first) = send(
+        &app,
+        "POST",
+        "/api/v1/admin/calendars/packs/sa/apply",
+        &cookie,
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{first}");
+    let (status, second) = send(
+        &app,
+        "POST",
+        "/api/v1/admin/calendars/packs/SA/apply",
+        &cookie,
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{second}");
+    assert_eq!(second["calendar_id"], first["calendar_id"]);
+    assert_eq!(second["created"], false);
+    assert_eq!(second["rules_changed"], 0);
+
+    let calendars: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM calendar WHERE country_code = 'SA' AND is_active = true",
+    )
+    .fetch_one(&db)
+    .await
+    .unwrap();
+    assert_eq!(calendars, 1);
+    let calendar: Uuid = first["calendar_id"].as_str().unwrap().parse().unwrap();
+    let rules: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM calendar_holiday_rule WHERE calendar_id = $1 AND is_active = true",
+    )
+    .bind(calendar)
+    .fetch_one(&db)
+    .await
+    .unwrap();
+    assert_eq!(rules, 4);
+
+    let (status, _) = send(
+        &app,
+        "POST",
+        "/api/v1/admin/calendars/packs/zz/apply",
+        &cookie,
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}

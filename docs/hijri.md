@@ -57,3 +57,31 @@ stretches in one Gregorian year (1 Ramadan fell on 5 January and 26 December 203
 `rules::Season` between two rules (Ramadan's first and last day) sets per-weekday hours, expanded
 into one exception per working date with `rules::expand_season`.
 
+
+## Country holiday packs
+
+`GET /api/v1/admin/calendars/packs` lists the official holiday packs the server carries, and
+`POST /api/v1/admin/calendars/packs/{code}/apply` applies one (administrators). Applying creates the
+country's calendar, or finds the active calendar with that `country_code`, and writes the pack's
+holiday rules through the same code as the holiday-rule route. A calendar that already exists keeps
+its name, working days and hours, and only rules that differ are written, so a second apply
+changes nothing. Inside an open changeset the apply is recorded as calendar and rule writes.
+
+| Code | Country | Holidays | Source |
+|---|---|---|---|
+| `sa` | Saudi Arabia | Eid al-Fitr (4 days from the day after 29 Ramadan), Eid al-Adha (4 days from Arafat), Founding Day (22 February), National Day (23 September) | [HRSD](https://www.hrsd.gov.sa/en/knowledge-centre/articles/322); Founding Day by royal order |
+| `ae` | United Arab Emirates | New Year, Eid al-Fitr (1 to 3 Shawwal, plus 30 Ramadan when there is one), Arafat Day, Eid al-Adha (10 to 12 Dhu al-Hijjah), Hijri New Year, the Prophet's Birthday, National Day (2 and 3 December) | Cabinet Resolution 27 of 2024, on [u.ae](https://u.ae/information-and-services/public-holidays-and-religious-affairs/public-holidays) |
+| `om` | Oman | Eid al-Fitr (29 Ramadan to 3 Shawwal), Eid al-Adha (9 to 12 Dhu al-Hijjah), Hijri New Year, the Prophet's Birthday, Isra and Mi'raj, National Day (18 and 19 November), Accession Day (11 January) | [Royal Decree 88/2022](https://decree.om/2022/rd20220088/) |
+
+The Eids (and Arafat Day) wait for the moon sighting: confirm the real first day with
+`POST /api/v1/calendar-sightings` when it is announced. A pack's working hours, 08:00 to 16:00 on
+the country's working days, are a starting point and not an official figure; change them on the
+calendar. Ramadan hours are not in a pack, because the labour laws cap the hours of Muslim workers
+without setting clock times; add a season for the hours your organisation keeps. Holidays a
+government announces for one year only (extra Eid days, a moved National Day) are added as holidays
+on the calendar. Kuwait, Qatar and Bahrain have no pack yet: no official text with their holiday
+spans could be reached to cite.
+
+Every December the yearly review sends each active administrator the expected first days of next
+year's Hijri holidays on every calendar, to confirm or correct as the announcements come. It runs
+once a year (the year is recorded in `calendar_review_notice`), in the default calendar's time zone.

@@ -3162,6 +3162,8 @@ const DEDUP_KEY_DEAL_COVERAGE: &str = "sales-deal-coverage";
 /// J10-T1: the unified router's tick (a registered job type).
 const DEDUP_KEY_SERVICE_ROUTER: &str = "service-router-tick";
 const DEDUP_KEY_OPS_STATUS_WATCH: &str = "ops-status-watch";
+/// Z12-T7: the yearly Hijri holiday review check (a registered job type).
+const DEDUP_KEY_CALENDAR_REVIEW: &str = "calendar-yearly-review";
 /// E23-T1: profile event retention (a registered job type).
 const DEDUP_KEY_PROFILE_EVENT_RETENTION: &str = "profile-event-retention";
 /// J8-T1: the Google reviews read (a registered job type).
@@ -3569,6 +3571,10 @@ pub const IMPORT_UNDO: attome_jobs::JobType =
 /// AB11-T4: the status watch, every minute.
 pub const OPS_STATUS_WATCH: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_ops::status_watch::TICK_JOB, 1);
+
+/// Z12-T7: the check for December's Hijri holiday review reminder.
+pub const CALENDAR_YEARLY_REVIEW: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_api::calendar_packs::REVIEW_JOB, 1);
 
 /// J10-T1: the unified router: expire offers, overflow, offer waiting work.
 pub const SERVICE_ROUTER_TICK: attome_jobs::JobType =
@@ -4912,6 +4918,21 @@ pub fn register_job_types() {
         ) {
             tracing::error!(%error, "job type registration failed");
         }
+        // Z12-T7: the yearly Hijri holiday review reminder.
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            CALENDAR_YEARLY_REVIEW,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let sent = attome_api::calendar_packs::yearly_review(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if sent > 0 {
+                    tracing::info!(sent, "calendar yearly review: reminders sent");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
         // AB11-T4: the status watch.
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             OPS_STATUS_WATCH,
@@ -5764,6 +5785,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         }
         EngineJob::Registered(job) if job.name == OPS_STATUS_WATCH.name => {
             DEDUP_KEY_OPS_STATUS_WATCH
+        }
+        EngineJob::Registered(job) if job.name == CALENDAR_YEARLY_REVIEW.name => {
+            DEDUP_KEY_CALENDAR_REVIEW
         }
         EngineJob::Registered(job) if job.name == MARKETING_JOURNEY_ENTRY.name => {
             DEDUP_KEY_JOURNEY_ENTRY
@@ -7395,6 +7419,22 @@ pub fn spawn_service_router_scheduler(db: DbPool, interval: std::time::Duration)
             "service router",
         ),
         Err(error) => tracing::error!(%error, "service router: not scheduled"),
+    }
+}
+
+/// Z12-T7: every hour, one yearly review check (one pending at most); the
+/// check itself sends only once a year.
+pub fn spawn_calendar_review_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(CALENDAR_YEARLY_REVIEW.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_CALENDAR_REVIEW,
+            "calendar yearly review",
+        ),
+        Err(error) => tracing::error!(%error, "calendar yearly review: not scheduled"),
     }
 }
 

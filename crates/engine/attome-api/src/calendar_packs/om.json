@@ -1,0 +1,146 @@
+{
+  "country_code": "OM",
+  "name": "Oman",
+  "name_ar": "سلطنة عُمان",
+  "tz": "Asia/Muscat",
+  "working_days": [
+    "sun",
+    "mon",
+    "tue",
+    "wed",
+    "thu"
+  ],
+  "hours": {
+    "sun": [
+      {
+        "start_minute": 480,
+        "end_minute": 960
+      }
+    ],
+    "mon": [
+      {
+        "start_minute": 480,
+        "end_minute": 960
+      }
+    ],
+    "tue": [
+      {
+        "start_minute": 480,
+        "end_minute": 960
+      }
+    ],
+    "wed": [
+      {
+        "start_minute": 480,
+        "end_minute": 960
+      }
+    ],
+    "thu": [
+      {
+        "start_minute": 480,
+        "end_minute": 960
+      }
+    ]
+  },
+  "source_url": "https://decree.om/2022/rd20220088/",
+  "reviewed_for_year": 2026,
+  "holiday_rules": [
+    {
+      "name": "Eid al-Fitr eve",
+      "name_ar": "ليلة عيد الفطر",
+      "rule": {
+        "kind": "hijri",
+        "month": 9,
+        "day": 29,
+        "span_days": 2
+      },
+      "needs_sighting": true,
+      "source_url": "https://decree.om/2022/rd20220088/"
+    },
+    {
+      "name": "Eid al-Fitr",
+      "name_ar": "عيد الفطر",
+      "rule": {
+        "kind": "hijri",
+        "month": 10,
+        "day": 1,
+        "span_days": 3
+      },
+      "needs_sighting": true,
+      "source_url": "https://decree.om/2022/rd20220088/"
+    },
+    {
+      "name": "Eid al-Adha",
+      "name_ar": "عيد الأضحى",
+      "rule": {
+        "kind": "hijri",
+        "month": 12,
+        "day": 9,
+        "span_days": 4
+      },
+      "needs_sighting": true,
+      "source_url": "https://decree.om/2022/rd20220088/"
+    },
+    {
+      "name": "Hijri New Year",
+      "name_ar": "رأس السنة الهجرية",
+      "rule": {
+        "kind": "hijri",
+        "month": 1,
+        "day": 1,
+        "span_days": 1
+      },
+      "needs_sighting": false,
+      "source_url": "https://decree.om/2022/rd20220088/"
+    },
+    {
+      "name": "Prophet's Birthday",
+      "name_ar": "المولد النبوي الشريف",
+      "rule": {
+        "kind": "hijri",
+        "month": 3,
+        "day": 12,
+        "span_days": 1
+      },
+      "needs_sighting": false,
+      "source_url": "https://decree.om/2022/rd20220088/"
+    },
+    {
+      "name": "Isra and Mi'raj",
+      "name_ar": "الإسراء والمعراج",
+      "rule": {
+        "kind": "hijri",
+        "month": 7,
+        "day": 27,
+        "span_days": 1
+      },
+      "needs_sighting": false,
+      "source_url": "https://decree.om/2022/rd20220088/"
+    },
+    {
+      "name": "National Day",
+      "name_ar": "العيد الوطني",
+      "rule": {
+        "kind": "fixed",
+        "month": 11,
+        "day": 18,
+        "span_days": 2
+      },
+      "needs_sighting": false,
+      "source_url": "https://decree.om/2022/rd20220088/"
+    },
+    {
+      "name": "Accession Day",
+      "name_ar": "يوم تولي السلطان مقاليد الحكم",
+      "rule": {
+        "kind": "fixed",
+        "month": 1,
+        "day": 11,
+        "span_days": 1
+      },
+      "needs_sighting": false,
+      "source_url": "https://www.omanobserver.om/ampArticle/1147655"
+    }
+  ],
+  "seasons": []
+}

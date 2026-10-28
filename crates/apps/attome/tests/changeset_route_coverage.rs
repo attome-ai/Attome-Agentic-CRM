@@ -223,6 +223,15 @@ const RECORDED: &[(&str, &[&str])] = &[
         "DELETE /api/v1/admin/calendars/{id}/seasons/{season_id}",
         &["retire_calendar_season"],
     ),
+    // Z12-T7: a country pack writes its calendar, rules and seasons.
+    (
+        "POST /api/v1/admin/calendars/packs/{code}/apply",
+        &[
+            "upsert_calendar",
+            "upsert_calendar_rule",
+            "upsert_calendar_season",
+        ],
+    ),
     // Engines (lane L5).
     ("POST /api/v1/admin/queries", &["upsert_query"]),
     ("PATCH /api/v1/admin/queries/{id}", &["upsert_query"]),

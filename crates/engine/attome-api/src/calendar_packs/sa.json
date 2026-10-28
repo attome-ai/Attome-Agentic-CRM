@@ -1,0 +1,98 @@
+{
+  "country_code": "SA",
+  "name": "Saudi Arabia",
+  "name_ar": "المملكة العربية السعودية",
+  "tz": "Asia/Riyadh",
+  "working_days": [
+    "sun",
+    "mon",
+    "tue",
+    "wed",
+    "thu"
+  ],
+  "hours": {
+    "sun": [
+      {
+        "start_minute": 480,
+        "end_minute": 960
+      }
+    ],
+    "mon": [
+      {
+        "start_minute": 480,
+        "end_minute": 960
+      }
+    ],
+    "tue": [
+      {
+        "start_minute": 480,
+        "end_minute": 960
+      }
+    ],
+    "wed": [
+      {
+        "start_minute": 480,
+        "end_minute": 960
+      }
+    ],
+    "thu": [
+      {
+        "start_minute": 480,
+        "end_minute": 960
+      }
+    ]
+  },
+  "source_url": "https://www.hrsd.gov.sa/en/knowledge-centre/articles/322",
+  "reviewed_for_year": 2026,
+  "holiday_rules": [
+    {
+      "name": "Eid al-Fitr",
+      "name_ar": "عيد الفطر",
+      "rule": {
+        "kind": "hijri",
+        "month": 9,
+        "day": 30,
+        "span_days": 4
+      },
+      "needs_sighting": true,
+      "source_url": "https://www.hrsd.gov.sa/en/knowledge-centre/articles/322"
+    },
+    {
+      "name": "Eid al-Adha",
+      "name_ar": "عيد الأضحى",
+      "rule": {
+        "kind": "hijri",
+        "month": 12,
+        "day": 9,
+        "span_days": 4
+      },
+      "needs_sighting": true,
+      "source_url": "https://www.hrsd.gov.sa/en/knowledge-centre/articles/322"
+    },
+    {
+      "name": "Founding Day",
+      "name_ar": "يوم التأسيس",
+      "rule": {
+        "kind": "fixed",
+        "month": 2,
+        "day": 22,
+        "span_days": 1
+      },
+      "needs_sighting": false,
+      "source_url": "https://saudipedia.com/en/official-holidays-in-saudi-arabia"
+    },
+    {
+      "name": "National Day",
+      "name_ar": "اليوم الوطني",
+      "rule": {
+        "kind": "fixed",
+        "month": 9,
+        "day": 23,
+        "span_days": 1
+      },
+      "needs_sighting": false,
+      "source_url": "https://www.hrsd.gov.sa/en/knowledge-centre/articles/322"
+    }
+  ],
+  "seasons": []
+}
