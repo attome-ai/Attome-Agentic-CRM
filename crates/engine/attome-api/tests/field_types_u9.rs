@@ -431,6 +431,7 @@ async fn export_json(
             columns: vec![],
             filters,
             user_id,
+            query_spec: None,
         },
     )
     .await

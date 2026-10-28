@@ -632,6 +632,7 @@ async fn enqueue_export(
             columns: plan.columns.clone(),
             filters: filters_payload,
             user_id: claims.sub,
+            query_spec: None,
         }),
     )
     .await
@@ -780,6 +781,11 @@ pub async fn process(
         )
         .await?;
         return Ok(());
+    }
+
+    // S4-T10: a `query/run` export pages through the query engine instead.
+    if let Some(spec) = payload.query_spec.clone() {
+        return process_query_export(state, &payload, &security, &entity_name, spec).await;
     }
 
     let filters: Vec<Filter> = payload
@@ -1018,6 +1024,207 @@ pub async fn process(
         return Err(e);
     }
 
+    Ok(())
+}
+
+/// S4-T10: rows a query export reads per page.
+const QUERY_EXPORT_PAGE: i64 = 1000;
+
+/// S4-T10: a `query/run` export. The spec runs through the query engine as
+/// the job's user (record and field security inside the SQL, re-derived
+/// now), a keyset page of [`QUERY_EXPORT_PAGE`] at a time, each page its own
+/// short read: no transaction is held across pages. The rows stream to the
+/// store as JSON lines or CSV (the select list, in order, heads it), at most
+/// [`MAX_EXPORT_ROWS`], and complete like any export.
+async fn process_query_export(
+    state: &EngineState,
+    payload: &attome_core::jobs::DataExportPayload,
+    security: &attome_server::security::SecurityContext,
+    entity_name: &str,
+    spec: Value,
+) -> Result<(), AppError> {
+    use attome_records::query_spec::{QuerySpec, RunResponse, RunRow, execute_spec};
+    use futures_util::StreamExt;
+
+    let export_id = payload.export_id;
+    let mut spec: QuerySpec = match serde_json::from_value(spec) {
+        Ok(spec) => spec,
+        Err(e) => {
+            mark_failed(
+                state,
+                export_id,
+                &format!("the export's query is not valid: {e}"),
+            )
+            .await?;
+            return Ok(());
+        }
+    };
+    spec.page_size = Some(QUERY_EXPORT_PAGE);
+    spec.cursor = None;
+    spec.explain = false;
+    sqlx::query(
+        "UPDATE data_export SET status = 'running', updated_at = NOW(), row_version = row_version + 1 WHERE id = $1",
+    )
+    .bind(export_id)
+    .execute(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+
+    /// The next page to write, or why the export stopped.
+    enum Next {
+        Page(Vec<RunRow>, Option<String>),
+        Failed(String),
+        Done,
+    }
+    let fetch = |cursor: Option<String>| {
+        let mut page_spec = spec.clone();
+        page_spec.cursor = cursor.map(|raw| attome_types::cursor::seal(&raw));
+        async move {
+            match execute_spec(state, security, page_spec).await {
+                Ok(RunResponse::Rows(page)) => Next::Page(page.items, page.next_cursor),
+                Ok(_) => Next::Failed("the export's query is not a row query".into()),
+                Err(e) => Next::Failed(e.to_string()),
+            }
+        }
+    };
+    let first = fetch(None).await;
+    if let Next::Failed(reason) = &first {
+        mark_failed(state, export_id, &format!("export failed: {reason}")).await?;
+        return Ok(());
+    }
+
+    let header: Vec<String> = match &first {
+        Next::Page(items, _) if spec.select.is_empty() => items
+            .first()
+            .map(|row| row.0.keys().cloned().collect())
+            .unwrap_or_default(),
+        _ => spec.select.clone(),
+    };
+    let csv = payload.format == "csv";
+    let guard = attome_report::render::formula_guard_enabled(state);
+    let rows = std::sync::Arc::new(std::sync::atomic::AtomicI64::new(0));
+    let counted = rows.clone();
+    let render_header = header.clone();
+    let fetch = &fetch;
+    let pages = futures_util::stream::unfold(first, move |next| {
+        let counted = counted.clone();
+        let header = render_header.clone();
+        async move {
+            match next {
+                Next::Done => None,
+                Next::Failed(reason) => {
+                    Some((vec![Err(sqlx::Error::Protocol(reason))], Next::Done))
+                }
+                Next::Page(items, cursor) => {
+                    let total = counted.fetch_add(
+                        i64::try_from(items.len()).unwrap_or(i64::MAX),
+                        std::sync::atomic::Ordering::Relaxed,
+                    ) + i64::try_from(items.len()).unwrap_or(i64::MAX);
+                    let lines: Vec<Result<String, sqlx::Error>> = items
+                        .into_iter()
+                        .map(|row| {
+                            let value = Value::Object(row.0);
+                            Ok(if csv {
+                                attome_report::render::csv_line_with(&header, &value, guard)
+                            } else {
+                                value.to_string()
+                            })
+                        })
+                        .collect();
+                    let following = if total > MAX_EXPORT_ROWS {
+                        Next::Failed(format!(
+                            "the query returns over {MAX_EXPORT_ROWS} rows; narrow it"
+                        ))
+                    } else {
+                        match cursor {
+                            Some(cursor) => fetch(Some(cursor)).await,
+                            None => Next::Done,
+                        }
+                    };
+                    Some((lines, following))
+                }
+            }
+        }
+    })
+    .flat_map(futures_util::stream::iter);
+    let header_line = csv.then(|| {
+        format!(
+            "{}{}",
+            attome_report::render::CSV_BOM,
+            attome_report::render::csv_header_line(&header)
+        )
+    });
+    let lines = futures_util::stream::iter(header_line.into_iter().map(Ok::<String, sqlx::Error>))
+        .chain(pages);
+    let object_key = format!(
+        "data-exports/{entity_name}/{export_id}.{}",
+        if csv { "csv" } else { "ndjson" }
+    );
+    let path = ObjectPath::parse(&object_key)
+        .map_err(|e| AppError::internal(format!("invalid export object key: {e}")))?;
+    let checksum = match attome_compliance::retention::stream_masked_export_to_store(
+        lines,
+        state.base.storage.store_arc(),
+        path,
+    )
+    .await
+    {
+        Ok((_, checksum)) => checksum,
+        Err(e) => {
+            mark_failed(state, export_id, &format!("export failed: {e}")).await?;
+            return Ok(());
+        }
+    };
+    let row_count = rows.load(std::sync::atomic::Ordering::Relaxed);
+
+    let (user_ctx, org_ref) = entity_crud::fetch_audit_ctx(state, payload.user_id).await;
+    let event = AuditEvent {
+        organization_ref: org_ref,
+        category: AuditCategory::Entity,
+        entity_name: Some(entity_name.to_owned()),
+        record_id: None,
+        operation: AuditOperation::Export,
+        version_before: None,
+        version_after: None,
+        user_context: user_ctx,
+        changed_on: chrono::Utc::now(),
+        source: AuditSource::Api,
+        request_context: AuditRequestContext::default(),
+        correlation_id: None,
+        batch_id: Some(export_id),
+        event_name: Some("query_export".into()),
+        event_comment: Some(format!(
+            "exported {row_count} row(s) of a query over {entity_name} as {}",
+            payload.format
+        )),
+        changed_fields: vec![],
+        snapshot_json: None,
+    };
+    let parts = [ExportPart {
+        object_key: object_key.clone(),
+        row_count,
+        checksum: checksum.clone(),
+    }];
+    if let Err(e) = complete_export(
+        state,
+        export_id,
+        row_count,
+        &object_key,
+        &checksum,
+        None,
+        &parts,
+        event,
+    )
+    .await
+    {
+        mark_failed(
+            state,
+            export_id,
+            &format!("completion could not be recorded: {e}"),
+        )
+        .await?;
+        return Err(e);
+    }
     Ok(())
 }
 

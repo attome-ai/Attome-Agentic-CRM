@@ -457,6 +457,7 @@ async fn export_never_includes_a_field_the_caller_lacks_field_read_grant_for() {
             columns: vec![],
             filters: vec![],
             user_id: caller_user_id,
+            query_spec: None,
         },
     )
     .await
@@ -545,6 +546,7 @@ async fn export_uses_long_pool() {
                     columns: vec![],
                     filters: vec![],
                     user_id: admin_id,
+                    query_spec: None,
                 },
             )
             .await
@@ -610,6 +612,7 @@ async fn run_export(
             columns: vec![],
             filters: vec![],
             user_id,
+            query_spec: None,
         },
     )
     .await

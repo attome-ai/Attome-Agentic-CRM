@@ -1774,6 +1774,11 @@ pub struct DataExportPayload {
     pub columns: Vec<String>,
     pub filters: Vec<serde_json::Value>,
     pub user_id: Uuid,
+    /// S4-T10: a `query/run` QuerySpec to export instead of `columns` and
+    /// `filters`, paged through the query engine as `user_id`. `None` for a
+    /// payload queued before this field existed.
+    #[serde(default)]
+    pub query_spec: Option<serde_json::Value>,
 }
 
 /// M12 — `POST /admin/data/profile` background job: null %, distinct counts,
@@ -2318,6 +2323,7 @@ mod tests {
                 columns: vec![],
                 filters: vec![],
                 user_id: Uuid::now_v7(),
+                query_spec: None,
             })
             .is_batch()
         );
@@ -2578,6 +2584,7 @@ mod tests {
             columns: vec!["firstname".to_string(), "lastname".to_string()],
             filters: vec![serde_json::json!({"field": "status", "op": "eq", "value": "active"})],
             user_id: Uuid::now_v7(),
+            query_spec: None,
         }));
     }
 

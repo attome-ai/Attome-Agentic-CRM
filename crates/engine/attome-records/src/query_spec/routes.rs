@@ -57,6 +57,45 @@ pub struct RunRequest {
     /// S4-T9: with `query_id`, the previous page's `next_cursor`.
     #[serde(default)]
     pub cursor: Option<String>,
+    /// S4-T10: run it as a background export instead of in the request:
+    /// the answer is 202 with the export, followed at
+    /// `GET /api/v1/{entity}/export/{id}`. A row query over the interactive
+    /// limit needs it.
+    #[serde(default)]
+    pub export: bool,
+    /// S4-T10: with `export`, `json` (one row per line, the default) or `csv`.
+    #[serde(default)]
+    pub export_format: Option<String>,
+}
+
+/// S4-T10: what refuses a query over the interactive limit; `export: true`
+/// runs it as a background export instead.
+pub const QUERY_TOO_LARGE: &str = "query_too_large";
+
+/// S4-T10: `as_of` reads history, which no entity keeps yet (A1).
+pub const TIME_TRAVEL_OFF: &str = "time travel is not enabled for this entity";
+
+/// The background exports one person may have pending or running at once,
+/// the same cap `POST /api/v1/{entity}/export` applies.
+pub const MAX_CONCURRENT_QUERY_EXPORTS: i64 = 3;
+
+/// The refusal of a plan costing `total_cost`, over [`GUARD_LIMIT`]. Pure.
+pub fn too_large(total_cost: f64) -> AppError {
+    AppError::Validation(format!(
+        "{QUERY_TOO_LARGE}: the query plan costs {total_cost:.0}, over the interactive limit \
+         {GUARD_LIMIT:.0}; narrow it, or send it again with export: true to run it as a \
+         background export"
+    ))
+}
+
+/// S4-T10: a query queued as a background export.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct ExportQueued {
+    pub export_id: Uuid,
+    /// `pending` until the worker starts it.
+    pub status: String,
+    /// Where to follow it and, once done, download it.
+    pub status_url: String,
 }
 
 impl RunRequest {
@@ -101,6 +140,8 @@ pub enum RunResponse {
     Rows(CursorPage<RunRow>),
     Aggregate(AggregateResult),
     Explain(ExplainResponse),
+    /// S4-T10: `export: true` queued it.
+    Export(ExportQueued),
 }
 
 enum Plan {
@@ -120,16 +161,18 @@ enum Plan {
     operation_id = "query_run",
     request_body = RunRequest,
     extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
-        attome_audit::security::ExemptReason::ReadOnly,
-        None,
-        "runs one query on the read-only pool, or plans it; persists nothing",
+        attome_audit::security::ExemptReason::Delegated,
+        Some("EngineJob::DataExport"),
+        "runs one query on the read-only pool, or plans it; with export it only enqueues an export, which the job audits in the export's completion transaction",
     )))),
     responses(
         (status = 200, description = "A page of rows with its cursor, the aggregate groups, or the plan when explain is set", body = RunResponse),
+        (status = 202, description = "S4-T10: export is set; the export is queued", body = RunResponse),
         (status = 400, description = "A cursor this deployment did not issue", body = ErrorResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 404, description = "No such entity, or one the caller may not read", body = ErrorResponse),
-        (status = 422, description = "A query outside the grammar, an unknown field or operator, or a plan over the cost limit", body = ErrorResponse),
+        (status = 409, description = "Too many exports of this person already pending or running", body = ErrorResponse),
+        (status = 422, description = "A query outside the grammar, an unknown field or operator, a plan over the interactive limit without export (`query_too_large`), or as_of while time travel is off", body = ErrorResponse),
         (status = 504, description = "The query ran past the statement time limit", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
@@ -138,7 +181,9 @@ pub(crate) async fn run_query(
     State(state): State<EngineState>,
     ctx: Authorized<SelfService>,
     Json(body): Json<RunRequest>,
-) -> Result<Json<RunResponse>, AppError> {
+) -> Result<(axum::http::StatusCode, Json<RunResponse>), AppError> {
+    let export = body.export;
+    let export_format = body.export_format.clone();
     let spec = match body.query_id {
         Some(id) => saved_spec(&state, &ctx, id, body).await?,
         None => {
@@ -152,7 +197,105 @@ pub(crate) async fn run_query(
     };
     ctx.require(&spec.entity, "read")
         .map_err(|_| AppError::NotFound)?;
-    Ok(Json(execute_spec(&state, &ctx, spec).await?))
+    // S4-T10: no entity keeps history yet (A1), so a read as of a time
+    // cannot be answered; refusing beats answering today's rows.
+    if spec.as_of.is_some() {
+        return Err(AppError::Validation(TIME_TRAVEL_OFF.into()));
+    }
+    if export {
+        let queued = enqueue_export(
+            &state,
+            &ctx,
+            spec,
+            export_format.as_deref().unwrap_or("json"),
+        )
+        .await?;
+        return Ok((
+            axum::http::StatusCode::ACCEPTED,
+            Json(RunResponse::Export(queued)),
+        ));
+    }
+    Ok((
+        axum::http::StatusCode::OK,
+        Json(execute_spec(&state, &ctx, spec).await?),
+    ))
+}
+
+/// S4-T10: queues `spec` as a background export (`data_export`, run by the
+/// export worker through the query engine as `ctx`, freshly authorized). The
+/// query is planned here first, so a bad one fails now and not in the job.
+async fn enqueue_export(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    mut spec: QuerySpec,
+    format: &str,
+) -> Result<ExportQueued, AppError> {
+    if !matches!(format, "json" | "csv") {
+        return Err(AppError::Validation("export_format is json or csv".into()));
+    }
+    if !(spec.aggregates.is_empty() && spec.group_by.is_empty() && spec.having.is_none()) {
+        return Err(AppError::Validation(
+            "only a row query exports; an aggregate answers in the request".into(),
+        ));
+    }
+    spec.cursor = None;
+    let mut check = spec.clone();
+    check.explain = true;
+    execute_spec(state, ctx, check).await?;
+    spec.explain = false;
+
+    let running: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM data_export \
+          WHERE created_by = $1 AND status IN ('pending', 'running') AND is_deleted = false",
+    )
+    .bind(ctx.user_id)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if running >= MAX_CONCURRENT_QUERY_EXPORTS {
+        return Err(AppError::Conflict(
+            "too many exports already in progress for this account — wait for one to finish",
+        ));
+    }
+
+    let export_id = Uuid::now_v7();
+    let query_spec = serde_json::to_value(&spec).map_err(AppError::internal)?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    sqlx::query(
+        "INSERT INTO data_export \
+            (id, entity_logicalname, format, columns, filters, status, created_by, labels, \
+             split_rows) \
+         VALUES ($1, $2, $3, $4, $5, 'pending', $6, false, NULL)",
+    )
+    .bind(export_id)
+    .bind(&spec.entity)
+    .bind(format)
+    .bind(serde_json::json!(spec.select))
+    .bind(serde_json::json!([]))
+    .bind(ctx.user_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    attome_jobs::enqueue_in_tx(
+        &mut tx,
+        attome_core::jobs::EngineJob::DataExport(attome_core::jobs::DataExportPayload {
+            export_id,
+            entity_logicalname: spec.entity.clone(),
+            format: format.to_owned(),
+            columns: spec.select.clone(),
+            filters: Vec::new(),
+            user_id: ctx.user_id,
+            query_spec: Some(query_spec),
+        }),
+    )
+    .await
+    .map_err(AppError::internal)?;
+    attome_db::tx::commit(tx).await?;
+    Ok(ExportQueued {
+        export_id,
+        status: "pending".into(),
+        status_url: format!("/api/v1/{}/export/{export_id}", spec.entity),
+    })
 }
 
 /// S4-T9: the stored query `id`'s spec with the run's values: its
@@ -290,9 +433,8 @@ pub async fn execute_spec(
         }));
     }
     if total_cost > GUARD_LIMIT {
-        return Err(AppError::Validation(format!(
-            "query plan cost {total_cost:.2} exceeds the allowed limit {GUARD_LIMIT:.0}; narrow the query"
-        )));
+        // S4-T10: a row query this size runs as a background export.
+        return Err(too_large(total_cost));
     }
 
     let wrapped = attome_db::tag_dynamic(
@@ -367,6 +509,24 @@ mod tests {
     use serde_json::json;
 
     use super::*;
+
+    #[test]
+    fn large_query_without_export_is_422() {
+        let refused = too_large(250_000.0);
+        assert!(
+            matches!(&refused, AppError::Validation(m) if m.starts_with(QUERY_TOO_LARGE) && m.contains("export: true")),
+            "{refused:?}"
+        );
+        let body: RunRequest = serde_json::from_value(json!({
+            "spec": {"entity": "account"}, "export": true, "export_format": "csv"
+        }))
+        .unwrap();
+        assert!(body.export);
+        assert_eq!(body.export_format.as_deref(), Some("csv"));
+        let plain: RunRequest =
+            serde_json::from_value(json!({ "spec": {"entity": "account"} })).unwrap();
+        assert!(!plain.export);
+    }
 
     #[test]
     fn exactly_one_form_is_taken() {

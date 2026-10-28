@@ -3716,6 +3716,88 @@ async fn none_tier_reader_sharing(system: &TestSystem, logicalname: &str, shared
     cookie
 }
 
+/// S4-T10: `export: true` queues the query as a background export (202, a
+/// `data_export` row, a `DataExport` job carrying the spec) instead of running it.
+#[test]
+fn export_true_enqueues_data_export_job() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (admin, cookie) = seed_admin_with_id(&system).await;
+        let app = system.app.clone();
+        let (logicalname, _, _) = etag_fixture(&system, &app, &cookie).await;
+
+        let (status, queued) = run(
+            &app,
+            &cookie,
+            serde_json::json!({
+                "spec": {"entity": logicalname, "select": ["title"]},
+                "export": true,
+                "export_format": "csv"
+            }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::ACCEPTED, "{queued}");
+        let export_id: Uuid = queued["export_id"].as_str().unwrap().parse().unwrap();
+        assert_eq!(queued["status"], "pending");
+        assert_eq!(
+            queued["status_url"],
+            format!("/api/v1/{logicalname}/export/{export_id}")
+        );
+
+        let db = system.state().base.db.clone();
+        let (format, created_by): (String, Uuid) =
+            sqlx::query_as("SELECT format, created_by FROM data_export WHERE id = $1")
+                .bind(export_id)
+                .fetch_one(&db)
+                .await
+                .expect("the export row");
+        assert_eq!(format, "csv");
+        assert_eq!(created_by, admin);
+        let jobs: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM apalis.jobs \
+              WHERE job::text LIKE '%' || $1 || '%' AND job::text LIKE '%query_spec%'",
+        )
+        .bind(export_id.to_string())
+        .fetch_one(&db)
+        .await
+        .expect("count the job");
+        assert_eq!(jobs, 1, "one DataExport job carrying the query");
+
+        // An aggregate answers in the request; it does not export.
+        let (status, _) = run(
+            &app,
+            &cookie,
+            serde_json::json!({
+                "spec": {"entity": logicalname, "aggregates": [{"func": "count", "alias": "n"}]},
+                "export": true
+            }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    })
+}
+
+/// S4-T10: no entity keeps history yet, so `as_of` is refused, not ignored.
+#[test]
+fn as_of_without_time_travel_is_422() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_, cookie) = seed_admin_with_id(&system).await;
+        let app = system.app.clone();
+        let (logicalname, _, _) = etag_fixture(&system, &app, &cookie).await;
+        let (status, body) = run(
+            &app,
+            &cookie,
+            serde_json::json!({
+                "spec": {"entity": logicalname, "select": ["title"], "as_of": "2026-01-01T00:00:00Z"}
+            }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+        assert!(body.to_string().contains("time travel"), "{body}");
+    })
+}
+
 /// S4-T7: the selected rows in sort order, a page at a time, from the JSON
 /// form and the text form alike.
 #[test]

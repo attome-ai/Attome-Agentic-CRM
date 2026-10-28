@@ -407,6 +407,7 @@ async fn a_failed_audit_write_rolls_back_the_data_export_completion() {
         columns: vec![],
         filters: vec![],
         user_id,
+        query_spec: None,
     };
 
     let matcher = AuditMatch::Batch(export_id);
