@@ -339,6 +339,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "زمن انتظار دور في تجزئة كلمات المرور.",
     },
     MetricInfo {
+        name: "auth_mfa_failures_total",
+        kind: "counter",
+        unit: "attempts",
+        en: "Refused second-factor attempts at sign-in, by factor (totp, recovery_code, email_code, forced_at_login).",
+        ar: "محاولات العامل الثاني المرفوضة عند تسجيل الدخول، حسب العامل (totp وrecovery_code وemail_code وforced_at_login).",
+    },
+    MetricInfo {
         name: "auth_password_rehash_total",
         kind: "counter",
         unit: "passwords",

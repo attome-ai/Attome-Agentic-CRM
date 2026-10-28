@@ -697,3 +697,128 @@ async fn password_reset_request_and_confirm_write_password_reset() {
         "request, confirm, refused reuse; the invalid token wrote nothing"
     );
 }
+
+fn totp_for(secret_base32: &str) -> totp_rs::Totp {
+    totp_rs::Builder::new()
+        .with_algorithm(totp_rs::Algorithm::SHA1)
+        .with_digits(6)
+        .with_skew(1)
+        .with_step_duration(30)
+        .with_secret(totp_rs::Secret::try_from_base32(secret_base32).expect("base32 secret"))
+        .with_account_name("test".to_string())
+        .build()
+        .expect("build totp")
+}
+
+/// A user with a confirmed TOTP factor, signed in with the password: the
+/// pending token and the TOTP generator.
+async fn challenged(app: &axum::Router, state: &AppState, n: u8) -> (Uuid, String, totp_rs::Totp) {
+    let (user_id, email) = seed_user(state).await;
+    let ring = state.secrets.load().mfa_encryption_key.clone();
+    let enrolled = attome_auth::mfa::enroll(&state.db, &ring, user_id)
+        .await
+        .expect("enroll");
+    let totp = totp_for(&enrolled.secret_base32);
+    attome_auth::mfa::confirm_enrollment(
+        &state.db,
+        &ring,
+        &state.pepper_ring(),
+        user_id,
+        &totp.generate_current().to_string(),
+    )
+    .await
+    .expect("confirm enrollment");
+    let res = app
+        .clone()
+        .oneshot(login(&email, PASSWORD, n))
+        .await
+        .expect("login");
+    assert_eq!(res.status(), StatusCode::OK);
+    let body: serde_json::Value = serde_json::from_slice(
+        &axum::body::to_bytes(res.into_body(), 1 << 20)
+            .await
+            .expect("body"),
+    )
+    .expect("json");
+    let token = body["pending_token"]
+        .as_str()
+        .expect("an MFA challenge")
+        .to_owned();
+    (user_id, token, totp)
+}
+
+/// Q5-T11: a wrong code on mfa/verify is a failed-login event of its own,
+/// named for the factor, never coalesced and never carrying the code.
+#[tokio::test]
+async fn failed_totp_attempt_is_audited() {
+    let (app, state, _) = skip_if_no_db!(test_app().await);
+    let (user_id, token, _) = challenged(&app, &state, 31).await;
+    let res = app
+        .clone()
+        .oneshot(post_json_from(
+            "/api/v1/auth/mfa/verify",
+            serde_json::json!({ "pending_token": token, "code": "000000" }),
+            31,
+        ))
+        .await
+        .expect("verify");
+    assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
+    let rows = events(&state, FAILED_LOGIN, Some(user_id)).await;
+    assert_eq!(rows.len(), 1, "{rows:?}");
+    assert_eq!(rows[0].category, "Security");
+    assert_eq!(
+        rows[0].event_name.as_deref(),
+        Some("mfa_verify_failed totp")
+    );
+    assert_eq!(rows[0].outcome.as_deref(), Some("Failed"));
+    assert!(
+        !rows[0].payload.contains("000000"),
+        "the code is never written"
+    );
+}
+
+/// Q5-T11: remembering a browser after the second factor is a credential
+/// event; the bearer itself is never written.
+#[tokio::test]
+async fn remembered_device_creation_is_audited() {
+    let (app, state, _) = skip_if_no_db!(test_app().await);
+    let (user_id, token, totp) = challenged(&app, &state, 32).await;
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("clock")
+        .as_secs();
+    let res = app
+        .clone()
+        .oneshot(post_json_from(
+            "/api/v1/auth/mfa/verify",
+            serde_json::json!({
+                "pending_token": token,
+                "code": totp.generate(now + 30).to_string(),
+                "remember": true,
+            }),
+            32,
+        ))
+        .await
+        .expect("verify");
+    assert_eq!(res.status(), StatusCode::OK);
+    let bearer = set_cookies(&res)
+        .into_iter()
+        .find_map(|c| c.strip_prefix("__Host-attome_rd=").map(str::to_owned))
+        .expect("the remembered-device cookie");
+    let device_id = bearer.split_once('.').expect("id.secret").0.to_owned();
+    let rows = events(
+        &state,
+        AuditOperation::Create,
+        Some(device_id.parse().expect("a device id")),
+    )
+    .await;
+    assert_eq!(rows.len(), 1, "{rows:?}");
+    assert_eq!(rows[0].category, "Credential");
+    assert_eq!(rows[0].user_id, user_id.to_string());
+    assert_eq!(rows[0].event_name.as_deref(), Some("mfa device remembered"));
+    let secret = bearer.split_once('.').expect("id.secret").1;
+    assert!(
+        !rows[0].payload.contains(secret),
+        "the bearer is never written"
+    );
+}

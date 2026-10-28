@@ -648,6 +648,10 @@ async fn record_failed_second_factor(
     if !matches!(err, AppError::Unauthorized) {
         return err;
     }
+    // Q5-T11: every refused second factor counts, by factor (the event
+    // name's last word: totp, recovery_code, email_code, forced_at_login).
+    let factor = event_name.rsplit(' ').next().unwrap_or("unknown");
+    metrics::counter!("auth_mfa_failures_total", "factor" => factor).increment(1);
     let Some(user_id) = mfa::verified_pending_subject(
         pending_token,
         token_type,
@@ -797,6 +801,23 @@ pub(super) async fn mfa_verify(
                 label,
             )
             .await?;
+            // Q5-T11: a remembered browser is a credential; its creation is
+            // audited (the bearer never is).
+            let device_id = bearer
+                .split_once('.')
+                .and_then(|(id, _)| id.parse::<Uuid>().ok());
+            auditor
+                .write(
+                    SecurityEvent::new(
+                        MandatoryCategory::Credential,
+                        AuditOperation::Create,
+                        user_id,
+                        "remembered_device",
+                        device_id,
+                    )
+                    .named("mfa device remembered"),
+                )
+                .await?;
             cookies.push((
                 axum::http::header::SET_COOKIE,
                 attome_auth::remembered_device::cookie(
