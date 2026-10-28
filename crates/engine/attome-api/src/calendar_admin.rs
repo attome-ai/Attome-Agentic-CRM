@@ -187,6 +187,130 @@ async fn get_calendar(
     }))
 }
 
+/// Z12-T13: which years of a calendar's holiday rules to list.
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct ExpandedQuery {
+    /// The first Gregorian year; this year by default.
+    from_year: Option<i32>,
+    /// How many years, 1 to 5; 2 by default.
+    years: Option<i32>,
+}
+
+/// One day a holiday rule closes, in both calendars.
+#[derive(Debug, Serialize, ToSchema)]
+struct ExpandedDay {
+    date: NaiveDate,
+    /// The Umm al-Qura date, `1447-10-01`; `null` outside its range.
+    hijri: Option<String>,
+}
+
+/// Z12-T13: a holiday rule and the days it closes in the years asked for.
+#[derive(Debug, Serialize, ToSchema)]
+struct ExpandedRule {
+    rule_id: Uuid,
+    name: String,
+    name_ar: Option<String>,
+    needs_sighting: bool,
+    days: Vec<ExpandedDay>,
+    /// Why the rule could not be expanded, when it could not.
+    error: Option<String>,
+}
+
+/// Z12-T13: a calendar's rules and their days, for the years asked for.
+#[derive(Debug, Serialize, ToSchema)]
+struct ExpandedRules {
+    from_year: i32,
+    years: i32,
+    rules: Vec<ExpandedRule>,
+}
+
+/// A calendar's holiday rule dates
+///
+/// The days each of the calendar's own holiday rules closes in the years asked for (two from this year by default, at most five), each with its Gregorian and Umm al-Qura date, for an administrator checking a rule before relying on it. A rule that needs a sighting shows its expected dates. Administrators of automation only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/calendars/{id}/holiday-rules/expanded",
+    tag = "admin",
+    params(("id" = Uuid, Path, description = "The calendar"), ExpandedQuery),
+    responses(
+        (status = 200, description = "Each rule with its days", body = ExpandedRules),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such calendar", body = ErrorResponse),
+        (status = 422, description = "years outside 1 to 5", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn expanded_rules(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<area::Automation>>,
+    Path(id): Path<Uuid>,
+    Query(q): Query<ExpandedQuery>,
+) -> Result<Json<ExpandedRules>, AppError> {
+    use attome_core::calendar::{hijri, rules};
+    use chrono::Datelike;
+    let years = q.years.unwrap_or(2);
+    if !(1..=5).contains(&years) {
+        return Err(AppError::Validation("years is 1 to 5".into()));
+    }
+    let from_year = q.from_year.unwrap_or_else(|| chrono::Utc::now().year());
+    let exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM calendar WHERE id = $1 AND is_active = true)",
+    )
+    .bind(id)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if !exists {
+        return Err(AppError::NotFound);
+    }
+    let stored: Vec<RuleDetail> = sqlx::query_as(&format!(
+        "{RULE_SELECT} WHERE calendar_id = $1 AND is_active = true ORDER BY name"
+    ))
+    .bind(id)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let rules = stored
+        .into_iter()
+        .map(|r| {
+            let parsed: Result<rules::HolidayRule, String> =
+                serde_json::from_value(r.rule.clone()).map_err(|e| e.to_string());
+            let expanded = parsed.and_then(|rule| {
+                let mut days = Vec::new();
+                for year in from_year..from_year + years {
+                    days.extend(rules::expand(&rule, year).map_err(|e| e.to_string())?);
+                }
+                Ok(days)
+            });
+            let (days, error) = match expanded {
+                Ok(days) => (days, None),
+                Err(error) => (Vec::new(), Some(error)),
+            };
+            ExpandedRule {
+                rule_id: r.id,
+                name: r.name,
+                name_ar: r.name_ar,
+                needs_sighting: r.needs_sighting,
+                days: days
+                    .into_iter()
+                    .map(|date| ExpandedDay {
+                        date,
+                        hijri: hijri::to_hijri(date).ok().map(|h| h.to_string()),
+                    })
+                    .collect(),
+                error,
+            }
+        })
+        .collect();
+    Ok(Json(ExpandedRules {
+        from_year,
+        years,
+        rules,
+    }))
+}
+
 /// Z12-T6: one calendar with its holiday rules and seasons.
 #[derive(Serialize, ToSchema)]
 pub(crate) struct CalendarFull {
@@ -3060,6 +3184,11 @@ pub fn routes() -> Router<EngineState> {
             axum::routing::delete(delete_rule),
         )
         .route(
+            // Z12-T13: static, so it wins over `{rule_id}` (a DELETE only).
+            "/api/v1/admin/calendars/{id}/holiday-rules/expanded",
+            get(expanded_rules),
+        )
+        .route(
             "/api/v1/admin/calendars/{id}/seasons",
             axum::routing::post(create_season),
         )
@@ -3337,6 +3466,7 @@ async fn correct_hijri_month(
     calculate,
     create_rule,
     delete_rule,
+    expanded_rules,
     create_season,
     delete_season,
     confirm_sighting,

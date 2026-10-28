@@ -286,6 +286,64 @@ async fn create_feed(
     Ok((StatusCode::CREATED, Json(feed)))
 }
 
+/// Z12-T13: whose feeds to list.
+#[derive(Debug, Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+struct FeedsQuery {
+    /// The calendar.
+    calendar_id: Uuid,
+}
+
+/// List a calendar's feeds
+///
+/// Z12-T13: the calendar's iCal feeds with whether each is on, when it was
+/// last fetched and why the last fetch failed. Administrators of automation
+/// only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/calendar-feeds",
+    tag = "admin",
+    operation_id = "list_calendar_feeds",
+    params(FeedsQuery, attome_types::OnePageQuery),
+    responses(
+        (status = 200, description = "One page of the calendar's feeds", body = attome_types::PaginatedResponse<CalendarFeed>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "A malformed page or page size", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_feeds(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<area::Automation>>,
+    axum::extract::Query(q): axum::extract::Query<FeedsQuery>,
+    axum::extract::Query(page): axum::extract::Query<attome_types::OnePageQuery>,
+) -> Result<Json<attome_types::PaginatedResponse<CalendarFeed>>, AppError> {
+    let window = page.window();
+    let total: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM calendar_feed WHERE calendar_id = $1")
+            .bind(q.calendar_id)
+            .fetch_one(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    let items: Vec<CalendarFeed> = sqlx::query_as(
+        "SELECT id, calendar_id, url, enabled, last_fetched_at, last_error FROM calendar_feed \
+          WHERE calendar_id = $1 ORDER BY url, id LIMIT $2 OFFSET $3",
+    )
+    .bind(q.calendar_id)
+    .bind(window.page_size)
+    .bind(window.offset)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(Json(attome_types::PaginatedResponse::new(
+        items,
+        total,
+        window.page,
+        window.page_size,
+    )))
+}
+
 /// Remove a calendar feed
 ///
 /// Z12-T8. The holidays it brought stay until removed by hand.
@@ -488,13 +546,13 @@ async fn apply(
 
 pub(crate) fn routes() -> Router<EngineState> {
     Router::new()
-        .route("/api/v1/calendar-feeds", post(create_feed))
+        .route("/api/v1/calendar-feeds", post(create_feed).get(list_feeds))
         .route("/api/v1/calendar-feeds/{id}", delete(delete_feed))
 }
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(create_feed, delete_feed),
+    paths(create_feed, delete_feed, list_feeds),
     components(schemas(CalendarFeedBody, CalendarFeed))
 )]
 struct ApiDocFragment;
