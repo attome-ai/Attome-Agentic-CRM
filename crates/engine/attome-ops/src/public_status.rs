@@ -252,6 +252,15 @@ pub(crate) fn invalidate() {
         .unwrap_or_else(std::sync::PoisonError::into_inner) = None;
 }
 
+/// AB11-T10: the status as `ctx` may read it, for the `ops.status` agent
+/// action (the same cached snapshot the route answers from).
+pub async fn status_for(
+    state: &EngineState,
+    ctx: &SecurityContext,
+) -> Result<StatusSnapshot, AppError> {
+    Ok(visible_to(snapshot(state).await?, sees_internal(ctx)))
+}
+
 /// Whether `ctx` sees internal incidents, maintenance and components.
 fn sees_internal(ctx: &SecurityContext) -> bool {
     ctx.is_admin || ctx.privileges.contains(OpsRead::KEY)

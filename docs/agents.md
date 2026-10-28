@@ -194,6 +194,10 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   recording's transcript (summary and next steps, extracted locally) and saves nothing.
 - Service levels (administrators): `ops.slo_health` lists each SLO class with its status and the share
   of its 30-day error budget left, from the server's own metrics store.
+- Status page (with the ops module): `ops.status` reads each component's state, open incidents and
+  maintenance as the caller may see them; `ops.draft_incident_update` (`ops.read`) suggests the next
+  update of an open incident in English and Arabic. Neither publishes: a person with
+  `ops.incident.publish` does, through the incidents route.
 - Database cluster (with the ops module): `ops.cluster_status` (`ops.read`) reads the members, lag,
   synchronous standby and last failover; `ops.propose_switchover` (`ops.cluster.switchover`) only
   creates the switchover approval request. A second person in the Operations role approves it, never

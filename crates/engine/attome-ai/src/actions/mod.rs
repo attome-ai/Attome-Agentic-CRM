@@ -78,6 +78,7 @@ pub mod ops_drills;
 /// AB3-T11: recovery readiness and the live recovery point, read only.
 pub mod ops_recovery;
 pub mod ops_slo;
+pub mod ops_status;
 /// AB8-T9: the latest platform upgrade, read only.
 pub mod ops_upgrade;
 /// L6-T8: profile.summary, profile.explain.
@@ -170,6 +171,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(search_records::descriptor());
     all.push(system_status::descriptor());
     all.extend(ops_cluster::descriptors());
+    all.extend(ops_status::descriptors());
     all.extend(ops_drills::descriptors());
     all.extend(import::descriptors());
     all.extend(ops_recovery::descriptors());
@@ -268,6 +270,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(search_records::SearchRecords));
     all.push(Box::new(system_status::SystemStatus));
     all.extend(ops_cluster::executors());
+    all.extend(ops_status::executors());
     all.extend(ops_drills::executors());
     all.extend(import::executors());
     all.extend(ops_recovery::executors());
