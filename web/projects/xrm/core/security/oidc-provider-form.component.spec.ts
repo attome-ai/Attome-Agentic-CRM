@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { OidcProviderFormComponent, applyPreset, bodyOf, draftOf, emptyDraft } from './oidc-provider-form.component';
 import { OidcProvidersComponent } from './oidc-providers.component';
-import { OidcProviderItem, SecurityAdminService } from './security-admin.service';
+import { OidcPresetItem, OidcProviderItem, SecurityAdminService } from './security-admin.service';
 
 const provider = (over: Partial<OidcProviderItem> = {}): OidcProviderItem => ({
   id: 'p1', key: 'corp', display_name: 'Corp', display_name_ar: 'الشركة', issuer: 'https://login.corp.example',
@@ -15,7 +15,7 @@ const provider = (over: Partial<OidcProviderItem> = {}): OidcProviderItem => ({
   trusted_for_mfa: false, tenant_allowlist: [], enabled: true, read_only: false, secret_set: true,
   secret_fingerprint: 'ab12', row_version: 3, preset: null, default_role_ref: null, secret_updated_at: null,
   ...over,
-} as OidcProviderItem);
+} as unknown as OidcProviderItem);
 
 const lang = { translate: (k: string) => k, current: signal('en'), errorText: () => 'error', intlLocale: () => 'en-GB' };
 
@@ -25,7 +25,7 @@ describe('sign-in provider screens (Q1-T14)', () => {
       key: 'entra', display_name: 'Microsoft Entra ID', kind: 'oidc',
       issuer_template: 'https://login.microsoftonline.com/{tenant}/v2.0', scopes: ['openid', 'email', 'profile'],
       claim_map: { email: 'preferred_username' }, mfa_claim: 'amr', supports_forced_reauth: true,
-    });
+    } as unknown as OidcPresetItem);
     expect(draft.preset).toBe('entra');
     expect(draft.display_name).toBe('Our login');
     expect(draft.issuer).toBe('https://login.microsoftonline.com/{tenant}/v2.0');
