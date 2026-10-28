@@ -211,6 +211,24 @@ fn baseline_has_no_fixed_entries() {
     );
 }
 
+/// S2-T6: every operation has a summary, a description and a description on
+/// each inline parameter; none may be added to the baseline again.
+#[test]
+fn no_description_entries_in_baseline() {
+    let open: Vec<String> = baseline()
+        .into_iter()
+        .filter(|f| {
+            f.starts_with("summary ")
+                || f.starts_with("description ")
+                || f.starts_with("param-description ")
+        })
+        .collect();
+    assert!(
+        open.is_empty(),
+        "S2-T6 documented every operation: {open:?}"
+    );
+}
+
 #[test]
 fn security_declared_has_no_baseline_entries() {
     let open: Vec<String> = baseline()
