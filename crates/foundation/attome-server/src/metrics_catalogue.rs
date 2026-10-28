@@ -465,6 +465,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "حجم الجدول على القرص.",
     },
     MetricInfo {
+        name: "db_failover_pin_active",
+        kind: "gauge",
+        unit: "flag",
+        en: "1 while database reads are pinned to the primary after a failover, else 0.",
+        ar: "1 ما دامت القراءات مثبّتة على قاعدة البيانات الرئيسية بعد تحويل، وإلا 0.",
+    },
+    MetricInfo {
         name: "db_migrator_pool_idle",
         kind: "gauge",
         unit: "connections",
@@ -617,6 +624,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         unit: "records",
         en: "Records one read of the change feed returned.",
         ar: "السجلات التي أعادتها قراءة واحدة لموجز التغييرات.",
+    },
+    MetricInfo {
+        name: "email_rate_limited_total",
+        kind: "counter",
+        unit: "messages",
+        en: "Emails deferred because the provider's sending rate was used up.",
+        ar: "رسائل بريد أُجّلت لاستنفاد معدل الإرسال لدى المزوّد.",
     },
     MetricInfo {
         name: "email_send_duration_seconds",
@@ -864,6 +878,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "قيمة 1 عندما يستجيب مخزن الملفات.",
     },
     MetricInfo {
+        name: "oidc_provider_failures_total",
+        kind: "counter",
+        unit: "failures",
+        en: "Sign-in failures at an OIDC provider, by provider and kind (discovery, key set, token exchange, refused token, clock skew).",
+        ar: "إخفاقات تسجيل الدخول لدى مزوّد OIDC، حسب المزوّد والنوع (الاكتشاف، مجموعة المفاتيح، تبادل الرمز، رمز مرفوض، فرق الساعة).",
+    },
+    MetricInfo {
         name: "ops_live_rpo_seconds",
         kind: "gauge",
         unit: "seconds",
@@ -1018,6 +1039,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "زمن الذهاب والإياب إلى Redis التخزين المؤقت.",
     },
     MetricInfo {
+        name: "redis_reconnects_total",
+        kind: "counter",
+        unit: "reconnects",
+        en: "Times a Redis connection reconnected, by pool.",
+        ar: "مرات إعادة اتصال Redis، حسب المجمّع.",
+    },
+    MetricInfo {
         name: "redis_subscriber_clients_created_total",
         kind: "counter",
         unit: "clients",
@@ -1074,6 +1102,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "قيود سجل الوصول بين الخوادم التي تنتظر الكتابة.",
     },
     MetricInfo {
+        name: "security_detection_total",
+        kind: "counter",
+        unit: "detections",
+        en: "Security detection rules that fired, by rule.",
+        ar: "قواعد الكشف الأمني التي انطلقت، حسب القاعدة.",
+    },
+    MetricInfo {
         name: "security_rejection_total",
         kind: "counter",
         unit: "requests",
@@ -1093,6 +1128,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         unit: "entries",
         en: "Buffered stream entries lost before they were written.",
         ar: "قيود التدفق المؤقتة المفقودة قبل كتابتها.",
+    },
+    MetricInfo {
+        name: "tls_certificate_expiry_seconds",
+        kind: "gauge",
+        unit: "unix seconds",
+        en: "When the served TLS certificate expires, as a Unix time.",
+        ar: "موعد انتهاء شهادة TLS المستخدمة، بتوقيت يونكس.",
     },
     MetricInfo {
         name: "upload_scan_backlog_oldest_seconds",
