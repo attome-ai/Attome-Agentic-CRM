@@ -59,6 +59,14 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Calendars, the rest of Z12 (see `docs/calendars.md`): holiday rules and seasons per calendar
+  (`/api/v1/admin/calendars/{id}/holiday-rules`, `.../holiday-rules/expanded`, `.../seasons`),
+  moon-sighting confirmation (`/api/v1/calendar-sightings`), the Saudi, UAE and Omani holiday
+  packs (`GET /api/v1/admin/calendars/packs`, `POST .../packs/{code}/apply`) with a yearly review
+  reminder, iCal holiday feeds (`/api/v1/calendar-feeds`, fetched daily), calendar assignments to
+  people and teams (`/api/v1/calendar-assignments/{subject_type}/{subject_id}`), the agent actions
+  `calendar.list_holidays` and `calendar.propose_holiday` (approved by an administrator), and the
+  calendar manager screens for all of them, in English and Arabic.
 - Upgrade conflicts can be listed and resolved (Y11-T7): `GET /api/v1/admin/metadata/conflicts` and
   `POST /api/v1/admin/metadata/conflicts/{id}/resolve` with `keep_customer`, `take_platform` or
   `combine` (with a value). Taking or combining changes the entity or field at once and is audited.
