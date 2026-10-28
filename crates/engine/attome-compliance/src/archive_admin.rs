@@ -58,7 +58,10 @@ struct ArchiveRecordSummary {
     restored_at: Option<DateTime<Utc>>,
 }
 
-/// `GET /api/v1/admin/archive/records` — `system.admin` only.
+/// List archived records
+///
+/// The records retention moved to the archive (or, with `status=restored`, the ones restored),
+/// optionally for one entity. Compliance administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/archive/records",
@@ -134,12 +137,14 @@ struct RestoreResult {
     restored: bool,
 }
 
-/// `POST /api/v1/admin/archive/records/{id}/restore` — `system.admin` only.
+/// Restore an archived record
+///
+/// Puts an archived record back as a live row. Compliance administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/archive/records/{id}/restore",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The archive entry")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Security, attome_audit::AuditOperation::Restore)])))),
     responses(
         (status = 200, description = "Success", body = RestoreResult),

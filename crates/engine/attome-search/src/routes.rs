@@ -1400,10 +1400,11 @@ struct GapQuery {
     page_size: Option<i64>,
 }
 
-/// Why a question retrieves what it does (roadmap N15-T4): its terms, the
-/// words dropped, and each passage's matched terms in rank order. Admin-only,
-/// retrieved under the administrator's own permissions, and never recorded as
-/// demand or as a gap.
+/// Explain a knowledge search
+///
+/// Why a question retrieves what it does: its terms, the words dropped, and each passage's matched
+/// terms in rank order, under the administrator's own permissions; never recorded as demand or as a
+/// gap. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/knowledge/explain",
@@ -1475,14 +1476,15 @@ struct TriageGapBody {
     addressed_item_ref: Option<Uuid>,
 }
 
-/// Triages one gap topic. An explicit author decision, never a delete, so the
-/// queue does not re-surface a topic without showing it was already judged
-/// (D-452's rationale for the status column).
+/// Triage a knowledge gap
+///
+/// Records an author's decision on a gap topic, never a delete, so the queue does not show a judged
+/// topic again. AI administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/admin/knowledge/gaps/{id}",
     tag = "search",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The gap topic")),
     request_body = TriageGapBody,
     responses(
         (status = 200, description = "Success", body = GapTopic),
@@ -1560,9 +1562,10 @@ async fn knowledge_coverage(
     Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
-/// The knowledge indexer's shared state: when the search drain last advanced,
-/// and which embedding model chunk vectors are written with (`null` when
-/// knowledge is lexical-only by configuration).
+/// Read the knowledge indexer's state
+///
+/// When the search drain last advanced, and which embedding model chunk vectors are written with
+/// (`null` when knowledge is lexical only). AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/knowledge/coverage/indexer",

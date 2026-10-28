@@ -733,8 +733,9 @@ async fn disconnect(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// The URL that asks a Microsoft tenant's administrator to consent for every
-/// person at once.
+/// Get the Microsoft admin consent URL
+///
+/// The URL a Microsoft tenant's administrator opens to consent to mail sync for every person at once.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/mail-connections/microsoft/admin-consent-url",

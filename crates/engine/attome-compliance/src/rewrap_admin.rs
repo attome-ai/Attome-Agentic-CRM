@@ -137,7 +137,7 @@ pub async fn do_trigger_rewrap(
     post,
     path = "/api/v1/admin/security/rewrap/{domain}",
     tag = "admin-security",
-    params(("domain" = String, Path)),
+    params(("domain" = String, Path, description = "`mfa`, `s2s` or `erasure`")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Credential, attome_audit::AuditOperation::Rotate)])))),
     responses(
         (status = 201, description = "Success", body = RewrapTriggered),

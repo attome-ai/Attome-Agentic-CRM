@@ -45,6 +45,9 @@ pub struct StartsDiffQuery {
     pub b: Uuid,
 }
 
+/// List server starts
+///
+/// Each node start with its configuration fingerprint, newest first. Security administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/config/starts",
@@ -66,6 +69,10 @@ async fn list_config_starts(
     Ok(Json(config_starts::list(&state.base.db, window).await?))
 }
 
+/// Compare two server starts
+///
+/// The configuration keys whose values differ between starts `a` and `b`; secret values are never
+/// stored, so never shown. Security administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/config/starts/diff",
@@ -98,6 +105,10 @@ async fn diff_config_starts(
     Ok(Json(PaginatedResponse::new(changes, total, 1, page_size)))
 }
 
+/// List configured secrets
+///
+/// Every secret the configuration holds with what uses it, its key ids and age; never a value.
+/// Security administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/secrets",

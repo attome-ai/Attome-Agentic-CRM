@@ -369,7 +369,9 @@ fn audit_event(
     .named(name)
 }
 
-/// `GET /api/v1/admin/mcp-servers`
+/// List MCP servers
+///
+/// The outside MCP servers registered for agents to use. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/mcp-servers",
@@ -403,7 +405,11 @@ async fn list_servers(
     }))
 }
 
-/// `POST /api/v1/admin/mcp-servers`
+/// Register an MCP server
+///
+/// An outside MCP server agents may use: its URL, an optional bearer credential (stored encrypted,
+/// never returned) and whether it may be outside the deployment. Its tools are imported separately. AI
+/// administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/mcp-servers",
@@ -475,7 +481,10 @@ async fn create_server(
     Ok((StatusCode::CREATED, Json(view)))
 }
 
-/// `POST /api/v1/admin/mcp-servers/{id}/import` — reads the server's tools.
+/// Import an MCP server's tools
+///
+/// Reads the server's tool list; every new tool arrives switched off at the consequential tier until
+/// an administrator reads it, sets its tier and switches it on. AI administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/mcp-servers/{id}/import",
@@ -569,7 +578,9 @@ async fn list_tools_of(
     })
 }
 
-/// `GET /api/v1/admin/mcp-servers/{id}/tools`
+/// List an MCP server's tools
+///
+/// The tools imported from the server with their tier and whether each is on. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/mcp-servers/{id}/tools",
@@ -590,7 +601,10 @@ async fn list_tools(
     list_tools_of(&state, id).await.map(Json)
 }
 
-/// `PUT /api/v1/admin/mcp-servers/{id}/tools/{tool}` — a tool's tier and switch.
+/// Set an MCP tool's tier and switch
+///
+/// Sets the risk tier an agent's call to the tool is gated at, and switches it on or off. AI
+/// administrators only. Audited.
 #[utoipa::path(
     put,
     path = "/api/v1/admin/mcp-servers/{id}/tools/{tool}",

@@ -101,7 +101,9 @@ struct ListLegalHoldsQuery {
     page_size: Option<i64>,
 }
 
-/// `GET /api/v1/admin/legal-holds` — `system.admin` only.
+/// List legal holds
+///
+/// The legal holds placed on records, active and released. Compliance administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/legal-holds",
@@ -184,11 +186,10 @@ struct PlaceLegalHoldBody {
     matter_reference: String,
 }
 
-/// `POST /api/v1/admin/legal-holds` — `system.admin` only. `entity_logicalname`
-/// is validated against the live metadata registry (never interpolated from
-/// unvalidated input — guidelines §4) but this intentionally does NOT check
-/// whether `record_id` currently exists in that table; see the field's own
-/// doc comment.
+/// Place a legal hold
+///
+/// Holds one record of a known entity, so retention leaves it alone; the record need not exist yet.
+/// Compliance administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/legal-holds",
@@ -261,17 +262,15 @@ async fn place_hold(
     ))
 }
 
-/// `POST /api/v1/admin/legal-holds/{id}/release` — `system.admin` only.
-/// Idempotent: `COALESCE(released_at, NOW())` means releasing an
-/// already-released hold updates nothing about `released_at` itself and
-/// still returns `200` with the row's (unchanged) release time, not an
-/// error — matching `destroy_key`'s own "idempotent retry" convention.
-/// `404` only when the row is missing or soft-deleted.
+/// Release a legal hold
+///
+/// Releases the hold; releasing one already released changes nothing and still answers 200.
+/// Compliance administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/legal-holds/{id}/release",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The hold")),
     responses(
         (status = 200, description = "Success", body = LegalHoldSummary),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

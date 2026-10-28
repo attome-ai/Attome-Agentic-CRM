@@ -69,6 +69,11 @@ fn mentions(source: &str, field: &str) -> bool {
     })
 }
 
+/// Preview a document template
+///
+/// Renders a template against a real record read as the caller, so it sees only what the caller may
+/// read, and warns about every field it names that renders empty for that reason; an unknown field or
+/// a syntax error is refused. Writes nothing. Content administrators only.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/templates/preview",

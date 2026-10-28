@@ -280,7 +280,9 @@ struct OutcomeListQuery {
     page_size: Option<i64>,
 }
 
-/// `GET /api/v1/admin/outcomes` — the "proposals and their fates" list.
+/// List AI outcomes
+///
+/// What AI proposed and what became of each proposal, filtered by the query. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/outcomes",
@@ -372,10 +374,9 @@ pub struct OutcomeSummaryReport {
     pub groups: Vec<OutcomeKindSummary>,
 }
 
-/// `GET /api/v1/admin/outcomes/summary` — "by kind, by source, acceptance
-/// and effectiveness trends" (plan §3), the aggregate half of the dashboard
-/// bundle. Deliberately unfiltered (unlike `list_outcomes`): the whole point
-/// is one call showing every kind/source pair at once.
+/// Summarise AI outcomes
+///
+/// Acceptance and effectiveness by kind and by source, every pair in one call. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/outcomes/summary",
@@ -545,6 +546,9 @@ pub async fn quality_by_agent(db: &PgPool, days: i64) -> Result<Vec<OutcomeQuali
     Ok(quality_rows(rows))
 }
 
+/// Compare AI quality by model
+///
+/// The same figures per model. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/outcomes/quality/by-model",
@@ -572,6 +576,10 @@ async fn get_quality_by_model(
     )))
 }
 
+/// Compare AI quality by agent
+///
+/// Per agent over the window, how its proposals fared: how many were measured, accepted, edited and
+/// rejected. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/outcomes/quality/by-agent",

@@ -313,6 +313,10 @@ struct AuditSearchRow {
     event_name: Option<String>,
 }
 
+/// Search the audit trail
+///
+/// Audit entries filtered by entity, record, user, operation, field and date range. An administrator
+/// reads everything, a unit auditor only their units; the search is itself audited.
 #[utoipa::path(
     get,
     operation_id = "audit_search",
@@ -569,6 +573,11 @@ fn format_csv_row(row: &ExportRow) -> String {
     )
 }
 
+/// Export the audit trail
+///
+/// Streams the filtered audit entries as JSON lines (default), CEF or CSV for a SIEM or an archive.
+/// An administrator exports everything, a unit auditor only their units; the export is itself
+/// audited.
 #[utoipa::path(
     get,
     operation_id = "audit_export",

@@ -64,6 +64,9 @@ async fn fetch_summary(state: &EngineState, id: Uuid) -> Result<ModelSummary, Ap
     Ok(row.into())
 }
 
+/// List prediction models
+///
+/// The prediction models, one-based pages. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/predict/models",
@@ -91,6 +94,9 @@ async fn list_models(
     Ok(Json(PaginatedResponse::new(items, total, 1, total.max(1))))
 }
 
+/// Get a prediction model
+///
+/// One prediction model. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/predict/models/{id}",
@@ -112,10 +118,10 @@ async fn get_model(
     Ok(Json(fetch_summary(&state, id).await?))
 }
 
-/// Creates the model row and enqueues its first training run — see
-/// [`crate::train::create_and_enqueue`] for the actual transaction (insert +
-/// `enqueue_in_tx`, a duplicate `name` surfacing as `Conflict` via the
-/// unique index's `23505`) and the target/entity validation it performs.
+/// Create a prediction model
+///
+/// Creates the model for its target and entity and queues its first training run in the same
+/// transaction; a duplicate name is 409. AI administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/predict/models",
@@ -146,9 +152,9 @@ async fn create_model(
     ))
 }
 
-/// Re-queues a training run for an existing model — see
-/// [`crate::train::enqueue_retrain`] for the `status != 'training'`
-/// concurrency guard.
+/// Retrain a prediction model
+///
+/// Queues a new training run; a model already training is refused. AI administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/predict/models/{id}/train",
@@ -173,8 +179,9 @@ async fn retrain_model(
     Ok(StatusCode::ACCEPTED)
 }
 
-/// A soft "retire", not a hard delete — a retired model's past
-/// `prediction` rows (and their `model_ref` FK) must stay readable.
+/// Retire a prediction model
+///
+/// Retires the model; its past predictions stay readable. AI administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/predict/models/{id}",

@@ -60,10 +60,10 @@ struct RetentionActionSummary {
     evidence_ref: Option<String>,
 }
 
-/// `GET /api/v1/admin/retention/actions` — `system.admin` only. Explicit
-/// column projection (guidelines §4: no `SELECT *`), optional `status`/
-/// `action_type` filters via a bound-parameter `($n::text IS NULL OR col =
-/// $n)` predicate rather than dynamic SQL string-building.
+/// List retention actions
+///
+/// The archive and delete actions the retention sweep proposed, optionally by status and type.
+/// Compliance administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/retention/actions",
@@ -254,19 +254,16 @@ pub async fn do_approve_retention_action(
     })
 }
 
-/// `POST /api/v1/admin/retention/actions/{id}/approve` — `system.admin` only.
+/// Approve a retention action
 ///
-/// D-195: gated behind `approval.required_actions` (empty/off by default,
-/// same opt-in shape as the other wired actions). When gated, this submits
-/// an approval request for `{action_id}` instead of transitioning anything
-/// and returns `202` with `approval_pending: true` — the `legal_hold`/
-/// `dry_run` checks and the actual transition only run once a different
-/// `system.admin` approves the request (`do_approve_retention_action`).
+/// Approves a proposed archive or delete, which then runs unless a legal hold stops it. When
+/// `approval.required_actions` gates it, a second administrator decides (202, `approval_pending`).
+/// Compliance administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/retention/actions/{id}/approve",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The retention action")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Security, attome_audit::AuditOperation::Approved)])))),
     responses(
         (status = 201, description = "Success", body = ActionTransitionResult),
@@ -301,17 +298,15 @@ async fn approve_action(
     Ok((StatusCode::OK, Json(result)))
 }
 
-/// `POST /api/v1/admin/retention/actions/{id}/reject` — `system.admin` only.
-/// Rejecting frees the action's target for re-proposal on the next sweep
-/// (migration 0067's partial unique index only blocks re-insert for
-/// non-`rejected` rows) — never allowed while `legal_hold` is set, since a
-/// hold's whole point is "nothing about this deployment's retention state
-/// moves" while it's active.
+/// Reject a retention action
+///
+/// The target can be proposed again by the next sweep; refused while a legal hold is set. Compliance
+/// administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/retention/actions/{id}/reject",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The retention action")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Security, attome_audit::AuditOperation::Rejected)])))),
     responses(
         (status = 200, description = "Success", body = ActionTransitionResult),
@@ -378,11 +373,10 @@ struct ProposeTriggered {
     enqueued: bool,
 }
 
-/// `POST /api/v1/admin/retention/propose` — `system.admin` only. On-demand
-/// version of the daily `EngineJob::ProposeRetentionActions` sweep (the
-/// same job — this just enqueues it early). Dedup-keyed so repeated clicks
-/// before the job actually runs don't queue duplicates; the propose step
-/// itself is idempotent either way (migration 0067's partial unique index).
+/// Propose retention actions now
+///
+/// Queues the daily retention sweep early; asking again before it runs queues nothing more.
+/// Compliance administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/retention/propose",

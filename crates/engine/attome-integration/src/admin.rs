@@ -105,6 +105,11 @@ struct TestConnectionResponse {
 
 // ── Handlers ─────────────────────────────────────────────────────────────────
 
+/// Register an integration system
+///
+/// An outside system with its base URL, screened against private addresses, and optionally its
+/// credential, stored encrypted before the system is readable. Listing, renaming and deleting stay on
+/// the record API. Integration administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/integrations/systems",
@@ -226,11 +231,15 @@ async fn create_system(
     ))
 }
 
+/// Rotate an integration system's credential
+///
+/// Stores a new credential for the system, encrypted; it is never returned. Integration administrators
+/// only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/integrations/systems/{id}/credential",
     tag = "admin-integrations",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The integration system")),
     request_body = RotateCredentialBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Credential, attome_audit::AuditOperation::Rotate)])))),
     responses(
@@ -313,11 +322,15 @@ async fn rotate_credential(
     }))
 }
 
+/// Test an integration system's connection
+///
+/// Calls the system's health check, guarded against private addresses when it dials. Integration
+/// administrators only.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/integrations/systems/{id}/test-connection",
     tag = "admin-integrations",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The integration system")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Update)])))),
     responses(
         (status = 200, description = "Success", body = TestConnectionResponse),

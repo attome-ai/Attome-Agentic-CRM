@@ -97,8 +97,8 @@ struct ErasurePending {
     tag = "admin-security",
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Security, attome_audit::AuditOperation::Erasure)])))),
     params(
-        ("logicalname" = String, Path),
-        ("record_id" = Uuid, Path),
+        ("logicalname" = String, Path, description = "The entity's logical name"),
+        ("record_id" = Uuid, Path, description = "The record"),
     ),
     responses(
         (status = 200, description = "Success"),

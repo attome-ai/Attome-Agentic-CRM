@@ -170,7 +170,9 @@ struct DsrRequestSummary {
     resolution: Option<String>,
 }
 
-/// `GET /api/v1/admin/dsr/requests` — `system.admin` only.
+/// List data subject requests
+///
+/// Access, erasure and portability requests with their status. Compliance administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/dsr/requests",
@@ -239,9 +241,10 @@ struct CreateDsrRequestBody {
     request_type: String,
 }
 
-/// `POST /api/v1/admin/dsr/requests` — `system.admin` only. Just records the
-/// ask (`status = 'pending'`); fulfillment is a separate, explicit call to
-/// one of the three `fulfill-*` endpoints below.
+/// Record a data subject request
+///
+/// Records the request as pending; fulfilling it is a separate call to one of the fulfil routes.
+/// Compliance administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/dsr/requests",
@@ -755,12 +758,15 @@ async fn do_fulfill_export(
     })
 }
 
-/// `POST /api/v1/admin/dsr/requests/{id}/fulfill-access` — `system.admin` only.
+/// Fulfil an access request
+///
+/// Gathers the subject's data in the scopes given and completes the request. Compliance
+/// administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/dsr/requests/{id}/fulfill-access",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The request")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Security, attome_audit::AuditOperation::Export)])))),
     request_body = FulfillExportBody,
     responses(
@@ -781,12 +787,15 @@ async fn fulfill_access(
     Ok(Json(result))
 }
 
-/// `POST /api/v1/admin/dsr/requests/{id}/fulfill-portability` — `system.admin` only.
+/// Fulfil a portability request
+///
+/// Exports the subject's data in the scopes given and completes the request. Compliance administrators
+/// only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/dsr/requests/{id}/fulfill-portability",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The request")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Security, attome_audit::AuditOperation::Export)])))),
     request_body = FulfillExportBody,
     responses(
@@ -909,17 +918,16 @@ struct FulfillErasurePending {
     approval_request_id: Uuid,
 }
 
-/// `POST /api/v1/admin/dsr/requests/{id}/fulfill-erasure` — `system.admin`
-/// only. D-195: gated behind `approval.required_actions` via
-/// `ACTION_DSR_FULFILL_ERASURE` (empty/off by default, same opt-in shape as
-/// every other wired action — see `erasure_admin::erase_record` for the
-/// identical pattern this mirrors). When gated, submits an approval request
-/// instead of erasing anything and returns `202` with `approval_pending: true`.
+/// Fulfil an erasure request
+///
+/// Erases the subject's data in the scopes given and completes the request. When
+/// `approval.required_actions` gates it, this submits an approval request instead (202,
+/// `approval_pending`). Compliance administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/dsr/requests/{id}/fulfill-erasure",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The request")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Security, attome_audit::AuditOperation::Erasure)])))),
     request_body = FulfillErasureBody,
     responses(

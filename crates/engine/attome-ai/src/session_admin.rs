@@ -129,7 +129,10 @@ struct SessionListQuery {
     page_size: Option<i64>,
 }
 
-/// `GET /api/v1/admin/agents/sessions` — the supervisor dashboard's one read.
+/// List agent sessions
+///
+/// The agent sessions for the supervisor dashboard, filtered by the query. Holders of
+/// `ai_agent.supervise`.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/agents/sessions",
@@ -269,10 +272,10 @@ pub struct TraceStep {
 /// Most steps one trace returns.
 const MAX_TRACE_STEPS: i64 = 1_000;
 
-/// `GET /api/v1/admin/agents/sessions/{id}/trace` — every action a session
-/// invoked, oldest first (N29-T2): what it did, what came of it and who it
-/// acted as. Results are not included: they may hold record data, which the
-/// records' own routes govern.
+/// Read an agent session's trace
+///
+/// Every action the session invoked, oldest first: what it did, what came of it and who it acted as.
+/// Results are left out, since they may hold record data. Holders of `ai_agent.supervise`.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/agents/sessions/{id}/trace",
@@ -334,9 +337,10 @@ pub struct ChildSession {
 /// Most child sessions one listing returns.
 const MAX_CHILDREN: i64 = 200;
 
-/// `GET /api/v1/admin/agents/sessions/{id}/children` — the sessions this one
-/// delegated to, oldest first (N8-T1): with each child's own trace, the
-/// whole run tree.
+/// List a session's delegated sessions
+///
+/// The sessions this one delegated to, oldest first, each with its own trace, so the whole run tree
+/// shows. Holders of `ai_agent.supervise`.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/agents/sessions/{id}/children",
@@ -418,10 +422,11 @@ pub struct RunTree {
 /// Most turns one tree returns.
 const MAX_RUN_TURNS: i64 = 500;
 
-/// `GET /api/v1/admin/agents/sessions/{id}/run` — the session's run as one
-/// tree (N29-T1): its parent and delegated children, every turn of its
-/// conversations with the model, prompt version and end state, and each
-/// turn's tool calls with the gate's decision and the ledger's outcome.
+/// Read an agent session's run
+///
+/// The session's run as one tree: its parent and delegated children, every turn with its model, prompt
+/// version and end state, and each turn's tool calls with the gate's decision and the ledger's outcome.
+/// Holders of `ai_agent.supervise`.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/agents/sessions/{id}/run",

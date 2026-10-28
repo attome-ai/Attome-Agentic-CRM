@@ -501,16 +501,15 @@ struct CollectTriggered {
     enqueued: bool,
 }
 
-/// `POST /api/v1/admin/legal/matters/{id}/collect` — `system.admin` only.
-/// Transitions the matter to `collecting` and enqueues
-/// `EngineJob::LegalMatterCollect` in the same transaction (never an
-/// `collecting` row with no job behind it), dedup-keyed on the matter id so
-/// a repeated click before the job starts doesn't queue duplicates.
+/// Collect a legal matter's records
+///
+/// Moves the matter to collecting and queues the collection job in the same transaction; asking again
+/// before it starts queues nothing more. Compliance administrators only.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/legal/matters/{id}/collect",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The legal matter")),
     extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
         attome_audit::security::ExemptReason::Delegated,
         Some("EngineJob::LegalMatterCollect"),
@@ -596,13 +595,15 @@ struct ReleaseTriggered {
     enqueued: bool,
 }
 
-/// `POST /api/v1/admin/legal/matters/{id}/release` — `system.admin` only.
-/// Same enqueue-in-tx-dedup shape as `collect` above.
+/// Release a legal matter
+///
+/// Moves a collected matter to releasing and queues the release job in the same transaction.
+/// Compliance administrators only.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/legal/matters/{id}/release",
     tag = "admin",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The legal matter")),
     extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
         attome_audit::security::ExemptReason::Delegated,
         Some("EngineJob::LegalMatterRelease"),
@@ -680,12 +681,10 @@ struct RecordsPosture {
     open_legal_matters: i64,
 }
 
-/// `GET /api/v1/admin/records/posture` — `system.admin` only. Four cheap
-/// `COUNT(*)`s against already-indexed predicates (each table's own active-row
-/// partial index — `idx_core_retention_action_status`,
-/// `idx_core_legal_hold_active`, `idx_core_archive_record_entity_record`, and
-/// `audit_legal_matter`'s ordinary `status` — no new index needed at this
-/// table class's expected size).
+/// Read the records management posture
+///
+/// How many retention actions are proposed, legal holds active, records still archived and legal
+/// matters in progress. Compliance administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/records/posture",
