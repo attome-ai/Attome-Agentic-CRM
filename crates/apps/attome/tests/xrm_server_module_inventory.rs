@@ -102,6 +102,8 @@ const BASELINE: &[&str] = &[
     "approval_metrics",
     "approval_policy_admin",
     "approval_process",
+    // Z10-T6: the `queue:<uuid>` approver token, resolved to a queue's members.
+    "approval_queue_resolver",
     // Y7-T7: the AsyncAPI document reads every engine's live registry and
     // the published business events at once, like deployment_openapi.
     "asyncapi",
@@ -120,6 +122,8 @@ const BASELINE: &[&str] = &[
     "calendar_admin",
     // Z12-T8: iCal holiday feeds, beside the calendar admin they extend.
     "calendar_feed",
+    // Z12-T7: the official Gulf holiday packs, beside the calendar admin they fill.
+    "calendar_packs",
     "capability_probe",
     "catalog_admin",
     // L4-T2: the catalog asset index reads every engine's metadata.
@@ -130,6 +134,8 @@ const BASELINE: &[&str] = &[
     "changeset",
     "communication",
     "content_public",
+    // T6-T2: the feature flags a builder defines for a deployment.
+    "customer_flags_admin",
     // Z15-T13: the customer test admin routes; the store and runner live in
     // attome-records, which has no admin-guard routes to host them.
     "customer_test_admin",
@@ -152,6 +158,8 @@ const BASELINE: &[&str] = &[
     // A30-T1: values of the `environment_variable` model kind, which the
     // changeset and model admin here define; no engine crate owns kinds.
     "env_variable_admin",
+    // Z11-T12: what an expression editor needs from the server.
+    "expression_admin",
     "features_admin",
     "field_changes",
     "field_hooks",
@@ -174,6 +182,10 @@ const BASELINE: &[&str] = &[
     "metadata_label_admin",
     "metrics",
     "migration",
+    // A24-T3: a migration project's model mapping.
+    "migration_model",
+    // A24-T4: running a migration project's waves.
+    "migration_run",
     "model_admin",
     "model_health",
     "my_work",
@@ -196,6 +208,8 @@ const BASELINE: &[&str] = &[
     // Q20-T5: the bans live in attome-server's rate limiter; belongs in
     // attome-security's admin routes, kept here until it moves.
     "ratelimit_admin",
+    // B8-T2: applying record templates.
+    "record_template_routes",
     "registry",
     "relationship_admin",
     "reminder_access",
