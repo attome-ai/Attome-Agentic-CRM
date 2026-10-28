@@ -472,7 +472,7 @@ async fn start(
     get,
     path = "/api/v1/me/mail-connections/{provider}/callback",
     tag = "integration",
-    params(("provider" = String, Path), CallbackQuery),
+    params(("provider" = String, Path, description = "The mail provider the connection is for"), CallbackQuery),
     responses(
         (status = 303, description = "Back to the person's settings"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

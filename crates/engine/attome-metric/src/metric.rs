@@ -1558,9 +1558,10 @@ struct MetricDefinitionSummary {
     lineage_entities: Vec<String>,
 }
 
-/// `GET /api/v1/metrics` — every active metric definition, enriched with
-/// query lineage. `dashboard_metric_definition.read` (plan §5: metric values are
-/// visible to anyone who may read the definition).
+/// List metrics
+///
+/// Every active metric definition with the queries it reads, one-based pages. Anyone who may read
+/// metric definitions.
 #[utoipa::path(
     get,
     path = "/api/v1/metrics",
@@ -1660,15 +1661,16 @@ pub struct SnapshotListQuery {
     pub dimension_value: Option<String>,
 }
 
-/// `GET /api/v1/metrics/{id}/snapshots` — the trend: every snapshot ever
-/// recorded for this metric, newest period first, superseded rows included
-/// (a restatement's whole history is visible, not just the current value).
+/// List a metric's snapshots
+///
+/// Every value recorded for the metric, newest period first, superseded ones included, so a
+/// restatement's whole history shows. Anyone who may read metric definitions.
 #[utoipa::path(
     get,
     path = "/api/v1/metrics/{id}/snapshots",
     tag = "dashboard",
     params(
-        ("id" = Uuid, Path),
+        ("id" = Uuid, Path, description = "The metric"),
         SnapshotListQuery,
     ),
     responses(
@@ -1751,16 +1753,15 @@ struct ComputeMetricResponse {
     skipped: bool,
 }
 
-/// `POST /api/v1/metrics/{id}/compute` — admin on-demand trigger.
-/// `dashboard_metric_definition.update`: triggering a computation is a business
-/// action on the metric, same "reuse the CRUD update privilege for a
-/// bespoke action" convention `attome_dashboard`'s own lifecycle transitions
-/// use (`DashboardUpdate`).
+/// Compute a metric now
+///
+/// Computes the metric now instead of waiting for its schedule. Needs update rights on metric
+/// definitions. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/metrics/{id}/compute",
     tag = "dashboard",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The metric")),
     request_body = ComputeMetricBody,
     responses(
         (status = 200, description = "Success", body = ComputeMetricResponse),

@@ -302,7 +302,7 @@ async fn post_meeting(
     path = "/api/v1/me/meetings/{provider}/{id}/report",
     operation_id = "get_meeting_report",
     tag = "integration",
-    params(("provider" = String, Path), ("id" = String, Path)),
+    params(("provider" = String, Path, description = "The video provider"), ("id" = String, Path, description = "The provider's meeting id")),
     responses(
         (status = 200, description = "Attendance and recordings", body = MeetingReport),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

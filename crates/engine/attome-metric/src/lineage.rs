@@ -260,11 +260,16 @@ pub async fn do_metric_lineage(
     Ok(MetricLineageResponse { period_start, root })
 }
 
+/// Read what a metric is made of
+///
+/// The metric's composition for a period: its child metrics with their weights and, for a formula
+/// metric, the metrics the formula uses, each with its latest snapshot. A cycle or a deep hierarchy
+/// gives a cut-short tree, never an error. Anyone who may read metric definitions.
 #[utoipa::path(
     get,
     path = "/api/v1/metrics/{id}/lineage",
     tag = "dashboard",
-    params(("id" = Uuid, Path), LineageQuery),
+    params(("id" = Uuid, Path, description = "The metric"), LineageQuery),
     responses(
         (status = 200, description = "The metric's children and formula inputs, each with its snapshot for the period", body = MetricLineageResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

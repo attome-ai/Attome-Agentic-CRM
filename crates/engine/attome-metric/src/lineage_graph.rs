@@ -237,12 +237,13 @@ pub async fn impact(db: &DbPool, metric_id: Uuid) -> Result<MetricImpact, AppErr
     })
 }
 
+/// Read a metric's impact
 #[utoipa::path(
     get,
     path = "/api/v1/metrics/{id}/impact",
     description = "What the metric reads (entities, attributes and other metrics) and what uses it (dashboard widgets, metrics), from the lineage graph; the counts preview what a change reaches (P10-T1).",
     tag = "dashboard",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The metric")),
     responses(
         (status = 200, description = "The metric's inputs and consumers", body = MetricImpact),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
