@@ -1274,3 +1274,58 @@ async fn reset_then_undo_restores_label() {
         "{again:?}"
     );
 }
+
+/// Y11-T12: a customisation on a field a release renames is listed with the
+/// field's new name, and one on a removed entity's field with none.
+#[tokio::test]
+async fn renamed_item_customisation_listed_with_target() {
+    use attome_metadata::provision::layer_impact::{deprecation_impact, report_drafts};
+    let db = skip_if_no_db!(test_db().await);
+    let entity_ln = unique_logicalname("test_layer");
+    let (entity_id, _) = reconcile_entity(
+        &db,
+        &entity_desc(&entity_ln, "Layers"),
+        ReconcilePolicy::Seed,
+    )
+    .await
+    .expect("create entity");
+    reconcile_attribute(
+        &db,
+        entity_id,
+        &sized_attr("Phone", 20),
+        ReconcilePolicy::Seed,
+    )
+    .await
+    .expect("seed attribute");
+    reconcile_attribute(
+        &db,
+        entity_id,
+        &sized_attr("Mobile", 20),
+        ReconcilePolicy::Admin,
+    )
+    .await
+    .expect("the customer relabels it");
+    let old = ("attribute".to_owned(), format!("{entity_ln}.title"));
+    let new = ("attribute".to_owned(), format!("{entity_ln}.heading"));
+
+    let impacts = deprecation_impact(&db, &[], &[(old.clone(), new.clone())])
+        .await
+        .expect("impact");
+    assert_eq!(impacts.len(), 1, "{impacts:?}");
+    assert_eq!(impacts[0].property, "name");
+    assert_eq!(impacts[0].layer, "customer");
+    assert_eq!(impacts[0].suggested_key.as_deref(), Some(new.1.as_str()));
+    let drafts = report_drafts(&impacts);
+    assert_eq!(drafts[0].detail["to"], "heading");
+
+    // Retiring the entity reaches its field's customisation, with no target.
+    let impacts = deprecation_impact(&db, &[("entity".to_owned(), entity_ln.clone())], &[])
+        .await
+        .expect("impact");
+    assert!(
+        impacts
+            .iter()
+            .any(|i| i.object_key == old.1 && i.suggested_key.is_none()),
+        "{impacts:?}"
+    );
+}

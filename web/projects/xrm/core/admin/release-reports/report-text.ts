@@ -51,6 +51,13 @@ export function describeItem(lang: Translate, item: Pick<ReportItem, 'kind' | 'e
     case 'choice_removed_in_use':
     case 'required_empty':
       return lang.translate(`releaseReport.text.${item.kind}`, params);
+    case 'customisation_affected':
+      return lang.translate(
+        str(d['change']) === 'renamed'
+          ? 'releaseReport.text.customisation_renamed'
+          : 'releaseReport.text.customisation_removed',
+        params,
+      );
     case 'breaking_api_change': {
       const change = str(d['change']);
       const variant = change === 'renamed' || change === 'removed' || change === 'type' ? change : 'other';

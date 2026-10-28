@@ -41,6 +41,8 @@ pub mod index_advisor;
 pub mod layer_conflicts;
 /// Y11-T9: resetting a customisation, with a preview and an undo.
 pub mod layer_reset;
+/// Y11-T12: customisations a release's removals and renames affect.
+pub mod layer_impact;
 /// Y2-T4 — the orphan scan: lookup values that point at no record.
 pub mod lookup_fk;
 /// L1-T2: a master entity's contribution and provenance side tables.

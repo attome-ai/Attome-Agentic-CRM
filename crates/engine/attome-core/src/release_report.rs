@@ -83,10 +83,13 @@ pub enum ItemKind {
     BreakingApiChange,
     ChoiceRemovedInUse,
     RequiredEmpty,
+    /// Y11-T12: a customisation on an item the release retired, deleted or
+    /// renamed (information; never moved automatically).
+    CustomisationAffected,
 }
 
 impl ItemKind {
-    pub const ALL: [ItemKind; 8] = [
+    pub const ALL: [ItemKind; 9] = [
         Self::Conflict,
         Self::ConversionNulled,
         Self::FieldDeleted,
@@ -95,6 +98,7 @@ impl ItemKind {
         Self::BreakingApiChange,
         Self::ChoiceRemovedInUse,
         Self::RequiredEmpty,
+        Self::CustomisationAffected,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -107,6 +111,7 @@ impl ItemKind {
             Self::BreakingApiChange => "breaking_api_change",
             Self::ChoiceRemovedInUse => "choice_removed_in_use",
             Self::RequiredEmpty => "required_empty",
+            Self::CustomisationAffected => "customisation_affected",
         }
     }
 

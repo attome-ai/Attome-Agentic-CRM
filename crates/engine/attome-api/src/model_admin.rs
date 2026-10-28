@@ -2752,6 +2752,10 @@ pub fn routes() -> Router<EngineState> {
             post(layers::undo_reset),
         )
         .route(
+            "/api/v1/admin/metadata/upgrade-impact",
+            get(layers::upgrade_impact),
+        )
+        .route(
             "/api/v1/admin/metadata/{kind}/{key}/layers/diff",
             get(layers::layer_diff),
         )
@@ -2841,6 +2845,7 @@ pub fn routes() -> Router<EngineState> {
         layers::resolve_conflict,
         layers::reset_customisation,
         layers::undo_reset,
+        layers::upgrade_impact,
         flow_template::instantiate,
         export_files,
         import_files,
@@ -2880,6 +2885,7 @@ pub fn routes() -> Router<EngineState> {
         layers::ResetBody,
         layers::ResetChangeView,
         layers::ResetView,
+        layers::UpgradeImpactView,
         flow_template::InstantiateRequest,
         flow_template::InstantiateResponse,
         ModelFile,

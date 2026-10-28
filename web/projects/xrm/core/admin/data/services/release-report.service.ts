@@ -22,6 +22,7 @@ export const REPORT_ITEM_KINDS = [
   'conflict', 'conversion_nulled', 'field_deleted',
   'customer_object_adjusted', 'customer_object_removed',
   'breaking_api_change', 'choice_removed_in_use', 'required_empty',
+  'customisation_affected',
 ] as const;
 export type ReportItemKind = typeof REPORT_ITEM_KINDS[number];
 

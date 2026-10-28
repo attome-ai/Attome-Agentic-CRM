@@ -59,6 +59,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Customisations a release affects (Y11-T12): when a platform or app release retires, deletes or
+  renames an entity or field this system customised, the release report gets a
+  `customisation_affected` item naming the properties and, for a rename, the new name, and
+  `GET /api/v1/admin/metadata/upgrade-impact?changeset_id=` lists them for a planned changeset.
+  Nothing is moved automatically.
 - Resetting a customisation (Y11-T9): `POST /api/v1/admin/metadata/{kind}/{key}/reset` (with
   `?preview=true` to see what changes) puts an entity's or field's customised properties back to the
   app's or platform's values, and `POST /api/v1/admin/metadata/resets/{reset_id}/undo` undoes it once.

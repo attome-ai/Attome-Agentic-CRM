@@ -103,6 +103,48 @@ use super::plan::{self, DocOp, Document, Fold};
 use crate::bundle::model::*;
 use crate::bundle::{bundle_hash, derived_id, export_bundle};
 
+/// Y11-T12: a platform or app release that retired, deleted or renamed an
+/// item the customer (or another app) customised puts a
+/// `customisation_affected` item in the apply run's release report, naming
+/// the properties and, for a rename, the new name. The customisation is not
+/// moved. Reporting runs after the operation committed; a failure is
+/// logged, never a failure of the apply.
+async fn report_customisation_impact(
+    state: &EngineState,
+    layer: Layer,
+    removed: &[provision::layer_impact::ObjectKey],
+    renamed: &[(
+        provision::layer_impact::ObjectKey,
+        provision::layer_impact::ObjectKey,
+    )],
+) {
+    if !matches!(layer, Layer::Platform | Layer::Product) {
+        return;
+    }
+    let drafts = match provision::layer_impact::deprecation_impact(&state.base.db, removed, renamed)
+        .await
+    {
+        Ok(impacts) => provision::layer_impact::report_drafts(&impacts),
+        Err(error) => {
+            tracing::error!(%error, "release report: affected customisations could not be read");
+            return;
+        }
+    };
+    if drafts.is_empty() {
+        return;
+    }
+    if let Err(error) = rr::record_drafts(
+        &state.base.db,
+        attome_core::recovery_archive::ring(state.base.config.as_ref()),
+        &drafts,
+        "customisations affected by the release",
+    )
+    .await
+    {
+        tracing::error!(%error, "release report: affected customisations were not stored");
+    }
+}
+
 /// Same inline size gate as the bundle engine's index build.
 const ATTRIBUTE_INDEX_INLINE_ROW_LIMIT: i64 = 100_000;
 /// Bounded retry when a step loses the non-blocking metadata lock.
@@ -917,6 +959,13 @@ impl Ctx<'_> {
                     if wrote(outcome) {
                         self.audit(name, id, AuditOperation::SoftDelete, None)
                             .await?;
+                        report_customisation_impact(
+                            state,
+                            self.layer(),
+                            &[("entity".to_owned(), name.to_owned())],
+                            &[],
+                        )
+                        .await;
                     }
                     outcome
                 }
@@ -940,7 +989,18 @@ impl Ctx<'_> {
                     ReconcileOutcome::Unchanged
                 } else {
                     let entity_id = self.entity_id(entity).await?;
-                    with_lock_retry!(provision::retire_attribute(db, entity_id, field).await)?
+                    let outcome =
+                        with_lock_retry!(provision::retire_attribute(db, entity_id, field).await)?;
+                    if wrote(outcome) {
+                        report_customisation_impact(
+                            state,
+                            self.layer(),
+                            &[("attribute".to_owned(), format!("{entity}.{field}"))],
+                            &[],
+                        )
+                        .await;
+                    }
+                    outcome
                 }
             }
             Op::ReactivateField => {
@@ -1190,6 +1250,40 @@ impl Ctx<'_> {
                     .await
                 )?;
                 if wrote {
+                    let key = format!("{}.{}", op.t("entity"), op.t("field"));
+                    match op.op {
+                        Op::RenameField => {
+                            let new_name = op
+                                .args
+                                .as_ref()
+                                .and_then(|a| a.get("new_name"))
+                                .and_then(Value::as_str)
+                                .unwrap_or_default();
+                            report_customisation_impact(
+                                state,
+                                self.layer(),
+                                &[],
+                                &[(
+                                    ("attribute".to_owned(), key),
+                                    (
+                                        "attribute".to_owned(),
+                                        format!("{}.{new_name}", op.t("entity")),
+                                    ),
+                                )],
+                            )
+                            .await;
+                        }
+                        Op::DeleteField => {
+                            report_customisation_impact(
+                                state,
+                                self.layer(),
+                                &[("attribute".to_owned(), key)],
+                                &[],
+                            )
+                            .await;
+                        }
+                        _ => {}
+                    }
                     ReconcileOutcome::Updated
                 } else {
                     ReconcileOutcome::Unchanged

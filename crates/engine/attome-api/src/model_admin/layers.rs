@@ -16,7 +16,7 @@ use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::EngineState;
 use attome_metadata::provision::layer_conflicts::{self, LayerConflict, Resolution};
-use attome_metadata::provision::layer_reset;
+use attome_metadata::provision::{layer_impact, layer_reset};
 use attome_model::Layer;
 use attome_model::layer_stack::{self, PropertyStack};
 use attome_server::authz::{Authorized, Privilege, area};
@@ -544,4 +544,78 @@ pub(crate) async fn undo_reset(
     attome_db::tx::commit(tx).await?;
     crate::admin::notify_metadata_change(&state.base.redis).await;
     Ok(axum::http::StatusCode::NO_CONTENT)
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub(crate) struct UpgradeImpactQuery {
+    /// The platform (or app) changeset to check, planned or applied.
+    changeset_id: Uuid,
+}
+
+/// A customisation a release affects.
+#[derive(Debug, Serialize, ToSchema)]
+pub(crate) struct UpgradeImpactView {
+    /// `entity` or `attribute`.
+    object_kind: String,
+    /// The item it was made on: the entity's logical name, or `<entity>.<field>`.
+    object_key: String,
+    property: String,
+    /// `customer` or `app`.
+    layer: String,
+    app: String,
+    /// Where it would apply after the release: the renamed item's key; absent for a removal.
+    suggested_key: Option<String>,
+}
+
+/// Customisations a release affects
+///
+/// Y11-T12: for a platform or app changeset (planned or applied), each customer or app customisation on an entity or field it retires, deletes or renames, with the new name for a rename. Nothing is moved.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/metadata/upgrade-impact",
+    tag = "admin",
+    params(UpgradeImpactQuery),
+    responses(
+        (status = 200, description = "Every affected customisation, whole on page 1", body = PaginatedResponse<UpgradeImpactView>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No planned or applied changeset with this id", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(crate) async fn upgrade_impact(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
+    Query(query): Query<UpgradeImpactQuery>,
+) -> Result<Json<PaginatedResponse<UpgradeImpactView>>, AppError> {
+    let document: Value = sqlx::query_scalar(
+        "SELECT document FROM changeset_apply WHERE changeset_id = $1 \
+          ORDER BY seq DESC, id DESC LIMIT 1",
+    )
+    .bind(query.changeset_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::NotFound)?;
+    let ops = document
+        .get("operations")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let (removed, renamed) = layer_impact::affected_items(&ops);
+    let impacts = layer_impact::deprecation_impact(&state.base.db, &removed, &renamed).await?;
+    Ok(Json(page(
+        impacts
+            .into_iter()
+            .map(|i| UpgradeImpactView {
+                object_kind: i.object_kind,
+                object_key: i.object_key,
+                property: i.property,
+                layer: i.layer,
+                app: i.app,
+                suggested_key: i.suggested_key,
+            })
+            .collect(),
+    )))
 }
