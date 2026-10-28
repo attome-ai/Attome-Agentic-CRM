@@ -26,6 +26,9 @@ export const hostEn = {
     invalidCode:        'That code is incorrect or has expired. Please try again.',
     googleError:        'Google sign-in failed. Please try again.',
     checkingBrowser:    'Checking your browser before signing in…',
+    continue:           'Continue',
+    checkingEmail:      'Checking your sign-in options…',
+    otherEmail:         'Use another email',
   },
   // Host app's /settings/security page (src/app/pages/security-settings).
   securitySettings: {

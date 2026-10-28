@@ -152,6 +152,12 @@ export class AuthService {
     return this.api.get<OidcProviderInfo[]>('/api/v1/auth/oidc/providers');
   }
 
+  /** Q1-T14: the sign-in provider a verified email domain sends this address
+   *  to, or `null` to sign in with a password. */
+  discoverOidc(email: string): Observable<{ provider?: string | null }> {
+    return this.api.post<{ provider?: string | null }>('/api/v1/auth/oidc/discover', { email });
+  }
+
   /** P-registration-gating (D-128) — the register page/login page's sign-up link consult this to decide whether to render at all. */
   getRegistrationConfig(): Observable<RegistrationConfigInfo> {
     return this.api.get<RegistrationConfigInfo>('/api/v1/auth/register/config');

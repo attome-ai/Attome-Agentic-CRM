@@ -389,6 +389,17 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/security/access-admin').then(m => m.RoleTemplatesComponent),
           },
           {
+            // Q1-T14: sign-in providers added on screen.
+            path: 'security/oidc-providers',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/security').then(m => m.OidcProvidersComponent),
+          },
+          {
+            path: 'security/oidc-providers/:id',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/security').then(m => m.OidcProviderFormComponent),
+          },
+          {
             path: 'security/users/list',
             canActivate: [authGuard],
             loadComponent: () => import('@attome/xrm/core/security').then(m => m.UsersListComponent),

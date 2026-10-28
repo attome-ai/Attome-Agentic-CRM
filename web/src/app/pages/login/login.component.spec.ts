@@ -364,3 +364,39 @@ describe('LoginComponent password-spray challenge (Q20-T3)', () => {
     expect(component.loading()).toBe(false);
   });
 });
+
+describe('LoginComponent email first (Q1-T14)', () => {
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  const providers = [{ key: 'corp', display_name: 'Corp' }];
+
+  it('asks for the email alone and sends a verified domain to its provider', () => {
+    const { component, auth } = mount({
+      getOidcProviders: vi.fn(() => of(providers)),
+      discoverOidc:     vi.fn(() => of({ provider: 'corp' })),
+      loginWithOidc:    vi.fn(),
+    });
+    expect(component.askPassword()).toBe(false);
+    component.form.controls.email.setValue('person@corp.example');
+    component.submit();
+    expect(auth['discoverOidc']).toHaveBeenCalledWith('person@corp.example');
+    expect(auth['loginWithOidc']).toHaveBeenCalledWith('corp');
+    expect(auth.login).not.toHaveBeenCalled();
+  });
+
+  it('goes on to the password for any other address, even when the lookup fails', () => {
+    const { component, auth } = mount({
+      getOidcProviders: vi.fn(() => of(providers)),
+      discoverOidc:     vi.fn(() => throwError(() => apiError(500))),
+    });
+    component.form.controls.email.setValue('someone@elsewhere.example');
+    component.submit();
+    expect(component.askPassword()).toBe(true);
+    expect(auth.login).not.toHaveBeenCalled();
+    component.form.controls.password.setValue('correct horse');
+    component.submit();
+    expect(auth.login).toHaveBeenCalledTimes(1);
+  });
+});

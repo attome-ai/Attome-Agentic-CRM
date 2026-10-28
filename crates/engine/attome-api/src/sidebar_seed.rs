@@ -877,6 +877,20 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     )
     .await?;
 
+    // Q1-T14: sign-in providers (OIDC) added on screen, with their domains
+    // and group mappings.
+    upsert_sidebar(
+        db,
+        "Sign-in Providers",
+        Some("/xrm/admin/security/oidc-providers"),
+        "las la-sign-in-alt",
+        "#a855f7",
+        Some(security_group),
+        82,
+        Some("core"),
+    )
+    .await?;
+
     // ── Management: platform admin tools with no single owning module —
     // Entity Manager, Query Builder, Sidebar Manager, System Settings. Was
     // four separate top-level items; now grouped under one top-level

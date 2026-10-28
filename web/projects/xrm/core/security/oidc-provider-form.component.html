@@ -1,0 +1,193 @@
+<div class="page-header">
+  <div>
+    <p class="breadcrumb"><button type="button" class="btn-text" (click)="back()">{{ 'oidcAdmin.title' | translate }}</button></p>
+    <h2>{{ creating() ? ('oidcAdmin.newTitle' | translate) : draft.display_name }}</h2>
+    @if (readOnly()) { <p class="hint" data-read-only>{{ 'oidcAdmin.readOnly' | translate }}</p> }
+  </div>
+  @if (!creating() && !readOnly()) {
+    <div class="btn-row-inline">
+      <button type="button" class="btn-ghost" (click)="test()" data-testid="oidc-test">{{ 'oidcAdmin.test' | translate }}</button>
+      <button type="button" class="btn-danger-outline" (click)="remove()" [disabled]="busy()">{{ 'oidcAdmin.delete' | translate }}</button>
+    </div>
+  }
+</div>
+
+@if (error(); as message) { <p class="error-msg" role="alert">{{ message }}</p> }
+@if (notice(); as message) { <p class="state-msg" role="status">{{ message }}</p> }
+
+@if (!creating()) {
+  <div class="prefix-tabs" role="tablist">
+    @for (t of ['settings', 'domains', 'groups', 'health']; track t) {
+      <button type="button" role="tab" [attr.aria-selected]="tab() === t" [class.btn-primary]="tab() === t"
+              class="btn-ghost" (click)="show($any(t))" [attr.data-tab]="t">{{ ('oidcAdmin.tab.' + t) | translate }}</button>
+    }
+  </div>
+}
+
+@if (tab() === 'settings') {
+  <form class="card" (ngSubmit)="save()">
+    <fieldset [disabled]="readOnly() || busy()">
+      @if (creating()) {
+        <div class="field">
+          <label for="oidc-preset">{{ 'oidcAdmin.preset' | translate }}</label>
+          <select id="oidc-preset" name="preset" [ngModel]="draft.preset" (ngModelChange)="onPreset($event)">
+            <option value="">{{ 'oidcAdmin.noPreset' | translate }}</option>
+            @for (p of presets(); track p.key) { <option [value]="p.key">{{ p.display_name }}</option> }
+          </select>
+        </div>
+        <div class="field">
+          <label for="oidc-key">{{ 'oidcAdmin.key' | translate }}</label>
+          <input id="oidc-key" name="key" class="mono-input" dir="ltr" [(ngModel)]="draft.key" autocomplete="off" required>
+          <p class="hint">{{ 'oidcAdmin.keyHint' | translate }}</p>
+        </div>
+      }
+      <div class="field">
+        <label for="oidc-name">{{ 'oidcAdmin.displayName' | translate }}</label>
+        <input id="oidc-name" name="display_name" [(ngModel)]="draft.display_name" required>
+      </div>
+      <div class="field">
+        <label for="oidc-name-ar">{{ 'oidcAdmin.displayNameAr' | translate }}</label>
+        <input id="oidc-name-ar" name="display_name_ar" dir="rtl" [(ngModel)]="draft.display_name_ar">
+      </div>
+      <div class="field">
+        <label for="oidc-issuer">{{ 'oidcAdmin.issuer' | translate }}</label>
+        <input id="oidc-issuer" name="issuer" class="mono-input" dir="ltr" [(ngModel)]="draft.issuer" required>
+      </div>
+      <div class="field">
+        <label for="oidc-client-id">{{ 'oidcAdmin.clientId' | translate }}</label>
+        <input id="oidc-client-id" name="client_id" class="mono-input" dir="ltr" [(ngModel)]="draft.client_id" autocomplete="off" required>
+      </div>
+      <div class="field">
+        <label for="oidc-secret">{{ 'oidcAdmin.clientSecret' | translate }}</label>
+        <input id="oidc-secret" name="client_secret" type="password" dir="ltr" [(ngModel)]="draft.client_secret" autocomplete="new-password">
+        @if (provider()?.secret_set) {
+          <p class="hint">{{ 'oidcAdmin.secretKept' | translate: { fingerprint: provider()?.secret_fingerprint ?? '' } }}</p>
+        }
+      </div>
+      <div class="field">
+        <label for="oidc-scopes">{{ 'oidcAdmin.scopes' | translate }}</label>
+        <input id="oidc-scopes" name="scopes" class="mono-input" dir="ltr" [(ngModel)]="draft.scopes">
+      </div>
+      <div class="field">
+        <label for="oidc-tenants">{{ 'oidcAdmin.tenants' | translate }}</label>
+        <input id="oidc-tenants" name="tenant_allowlist" class="mono-input" dir="ltr" [(ngModel)]="draft.tenant_allowlist">
+        <p class="hint">{{ 'oidcAdmin.tenantsHint' | translate }}</p>
+      </div>
+      <div class="field">
+        <label for="oidc-link-mode">{{ 'oidcAdmin.linkMode' | translate }}</label>
+        <select id="oidc-link-mode" name="link_mode" [(ngModel)]="draft.link_mode">
+          @for (m of linkModes; track m) { <option [value]="m">{{ ('oidcAdmin.linkModes.' + m) | translate }}</option> }
+        </select>
+      </div>
+      <div class="field">
+        <label for="oidc-role">{{ 'oidcAdmin.defaultRole' | translate }}</label>
+        <select id="oidc-role" name="default_role_ref" [(ngModel)]="draft.default_role_ref">
+          <option value="">{{ 'oidcAdmin.noRole' | translate }}</option>
+          @for (r of roles(); track r.id) { <option [value]="r.id">{{ r.name }}</option> }
+        </select>
+      </div>
+      <label class="checkbox-row"><input type="checkbox" name="trusted_for_mfa" [(ngModel)]="draft.trusted_for_mfa"> {{ 'oidcAdmin.trustedForMfa' | translate }}</label>
+      <label class="checkbox-row"><input type="checkbox" name="enabled" [(ngModel)]="draft.enabled"> {{ 'oidcAdmin.enabledLabel' | translate }}</label>
+      <div class="field">
+        <label for="oidc-claims">{{ 'oidcAdmin.claimMap' | translate }}</label>
+        <textarea id="oidc-claims" name="claim_map" class="mono-input" dir="ltr" rows="6" [(ngModel)]="draft.claim_map"></textarea>
+      </div>
+      <div class="btn-row">
+        <button type="submit" class="btn-primary" data-testid="oidc-save">{{ 'oidcAdmin.save' | translate }}</button>
+      </div>
+    </fieldset>
+  </form>
+}
+
+@if (tab() === 'domains') {
+  <div class="card">
+    <p class="hint">{{ 'oidcAdmin.domainsIntro' | translate }}</p>
+    @if (!readOnly()) {
+      <form class="inline-form-panel" (ngSubmit)="addDomain()">
+        <div class="field">
+          <label for="oidc-domain">{{ 'oidcAdmin.domain' | translate }}</label>
+          <input id="oidc-domain" name="domain" dir="ltr" [(ngModel)]="newDomain" [placeholder]="'oidcAdmin.domainPlaceholder' | translate">
+        </div>
+        <label class="checkbox-row"><input type="checkbox" name="sso_only" [(ngModel)]="newDomainSsoOnly"> {{ 'oidcAdmin.ssoOnly' | translate }}</label>
+        <button type="submit" class="btn-sm-accent" data-testid="oidc-add-domain">{{ 'oidcAdmin.addDomain' | translate }}</button>
+      </form>
+    }
+    @for (d of domains(); track d.id) {
+      <div class="detail-panel" [attr.data-domain]="d.domain">
+        <p><strong dir="ltr">{{ d.domain }}</strong>
+          — {{ (d.verified_at ? 'oidcAdmin.verified' : 'oidcAdmin.notVerified') | translate }}
+          @if (d.sso_only) { · {{ 'oidcAdmin.ssoOnly' | translate }} }</p>
+        @if (!d.verified_at) {
+          <p class="hint">{{ 'oidcAdmin.publishTxt' | translate }}</p>
+          <p class="cell-mono" dir="ltr">{{ txtRecord(d) }}</p>
+          @if (d.last_error) { <p class="warn-msg">{{ d.last_error }}</p> }
+        }
+        @if (!readOnly()) {
+          <div class="btn-row-inline">
+            @if (!d.verified_at) { <button type="button" class="btn-sm" (click)="verifyDomain(d)" data-testid="oidc-verify">{{ 'oidcAdmin.verify' | translate }}</button> }
+            <button type="button" class="btn-sm-danger" (click)="removeDomain(d)">{{ 'oidcAdmin.remove' | translate }}</button>
+          </div>
+        }
+      </div>
+    } @empty {
+      <p class="state-msg">{{ 'oidcAdmin.noDomains' | translate }}</p>
+    }
+  </div>
+}
+
+@if (tab() === 'groups') {
+  <div class="card">
+    <p class="hint">{{ 'oidcAdmin.groupsIntro' | translate }}</p>
+    @if (!readOnly()) {
+      <form class="inline-form-panel" (ngSubmit)="addMapping()">
+        <div class="field">
+          <label for="oidc-claim-value">{{ 'oidcAdmin.claimValue' | translate }}</label>
+          <input id="oidc-claim-value" name="claim_value" dir="ltr" [(ngModel)]="newClaimValue">
+        </div>
+        <div class="field">
+          <label for="oidc-map-role">{{ 'oidcAdmin.role' | translate }}</label>
+          <select id="oidc-map-role" name="role_id" [(ngModel)]="newRoleId">
+            <option value="">{{ 'oidcAdmin.noRole' | translate }}</option>
+            @for (r of roles(); track r.id) { <option [value]="r.id">{{ r.name }}</option> }
+          </select>
+        </div>
+        <div class="field">
+          <label for="oidc-map-team">{{ 'oidcAdmin.teamId' | translate }}</label>
+          <input id="oidc-map-team" name="team_id" class="mono-input" dir="ltr" [(ngModel)]="newTeamId">
+        </div>
+        <button type="submit" class="btn-sm-accent">{{ 'oidcAdmin.addMapping' | translate }}</button>
+      </form>
+    }
+    <div class="table-wrap"><table>
+      <thead><tr><th>{{ 'oidcAdmin.claimValue' | translate }}</th><th>{{ 'oidcAdmin.role' | translate }}</th><th>{{ 'oidcAdmin.teamId' | translate }}</th><th></th></tr></thead>
+      <tbody>@for (m of mappings(); track m.id) {
+        <tr [attr.data-mapping]="m.claim_value">
+          <td class="cell-mono" dir="ltr">{{ m.claim_value }}</td>
+          <td>{{ roleName(m.role_id) }}</td>
+          <td class="cell-mono">{{ m.team_id ?? '' }}</td>
+          <td>@if (!readOnly()) { <button type="button" class="btn-sm-danger" (click)="removeMapping(m)">{{ 'oidcAdmin.remove' | translate }}</button> }</td>
+        </tr>
+      } @empty {
+        <tr><td colspan="4" class="cell-muted">{{ 'oidcAdmin.noMappings' | translate }}</td></tr>
+      }</tbody>
+    </table></div>
+  </div>
+}
+
+@if (tab() === 'health') {
+  <div class="card">
+    @if (health(); as h) {
+      <p>{{ 'oidcAdmin.healthNode' | translate: { node: h.node } }}</p>
+      @if (h.last_failure_at) {
+        <p class="warn-msg">{{ 'oidcAdmin.lastFailure' | translate: { kind: h.last_failure_kind ?? '', time: h.last_failure_at } }}</p>
+      } @else {
+        <p class="state-msg">{{ 'oidcAdmin.noFailures' | translate }}</p>
+      }
+      <ul>
+        @for (f of failures(h); track f.kind) { <li><span class="cell-mono">{{ f.kind }}</span>: {{ f.count }}</li> }
+      </ul>
+    } @else {
+      <p class="state-msg">{{ 'oidcAdmin.loading' | translate }}</p>
+    }
+  </div>
+}

@@ -152,6 +152,18 @@ export type CurrentConflict = ApiComponents['schemas']['CurrentConflict'];
 export type RoleTemplateItem = ApiComponents['schemas']['RoleTemplateItem'];
 export type InstalledRole = ApiComponents['schemas']['InstalledRole'];
 
+// Q1-T14: sign-in providers added on screen (Q1-T4..T12).
+export type OidcProviderItem = ApiComponents['schemas']['OidcProviderItem'];
+export type CreateOidcProviderBody = ApiComponents['schemas']['CreateOidcProviderBody'];
+export type UpdateOidcProviderBody = ApiComponents['schemas']['UpdateOidcProviderBody'];
+export type OidcPresetItem = ApiComponents['schemas']['OidcPresetItem'];
+export type OidcDomainItem = ApiComponents['schemas']['OidcDomainItem'];
+export type CreateOidcDomainBody = ApiComponents['schemas']['CreateOidcDomainBody'];
+export type OidcGroupMappingItem = ApiComponents['schemas']['OidcGroupMappingItem'];
+export type CreateOidcGroupMappingBody = ApiComponents['schemas']['CreateOidcGroupMappingBody'];
+export type OidcProviderHealthItem = ApiComponents['schemas']['OidcProviderHealthItem'];
+export type OidcTestStart = ApiComponents['schemas']['OidcTestStart'];
+
 /// Q10-T12: the feature switches the advanced access screens sit behind
 /// (`attome_core::feature_flag_catalog::q10_flags`), all off on a new
 /// deployment so it shows only roles.
@@ -529,6 +541,79 @@ export class SecurityAdminService {
   findUserByEmail(email: string): Observable<ApiComponents['schemas']['UserLookupItem'][]> {
     return this.api.get<ApiComponents['schemas']['UserLookupItem'][]>(
       '/api/v1/admin/security/users/lookup', { email },
+    );
+  }
+  // ── Q1-T14: sign-in providers ────────────────────────────────────────────
+
+  listOidcProviders(): Observable<OidcProviderItem[]> {
+    return this.api.getAllPages<OidcProviderItem>('/api/v1/admin/security/oidc-providers');
+  }
+
+  listOidcPresets(): Observable<OidcPresetItem[]> {
+    return this.api.get<OidcPresetItem[]>('/api/v1/admin/security/oidc-presets');
+  }
+
+  createOidcProvider(body: CreateOidcProviderBody): Observable<OidcProviderItem> {
+    return this.api.post<OidcProviderItem>('/api/v1/admin/security/oidc-providers', body);
+  }
+
+  /** `rowVersion` goes out as `If-Match`; a stale one is a 409. */
+  updateOidcProvider(id: string, body: UpdateOidcProviderBody, rowVersion: number): Observable<OidcProviderItem> {
+    return this.api.patch<OidcProviderItem>(
+      `/api/v1/admin/security/oidc-providers/${encodeURIComponent(id)}`, body, rowVersion,
+    );
+  }
+
+  deleteOidcProvider(id: string): Observable<void> {
+    return this.api.delete(`/api/v1/admin/security/oidc-providers/${encodeURIComponent(id)}`);
+  }
+
+  /** Starts a test sign-in; open `authorize_url` to finish it at the provider. */
+  testOidcProvider(id: string): Observable<OidcTestStart> {
+    return this.api.post<OidcTestStart>(
+      `/api/v1/admin/security/oidc-providers/${encodeURIComponent(id)}/test`, {},
+    );
+  }
+
+  oidcProviderHealth(id: string): Observable<OidcProviderHealthItem> {
+    return this.api.get<OidcProviderHealthItem>(
+      `/api/v1/admin/security/oidc-providers/${encodeURIComponent(id)}/health`,
+    );
+  }
+
+  listOidcDomains(): Observable<OidcDomainItem[]> {
+    return this.api.getAllPages<OidcDomainItem>('/api/v1/admin/security/oidc-domains');
+  }
+
+  createOidcDomain(body: CreateOidcDomainBody): Observable<OidcDomainItem> {
+    return this.api.post<OidcDomainItem>('/api/v1/admin/security/oidc-domains', body);
+  }
+
+  verifyOidcDomain(id: string): Observable<OidcDomainItem> {
+    return this.api.post<OidcDomainItem>(
+      `/api/v1/admin/security/oidc-domains/${encodeURIComponent(id)}/verify`, {},
+    );
+  }
+
+  deleteOidcDomain(id: string): Observable<void> {
+    return this.api.delete(`/api/v1/admin/security/oidc-domains/${encodeURIComponent(id)}`);
+  }
+
+  listOidcGroupMappings(providerId: string): Observable<OidcGroupMappingItem[]> {
+    return this.api.getAllPages<OidcGroupMappingItem>(
+      `/api/v1/admin/security/oidc-providers/${encodeURIComponent(providerId)}/group-mappings`,
+    );
+  }
+
+  createOidcGroupMapping(providerId: string, body: CreateOidcGroupMappingBody): Observable<OidcGroupMappingItem> {
+    return this.api.post<OidcGroupMappingItem>(
+      `/api/v1/admin/security/oidc-providers/${encodeURIComponent(providerId)}/group-mappings`, body,
+    );
+  }
+
+  deleteOidcGroupMapping(providerId: string, mappingId: string): Observable<void> {
+    return this.api.delete(
+      `/api/v1/admin/security/oidc-providers/${encodeURIComponent(providerId)}/group-mappings/${encodeURIComponent(mappingId)}`,
     );
   }
 }

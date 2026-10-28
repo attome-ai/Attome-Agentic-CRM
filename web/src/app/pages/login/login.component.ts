@@ -79,6 +79,7 @@ type Stage = 'credentials' | 'mfa-code' | 'mfa-enroll';
               }
             </div>
 
+            @if (askPassword()) {
             <div class="field">
               <label for="password">Password</label>
               <input id="password" type="password" formControlName="password"
@@ -89,13 +90,21 @@ type Stage = 'credentials' | 'mfa-code' | 'mfa-enroll';
                 <p class="field-error" id="password-error">Password is required.</p>
               }
             </div>
+            @if (emailChecked()) {
+              <p class="auth-link"><button type="button" class="btn-link" (click)="otherEmail()" data-testid="other-email">{{ t('xrmLogin.otherEmail') }}</button></p>
+            }
+            }
 
             @if (error()) {
               <p class="error-msg">{{ error() }}</p>
             }
 
             <button type="submit" class="btn-submit" [disabled]="loading()">
-              {{ loading() ? 'Signing in…' : 'Sign in' }}
+              @if (askPassword()) {
+                {{ loading() ? 'Signing in…' : 'Sign in' }}
+              } @else {
+                {{ loading() ? t('xrmLogin.checkingEmail') : t('xrmLogin.continue') }}
+              }
             </button>
           </form>
 
@@ -322,6 +331,15 @@ export class LoginComponent implements OnInit, AfterViewInit {
     this.hasGoogleAuth() || this.oidcProviders().length > 0,
   );
   readonly googleBtnId = 'attome-xrm-google-btn';
+  /**
+   * Q1-T14: email first. With sign-in providers configured, the email is
+   * asked for alone; a verified domain sends the person to their provider
+   * (`POST /api/v1/auth/oidc/discover`), any other address goes on to the
+   * password. A failed lookup also goes on to the password, so nobody is
+   * locked out by it.
+   */
+  readonly emailChecked = signal(false);
+  readonly askPassword = computed(() => this.emailChecked() || this.oidcProviders().length === 0);
 
   private pendingToken = '';
   private googleScriptLoaded = false;
@@ -430,8 +448,37 @@ export class LoginComponent implements OnInit, AfterViewInit {
     return this.submitAttempted() && this.codeForm.controls.code.invalid;
   }
 
+  t(key: string): string {
+    return this.lang.translate(key);
+  }
+
+  otherEmail(): void {
+    this.emailChecked.set(false);
+    this.form.controls.password.reset('');
+    this.error.set(null);
+  }
+
+  private discover(): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.auth.discoverOidc(this.form.value.email!).subscribe({
+      next: res => {
+        if (res.provider) { this.signInWithOidc(res.provider); return; }
+        this.loading.set(false);
+        this.emailChecked.set(true);
+      },
+      error: () => { this.loading.set(false); this.emailChecked.set(true); },
+    });
+  }
+
   submit(): void {
     this.submitAttempted.set(true);
+    if (!this.askPassword()) {
+      if (this.form.controls.email.invalid) { this.form.controls.email.markAsTouched(); return; }
+      this.submitAttempted.set(false);
+      this.discover();
+      return;
+    }
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     this.submitAttempted.set(false);
     this.loading.set(true);

@@ -781,6 +781,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `ATTOME_LISTEN_PROTOCOL_INFO` (Windows, the base64 `WSAPROTOCOL_INFOW` from
   `WSADuplicateSocketW`, or `-` to read it from stdin) is set, so a supervisor can hand the same
   socket to the next version; otherwise it binds as before.
+- Sign-in provider screens (Q1-T14): Security > Sign-in Providers lists the OIDC providers (those
+  from `config.json` marked and read-only) and edits one added on screen: a preset picker, a test
+  sign-in, its email domains with the TXT record to publish and a verify button, its group mappings
+  and its failure health, in English and Arabic. With providers configured, the sign-in page asks
+  for the email first and sends a verified domain's people to their provider.
 - Drilling a governed metric (P7-T2): a scorecard or trendline showing one metric built from its
   parts (`POST /api/v1/metrics/{id}/builder`) now drills: the records route lists the records the
   metric's definition counts in its current period, as the viewer, and `metric_parity` gives the

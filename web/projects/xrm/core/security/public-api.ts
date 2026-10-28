@@ -45,6 +45,10 @@ export { UserAccessComponent }            from './user-access.component';
 export { UsersListComponent }             from './users-list.component';
 export { OrganizationsListComponent }     from './organizations-list.component';
 export { RecordSharesComponent }          from './record-shares.component';
+// Q1-T14: the sign-in provider screens.
+export { OidcProvidersComponent }         from './oidc-providers.component';
+export { OidcProviderFormComponent, applyPreset, bodyOf, draftOf, emptyDraft } from './oidc-provider-form.component';
+export type { OidcDraft, OidcTab } from './oidc-provider-form.component';
 export type {
   RoleEntityAccessItem, UpsertEntityAccessGrantBody,
   UserRoleItem, AssignUserRoleBody, UserListItem,

@@ -19,6 +19,9 @@ export const hostAr = {
     invalidCode:        'الرمز غير صحيح أو انتهت صلاحيته. يرجى المحاولة مرة أخرى.',
     googleError:        'فشل تسجيل الدخول عبر Google. يرجى المحاولة مرة أخرى.',
     checkingBrowser:    'جارٍ التحقق من المتصفح قبل تسجيل الدخول…',
+    continue:           'متابعة',
+    checkingEmail:      'جارٍ التحقق من طرق تسجيل الدخول…',
+    otherEmail:         'استخدام بريد آخر',
   },
   securitySettings: {
     googleLinkConflict: 'حساب Google هذا مرتبط بالفعل بمستخدم آخر.',
