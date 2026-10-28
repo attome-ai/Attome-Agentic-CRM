@@ -65,11 +65,15 @@ pub async fn build_timeline(
     Ok(PaginatedResponse::new(page.items, total, 1, MAX_PAGE_SIZE))
 }
 
+/// Read a ticket's timeline
+///
+/// The ticket's audit events, status changes, communications and linked decisions in one feed, newest
+/// first, filtered to what the caller may read. Anyone who may read tickets.
 #[utoipa::path(
     get,
     path = "/api/v1/ticket/{id}/timeline",
     tag = "service",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The ticket")),
     responses(
         (status = 200, description = "Assembled, permission-filtered ticket timeline", body = PaginatedResponse<TimelineEntry>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

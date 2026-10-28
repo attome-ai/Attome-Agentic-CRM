@@ -500,7 +500,10 @@ pub async fn create_channel(
     ))
 }
 
-/// Starts a direct, group or record channel.
+/// Start a chat channel
+///
+/// A direct channel (one per pair of people; asking again returns the same one), a named group, or a
+/// channel on a record, whose members must each be able to read the record.
 #[utoipa::path(
     post,
     path = "/api/v1/chat/channels",
@@ -525,7 +528,9 @@ pub(crate) async fn post_channel(
     Ok((status, Json(row)))
 }
 
-/// The caller's channels, most recently active first.
+/// List my chat channels
+///
+/// The channels the signed-in person is a member of, most recently active first, one-based pages.
 #[utoipa::path(
     get,
     path = "/api/v1/chat/channels",
@@ -570,12 +575,15 @@ pub(crate) async fn list_channels(
     )))
 }
 
-/// Adds someone to a group or record channel; any member may.
+/// Add a chat channel member
+///
+/// Adds someone to a group or record channel; any member may. On a record channel the person must be
+/// able to read the record. A channel the caller is not in is 404.
 #[utoipa::path(
     post,
     path = "/api/v1/chat/channels/{id}/members",
     tag = "chat",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The channel")),
     request_body = AddMember,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::BusinessEvent, AuditOperation::Update)])))),
     responses(
@@ -638,12 +646,14 @@ pub(crate) async fn add_member(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Leaves a channel, or (its owner) removes someone from it.
+/// Leave or remove from a chat channel
+///
+/// A member leaves the channel, or its owner removes someone from it.
 #[utoipa::path(
     delete,
     path = "/api/v1/chat/channels/{id}/members/{user_id}",
     tag = "chat",
-    params(("id" = Uuid, Path), ("user_id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The channel"), ("user_id" = Uuid, Path, description = "The member")),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::BusinessEvent, AuditOperation::Update)])))),
     responses(
         (status = 204, description = "Removed"),
@@ -696,12 +706,14 @@ pub(crate) async fn remove_member(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Sets how long the channel keeps messages (its owner only).
+/// Set a chat channel's retention
+///
+/// How long the channel keeps messages; its owner only.
 #[utoipa::path(
     put,
     path = "/api/v1/chat/channels/{id}/retention",
     tag = "chat",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The channel")),
     request_body = SetRetention,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::BusinessEvent, AuditOperation::Update)])))),
     responses(
@@ -763,14 +775,16 @@ const MESSAGE_SELECT: &str = "SELECT g.id, g.channel_id, g.thread_root_id, g.aut
           WHERE r.thread_root_id = g.id AND r.deleted_at IS NULL) AS reply_count \
    FROM chat_message g";
 
-/// A channel's messages: top-level ones newest first, or one thread oldest
-/// first.
+/// List a channel's messages
+///
+/// Top-level messages newest first, or one thread's replies oldest first. Members only; anyone else
+/// gets 404.
 #[utoipa::path(
     get,
     path = "/api/v1/chat/channels/{id}/messages",
     operation_id = "list_channel_messages",
     tag = "chat",
-    params(("id" = Uuid, Path), MessageQuery),
+    params(("id" = Uuid, Path, description = "The channel"), MessageQuery),
     responses(
         (status = 200, description = "Success", body = CursorPage<MessageRow>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -834,12 +848,15 @@ pub(crate) async fn list_messages(
     Ok(Json(CursorPage::new(rows, next)))
 }
 
-/// Posts a message, optionally in a thread and with a document.
+/// Post a chat message
+///
+/// Posts a message, optionally as a reply in a thread and with a document the poster may read.
+/// Members only.
 #[utoipa::path(
     post,
     path = "/api/v1/chat/channels/{id}/messages",
     tag = "chat",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The channel")),
     request_body = NewMessage,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::BusinessEvent, AuditOperation::Create)])))),
     responses(
@@ -916,13 +933,15 @@ pub(crate) async fn post_message(
     Ok((StatusCode::CREATED, Json(row)))
 }
 
-/// Deletes a message: its author or the channel's owner. Under a legal hold
-/// the text is kept for the hold and only hidden.
+/// Delete a chat message
+///
+/// Its author or the channel's owner deletes it. Under a legal hold the text is kept for the hold and
+/// only hidden.
 #[utoipa::path(
     delete,
     path = "/api/v1/chat/channels/{id}/messages/{message_id}",
     tag = "chat",
-    params(("id" = Uuid, Path), ("message_id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The channel"), ("message_id" = Uuid, Path, description = "The message")),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::BusinessEvent, AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Deleted"),
@@ -987,13 +1006,15 @@ pub(crate) async fn delete_message(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Marks the channel read up to now.
+/// Mark a chat channel read
+///
+/// Marks the channel read up to now for the signed-in member.
 #[utoipa::path(
     post,
     path = "/api/v1/chat/channels/{id}/read",
     operation_id = "mark_channel_read",
     tag = "chat",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The channel")),
     extensions(("x-audit-exempt" = json!(x_audit_exempt(
         ExemptReason::UserPreference,
         None,

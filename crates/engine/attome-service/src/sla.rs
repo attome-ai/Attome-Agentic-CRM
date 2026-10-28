@@ -839,11 +839,15 @@ pub async fn apply_policy(
     }))
 }
 
+/// Apply an SLA policy to a ticket
+///
+/// Assigns the SLA policy that matches the ticket and computes its resolution deadline in business
+/// time, or records why it could not. Needs update rights on tickets. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/ticket/{id}/apply-sla-policy",
     tag = "service",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The ticket")),
     responses(
         (status = 200, description = "Policy applied", body = ApplySlaPolicyResponse),
         (status = 204, description = "No matching or fallback SLA policy is configured"),

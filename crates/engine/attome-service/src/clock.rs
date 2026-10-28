@@ -842,11 +842,16 @@ pub struct RecalculateUnresolvedRequest {
     pub limit: Option<i64>,
 }
 
+/// Recalculate a ticket's unresolved SLA
+///
+/// For a ticket whose SLA deadline could not be worked out (its business calendar did not resolve),
+/// tries again: stores the deadline when it resolves now, or records another attempt. Any other
+/// ticket is left alone, so it is safe to repeat. Needs update rights on tickets. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/ticket/{id}/sla/recalculate",
     tag = "service",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The ticket")),
     responses(
         (status = 200, description = "The ticket's SLA state after recalculation (unchanged unless it was unresolved)", body = SlaRecalculation),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -882,6 +887,11 @@ async fn recalculate_ticket_route(
     Ok(Json(result))
 }
 
+/// Recalculate every unresolved SLA
+///
+/// The same recalculation for up to 500 tickets after `after`, in id order; call again with
+/// `next_after` until it is `null`. Each ticket commits on its own. Automation administrators only.
+/// Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/ticket/sla/recalculate-unresolved",
@@ -912,11 +922,15 @@ async fn recalculate_unresolved_route(
     Ok(Json(summary))
 }
 
+/// Pause a ticket's SLA clock
+///
+/// Stops the ticket's SLA time from counting until it is resumed; a second pause or resume already
+/// in progress is 409. Needs update rights on tickets. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/ticket/{id}/sla-clock/pause",
     tag = "service",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The ticket")),
     request_body = PauseClockRequest,
     responses(
         (status = 200, description = "Clock paused", body = ClockView),
@@ -941,11 +955,15 @@ async fn pause_clock_route(
     Ok(Json(view))
 }
 
+/// Resume a ticket's SLA clock
+///
+/// Starts the clock again now and recalculates the deadline from the time left. Needs update rights
+/// on tickets. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/ticket/{id}/sla-clock/resume",
     tag = "service",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The ticket")),
     responses(
         (status = 200, description = "Clock resumed", body = ClockView),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
