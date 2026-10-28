@@ -345,7 +345,7 @@ fn config_item(key: &str, cfg: &attome_config::OidcProviderConfig) -> OidcProvid
         client_id: cfg.client_id.clone(),
         scopes: cfg.scopes.clone(),
         claim_map: json!({ "email": cfg.email_claim, "mfa_acr": cfg.mfa_acr_values }),
-        link_mode: "link_only".to_owned(),
+        link_mode: "create".to_owned(),
         default_role_ref: None,
         trusted_for_mfa: cfg.trust_idp_mfa,
         tenant_allowlist: Vec::new(),

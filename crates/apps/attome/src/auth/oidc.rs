@@ -355,10 +355,11 @@ pub(super) async fn oidc_callback(
 /// (enterprise-audit remediation, Phase 2.1); everything else, BAU-25's
 /// provider-cancelled `error` redirect included, gets the generic one.
 fn oidc_error_redirect(state: &AppState, error: AppError) -> Response {
-    let reason = if matches!(error, AppError::Conflict(_)) {
-        "oidc_link_conflict"
-    } else {
-        "oidc_error"
+    let reason = match error {
+        // Q1-T8: a link-only provider found no account for this person.
+        AppError::Conflict("no_linked_account") => "no_linked_account",
+        AppError::Conflict(_) => "oidc_link_conflict",
+        _ => "oidc_error",
     };
     let location = format!("{}/login?{reason}=1", state.config.frontend_url());
     (StatusCode::FOUND, [(header::LOCATION, location)]).into_response()
@@ -381,11 +382,13 @@ async fn oidc_callback_inner(
     license: &super::LicenseHandle,
     bound: attome_auth::oidc::BoundState,
 ) -> Result<Response, AppError> {
-    let provider_config = state
+    let entry = state
         .oidc_providers
         .get(provider)
-        .ok_or(AppError::NotFound)?
-        .config;
+        .ok_or(AppError::NotFound)?;
+    let provider_config = entry.config.clone();
+    // Q1-T8: what the provider does the first time it sees a person.
+    let link_mode = attome_security::accounts::LinkMode::of(&entry.link_mode, entry.default_role);
 
     let identity = attome_auth::oidc::complete_login(
         &state.redis_coordination,
@@ -411,6 +414,7 @@ async fn oidc_callback_inner(
         provider,
         &identity.sub,
         &identity.email,
+        &link_mode,
         &active_license,
     )
     .await?;

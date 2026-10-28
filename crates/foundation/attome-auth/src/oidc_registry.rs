@@ -49,7 +49,7 @@ pub struct ProviderEntry {
     pub id: Option<Uuid>,
     pub config: OidcProviderConfig,
     pub display_name_ar: Option<String>,
-    /// `link_only` or `create` (Q1-T8); configuration providers link only.
+    /// `link_only` or `create` (Q1-T8); configured providers create.
     pub link_mode: String,
     pub default_role: Option<Uuid>,
     /// Whether the provider's own MFA counts as a second factor (Q1-T11).
@@ -133,7 +133,9 @@ fn from_config(key: &str, config: &OidcProviderConfig) -> ProviderEntry {
         id: None,
         config: config.clone(),
         display_name_ar: None,
-        link_mode: "link_only".to_owned(),
+        // Q1-T8: a configured provider keeps creating accounts, as it always
+        // has; only a provider added on screen can be link-only.
+        link_mode: "create".to_owned(),
         default_role: None,
         trusted_for_mfa: config.trust_idp_mfa,
         tenant_allowlist: Vec::new(),

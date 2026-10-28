@@ -369,9 +369,32 @@ pub async fn link_oidc_identity(
     provider_key: &str,
     sub: &str,
     email: &str,
+    mode: &LinkMode,
     _license: &ModuleSet,
 ) -> Result<Uuid, AppError> {
-    link_external_identity(db, provider_key, sub, email).await
+    link_external_identity(db, provider_key, sub, email, mode).await
+}
+
+/// Q1-T8: what a provider does the first time it sees a person.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LinkMode {
+    /// Link to an existing active account with the same verified email (or
+    /// an administrator's pre-made link); never create one. A person with
+    /// neither is refused with `Conflict("no_linked_account")`.
+    LinkOnly,
+    /// Link as above, or create the account; a created account gets
+    /// `default_role` in the same transaction.
+    Create { default_role: Option<Uuid> },
+}
+
+impl LinkMode {
+    /// The mode a provider entry names (`link_only` or `create`).
+    pub fn of(link_mode: &str, default_role: Option<Uuid>) -> Self {
+        match link_mode {
+            "create" => Self::Create { default_role },
+            _ => Self::LinkOnly,
+        }
+    }
 }
 
 /// P-federation-linking-policy §4.3 — binds `(provider_key, sub)` directly to
@@ -620,6 +643,7 @@ async fn link_external_identity(
     provider_key: &str,
     sub: &str,
     email: &str,
+    mode: &LinkMode,
 ) -> Result<Uuid, AppError> {
     let email = attome_auth::email_identity::normalize_email(email);
     reject_reserved_service_email(&email)?;
@@ -690,17 +714,51 @@ async fn link_external_identity(
             reject_if_linking_would_bypass_existing_credential(&mut tx, &email, provider_key)
                 .await?;
 
-            let user_id: Uuid = sqlx::query_scalar(
+            // Q1-T8: a link-only provider never creates the account.
+            if *mode == LinkMode::LinkOnly {
+                let known: Option<Uuid> = sqlx::query_scalar(
+                    "SELECT id FROM user_account WHERE email = $1 AND is_active IS NOT FALSE",
+                )
+                .bind(&email)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(AppError::internal)?;
+                if known.is_none() {
+                    return Err(AppError::Conflict("no_linked_account"));
+                }
+            }
+
+            let (user_id, created): (Uuid, bool) = sqlx::query_as(
                 "INSERT INTO user_account (id, email, created_at, last_login, is_active, email_verified)
                  VALUES (uuidv7(), $1, now(), now(), true, true)
                  ON CONFLICT (email) WHERE is_active DO UPDATE
                      SET last_login = now(), email_verified = true
-                 RETURNING id",
+                 RETURNING id, (xmax = 0)",
             )
             .bind(&email)
             .fetch_one(&mut *tx)
             .await
             .map_err(AppError::internal)?;
+
+            // Q1-T8: a created account gets the provider's default role in the
+            // same transaction. (A provider's default role never carries
+            // `system.admin`; the provider admin refuses it at save.)
+            if let (
+                true,
+                LinkMode::Create {
+                    default_role: Some(role),
+                },
+            ) = (created, mode)
+            {
+                sqlx::query(
+                    "INSERT INTO user_account_mm_role (user_ref, role_ref)                      SELECT $1, id FROM role WHERE id = $2 AND is_deleted = false",
+                )
+                .bind(user_id)
+                .bind(role)
+                .execute(&mut *tx)
+                .await
+                .map_err(AppError::internal)?;
+            }
 
             sqlx::query(
                 "INSERT INTO user_identity (id, user_ref, provider_key, provider_sub, email)

@@ -17,13 +17,17 @@
 
 use attome_db::DbPool;
 use attome_security::accounts::{
-    link_google_account, link_google_to_user, link_identity_to_user, link_oidc_identity,
+    LinkMode, link_google_account, link_google_to_user, link_identity_to_user, link_oidc_identity,
     list_identities_for_user,
 };
 use attome_testkit::skip_if_no_db;
 use attome_types::AppError;
 use sqlx::postgres::PgPoolOptions;
 use uuid::Uuid;
+
+/// Q1-T8: what every provider did before link modes existed, and what a
+/// configured provider still does.
+const CREATE: LinkMode = LinkMode::Create { default_role: None };
 
 /// Every linking path still takes the active licence (a parameter kept for its
 /// callers), but since CLEANUP-REVIEW 1.2 (D-778) no path reads it to gate
@@ -169,7 +173,7 @@ async fn link_oidc_identity_first_login_succeeds() {
     let email = format!("oidc-{}@example.test", Uuid::now_v7());
     let sub = format!("oidc-sub-first-login-{}", Uuid::now_v7());
 
-    link_oidc_identity(&db, "test-provider", &sub, &email, &test_license())
+    link_oidc_identity(&db, "test-provider", &sub, &email, &CREATE, &test_license())
         .await
         .expect("first-time link_oidc_identity must not 500");
 }
@@ -260,7 +264,7 @@ async fn link_oidc_identity_rejects_a_disabled_existing_user() {
     let email = format!("oidc-disabled-{}@example.test", Uuid::now_v7());
     let sub = format!("oidc-sub-disabled-{}", Uuid::now_v7());
 
-    let user_id = link_oidc_identity(&db, "test-provider", &sub, &email, &test_license())
+    let user_id = link_oidc_identity(&db, "test-provider", &sub, &email, &CREATE, &test_license())
         .await
         .expect("first login must succeed");
     sqlx::query("UPDATE user_account SET is_active = false WHERE id = $1")
@@ -269,7 +273,8 @@ async fn link_oidc_identity_rejects_a_disabled_existing_user() {
         .await
         .expect("disable the test user");
 
-    let result = link_oidc_identity(&db, "test-provider", &sub, &email, &test_license()).await;
+    let result =
+        link_oidc_identity(&db, "test-provider", &sub, &email, &CREATE, &test_license()).await;
     assert!(
         matches!(result, Err(AppError::Forbidden)),
         "a disabled user's repeat OIDC login must be rejected, got {result:?}"
@@ -285,17 +290,31 @@ async fn link_oidc_identity_rejects_resurrection_of_a_disabled_email() {
     let original_sub = format!("oidc-sub-original-{}", Uuid::now_v7());
     let new_sub = format!("oidc-sub-new-{}", Uuid::now_v7());
 
-    let original_id =
-        link_oidc_identity(&db, "test-provider", &original_sub, &email, &test_license())
-            .await
-            .expect("first login must succeed");
+    let original_id = link_oidc_identity(
+        &db,
+        "test-provider",
+        &original_sub,
+        &email,
+        &CREATE,
+        &test_license(),
+    )
+    .await
+    .expect("first login must succeed");
     sqlx::query("UPDATE user_account SET is_active = false WHERE id = $1")
         .bind(original_id)
         .execute(&db)
         .await
         .expect("disable the test user");
 
-    let result = link_oidc_identity(&db, "test-provider", &new_sub, &email, &test_license()).await;
+    let result = link_oidc_identity(
+        &db,
+        "test-provider",
+        &new_sub,
+        &email,
+        &CREATE,
+        &test_license(),
+    )
+    .await;
     assert!(
         matches!(result, Err(AppError::Forbidden)),
         "an OIDC login for a disabled email (new sub, never linked before) must not \
@@ -328,7 +347,8 @@ async fn link_oidc_identity_rejects_linking_to_a_password_account() {
     .expect("seed a password-registered account");
 
     let sub = format!("oidc-sub-conflict-{}", Uuid::now_v7());
-    let result = link_oidc_identity(&db, "test-provider", &sub, &email, &test_license()).await;
+    let result =
+        link_oidc_identity(&db, "test-provider", &sub, &email, &CREATE, &test_license()).await;
     assert!(
         matches!(result, Err(AppError::Conflict(_))),
         "an OIDC login must not silently link to an account that already has \
@@ -357,11 +377,12 @@ async fn link_oidc_identity_rejects_linking_from_a_second_provider() {
     let sub_a = format!("provider-a-sub-{}", Uuid::now_v7());
     let sub_b = format!("provider-b-sub-{}", Uuid::now_v7());
 
-    link_oidc_identity(&db, "provider-a", &sub_a, &email, &test_license())
+    link_oidc_identity(&db, "provider-a", &sub_a, &email, &CREATE, &test_license())
         .await
         .expect("first provider's first login must succeed");
 
-    let result = link_oidc_identity(&db, "provider-b", &sub_b, &email, &test_license()).await;
+    let result =
+        link_oidc_identity(&db, "provider-b", &sub_b, &email, &CREATE, &test_license()).await;
     assert!(
         matches!(result, Err(AppError::Conflict(_))),
         "a second provider asserting the same email must not silently link \
@@ -378,12 +399,13 @@ async fn link_oidc_identity_repeat_login_same_provider_still_succeeds() {
     let email = format!("oidc-repeat-{}@example.test", Uuid::now_v7());
     let sub = format!("oidc-sub-repeat-{}", Uuid::now_v7());
 
-    let first_id = link_oidc_identity(&db, "test-provider", &sub, &email, &test_license())
+    let first_id = link_oidc_identity(&db, "test-provider", &sub, &email, &CREATE, &test_license())
         .await
         .expect("first login must succeed");
-    let second_id = link_oidc_identity(&db, "test-provider", &sub, &email, &test_license())
-        .await
-        .expect("repeat login from the same provider must not be blocked");
+    let second_id =
+        link_oidc_identity(&db, "test-provider", &sub, &email, &CREATE, &test_license())
+            .await
+            .expect("repeat login from the same provider must not be blocked");
     assert_eq!(first_id, second_id);
 }
 
@@ -396,7 +418,7 @@ async fn link_oidc_identity_brand_new_account_still_jit_creates() {
     let email = format!("oidc-fresh-{}@example.test", Uuid::now_v7());
     let sub = format!("oidc-sub-fresh-{}", Uuid::now_v7());
 
-    link_oidc_identity(&db, "test-provider", &sub, &email, &test_license())
+    link_oidc_identity(&db, "test-provider", &sub, &email, &CREATE, &test_license())
         .await
         .expect("a brand-new account with no prior credential must JIT-create, not conflict");
 }
@@ -447,7 +469,8 @@ async fn link_oidc_identity_rejects_linking_to_a_google_only_account() {
         .expect("seed a Google-only account");
 
     let sub = format!("oidc-sub-vs-google-{}", Uuid::now_v7());
-    let result = link_oidc_identity(&db, "test-provider", &sub, &email, &test_license()).await;
+    let result =
+        link_oidc_identity(&db, "test-provider", &sub, &email, &CREATE, &test_license()).await;
     assert!(
         matches!(result, Err(AppError::Conflict(_))),
         "an OIDC login must not silently link to a Google-only account, \
@@ -849,6 +872,7 @@ async fn oidc_jit_creates_a_new_account_even_with_no_free_seats() {
         "seat-gate-provider",
         &format!("seat-gate-sub-{}", Uuid::now_v7()),
         &email,
+        &CREATE,
         &license,
     )
     .await
@@ -875,8 +899,8 @@ async fn concurrent_oidc_jit_creates_both_succeed() {
     let sub_a = format!("concurrent-sub-a-{}", Uuid::now_v7());
     let sub_b = format!("concurrent-sub-b-{}", Uuid::now_v7());
     let (ra, rb) = tokio::join!(
-        link_oidc_identity(&db, "concurrent-provider", &sub_a, &a, &license),
-        link_oidc_identity(&db, "concurrent-provider", &sub_b, &b, &license),
+        link_oidc_identity(&db, "concurrent-provider", &sub_a, &a, &CREATE, &license),
+        link_oidc_identity(&db, "concurrent-provider", &sub_b, &b, &CREATE, &license),
     );
     ra.expect("first concurrent JIT create must succeed");
     rb.expect("second concurrent JIT create must succeed");
@@ -937,7 +961,8 @@ async fn oidc_jit_for_a_service_principal_address_is_refused() {
     ] {
         let user_id = ensure_service_row(&db, email).await;
         let sub = format!("attacker-{}", Uuid::now_v7());
-        let result = link_oidc_identity(&db, "test-provider", &sub, email, &test_license()).await;
+        let result =
+            link_oidc_identity(&db, "test-provider", &sub, email, &CREATE, &test_license()).await;
         assert!(
             matches!(result, Err(AppError::Forbidden)),
             "{email}: an IdP asserting a service address must be refused, got {result:?}"
@@ -1034,4 +1059,112 @@ async fn generic_update_cannot_change_a_service_principal_email() {
     .await
     .expect("a non-service row is not guarded");
     tx.rollback().await.expect("rollback");
+}
+
+// ── Q1-T8: a provider's first-sign-in mode ────────────────────────────────
+
+#[tokio::test]
+async fn link_only_refuses_unknown_email() {
+    let db = skip_if_no_db!(test_db().await);
+    let email = format!("link-only-{}@example.test", Uuid::now_v7());
+    let sub = format!("link-only-sub-{}", Uuid::now_v7());
+
+    let result = link_oidc_identity(
+        &db,
+        "test-provider",
+        &sub,
+        &email,
+        &LinkMode::LinkOnly,
+        &test_license(),
+    )
+    .await;
+    assert!(
+        matches!(result, Err(AppError::Conflict("no_linked_account"))),
+        "{result:?}"
+    );
+    let created: bool =
+        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM user_account WHERE email = $1)")
+            .bind(&email)
+            .fetch_one(&db)
+            .await
+            .unwrap();
+    assert!(!created, "a link-only provider never creates an account");
+}
+
+#[tokio::test]
+async fn link_only_links_an_existing_account() {
+    let db = skip_if_no_db!(test_db().await);
+    let email = format!("link-only-known-{}@example.test", Uuid::now_v7());
+    let user_id: Uuid = sqlx::query_scalar(
+        "INSERT INTO user_account (id, email, is_active, email_verified)          VALUES (uuidv7(), $1, true, true) RETURNING id",
+    )
+    .bind(&email)
+    .fetch_one(&db)
+    .await
+    .unwrap();
+    let linked = link_oidc_identity(
+        &db,
+        "test-provider",
+        &format!("link-only-known-sub-{}", Uuid::now_v7()),
+        &email,
+        &LinkMode::LinkOnly,
+        &test_license(),
+    )
+    .await
+    .expect("an existing account is linked");
+    assert_eq!(linked, user_id);
+}
+
+#[tokio::test]
+async fn create_assigns_default_role() {
+    let db = skip_if_no_db!(test_db().await);
+    let role_id = Uuid::now_v7();
+    sqlx::query("INSERT INTO role (id, name, owner_layer) VALUES ($1, $2, 'project')")
+        .bind(role_id)
+        .bind(format!("provider-default-{role_id}"))
+        .execute(&db)
+        .await
+        .unwrap();
+    let email = format!("create-role-{}@example.test", Uuid::now_v7());
+    let user_id = link_oidc_identity(
+        &db,
+        "test-provider",
+        &format!("create-role-sub-{}", Uuid::now_v7()),
+        &email,
+        &LinkMode::Create {
+            default_role: Some(role_id),
+        },
+        &test_license(),
+    )
+    .await
+    .expect("created");
+    let has_role: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM user_account_mm_role                          WHERE user_ref = $1 AND role_ref = $2 AND NOT is_deleted)",
+    )
+    .bind(user_id)
+    .bind(role_id)
+    .fetch_one(&db)
+    .await
+    .unwrap();
+    assert!(
+        has_role,
+        "the created account holds the provider's default role"
+    );
+}
+
+#[tokio::test]
+async fn reserved_service_email_never_linked_by_provider() {
+    let db = skip_if_no_db!(test_db().await);
+    for mode in [LinkMode::LinkOnly, LinkMode::Create { default_role: None }] {
+        let result = link_oidc_identity(
+            &db,
+            "test-provider",
+            &format!("reserved-sub-{}", Uuid::now_v7()),
+            "workflow@internal.attome",
+            &mode,
+            &test_license(),
+        )
+        .await;
+        assert!(result.is_err(), "{mode:?}: {result:?}");
+    }
 }
