@@ -182,6 +182,9 @@ async fn newest_draft(state: &EngineState, meeting_id: Uuid) -> Result<Uuid, App
     id.ok_or(AppError::NotFound)
 }
 
+/// Get a meeting brief
+///
+/// The brief prepared for the meeting. Anyone who may read the meeting.
 #[utoipa::path(
     get,
     path = "/api/v1/ai/meetings/{id}/brief",
@@ -202,6 +205,9 @@ async fn get_meeting_brief(
     Ok(Json(brief_for(&state, &ctx, meeting_id).await?))
 }
 
+/// Regenerate a meeting brief
+///
+/// Runs the meeting brief action again now, as the caller.
 #[utoipa::path(
     post,
     path = "/api/v1/ai/meetings/{id}/brief/regenerate",
@@ -233,6 +239,9 @@ async fn regenerate_meeting_brief(
     ))
 }
 
+/// Write meeting notes from a transcript
+///
+/// Queues the meeting notes action for a transcript; 202.
 #[utoipa::path(
     post,
     path = "/api/v1/ai/meetings/{id}/notes",
@@ -284,6 +293,9 @@ async fn post_meeting_notes(
     ))
 }
 
+/// Confirm meeting notes
+///
+/// Confirms the drafted notes, with their `If-Match` row version, through the confirm notes action.
 #[utoipa::path(
     post,
     path = "/api/v1/ai/meetings/{id}/notes/confirm",

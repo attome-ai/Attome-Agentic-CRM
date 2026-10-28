@@ -141,6 +141,10 @@ pub struct UndoRunView {
     pub items: PaginatedResponse<UndoItemView>,
 }
 
+/// Preview undoing an agent session
+///
+/// The steps that would undo what the session changed, planned as the caller, writing nothing. The
+/// session's owner or a holder of `ai_agent.supervise`.
 #[utoipa::path(
     get,
     path = "/api/v1/ai/agent-sessions/{id}/undo-preview",
@@ -171,6 +175,10 @@ pub(crate) async fn get_undo_preview(
     Ok(Json(PaginatedResponse::new(steps, total, 1, total.max(1))))
 }
 
+/// Undo an agent session
+///
+/// Stores the undo plan and queues it; 202 with the run's id. The session's owner or a holder of
+/// `ai_agent.supervise`. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/ai/agent-sessions/{id}/undo",
@@ -277,6 +285,9 @@ type RunRow = (
     Option<Value>,
 );
 
+/// Read an undo run
+///
+/// The run and a page of its items, each step's outcome. Whoever asked for it, or a supervisor.
 #[utoipa::path(
     get,
     path = "/api/v1/ai/undo-runs/{id}",

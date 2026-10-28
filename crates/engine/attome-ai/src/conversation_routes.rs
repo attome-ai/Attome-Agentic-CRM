@@ -359,8 +359,10 @@ async fn rate_limit(state: &EngineState, key: String, per_minute: i32) -> Result
 // Handlers
 // ---------------------------------------------------------------------------
 
-/// `POST /api/v1/ai/conversations` — starts a conversation and its agent
-/// session from an agent definition.
+/// Start an AI conversation
+///
+/// Starts a conversation and its agent session from an agent definition, under that agent's limits
+/// and the caller's own access.
 #[utoipa::path(
     post,
     path = "/api/v1/ai/conversations",
@@ -464,8 +466,9 @@ async fn start_conversation(
     }))
 }
 
-/// `GET /api/v1/ai/conversations` — the caller's own conversations, newest
-/// first.
+/// List my AI conversations
+///
+/// The caller's own conversations, newest first, one-based pages.
 #[utoipa::path(
     get,
     path = "/api/v1/ai/conversations",
@@ -495,8 +498,9 @@ async fn list_conversations(
     )))
 }
 
-/// `GET /api/v1/ai/conversations/{id}` — metadata and the governance in
-/// effect.
+/// Get an AI conversation
+///
+/// The conversation's details and the governance in effect for it.
 #[utoipa::path(
     get,
     path = "/api/v1/ai/conversations/{id}",
@@ -541,8 +545,10 @@ async fn get_conversation(
     }))
 }
 
-/// `POST /api/v1/ai/conversations/{id}/messages` — sends a message and runs
-/// one turn.
+/// Send a message to an AI conversation
+///
+/// Sends the caller's message and runs one turn of the agent; a write the agent proposes waits for
+/// confirmation or approval as its tier requires.
 #[utoipa::path(
     post,
     path = "/api/v1/ai/conversations/{id}/messages",
@@ -654,12 +660,11 @@ pub struct RunStarted {
     pub status: String,
 }
 
-/// `POST /api/v1/ai/conversations/{id}/runs` — gives the agent a task and
-/// returns at once while it works through it in the background (N7-T1):
-/// the same turn loop, gate and ledger as a chat message, bounded by
-/// `max_steps`, ending in one of the turn's terminal states (completed,
-/// awaiting confirmation or approval, a limit, a failure). Its steps and end
-/// state are on the conversation's stream.
+/// Give the agent a task to run
+///
+/// Returns at once while the agent works through the task in the background, with the same turn loop,
+/// gate and ledger as a chat message, bounded by `max_steps`; it ends completed, waiting for
+/// confirmation or approval, at a limit, or failed. Its steps are on the conversation's stream.
 #[utoipa::path(
     post,
     path = "/api/v1/ai/conversations/{id}/runs",
@@ -816,8 +821,9 @@ fn turn_response(outcome: TurnOutcome, grounding: TurnGrounding) -> TurnResponse
     }
 }
 
-/// `GET /api/v1/ai/conversations/{id}/messages` — the transcript, oldest
-/// first, paged by ordinal.
+/// Read an AI conversation's transcript
+///
+/// The messages, oldest first, one-based pages.
 #[utoipa::path(
     get,
     path = "/api/v1/ai/conversations/{id}/messages",
@@ -891,9 +897,10 @@ async fn list_messages(
     )))
 }
 
-/// `PUT /api/v1/ai/conversations/{id}/messages/{message_id}/feedback` — the
-/// caller's thumbs up or down on a turn's answer. Changing a vote replaces
-/// it; there is one current vote per user and message.
+/// Rate an AI answer
+///
+/// The caller's thumbs up or down on a turn's answer; voting again replaces it, one vote per person
+/// and message.
 #[utoipa::path(
     put,
     path = "/api/v1/ai/conversations/{id}/messages/{message_id}/feedback",
@@ -977,10 +984,10 @@ fn is_turn_final(m: &conversation::MessageRow) -> bool {
     m.role == "assistant" && m.terminal_state.is_some()
 }
 
-/// `GET /api/v1/ai/conversations/{id}/tool-calls` — the conversation's tool
-/// calls, oldest first. A read projection for display: `arguments` is shown on
-/// a confirmation card and never sent back (I-13); the stored outcome is not
-/// exposed.
+/// List a conversation's tool calls
+///
+/// The tool calls oldest first, for display: `arguments` show on a confirmation card and are never
+/// sent back, and the stored outcome is not exposed.
 #[utoipa::path(
     get,
     path = "/api/v1/ai/conversations/{id}/tool-calls",
@@ -1012,8 +1019,10 @@ async fn list_tool_calls(
     )))
 }
 
-/// `POST /api/v1/ai/conversations/{id}/tool-calls/{tid}/confirm` — executes a
-/// **server-persisted** proposal as the agent action it is (I-13).
+/// Confirm an AI proposal
+///
+/// Runs the server-stored proposal as the agent action it is, after checking the displayed
+/// `arguments_hash` still matches; the client never sends arguments of its own.
 #[utoipa::path(
     post,
     path = "/api/v1/ai/conversations/{id}/tool-calls/{tid}/confirm",
@@ -1166,8 +1175,9 @@ fn refusal_response(refusal: ConfirmRefusal) -> Result<Response, AppError> {
     Ok(response.into_response())
 }
 
-/// `DELETE /api/v1/ai/conversations/{id}/tool-calls/{tid}` — rejects a
-/// pending proposal.
+/// Reject an AI proposal
+///
+/// The pending proposal is refused and never runs.
 #[utoipa::path(
     delete,
     path = "/api/v1/ai/conversations/{id}/tool-calls/{tid}",
@@ -1209,8 +1219,9 @@ fn status_outcome(status: Status) -> &'static str {
     status.as_str()
 }
 
-/// `DELETE /api/v1/ai/conversations/{id}` — ends the conversation and revokes
-/// its session.
+/// End an AI conversation
+///
+/// Ends the conversation and revokes its agent session.
 #[utoipa::path(
     delete,
     path = "/api/v1/ai/conversations/{id}",

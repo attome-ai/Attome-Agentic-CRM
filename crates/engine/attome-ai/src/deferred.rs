@@ -455,8 +455,10 @@ async fn retry_later(state: &EngineState, id: Uuid, reason: &str) -> Result<(), 
 
 // ── Routes ──────────────────────────────────────────────────────────────────
 
-/// `GET /api/v1/ai/deferred-actions` — the caller's held actions, newest
-/// first; an administrator sees everyone's.
+/// List held AI actions
+///
+/// The caller's actions held for an undo window or staged for review, newest first; an administrator
+/// sees everyone's.
 #[utoipa::path(
     get,
     path = "/api/v1/ai/deferred-actions",
@@ -504,8 +506,9 @@ async fn list_deferred(
     )))
 }
 
-/// `POST /api/v1/ai/deferred-actions/{id}/cancel` — cancels a held action
-/// before it runs. The person it acts for, or an administrator.
+/// Cancel a held AI action
+///
+/// Cancels a held action before it runs. The person it acts for, or an administrator. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/ai/deferred-actions/{id}/cancel",
@@ -692,9 +695,10 @@ fn page(items: Vec<DeferredAction>) -> PaginatedResponse<DeferredAction> {
     )
 }
 
-/// `POST /api/v1/ai/deferred-actions/apply` — runs staged actions: one
-/// agent session's, or chosen ones, now or after an undo window, in the
-/// order they were staged.
+/// Apply staged AI actions
+///
+/// Runs one agent session's staged actions, or chosen ones, now or after an undo window, in the order
+/// they were staged. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/ai/deferred-actions/apply",
@@ -719,8 +723,9 @@ async fn apply_staged(
     )))
 }
 
-/// `POST /api/v1/ai/deferred-actions/discard` — discards staged actions so
-/// they never run.
+/// Discard staged AI actions
+///
+/// The staged actions never run. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/ai/deferred-actions/discard",

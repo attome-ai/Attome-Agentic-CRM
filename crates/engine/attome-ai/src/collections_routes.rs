@@ -324,6 +324,10 @@ pub async fn set_promise_status(
     change_promise(state, ctx, promise, expected, json!({ "status": status })).await
 }
 
+/// List an invoice's payment promises
+///
+/// The promises to pay recorded on the invoice, by people or agents, with their status. Anyone who
+/// may read the invoice.
 #[utoipa::path(
     get,
     path = "/api/v1/ai/collections/invoices/{id}/promises",
@@ -345,6 +349,9 @@ async fn list_invoice_promises(
     Ok(Json(invoice_promises(&state, &ctx, invoice, &page).await?))
 }
 
+/// List an invoice's payment reminders
+///
+/// The reminders sent or planned for the invoice. Anyone who may read the invoice.
 #[utoipa::path(
     get,
     path = "/api/v1/ai/collections/invoices/{id}/reminders",
@@ -366,6 +373,10 @@ async fn list_invoice_reminders(
     Ok(Json(invoice_reminders(&state, &ctx, invoice, &page).await?))
 }
 
+/// Confirm a payment promise
+///
+/// Confirms a promise an agent recorded (pending review). Needs update rights on the invoice and the
+/// promise's `If-Match` row version. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/ai/collections/promises/{id}/confirm",
@@ -396,6 +407,10 @@ async fn confirm_promise(
     ))
 }
 
+/// Reject a payment promise
+///
+/// Rejects a promise an agent recorded; it no longer holds reminders back. Needs update rights on the
+/// invoice and the promise's `If-Match` row version. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/ai/collections/promises/{id}/reject",
@@ -426,6 +441,9 @@ async fn reject_promise(
     ))
 }
 
+/// Mark a payment promise kept or broken
+///
+/// Needs update rights on the invoice and the promise's `If-Match` row version. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/ai/collections/promises/{id}/status",

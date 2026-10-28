@@ -107,6 +107,9 @@ pub async fn my_followups(
     ))
 }
 
+/// List my AI follow-ups
+///
+/// The caller's open follow-ups that agents' rules found, one-based pages.
 #[utoipa::path(
     get,
     path = "/api/v1/ai/follow-ups",
@@ -193,6 +196,9 @@ pub async fn dismiss(
     Ok(())
 }
 
+/// Dismiss an AI follow-up
+///
+/// Closes the follow-up, with its `If-Match` row version; a stale or already closed one is 409.
 #[utoipa::path(
     post,
     path = "/api/v1/ai/follow-ups/{id}/dismiss",
