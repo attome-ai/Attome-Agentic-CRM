@@ -50021,6 +50021,440 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/security/oidc-presets": {
+      "get": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Sign-in provider presets",
+        "description": "What the add-provider form starts from for each common provider: the issuer template, scopes and claim names. Administrators only.",
+        "operationId": "list_oidc_presets",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OidcPresetItem"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/security/oidc-providers": {
+      "get": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Sign-in providers",
+        "description": "Every sign-in provider: the ones added here and the configured ones (read-only). A client secret is never returned, only whether it is set, when, and its fingerprint. Administrators only.",
+        "operationId": "list_oidc_providers",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_OidcProviderItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      },
+      "post": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Add a sign-in provider",
+        "description": "Adds an OpenID Connect provider people can sign in with. The client secret is sealed and never returned. Administrators only; audited.",
+        "operationId": "create_oidc_provider",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOidcProviderBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OidcProviderItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The key is a configured provider (`provider_is_config_managed`) or taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation, or no key ring is configured for client secrets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/security/oidc-providers/{id}": {
+      "delete": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Remove a sign-in provider",
+        "description": "Nobody signs in with it from now on; its links to people stay, so adding it back restores them. A configured provider is refused. Administrators only; audited.",
+        "operationId": "delete_oidc_provider",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The provider's id, or a configured provider's key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such provider",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A configured provider (`provider_is_config_managed`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "soft_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      },
+      "patch": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Change a sign-in provider",
+        "description": "Changes the given fields; a `client_secret` replaces the secret. `If-Match: \"<row_version>\"` guards against a lost update. A configured provider is refused. Administrators only; audited.",
+        "operationId": "update_oidc_provider",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The provider's id, or a configured provider's key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOidcProviderBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OidcProviderItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such provider",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A configured provider (`provider_is_config_managed`), or it changed since `If-Match`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/api/v1/admin/security/organizations": {
       "get": {
         "tags": [
@@ -155279,6 +155713,102 @@
           }
         }
       },
+      "CreateOidcProviderBody": {
+        "type": "object",
+        "description": "A new provider. `client_secret` is write-only.",
+        "required": [
+          "key",
+          "display_name",
+          "issuer",
+          "client_id",
+          "client_secret"
+        ],
+        "properties": {
+          "claim_map": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Claim names and provider settings (`email`, `groups`, `mfa_acr`, ...)."
+          },
+          "client_id": {
+            "type": "string"
+          },
+          "client_secret": {
+            "type": "string"
+          },
+          "default_role_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "display_name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "enabled": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Default true."
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string",
+            "description": "Lowercase letters, digits and `-`, 2 to 40: the `{provider}` in\n`/api/v1/auth/oidc/{provider}/login`."
+          },
+          "link_mode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`link_only` (default) or `create`."
+          },
+          "preset": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The preset the form started from, recorded for the screen."
+          },
+          "scopes": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Default `openid email profile`; must include `openid`."
+          },
+          "tenant_allowlist": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "trusted_for_mfa": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Default true."
+          }
+        }
+      },
       "CreatePageBody": {
         "type": "object",
         "required": [
@@ -177516,6 +178046,53 @@
           }
         }
       },
+      "OidcPresetItem": {
+        "type": "object",
+        "description": "One preset, as the form uses it.",
+        "required": [
+          "key",
+          "display_name",
+          "kind",
+          "issuer_template",
+          "scopes",
+          "claim_map",
+          "mfa_claim",
+          "supports_forced_reauth"
+        ],
+        "properties": {
+          "claim_map": {
+            "type": "object",
+            "description": "Suggested claim map: `email`, `groups`, `name`, `title`, `department`,\n`phone`, `manager`, and `mfa_acr`; an absent claim the provider does\nnot send by default."
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "issuer_template": {
+            "type": "string",
+            "description": "With `{placeholders}` to fill in."
+          },
+          "key": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "description": "`oidc` or `broker` (a SAML provider through an OpenID Connect broker)."
+          },
+          "mfa_claim": {
+            "type": "string",
+            "description": "`amr` or `acr`: where the provider reports MFA."
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "supports_forced_reauth": {
+            "type": "boolean"
+          }
+        }
+      },
       "OidcProviderInfo": {
         "type": "object",
         "description": "P2.8 step 5 — public provider directory for the Angular login page's\nbutton list. Only `key`/`display_name` leave the process; `issuer`/\n`client_id`/`client_secret`/`scopes`/`email_claim` are never serialized\nhere (`client_secret` in particular must never reach a GET response).",
@@ -177529,6 +178106,119 @@
           },
           "key": {
             "type": "string"
+          }
+        }
+      },
+      "OidcProviderItem": {
+        "type": "object",
+        "description": "One sign-in provider. The client secret is never part of it.",
+        "required": [
+          "key",
+          "display_name",
+          "issuer",
+          "client_id",
+          "scopes",
+          "claim_map",
+          "link_mode",
+          "trusted_for_mfa",
+          "tenant_allowlist",
+          "enabled",
+          "read_only",
+          "secret_set"
+        ],
+        "properties": {
+          "claim_map": {
+            "type": "object"
+          },
+          "client_id": {
+            "type": "string"
+          },
+          "default_role_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "display_name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The row; absent for a configured provider."
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "link_mode": {
+            "type": "string",
+            "description": "`link_only` or `create`."
+          },
+          "preset": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "read_only": {
+            "type": "boolean",
+            "description": "Defined in configuration: shown, never changed here."
+          },
+          "row_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Send back as `If-Match` on the next `PATCH`."
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "secret_fingerprint": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The first 8 hex characters of the secret's SHA-256."
+          },
+          "secret_set": {
+            "type": "boolean"
+          },
+          "secret_updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "tenant_allowlist": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "trusted_for_mfa": {
+            "type": "boolean"
           }
         }
       },
@@ -191568,6 +192258,153 @@
                   "items": {
                     "$ref": "#/components/schemas/TemplatePrompt"
                   }
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_OidcProviderItem": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One sign-in provider. The client secret is never part of it.",
+              "required": [
+                "key",
+                "display_name",
+                "issuer",
+                "client_id",
+                "scopes",
+                "claim_map",
+                "link_mode",
+                "trusted_for_mfa",
+                "tenant_allowlist",
+                "enabled",
+                "read_only",
+                "secret_set"
+              ],
+              "properties": {
+                "claim_map": {
+                  "type": "object"
+                },
+                "client_id": {
+                  "type": "string"
+                },
+                "default_role_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "display_name": {
+                  "type": "string"
+                },
+                "display_name_ar": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "The row; absent for a configured provider."
+                },
+                "issuer": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "link_mode": {
+                  "type": "string",
+                  "description": "`link_only` or `create`."
+                },
+                "preset": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "read_only": {
+                  "type": "boolean",
+                  "description": "Defined in configuration: shown, never changed here."
+                },
+                "row_version": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int64",
+                  "description": "Send back as `If-Match` on the next `PATCH`."
+                },
+                "scopes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "secret_fingerprint": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The first 8 hex characters of the secret's SHA-256."
+                },
+                "secret_set": {
+                  "type": "boolean"
+                },
+                "secret_updated_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "tenant_allowlist": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "trusted_for_mfa": {
+                  "type": "boolean"
                 }
               }
             }
@@ -223781,6 +224618,91 @@
           }
         }
       },
+      "UpdateOidcProviderBody": {
+        "type": "object",
+        "description": "A change to a provider; absent fields keep their value. A\n`client_secret` replaces the secret.",
+        "properties": {
+          "claim_map": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "client_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "client_secret": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "default_role_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "display_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "display_name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "enabled": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "issuer": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "link_mode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "scopes": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "tenant_allowlist": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "trusted_for_mfa": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        }
+      },
       "UpdatePageBody": {
         "type": "object",
         "description": "The optimistic-concurrency guard is the `If-Match` header (D-079's\ncontract, reused as-is), not a body field — `attome-api`'s\n`content_admin::update_page` parses it before this deserializes.",
@@ -227063,7 +227985,6 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -227116,5 +228037,6 @@
       }
     }
   },
-  "x-api-version": "2026-10"
+  "x-api-version": "2026-10",
+  "x-version-adapters": []
 }
