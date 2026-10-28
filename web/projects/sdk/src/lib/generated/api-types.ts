@@ -9674,6 +9674,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/security/oidc-presets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sign-in provider presets
+         * @description What the add-provider form starts from for each common provider: the issuer template, scopes and claim names. Administrators only.
+         */
+        get: operations["list_oidc_presets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/oidc-providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sign-in providers
+         * @description Every sign-in provider: the ones added here and the configured ones (read-only). A client secret is never returned, only whether it is set, when, and its fingerprint. Administrators only.
+         */
+        get: operations["list_oidc_providers"];
+        put?: never;
+        /**
+         * Add a sign-in provider
+         * @description Adds an OpenID Connect provider people can sign in with. The client secret is sealed and never returned. Administrators only; audited.
+         */
+        post: operations["create_oidc_provider"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/oidc-providers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a sign-in provider
+         * @description Nobody signs in with it from now on; its links to people stay, so adding it back restores them. A configured provider is refused. Administrators only; audited.
+         */
+        delete: operations["delete_oidc_provider"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a sign-in provider
+         * @description Changes the given fields; a `client_secret` replaces the secret. `If-Match: "<row_version>"` guards against a lost update. A configured provider is refused. Administrators only; audited.
+         */
+        patch: operations["update_oidc_provider"];
+        trace?: never;
+    };
     "/api/v1/admin/security/organizations": {
         parameters: {
             query?: never;
@@ -33751,6 +33819,34 @@ export interface components {
             name: string;
             target: string;
         };
+        /** @description A new provider. `client_secret` is write-only. */
+        CreateOidcProviderBody: {
+            /** @description Claim names and provider settings (`email`, `groups`, `mfa_acr`, ...). */
+            claim_map?: Record<string, never> | null;
+            client_id: string;
+            client_secret: string;
+            /** Format: uuid */
+            default_role_ref?: string | null;
+            display_name: string;
+            display_name_ar?: string | null;
+            /** @description Default true. */
+            enabled?: boolean | null;
+            issuer: string;
+            /**
+             * @description Lowercase letters, digits and `-`, 2 to 40: the `{provider}` in
+             *     `/api/v1/auth/oidc/{provider}/login`.
+             */
+            key: string;
+            /** @description `link_only` (default) or `create`. */
+            link_mode?: string | null;
+            /** @description The preset the form started from, recorded for the screen. */
+            preset?: string | null;
+            /** @description Default `openid email profile`; must include `openid`. */
+            scopes?: string[] | null;
+            tenant_allowlist?: string[] | null;
+            /** @description Default true. */
+            trusted_for_mfa?: boolean | null;
+        };
         CreatePageBody: {
             /** Format: uuid */
             content_space_id: string;
@@ -42531,6 +42627,25 @@ export interface components {
             /** Format: uuid */
             pending: string;
         };
+        /** @description One preset, as the form uses it. */
+        OidcPresetItem: {
+            /**
+             * @description Suggested claim map: `email`, `groups`, `name`, `title`, `department`,
+             *     `phone`, `manager`, and `mfa_acr`; an absent claim the provider does
+             *     not send by default.
+             */
+            claim_map: Record<string, never>;
+            display_name: string;
+            /** @description With `{placeholders}` to fill in. */
+            issuer_template: string;
+            key: string;
+            /** @description `oidc` or `broker` (a SAML provider through an OpenID Connect broker). */
+            kind: string;
+            /** @description `amr` or `acr`: where the provider reports MFA. */
+            mfa_claim: string;
+            scopes: string[];
+            supports_forced_reauth: boolean;
+        };
         /**
          * @description P2.8 step 5 — public provider directory for the Angular login page's
          *     button list. Only `key`/`display_name` leave the process; `issuer`/
@@ -42540,6 +42655,41 @@ export interface components {
         OidcProviderInfo: {
             display_name: string;
             key: string;
+        };
+        /** @description One sign-in provider. The client secret is never part of it. */
+        OidcProviderItem: {
+            claim_map: Record<string, never>;
+            client_id: string;
+            /** Format: uuid */
+            default_role_ref?: string | null;
+            display_name: string;
+            display_name_ar?: string | null;
+            enabled: boolean;
+            /**
+             * Format: uuid
+             * @description The row; absent for a configured provider.
+             */
+            id?: string | null;
+            issuer: string;
+            key: string;
+            /** @description `link_only` or `create`. */
+            link_mode: string;
+            preset?: string | null;
+            /** @description Defined in configuration: shown, never changed here. */
+            read_only: boolean;
+            /**
+             * Format: int64
+             * @description Send back as `If-Match` on the next `PATCH`.
+             */
+            row_version?: number | null;
+            scopes: string[];
+            /** @description The first 8 hex characters of the secret's SHA-256. */
+            secret_fingerprint?: string | null;
+            secret_set: boolean;
+            /** Format: date-time */
+            secret_updated_at?: string | null;
+            tenant_allowlist: string[];
+            trusted_for_mfa: boolean;
         };
         /**
          * @description What happens when a step's `sla_minutes` elapses with nobody having
@@ -47886,6 +48036,54 @@ export interface components {
                 label_ar?: string | null;
                 label_en: string;
                 prompts: components["schemas"]["TemplatePrompt"][];
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_OidcProviderItem: {
+            items: {
+                claim_map: Record<string, never>;
+                client_id: string;
+                /** Format: uuid */
+                default_role_ref?: string | null;
+                display_name: string;
+                display_name_ar?: string | null;
+                enabled: boolean;
+                /**
+                 * Format: uuid
+                 * @description The row; absent for a configured provider.
+                 */
+                id?: string | null;
+                issuer: string;
+                key: string;
+                /** @description `link_only` or `create`. */
+                link_mode: string;
+                preset?: string | null;
+                /** @description Defined in configuration: shown, never changed here. */
+                read_only: boolean;
+                /**
+                 * Format: int64
+                 * @description Send back as `If-Match` on the next `PATCH`.
+                 */
+                row_version?: number | null;
+                scopes: string[];
+                /** @description The first 8 hex characters of the secret's SHA-256. */
+                secret_fingerprint?: string | null;
+                secret_set: boolean;
+                /** Format: date-time */
+                secret_updated_at?: string | null;
+                tenant_allowlist: string[];
+                trusted_for_mfa: boolean;
             }[];
             /** Format: int64 */
             page: number;
@@ -60229,6 +60427,25 @@ export interface components {
         UpdateModuleConfiguration: {
             enabled: boolean;
             modules: string[];
+        };
+        /**
+         * @description A change to a provider; absent fields keep their value. A
+         *     `client_secret` replaces the secret.
+         */
+        UpdateOidcProviderBody: {
+            claim_map?: Record<string, never> | null;
+            client_id?: string | null;
+            client_secret?: string | null;
+            /** Format: uuid */
+            default_role_ref?: string | null;
+            display_name?: string | null;
+            display_name_ar?: string | null;
+            enabled?: boolean | null;
+            issuer?: string | null;
+            link_mode?: string | null;
+            scopes?: string[] | null;
+            tenant_allowlist?: string[] | null;
+            trusted_for_mfa?: boolean | null;
         };
         /**
          * @description The optimistic-concurrency guard is the `If-Match` header (D-079's
@@ -91918,6 +92135,282 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_oidc_presets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OidcPresetItem"][];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_oidc_providers: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_OidcProviderItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_oidc_provider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOidcProviderBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OidcProviderItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The key is a configured provider (`provider_is_config_managed`) or taken */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation, or no key ring is configured for client secrets */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_oidc_provider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The provider's id, or a configured provider's key */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such provider */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A configured provider (`provider_is_config_managed`) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_oidc_provider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The provider's id, or a configured provider's key */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOidcProviderBody"];
+            };
+        };
+        responses: {
+            /** @description Changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OidcProviderItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such provider */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A configured provider (`provider_is_config_managed`), or it changed since `If-Match` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

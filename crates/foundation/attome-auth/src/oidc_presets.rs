@@ -30,6 +30,27 @@ pub enum MfaClaim {
     Acr,
 }
 
+/// Q1-T4: the claims a provider's profile fields come from, updated at
+/// each sign-in (Q1-T9). An empty name means the provider sends no such
+/// claim by default.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ProfileClaims {
+    pub name: &'static str,
+    pub title: &'static str,
+    pub department: &'static str,
+    pub phone: &'static str,
+    pub manager: &'static str,
+}
+
+/// The OpenID Connect standard claim names, and the usual directory ones.
+const STANDARD_PROFILE: ProfileClaims = ProfileClaims {
+    name: "name",
+    title: "title",
+    department: "department",
+    phone: "phone_number",
+    manager: "manager",
+};
+
 /// One identity provider preset.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OidcPreset {
@@ -51,12 +72,115 @@ pub struct OidcPreset {
     /// Whether the provider honours `prompt=login` / `max_age=0`, so a step-up
     /// in Attome reaches the person's own provider rather than a session.
     pub supports_forced_reauth: bool,
+    /// Q1-T4: where the profile fields come from.
+    pub profile_claims: ProfileClaims,
 }
 
 const SCOPES: &[&str] = &["openid", "email", "profile"];
 
 /// Every preset, brokers included.
 pub const PRESETS: &[OidcPreset] = &[
+    // Q1-T4: OpenID Connect providers used directly.
+    OidcPreset {
+        key: "entra",
+        display_name: "Microsoft Entra ID",
+        kind: PresetKind::Oidc,
+        issuer_template: "https://login.microsoftonline.com/{tenant_id}/v2.0",
+        scopes: SCOPES,
+        email_claim: "email",
+        groups_claim: "groups",
+        mfa_claim: MfaClaim::Amr,
+        mfa_acr_values: &["mfa"],
+        supports_forced_reauth: true,
+        profile_claims: ProfileClaims {
+            name: "name",
+            title: "jobTitle",
+            department: "department",
+            phone: "mobilePhone",
+            manager: "",
+        },
+    },
+    OidcPreset {
+        key: "google",
+        display_name: "Google",
+        kind: PresetKind::Oidc,
+        issuer_template: "https://accounts.google.com",
+        scopes: SCOPES,
+        email_claim: "email",
+        // Google sends no groups in the ID token.
+        groups_claim: "",
+        mfa_claim: MfaClaim::Amr,
+        mfa_acr_values: &[],
+        supports_forced_reauth: true,
+        profile_claims: ProfileClaims {
+            name: "name",
+            title: "",
+            department: "",
+            phone: "",
+            manager: "",
+        },
+    },
+    OidcPreset {
+        key: "okta",
+        display_name: "Okta",
+        kind: PresetKind::Oidc,
+        issuer_template: "https://{okta_domain}/oauth2/default",
+        scopes: SCOPES,
+        email_claim: "email",
+        groups_claim: "groups",
+        mfa_claim: MfaClaim::Amr,
+        mfa_acr_values: &["mfa"],
+        supports_forced_reauth: true,
+        profile_claims: STANDARD_PROFILE,
+    },
+    OidcPreset {
+        key: "keycloak",
+        display_name: "Keycloak",
+        kind: PresetKind::Oidc,
+        issuer_template: "https://{keycloak_host}/realms/{realm}",
+        scopes: SCOPES,
+        email_claim: "email",
+        groups_claim: "groups",
+        mfa_claim: MfaClaim::Acr,
+        mfa_acr_values: &["2"],
+        supports_forced_reauth: true,
+        profile_claims: STANDARD_PROFILE,
+    },
+    OidcPreset {
+        key: "auth0",
+        display_name: "Auth0",
+        kind: PresetKind::Oidc,
+        issuer_template: "https://{auth0_domain}",
+        scopes: SCOPES,
+        email_claim: "email",
+        // Auth0 sends groups only through a namespaced custom claim an
+        // Action adds; name it on the provider.
+        groups_claim: "",
+        mfa_claim: MfaClaim::Amr,
+        mfa_acr_values: &["mfa"],
+        supports_forced_reauth: true,
+        profile_claims: ProfileClaims {
+            name: "name",
+            title: "",
+            department: "",
+            phone: "phone_number",
+            manager: "",
+        },
+    },
+    OidcPreset {
+        key: "ping",
+        display_name: "PingOne",
+        kind: PresetKind::Oidc,
+        issuer_template: "https://auth.pingone.com/{environment_id}/as",
+        scopes: SCOPES,
+        email_claim: "email",
+        groups_claim: "memberOfGroupNames",
+        mfa_claim: MfaClaim::Amr,
+        mfa_acr_values: &["mfa"],
+        supports_forced_reauth: true,
+        profile_claims: STANDARD_PROFILE,
+    },
+    // SAML identity providers reached through an OpenID Connect broker.
     OidcPreset {
         key: "broker_entra_saml",
         display_name: "Microsoft Entra ID",
@@ -68,6 +192,7 @@ pub const PRESETS: &[OidcPreset] = &[
         mfa_claim: MfaClaim::Amr,
         mfa_acr_values: &["mfa"],
         supports_forced_reauth: true,
+        profile_claims: STANDARD_PROFILE,
     },
     OidcPreset {
         key: "broker_okta_saml",
@@ -80,6 +205,7 @@ pub const PRESETS: &[OidcPreset] = &[
         mfa_claim: MfaClaim::Amr,
         mfa_acr_values: &["mfa"],
         supports_forced_reauth: true,
+        profile_claims: STANDARD_PROFILE,
     },
     OidcPreset {
         key: "broker_adfs",
@@ -94,6 +220,7 @@ pub const PRESETS: &[OidcPreset] = &[
         // AD FS keeps its own session unless the relying party trust is set
         // to honour prompt=login, so a step-up may not reach the person.
         supports_forced_reauth: false,
+        profile_claims: STANDARD_PROFILE,
     },
     OidcPreset {
         key: "broker_keycloak",
@@ -108,6 +235,7 @@ pub const PRESETS: &[OidcPreset] = &[
         mfa_claim: MfaClaim::Acr,
         mfa_acr_values: &["2"],
         supports_forced_reauth: true,
+        profile_claims: STANDARD_PROFILE,
     },
 ];
 
@@ -141,6 +269,21 @@ mod tests {
         }
         assert!(!preset("broker_adfs").unwrap().supports_forced_reauth);
         assert!(preset("broker_entra_saml").unwrap().supports_forced_reauth);
+    }
+
+    /// Q1-T4: the direct providers the admin screen offers.
+    #[test]
+    fn direct_presets_cover_the_common_providers() {
+        let direct: Vec<&str> = presets_of(PresetKind::Oidc).map(|p| p.key).collect();
+        assert_eq!(
+            direct,
+            ["entra", "google", "okta", "keycloak", "auth0", "ping"]
+        );
+        for p in presets_of(PresetKind::Oidc) {
+            assert!(p.scopes.contains(&"openid"), "{}", p.key);
+            assert!(p.issuer_template.starts_with("https://"), "{}", p.key);
+            assert!(!p.profile_claims.name.is_empty(), "{}", p.key);
+        }
     }
 
     #[test]

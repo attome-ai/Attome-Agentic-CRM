@@ -324,6 +324,15 @@ const UNDRIVABLE: &[(&str, &str)] = &[
 /// AB4-T6: the seed of the drill key the fixture trusts.
 const DRILL_KEY_SEED: [u8; 32] = [7; 32];
 
+/// Q1-T4: a sign-in provider with a fresh key.
+fn oidc_provider_body() -> serde_json::Value {
+    json!({
+        "key": format!("cov-{}", &uuid::Uuid::now_v7().simple().to_string()[20..]),
+        "display_name": "Coverage", "issuer": "https://idp.example",
+        "client_id": "client", "client_secret": "coverage-client-secret",
+    })
+}
+
 fn test_config() -> AppConfig {
     let json = format!(
         r#"{{
@@ -404,6 +413,8 @@ fn test_config() -> AppConfig {
     // M14-T1 — an inbound hook's secret is sealed under this ring; creating
     // one refuses without it.
     config.integration.credential_encryption_key = KeyRing::single("34".repeat(32));
+    // Q1-T4: sign-in providers added on screen seal their client secret.
+    config.oidc.client_secret_encryption_key = KeyRing::single("56".repeat(32));
     // AB2-T8 — a switchover is asked for only with a Patroni cluster named.
     config.ops.patroni_api_urls = vec!["http://127.0.0.1:9".into()];
     // AB4-T6 — drill evidence is accepted only under a configured key.
@@ -2557,6 +2568,42 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 .await,
             );
             request("DELETE", &format!("{S}/role-conflicts/rules/{id}"), t, None)
+        }
+        // ── sign-in providers (Q1-T4) ───────────────────────────────────────
+        "POST /api/v1/admin/security/oidc-providers" => request(
+            "POST",
+            &format!("{S}/oidc-providers"),
+            t,
+            Some(oidc_provider_body()),
+        ),
+        "PATCH /api/v1/admin/security/oidc-providers/{id}" => {
+            let id = id_of(
+                &admin(
+                    fx,
+                    "POST",
+                    &format!("{S}/oidc-providers"),
+                    Some(oidc_provider_body()),
+                )
+                .await,
+            );
+            request(
+                "PATCH",
+                &format!("{S}/oidc-providers/{id}"),
+                t,
+                Some(json!({"display_name": "Renamed"})),
+            )
+        }
+        "DELETE /api/v1/admin/security/oidc-providers/{id}" => {
+            let id = id_of(
+                &admin(
+                    fx,
+                    "POST",
+                    &format!("{S}/oidc-providers"),
+                    Some(oidc_provider_body()),
+                )
+                .await,
+            );
+            request("DELETE", &format!("{S}/oidc-providers/{id}"), t, None)
         }
         // ── impersonation (Q13-T1) ──────────────────────────────────────────
         "POST /api/v1/admin/security/impersonation" => {
@@ -7745,8 +7792,14 @@ async fn every_mapped_security_route_writes_its_event_body() {
 
     let mut failures = Vec::new();
     let mut driven = 0;
+    // `AUDIT_COVERAGE_ONLY=<text>` drives only the routes whose key contains
+    // it, to prove a new route without the whole sweep.
+    let only = std::env::var("AUDIT_COVERAGE_ONLY").ok();
     for (key, category, operation) in &mappings {
         if UNDRIVABLE.iter().any(|(route, _)| route == key) {
+            continue;
+        }
+        if only.as_deref().is_some_and(|only| !key.contains(only)) {
             continue;
         }
         // Boxed: `drive` is one ~200-arm match, and its future overflows a

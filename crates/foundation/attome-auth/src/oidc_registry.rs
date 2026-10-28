@@ -260,6 +260,34 @@ pub fn open_with(ring: &KeyRing) -> impl Fn(&ProviderRow) -> Result<Secret, AppE
     }
 }
 
+/// Q1-T4: seals a client secret for row `id` under `ring`, the inverse of
+/// [`open_with`]. Refused when no ring is configured.
+pub fn seal_secret(ring: &KeyRing, id: Uuid, secret: &str) -> Result<String, AppError> {
+    if ring.is_empty() {
+        return Err(AppError::Validation(
+            "oidc.client_secret_encryption_key is not configured, so a provider cannot be added              on screen"
+                .into(),
+        ));
+    }
+    crate::envelope::encrypt_bound(
+        CLIENT_SECRET_FIELD,
+        ring,
+        secret,
+        RowBinding {
+            table: "oidc_provider",
+            column: "client_secret_enc",
+            row_id: id,
+        },
+    )
+}
+
+/// Q1-T4: the first 8 hex characters of a secret's SHA-256, so an
+/// administrator can tell which secret a provider holds without seeing it.
+pub fn secret_fingerprint(secret: &str) -> String {
+    use sha2::{Digest, Sha256};
+    hex::encode(Sha256::digest(secret.as_bytes()))[..8].to_owned()
+}
+
 /// The providers every sign-in reads, swapped whole on a rebuild.
 pub struct OidcRegistry {
     snapshot: ArcSwap<Vec<ProviderEntry>>,
@@ -418,6 +446,20 @@ mod tests {
             open_with(&ring)(&row("x")).is_err(),
             "no ring, no database providers"
         );
+    }
+
+    #[test]
+    fn a_sealed_secret_opens_for_its_own_row_only() {
+        let ring = KeyRing::single("ab".repeat(32));
+        let mut sealed = row("sealed");
+        sealed.client_secret_enc = seal_secret(&ring, sealed.id, "s3cret").unwrap();
+        assert_eq!(open_with(&ring)(&sealed).unwrap().expose(), "s3cret");
+        let mut moved = sealed.clone();
+        moved.id = Uuid::now_v7();
+        assert!(open_with(&ring)(&moved).is_err(), "bound to its row");
+        assert!(seal_secret(&KeyRing::default(), sealed.id, "s3cret").is_err());
+        assert_eq!(secret_fingerprint("s3cret").len(), 8);
+        assert_ne!(secret_fingerprint("s3cret"), secret_fingerprint("other"));
     }
 
     #[test]
