@@ -89,7 +89,16 @@ pub struct AuthSection {
     /// today's behavior unchanged. `"optional"` challenges only accounts
     /// that have self-enrolled TOTP; `"required"` blocks a password login
     /// for an unenrolled account until it completes enrollment
-    /// (`attome_auth::mfa`/D-068). Same string-enum convention as
+    /// (`attome_auth::mfa`/D-068). Q5-T3: since per-role policies
+    /// (`role_auth_policy.mfa_mode`) this is the deployment-wide default under
+    /// them: the value a role set to `inherit`, or a person with no role
+    /// policy, gets. A role may set its own mode instead; the strictest of the
+    /// person's roles wins, and a `system.admin` holder always needs a factor
+    /// with no grace period. When a role requires a factor the person lacks,
+    /// its `mfa_grace_days` lets them put enrolment off a day at a time
+    /// (`POST /api/v1/auth/mfa/postpone` with the pending token) until the
+    /// grace period ends. A federated sign-in meets a required policy when the
+    /// provider reports MFA. Same string-enum convention as
     /// `database.ssl_mode` — deliberately a plain `String`, not a Rust enum.
     #[serde(default = "default_mfa_policy")]
     pub mfa_policy: String,

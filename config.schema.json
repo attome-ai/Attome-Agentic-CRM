@@ -532,7 +532,7 @@
         },
         "mfa_policy": {
           "default": "off",
-          "description": "P2.8 step 7 — one of `\"off\"`/`\"optional\"`/`\"required\"` (see\n`VALID_MFA_POLICIES` in `validate()`). `\"off\"` (the default) is\ntoday's behavior unchanged. `\"optional\"` challenges only accounts\nthat have self-enrolled TOTP; `\"required\"` blocks a password login\nfor an unenrolled account until it completes enrollment\n(`attome_auth::mfa`/D-068). Same string-enum convention as\n`database.ssl_mode` — deliberately a plain `String`, not a Rust enum.",
+          "description": "P2.8 step 7 — one of `\"off\"`/`\"optional\"`/`\"required\"` (see\n`VALID_MFA_POLICIES` in `validate()`). `\"off\"` (the default) is\ntoday's behavior unchanged. `\"optional\"` challenges only accounts\nthat have self-enrolled TOTP; `\"required\"` blocks a password login\nfor an unenrolled account until it completes enrollment\n(`attome_auth::mfa`/D-068). Q5-T3: since per-role policies\n(`role_auth_policy.mfa_mode`) this is the deployment-wide default under\nthem: the value a role set to `inherit`, or a person with no role\npolicy, gets. A role may set its own mode instead; the strictest of the\nperson's roles wins, and a `system.admin` holder always needs a factor\nwith no grace period. When a role requires a factor the person lacks,\nits `mfa_grace_days` lets them put enrolment off a day at a time\n(`POST /api/v1/auth/mfa/postpone` with the pending token) until the\ngrace period ends. A federated sign-in meets a required policy when the\nprovider reports MFA. Same string-enum convention as\n`database.ssl_mode` — deliberately a plain `String`, not a Rust enum.",
           "type": "string"
         },
         "oauth_google_client_id": {

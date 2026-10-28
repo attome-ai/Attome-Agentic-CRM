@@ -155,6 +155,29 @@ Every audit row it writes names both people: the person's access was used (`acti
 (initiator `impersonation`, the session, and `impersonator:<administrator id>`), all in the v2 hash. The
 person sees every session about them at `GET /api/v1/me/impersonation-sessions`.
 
+## Second factors by role
+
+Each role can set what it asks of a person signing in: a second factor `required`, `optional` or
+`off`, or `inherit`, which takes the deployment's `auth.mfa_policy`. The deployment value is the
+default under the roles: it applies to a role set to `inherit` and to a person whose roles set
+nothing. A role may set its own mode instead, stricter or not.
+
+- **The strictest role wins.** A person with one `required` role and one `off` role needs a
+  factor. The factors their roles allow are the ones every role allows.
+- **Administrators always need one.** A `system.admin` holder needs a passkey or TOTP (or a
+  recovery code) at every password sign-in, with no grace period, whatever the roles say. An
+  administrator without a factor is asked to enrol at their next sign-in.
+- **Grace period.** When a role requires a factor a person has not set up, the role's
+  `mfa_grace_days` lets them sign in and put enrolment off a day at a time
+  (`POST /api/v1/auth/mfa/postpone` with the pending sign-in token) until the grace period ends.
+  After that, sign-in continues only through enrolment.
+- **Provider sign-in.** A sign-in through a provider meets a required policy when the provider
+  reports that it checked a second factor; otherwise it is refused with `mfa_required`.
+
+A role's mode is stored with its sign-in policy (`role_auth_policy`). The route that sets it today,
+`PUT /api/v1/admin/security/roles/{id}/auth-policy`, sets single sign-on only; setting the second
+factor mode comes with the security policy screens.
+
 ## Explaining access
 
 - `GET /api/v1/{entity}/{id}/access/explain?user=&action=` explains one record: every source the filter
