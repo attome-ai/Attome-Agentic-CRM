@@ -404,6 +404,20 @@ async fn oidc_callback_inner(
     if identity.step_up.is_some() {
         return Err(AppError::Unauthorized);
     }
+    // Q1-T5: an administrator's test of the provider: show what it returned,
+    // sign nobody in, set no session cookie.
+    if identity.purpose == attome_auth::oidc::FlowPurpose::Test {
+        tracing::info!(
+            provider,
+            tester = ?identity.tester,
+            "oidc provider test completed; no session issued"
+        );
+        return Ok(test_result_page(
+            &state.config.frontend_url(),
+            provider,
+            &identity.claims,
+        ));
+    }
     // M04 Phase 2 (LIC-F2): the seat gate lives inside `link_oidc_identity`'s
     // transaction, on the branch that actually creates a row (see
     // `attome_security::accounts::link_google_account`'s doc comment for why the
@@ -739,6 +753,151 @@ pub(super) async fn oidc_providers(State(state): State<AppState>) -> Json<Vec<Oi
     Json(providers)
 }
 
+/// Q1-T5: the claims a test sign-in shows; a value under a name like
+/// `*token*` is masked.
+pub(super) fn test_claims(claims: &serde_json::Value) -> serde_json::Value {
+    let Some(map) = claims.as_object() else {
+        return serde_json::json!({});
+    };
+    serde_json::Value::Object(
+        map.iter()
+            .map(|(name, value)| {
+                let shown = if name.to_ascii_lowercase().contains("token") {
+                    serde_json::json!("********")
+                } else {
+                    value.clone()
+                };
+                (name.clone(), shown)
+            })
+            .collect(),
+    )
+}
+
+fn html_escape(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&#39;")
+}
+
+/// Q1-T5: the page a test sign-in ends on. It lists the claims and, when the
+/// admin page that opened it is still its opener, posts them there and
+/// closes. The claims are JSON escaped for the script (no `<` survives).
+fn test_result_page(frontend_url: &str, provider: &str, claims: &serde_json::Value) -> Response {
+    let shown = test_claims(claims);
+    let rows: String = shown
+        .as_object()
+        .into_iter()
+        .flatten()
+        .map(|(name, value)| {
+            let value = match value {
+                serde_json::Value::String(s) => s.clone(),
+                other => other.to_string(),
+            };
+            format!(
+                "<tr><th>{}</th><td>{}</td></tr>",
+                html_escape(name),
+                html_escape(&value)
+            )
+        })
+        .collect();
+    let message = serde_json::json!({
+        "type": "attome-oidc-test",
+        "provider": provider,
+        "claims": shown,
+    })
+    .to_string()
+    .replace('<', "\\u003c");
+    let origin = serde_json::Value::String(frontend_url.to_owned()).to_string();
+    let body = format!(
+        "<!doctype html><html><head><meta charset=\"utf-8\"><title>Provider test</title></head>\
+         <body><h1>{provider}</h1><p>Nobody was signed in. The provider returned:</p>\
+         <table>{rows}</table>\
+         <script>(function(){{var m={message};if(window.opener){{window.opener.postMessage(m,{origin});window.close();}}}})();</script>\
+         </body></html>",
+        provider = html_escape(provider),
+    );
+    (
+        StatusCode::OK,
+        [
+            (header::CONTENT_TYPE, "text/html; charset=utf-8"),
+            (header::CACHE_CONTROL, "no-store"),
+        ],
+        body,
+    )
+        .into_response()
+}
+
+/// Test a sign-in provider
+///
+/// Starts a sign-in through the provider for the administrator to check it: the returned address opens the provider, and the ordinary sign-in callback then shows the claims it returned and signs nobody in. The flow is bound to this browser like a sign-in. Administrators only; writes nothing durable.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/security/oidc-providers/{id}/test",
+    operation_id = "test_oidc_provider",
+    tag = "admin-security",
+    params(("id" = String, Path, description = "The provider's id, or a configured provider's key")),
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(attome_audit::security::ExemptReason::ReadOnly, None, "starts a test sign-in: a single-use state in the cache and a binding cookie; nothing durable, no session")))),
+    responses(
+        (status = 200, description = "The address to open", body = OidcTestStart),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such provider", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn oidc_provider_test(
+    State(state): State<AppState>,
+    ctx: attome_server::authz::Authorized<attome_server::authz::Admin>,
+    Path(id): Path<String>,
+) -> Result<Response, AppError> {
+    let key = if state.oidc_providers.get(&id).is_some() {
+        id
+    } else {
+        let id: uuid::Uuid = id.parse().map_err(|_| AppError::NotFound)?;
+        sqlx::query_scalar("SELECT key FROM oidc_provider WHERE id = $1 AND NOT is_deleted")
+            .bind(id)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(AppError::internal)?
+            .ok_or(AppError::NotFound)?
+    };
+    let entry = state.oidc_providers.get(&key).ok_or(AppError::NotFound)?;
+    // The ordinary sign-in callback, which every provider has registered.
+    let redirect_uri = format!(
+        "{}/api/v1/auth/oidc/{key}/callback",
+        state.config.frontend_url()
+    );
+    let authorize_url = attome_auth::oidc::start_test_login(
+        &state.redis_coordination,
+        &state.redis,
+        &entry.config,
+        &key,
+        &redirect_uri,
+        ctx.user_id,
+    )
+    .await?;
+    let state_id = redirect_url_query_param(&authorize_url, "state")
+        .ok_or_else(|| AppError::internal("oidc authorize url carries no state parameter"))?;
+    let binding_cookie = identity_link_cookie_set(
+        IdentityLinkFlow::Login,
+        state.config.auth.secure_cookies,
+        &state_id,
+    );
+    Ok((
+        AppendHeaders([(header::SET_COOKIE, binding_cookie)]),
+        Json(OidcTestStart { authorize_url }),
+    )
+        .into_response())
+}
+
+/// Q1-T5: where to send the administrator's browser.
+#[derive(Debug, serde::Serialize, utoipa::ToSchema)]
+pub(super) struct OidcTestStart {
+    pub authorize_url: String,
+}
+
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI document. Separate per file
 /// because `#[utoipa::path]` generates a `__path_*` type with the handler's
 /// own visibility, and these handlers are module-private — the crate's
@@ -749,7 +908,8 @@ pub(super) async fn oidc_providers(State(state): State<AppState>) -> Json<Vec<Oi
     oidc_callback,
     identity_link_oidc_start,
     identity_link_oidc_callback,
-    oidc_providers
+    oidc_providers,
+    oidc_provider_test
 ))]
 struct ApiDocFragment;
 
@@ -880,6 +1040,44 @@ mod identity_link_binding_tests {
         assert!(
             require_identity_link_binding(&headers, IdentityLinkFlow::StepUpOidc, false, "abc")
                 .is_ok()
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Q1-T5: a test sign-in's page signs nobody in: no session cookie, the
+    /// claims shown with any token masked, and no markup from a claim.
+    #[tokio::test]
+    async fn test_flow_never_issues_session() {
+        let claims = serde_json::json!({
+            "email": "admin@example.test",
+            "groups": ["finance"],
+            "amr": ["pwd", "mfa"],
+            "access_token_hash": "secret-hash",
+            "name": "<script>alert(1)</script>",
+        });
+        let response = test_result_page("https://app.example", "okta", &claims);
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(
+            response.headers().get(header::SET_COOKIE).is_none(),
+            "a test flow never sets a cookie"
+        );
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body = String::from_utf8(body.to_vec()).unwrap();
+        assert!(body.contains("admin@example.test"));
+        assert!(!body.contains("secret-hash"), "a token claim is masked");
+        assert!(
+            !body.contains("<script>alert"),
+            "claims are escaped: {body}"
+        );
+        assert!(
+            body.contains("\"https://app.example\""),
+            "posts to the app only"
         );
     }
 }

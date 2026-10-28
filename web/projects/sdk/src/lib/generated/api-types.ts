@@ -9762,6 +9762,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/security/oidc-providers/{id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test a sign-in provider
+         * @description Starts a sign-in through the provider for the administrator to check it: the returned address opens the provider, and the ordinary sign-in callback then shows the claims it returned and signs nobody in. The flow is bound to this browser like a sign-in. Administrators only; writes nothing durable.
+         */
+        post: operations["test_oidc_provider"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/security/organizations": {
         parameters: {
             query?: never;
@@ -42728,6 +42748,10 @@ export interface components {
             secret_updated_at?: string | null;
             tenant_allowlist: string[];
             trusted_for_mfa: boolean;
+        };
+        /** @description Q1-T5: where to send the administrator's browser. */
+        OidcTestStart: {
+            authorize_url: string;
         };
         /**
          * @description What happens when a step's `sla_minutes` elapses with nobody having
@@ -92477,6 +92501,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OidcProviderHealthItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such provider */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    test_oidc_provider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The provider's id, or a configured provider's key */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The address to open */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OidcTestStart"];
                 };
             };
             /** @description Missing or invalid credentials */

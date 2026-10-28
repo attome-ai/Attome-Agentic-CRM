@@ -139,6 +139,13 @@ pub struct OidcIdentity {
     /// `acr` carries one of the provider's `mfa_acr_values`, and the provider
     /// is trusted for MFA). The session then records `mfa` in its `amr`.
     pub idp_mfa: bool,
+    /// Q1-T5: what the flow was for; a `Test` flow never signs anyone in.
+    pub purpose: FlowPurpose,
+    /// Q1-T5: the administrator who started a `Test` flow.
+    pub tester: Option<Uuid>,
+    /// Q1-T5: the validated ID token's claims, shown to the administrator of
+    /// a `Test` flow. Never logged (`Debug` leaves it out).
+    pub claims: serde_json::Value,
 }
 
 impl std::fmt::Debug for OidcIdentity {
@@ -148,6 +155,7 @@ impl std::fmt::Debug for OidcIdentity {
             .field("auth_time", &self.auth_time)
             .field("expires_at", &self.expires_at)
             .field("idp_mfa", &self.idp_mfa)
+            .field("purpose", &self.purpose)
             .finish_non_exhaustive()
     }
 }
@@ -237,6 +245,25 @@ struct OidcState {
     /// `linking_user_id`: the session cookie never survives the IdP redirect.
     #[serde(default)]
     step_up: Option<crate::step_up::FederatedStepUp>,
+    /// Q1-T5: `Login` for a state written before purposes existed.
+    #[serde(default)]
+    purpose: FlowPurpose,
+    /// Q1-T5: the administrator who started a `Test` flow.
+    #[serde(default)]
+    tester: Option<Uuid>,
+}
+
+/// Q1-T5: what an authorization flow is for, carried in its single-use
+/// server-side state. A `Test` flow is an administrator checking a provider:
+/// its callback shows the claims and never signs anyone in.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FlowPurpose {
+    #[default]
+    Login,
+    StepUp,
+    Link,
+    Test,
 }
 
 fn state_key(state_id: &str) -> String {
@@ -562,6 +589,37 @@ pub async fn start_login(
         redirect_uri,
         linking_user_id,
         None,
+        if linking_user_id.is_some() {
+            FlowPurpose::Link
+        } else {
+            FlowPurpose::Login
+        },
+        None,
+    )
+    .await
+}
+
+/// Q1-T5: starts a flow an administrator (`tester`) runs to check a
+/// provider. It returns to the ordinary sign-in callback, which shows the
+/// returned claims for a `Test` flow and signs nobody in.
+pub async fn start_test_login(
+    state_redis: &Store,
+    cache_redis: &Store,
+    provider: &OidcProviderConfig,
+    provider_key: &str,
+    redirect_uri: &str,
+    tester: Uuid,
+) -> Result<String, AppError> {
+    start_authorization(
+        state_redis,
+        cache_redis,
+        provider,
+        provider_key,
+        redirect_uri,
+        None,
+        None,
+        FlowPurpose::Test,
+        Some(tester),
     )
     .await
 }
@@ -588,6 +646,8 @@ pub async fn start_step_up_login(
         redirect_uri,
         None,
         Some(step_up),
+        FlowPurpose::StepUp,
+        None,
     )
     .await
 }
@@ -601,6 +661,7 @@ fn step_up_params(step_up: Option<&crate::step_up::FederatedStepUp>) -> String {
         .unwrap_or_default()
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn start_authorization(
     state_redis: &Store,
     cache_redis: &Store,
@@ -609,6 +670,8 @@ async fn start_authorization(
     redirect_uri: &str,
     linking_user_id: Option<Uuid>,
     step_up: Option<crate::step_up::FederatedStepUp>,
+    purpose: FlowPurpose,
+    tester: Option<Uuid>,
 ) -> Result<String, AppError> {
     let (code_verifier, code_challenge) = generate_pkce();
     let nonce = generate_nonce();
@@ -621,6 +684,8 @@ async fn start_authorization(
         redirect_uri: redirect_uri.to_string(),
         linking_user_id,
         step_up,
+        purpose,
+        tester,
     };
     let state_json = serde_json::to_string(&state).map_err(AppError::internal)?;
 
@@ -797,6 +862,8 @@ pub async fn complete_login(
     .await?;
     identity.linking_user_id = state.linking_user_id;
     identity.step_up = state.step_up;
+    identity.purpose = state.purpose;
+    identity.tester = state.tester;
     Ok(identity)
 }
 
@@ -1032,6 +1099,9 @@ fn verify_claims(
         expires_at,
         step_up: None,
         idp_mfa,
+        purpose: FlowPurpose::Login,
+        tester: None,
+        claims,
     })
 }
 
@@ -1479,6 +1549,19 @@ mod tests {
         assert!(idp_mfa_of(&keycloak, serde_json::json!({"acr": "2"})));
         assert!(!idp_mfa_of(&keycloak, serde_json::json!({"acr": "1"})));
         assert!(!idp_mfa_of(&keycloak, serde_json::json!({"acr": 2})));
+    }
+
+    /// Q1-T5: a state written before flow purposes existed reads as a
+    /// sign-in, so an in-flight sign-in across a deploy is not mistaken for
+    /// a test.
+    #[test]
+    fn a_state_without_a_purpose_is_a_login() {
+        let old = r#"{"code_verifier":"v","nonce":"n","redirect_uri":"https://app/cb"}"#;
+        let state: OidcState = serde_json::from_str(old).unwrap();
+        assert_eq!(state.purpose, FlowPurpose::Login);
+        assert_eq!(state.tester, None);
+        let test = serde_json::to_string(&FlowPurpose::Test).unwrap();
+        assert_eq!(test, "\"test\"");
     }
 
     /// Q1-T12: an expired or future-dated token reads as clock skew.

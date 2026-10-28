@@ -115,6 +115,11 @@ pub fn public_routes(
         )
         .route("/api/v1/auth/oidc/providers", get(oidc::oidc_providers))
         .route("/api/v1/auth/oidc/{provider}/login", get(oidc::oidc_login))
+        // Q1-T5: an administrator's test sign-in through a provider.
+        .route(
+            "/api/v1/admin/security/oidc-providers/{id}/test",
+            post(oidc::oidc_provider_test),
+        )
         .route(
             "/api/v1/auth/oidc/{provider}/callback",
             get(oidc::oidc_callback),
