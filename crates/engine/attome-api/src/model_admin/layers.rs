@@ -3,17 +3,27 @@
 //! layer wins (`attome_model::layer_stack`); and the properties two layers
 //! set differently. Read-only. Metadata carries no secrets, so every value
 //! is shown.
+//!
+//! Y11-T7: the conflicts an upgrade recorded, and resolving one (keep the
+//! customer's value, take the platform's, or combine them), through
+//! `attome_metadata::provision::layer_conflicts`, with its audit event in
+//! the same transaction.
 
+use attome_audit::AuditOperation;
+use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::EngineState;
+use attome_metadata::provision::layer_conflicts::{self, LayerConflict, Resolution};
 use attome_model::Layer;
 use attome_model::layer_stack::{self, PropertyStack};
 use attome_server::authz::{Authorized, Privilege, area};
-use attome_types::{AppError, ErrorResponse, PaginatedResponse};
+use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::Json;
 use axum::extract::{Path, Query, State};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Value, json};
 use utoipa::{IntoParams, ToSchema};
+use uuid::Uuid;
 
 /// One layer's value for a property.
 #[derive(Debug, Serialize, ToSchema)]
@@ -190,4 +200,178 @@ pub(crate) async fn layer_diff(
             })
             .collect(),
     )))
+}
+
+/// An upgrade conflict.
+#[derive(Debug, Serialize, ToSchema)]
+pub(crate) struct LayerConflictView {
+    id: Uuid,
+    /// `entity` or `attribute`.
+    object_kind: String,
+    /// The entity's logical name, or `<entity>.<field>`.
+    object_key: String,
+    property: String,
+    /// The platform's value before the upgrade.
+    #[schema(value_type = Option<Object>)]
+    old_platform: Option<Value>,
+    /// The platform's value now.
+    #[schema(value_type = Option<Object>)]
+    new_platform: Option<Value>,
+    /// The value the customer (or an app) holds.
+    #[schema(value_type = Option<Object>)]
+    customer: Option<Value>,
+    /// `open` or `resolved`.
+    status: String,
+    /// `keep_customer`, `take_platform` or `combine`, once resolved.
+    resolution: Option<String>,
+    resolved_by: Option<Uuid>,
+    resolved_at: Option<DateTime<Utc>>,
+    created_at: DateTime<Utc>,
+}
+
+impl From<LayerConflict> for LayerConflictView {
+    fn from(c: LayerConflict) -> Self {
+        Self {
+            id: c.id,
+            object_kind: c.object_kind,
+            object_key: c.object_key,
+            property: c.property,
+            old_platform: c.old_platform,
+            new_platform: c.new_platform,
+            customer: c.customer,
+            status: c.status,
+            resolution: c.resolution,
+            resolved_by: c.resolved_by,
+            resolved_at: c.resolved_at,
+            created_at: c.created_at,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub(crate) struct ConflictListQuery {
+    /// `open` or `resolved`; every conflict when absent.
+    status: Option<String>,
+}
+
+/// How to resolve a conflict.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct ResolveConflictBody {
+    /// `keep_customer`, `take_platform` or `combine`.
+    choice: String,
+    /// The value to apply; required for `combine`, refused otherwise.
+    #[schema(value_type = Option<Object>)]
+    value: Option<Value>,
+}
+
+/// List upgrade conflicts
+///
+/// The properties an upgrade changed that the customer (or an app) had also changed, newest first.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/metadata/conflicts",
+    tag = "admin",
+    params(ConflictListQuery, OnePageQuery),
+    responses(
+        (status = 200, description = "One page of conflicts", body = PaginatedResponse<LayerConflictView>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "A status that is not open or resolved", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(crate) async fn list_conflicts(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
+    Query(query): Query<ConflictListQuery>,
+    Query(page): Query<OnePageQuery>,
+) -> Result<Json<PaginatedResponse<LayerConflictView>>, AppError> {
+    let status = query.status.as_deref();
+    if status.is_some_and(|s| s != "open" && s != "resolved") {
+        return Err(AppError::Validation(
+            "status must be open or resolved".into(),
+        ));
+    }
+    let window = page.window();
+    let (items, total) = layer_conflicts::list(&state.base.db, status, window).await?;
+    Ok(Json(PaginatedResponse {
+        items: items.into_iter().map(LayerConflictView::from).collect(),
+        total,
+        page: window.page,
+        page_size: window.page_size,
+        warnings: Vec::new(),
+    }))
+}
+
+/// Resolve an upgrade conflict
+///
+/// Keeps the customer's value, takes the platform's (the customer's layer value is removed), or applies a combined value as the customer's. Taking or combining changes the entity or field at once.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/metadata/conflicts/{id}/resolve",
+    tag = "admin",
+    params(("id" = Uuid, Path, description = "The conflict's id")),
+    request_body = ResolveConflictBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "The resolved conflict", body = LayerConflictView),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such conflict, or its entity or field is gone", body = ErrorResponse),
+        (status = 409, description = "The conflict is already resolved", body = ErrorResponse),
+        (status = 422, description = "An unknown choice, or a value missing for combine or given otherwise", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(crate) async fn resolve_conflict(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<area::DataModel>>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<ResolveConflictBody>,
+) -> Result<Json<LayerConflictView>, AppError> {
+    let resolution = match (body.choice.as_str(), body.value) {
+        ("keep_customer", None) => Resolution::KeepCustomer,
+        ("take_platform", None) => Resolution::TakePlatform,
+        ("combine", Some(value)) => Resolution::Combine(value),
+        ("combine", None) => {
+            return Err(AppError::Validation("combine needs a value".into()));
+        }
+        ("keep_customer" | "take_platform", Some(_)) => {
+            return Err(AppError::Validation("only combine takes a value".into()));
+        }
+        _ => {
+            return Err(AppError::Validation(
+                "choice must be keep_customer, take_platform or combine".into(),
+            ));
+        }
+    };
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let resolved = layer_conflicts::resolve_in_tx(&mut tx, id, resolution, ctx.user_id).await?;
+    write_security_event(
+        &mut tx,
+        &attome_audit::audit_service(&state),
+        SecurityEvent::new(
+            MandatoryCategory::Configuration,
+            AuditOperation::Update,
+            ctx.user_id,
+            "metadata_layer_conflict",
+            Some(id),
+        )
+        .named("metadata.conflict.resolve")
+        .comment(format!(
+            "{} {} {}: {}",
+            resolved.object_kind,
+            resolved.object_key,
+            resolved.property,
+            resolved.resolution.as_deref().unwrap_or("")
+        )),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    if resolved.resolution.as_deref() != Some("keep_customer") {
+        crate::admin::notify_metadata_change(&state.base.redis).await;
+    }
+    Ok(Json(resolved.into()))
 }

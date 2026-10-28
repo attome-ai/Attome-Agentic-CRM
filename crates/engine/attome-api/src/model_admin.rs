@@ -2736,6 +2736,14 @@ pub fn routes() -> Router<EngineState> {
             get(layers::layer_stack),
         )
         .route(
+            "/api/v1/admin/metadata/conflicts",
+            get(layers::list_conflicts),
+        )
+        .route(
+            "/api/v1/admin/metadata/conflicts/{id}/resolve",
+            post(layers::resolve_conflict),
+        )
+        .route(
             "/api/v1/admin/metadata/{kind}/{key}/layers/diff",
             get(layers::layer_diff),
         )
@@ -2821,6 +2829,8 @@ pub fn routes() -> Router<EngineState> {
         option_merge::merge_values,
         layers::layer_stack,
         layers::layer_diff,
+        layers::list_conflicts,
+        layers::resolve_conflict,
         flow_template::instantiate,
         export_files,
         import_files,
@@ -2855,6 +2865,8 @@ pub fn routes() -> Router<EngineState> {
         layers::LayerValueView,
         layers::PropertyStackView,
         layers::LayerDifferenceView,
+        layers::LayerConflictView,
+        layers::ResolveConflictBody,
         flow_template::InstantiateRequest,
         flow_template::InstantiateResponse,
         ModelFile,

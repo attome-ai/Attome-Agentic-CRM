@@ -1115,3 +1115,87 @@ async fn seed_records_a_conflict_instead_of_overwriting_the_customer() {
         )]
     );
 }
+
+/// Y11-T7: taking the platform's side removes the customer's layer value,
+/// applies the platform's value to the field and closes the conflict; a
+/// second resolve is refused.
+#[tokio::test]
+async fn take_platform_removes_customer_row() {
+    use attome_metadata::provision::layer_conflicts::{self, ALREADY_RESOLVED, Resolution};
+    let db = skip_if_no_db!(test_db().await);
+    let entity_ln = unique_logicalname("test_layer");
+    let (entity_id, _) = reconcile_entity(
+        &db,
+        &entity_desc(&entity_ln, "Layers"),
+        ReconcilePolicy::Seed,
+    )
+    .await
+    .expect("create entity");
+    reconcile_attribute(
+        &db,
+        entity_id,
+        &sized_attr("Phone", 20),
+        ReconcilePolicy::Seed,
+    )
+    .await
+    .expect("seed attribute");
+    reconcile_attribute(
+        &db,
+        entity_id,
+        &sized_attr("Phone", 50),
+        ReconcilePolicy::Admin,
+    )
+    .await
+    .expect("the customer widens it");
+    reconcile_attribute(
+        &db,
+        entity_id,
+        &sized_attr("Phone", 32),
+        ReconcilePolicy::Seed,
+    )
+    .await
+    .expect("the platform changes it too");
+    let key = format!("{entity_ln}.title");
+    let id: Uuid = sqlx::query_scalar(
+        "SELECT id FROM metadata_layer_conflict \
+          WHERE object_kind = 'attribute' AND object_key = $1 AND status = 'open'",
+    )
+    .bind(&key)
+    .fetch_one(&db)
+    .await
+    .expect("the open conflict");
+
+    let actor = Uuid::now_v7();
+    let mut tx = attome_db::tx::begin(&db).await.unwrap();
+    let resolved = layer_conflicts::resolve_in_tx(&mut tx, id, Resolution::TakePlatform, actor)
+        .await
+        .expect("resolve");
+    tx.commit().await.unwrap();
+    assert_eq!(resolved.status, "resolved");
+    assert_eq!(resolved.resolution.as_deref(), Some("take_platform"));
+
+    assert_eq!(
+        attr_probe(&db, entity_id, "title").await.max_length,
+        Some(32)
+    );
+    let customer: Vec<serde_json::Value> = sqlx::query_scalar(
+        "SELECT value FROM metadata_property_layer \
+          WHERE object_kind = 'attribute' AND object_key = $1 AND property = 'max_length' \
+            AND layer = 'customer'",
+    )
+    .bind(&key)
+    .fetch_all(&db)
+    .await
+    .unwrap();
+    assert!(
+        customer.is_empty(),
+        "the customer's value is gone: {customer:?}"
+    );
+
+    let mut tx = attome_db::tx::begin(&db).await.unwrap();
+    let again = layer_conflicts::resolve_in_tx(&mut tx, id, Resolution::KeepCustomer, actor).await;
+    assert!(
+        matches!(again, Err(attome_types::AppError::Conflict(m)) if m == ALREADY_RESOLVED),
+        "{again:?}"
+    );
+}

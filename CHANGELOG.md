@@ -59,6 +59,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Upgrade conflicts can be listed and resolved (Y11-T7): `GET /api/v1/admin/metadata/conflicts` and
+  `POST /api/v1/admin/metadata/conflicts/{id}/resolve` with `keep_customer`, `take_platform` or
+  `combine` (with a value). Taking or combining changes the entity or field at once and is audited.
 - Emailed sign-in codes as a weaker second factor (Q5-T5): `POST /api/v1/auth/mfa/code/send` and
   `POST /api/v1/auth/mfa/code/verify`, for a person every one of whose roles lists `email` among its
   factors and whose address is verified; never for an administrator. The session records `otp_weak`.

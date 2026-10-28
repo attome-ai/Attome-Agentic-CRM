@@ -2713,6 +2713,25 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             )
         }
         // ── sign-in domains (Q1-T6) ─────────────────────────────────────────
+        "POST /api/v1/admin/metadata/conflicts/{id}/resolve" => {
+            // Y11-T7: an open conflict on a property no row needs to exist
+            // for when the customer's value is kept.
+            let id: Uuid = sqlx::query_scalar(
+                "INSERT INTO metadata_layer_conflict \
+                     (object_kind, object_key, property, old_platform, new_platform, customer) \
+                 VALUES ('attribute', $1, 'max_length', '20', '32', '50') RETURNING id",
+            )
+            .bind(format!("audit_emit_{}.title", Uuid::now_v7().simple()))
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("an open conflict");
+            request(
+                "POST",
+                &format!("/api/v1/admin/metadata/conflicts/{id}/resolve"),
+                t,
+                Some(json!({"choice": "keep_customer"})),
+            )
+        }
         "POST /api/v1/admin/security/oidc-domains" => {
             let provider = id_of(
                 &admin(

@@ -37,6 +37,8 @@ mod grants;
 mod identifiers;
 /// AA3-T1: indexes for the attributes views and definitions filter and sort on.
 pub mod index_advisor;
+/// Y11-T7: listing and resolving upgrade conflicts.
+pub mod layer_conflicts;
 /// Y2-T4 — the orphan scan: lookup values that point at no record.
 pub mod lookup_fk;
 /// L1-T2: a master entity's contribution and provenance side tables.
