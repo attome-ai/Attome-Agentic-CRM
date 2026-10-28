@@ -25,6 +25,8 @@ pub mod error;
 pub mod evidence;
 /// AB4-T9: how fresh each kind of drill is.
 pub mod freshness;
+/// AB11-T3: incident drafts, bilingual updates, corrections and resolution.
+pub mod incidents;
 /// AB3-T2: the live recovery point from three sources.
 pub mod live_rpo;
 pub mod model;
@@ -53,6 +55,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(disasters::openapi_fragment());
     doc.merge(status::openapi_fragment());
     doc.merge(public_status::openapi_fragment());
+    doc.merge(incidents::openapi_fragment());
     doc.merge(drills::openapi_fragment());
     doc.merge(drill_schedules::openapi_fragment());
     doc.merge(auditor_pack::openapi_fragment());

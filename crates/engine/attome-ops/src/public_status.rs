@@ -244,6 +244,14 @@ async fn snapshot(state: &EngineState) -> Result<Snapshot, AppError> {
     Ok(fresh)
 }
 
+/// AB11-T3: drops this node's cached snapshot after an incident or
+/// maintenance write, so the next read computes it.
+pub(crate) fn invalidate() {
+    *CACHE
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner) = None;
+}
+
 /// Whether `ctx` sees internal incidents, maintenance and components.
 fn sees_internal(ctx: &SecurityContext) -> bool {
     ctx.is_admin || ctx.privileges.contains(OpsRead::KEY)

@@ -4351,6 +4351,36 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"action": "switch_site"})),
             )
         }
+        // AB11-T3: an incident draft, changed, then given its first update.
+        "POST /api/v1/ops/incidents" => request(
+            "POST",
+            "/api/v1/ops/incidents",
+            t,
+            Some(json!({"title_en": "Search is slow", "components": ["search"]})),
+        ),
+        "PATCH /api/v1/ops/incidents/{id}" => {
+            let id = ops_incident(fx).await;
+            with_if_match(
+                request(
+                    "PATCH",
+                    &format!("/api/v1/ops/incidents/{id}"),
+                    t,
+                    Some(json!({"impact": "partial"})),
+                ),
+                1,
+            )
+        }
+        "POST /api/v1/ops/incidents/{id}/updates" => {
+            let id = ops_incident(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/ops/incidents/{id}/updates"),
+                t,
+                Some(
+                    json!({"stage": "investigating", "body_en": "We are looking into it.", "body_ar": "نتحقق من ذلك."}),
+                ),
+            )
+        }
         "POST /api/v1/ops/disasters/{id}/close" => {
             let id = ops_disaster(fx).await;
             with_if_match(
@@ -8621,6 +8651,17 @@ async fn ops_disaster(fx: &Fx) -> Uuid {
     .fetch_one(&fx.base.db)
     .await
     .expect("insert a disaster")
+}
+
+/// AB11-T3: an incident draft.
+async fn ops_incident(fx: &Fx) -> Uuid {
+    sqlx::query_scalar(
+        "INSERT INTO ops_incident (title_en, created_by) VALUES ('drill incident', $1) RETURNING id",
+    )
+    .bind(fx.admin_id)
+    .fetch_one(&fx.base.db)
+    .await
+    .expect("insert an incident")
 }
 
 /// Z12-T8: a calendar to hang a feed on.

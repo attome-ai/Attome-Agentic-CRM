@@ -45,6 +45,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Incidents (AB11-T3): `POST /api/v1/ops/incidents` opens a draft and `PATCH /api/v1/ops/incidents/{id}`
+  (`If-Match`) changes it while it is a draft (`ops.read`); `POST /api/v1/ops/incidents/{id}/updates`
+  (`ops.incident.publish`) publishes an update in English and Arabic (both required), moving the
+  incident to its stage and resolving it at `resolved`; a correction is a new update naming the one it
+  corrects. `GET /api/v1/ops/incidents` and `GET /api/v1/ops/incidents/{id}` read them. All audited.
 - An entity settings page at `/xrm/admin/entity-settings` (A31-T5): an entity's preset and per-feature
   switches, each with what it costs to keep on, saved and published as its `entity_settings` object;
   a data-protection card (field labels, encryption, retention rules, active legal holds); and a table
