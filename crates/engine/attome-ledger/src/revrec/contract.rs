@@ -420,7 +420,9 @@ pub fn check_combine(ids: &[Uuid]) -> Result<(), String> {
     Ok(())
 }
 
-/// Merges contracts of one customer into the first.
+/// Combine revenue contracts
+///
+/// Merges contracts of one customer into the first, for revenue recognition. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/ledger/revrec/contracts/combine",

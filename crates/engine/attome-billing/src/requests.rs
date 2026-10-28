@@ -487,8 +487,10 @@ async fn run_one(
     Ok(made)
 }
 
-/// The caller may ask for invoices: `billing.issue`, held by billing staff
-/// and by the service accounts of features that bill.
+/// Request an invoice
+///
+/// Other features (a won order, a subscription charge, a project milestone) ask for invoices rather
+/// than write them; a request is stored once per source. Holders of `billing.issue`. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/billing/invoice-requests",

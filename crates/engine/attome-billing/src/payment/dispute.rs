@@ -289,6 +289,10 @@ impl attome_server::authz::PrivilegeKey for DisputeRead {
     const KEY: &'static str = "payment_dispute.read";
 }
 
+/// Gather a dispute's evidence
+///
+/// The evidence a chargeback a gateway reported can draw on, for a person to submit before the
+/// deadline; nothing is submitted automatically.
 #[utoipa::path(
     get,
     path = "/api/v1/billing/disputes/{id}/evidence",

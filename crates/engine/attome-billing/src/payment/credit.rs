@@ -269,6 +269,10 @@ async fn readable(
     found.map(|_| ()).ok_or(AppError::NotFound)
 }
 
+/// Read an account's credit position
+///
+/// The account's credit limit, whether it is on credit hold, its open balance, and whether an amount
+/// would still fit, as order confirmation checks it.
 #[utoipa::path(
     get,
     path = "/api/v1/billing/accounts/{id}/credit",

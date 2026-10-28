@@ -201,6 +201,11 @@ pub struct RecurringMeasures {
     pub currencies: Vec<Movements>,
 }
 
+/// Read recurring revenue
+///
+/// Monthly recurring revenue per account and currency on a day (today by default), from the nightly
+/// snapshots, and its movement over the days before (30 by default): new, expansion, contraction and
+/// churn.
 #[utoipa::path(
     get,
     path = "/api/v1/billing/metrics/recurring",

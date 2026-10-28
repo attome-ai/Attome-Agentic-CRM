@@ -165,6 +165,10 @@ pub async fn ingest(
     Ok(result)
 }
 
+/// Report metered usage
+///
+/// Takes a batch of usage records; each carries the sender's idempotency key, and one already stored
+/// for the same line and time is counted as a duplicate, so a whole batch can be retried.
 #[utoipa::path(
     post,
     path = "/api/v1/billing/usage",

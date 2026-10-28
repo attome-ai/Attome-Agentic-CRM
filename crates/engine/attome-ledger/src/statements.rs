@@ -331,7 +331,10 @@ fn check_range(q: &RangeQuery) -> Result<(), AppError> {
     Ok(())
 }
 
-/// The trial balance for a date range.
+/// Read the trial balance
+///
+/// Each account's debits, credits and balance from the posted entries over a date range, in exact
+/// decimals.
 #[utoipa::path(
     get,
     path = "/api/v1/ledger/statements/trial-balance",
@@ -359,7 +362,9 @@ async fn get_trial_balance(
     Ok(Json(trial_balance(&accounts, &sums)))
 }
 
-/// The profit and loss statement for a date range.
+/// Read the profit and loss statement
+///
+/// Income and expense accounts summed from the posted entries over a date range.
 #[utoipa::path(
     get,
     path = "/api/v1/ledger/statements/profit-and-loss",
@@ -387,7 +392,10 @@ async fn get_profit_and_loss(
     Ok(Json(profit_and_loss(&accounts, &sums)))
 }
 
-/// The balance sheet as of a date.
+/// Read the balance sheet
+///
+/// Assets, liabilities and equity from the posted entries as of a date, with income not yet closed
+/// into equity shown as current earnings.
 #[utoipa::path(
     get,
     path = "/api/v1/ledger/statements/balance-sheet",

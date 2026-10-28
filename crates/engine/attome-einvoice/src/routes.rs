@@ -25,6 +25,9 @@ impl PrivilegeKey for EinvoiceManage {
 /// How long one ZATCA call may take during onboarding.
 const ZATCA_TIMEOUT: Duration = Duration::from_secs(30);
 
+/// List e-invoicing devices
+///
+/// The e-invoicing units (ZATCA devices) and whether each is onboarded. Holders of `einvoice.manage`.
 #[utoipa::path(
     get,
     path = "/api/v1/einvoice/devices",
@@ -51,6 +54,10 @@ pub(crate) async fn get_devices(
     }))
 }
 
+/// Add an e-invoicing device
+///
+/// A ZATCA e-invoicing unit, to be onboarded before it can sign invoices. Holders of
+/// `einvoice.manage`. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/einvoice/devices",
@@ -82,6 +89,10 @@ pub struct OnboardRequest {
     pub otp: String,
 }
 
+/// Onboard an e-invoicing device
+///
+/// Onboards the device with ZATCA using the one-time password the Fatoora portal shows, so it can
+/// stamp invoices. Holders of `einvoice.manage`. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/einvoice/devices/{id}/onboard",

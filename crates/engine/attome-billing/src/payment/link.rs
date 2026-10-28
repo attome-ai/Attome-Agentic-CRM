@@ -626,6 +626,10 @@ impl attome_server::authz::PrivilegeKey for PaymentLinkCreate {
     const KEY: &'static str = "payment_link.create";
 }
 
+/// Create a payment link
+///
+/// A single-use link for an issued invoice's open amount, an order's total, or a free amount for an
+/// account, valid 72 hours by default. Holders of `payment_link.create`. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/billing/payment-links",
@@ -649,6 +653,9 @@ pub(crate) async fn post_link(
     Ok(axum::Json(create_link(&state, &ctx, &body).await?))
 }
 
+/// Open a payment link
+///
+/// The hosted payment page's view of a link. No session; the token is the credential.
 #[utoipa::path(
     get,
     path = "/api/v1/pay/{token}",
@@ -672,6 +679,9 @@ pub(crate) async fn get_pay(
     Ok(axum::Json(view(&state, &token, locale).await?))
 }
 
+/// Pay through a payment link
+///
+/// Starts the gateway checkout for the link's amount. No session; the token is the credential.
 #[utoipa::path(
     post,
     path = "/api/v1/pay/{token}/checkout",

@@ -423,6 +423,10 @@ impl attome_server::authz::PrivilegeKey for InvoiceRead {
     const KEY: &'static str = "invoice.read";
 }
 
+/// Read an account's statement
+///
+/// The account's issued documents, payments and write-offs over a period (this month by default), each
+/// with what it adds to the balance; drafts, void and pro forma invoices do not count.
 #[utoipa::path(
     get,
     path = "/api/v1/billing/accounts/{id}/statement",
@@ -454,6 +458,9 @@ pub(crate) async fn get_statement(
     ))
 }
 
+/// Read receivables ageing
+///
+/// Each account's open balance by how overdue it is, as of a date.
 #[utoipa::path(
     get,
     path = "/api/v1/billing/ageing",
@@ -486,6 +493,9 @@ pub struct AgeingTotalsQuery {
     pub as_of: Option<NaiveDate>,
 }
 
+/// Read receivables ageing totals
+///
+/// The open balance across accounts by how overdue it is, as of a date.
 #[utoipa::path(
     get,
     path = "/api/v1/billing/ageing/totals",

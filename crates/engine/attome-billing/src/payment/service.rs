@@ -742,6 +742,10 @@ impl attome_server::authz::PrivilegeKey for PaymentReverse {
     const KEY: &'static str = "billing.payment_reverse";
 }
 
+/// Record a payment
+///
+/// A manual payment from an account, allocated to its invoices, in one transaction under the account's
+/// balance lock so two payments never allocate the same open amount. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/billing/payments",
@@ -777,6 +781,9 @@ pub struct PaymentReversed {
     pub invoices: Vec<Uuid>,
 }
 
+/// Reverse a payment
+///
+/// Reverses a payment and its allocations, so the invoices it paid are open again. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/billing/payments/{id}/reverse",
@@ -807,6 +814,9 @@ pub(crate) async fn post_reverse(
     }))
 }
 
+/// Apply an account's credit
+///
+/// Allocates the account's unallocated credit to its open invoices. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/billing/accounts/{id}/apply-credit",

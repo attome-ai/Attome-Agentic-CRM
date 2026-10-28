@@ -53,6 +53,11 @@ pub struct WebhookAccepted {
     pub new: usize,
 }
 
+/// Receive a payment gateway notification
+///
+/// Where a payment gateway posts its events, with no session: the call is verified with the system's
+/// webhook secret, each event is stored once and a job applies it to its payment. Rate limited per
+/// address.
 #[utoipa::path(
     post,
     path = "/api/v1/billing/gateways/{system}/webhook",

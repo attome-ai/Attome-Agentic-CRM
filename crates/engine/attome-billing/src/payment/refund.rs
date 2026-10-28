@@ -570,6 +570,10 @@ impl attome_server::authz::PrivilegeKey for PaymentRefund {
     const KEY: &'static str = "payment.refund";
 }
 
+/// Refund a payment
+///
+/// Refunds part or all of a paid payment, never more than earlier refunds left, under the payment's
+/// refund lock. Holders of `payment.refund`. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/billing/payments/{id}/refunds",

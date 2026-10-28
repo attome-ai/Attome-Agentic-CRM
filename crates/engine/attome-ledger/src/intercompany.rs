@@ -312,6 +312,10 @@ pub async fn group_trial_balance(
         .collect())
 }
 
+/// Post an inter-company entry
+///
+/// Writes both sides of a charge or loan between two companies of the group in one transaction, so the
+/// group's books never hold one half. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/ledger/intercompany",
@@ -338,6 +342,10 @@ async fn post_intercompany_entry(
     ))
 }
 
+/// Read the group trial balance
+///
+/// The trial balance of every company together, with inter-company postings eliminated, for a date
+/// range.
 #[utoipa::path(
     get,
     path = "/api/v1/ledger/group-trial-balance",
