@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:df6948d44987c19ef96f0f541387d829db95509469d1bd0f796fca0860dddb58",
+  "checksum": "sha256:c20639556b571004e430577e69874d31c20c8a34a3729705571ba5f5c8407851",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-agent.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -385,6 +385,7 @@
               "meeting.notes",
               "memory.forget",
               "memory.remember",
+              "metadata.propose_conflict_resolution",
               "model.agent.describe",
               "model.agent.edit",
               "model.agent.list",

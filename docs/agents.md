@@ -109,6 +109,10 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
     URL (public addresses only, 5 seconds). It drafts the provider settings: the preset,
     scopes, claim names and the groups claim to map, with warnings.
   - The draft never holds a secret and is never saved. A person adds the provider from it.
+- Upgrade conflicts: `metadata.propose_conflict_resolution` proposes, for an administrator who
+  asks, how to resolve a conflict an upgrade recorded (keep this system's value, take the
+  platform's, or combine them), with its reasoning. It sees only the setting's three values and
+  what the setting means, and never resolves anything; the administrator decides.
 - Questions: `query.plan` turns a question into a checked query (entity, filters, order, limit) and
   returns the issues to fix, or a description for the person and the `query.execute` arguments that
   run it. The model never writes SQL. `query.run` runs a query in the text form (`SELECT … FROM …

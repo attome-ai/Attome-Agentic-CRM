@@ -110,6 +110,18 @@ pub async fn list(
     Ok((items, total))
 }
 
+/// Conflict `id`; `NotFound` when there is none.
+pub async fn get(db: &DbPool, id: Uuid) -> Result<LayerConflict, AppError> {
+    sqlx::query_as(&format!(
+        "SELECT {COLUMNS} FROM metadata_layer_conflict WHERE id = $1"
+    ))
+    .bind(id)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::NotFound)
+}
+
 /// Resolves conflict `id` as `resolution` for `actor`, in `tx`. `NotFound`
 /// for no such conflict, `Conflict(ALREADY_RESOLVED)` for a resolved one.
 pub async fn resolve_in_tx(

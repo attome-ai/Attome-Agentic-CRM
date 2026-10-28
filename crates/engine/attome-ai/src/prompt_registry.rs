@@ -137,6 +137,12 @@ pub fn all_versions() -> Vec<PromptEntry> {
             text: crate::actions::search_ask::parse_system_prompt(),
         },
         PromptEntry {
+            action_id: crate::actions::layer_conflict_propose::METADATA_PROPOSE_CONFLICT_RESOLUTION,
+            version: crate::actions::layer_conflict_propose::PROPOSE_PROMPT_VERSION,
+            // The conflict's values go in their own untrusted segment.
+            text: crate::actions::layer_conflict_propose::system_prompt(),
+        },
+        PromptEntry {
             action_id: crate::actions::search_ask::SEARCH_ANSWER_RECORDS,
             version: crate::actions::search_ask::RECORDS_ANSWER_PROMPT_VERSION,
             text: crate::actions::search_ask::records_answer_system_prompt(),

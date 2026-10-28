@@ -44,7 +44,7 @@
               "lead.book_meeting", "lead.send_message", "lineage.downstream", "lineage.impact", "lineage.upstream",
               "master.preview_ranking", "master.propose_release", "master.xref", "mcp.call.consequential",
               "mcp.call.read", "mcp.call.reversible", "mcp.tools", "meeting.brief", "meeting.confirm_notes",
-              "meeting.notes", "memory.forget", "memory.remember", "model.agent.describe", "model.agent.edit",
+              "meeting.notes", "memory.forget", "memory.remember", "metadata.propose_conflict_resolution", "model.agent.describe", "model.agent.edit",
               "model.agent.list", "model.attribute.describe", "model.business_event.describe",
               "model.business_event.edit", "model.business_event.list", "model.component.describe",
               "model.component.edit", "model.component.list", "model.decision_table.describe",
