@@ -530,6 +530,11 @@ impl attome_server::authz::PrivilegeKey for BillingCredit {
     const KEY: &'static str = "billing.credit";
 }
 
+/// Credit an issued invoice
+///
+/// A draft credit note copying chosen lines of the issued invoice with a negative quantity, with a
+/// reason; a line is never credited beyond what earlier credit notes left. An issued invoice itself
+/// never changes. Needs the billing credit privilege. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/billing/invoices/{id}/credit-notes",
@@ -563,6 +568,10 @@ pub(crate) async fn post_credit_note(
     ))
 }
 
+/// Charge more on an issued invoice
+///
+/// A draft debit note with new positive lines for a charge the invoice missed, with a reason. Needs
+/// the billing credit privilege. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/billing/invoices/{id}/debit-notes",
@@ -591,6 +600,10 @@ pub(crate) async fn post_debit_note(
     ))
 }
 
+/// Cancel an issued invoice
+///
+/// Issues a credit note for whatever is still uncredited, at once and with a reason; the issue
+/// approval threshold applies to it as to any document. Needs the billing credit privilege. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/billing/invoices/{id}/cancel",

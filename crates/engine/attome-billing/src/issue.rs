@@ -368,6 +368,12 @@ impl attome_server::authz::PrivilegeKey for BillingIssue {
     const KEY: &'static str = "billing.issue";
 }
 
+/// Issue an invoice
+///
+/// Recomputes a draft's totals and issues it with the next number of its series; it needs an account
+/// and a line, and a pro forma never takes a number (409). Above `billing.issue_approval_threshold`
+/// it opens an approval instead. With e-invoicing on, the e-invoice is made and sent in the same step.
+/// Needs the billing issue privilege. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/billing/invoices/{id}/issue",

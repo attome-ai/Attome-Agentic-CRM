@@ -327,6 +327,10 @@ impl attome_server::authz::PrivilegeKey for InvoiceUpdate {
     const KEY: &'static str = "invoice.update";
 }
 
+/// Recompute a draft invoice
+///
+/// Prices each line through the tax engine and stores the invoice totals summed from the rounded
+/// lines; only a draft (409 otherwise). Needs update rights on invoices. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/billing/invoices/{id}/recompute",

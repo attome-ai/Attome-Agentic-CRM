@@ -430,6 +430,10 @@ pub async fn sweep(state: &EngineState, transport: &dyn Transport) -> Result<u64
     Ok(settled)
 }
 
+/// Read an invoice's e-invoice
+///
+/// The ZATCA e-invoice made when the invoice was issued: its status (pending, cleared, reported or
+/// rejected), ZATCA's validation results and the QR code.
 #[utoipa::path(
     get,
     path = "/api/v1/billing/invoices/{id}/einvoice",

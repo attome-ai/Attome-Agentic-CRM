@@ -399,6 +399,10 @@ impl attome_server::authz::PrivilegeKey for InvoiceCreate {
     const KEY: &'static str = "invoice.create";
 }
 
+/// Apply a deposit to a final invoice
+///
+/// Adds one negative line per VAT category of an issued deposit invoice to a draft final invoice. A
+/// deposit applies once; a second application is 409. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/billing/invoices/{id}/apply-deposit",
@@ -429,6 +433,10 @@ pub(crate) async fn post_apply_deposit(
     ))
 }
 
+/// Convert a pro forma invoice
+///
+/// Copies a pro forma invoice and its lines into a new draft invoice, which is then priced and issued
+/// as usual; the pro forma stays as it was. Needs the invoice create privilege. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/billing/invoices/{id}/convert-pro-forma",

@@ -247,6 +247,11 @@ impl attome_server::authz::PrivilegeKey for BillingWriteOff {
     const KEY: &'static str = "billing.write_off";
 }
 
+/// Write off an invoice balance
+///
+/// Writes off up to what is open on an issued invoice, with a reason. Above
+/// `billing.write_off_approval_threshold` it waits for approval. Needs the write-off privilege.
+/// Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/billing/invoices/{id}/write-off",
