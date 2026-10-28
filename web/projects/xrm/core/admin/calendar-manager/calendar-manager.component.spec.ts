@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { LangService, UserPreferencesService } from '@attome/base';
-import { AdminService } from '@attome/xrm/core/admin/data';
+import { AdminService, ChangesetContextService } from '@attome/xrm/core/admin/data';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -41,6 +41,7 @@ function create() {
     imports: [CalendarManagerComponent],
     providers: [
       { provide: AdminService, useValue: service },
+      { provide: ChangesetContextService, useValue: { editingLayer: signal<string | null>(null) } },
       {
         provide: LangService,
         useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' },
