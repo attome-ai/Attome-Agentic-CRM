@@ -299,6 +299,19 @@ pub async fn resolve_widget_context<'a>(
     {
         drillability = Drillability::Exact;
     }
+    // P7-T2: a KPI widget over one builder metric drills to the records its
+    // definition counts now; any other KPI can only be explained.
+    if data_class == DataClass::Kpi {
+        let refs = crate::execution::kpi_metric_refs(widget);
+        if let [metric_id] = refs.as_slice()
+            && matches!(
+                attome_metric::builder::current_spec(&state.base.db, *metric_id).await,
+                Ok(Some(_))
+            )
+        {
+            drillability = Drillability::Exact;
+        }
+    }
     let page_id = page.get("id").and_then(Value::as_str);
     let parameters = resolve_parameters(
         &declared_parameters(&definition.snapshot, page_id),

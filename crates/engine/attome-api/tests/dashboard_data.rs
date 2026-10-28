@@ -2546,3 +2546,132 @@ async fn an_approval_executes_only_the_content_that_was_reviewed() {
         unchanged.dashboard_id.to_string()
     );
 }
+
+// ── P7-T2: governed metric widgets drill to the records behind them ────────
+
+/// A scorecard on one builder metric drills to the records its definition
+/// counts now, as the viewer, and shows the snapshot beside them: a record
+/// added after the snapshot is listed, and the snapshot keeps its value.
+#[tokio::test]
+async fn metric_widget_drill_reports_snapshot_and_now() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let (admin_id, admin_cookie) = seed_user(&system, true).await;
+    let db = system.state().base.db.clone();
+    let (deal, _) = provision_deals(&system).await;
+    let metric_id = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO dashboard_metric_definition \
+         (id, name, key, source_kind, direction, period, is_active) \
+         VALUES ($1, 'Deals won', $2, 'manual', 'higher_is_better', 'month', true)",
+    )
+    .bind(metric_id)
+    .bind(format!("deals_won_{}", metric_id.simple()))
+    .execute(&db)
+    .await
+    .expect("insert metric definition");
+    let app = full_app(system);
+    let res = app
+        .clone()
+        .oneshot(req(
+            "POST",
+            &format!("/api/v1/metrics/{metric_id}/builder"),
+            Some(&admin_cookie),
+            Some(&json!({
+                "entity_logicalname": deal,
+                "aggregate": "count",
+                "date_attribute": "closed_on",
+                "filters": [{ "attribute": "status", "op": "eq", "value": "won" }],
+            })),
+        ))
+        .await
+        .unwrap();
+    let status = res.status();
+    assert_eq!(status, StatusCode::OK, "{}", body_json(res).await);
+
+    let today = chrono::Utc::now().date_naive();
+    let month_start = today.format("%Y-%m-01").to_string();
+    let day = today.to_string();
+    for status in ["won", "won", "lost"] {
+        insert_deal(
+            &db,
+            &deal,
+            Some(status),
+            10.0,
+            &day,
+            Some(admin_id),
+            Some(true),
+        )
+        .await;
+    }
+    insert_snapshot(&db, metric_id, &month_start, 2.0).await;
+    // One more won deal after the snapshot.
+    insert_deal(
+        &db,
+        &deal,
+        Some("won"),
+        10.0,
+        &day,
+        Some(admin_id),
+        Some(true),
+    )
+    .await;
+    // A won deal outside the period is not listed.
+    insert_deal(
+        &db,
+        &deal,
+        Some("won"),
+        10.0,
+        "2001-01-15",
+        Some(admin_id),
+        Some(true),
+    )
+    .await;
+
+    let dashboard = build_data_dashboard(&db, admin_id, &json!({})).await;
+    sqlx::query("UPDATE dashboard_widget SET widget_type = 'scorecard', config = $1 WHERE id = $2")
+        .bind(json!({ "metric_refs": [metric_id] }).to_string())
+        .bind(dashboard.widget_id)
+        .execute(&db)
+        .await
+        .unwrap();
+    publish(&app, &admin_cookie, dashboard.dashboard_id, &db).await;
+
+    let (status, data) = widget_data(&app, &admin_cookie, &dashboard, json!({})).await;
+    assert_eq!(status, StatusCode::OK, "{data}");
+    assert_eq!(data["drillability"], "exact", "{data}");
+
+    let (status, body) = widget_route(&app, &admin_cookie, &dashboard, "records", json!({})).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let parity = &body["metric_parity"];
+    assert_eq!(parity["snapshot_value"], 2.0, "{body}");
+    assert_eq!(parity["listed_total"], 3, "{body}");
+    assert_eq!(parity["period_start"], month_start);
+    assert_eq!(parity["as_of_available"], false);
+    assert_eq!(parity["counts_records"], true);
+    assert_eq!(body["records"]["total"], 3);
+    assert_eq!(body["records"]["entity_logical_name"], deal);
+}
+
+/// A formula metric has no records behind it: its widget stays explain-only
+/// and a records drill is refused.
+#[tokio::test]
+async fn formula_metric_widget_stays_explain_only() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let (admin_id, admin_cookie) = seed_user(&system, true).await;
+    let db = system.state().base.db.clone();
+    let metric_id = insert_metric(&db, "a / b").await;
+    let dashboard = build_data_dashboard(&db, admin_id, &json!({})).await;
+    sqlx::query("UPDATE dashboard_widget SET widget_type = 'scorecard', config = $1 WHERE id = $2")
+        .bind(json!({ "metric_refs": [metric_id] }).to_string())
+        .bind(dashboard.widget_id)
+        .execute(&db)
+        .await
+        .unwrap();
+    let app = full_app(system);
+    publish(&app, &admin_cookie, dashboard.dashboard_id, &db).await;
+
+    let (_, data) = widget_data(&app, &admin_cookie, &dashboard, json!({})).await;
+    assert_eq!(data["drillability"], "explain_only", "{data}");
+    let (status, body) = widget_route(&app, &admin_cookie, &dashboard, "records", json!({})).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+}

@@ -62,6 +62,26 @@ pub struct WidgetRecordsInputs {
     pub page_size: Option<i64>,
 }
 
+/// P7-T2: a drilled KPI's snapshot next to the records listed now.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct MetricParity {
+    pub metric_id: Uuid,
+    /// The period the records were listed for: the metric's current one.
+    pub period_start: chrono::NaiveDate,
+    /// The latest snapshot of that period; absent before one is computed.
+    pub snapshot_value: Option<f64>,
+    pub snapshot_computed_at: Option<DateTime<Utc>>,
+    /// How many records the caller may read match the definition now.
+    pub listed_total: i64,
+    /// Whether the metric counts records, so the snapshot and the listed
+    /// total are the same measure and can be compared.
+    pub counts_records: bool,
+    /// Whether the records as they were when the snapshot was taken can be
+    /// listed; never yet.
+    pub as_of_available: bool,
+    pub as_of_unavailable_reason: Option<String>,
+}
+
 #[derive(Serialize, ToSchema)]
 pub struct WidgetRecordsResponse {
     pub widget_id: Uuid,
@@ -79,6 +99,9 @@ pub struct WidgetRecordsResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub series_key: Option<BucketKey>,
     pub records: StructuredRecords,
+    /// P7-T2: for a KPI widget, the snapshot and the records listed now.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metric_parity: Option<MetricParity>,
 }
 
 impl std::fmt::Debug for WidgetRecordsResponse {
@@ -152,6 +175,26 @@ async fn widget_records(
             bucket_key: inputs.bucket_key,
             series_key: inputs.series_key,
             records,
+            metric_parity: None,
+        }));
+    }
+    // P7-T2: a builder metric's KPI lists the records its definition counts
+    // now, as the viewer, next to the snapshot.
+    if wc.data_class == DataClass::Kpi {
+        let (records, applied_filters, parity) = metric_records(&state, &ctx, &wc, &inputs).await?;
+        return Ok(Json(WidgetRecordsResponse {
+            widget_id: wc.widget_id,
+            drillability: wc.drillability,
+            definition_source: definition.source,
+            published_version_number: definition.version_number,
+            definition_fingerprint: definition_fingerprint(&definition, &wc, &applied_filters),
+            timezone: wc.tz.name().to_owned(),
+            timezone_source: wc.timezone_source,
+            applied_filters,
+            bucket_key: inputs.bucket_key,
+            series_key: inputs.series_key,
+            records,
+            metric_parity: Some(parity),
         }));
     }
     let plan = structured_plan(&state, &wc)?;
@@ -182,7 +225,75 @@ async fn widget_records(
         bucket_key: inputs.bucket_key,
         series_key: inputs.series_key,
         records,
+        metric_parity: None,
     }))
+}
+
+/// P7-T2: the records behind a builder metric's KPI: the metric's spec as a
+/// structured definition over its current period, run as the viewer (record
+/// and attribute security apply, never the metric principal's scope), with
+/// the latest snapshot of that period beside the exact total.
+async fn metric_records(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    wc: &WidgetContext<'_>,
+    inputs: &WidgetRecordsInputs,
+) -> Result<(StructuredRecords, Vec<AppliedFilter>, MetricParity), AppError> {
+    let refs = crate::execution::kpi_metric_refs(wc.widget);
+    let [metric_id] = refs.as_slice() else {
+        return Err(AppError::Validation(
+            "only a widget showing one metric can be drilled".into(),
+        ));
+    };
+    let db = &state.base.db;
+    let spec = attome_metric::builder::current_spec(db, *metric_id)
+        .await?
+        .ok_or_else(|| {
+            AppError::Validation(
+                "this metric is not built from its parts; it can only be explained".into(),
+            )
+        })?;
+    let metric = attome_metric::metric::fetch_metric(db, *metric_id).await?;
+    let (start, end) = attome_metric::metric::period_bounds(
+        &metric.period,
+        attome_metric::metric::PeriodCalendar::default(),
+        Utc::now(),
+    )?;
+    let snapshot = attome_metric::metric::latest_snapshot(db, *metric_id, start).await?;
+    let data = attome_metric::builder::spec_definition(&spec, start, end)?;
+    let records = attome_search::run_structured_records(
+        state,
+        ctx,
+        &data,
+        &[],
+        wc.tz,
+        &DrillTarget {
+            bucket_key: inputs.bucket_key.clone(),
+            series_key: inputs.series_key.clone(),
+        },
+        inputs.after_id,
+        inputs.page_size.unwrap_or(attome_types::DEFAULT_PAGE_SIZE),
+    )
+    .await?;
+    let applied_filters = data
+        .filters
+        .iter()
+        .map(|filter| AppliedFilter {
+            filter: filter.clone(),
+            origin: FilterOrigin::Definition,
+        })
+        .collect();
+    let parity = MetricParity {
+        metric_id: *metric_id,
+        period_start: start,
+        snapshot_value: snapshot.as_ref().and_then(|s| s.actual),
+        snapshot_computed_at: snapshot.as_ref().map(|s| s.computed_at),
+        listed_total: records.total,
+        counts_records: spec.aggregate == "count",
+        as_of_available: false,
+        as_of_unavailable_reason: Some("record history (A1) is not enabled".to_owned()),
+    };
+    Ok((records, applied_filters, parity))
 }
 
 /// The filters that select one bucket of a chart over a query's rows: the

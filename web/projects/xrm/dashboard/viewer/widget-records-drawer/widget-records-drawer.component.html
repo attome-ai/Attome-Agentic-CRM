@@ -17,6 +17,19 @@
   @if (response(); as res) {
     <div class="xwr-context">
       <p class="xwr-total">{{ 'dashboard.records.total' | translate: { total: res.records.total } }}</p>
+      @if (res.metric_parity; as parity) {
+        <p class="xwr-meta" data-parity>
+          @if (parity.snapshot_value === null || parity.snapshot_value === undefined) {
+            {{ 'dashboard.records.noSnapshot' | translate }}
+          } @else if (!parity.counts_records) {
+            {{ 'dashboard.records.snapshotValue' | translate: { value: parity.snapshot_value } }}
+          } @else if (parity.snapshot_value === parity.listed_total) {
+            {{ 'dashboard.records.snapshotMatches' | translate: { value: parity.snapshot_value } }}
+          } @else {
+            {{ 'dashboard.records.snapshotDiffers' | translate: { value: parity.snapshot_value, total: parity.listed_total } }}
+          }
+        </p>
+      }
       <p class="xwr-meta">{{ 'dashboard.viewer.asOf' | translate: { time: asOf() } }} · {{ res.timezone }}</p>
       @if (res.applied_filters.length > 0) {
         <ul class="xwr-filters" [attr.aria-label]="'dashboard.explain.filters' | translate">

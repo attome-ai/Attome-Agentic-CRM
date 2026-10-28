@@ -1807,6 +1807,10 @@ export const xrmAr = {
       title: 'السجلات', close: 'إغلاق', total: '{total, plural, one {سجل واحد} other {# سجلات}}',
       exportCsv: 'تصدير CSV', exportXlsx: 'تصدير Excel', exportQueued: 'تمت جدولة التصدير: {rows} صفاً.',
       filterDashboard: 'تصفية اللوحة بهذه القيمة', loadMore: 'تحميل المزيد',
+      noSnapshot: 'لم تُسجَّل قيمة لهذه الفترة بعد؛ هذه هي السجلات الآن.',
+      snapshotValue: 'القيمة المسجلة لهذه الفترة {value}؛ وهذه هي السجلات التي تشملها الآن.',
+      snapshotMatches: 'القيمة المسجلة، {value}، تطابق السجلات الآن.',
+      snapshotDiffers: 'القيمة المسجلة {value}، والسجلات الآن {total}. تغيّرت السجلات منذ تسجيلها.',
     },
     explain: {
       title: 'كيف تم الحساب', inspect: 'فحص', calculation: 'الحساب', filters: 'عوامل التصفية',

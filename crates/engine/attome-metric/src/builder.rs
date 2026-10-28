@@ -324,6 +324,79 @@ pub fn spec_sql(spec: &MetricSpec, entity: &EntityMeta, period: &str) -> Result<
     Ok(sql)
 }
 
+/// P7-T2: keeps the spec a builder metric was last built from. The stored
+/// query holds only the aggregate, so the spec is what lets a drill list the
+/// records behind the value. One row per metric, replaced on every build.
+pub async fn store_spec(
+    db: &attome_db::DbPool,
+    metric_id: Uuid,
+    spec: &MetricSpec,
+    actor: Uuid,
+) -> Result<(), AppError> {
+    let spec = serde_json::to_value(spec).map_err(AppError::internal)?;
+    sqlx::query(
+        "INSERT INTO metric_builder_spec (metric_ref, spec, updated_by) VALUES ($1, $2, $3) \
+         ON CONFLICT (metric_ref) DO UPDATE \
+            SET spec = EXCLUDED.spec, updated_by = EXCLUDED.updated_by, updated_at = now()",
+    )
+    .bind(metric_id)
+    .bind(spec)
+    .bind(actor)
+    .execute(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
+}
+
+/// P7-T2: the spec of a builder metric whose value still comes from the
+/// builder's own query; `None` for any other metric, or once someone pointed
+/// it at a different query.
+pub async fn current_spec(
+    db: &attome_db::DbPool,
+    metric_id: Uuid,
+) -> Result<Option<MetricSpec>, AppError> {
+    let spec: Option<Value> = sqlx::query_scalar(
+        "SELECT s.spec FROM metric_builder_spec s \
+           JOIN dashboard_metric_definition m ON m.id = s.metric_ref \
+           JOIN sql_query q ON q.id::text = m.query_ref \
+          WHERE s.metric_ref = $1 AND m.source_kind = 'query' \
+            AND q.name = $2 AND q.is_active = true",
+    )
+    .bind(metric_id)
+    .bind(builder_query_name(metric_id))
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(spec.and_then(|spec| serde_json::from_value(spec).ok()))
+}
+
+/// P7-T2: the records `spec` counts in the period `[start, end)`, as a
+/// structured data definition over its entity: its filters plus the date
+/// window, measured by its aggregate. Pure.
+pub fn spec_definition(
+    spec: &MetricSpec,
+    start: NaiveDate,
+    end: NaiveDate,
+) -> Result<attome_core::data_definition::DataDefinition, AppError> {
+    let mut filters: Vec<Value> = spec
+        .filters
+        .iter()
+        .map(|f| json!({ "field": f.attribute, "op": f.op, "value": f.value }))
+        .collect();
+    filters.push(json!({ "field": spec.date_attribute, "op": "gte", "value": start.to_string() }));
+    filters.push(json!({ "field": spec.date_attribute, "op": "lt", "value": end.to_string() }));
+    let mut measure = json!({ "aggregation": spec.aggregate });
+    if let Some(field) = &spec.measure_attribute {
+        measure["field"] = json!(field);
+    }
+    serde_json::from_value(json!({
+        "source": spec.entity_logicalname,
+        "measures": [measure],
+        "filters": filters,
+    }))
+    .map_err(|e| invalid(format!("the metric's builder spec cannot be listed: {e}")))
+}
+
 /// Creates or republishes the metric's builder query from `spec` and points
 /// the metric at it, as `ctx` (who holds the metric's update privilege).
 /// Answers the stored query's id.
@@ -401,12 +474,46 @@ pub async fn upsert_builder_query(
         )
         .await?;
     }
+    store_spec(&state.base.db, metric_id, spec, ctx.user_id).await?;
     Ok(query_id)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_spec_lists_its_records_over_the_period() {
+        let spec = MetricSpec {
+            entity_logicalname: "deal".into(),
+            aggregate: "sum".into(),
+            measure_attribute: Some("amount".into()),
+            date_attribute: "closed_on".into(),
+            filters: vec![SpecFilter {
+                attribute: "status".into(),
+                op: "eq".into(),
+                value: Some(json!("won")),
+            }],
+            dimension_attributes: vec![],
+        };
+        let day = |d: &str| NaiveDate::parse_from_str(d, "%Y-%m-%d").unwrap();
+        let definition = spec_definition(&spec, day("2026-10-01"), day("2026-11-01")).unwrap();
+        assert_eq!(definition.source, "deal");
+        assert_eq!(definition.measures.len(), 1);
+        let filters: Vec<(String, String, Option<Value>)> = definition
+            .filters
+            .iter()
+            .map(|f| (f.field.clone(), f.op.clone(), f.value.clone()))
+            .collect();
+        assert_eq!(
+            filters,
+            vec![
+                ("status".into(), "eq".into(), Some(json!("won"))),
+                ("closed_on".into(), "gte".into(), Some(json!("2026-10-01"))),
+                ("closed_on".into(), "lt".into(), Some(json!("2026-11-01"))),
+            ]
+        );
+    }
 
     fn attr(name: &str, field_type: i32, sensitive: bool) -> AttrInfo {
         serde_json::from_value(json!({

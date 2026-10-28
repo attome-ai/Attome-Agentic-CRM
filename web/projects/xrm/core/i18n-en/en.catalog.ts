@@ -1851,6 +1851,10 @@ export const xrmEn = {
       title: 'Records', close: 'Close', total: '{total, plural, one {# record} other {# records}}',
       exportCsv: 'Export CSV', exportXlsx: 'Export Excel', exportQueued: 'Export queued: {rows} rows.',
       filterDashboard: 'Filter dashboard by this', loadMore: 'Load more',
+      noSnapshot: 'No value has been recorded for this period yet; these are the records now.',
+      snapshotValue: 'The recorded value for this period is {value}; these are the records it covers now.',
+      snapshotMatches: 'The recorded value, {value}, matches the records now.',
+      snapshotDiffers: 'The recorded value is {value}; the records now come to {total}. Records changed since it was recorded.',
     },
     explain: {
       title: 'How this was calculated', inspect: 'Inspect', calculation: 'Calculation', filters: 'Filters',

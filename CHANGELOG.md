@@ -781,6 +781,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `ATTOME_LISTEN_PROTOCOL_INFO` (Windows, the base64 `WSAPROTOCOL_INFOW` from
   `WSADuplicateSocketW`, or `-` to read it from stdin) is set, so a supervisor can hand the same
   socket to the next version; otherwise it binds as before.
+- Drilling a governed metric (P7-T2): a scorecard or trendline showing one metric built from its
+  parts (`POST /api/v1/metrics/{id}/builder`) now drills: the records route lists the records the
+  metric's definition counts in its current period, as the viewer, and `metric_parity` gives the
+  period's snapshot value beside the listed total; the drawer says when they differ. Other metrics
+  stay explain-only. The builder keeps its spec (migration 0325).
 - On-call calendar (H7-T2): `GET /api/v1/service/oncall/schedules/{id}/calendar?from&to` answers who
   is on call on a schedule over up to 62 days, stretch by stretch, from the rotation or an override,
   and the Service > On-call screen (`service/oncall`) shows it a week at a time in English and Arabic,
