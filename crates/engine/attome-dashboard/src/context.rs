@@ -250,6 +250,10 @@ struct ResolveVariablesResponse {
     variables: serde_json::Map<String, serde_json::Value>,
 }
 
+/// Resolve a dashboard's variables
+///
+/// What `@current_user`, `@current_date` and the dashboard's other variables come to for this
+/// viewer, embed context and URL overrides. Writes nothing. Anyone who may read the dashboard.
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/{id}/resolve-variables",
@@ -259,7 +263,7 @@ struct ResolveVariablesResponse {
         None,
         "resolves declared variable/parameter defaults and embed/URL overrides for display; persists nothing",
     )))),
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The dashboard")),
     request_body = ResolveVariablesBody,
     responses(
         (status = 200, description = "Success", body = ResolveVariablesResponse),

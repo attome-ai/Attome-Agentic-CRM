@@ -364,11 +364,16 @@ pub async fn do_health_check(
     })
 }
 
+/// Check a dashboard's bound queries
+///
+/// Whether every query and view its widgets name still exists and resolves, so a renamed or deleted
+/// one is found before publishing instead of when a widget fails to draw. Anyone who may read the
+/// dashboard.
 #[utoipa::path(
     get,
     path = "/api/v1/attome-dashboard/{id}/health-check",
     tag = "dashboard",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The dashboard")),
     responses(
         (status = 200, description = "Success", body = HealthCheckResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

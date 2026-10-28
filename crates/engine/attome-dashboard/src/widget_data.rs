@@ -946,12 +946,16 @@ async fn run_page_widget(
     (index, result)
 }
 
+/// Get a widget's data
+///
+/// Runs one widget's definition over the records the caller may see and returns its values. Writes
+/// nothing. Anyone who may read the dashboard.
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/{id}/widgets/{widget_id}/data",
     tag = "dashboard",
     extensions(("x-audit-exempt" = json!({"reason": "read_only", "via": null, "note": "Dashboard 10/10 Phase 2.3: executes a widget definition over the caller's record scope and writes nothing."}))),
-    params(("id" = Uuid, Path), ("widget_id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The dashboard"), ("widget_id" = Uuid, Path, description = "The widget")),
     request_body = WidgetInputs,
     responses(
         (status = 200, description = "The widget's data, executed server-side from the published definition (or the draft for a preview)", body = WidgetDataResponse),
@@ -974,12 +978,16 @@ async fn widget_data(
     Ok(Json(response))
 }
 
+/// Get a page's data
+///
+/// Runs every widget of one page over the records the caller may see, in one call. Writes nothing.
+/// Anyone who may read the dashboard.
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/{id}/pages/{page_id}/data",
     tag = "dashboard",
     extensions(("x-audit-exempt" = json!({"reason": "read_only", "via": null, "note": "Dashboard 10/10 Phase 2.3: executes every widget of one page over the caller's record scope and writes nothing."}))),
-    params(("id" = Uuid, Path), ("page_id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The dashboard"), ("page_id" = Uuid, Path, description = "The page")),
     request_body = WidgetInputs,
     responses(
         (status = 200, description = "Every widget on the page, executed with at most four at a time; a widget that fails carries its own error", body = PageDataResponse),

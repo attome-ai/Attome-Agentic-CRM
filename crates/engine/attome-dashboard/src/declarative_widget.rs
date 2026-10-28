@@ -443,18 +443,11 @@ pub struct ValidateConfigResponse {
     pub errors: Vec<String>,
 }
 
-/// `POST /api/v1/attome-dashboard/widget/validate-config` — the "reject
-/// malformed configs at write time, not render time" surface for
-/// `declarative_widget` (see this module's doc comment). Generic entity CRUD
-/// has no per-field business-validation hook (`widget_registry.rs`'s doc
-/// comment: `config` is an unvalidated client-owned blob on every
-/// widget-carrying entity), so — same shape as `query_admin.rs`'s
-/// publish-time `EXPLAIN` lint being "the friendly error, the missing grant
-/// is the actual guarantee" — this is the sanctioned pre-save check the
-/// widget config editor calls before writing through
-/// `/api/v1/dashboard_widget`. Same authorization as this crate's other
-/// bespoke widget business actions (`widget_actions.rs`): a caller who may
-/// update a widget may check whether a config they intend to save is valid.
+/// Check a widget configuration
+///
+/// Validates a declarative widget's configuration before it is saved through the record API, and
+/// names every problem, so a bad configuration is refused when written rather than when drawn. Writes
+/// nothing. Needs update rights on widgets.
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/widget/validate-config",

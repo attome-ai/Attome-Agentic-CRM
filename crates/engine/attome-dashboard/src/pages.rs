@@ -435,6 +435,10 @@ pub async fn do_load_draft_tree(
 
 // ── HTTP surface ─────────────────────────────────────────────────────────
 
+/// Add a page to a dashboard
+///
+/// Creates the page together with its root grid section in one transaction, under the dashboard's
+/// lifecycle lock. Dashboard editors only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/{id}/pages",
@@ -442,7 +446,7 @@ pub async fn do_load_draft_tree(
     operation_id = "create_dashboard_page",
     tag = "dashboard",
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The dashboard")),
     request_body = NewPageBody,
     responses(
         (status = 201, description = "Page created with its root section", body = CreatedPage),
@@ -471,12 +475,15 @@ pub struct RepairedRootSection {
     pub id: Uuid,
 }
 
+/// Give a page its root section
+///
+/// Adds the root grid section to a page that has none. Needs the right to create sections. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/{id}/pages/{page_id}/root-section",
     tag = "dashboard",
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
-    params(("id" = Uuid, Path), ("page_id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The dashboard"), ("page_id" = Uuid, Path, description = "The page")),
     responses(
         (status = 201, description = "Root section provisioned", body = RepairedRootSection),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -497,11 +504,15 @@ async fn repair_root_section(
     Ok((StatusCode::CREATED, Json(RepairedRootSection { id })))
 }
 
+/// Read a dashboard's draft tree
+///
+/// The working copy's pages, sections and widgets in one response, for the editor. Needs update
+/// rights on the dashboard.
 #[utoipa::path(
     get,
     path = "/api/v1/attome-dashboard/{id}/tree",
     tag = "dashboard",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The dashboard")),
     responses(
         (status = 200, description = "The dashboard's whole draft tree", body = DraftTree),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

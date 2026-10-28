@@ -143,6 +143,10 @@ struct DuplicateResponse {
     id: uuid::Uuid,
 }
 
+/// Duplicate a widget
+///
+/// Copies a widget, with its configuration, into its own section or into `target_section_id`. Needs
+/// update rights on widgets and the right to create one. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/widget/duplicate",

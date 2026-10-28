@@ -1172,12 +1172,12 @@ struct CreateFromLayoutResponse {
     pages_created: usize,
 }
 
-/// Creates a dashboard and its entire page/section/widget tree from one
-/// layout document — the single-call counterpart to building a dashboard
-/// through a sequence of generic-entity-CRUD calls. Meant for a caller that
-/// already has the whole layout decided (an AI-authoring flow, an import),
-/// not for interactive editing — the visual Page Editor's own generic-CRUD
-/// path remains how a human edits an existing dashboard.
+/// Create a dashboard from a layout
+///
+/// Creates a dashboard and its whole tree of pages, sections and widgets from one layout document in
+/// one transaction, for a caller that has the layout decided already (an AI authoring flow, an
+/// import). Editing an existing dashboard stays the record API's job. Needs the dashboard create
+/// privilege. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/from-layout",

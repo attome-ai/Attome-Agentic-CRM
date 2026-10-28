@@ -1446,12 +1446,15 @@ struct CloneResponse {
     id: Uuid,
 }
 
+/// Submit a dashboard for review
+///
+/// Moves the working copy from draft to review. Dashboard editors only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/{id}/submit-review",
     tag = "dashboard",
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Submitted)])))),
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The dashboard")),
     request_body = TransitionBody,
     responses(
         (status = 200, description = "Success", body = TransitionResponse),
@@ -1477,6 +1480,10 @@ async fn submit_for_review(
     }))
 }
 
+/// Approve a dashboard
+///
+/// A reviewer's sign-off: moves the working copy from review to approved, ready to publish.
+/// Dashboard editors only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/{id}/approve",
@@ -1489,7 +1496,7 @@ async fn submit_for_review(
     // uses for `list_event_deliveries`.
     operation_id = "approve_dashboard",
     tag = "dashboard",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The dashboard")),
     request_body = TransitionBody,
     responses(
         (status = 200, description = "Success", body = TransitionResponse),
@@ -1515,12 +1522,15 @@ async fn approve(
     }))
 }
 
+/// Send a dashboard back to draft
+///
+/// Moves the working copy from review back to draft. Dashboard editors only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/{id}/reject",
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Rejected)])))),
     tag = "dashboard",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The dashboard")),
     request_body = TransitionBody,
     responses(
         (status = 200, description = "Success", body = TransitionResponse),
@@ -1546,19 +1556,18 @@ async fn reject(
     }))
 }
 
-/// D-195: gated behind `approval.required_actions` (empty/off by default,
-/// same as every other wired action_type — see `attome_audit::approval::gate`).
-/// When gated, this submits an approval request instead of publishing and
-/// returns `202` with `approval_pending: true` — the dashboard stays
-/// `approved` until a second, different `system.admin` decides the request
-/// (`attome-api`'s `approval_admin::decide_approval`, wired to
-/// `do_publish_dashboard` via `ACTION_DASHBOARD_PUBLISH`).
+/// Publish a dashboard
+///
+/// Writes an approved dashboard's tree as a new immutable version and points viewers at it, pinning
+/// each widget's query to the version it was published with. When `approval.required_actions` gates
+/// it, this submits an approval request instead (202, `approval_pending`) and a second administrator
+/// decides. Dashboard editors only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/{id}/publish",
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Activated)])))),
     tag = "dashboard",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The dashboard")),
     request_body = TransitionBody,
     responses(
         (status = 200, description = "Success", body = PublishResponse),
@@ -1637,12 +1646,16 @@ async fn publish(
     ))
 }
 
+/// Unpublish a dashboard
+///
+/// Viewers see no published version any more and the working copy returns to draft. Dashboard editors
+/// only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/{id}/unpublish",
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
     tag = "dashboard",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The dashboard")),
     request_body = TransitionBody,
     responses(
         (status = 200, description = "Success", body = TransitionResponse),
@@ -1669,12 +1682,16 @@ async fn unpublish(
     }))
 }
 
+/// Start revising a published dashboard
+///
+/// Returns the published working copy to draft for editing; viewers keep seeing the published
+/// version. Dashboard editors only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/{id}/start-revision",
     tag = "dashboard",
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The dashboard")),
     request_body = TransitionBody,
     responses(
         (status = 200, description = "Working copy returned to draft; the live version is unchanged", body = TransitionResponse),
@@ -1700,12 +1717,16 @@ async fn start_revision(
     }))
 }
 
+/// Archive a dashboard
+///
+/// Marks the dashboard archived and inactive and clears its published version; the record API's
+/// restore brings it back, still archived. Dashboard editors only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/{id}/archive",
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::SoftDelete)])))),
     tag = "dashboard",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The dashboard")),
     request_body = TransitionBody,
     responses(
         (status = 200, description = "Success", body = TransitionResponse),
@@ -1731,12 +1752,16 @@ async fn archive(
     }))
 }
 
+/// Clone a dashboard
+///
+/// A new draft dashboard named "<name> (Copy)", copied from this one. Dashboard editors only.
+/// Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/{id}/clone",
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Clone)])))),
     tag = "dashboard",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The dashboard")),
     responses(
         (status = 201, description = "Success", body = CloneResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -1769,12 +1794,16 @@ struct RestoreResponse {
     restored_from_version: Uuid,
 }
 
+/// Restore a version into the draft
+///
+/// Writes an earlier version's tree into the working copy; what viewers see does not change until it
+/// is published. Dashboard editors only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/{id}/versions/{version_id}/restore",
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Restore)])))),
     tag = "dashboard",
-    params(("id" = Uuid, Path), ("version_id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The dashboard"), ("version_id" = Uuid, Path, description = "The version to restore")),
     responses(
         (status = 200, description = "Success", body = RestoreResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -1810,12 +1839,16 @@ struct ActivateResponse {
     live_version_number: Option<i64>,
 }
 
+/// Roll a dashboard back to a version
+///
+/// Points viewers at an earlier published version, behind the same four-eyes gate as publishing.
+/// Dashboard editors only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/{id}/versions/{version_id}/activate",
     tag = "dashboard",
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Activated)])))),
-    params(("id" = Uuid, Path), ("version_id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The dashboard"), ("version_id" = Uuid, Path, description = "The version to show")),
     request_body = TransitionBody,
     responses(
         (status = 200, description = "The version is now live", body = ActivateResponse),
@@ -1873,11 +1906,15 @@ async fn activate_version(
     ))
 }
 
+/// Get a dashboard's published version
+///
+/// The snapshot viewers see, which editing the working copy does not change. Anyone who may read
+/// the dashboard.
 #[utoipa::path(
     get,
     path = "/api/v1/attome-dashboard/{id}/published",
     tag = "dashboard",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The dashboard")),
     responses(
         (status = 200, description = "What viewers of this dashboard see", body = PublishedDashboard),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

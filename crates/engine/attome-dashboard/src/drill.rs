@@ -88,12 +88,16 @@ impl std::fmt::Debug for WidgetRecordsResponse {
     }
 }
 
+/// List the records behind a widget value
+///
+/// The records the caller may see that make up a widget's value, for drilling in. Writes nothing.
+/// Anyone who may read the dashboard.
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/{id}/widgets/{widget_id}/records",
     tag = "dashboard",
     extensions(("x-audit-exempt" = json!({"reason": "read_only", "via": null, "note": "Dashboard 10/10 Phase 3.1: lists the records behind a widget value over the caller's record scope and writes nothing."}))),
-    params(("id" = Uuid, Path), ("widget_id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The dashboard"), ("widget_id" = Uuid, Path, description = "The widget")),
     request_body = WidgetRecordsInputs,
     responses(
         (status = 200, description = "The exact records behind the widget's value or bucket, with an exact total", body = WidgetRecordsResponse),
@@ -529,12 +533,16 @@ async fn explain_filters(
     Ok(out)
 }
 
+/// Explain a widget's value
+///
+/// How the widget's value is calculated, from the same resolved context as its data. Writes nothing.
+/// Anyone who may read the dashboard.
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/{id}/widgets/{widget_id}/explain",
     tag = "dashboard",
     extensions(("x-audit-exempt" = json!({"reason": "read_only", "via": null, "note": "Dashboard 10/10 Phase 3.2: explains how a widget value is calculated from the same resolved context and writes nothing."}))),
-    params(("id" = Uuid, Path), ("widget_id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The dashboard"), ("widget_id" = Uuid, Path, description = "The widget")),
     request_body = WidgetInputs,
     responses(
         (status = 200, description = "How the widget's number is calculated, from the same context the data route uses", body = WidgetExplanation),

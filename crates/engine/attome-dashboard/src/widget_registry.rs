@@ -681,11 +681,10 @@ pub fn registry() -> &'static WidgetRegistry {
     REGISTRY.get_or_init(WidgetRegistry::with_builtins)
 }
 
-/// `GET /api/v1/attome-dashboard/widget-types` — lists every registered widget
-/// descriptor, so a builder UI can populate its widget palette without
-/// hardcoding the catalog. `SelfService` (authenticated-only, same policy
-/// `attome-server`'s own sidebar read uses): this is a static capability
-/// list, not a data or configuration read, so no further privilege applies.
+/// List widget types
+///
+/// Every registered widget type with its descriptor, so a builder can fill its palette without a
+/// hard-coded list. Any signed-in user: it is a list of capabilities, not data.
 #[utoipa::path(
     get,
     path = "/api/v1/attome-dashboard/widget-types",
