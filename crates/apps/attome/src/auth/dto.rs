@@ -363,3 +363,27 @@ impl std::fmt::Debug for IdentityLinkInfo {
         f.debug_struct("IdentityLinkInfo").finish_non_exhaustive()
     }
 }
+
+/// Q1-T10: what sign-out answers. `redirect` is set when the session came
+/// from an OIDC provider with an end-session endpoint: the browser goes
+/// there so the provider ends its session too, and comes back to the app.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct LogoutResponse {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub redirect: Option<String>,
+}
+
+/// Q1-T10: a provider's back-channel logout request
+/// (`application/x-www-form-urlencoded`).
+#[derive(Deserialize, ToSchema)]
+pub struct BackchannelLogoutForm {
+    /// The signed logout token.
+    pub logout_token: String,
+}
+
+impl std::fmt::Debug for BackchannelLogoutForm {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BackchannelLogoutForm")
+            .finish_non_exhaustive()
+    }
+}

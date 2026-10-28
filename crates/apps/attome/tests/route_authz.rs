@@ -447,6 +447,11 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
         "Starts the redirect out to the identity provider; the caller has no session yet by definition. Bypass-listed subtree.",
     ),
     (
+        "POST",
+        "/api/v1/auth/oidc/{provider}/backchannel-logout",
+        "Q1-T10: the provider posts a signed logout token server to server; no session exists. The token's signature, issuer and audience are the credential. Bypass-listed subtree.",
+    ),
+    (
         "GET",
         "/api/v1/auth/oidc/{provider}/callback",
         "IdP redirect back. A SameSite=Strict session cookie never survives the cross-site hop, so this cannot ride Extension<SessionClaims>.",

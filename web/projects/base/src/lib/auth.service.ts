@@ -1,4 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { Router } from '@angular/router';
 import { Observable, catchError, map, of, shareReplay, tap } from 'rxjs';
 import { ApiService } from './api.service';
@@ -45,6 +46,7 @@ export class AuthService {
   private readonly api    = inject(ApiService);
   private readonly conditional = inject(ConditionalCache);
   private readonly router = inject(Router);
+  private readonly document = inject(DOCUMENT);
   private readonly config = inject(ATTOME_CONFIG);
 
   // ── Signals ───────────────────────────────────────────────────────────────
@@ -220,13 +222,23 @@ export class AuthService {
    * `ApiError` untouched, so the caller can say "sign-out failed; you are
    * still signed in" and offer a retry. Never swallow it: on a shared machine
    * a silently failed sign-out walks away with a live session.
+   *
+   * Q1-T10: a session from an OIDC provider answers the provider's sign-out
+   * page as `redirect`; the browser goes there so the provider ends its
+   * session too, and the provider sends it back to the app.
    */
   logout(): Observable<void> {
-    return this.api.post<void>('/api/v1/auth/logout', {}).pipe(
-      tap(() => {
+    return this.api.post<{ redirect?: string | null } | null>('/api/v1/auth/logout', {}).pipe(
+      tap(res => {
         this.clearSession();
-        this.router.navigate([this.config.loginRoute ?? '/login']);
+        const redirect = res?.redirect;
+        if (redirect) {
+          this.document.location.assign(redirect);
+        } else {
+          this.router.navigate([this.config.loginRoute ?? '/login']);
+        }
       }),
+      map(() => undefined),
     );
   }
 

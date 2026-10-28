@@ -611,6 +611,9 @@ mod tests {
     fn oidc_login_and_callback_subpaths_match_the_provider_agnostic_prefix() {
         assert!(is_bypass("/api/v1/auth/oidc/entra/login"));
         assert!(is_bypass("/api/v1/auth/oidc/entra/callback"));
+        // Q1-T10: the provider's server-to-server POST needs no new entry.
+        assert!(is_bypass("/api/v1/auth/oidc/entra/backchannel-logout"));
+        assert!(is_csrf_exempt("/api/v1/auth/oidc/entra/backchannel-logout"));
     }
 
     #[test]

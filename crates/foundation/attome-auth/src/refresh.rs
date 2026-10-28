@@ -314,9 +314,9 @@ async fn issue_inner(
     sqlx::query(
         "INSERT INTO refresh_token
              (user_ref, public_id, secret_hash, family_id, family_started_at, expires_at,
-              auth_time, amr)
+              auth_time, amr, oidc_provider, oidc_sid)
          VALUES ($1, $2, $3, $4, NOW(), NOW() + make_interval(secs => LEAST($5, $6)::float8),
-                 CASE WHEN $7 THEN NOW() WHEN $8 > NOW() THEN NOW() ELSE $8 END, $9)",
+                 CASE WHEN $7 THEN NOW() WHEN $8 > NOW() THEN NOW() ELSE $8 END, $9, $10, $11)",
     )
     .bind(user_id)
     .bind(public_id)
@@ -327,6 +327,8 @@ async fn issue_inner(
     .bind(auth_time_at_issue)
     .bind(asserted_auth_time)
     .bind(context.amr())
+    .bind(context.oidc_provider())
+    .bind(context.oidc_sid())
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -572,12 +574,14 @@ pub async fn redeem_session_outcome_with(
         "INSERT INTO refresh_token
              (user_ref, public_id, secret_hash, family_id, family_started_at,
               auth_time, amr, elevated_until, expires_at,
-              idle_secs, absolute_secs, last_activity_at)
+              idle_secs, absolute_secs, last_activity_at, oidc_provider, oidc_sid)
          SELECT $1, $2, $3, $4, $5, $6, $7, $8,
                 LEAST(NOW() + make_interval(secs => $9::float8),
                       $5 + make_interval(secs => $10::float8)),
                 -- A rotation is not activity: the family keeps its last real use.
-                o.idle_secs, o.absolute_secs, COALESCE(o.last_activity_at, o.created_at)
+                o.idle_secs, o.absolute_secs, COALESCE(o.last_activity_at, o.created_at),
+                -- Q1-T10: the family stays tied to its provider session.
+                o.oidc_provider, o.oidc_sid
            FROM refresh_token o
           WHERE o.id = $11 AND $5 + make_interval(secs => $10::float8) > NOW()
          RETURNING id",
@@ -743,6 +747,28 @@ pub async fn revoke_returning_user_with(
     ring: &PepperRing,
     hook: &dyn attome_db::BeforeCommit<Uuid>,
 ) -> Result<Option<Uuid>, AppError> {
+    Ok(revoke_session_with(db, presented, ring, hook)
+        .await?
+        .map(|session| session.user_id))
+}
+
+/// A refresh token sign-out revoked.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RevokedSession {
+    pub user_id: Uuid,
+    /// Q1-T10: the OIDC provider the family signed in through, so sign-out
+    /// can end that provider's session too.
+    pub oidc_provider: Option<String>,
+}
+
+/// [`revoke_returning_user_with`], also answering which OIDC provider (if
+/// any) the family signed in through.
+pub async fn revoke_session_with(
+    db: &DbPool,
+    presented: &str,
+    ring: &PepperRing,
+    hook: &dyn attome_db::BeforeCommit<Uuid>,
+) -> Result<Option<RevokedSession>, AppError> {
     let Some((public_id_str, secret)) = presented.split_once('.') else {
         return Ok(None);
     };
@@ -766,20 +792,123 @@ pub async fn revoke_returning_user_with(
     }
 
     let mut tx = attome_db::tx::begin(db).await?;
-    let owner: Option<Uuid> = sqlx::query_scalar(
+    let revoked: Option<(Uuid, Option<String>)> = sqlx::query_as(
         "UPDATE refresh_token SET revoked_at = NOW()
          WHERE id = $1 AND revoked_at IS NULL
-         RETURNING user_ref",
+         RETURNING user_ref, oidc_provider",
     )
     .bind(token_id)
     .fetch_optional(&mut *tx)
     .await
     .map_err(AppError::internal)?;
-    if let Some(user_id) = owner {
-        hook.before_commit(&mut tx, &user_id).await?;
+    if let Some((user_id, _)) = &revoked {
+        hook.before_commit(&mut tx, user_id).await?;
     }
     tx.commit().await.map_err(AppError::internal)?;
-    Ok(owner)
+    Ok(revoked.map(|(user_id, oidc_provider)| RevokedSession {
+        user_id,
+        oidc_provider,
+    }))
+}
+
+/// Q1-T10: whose sessions a provider's back-channel logout ends.
+#[derive(Debug, Clone, Copy)]
+pub enum OidcLogoutTarget<'a> {
+    /// The families signed in under this provider session, of `user` only
+    /// when the token also named a subject.
+    Sid { sid: &'a str, user: Option<Uuid> },
+    /// Every family `user` signed in through the provider.
+    User(Uuid),
+}
+
+/// What a back-channel logout did.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum OidcLogoutOutcome {
+    /// The token's id was seen before; nothing was changed.
+    Replayed,
+    /// These people's matching families were revoked and their epochs
+    /// bumped. Possibly none: the provider may know a session Attome never
+    /// had, or one already ended.
+    Ended(Vec<Uuid>),
+}
+
+/// Q1-T10: ends the refresh families a provider's verified back-channel
+/// logout names, in one transaction: claims the token id `replay_key` in
+/// `auth_jti_denylist` for `replay_ttl_secs` (a second delivery finds it and
+/// changes nothing), revokes the families signed in through `provider` that
+/// `target` names, bumps each affected person's `auth_epoch` so their live
+/// access tokens stop at once, and runs `hook` per person before the commit.
+/// Only families from that provider end: a provider speaks for its own
+/// sessions, not for a password sign-in. The caller drops each person's
+/// cached epoch after the commit ([`crate::epoch::invalidate_cache`]).
+pub async fn revoke_oidc_sessions(
+    db: &DbPool,
+    provider: &str,
+    target: OidcLogoutTarget<'_>,
+    replay_key: Uuid,
+    replay_ttl_secs: i64,
+    hook: &dyn attome_db::BeforeCommit<Uuid>,
+) -> Result<OidcLogoutOutcome, AppError> {
+    let mut tx = attome_db::tx::begin(db).await?;
+    let claimed = sqlx::query(
+        "INSERT INTO auth_jti_denylist (jti, expires_at)
+         VALUES ($1, NOW() + make_interval(secs => $2::float8))
+         ON CONFLICT (jti) DO NOTHING",
+    )
+    .bind(replay_key)
+    .bind(replay_ttl_secs)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?
+    .rows_affected();
+    if claimed == 0 {
+        tx.rollback().await.map_err(AppError::internal)?;
+        return Ok(OidcLogoutOutcome::Replayed);
+    }
+    let (sid, user) = match target {
+        OidcLogoutTarget::Sid { sid, user } => (Some(sid), user),
+        OidcLogoutTarget::User(user) => (None, Some(user)),
+    };
+    // The accounts are locked before their token rows, the order a sign-in
+    // takes them in (D-509 rule 6), so the two cannot deadlock.
+    let candidates: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT DISTINCT user_ref FROM refresh_token
+          WHERE oidc_provider = $1 AND revoked_at IS NULL
+            AND ($2::text IS NULL OR oidc_sid = $2)
+            AND ($3::uuid IS NULL OR user_ref = $3)",
+    )
+    .bind(provider)
+    .bind(sid)
+    .bind(user)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    sqlx::query("SELECT id FROM user_account WHERE id = ANY($1) ORDER BY id FOR UPDATE")
+        .bind(&candidates)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    let mut users: Vec<Uuid> = sqlx::query_scalar(
+        "UPDATE refresh_token SET revoked_at = NOW()
+          WHERE oidc_provider = $1 AND revoked_at IS NULL
+            AND ($2::text IS NULL OR oidc_sid = $2)
+            AND user_ref = ANY($3)
+         RETURNING user_ref",
+    )
+    .bind(provider)
+    .bind(sid)
+    .bind(&candidates)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    users.sort_unstable();
+    users.dedup();
+    for user_id in &users {
+        crate::epoch::bump_in_tx(&mut tx, *user_id).await?;
+        hook.before_commit(&mut tx, user_id).await?;
+    }
+    tx.commit().await.map_err(AppError::internal)?;
+    Ok(OidcLogoutOutcome::Ended(users))
 }
 
 /// BAU-13a (F15): one bounded batch of dead refresh families. A family is

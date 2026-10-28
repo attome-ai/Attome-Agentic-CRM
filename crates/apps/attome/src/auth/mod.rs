@@ -120,6 +120,12 @@ pub fn public_routes(
             "/api/v1/admin/security/oidc-providers/{id}/test",
             post(oidc::oidc_provider_test),
         )
+        // Q1-T10: under the `/api/v1/auth/oidc/` bypass subtree, which is
+        // CSRF-exempt: the provider posts here server to server.
+        .route(
+            "/api/v1/auth/oidc/{provider}/backchannel-logout",
+            post(oidc::oidc_backchannel_logout),
+        )
         .route(
             "/api/v1/auth/oidc/{provider}/callback",
             get(oidc::oidc_callback),

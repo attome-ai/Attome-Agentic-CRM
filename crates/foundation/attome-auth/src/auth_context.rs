@@ -62,6 +62,9 @@ pub enum AuthTime {
 pub struct AuthContext {
     auth_time: AuthTime,
     amr: Vec<AuthMethod>,
+    /// Q1-T10: the OIDC provider key and its session id, for a sign-in
+    /// through one.
+    oidc: Option<(String, Option<String>)>,
 }
 
 impl AuthContext {
@@ -70,6 +73,7 @@ impl AuthContext {
         Self {
             auth_time: AuthTime::AtIssue,
             amr: vec![AuthMethod::Password],
+            oidc: None,
         }
     }
 
@@ -78,6 +82,7 @@ impl AuthContext {
         Self {
             auth_time: AuthTime::AtIssue,
             amr: vec![AuthMethod::Password, AuthMethod::Totp],
+            oidc: None,
         }
     }
 
@@ -86,6 +91,7 @@ impl AuthContext {
         Self {
             auth_time: AuthTime::AtIssue,
             amr: vec![AuthMethod::Password, AuthMethod::RecoveryCode],
+            oidc: None,
         }
     }
 
@@ -96,6 +102,7 @@ impl AuthContext {
         Self {
             auth_time: asserted_auth_time.map_or(AuthTime::Unknown, AuthTime::Asserted),
             amr: vec![AuthMethod::Federated],
+            oidc: None,
         }
     }
 
@@ -107,6 +114,22 @@ impl AuthContext {
             self.amr.push(AuthMethod::IdpMfa);
         }
         self
+    }
+
+    /// Q1-T10: records the OIDC provider this federated sign-in came through
+    /// and its session id (`sid`, when the provider sent one), so sign-out
+    /// can end the provider's session and a back-channel logout can find it.
+    pub fn with_oidc_session(mut self, provider: &str, sid: Option<String>) -> Self {
+        self.oidc = Some((provider.to_owned(), sid));
+        self
+    }
+
+    pub fn oidc_provider(&self) -> Option<&str> {
+        self.oidc.as_ref().map(|(provider, _)| provider.as_str())
+    }
+
+    pub fn oidc_sid(&self) -> Option<&str> {
+        self.oidc.as_ref().and_then(|(_, sid)| sid.as_deref())
     }
 
     pub fn auth_time(&self) -> AuthTime {

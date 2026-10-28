@@ -22,7 +22,7 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use super::REFRESH_COOKIE_PATH;
-use super::dto::{AuthResponse, IdentityLinkInfo, SessionInfo};
+use super::dto::{AuthResponse, IdentityLinkInfo, LogoutResponse, SessionInfo};
 use attome_types::ErrorResponse;
 
 // ── Session issuance (shared by register/login/google) ───────────────────────
@@ -215,14 +215,16 @@ async fn enqueue_notification_backfill(state: &AppState, user_id: Uuid, flow: &s
 /// Invalidates the presented session server-side (Plan 1.6a): denylists the
 /// access token's `jti` for its remaining lifetime and revokes the refresh
 /// token row, then clears both cookies. Malformed/absent/already-expired
-/// tokens are not an error — logout always succeeds.
+/// tokens are not an error — logout always succeeds. A session that came
+/// from an OIDC provider with an end-session endpoint answers its URL as
+/// `redirect` (Q1-T10), and the browser goes there next.
 #[utoipa::path(
     post,
     path = "/api/v1/auth/logout",
     tag = "auth",
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Security, AuditOperation::Logout)])))),
     responses(
-        (status = 200, description = "Success"),
+        (status = 200, description = "Signed out; `redirect`, when present, is the provider's sign-out page", body = LogoutResponse),
         (status = 422, description = "Request failed validation", body = ErrorResponse),
     ),
 )]
@@ -265,6 +267,7 @@ pub(super) async fn logout(
     // A revoked refresh family and its `Logout` event commit together
     // (hook inside attome-auth's revocation transaction, D-062).
     let mut refresh_owner: Option<Uuid> = None;
+    let mut oidc_provider: Option<String> = None;
     if let Some(token) = cookie::extract_refresh(&headers, secure) {
         let hook = account_event_hook(
             auditor.service(),
@@ -273,9 +276,12 @@ pub(super) async fn logout(
             "user_account",
             "logout",
         );
-        refresh_owner =
-            refresh::revoke_returning_user_with(&state.db, &token, &state.pepper_ring(), &hook)
-                .await?;
+        if let Some(revoked) =
+            refresh::revoke_session_with(&state.db, &token, &state.pepper_ring(), &hook).await?
+        {
+            refresh_owner = Some(revoked.user_id);
+            oidc_provider = revoked.oidc_provider;
+        }
     }
     // Only the access token was revoked: a Redis denylist entry, no database
     // mutation to share a transaction with, so the event is written after it.
@@ -317,7 +323,38 @@ pub(super) async fn logout(
         ),
     ];
 
-    Ok((StatusCode::OK, AppendHeaders(cookies)).into_response())
+    let redirect = match oidc_provider {
+        Some(provider) => provider_sign_out_url(&state, &provider).await,
+        None => None,
+    };
+    Ok((
+        StatusCode::OK,
+        AppendHeaders(cookies),
+        Json(LogoutResponse { redirect }),
+    )
+        .into_response())
+}
+
+/// Q1-T10: the provider's end-session URL for a family signed in through
+/// `provider`, coming back to the app. Attome's own sign-out has already
+/// happened, so a provider that is gone, or whose discovery cannot be read
+/// now, only costs the provider-side sign-out: logged, never an error.
+async fn provider_sign_out_url(state: &AppState, provider: &str) -> Option<String> {
+    let entry = state.oidc_providers.get(provider)?;
+    match attome_auth::oidc::end_session_url(
+        &state.redis,
+        &entry.config,
+        provider,
+        &state.config.frontend_url(),
+    )
+    .await
+    {
+        Ok(url) => url,
+        Err(error) => {
+            tracing::warn!(provider, %error, "logout: the provider's end-session endpoint could not be read");
+            None
+        }
+    }
 }
 
 /// Mints a new access token AND rotates the refresh token from a live

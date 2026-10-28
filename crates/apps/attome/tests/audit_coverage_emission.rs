@@ -253,6 +253,10 @@ const UNDRIVABLE: &[(&str, &str)] = &[
          hook shape `before_commit_hook.rs` and the admin identity-link driver prove",
     ),
     (
+        "POST /api/v1/auth/oidc/{provider}/backchannel-logout",
+        "needs a logout token signed by the provider's published key;          oidc_backchannel_logout.rs drives it against a mock provider, and the event is          written by `account_event_hook` inside `refresh::revoke_oidc_sessions`",
+    ),
+    (
         "GET /api/v1/auth/oidc/{provider}/callback",
         "needs a live OpenID provider (crates/server/tests/keycloak_oidc.rs runs \
          against Keycloak when available); same `session::issue_session_cookies_for` \

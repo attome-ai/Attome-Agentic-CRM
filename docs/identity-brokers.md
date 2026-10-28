@@ -66,6 +66,25 @@ accepts only a token whose `auth_time` is fresh. The broker must pass that on to
 provider as a forced authentication (`ForceAuthn`); a broker that only re-checks its own
 session proves a fresh sign-in at the broker, not at the SAML provider.
 
+**Sign-out.** Two settings on the broker's client make signing out work both ways.
+
+- **Post-logout redirect URI:** register `https://<your-attome-host>`. When someone
+  signs out of Attome, Attome ends its own session first. If the broker's discovery
+  document has an `end_session_endpoint`, the browser then goes there with `client_id`
+  and this URI, so the broker ends its session too and sends the person back.
+- **Back-channel logout URL:** register
+  `https://<your-attome-host>/api/v1/auth/oidc/<provider>/backchannel-logout`. When the
+  person signs out at the broker, the broker posts a signed logout token there. Attome
+  ends every session signed in through that broker for the token's `sid`, or for its
+  `sub` when it names no session. Those sessions stop at once, not when their access
+  token expires.
+  - Attome checks the token's signature against the broker's keys, its issuer and
+    audience, an `iat` within five minutes and the back-channel logout event, and
+    refuses a token used before.
+  - Sessions from a password or from another provider stay signed in.
+  - Ask the broker to put `sid` in ID tokens (Keycloak and Entra ID do). Without it, a
+    logout ends every session the person has through that broker.
+
 ## Microsoft Entra ID
 
 Use this when the SAML provider is federated into Entra ID (External Identities, SAML/WS-Fed

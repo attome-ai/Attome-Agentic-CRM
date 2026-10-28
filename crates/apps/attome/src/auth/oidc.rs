@@ -5,13 +5,15 @@ use attome_auth::{SessionClaims, cookie};
 use attome_server::AppState;
 use attome_types::AppError;
 use axum::{
-    Json,
+    Form, Json,
     extract::{Extension, Path, Query, State},
     http::{HeaderMap, HeaderValue, StatusCode, header},
     response::{AppendHeaders, IntoResponse, Redirect, Response},
 };
 
-use super::dto::{IdentityLinkOidcCallbackQuery, OidcCallbackQuery, OidcProviderInfo};
+use super::dto::{
+    BackchannelLogoutForm, IdentityLinkOidcCallbackQuery, OidcCallbackQuery, OidcProviderInfo,
+};
 use super::session::issue_session_cookies_for;
 use attome_auth::auth_context::AuthContext;
 use attome_types::ErrorResponse;
@@ -438,7 +440,10 @@ async fn oidc_callback_inner(
         state,
         user_id,
         // Q2-T2: MFA the provider reported counts as this sign-in's second factor.
-        &AuthContext::federated(identity.auth_time).with_idp_mfa(identity.idp_mfa),
+        &AuthContext::federated(identity.auth_time)
+            .with_idp_mfa(identity.idp_mfa)
+            // Q1-T10: sign-out and back-channel logout find the family by these.
+            .with_oidc_session(provider, identity.sid.clone()),
         Some((auditor, &method)),
     )
     .await?;
@@ -902,10 +907,135 @@ pub(super) struct OidcTestStart {
 /// because `#[utoipa::path]` generates a `__path_*` type with the handler's
 /// own visibility, and these handlers are module-private — the crate's
 /// `openapi()` merges every fragment back into one document.
+/// How long a logout token's id is remembered: past its `iat` window, so a
+/// replay inside the window always finds it.
+const LOGOUT_TOKEN_REPLAY_TTL_SECS: i64 = 600;
+
+/// Receive a back-channel logout
+///
+/// OpenID Connect Back-Channel Logout 1.0: the provider posts a signed logout
+/// token naming a provider session (`sid`) or a person (`sub`), and every
+/// Attome session signed in through that provider for it ends at once: the
+/// refresh families are revoked and the person's live access tokens stop, in
+/// one transaction. The token is checked against the provider's published
+/// keys, issuer, audience, an `iat` within five minutes, the back-channel
+/// logout event and no `nonce`; a token id already used is refused. A token
+/// that names nobody Attome knows still answers 200. Sessions from a
+/// password or another provider are not touched. No session; audited.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/oidc/{provider}/backchannel-logout",
+    tag = "auth",
+    params(("provider" = String, Path, description = "The OIDC provider's key")),
+    request_body(content = BackchannelLogoutForm, content_type = "application/x-www-form-urlencoded"),
+    responses(
+        (status = 200, description = "The sessions the token names have ended"),
+        (status = 400, description = "A logout token that fails verification, or one already used", body = ErrorResponse),
+        (status = 404, description = "No such provider", body = ErrorResponse),
+    ),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Security, attome_audit::AuditOperation::Logout)])))),
+)]
+pub(super) async fn oidc_backchannel_logout(
+    State(state): State<AppState>,
+    Extension(auditor): Extension<attome_audit::security::SecurityAuditor>,
+    Path(provider): Path<String>,
+    Form(form): Form<BackchannelLogoutForm>,
+) -> Response {
+    // §2.8: the answer is never cached, whatever it is.
+    let no_store = [(header::CACHE_CONTROL, "no-store")];
+    match backchannel_logout_inner(&state, &auditor, &provider, &form.logout_token).await {
+        Ok(()) => (StatusCode::OK, no_store).into_response(),
+        Err(error) => (no_store, error).into_response(),
+    }
+}
+
+async fn backchannel_logout_inner(
+    state: &AppState,
+    auditor: &attome_audit::security::SecurityAuditor,
+    provider: &str,
+    logout_token: &str,
+) -> Result<(), AppError> {
+    let entry = state
+        .oidc_providers
+        .get(provider)
+        .ok_or(AppError::NotFound)?;
+    let token =
+        attome_auth::oidc::verify_logout_token(&state.redis, &entry.config, provider, logout_token)
+            .await
+            .map_err(|error| match error {
+                AppError::Unauthorized => {
+                    tracing::warn!(
+                        provider,
+                        "backchannel logout: the logout token failed verification"
+                    );
+                    AppError::RequestRejected("logout_token")
+                }
+                // A discovery or key fetch failure: the provider retries.
+                other => other,
+            })?;
+    let target = match (token.sid.as_deref(), token.sub.as_deref()) {
+        (Some(sid), sub) => {
+            let user = match sub {
+                Some(sub) => {
+                    attome_security::accounts::user_for_identity(&state.db, provider, sub).await?
+                }
+                None => None,
+            };
+            attome_auth::refresh::OidcLogoutTarget::Sid { sid, user }
+        }
+        (None, Some(sub)) => {
+            match attome_security::accounts::user_for_identity(&state.db, provider, sub).await? {
+                Some(user) => attome_auth::refresh::OidcLogoutTarget::User(user),
+                // Nobody here is linked to that subject: nothing to end.
+                None => return Ok(()),
+            }
+        }
+        (None, None) => return Err(AppError::RequestRejected("logout_token")),
+    };
+    let replay_key = uuid::Uuid::new_v5(
+        &uuid::Uuid::NAMESPACE_URL,
+        format!("oidc-logout:{provider}:{}", token.jti).as_bytes(),
+    );
+    let hook = attome_audit::security::account_event_hook(
+        auditor.service(),
+        attome_audit::security::MandatoryCategory::Security,
+        attome_audit::AuditOperation::Logout,
+        "user_account",
+        format!("logout oidc:{provider} backchannel"),
+    );
+    match attome_auth::refresh::revoke_oidc_sessions(
+        &state.db,
+        provider,
+        target,
+        replay_key,
+        LOGOUT_TOKEN_REPLAY_TTL_SECS,
+        &hook,
+    )
+    .await?
+    {
+        attome_auth::refresh::OidcLogoutOutcome::Replayed => {
+            tracing::warn!(provider, "backchannel logout: a logout token was replayed");
+            Err(AppError::RequestRejected("logout_token_replayed"))
+        }
+        attome_auth::refresh::OidcLogoutOutcome::Ended(users) => {
+            for user_id in &users {
+                attome_auth::epoch::invalidate_cache(&state.redis_coordination, *user_id).await;
+            }
+            tracing::info!(
+                provider,
+                ended = users.len(),
+                "backchannel logout: sessions ended"
+            );
+            Ok(())
+        }
+    }
+}
+
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(
     oidc_login,
     oidc_callback,
+    oidc_backchannel_logout,
     identity_link_oidc_start,
     identity_link_oidc_callback,
     oidc_providers,

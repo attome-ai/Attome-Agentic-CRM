@@ -85,6 +85,23 @@ fn service_email_change_refused(current: &str, new: &serde_json::Value) -> bool 
     }
 }
 
+/// The person a provider's subject is linked to, if any (Q1-T10: a
+/// back-channel logout that names only `sub`).
+pub async fn user_for_identity<'e>(
+    db: impl sqlx::PgExecutor<'e>,
+    provider_key: &str,
+    sub: &str,
+) -> Result<Option<Uuid>, AppError> {
+    sqlx::query_scalar(
+        "SELECT user_ref FROM user_identity WHERE provider_key = $1 AND provider_sub = $2",
+    )
+    .bind(provider_key)
+    .bind(sub)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)
+}
+
 /// D-786 follow-up M2: the service marker is the address, so a service
 /// principal's email is immutable through generic CRUD. Called by
 /// `attome_records::entity_mutation::update_one_as` for
@@ -451,14 +468,7 @@ pub async fn link_identity_to_user_with(
     // state-enforcement).
     reject_if_user_inactive(&mut tx, user_id).await?;
 
-    let existing: Option<Uuid> = sqlx::query_scalar(
-        "SELECT user_ref FROM user_identity WHERE provider_key = $1 AND provider_sub = $2",
-    )
-    .bind(provider_key)
-    .bind(sub)
-    .fetch_optional(&mut *tx)
-    .await
-    .map_err(AppError::internal)?;
+    let existing = user_for_identity(&mut *tx, provider_key, sub).await?;
 
     match existing {
         Some(existing_user) if existing_user == user_id => {

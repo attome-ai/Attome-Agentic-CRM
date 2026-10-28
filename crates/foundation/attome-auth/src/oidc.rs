@@ -146,6 +146,9 @@ pub struct OidcIdentity {
     /// Q1-T5: the validated ID token's claims, shown to the administrator of
     /// a `Test` flow. Never logged (`Debug` leaves it out).
     pub claims: serde_json::Value,
+    /// Q1-T10: the provider's session id (`sid`), when it sent one. Kept on
+    /// the refresh family so a back-channel logout naming it ends the family.
+    pub sid: Option<String>,
 }
 
 impl std::fmt::Debug for OidcIdentity {
@@ -177,6 +180,11 @@ struct DiscoveryDocument {
     authorization_endpoint: String,
     token_endpoint: String,
     jwks_uri: String,
+    /// Q1-T10: RP-Initiated Logout 1.0 — where sign-out sends the browser so
+    /// the provider ends its own session too. Optional; a provider without
+    /// one ends only Attome's session.
+    #[serde(default)]
+    end_session_endpoint: Option<String>,
 }
 
 /// BAU-7 (G-10, finding BAU-F4) — the discovery document's own cross-checks,
@@ -210,7 +218,10 @@ fn validate_discovery(doc: &DiscoveryDocument, issuer: &str) -> Result<(), AppEr
             &doc.authorization_endpoint,
             &doc.token_endpoint,
             &doc.jwks_uri,
-        ] {
+        ]
+        .into_iter()
+        .chain(doc.end_session_endpoint.as_ref())
+        {
             if !endpoint.starts_with("https://") {
                 tracing::warn!("oidc discovery endpoint is not https; refusing");
                 return Err(AppError::internal(
@@ -1088,6 +1099,11 @@ fn verify_claims(
         .ok_or(AppError::Unauthorized)?;
 
     let idp_mfa = idp_mfa(&claims, provider);
+    let sid = claims
+        .get("sid")
+        .and_then(|v| v.as_str())
+        .filter(|sid| !sid.is_empty())
+        .map(str::to_owned);
 
     // Overwritten by complete_login right after this returns — this pure
     // half has no `OidcState` (and thus no linking_user_id) to draw from.
@@ -1102,7 +1118,146 @@ fn verify_claims(
         purpose: FlowPurpose::Login,
         tester: None,
         claims,
+        sid,
     })
+}
+
+/// Q1-T10: the URL sign-out sends the browser to so the provider ends its
+/// session as well (RP-Initiated Logout 1.0 §2), carrying this client's id
+/// and where to come back to. `None` when the provider's discovery document
+/// names no end-session endpoint. The provider must have
+/// `post_logout_redirect_uri` registered for this client.
+pub async fn end_session_url(
+    redis: &Store,
+    provider: &OidcProviderConfig,
+    provider_key: &str,
+    post_logout_redirect_uri: &str,
+) -> Result<Option<String>, AppError> {
+    let discovery = fetch_discovery(redis, provider_key, &provider.issuer).await?;
+    Ok(discovery.end_session_endpoint.map(|endpoint| {
+        let joiner = if endpoint.contains('?') { '&' } else { '?' };
+        format!(
+            "{endpoint}{joiner}client_id={}&post_logout_redirect_uri={}",
+            urlencoding::encode(&provider.client_id),
+            urlencoding::encode(post_logout_redirect_uri),
+        )
+    }))
+}
+
+/// The `events` member a logout token must carry (Back-Channel Logout 1.0 §2.4).
+pub const BACKCHANNEL_LOGOUT_EVENT: &str = "http://schemas.openid.net/event/backchannel-logout";
+
+/// How far a logout token's `iat` may be from now, either way.
+pub const LOGOUT_TOKEN_MAX_AGE_SECS: i64 = 300;
+
+/// A verified back-channel logout token: who or which provider session to
+/// sign out. At least one of `sub` and `sid` is present.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LogoutToken {
+    pub sub: Option<String>,
+    pub sid: Option<String>,
+    /// The token's id, for refusing a replay.
+    pub jti: String,
+}
+
+/// Q1-T10: verifies a back-channel logout token against the provider's
+/// published keys (Back-Channel Logout 1.0 §2.6): the signature, issuer and
+/// audience as for an ID token, then the logout token's own rules. Fails
+/// closed: a discovery or key fetch failure is an error, never a pass. The
+/// caller still refuses a replayed `jti`.
+pub async fn verify_logout_token(
+    redis: &Store,
+    provider: &OidcProviderConfig,
+    provider_key: &str,
+    logout_token: &str,
+) -> Result<LogoutToken, AppError> {
+    let header = jsonwebtoken::decode_header(logout_token).map_err(|_| AppError::Unauthorized)?;
+    let kid = header.kid.clone().ok_or(AppError::Unauthorized)?;
+    let discovery = fetch_discovery(redis, provider_key, &provider.issuer).await?;
+    let jwk = resolve_signing_key(redis, provider_key, &discovery.jwks_uri, &kid).await?;
+    verify_logout_claims(
+        &jwk,
+        &header,
+        provider,
+        logout_token,
+        chrono::Utc::now().timestamp(),
+    )
+}
+
+/// The pure half of [`verify_logout_token`]: an asymmetric signature by the
+/// selected key, `iss` and `aud` present and this provider's (with the same
+/// `azp` rule as an ID token), `iat` within [`LOGOUT_TOKEN_MAX_AGE_SECS`] of
+/// `now`, an `exp` (when sent) not passed, `events` carrying
+/// [`BACKCHANNEL_LOGOUT_EVENT`], no `nonce` (§2.4: one tells a logout token
+/// from an ID token), a `jti`, and a `sub` or a `sid`.
+fn verify_logout_claims(
+    jwk: &jsonwebtoken::jwk::Jwk,
+    header: &jsonwebtoken::Header,
+    provider: &OidcProviderConfig,
+    logout_token: &str,
+    now: i64,
+) -> Result<LogoutToken, AppError> {
+    let decoding_key = DecodingKey::from_jwk(jwk).map_err(|_| AppError::Unauthorized)?;
+    if !matches!(
+        header.alg,
+        Algorithm::RS256
+            | Algorithm::RS384
+            | Algorithm::RS512
+            | Algorithm::ES256
+            | Algorithm::ES384
+    ) {
+        // Same alg-confusion refusal as `verify_claims`.
+        return Err(AppError::Unauthorized);
+    }
+    let mut validation = Validation::new(header.alg);
+    validation.set_audience(&[&provider.client_id]);
+    validation.set_issuer(&[&provider.issuer]);
+    // A logout token need not carry `exp`; `iat` bounds its age instead. An
+    // `exp` that is present is still enforced.
+    validation.set_required_spec_claims(&["aud", "iss"]);
+    let claims =
+        jsonwebtoken::decode::<serde_json::Value>(logout_token, &decoding_key, &validation)
+            .map_err(|_| AppError::Unauthorized)?
+            .claims;
+
+    let audiences = match claims.get("aud") {
+        Some(serde_json::Value::Array(many)) => many.len(),
+        Some(_) => 1,
+        None => 0,
+    };
+    match claims.get("azp").and_then(|v| v.as_str()) {
+        Some(azp) if azp != provider.client_id => return Err(AppError::Unauthorized),
+        None if audiences > 1 => return Err(AppError::Unauthorized),
+        _ => {}
+    }
+    let iat = claims
+        .get("iat")
+        .and_then(|v| v.as_i64().or_else(|| v.as_f64().map(|f| f as i64)))
+        .ok_or(AppError::Unauthorized)?;
+    if (now - iat).abs() > LOGOUT_TOKEN_MAX_AGE_SECS {
+        return Err(AppError::Unauthorized);
+    }
+    let is_logout = claims
+        .get("events")
+        .and_then(|v| v.as_object())
+        .and_then(|events| events.get(BACKCHANNEL_LOGOUT_EVENT))
+        .is_some_and(serde_json::Value::is_object);
+    if !is_logout || claims.get("nonce").is_some() {
+        return Err(AppError::Unauthorized);
+    }
+    let text = |name: &str| {
+        claims
+            .get(name)
+            .and_then(|v| v.as_str())
+            .filter(|v| !v.is_empty())
+            .map(str::to_owned)
+    };
+    let jti = text("jti").ok_or(AppError::Unauthorized)?;
+    let (sub, sid) = (text("sub"), text("sid"));
+    if sub.is_none() && sid.is_none() {
+        return Err(AppError::Unauthorized);
+    }
+    Ok(LogoutToken { sub, sid, jti })
 }
 
 /// Q1-T11: the `amr` methods (RFC 8176) that mean a second factor at the
@@ -1471,6 +1626,114 @@ mod tests {
         });
         let jwks: jsonwebtoken::jwk::JwkSet = serde_json::from_value(jwk_json).unwrap();
         (token, header, jwks)
+    }
+
+    fn logout_claims(provider: &OidcProviderConfig, now: i64) -> serde_json::Value {
+        serde_json::json!({
+            "iss": provider.issuer,
+            "aud": provider.client_id,
+            "iat": now,
+            "jti": "logout-1",
+            "sid": "op-session-7",
+            "events": { BACKCHANNEL_LOGOUT_EVENT: {} },
+        })
+    }
+
+    fn check_logout(
+        provider: &OidcProviderConfig,
+        claims: &serde_json::Value,
+        now: i64,
+    ) -> Result<LogoutToken, AppError> {
+        let (token, header, jwks) = sign_test_token(claims);
+        let jwk = jwks.find(header.kid.as_deref().unwrap()).unwrap();
+        verify_logout_claims(jwk, &header, provider, &token, now)
+    }
+
+    #[test]
+    fn a_logout_token_names_the_session_to_end() {
+        let provider = test_provider();
+        let now = chrono::Utc::now().timestamp();
+        let token = check_logout(&provider, &logout_claims(&provider, now), now).unwrap();
+        assert_eq!(token.sid.as_deref(), Some("op-session-7"));
+        assert_eq!(token.sub, None);
+        assert_eq!(token.jti, "logout-1");
+    }
+
+    #[test]
+    fn a_logout_token_breaking_a_rule_is_refused() {
+        let provider = test_provider();
+        let now = chrono::Utc::now().timestamp();
+        let with = |name: &str, value: serde_json::Value| {
+            let mut claims = logout_claims(&provider, now);
+            claims[name] = value;
+            claims
+        };
+        let without = |name: &str| {
+            let mut claims = logout_claims(&provider, now);
+            claims.as_object_mut().unwrap().remove(name);
+            claims
+        };
+        let mut no_subject = without("sid");
+        no_subject.as_object_mut().unwrap().remove("sub");
+        for (why, claims) in [
+            ("a nonce", with("nonce", serde_json::json!("n"))),
+            ("an old iat", with("iat", serde_json::json!(now - 301))),
+            ("a future iat", with("iat", serde_json::json!(now + 301))),
+            ("no iat", without("iat")),
+            (
+                "another event",
+                with("events", serde_json::json!({ "urn:other": {} })),
+            ),
+            ("no events", without("events")),
+            ("no jti", without("jti")),
+            ("no sub or sid", no_subject),
+            (
+                "another audience",
+                with("aud", serde_json::json!("someone-else")),
+            ),
+            ("no audience", without("aud")),
+            (
+                "another issuer",
+                with("iss", serde_json::json!("https://evil.example")),
+            ),
+            ("an expired exp", with("exp", serde_json::json!(now - 120))),
+        ] {
+            assert!(
+                check_logout(&provider, &claims, now).is_err(),
+                "accepted {why}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_logout_token_signed_by_another_key_is_refused() {
+        let provider = test_provider();
+        let now = chrono::Utc::now().timestamp();
+        let claims = logout_claims(&provider, now);
+        let (token, header, _) = sign_test_token_with_a_different_key(&claims);
+        let (_, _, jwks) = sign_test_token(&claims);
+        let jwk = jwks.find(header.kid.as_deref().unwrap()).unwrap();
+        assert!(verify_logout_claims(jwk, &header, &provider, &token, now).is_err());
+    }
+
+    #[test]
+    fn verify_claims_keeps_the_provider_session_id() {
+        let provider = test_provider();
+        let claims = serde_json::json!({
+            "iss": provider.issuer,
+            "aud": provider.client_id,
+            "sub": "user-sub-42",
+            "email": "person@example.com",
+            "nonce": "expected-nonce",
+            "sid": "op-session-7",
+            "exp": (chrono::Utc::now().timestamp() + 300),
+            "iat": chrono::Utc::now().timestamp(),
+        });
+        let (token, header, jwks) = sign_test_token(&claims);
+        let jwk = jwks.find(header.kid.as_deref().unwrap()).unwrap();
+        let identity =
+            verify_claims(jwk, &header, &provider, &token, Some("expected-nonce")).unwrap();
+        assert_eq!(identity.sid.as_deref(), Some("op-session-7"));
     }
 
     #[test]
