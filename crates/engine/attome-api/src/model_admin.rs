@@ -19,6 +19,8 @@
 pub(crate) mod cooked;
 /// M6-T4: fill a published flow template with its arguments.
 pub(crate) mod flow_template;
+/// Y11-T5: an entity's or a field's layer stack.
+pub(crate) mod layers;
 /// A5-T2: merging one option set value into another.
 pub mod option_merge;
 
@@ -2730,6 +2732,14 @@ pub fn routes() -> Router<EngineState> {
         )
         .route("/api/v1/admin/metadata/rollback", post(rollback_version))
         .route(
+            "/api/v1/admin/metadata/{kind}/{key}/layers",
+            get(layers::layer_stack),
+        )
+        .route(
+            "/api/v1/admin/metadata/{kind}/{key}/layers/diff",
+            get(layers::layer_diff),
+        )
+        .route(
             "/api/v1/admin/model/option_set/{id}/merge",
             post(option_merge::merge_values),
         )
@@ -2809,6 +2819,8 @@ pub fn routes() -> Router<EngineState> {
         version_docs,
         rollback_version,
         option_merge::merge_values,
+        layers::layer_stack,
+        layers::layer_diff,
         flow_template::instantiate,
         export_files,
         import_files,
@@ -2840,6 +2852,9 @@ pub fn routes() -> Router<EngineState> {
         MetadataVersionView,
         option_merge::MergeValuesRequest,
         option_merge::MergeValuesQueued,
+        layers::LayerValueView,
+        layers::PropertyStackView,
+        layers::LayerDifferenceView,
         flow_template::InstantiateRequest,
         flow_template::InstantiateResponse,
         ModelFile,

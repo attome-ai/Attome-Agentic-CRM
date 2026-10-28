@@ -56,6 +56,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- `GET /api/v1/admin/metadata/{kind}/{key}/layers` shows an entity's or a field's layer stack: each
+  property's value in the platform, app and customer layers and the one that applies; `/layers/diff`
+  lists the properties two layers set differently (Y11-T5).
 - Status notices and the incidents console (AB11-T9, AB11-T10): the shell's status bar also shows the status
   page notice (read every minute while the tab is visible, dismissible); `/xrm/ops/incidents` lists incidents,
   opens drafts and publishes updates with English and Arabic side by side (corrections, never edits), and

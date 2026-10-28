@@ -63,6 +63,118 @@ pub fn effective(
     (values, winners)
 }
 
+/// Y11-T5: one property across the layers: each layer's value, in merge
+/// order (platform, apps in install order, customer), and the winner.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PropertyStack {
+    pub property: String,
+    pub winner: Layer,
+    pub values: Vec<PropertyValue>,
+}
+
+/// Each property's stack, by property name. Pure.
+pub fn stacks(rows: &[(String, PropertyValue)], app_order: &[String]) -> Vec<PropertyStack> {
+    let (_, winners) = effective(&Map::new(), rows, app_order);
+    let app_position = |app: &str| {
+        app_order
+            .iter()
+            .position(|a| a == app)
+            .unwrap_or(app_order.len())
+    };
+    let mut by_property: BTreeMap<&str, Vec<PropertyValue>> = BTreeMap::new();
+    for (property, value) in rows {
+        by_property
+            .entry(property.as_str())
+            .or_default()
+            .push(value.clone());
+    }
+    by_property
+        .into_iter()
+        .map(|(property, mut values)| {
+            values.sort_by(|a, b| {
+                layer_rank(a.layer)
+                    .cmp(&layer_rank(b.layer))
+                    .then(app_position(&a.app).cmp(&app_position(&b.app)))
+                    .then(a.app.cmp(&b.app))
+            });
+            PropertyStack {
+                property: property.to_owned(),
+                winner: winners.get(property).copied().unwrap_or(Layer::Platform),
+                values,
+            }
+        })
+        .collect()
+}
+
+/// A property whose value differs between two layers.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LayerDifference {
+    pub property: String,
+    /// `None` when the layer does not set the property.
+    pub from: Option<Value>,
+    pub to: Option<Value>,
+}
+
+/// The properties whose value in layer `from` differs from layer `to`'s
+/// (among several apps, the last installed one's). Pure.
+pub fn diff(stacks: &[PropertyStack], from: Layer, to: Layer) -> Vec<LayerDifference> {
+    let at = |stack: &PropertyStack, layer: Layer| {
+        stack
+            .values
+            .iter()
+            .rev()
+            .find(|v| v.layer == layer)
+            .map(|v| v.value.clone())
+    };
+    stacks
+        .iter()
+        .filter_map(|stack| {
+            let (a, b) = (at(stack, from), at(stack, to));
+            (a != b).then(|| LayerDifference {
+                property: stack.property.clone(),
+                from: a,
+                to: b,
+            })
+        })
+        .collect()
+}
+
+/// Y11-T5: the stacks of one object (`metadata_property_layer`'s `kind` and
+/// `key`, e.g. `attribute` and `account.phone`), merged in the installed
+/// apps' order.
+pub async fn stack(
+    db: &attome_db::DbPool,
+    kind: &str,
+    key: &str,
+) -> Result<Vec<PropertyStack>, attome_types::AppError> {
+    let rows: Vec<(String, String, String, Option<Value>)> = sqlx::query_as(
+        "SELECT property, layer, app, value FROM metadata_property_layer           WHERE object_kind = $1 AND object_key = $2",
+    )
+    .bind(kind)
+    .bind(key)
+    .fetch_all(db)
+    .await
+    .map_err(attome_types::AppError::internal)?;
+    let app_order: Vec<String> = sqlx::query_scalar("SELECT app FROM app_layer ORDER BY position")
+        .fetch_all(db)
+        .await
+        .map_err(attome_types::AppError::internal)?;
+    let rows: Vec<(String, PropertyValue)> = rows
+        .into_iter()
+        .filter_map(|(property, layer, app, value)| {
+            Some((
+                property,
+                PropertyValue {
+                    layer: Layer::from_stored(&layer)?,
+                    app,
+                    value: value.unwrap_or(Value::Null),
+                },
+            ))
+        })
+        .collect();
+    Ok(stacks(&rows, &app_order))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -114,6 +226,40 @@ mod tests {
         assert_eq!(
             effective(&base, &rows, &reversed).0["label"],
             json!("Company")
+        );
+    }
+
+    #[test]
+    fn a_stack_lists_every_layer_in_merge_order_with_the_winner() {
+        let rows = [
+            row("label", Layer::Customer, "", json!("Mobile")),
+            row("label", Layer::Platform, "", json!("Phone")),
+            row("max_length", Layer::Platform, "", json!(20)),
+        ];
+        let stacks = stacks(&rows, &[]);
+        assert_eq!(stacks.len(), 2);
+        assert_eq!(stacks[0].property, "label");
+        assert_eq!(stacks[0].winner, Layer::Customer);
+        assert_eq!(
+            stacks[0].values.iter().map(|v| v.layer).collect::<Vec<_>>(),
+            vec![Layer::Platform, Layer::Customer]
+        );
+        assert_eq!(stacks[1].winner, Layer::Platform);
+        let differences = diff(&stacks, Layer::Platform, Layer::Customer);
+        assert_eq!(
+            differences,
+            vec![
+                LayerDifference {
+                    property: "label".into(),
+                    from: Some(json!("Phone")),
+                    to: Some(json!("Mobile")),
+                },
+                LayerDifference {
+                    property: "max_length".into(),
+                    from: Some(json!(20)),
+                    to: None,
+                },
+            ]
         );
     }
 
