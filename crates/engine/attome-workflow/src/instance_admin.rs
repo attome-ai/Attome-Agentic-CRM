@@ -74,6 +74,10 @@ struct InstanceListQuery {
     page_size: Option<i64>,
 }
 
+/// List workflow runs
+///
+/// Runs newest first, optionally only one status or only the runs about one record, one-based pages.
+/// Automation administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/workflow/instances",
@@ -139,11 +143,15 @@ async fn list_instances(
     )))
 }
 
+/// Get a workflow run
+///
+/// One run: its version, status, context, node data and each step's runs (round, status, attempts,
+/// last error). Automation administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/workflow/instances/{id}",
     tag = "workflow",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The run")),
     responses(
         (status = 200, description = "Success", body = InstanceDetail),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -209,11 +217,15 @@ async fn get_instance(
     }))
 }
 
+/// Cancel a workflow run
+///
+/// Cancels a queued, running, waiting or paused run when `row_version` is the stored one; a finished
+/// or changed run is 409. Automation administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/workflow/instances/{id}/cancel",
     tag = "workflow",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The run")),
     request_body = CancelInstanceBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Cancelled)])))),
     responses(
@@ -272,6 +284,10 @@ async fn cancel_instance(
     ))
 }
 
+/// Start a workflow run
+///
+/// Starts the published, active version of the workflow named, with the context given and
+/// optionally the record it is about. Automation administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/workflow/instances",

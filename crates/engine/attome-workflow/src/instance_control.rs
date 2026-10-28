@@ -126,12 +126,16 @@ async fn transition(
     .ok_or(AppError::VersionConflict)
 }
 
+/// Retry a failed workflow run
+///
+/// Runs a failed run again from its failed step, with that step's attempts reset, when `row_version` is
+/// the stored one. Automation administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/workflow/instances/{id}/retry",
     tag = "workflow",
     operation_id = "workflow_instance_retry",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The run")),
     request_body = ControlBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Activated)])))),
     responses(
@@ -197,12 +201,16 @@ pub async fn retry_run(
     })
 }
 
+/// Pause a workflow run
+///
+/// No step of a running or waiting run runs until it is resumed. Send the run's `row_version`.
+/// Automation administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/workflow/instances/{id}/pause",
     tag = "workflow",
     operation_id = "workflow_instance_pause",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The run")),
     request_body = ControlBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -257,12 +265,16 @@ pub async fn pause_run(
     })
 }
 
+/// Resume a paused workflow run
+///
+/// The run continues where it stopped. Send the run's `row_version`. Automation administrators only.
+/// Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/workflow/instances/{id}/resume",
     tag = "workflow",
     operation_id = "workflow_instance_resume",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The run")),
     request_body = ControlBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -396,12 +408,16 @@ async fn preview(
     })
 }
 
+/// Preview moving a run to another version
+///
+/// Where each waiting step of the run would land in the target version (a published version of the
+/// same flow). Changes nothing. Automation administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/workflow/instances/{id}/move-preview",
     tag = "workflow",
     operation_id = "workflow_instance_move_preview",
-    params(("id" = Uuid, Path), MovePreviewQuery),
+    params(("id" = Uuid, Path, description = "The run"), MovePreviewQuery),
     responses(
         (status = 200, description = "Where each waiting step lands in the target version", body = MovePreview),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -422,12 +438,17 @@ async fn move_preview(
     ))
 }
 
+/// Move a run to another version
+///
+/// Moves a waiting or paused run to a published version of its flow, each waiting step to the step
+/// of the same id; a step missing from the target is 422. Send the run's `row_version`. Automation
+/// administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/workflow/instances/{id}/move",
     tag = "workflow",
     operation_id = "workflow_instance_move",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The run")),
     request_body = MoveBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
     responses(

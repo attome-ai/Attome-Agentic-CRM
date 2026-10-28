@@ -170,6 +170,10 @@ struct DefinitionListQuery {
 
 // ── Handlers: Definitions ────────────────────────────────────────────────────
 
+/// List workflow definitions
+///
+/// The workflow definitions that are not deleted, optionally only active or inactive ones, one-based
+/// pages. Automation administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/workflow/definitions",
@@ -257,6 +261,11 @@ async fn list_definitions(
     )))
 }
 
+/// Create a workflow definition
+///
+/// A definition with a unique logical name and a kind (`flow` by default, or `journey`, `nurture`,
+/// `sequence`; fixed once created). It has no version yet. Recorded in the open changeset.
+/// Automation administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/workflow/definitions",
@@ -383,11 +392,14 @@ async fn create_definition(
     ))
 }
 
+/// Get a workflow definition
+///
+/// One definition with its versions. Automation administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/workflow/definitions/{id}",
     tag = "workflow",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The definition")),
     responses(
         (status = 200, description = "Success", body = DefinitionDetail),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -444,11 +456,15 @@ async fn get_definition(
     }))
 }
 
+/// Change a workflow definition
+///
+/// Renames it or switches it on or off when `row_version` is the stored one. Recorded in the open
+/// changeset; another layer's definition is 409. Automation administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/workflow/definitions/{id}",
     tag = "workflow",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The definition")),
     request_body = UpdateDefinitionBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
     responses(
@@ -539,11 +555,15 @@ async fn update_definition(
     get_definition(State(state), ctx, Path(definition_id)).await
 }
 
+/// Delete a workflow definition
+///
+/// Marks it deleted and inactive, so it starts no more runs. Recorded in the open changeset.
+/// Automation administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/workflow/definitions/{id}",
     tag = "workflow",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The definition")),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::SoftDelete)])))),
     responses(
         (status = 200, description = "Success", body = serde_json::Value),
@@ -607,11 +627,15 @@ async fn delete_definition(
 
 // ── Handlers: Versions ───────────────────────────────────────────────────────
 
+/// Add a draft version
+///
+/// A new draft version, numbered after the highest, with the graph given (an empty graph
+/// otherwise). Recorded in the open changeset. Automation administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/workflow/definitions/{id}/versions",
     tag = "workflow",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The definition")),
     request_body = CreateVersionBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Create)])))),
     responses(
@@ -719,13 +743,16 @@ async fn create_version(
     ))
 }
 
+/// Get a workflow version
+///
+/// One version: its number, status (draft or published) and graph. Automation administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/workflow/definitions/{id}/versions/{version_id}",
     tag = "workflow",
     params(
-        ("id" = Uuid, Path),
-        ("version_id" = Uuid, Path),
+        ("id" = Uuid, Path, description = "The definition"),
+        ("version_id" = Uuid, Path, description = "The version"),
     ),
     responses(
         (status = 200, description = "Success", body = VersionDetail),
@@ -777,15 +804,18 @@ async fn get_version(
     }))
 }
 
-/// Draft-only graph edit — the `row_version` CAS this plan's design review
-/// settled on for concurrent editor sessions (P-workflow-engine.md §4.3).
+/// Edit a draft version's graph
+///
+/// Replaces the graph of a draft version when `row_version` is the stored one, so two editors cannot
+/// overwrite each other; a published version or a stale version is 409. Recorded in the open
+/// changeset. Automation administrators only. Audited.
 #[utoipa::path(
     patch,
     path = "/api/v1/workflow/definitions/{id}/versions/{version_id}",
     tag = "workflow",
     params(
-        ("id" = Uuid, Path),
-        ("version_id" = Uuid, Path),
+        ("id" = Uuid, Path, description = "The definition"),
+        ("version_id" = Uuid, Path, description = "The version"),
     ),
     request_body = UpdateVersionGraphBody,
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
@@ -906,18 +936,18 @@ fn escalation_nodes(graph: &crate::graph::Graph) -> Vec<crate::escalation::Graph
         .collect()
 }
 
-/// draft -> published. Graph validation (cycle/port-type check) and
-/// `node_schema_hash` computation (P-workflow-engine.md §4.3/§5 step 4) run
-/// here, before the status flip — a bad graph fails fast with an actionable
-/// error, never a silent partial-publish. `workflow_trigger_index`'s
-/// `entry` rows are rebuilt in the same transaction (§5 step 6).
+/// Publish a workflow version
+///
+/// Checks the graph (no cycles, ports of matching types) and refuses a bad one with what is wrong,
+/// then makes the draft the published version and rebuilds its triggers in the same transaction.
+/// Recorded in the open changeset. Automation administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/workflow/definitions/{id}/versions/{version_id}/publish",
     tag = "workflow",
     params(
-        ("id" = Uuid, Path),
-        ("version_id" = Uuid, Path),
+        ("id" = Uuid, Path, description = "The definition"),
+        ("version_id" = Uuid, Path, description = "The version"),
     ),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Activated)])))),
     responses(

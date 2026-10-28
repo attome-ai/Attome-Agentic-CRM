@@ -63,13 +63,18 @@ use crate::scheduler;
 /// must fail this bound rather than spin forever on the request thread.
 const MAX_SIMULATE_ITERATIONS: usize = 2000;
 
+/// Simulate a workflow version
+///
+/// Runs the version's graph in memory against the trigger payload given and returns every node's
+/// trace. Nothing is written, sent or requested, whatever the nodes are, and a draft that is still
+/// being edited can be simulated. Automation administrators only.
 #[utoipa::path(
     post,
     path = "/api/v1/workflow/definitions/{id}/versions/{version_id}/simulate",
     tag = "workflow",
     params(
-        ("id" = Uuid, Path),
-        ("version_id" = Uuid, Path),
+        ("id" = Uuid, Path, description = "The definition"),
+        ("version_id" = Uuid, Path, description = "The version"),
     ),
     request_body = SimulateRequestBody,
     extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
@@ -1144,6 +1149,7 @@ struct RecentRun {
     node_data: Value,
 }
 
+/// Replay a version over recent runs
 #[utoipa::path(
     post,
     path = "/api/v1/workflow/definitions/{id}/versions/{version_id}/replay",
@@ -1151,8 +1157,8 @@ struct RecentRun {
     operation_id = "workflow_replay_draft",
     description = "Replays a version over the flow's latest finished runs (M4-T3): each run's trigger input and approval decisions go through the simulation of this version, and every node whose outcome differs from what the run really did is reported. Nothing is written.",
     params(
-        ("id" = Uuid, Path),
-        ("version_id" = Uuid, Path),
+        ("id" = Uuid, Path, description = "The definition"),
+        ("version_id" = Uuid, Path, description = "The version"),
     ),
     request_body = ReplayRequest,
     extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
