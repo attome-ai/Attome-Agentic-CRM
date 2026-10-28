@@ -287,3 +287,62 @@ async fn approvals_outside_the_callers_own_agent_actions_are_not_found() {
         assert!(matches!(err, AppError::NotFound), "{what}: {err:?}");
     }
 }
+
+// ---------------------------------------------------------------------------
+// query.run (S4-T13)
+// ---------------------------------------------------------------------------
+
+/// An agent runs a text query as its own context and gets the rows it may
+/// see, capped at 50 whatever LIMIT asks.
+#[tokio::test]
+async fn query_run_action_returns_rows_for_text_query() {
+    let f = skip_if_no_db!(fixture().await);
+    sqlx::query(&format!(
+        "INSERT INTO \"{}\" (status) SELECT CASE WHEN g % 2 = 0 THEN 'open' ELSE 'closed' END \
+         FROM generate_series(1, 120) g",
+        f.entity
+    ))
+    .execute(f.db())
+    .await
+    .expect("seed records");
+    let ctx = f.agent_ctx("q-1").await;
+
+    let result = completed(
+        f.dispatch(
+            &ctx,
+            "query.run",
+            json!({ "q": format!("SELECT status FROM {} WHERE status = 'open' LIMIT 5", f.entity) }),
+        )
+        .await
+        .expect("dispatch"),
+    );
+    assert_eq!(result["status"], "rows", "{result}");
+    let rows = result["rows"].as_array().expect("rows");
+    assert_eq!(rows.len(), 5, "{result}");
+    assert!(rows.iter().all(|r| r["status"] == "open"), "{result}");
+    assert_eq!(result["more"], true);
+
+    let capped = completed(
+        f.dispatch(
+            &ctx,
+            "query.run",
+            json!({ "q": format!("SELECT status FROM {} LIMIT 500", f.entity) }),
+        )
+        .await
+        .expect("dispatch"),
+    );
+    assert_eq!(
+        capped["rows"].as_array().expect("rows").len(),
+        50,
+        "{capped}"
+    );
+
+    let unknown = f
+        .dispatch(
+            &ctx,
+            "query.run",
+            json!({ "q": "SELECT name FROM no_such_entity_q1" }),
+        )
+        .await;
+    assert!(matches!(unknown, Err(AppError::NotFound)), "{unknown:?}");
+}

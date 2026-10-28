@@ -88,6 +88,8 @@ pub mod ops_upgrade;
 pub mod profile;
 /// L2-T9: quality.explain_drop, quality.record_score, quality.propose_rules.
 pub mod quality;
+/// S4-T13: `query.run`, a structured query in the text form.
+pub mod query_run;
 pub mod read;
 pub mod record_schema;
 pub mod record_update_field;
@@ -146,6 +148,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(record_schema::validate_descriptor());
     all.push(record_update_field::descriptor());
     all.extend(business::descriptors());
+    all.push(query_run::descriptor());
     all.extend(search_ask::descriptors());
     all.extend(catalog::descriptors());
     all.extend(timeline::descriptors());
@@ -247,6 +250,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(record_schema::RecordValidate));
     all.push(Box::new(record_update_field::RecordUpdateField));
     all.extend(business::executors());
+    all.push(Box::new(query_run::QueryRun));
     all.extend(search_ask::executors());
     all.extend(catalog::executors());
     all.extend(timeline::executors());

@@ -69,7 +69,7 @@
               "ops.draft_incident_update", "ops.drill_evidence", "ops.drill_freshness", "ops.live_rpo", "ops.propose_switchover",
               "ops.recovery_readiness", "ops.report", "ops.slo_health", "ops.status", "ops.upgrade_status", "page.draft",
               "profile.explain", "profile.summary", "quality.explain_drop", "quality.propose_rules",
-              "quality.record_score", "query.execute", "query.plan", "record.ai_field", "record.assign",
+              "quality.record_score", "query.execute", "query.plan", "query.run", "record.ai_field", "record.assign",
               "record.bulk.delete", "record.bulk.preview", "record.bulk.status", "record.bulk.update",
               "record.changes", "record.classify", "record.create", "record.delete", "record.deleted", "record.get",
               "record.mass.estimate", "record.mass.start", "record.mass.start_confirmed",

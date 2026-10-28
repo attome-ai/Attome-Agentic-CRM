@@ -111,7 +111,9 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   - The draft never holds a secret and is never saved. A person adds the provider from it.
 - Questions: `query.plan` turns a question into a checked query (entity, filters, order, limit) and
   returns the issues to fix, or a description for the person and the `query.execute` arguments that
-  run it. The model never writes SQL.
+  run it. The model never writes SQL. `query.run` runs a query in the text form (`SELECT … FROM …
+  WHERE … GROUP BY … ORDER BY … LIMIT n`) as the caller and returns at most 50 rows, or the groups;
+  a query estimated over 5,000 rows returns its plan instead, to be narrowed.
 - Searching by question (A25-T7): `search.parse_filter` turns words into a checked filter over one
   entity; `search.answer_records` answers from the records found, citing only records the person may
   read.
