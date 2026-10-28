@@ -211,11 +211,13 @@ pub async fn requirement_for(
         MfaMode::Off => Ok(UserMfaRequirement::default()),
         MfaMode::Optional => Ok(UserMfaRequirement {
             optional: true,
+            remember_device_days: policy.remember_device_days,
             ..UserMfaRequirement::default()
         }),
         MfaMode::Required => {
             let mut requirement = UserMfaRequirement {
                 required: true,
+                remember_device_days: policy.remember_device_days,
                 ..UserMfaRequirement::default()
             };
             if attome_auth::mfa::is_enrolled(db, user_id).await? {

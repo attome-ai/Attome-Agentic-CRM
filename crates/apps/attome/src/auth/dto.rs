@@ -214,6 +214,11 @@ impl std::fmt::Debug for MfaChallengeResponse {
 pub struct MfaVerifyBody {
     pub pending_token: String,
     pub code: String,
+    /// Q5-T4: remember this browser so later sign-ins from it skip the
+    /// second factor, for as long as the person's policy allows (never for
+    /// an administrator). Ignored by the recovery-code route.
+    #[serde(default)]
+    pub remember: bool,
 }
 
 impl std::fmt::Debug for MfaVerifyBody {

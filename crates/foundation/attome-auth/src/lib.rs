@@ -92,6 +92,8 @@ pub mod pow;
 /// Z4-T2: principal kinds and the token type each carries.
 pub mod principal;
 pub mod refresh;
+/// Q5-T4: browsers remembered after a second factor.
+pub mod remembered_device;
 pub mod reset;
 pub mod revocation;
 pub mod session;

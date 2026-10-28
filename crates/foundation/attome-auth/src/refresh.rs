@@ -964,12 +964,9 @@ const REVOKE_ALL_FOR_USER_SQL: &str = "UPDATE refresh_token SET revoked_at = NOW
 /// change this — every row (any family) for `user_id` is revoked regardless
 /// of lineage.
 pub async fn revoke_all_for_user(db: &DbPool, user_id: Uuid) -> Result<(), AppError> {
-    sqlx::query(REVOKE_ALL_FOR_USER_SQL)
-        .bind(user_id)
-        .execute(db)
-        .await
-        .map_err(AppError::internal)?;
-
+    let mut tx = attome_db::tx::begin(db).await?;
+    revoke_all_for_user_in_tx(&mut tx, user_id).await?;
+    tx.commit().await.map_err(AppError::internal)?;
     Ok(())
 }
 
@@ -982,6 +979,12 @@ pub async fn revoke_all_for_user_in_tx(
     user_id: Uuid,
 ) -> Result<(), AppError> {
     sqlx::query(REVOKE_ALL_FOR_USER_SQL)
+        .bind(user_id)
+        .execute(&mut **tx)
+        .await
+        .map_err(AppError::internal)?;
+    // Q5-T4: a remembered browser goes with the sessions.
+    sqlx::query(crate::remembered_device::REVOKE_ALL_SQL)
         .bind(user_id)
         .execute(&mut **tx)
         .await

@@ -354,6 +354,10 @@ pub struct UserMfaRequirement {
     /// While required and not enrolled: the person postponed enrolling
     /// until this time (never past `grace_until`).
     pub postponed_until: Option<chrono::DateTime<chrono::Utc>>,
+    /// Q5-T4: how many days a browser may be remembered after a second
+    /// factor; 0 never (an administrator's policy, and the deployment-wide
+    /// switch alone).
+    pub remember_device_days: i32,
 }
 
 impl UserMfaRequirement {
@@ -365,7 +369,13 @@ impl UserMfaRequirement {
             optional: mode != "off" && mode != "required",
             grace_until: None,
             postponed_until: None,
+            remember_device_days: 0,
         }
+    }
+
+    /// Q5-T4: whether this policy lets a browser be remembered.
+    pub fn may_remember(&self) -> bool {
+        self.remember_device_days > 0
     }
 
     /// Whether enrolment may still be put off at `now`.
@@ -405,6 +415,20 @@ impl MfaPolicySource for ConfigMfaPolicy<'_> {
     > {
         let requirement = UserMfaRequirement::from_mode(self.0);
         Box::pin(async move { Ok(requirement) })
+    }
+}
+
+/// Q5-T4: the remembered-device bearer a sign-in presents, and the ring its
+/// hash is checked with.
+#[derive(Clone, Copy)]
+pub struct RememberedDevice<'a> {
+    pub bearer: &'a str,
+    pub ring: &'a crate::apikey_hash::PepperRing,
+}
+
+impl std::fmt::Debug for RememberedDevice<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RememberedDevice").finish_non_exhaustive()
     }
 }
 
@@ -478,6 +502,7 @@ pub async fn login(
         jwt_ring,
         issuer,
         audience,
+        None,
     )
     .await
 }
@@ -503,6 +528,7 @@ pub async fn login_with_policy(
     jwt_ring: &KeyRing,
     issuer: &str,
     audience: &str,
+    remembered: Option<RememberedDevice<'_>>,
 ) -> Result<LoginOutcome, AppError> {
     let email = crate::email_identity::normalize_email(email);
     let row: Option<(Uuid, String, bool)> = sqlx::query_as(
@@ -548,7 +574,21 @@ pub async fn login_with_policy(
         return Ok(LoginOutcome::Session(user_id));
     }
     let enrolled = crate::mfa::is_enrolled(db, user_id).await?;
-    match mfa_step(&requirement, enrolled, chrono::Utc::now()) {
+    let mut step = mfa_step(&requirement, enrolled, chrono::Utc::now());
+    // Q5-T4: a browser remembered after a second factor skips the challenge
+    // while the policy remembers devices and the device is still good.
+    if step == MfaStep::Challenge
+        && requirement.may_remember()
+        && let Some(device) = remembered
+    {
+        let epoch = crate::epoch::current_epoch(db, user_id).await?;
+        if crate::remembered_device::is_remembered(db, device.ring, user_id, device.bearer, epoch)
+            .await?
+        {
+            step = MfaStep::Session;
+        }
+    }
+    match step {
         MfaStep::Challenge => {
             let pending_token = crate::mfa::start_challenge(
                 redis,

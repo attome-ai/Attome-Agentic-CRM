@@ -173,6 +173,12 @@ nothing. A role may set its own mode instead, stricter or not.
   After that, sign-in continues only through enrolment.
 - **Provider sign-in.** A sign-in through a provider meets a required policy when the provider
   reports that it checked a second factor; otherwise it is refused with `mfa_required`.
+- **Remembered browsers.** After entering a second factor, a person may ask for the browser to
+  be remembered (`"remember": true` on `POST /api/v1/auth/mfa/verify`). Their next password
+  sign-ins from it skip the second factor for the role's `remember_device_days` (30 by default;
+  the strictest role's shortest), until a password change, reset or disable, or a sign-out of
+  every session. An administrator's browser is never remembered. The browser holds only an
+  opaque token; the server keeps its hash.
 
 A role's mode is stored with its sign-in policy (`role_auth_policy`). The route that sets it today,
 `PUT /api/v1/admin/security/roles/{id}/auth-policy`, sets single sign-on only; setting the second

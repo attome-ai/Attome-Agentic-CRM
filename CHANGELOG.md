@@ -56,6 +56,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Remembered browsers (Q5-T4): `POST /api/v1/auth/mfa/verify` takes `remember`, and a browser
+  remembered after a second factor skips it at later password sign-ins for the role's
+  `remember_device_days`, until the account's sessions or password change. Never for an administrator.
 - `GET /api/v1/admin/metadata/{kind}/{key}/layers` shows an entity's or a field's layer stack: each
   property's value in the platform, app and customer layers and the one that applies; `/layers/diff`
   lists the properties two layers set differently (Y11-T5).

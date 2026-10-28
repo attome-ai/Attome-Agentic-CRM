@@ -471,7 +471,11 @@ pub(super) async fn login(
         Err(AppError::Unauthorized)
     } else {
         // Q5-T3: the person's roles decide the second factor;
-        // `auth.mfa_policy` is what a role set to inherit means.
+        // `auth.mfa_policy` is what a role set to inherit means. Q5-T4: a
+        // remembered browser skips it while the policy allows.
+        let device =
+            attome_auth::remembered_device::presented(&headers, state.config.auth.secure_cookies);
+        let ring = state.pepper_ring();
         accounts::login_with_policy(
             &state.db,
             &state.redis_coordination,
@@ -485,6 +489,10 @@ pub(super) async fn login(
             &state.secrets.load().jwt_secret,
             &state.config.auth.jwt_issuer,
             state.config.jwt_audience(),
+            device.as_deref().map(|bearer| accounts::RememberedDevice {
+                bearer,
+                ring: &ring,
+            }),
         )
         .await
     };
@@ -713,6 +721,7 @@ async fn failed_login_subject(
 pub(super) async fn mfa_verify(
     State(state): State<AppState>,
     Extension(auditor): Extension<SecurityAuditor>,
+    headers: HeaderMap,
     Json(body): Json<MfaVerifyBody>,
 ) -> Result<Response, AppError> {
     // T1-10: per-account budget across *every* pending token for this user —
@@ -758,13 +767,46 @@ pub(super) async fn mfa_verify(
     };
     // A pending login token comes only from a verified password, and this
     // request verified the TOTP code.
-    let cookies = issue_session_cookies_for(
+    let mut cookies = issue_session_cookies_for(
         &state,
         user_id,
         &AuthContext::password_and_totp(),
         Some((&auditor, "password+totp")),
     )
-    .await?;
+    .await?
+    .to_vec();
+    // Q5-T4: remember this browser when asked and the policy allows it.
+    if body.remember {
+        let requirement = attome_security::mfa_policy::requirement_for(
+            &state.db,
+            user_id,
+            &state.config.auth.mfa_policy,
+        )
+        .await?;
+        if requirement.may_remember() {
+            let epoch = attome_auth::epoch::current_epoch(&state.db, user_id).await?;
+            let label = headers
+                .get(axum::http::header::USER_AGENT)
+                .and_then(|v| v.to_str().ok());
+            let bearer = attome_auth::remembered_device::remember(
+                &state.db,
+                &state.pepper_ring(),
+                user_id,
+                epoch,
+                requirement.remember_device_days,
+                label,
+            )
+            .await?;
+            cookies.push((
+                axum::http::header::SET_COOKIE,
+                attome_auth::remembered_device::cookie(
+                    &bearer,
+                    requirement.remember_device_days,
+                    state.config.auth.secure_cookies,
+                ),
+            ));
+        }
+    }
 
     Ok((
         StatusCode::OK,
