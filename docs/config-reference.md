@@ -469,6 +469,7 @@ Required.
 
 | Key | Type | Default | Secret | Description |
 |---|---|---|---|---|
+| `oidc.client_secret_encryption_key` | string \| object |  | yes | Q1-T3: the key ring the client secrets of providers an administrator adds on screen (`oidc_provider.client_secret_enc`) are sealed under, its own trust domain (D-069). Hex, like the other envelope rings. Empty (the default) leaves those providers off: only the providers above sign anyone in. |
 | `oidc.providers` | map |  |  | Keyed by an operator-chosen provider key (e.g. "entra", "okta", "keycloak", "google") — becomes the `{provider}` path segment in `/api/v1/auth/oidc/{provider}/login\|callback` and the `provider_key` stored in `xrm_core_user_identity`. Empty (the default) means no OIDC provider is configured — those routes 404 for any key looked up here. |
 
 ## `ops`

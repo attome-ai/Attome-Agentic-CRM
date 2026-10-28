@@ -2840,7 +2840,7 @@ async fn drain_rewrap_secrets(
 
 /// Q18-T4: the ring each encrypted-column registry domain is sealed with,
 /// or `None` when this deployment configures none (its columns are skipped).
-/// `oidc` has no ring: its client secrets live in configuration.
+/// Q1-T3: `oidc` is the on-screen providers' client secrets.
 fn registry_ring(state: &EngineState, domain: &str) -> Option<attome_config::KeyRing> {
     let secrets = state.base.secrets.load();
     let config = &state.base.config;
@@ -2855,6 +2855,7 @@ fn registry_ring(state: &EngineState, domain: &str) -> Option<attome_config::Key
             config.metadata.recovery_archive_key_encryption_key.clone()
         }
         "s2s" => secrets.s2s_key_encryption_key.clone(),
+        "oidc" => config.oidc.client_secret_encryption_key.clone(),
         "mfa" | "portal_mfa" => secrets.mfa_encryption_key.clone(),
         _ => return None,
     };

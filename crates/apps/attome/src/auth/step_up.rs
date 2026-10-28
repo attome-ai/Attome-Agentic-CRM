@@ -472,16 +472,11 @@ pub(super) async fn start_oidc_step_up(
     Query(query): Query<StepUpFederatedStartQuery>,
 ) -> Result<Response, AppError> {
     let operation = step_up_operation(&operation)?;
-    let mut provider_config = state
-        .config
-        .oidc
-        .providers
+    let provider_config = state
+        .oidc_providers
         .get(&provider)
-        .cloned()
-        .ok_or(AppError::NotFound)?;
-    if let Some(secret) = state.secrets.load().oidc_client_secrets.get(&provider) {
-        provider_config.client_secret = secret.clone();
-    }
+        .ok_or(AppError::NotFound)?
+        .config;
     let binding = step_up::begin_federated_step_up(
         stores(&state),
         caller,
@@ -595,16 +590,11 @@ async fn oidc_step_up_callback_inner(
     code: &str,
     bound: attome_auth::oidc::BoundState,
 ) -> Result<Operation, AppError> {
-    let mut provider_config = state
-        .config
-        .oidc
-        .providers
+    let provider_config = state
+        .oidc_providers
         .get(provider)
-        .cloned()
-        .ok_or(AppError::NotFound)?;
-    if let Some(secret) = state.secrets.load().oidc_client_secrets.get(provider) {
-        provider_config.client_secret = secret.clone();
-    }
+        .ok_or(AppError::NotFound)?
+        .config;
 
     let identity = attome_auth::oidc::complete_login(
         &state.redis_coordination,

@@ -757,7 +757,7 @@ pub(crate) fn default_hsts_max_age_secs() -> u64 {
 // ── OIDC section (P2.8 — D-065: config-driven, not a core_identity_provider
 // admin-CRUD table; see that decision for why) ──────────────────────────────
 
-#[derive(Debug, Clone, Deserialize, Default, schemars::JsonSchema)]
+#[derive(Clone, Deserialize, Default, schemars::JsonSchema)]
 pub struct OidcSection {
     /// Keyed by an operator-chosen provider key (e.g. "entra", "okta",
     /// "keycloak", "google") — becomes the `{provider}` path segment in
@@ -766,6 +766,32 @@ pub struct OidcSection {
     /// provider is configured — those routes 404 for any key looked up here.
     #[serde(default)]
     pub providers: HashMap<String, OidcProviderConfig>,
+    /// Q1-T3: the key ring the client secrets of providers an administrator
+    /// adds on screen (`oidc_provider.client_secret_enc`) are sealed under,
+    /// its own trust domain (D-069). Hex, like the other envelope rings.
+    /// Empty (the default) leaves those providers off: only the providers
+    /// above sign anyone in.
+    #[serde(default)]
+    pub client_secret_encryption_key: KeyRing,
+}
+
+/// Hand-rolled: `client_secret_encryption_key` is key material. `KeyRing`'s
+/// own `Debug` redacts it already; this keeps the struct's output from
+/// depending on that.
+impl std::fmt::Debug for OidcSection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OidcSection")
+            .field("providers", &self.providers)
+            .field(
+                "client_secret_encryption_key",
+                &if self.client_secret_encryption_key.is_empty() {
+                    "<unset>"
+                } else {
+                    "<redacted>"
+                },
+            )
+            .finish()
+    }
 }
 
 #[derive(Clone, Deserialize, schemars::JsonSchema)]

@@ -61,6 +61,12 @@ pub struct AppState {
     /// invalidating everything signed/encrypted under the previous value —
     /// see `attome_server::secrets` module doc.
     pub secrets: MetadataCache<SecretRings>,
+    /// Q1-T3 — every sign-in provider (configuration and the ones an
+    /// administrator adds on screen), the snapshot every OIDC route reads.
+    /// Starts as the configuration providers; the engine rebuilds it at boot
+    /// and on each `attome_auth::oidc_registry::OIDC_PROVIDERS_CHANNEL`
+    /// doorbell, with a periodic catch-up. Per-node, rebuilt from Postgres.
+    pub oidc_providers: Arc<attome_auth::oidc_registry::OidcRegistry>,
     /// Fails closed (`DenyAllResolver`) until `XrmSystemBuilder::build()` stores
     /// the real `xrm-security` resolver — see `security.rs`.
     pub security: SecurityResolverHandle,
@@ -210,7 +216,12 @@ impl AppState {
         redis_coordination: impl Into<Store>,
         storage: StorageClient,
     ) -> Self {
-        let secrets = MetadataCache::new(SecretRings::from_config(&config));
+        let secret_rings = SecretRings::from_config(&config);
+        let oidc_providers = Arc::new(attome_auth::oidc_registry::OidcRegistry::from_config(
+            &config.oidc.providers,
+            &secret_rings.oidc_client_secrets,
+        ));
+        let secrets = MetadataCache::new(secret_rings);
         let shedder = Arc::new(crate::middleware::shed::Shedder::new(&config.shed));
         // S9-T3: every process that completes or replays a durable
         // idempotency record builds an AppState first.
@@ -239,6 +250,7 @@ impl AppState {
             redis_coordination: redis_coordination.into(),
             storage,
             secrets,
+            oidc_providers,
             security: SecurityResolverHandle::default_deny(),
             registry_ready: Arc::new(AtomicBool::new(false)),
             replica_watermark: Arc::new(ArcSwapOption::from(None)),

@@ -2497,6 +2497,29 @@
     },
     "OidcSection": {
       "properties": {
+        "client_secret_encryption_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "properties": {
+                "active_key_id": {
+                  "type": "string"
+                },
+                "keys": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
+          ],
+          "description": "Q1-T3: the key ring the client secrets of providers an administrator\nadds on screen (`oidc_provider.client_secret_enc`) are sealed under,\nits own trust domain (D-069). Hex, like the other envelope rings.\nEmpty (the default) leaves those providers off: only the providers\nabove sign anyone in.",
+          "writeOnly": true
+        },
         "providers": {
           "additionalProperties": {
             "$ref": "#/$defs/OidcProviderConfig"

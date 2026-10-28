@@ -315,7 +315,8 @@
   },
   "oidc": {
     "_comment": "P2.8 (D-065) — config-driven OIDC providers, not a DB-admin-CRUD table: provider metadata + client_secret live here (${VAR}-expanded, never committed), only the per-user link (core_user_identity) is DB state. Empty providers = feature off. Each key becomes a URL path segment: /api/v1/auth/oidc/{key}/login|callback — ASCII alphanumeric/-/_ only.",
-    "providers": {}
+    "providers": {},
+    "_client_secret_encryption_key_comment": "Q1-T3 — the key ring the client secrets of providers an administrator adds on screen (the oidc_provider table) are sealed under; its own trust domain (D-069), 64 hex (`openssl rand -hex 32`). Unset leaves those providers off: only the providers above sign anyone in. Set it as \"client_secret_encryption_key\": \"${OIDC_CLIENT_SECRET_ENCRYPTION_KEY}\"."
   },
   "retention": {
     "_comment": "P-retention-archive-completion — partition archive/drop, entity purge and legal hold. Development default: every window unset (keep forever), dry_run on, legal_hold off (BCF-12 adds this block so the dev template carries every section)."

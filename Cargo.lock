@@ -823,6 +823,7 @@ name = "attome-auth"
 version = "0.1.0"
 dependencies = [
  "aes-gcm",
+ "arc-swap",
  "argon2",
  "attome-cache",
  "attome-config",

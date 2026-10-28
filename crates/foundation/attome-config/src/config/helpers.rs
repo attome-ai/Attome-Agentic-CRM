@@ -249,6 +249,7 @@ const SECRET_PATHS: &[&str] = &[
     "audit.anchor_store.s3_secret_key",
     "events.webhook_signing_key",
     "integration.credential_encryption_key",
+    "oidc.client_secret_encryption_key",
     "einvoice.key_encryption_key",
     "inference.provider_credential_key",
     "inference.*.api_key",

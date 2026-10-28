@@ -142,6 +142,10 @@ pub const SECRETS: &[SecretSpec] = &[
         &["connector credentials at rest"],
     ),
     ring(
+        "oidc.client_secret_encryption_key",
+        &["sign-in providers added on screen (client secrets)"],
+    ),
+    ring(
         "metadata.recovery_archive_key_encryption_key",
         &["metadata recovery archive"],
     ),

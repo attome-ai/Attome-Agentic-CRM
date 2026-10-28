@@ -1579,6 +1579,17 @@ impl AppConfig {
         if let Err((field, reason)) = self.ops.check() {
             return Err(ConfigError::Invalid { field, reason });
         }
+        if !self.oidc.client_secret_encryption_key.is_empty() {
+            Self::check_secret_ring(
+                "oidc.client_secret_encryption_key",
+                &self.oidc.client_secret_encryption_key,
+                production,
+            )?;
+            Self::check_hex_key_ring(
+                "oidc.client_secret_encryption_key",
+                &self.oidc.client_secret_encryption_key,
+            )?;
+        }
         if !self.fleet.credential_encryption_key.is_empty() {
             Self::check_secret_ring(
                 "fleet.credential_encryption_key",

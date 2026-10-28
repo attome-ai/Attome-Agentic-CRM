@@ -1923,6 +1923,47 @@ impl EngineSystemBuilder {
             snapshot_catchup_interval,
         );
 
+        // Q1-T3: the sign-in providers, configuration and on screen. Built
+        // now, rebuilt on every node when a change is announced, and every
+        // minute in case an announcement was missed.
+        {
+            const OIDC_PROVIDERS_CATCHUP: Duration = Duration::from_secs(60);
+            let base = state.base.clone();
+            let reload = move || {
+                let base = base.clone();
+                async move {
+                    let secrets = base.secrets.load();
+                    if let Err(e) = base
+                        .oidc_providers
+                        .reload(
+                            &base.db,
+                            &base.config.oidc.providers,
+                            &secrets.oidc_client_secrets,
+                            &base.config.oidc.client_secret_encryption_key,
+                        )
+                        .await
+                    {
+                        tracing::warn!(error = %e, "sign-in providers could not be reloaded; the last list stays");
+                    }
+                }
+            };
+            reload().await;
+            let on_message = reload.clone();
+            subscriber.on_message(move |msg| {
+                if msg.channel == attome_auth::oidc_registry::OIDC_PROVIDERS_CHANNEL {
+                    tokio::spawn(on_message());
+                }
+            });
+            tokio::spawn(async move {
+                let mut tick = tokio::time::interval(OIDC_PROVIDERS_CATCHUP);
+                tick.tick().await;
+                loop {
+                    tick.tick().await;
+                    reload().await;
+                }
+            });
+        }
+
         // Z3-T5: the dependency-aware caches follow the change feed on every
         // node, once a second and at once on a record write's doorbell.
         attome_core::cache_invalidation::bus().spawn(
@@ -1949,6 +1990,7 @@ impl EngineSystemBuilder {
             attome_core::RELATIONSHIP_VERSION_CHANNEL,
             attome_core::RULE_VERSION_CHANNEL,
             attome_core::cache_invalidation::CACHE_INVALIDATE_CHANNEL,
+            attome_auth::oidc_registry::OIDC_PROVIDERS_CHANNEL,
         ] {
             tokio::time::timeout(Duration::from_secs(10), subscriber.subscribe(channel)).await??;
         }

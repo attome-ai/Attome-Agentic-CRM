@@ -202,8 +202,9 @@ fn form_urldecode(value: &str) -> String {
 /// Start an OIDC sign-in
 ///
 /// P2.8 (D-065) — starts the generic OIDC authorization-code + PKCE flow for
-/// a config-driven provider (`config.oidc.providers.{provider}`). Redirects
-/// the browser straight to the IdP; `AppError::NotFound` for an unconfigured
+/// a provider from configuration or added on screen (Q1-T3,
+/// `state.oidc_providers`). Redirects the browser straight to the IdP;
+/// `AppError::NotFound` for an unconfigured
 /// provider key (never 401/403 — an unconfigured provider isn't a protected
 /// resource, it just doesn't exist, same `FeatureHidden`-style reasoning as
 /// an unlicensed module route). Bypass-listed: the caller has no session yet.
@@ -221,19 +222,11 @@ pub(super) async fn oidc_login(
     State(state): State<AppState>,
     Path(provider): Path<String>,
 ) -> Result<Response, AppError> {
-    let mut provider_config = state
-        .config
-        .oidc
-        .providers
+    let provider_config = state
+        .oidc_providers
         .get(&provider)
-        .cloned()
-        .ok_or(AppError::NotFound)?;
-    // Prefer the secrets-bundle client_secret for this provider key, else
-    // keep the boot-time config value (both are config-sourced; this just
-    // picks the bundle's copy when present).
-    if let Some(secret) = state.secrets.load().oidc_client_secrets.get(&provider) {
-        provider_config.client_secret = secret.clone();
-    }
+        .ok_or(AppError::NotFound)?
+        .config;
     let redirect_uri = format!(
         "{}/api/v1/auth/oidc/{provider}/callback",
         state.config.frontend_url()
@@ -388,16 +381,11 @@ async fn oidc_callback_inner(
     license: &super::LicenseHandle,
     bound: attome_auth::oidc::BoundState,
 ) -> Result<Response, AppError> {
-    let mut provider_config = state
-        .config
-        .oidc
-        .providers
+    let provider_config = state
+        .oidc_providers
         .get(provider)
-        .cloned()
-        .ok_or(AppError::NotFound)?;
-    if let Some(secret) = state.secrets.load().oidc_client_secrets.get(provider) {
-        provider_config.client_secret = secret.clone();
-    }
+        .ok_or(AppError::NotFound)?
+        .config;
 
     let identity = attome_auth::oidc::complete_login(
         &state.redis_coordination,
@@ -521,18 +509,13 @@ pub(super) async fn identity_link_oidc_start(
     _ctx: attome_server::authz::Authorized<attome_server::authz::SelfService>,
     Path(provider): Path<String>,
 ) -> Result<Response, AppError> {
-    let mut provider_config = state
-        .config
-        .oidc
-        .providers
+    let provider_config = state
+        .oidc_providers
         .get(&provider)
-        .cloned()
-        .ok_or(AppError::NotFound)?;
+        .ok_or(AppError::NotFound)?
+        .config;
     if let Some(redirect) = identity_link_step_up_redirect(&state, caller, claims.sub).await? {
         return Ok(redirect);
-    }
-    if let Some(secret) = state.secrets.load().oidc_client_secrets.get(&provider) {
-        provider_config.client_secret = secret.clone();
     }
     let redirect_uri = format!(
         "{}/api/v1/auth/identity-link-callback/oidc/{provider}",
@@ -672,16 +655,11 @@ async fn identity_link_oidc_callback_inner(
     code: &str,
     bound: attome_auth::oidc::BoundState,
 ) -> Result<(), AppError> {
-    let mut provider_config = state
-        .config
-        .oidc
-        .providers
+    let provider_config = state
+        .oidc_providers
         .get(provider)
-        .cloned()
-        .ok_or(AppError::NotFound)?;
-    if let Some(secret) = state.secrets.load().oidc_client_secrets.get(provider) {
-        provider_config.client_secret = secret.clone();
-    }
+        .ok_or(AppError::NotFound)?
+        .config;
 
     let identity = attome_auth::oidc::complete_login(
         &state.redis_coordination,
@@ -744,17 +722,16 @@ async fn identity_link_oidc_callback_inner(
     ),
 )]
 pub(super) async fn oidc_providers(State(state): State<AppState>) -> Json<Vec<OidcProviderInfo>> {
-    let mut providers: Vec<OidcProviderInfo> = state
-        .config
-        .oidc
-        .providers
+    // Q1-T3: configuration and on-screen providers, sorted by key.
+    let providers: Vec<OidcProviderInfo> = state
+        .oidc_providers
+        .list()
         .iter()
-        .map(|(key, cfg)| OidcProviderInfo {
-            key: key.clone(),
-            display_name: cfg.display_name.clone(),
+        .map(|p| OidcProviderInfo {
+            key: p.key.clone(),
+            display_name: p.config.display_name.clone(),
         })
         .collect();
-    providers.sort_by(|a, b| a.key.cmp(&b.key));
     Json(providers)
 }
 
