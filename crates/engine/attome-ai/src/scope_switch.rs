@@ -245,7 +245,10 @@ pub struct ScopeSwitchRequest {
     pub reason: Option<String>,
 }
 
-/// `GET /api/v1/admin/ai/switches` — every scope that has been switched.
+/// List AI scope switches
+///
+/// Every agent, model, provider, tool or channel that has been switched, off ones first, with who did
+/// it, when and why. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/switches",
@@ -278,8 +281,10 @@ async fn list_switches(
     }))
 }
 
-/// `PUT /api/v1/admin/ai/switches/{kind}/{key}` — turns one scope off, or
-/// back on (by a different administrator from the one who turned it off).
+/// Switch an AI scope off or on
+///
+/// Turns one agent, model, provider, tool or channel off (with an optional reason), or back on; turning it back on
+/// takes a different administrator from the one who turned it off. AI administrators only. Audited.
 #[utoipa::path(
     put,
     path = "/api/v1/admin/ai/switches/{kind}/{key}",

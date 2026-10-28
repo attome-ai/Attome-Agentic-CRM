@@ -64,6 +64,11 @@ pub struct AgentBehaviour {
     pub last_trip: Option<TripView>,
 }
 
+/// Read an agent's behaviour
+///
+/// The agent's status and `row_version`, its baseline, its last 24 hours of activity and the last
+/// time it was stopped automatically, with the reason. Switching it back on is an ordinary update of
+/// the agent. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/agents/{id}/behaviour",

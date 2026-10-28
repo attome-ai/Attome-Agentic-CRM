@@ -496,9 +496,11 @@ pub struct AnalyticsQuery {
     pub surface: Option<String>,
 }
 
-/// `GET /api/v1/admin/ai/bot-analytics` — deployment-wide chatbot figures for
-/// one window: turns, tool calls by type, handoffs by reason, deflection and
-/// thumbs. Aggregates only; the formulas are `01-architecture.md`'s C10-B.
+/// Read chatbot analytics
+///
+/// Deployment-wide chatbot figures for one window, optionally one surface: turns, tool calls by
+/// type, hand-offs by reason, deflection and thumbs up or down. Aggregates only. AI administrators
+/// only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/bot-analytics",

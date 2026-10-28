@@ -79,6 +79,10 @@ pub fn range_of(query: &ShareQuery, today: NaiveDate) -> RebuildRange {
     RebuildRange { from, to }
 }
 
+/// Read the work share between agents and people
+///
+/// Per process over the date range: the completions agents and people made, the hand-offs between
+/// them, the agents' share, and the counts per day for a trend. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/work-share",
@@ -181,6 +185,10 @@ pub struct ShareEvent {
     pub agent_session_id: Option<Uuid>,
 }
 
+/// List what is behind a work-share figure
+///
+/// The change events behind one process's number on one day (ids, records and times only), newest
+/// first and keyset paged, while the change feed still keeps them. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/work-share/{process_key}/events",
@@ -259,6 +267,10 @@ pub struct RebuildQueued {
     pub to: NaiveDate,
 }
 
+/// Rebuild the work share for past days
+///
+/// Queues a job that recounts the work share for the date range from the change feed. AI
+/// administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/ai/work-share/rebuild",

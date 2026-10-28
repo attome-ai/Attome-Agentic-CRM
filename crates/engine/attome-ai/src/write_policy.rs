@@ -77,7 +77,10 @@ pub struct NewWritePolicy {
     pub reason: Option<String>,
 }
 
-/// `GET /api/v1/admin/ai/write-policies` — the active policies.
+/// List AI write approval policies
+///
+/// The active policies that make an agent's write of an action (optionally on one entity) wait for a
+/// second person. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/write-policies",
@@ -113,7 +116,10 @@ async fn list_policies(
     }))
 }
 
-/// `POST /api/v1/admin/ai/write-policies` — requires approval for an action.
+/// Require approval for an agent's writes
+///
+/// From now on an agent's write of the action, optionally only on one entity, waits for a second
+/// person's approval after the person it acts for confirms it. AI administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/ai/write-policies",
@@ -193,7 +199,10 @@ async fn create_policy(
     Ok((StatusCode::CREATED, Json(policy)))
 }
 
-/// `DELETE /api/v1/admin/ai/write-policies/{id}` — deactivates a policy.
+/// Remove an AI write approval policy
+///
+/// Deactivates the policy; the writes it covered run once confirmed again. AI administrators only.
+/// Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/ai/write-policies/{id}",

@@ -81,11 +81,15 @@ async fn authorized_provider(
     Ok(row)
 }
 
+/// Set an AI provider's API key
+///
+/// Sets or replaces the provider's API key, stored encrypted and never returned. AI administrators
+/// only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/ai/providers/{id}/credential",
     tag = "admin-ai-providers",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The `ai_provider` record")),
     request_body = SetCredentialBody,
     responses(
         (status = 200, description = "Success", body = SetCredentialResponse),
@@ -182,11 +186,17 @@ async fn set_credential(
     }))
 }
 
+/// Fetch an AI provider's models
+///
+/// Asks the provider for the models it offers, with the provider's own credential, and returns the
+/// list; it writes no catalogue rows (an operator adds the ones wanted, which then wait for
+/// approval). Needs update rights on the provider, since it spends the operator's quota. AI
+/// administrators only.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/ai/providers/{id}/models/fetch",
     tag = "admin-ai-providers",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The `ai_provider` record")),
     responses(
         (status = 200, description = "Success", body = FetchModelsResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

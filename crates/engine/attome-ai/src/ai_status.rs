@@ -75,7 +75,10 @@ pub fn approved(cards: &[ModelCard]) -> bool {
         .any(|c| c.approval_status.as_deref() == Some("approved"))
 }
 
-/// `GET /api/v1/admin/ai/status`
+/// Read the AI status page
+///
+/// The generation model's card and whether it is approved, what is switched off, how turns ended over
+/// the last day, and the latest switch changes as an incident timeline. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/status",

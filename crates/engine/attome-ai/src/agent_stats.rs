@@ -431,6 +431,10 @@ pub async fn run_backfill(state: &EngineState, job: &AgentStatsBackfill) -> Resu
     Ok(written)
 }
 
+/// Rebuild agent performance for past days
+///
+/// Queues a job that rebuilds the per-agent daily rollup for the days from `from` to `to` from the
+/// outcome, message and price ledgers. AI administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/ai/agents/performance/backfill",

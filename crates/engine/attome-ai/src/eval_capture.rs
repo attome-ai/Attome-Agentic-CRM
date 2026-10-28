@@ -90,7 +90,11 @@ pub fn case_value(
     }))
 }
 
-/// `POST /api/v1/admin/ai/eval-suites/{suite}/cases/from-message`
+/// Add an eval case from a message
+///
+/// Turns an answer that went wrong into a test case: the input is the person's message it replied to,
+/// the expectation is what the administrator says should have happened (tools, text it must or must
+/// not contain). AI administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/ai/eval-suites/{suite}/cases/from-message",

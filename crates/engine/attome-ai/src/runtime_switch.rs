@@ -162,8 +162,10 @@ pub async fn set(
     Ok(())
 }
 
-/// `GET /api/v1/admin/ai/runtime-switch` — every surface: what the
-/// configuration allows, what the runtime switch says, and the effect.
+/// Read the AI runtime switches
+///
+/// For every AI surface: what the configuration allows, what the runtime switch says, and the
+/// effect. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/runtime-switch",
@@ -182,11 +184,11 @@ async fn get_runtime_switch(
     Ok(Json(view(&state).await?))
 }
 
-/// `PUT /api/v1/admin/ai/runtime-switch/{surface}` — turn one AI surface off,
-/// or back on, without a restart (row A-85). It can only narrow: turning a
-/// surface on restores what the configuration allows, never more. A running
-/// conversation turn stops at its next step; nothing already dispatched is
-/// undone.
+/// Switch an AI surface off or on
+///
+/// Turns one AI surface off, or back on, without a restart. It only narrows: on restores what the
+/// configuration allows, never more. A running turn stops at its next step; nothing already
+/// dispatched is undone. AI administrators only. Audited.
 #[utoipa::path(
     put,
     path = "/api/v1/admin/ai/runtime-switch/{surface}",

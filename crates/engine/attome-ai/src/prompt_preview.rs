@@ -35,7 +35,11 @@ pub struct PromptPreview {
     pub chars: usize,
 }
 
-/// `POST /api/v1/admin/ai/preview/summary`
+/// Preview a record summary prompt
+///
+/// Exactly what a model would receive to summarise the record, built by the same code as
+/// `record.summarize` as the calling administrator, without calling a model. Nothing is generated,
+/// cached or spent. AI administrators only.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/ai/preview/summary",

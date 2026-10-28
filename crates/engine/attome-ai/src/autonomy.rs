@@ -673,7 +673,10 @@ pub struct AutonomyProposal {
 const PROPOSAL_COLUMNS: &str = "id, agent_definition_id, action_id, from_level, to_level, \
      agreement, cases, status, expires_at, created_at";
 
-/// `GET /api/v1/admin/ai/agents/{id}/autonomy/proposals` — open proposals.
+/// List an agent's open autonomy proposals
+///
+/// Raises of an action's level that the agent's measured agreement earned, waiting for a person to
+/// accept or reject them, newest first. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/agents/{id}/autonomy/proposals",
@@ -803,7 +806,10 @@ pub async fn decide_proposal(
     Ok(decided)
 }
 
-/// `POST /api/v1/admin/ai/autonomy/proposals/{id}/accept`.
+/// Accept an autonomy proposal
+///
+/// Raises the agent's level for the action to what the proposal names and closes it. AI
+/// administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/ai/autonomy/proposals/{id}/accept",
@@ -828,7 +834,9 @@ async fn accept_proposal(
     Ok(Json(decide_proposal(&state, ctx.user_id, id, true).await?))
 }
 
-/// `POST /api/v1/admin/ai/autonomy/proposals/{id}/reject`.
+/// Reject an autonomy proposal
+///
+/// Closes the proposal and leaves the agent's level as it is. AI administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/ai/autonomy/proposals/{id}/reject",
@@ -957,8 +965,10 @@ pub fn validate(descriptor: &ActionDescriptor, body: &SetAutonomy) -> Result<(),
     Ok(())
 }
 
-/// `GET /api/v1/admin/ai/agents/{id}/autonomy` — every non-read action with
-/// the level it runs at for this agent.
+/// List an agent's autonomy levels
+///
+/// Every action other than a read, with the level it runs at for this agent: the level an
+/// administrator set, or the built-in rule. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/agents/{id}/autonomy",
@@ -1012,7 +1022,12 @@ async fn list_levels(
     }))
 }
 
-/// `PUT /api/v1/admin/ai/agents/{id}/autonomy/{action_id}` — sets the level.
+/// Set an agent's autonomy level for an action
+///
+/// Sets how far the agent may go with the action without a person (suggest, ask first, act on
+/// review, act with undo, act and report, automatic), with its undo window, daily limit, money cap and
+/// whether only records it owns; a level the action does not allow is 422. AI administrators only.
+/// Audited.
 #[utoipa::path(
     put,
     path = "/api/v1/admin/ai/agents/{id}/autonomy/{action_id}",
@@ -1124,8 +1139,9 @@ async fn set_level(
     Ok(Json(row))
 }
 
-/// `DELETE /api/v1/admin/ai/agents/{id}/autonomy/{action_id}` — back to the
-/// built-in rule.
+/// Clear an agent's autonomy level for an action
+///
+/// The action goes back to its built-in rule for this agent. AI administrators only. Audited.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/ai/agents/{id}/autonomy/{action_id}",

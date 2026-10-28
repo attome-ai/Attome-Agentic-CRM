@@ -801,12 +801,10 @@ struct PromptListResponse {
     items: Vec<PromptSummary>,
 }
 
-/// `GET /api/v1/admin/ai/prompts` — every prompt_version this build ships.
-/// Admin-gated like every other admin-surface read in this workspace
-/// (`security-model`'s documented convention: `attome-api/src/admin/` and
-/// siblings require `system.admin` on every route including reads). Prompts
-/// are code (see `prompt_registry.rs`'s doc comment) — this route is
-/// deliberately read-only; there is no corresponding `POST`/`PUT`.
+/// List the shipped prompts
+///
+/// Every prompt version this build ships, per action, with its text. Prompts are code, so there is
+/// no route to change one. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/prompts",
@@ -843,8 +841,9 @@ struct PromptDiffResponse {
     lines: Vec<DiffLine>,
 }
 
-/// `GET /api/v1/admin/ai/prompts/diff?from=..&to=..` — a line diff between
-/// two shipped prompt_versions.
+/// Compare two shipped prompts
+///
+/// A line diff between two prompt versions this build ships. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/prompts/diff",
@@ -875,10 +874,10 @@ async fn diff_prompts(
 
 // ── D-435: the AI compliance report bundle ──────────────────────────────────
 
-/// `GET /api/v1/admin/ai/compliance-report` — models in use, their
-/// approvals, token spend, acceptance rates, and outcomes recorded without
-/// provenance. `system.admin`-gated: this bundles per-organization AI usage
-/// and cost data, the same sensitivity class as the rest of `/admin/`.
+/// Read the AI compliance report
+///
+/// The models in use and their approvals, token spend, acceptance rates, and outcomes recorded
+/// without provenance. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/compliance-report",

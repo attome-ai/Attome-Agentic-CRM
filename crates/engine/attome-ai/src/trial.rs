@@ -371,6 +371,11 @@ async fn report_for(state: &EngineState, agent: Uuid) -> Result<TrialReport, App
     })
 }
 
+/// Read an agent's trial report
+///
+/// While an agent definition is in `testing`, its writes and outside calls are recorded, not run, and
+/// compared with what a person did to the same record within 24 hours; this is how often it agreed,
+/// overall and per action. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/agents/{id}/trial-report",
@@ -421,8 +426,10 @@ pub fn go_live_refusal(report: &TrialReport, min: f64) -> Option<String> {
     }
 }
 
-/// `POST /api/v1/admin/ai/agents/{id}/go-live` — moves a `testing`
-/// definition to `active`, refused below the agreement threshold.
+/// Take an agent out of trial
+///
+/// Moves an agent definition from `testing` to `active` when it agreed with what people did at least
+/// as often as `min_agreement`; below it the call is refused. AI administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/ai/agents/{id}/go-live",

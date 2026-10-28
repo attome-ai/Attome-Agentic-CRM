@@ -836,8 +836,9 @@ const DAILY_CLASSES: [(&str, crate::descriptor::LimitClass); 4] = [
     ),
 ];
 
-/// `GET /api/v1/admin/ai/agents/{agent}/usage` — what a published agent
-/// object did today against its daily limits (AH4-T4, V2-D487).
+/// Read an agent's usage today
+///
+/// What a published agent object did today against each of its daily limits. Administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/agents/{agent}/usage",

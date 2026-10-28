@@ -227,6 +227,10 @@ pub struct AiFollowupRunQueued {
     pub rule_id: Uuid,
 }
 
+/// Run a follow-up rule now
+///
+/// Queues one scan of an active follow-up rule now instead of at its next scheduled time; 202. AI
+/// administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/ai/follow-up-rules/{id}/run",

@@ -92,7 +92,11 @@ fn round2(value: f64) -> f64 {
     (value * 100.0).round() / 100.0
 }
 
-/// `GET /api/v1/admin/ai/spend`
+/// Read AI spend
+///
+/// What generation has cost this rolling month against each money cap (the deployment, each capped
+/// feature, each agent that ran), from the counters the budget guard enforces, and where the month is
+/// heading. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/spend",

@@ -195,6 +195,11 @@ pub(crate) async fn post_undo(
     Ok((StatusCode::ACCEPTED, Json(UndoStarted { undo_run_id: run })))
 }
 
+/// Preview rolling back an agent
+///
+/// The undo steps for everything the agent's sessions changed since `since`, as the caller, writing
+/// nothing. `since` must be in the past and inside the audit retention window. Administrators or
+/// holders of `ai_agent.supervise`.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/agents/{id}/rollback-preview",
@@ -229,6 +234,10 @@ pub(crate) async fn get_rollback_preview(
     }))
 }
 
+/// Roll back an agent
+///
+/// Ends the agent's live sessions, then queues the undo of everything its sessions changed since
+/// `since`; 202 with the run's id. Administrators or holders of `ai_agent.supervise`. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/ai/agents/{id}/rollback",

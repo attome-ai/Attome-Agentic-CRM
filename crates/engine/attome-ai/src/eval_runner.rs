@@ -199,7 +199,11 @@ async fn run_suite(
     }
 }
 
-/// `POST /api/v1/admin/ai/eval-suites/{suite}/runs`
+/// Run an eval suite
+///
+/// Records a run of the suite's newest version and returns at once; each case then runs in the
+/// background as one turn of a fresh session of the suite's agent, where a write is only proposed,
+/// and is graded. AI administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/ai/eval-suites/{suite}/runs",
@@ -350,7 +354,10 @@ pub(crate) async fn run_as_last_starter(
     Ok(score)
 }
 
-/// `GET /api/v1/admin/ai/eval-runs/{id}`
+/// Get an eval run
+///
+/// One run of an eval suite: its status, score and outcome, the suite version it ran, who started it
+/// and when it finished. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/eval-runs/{id}",

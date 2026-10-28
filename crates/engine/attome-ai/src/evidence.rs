@@ -70,7 +70,12 @@ pub struct EvidenceRow {
     pub record_id: Option<Uuid>,
 }
 
-/// `GET /api/v1/admin/ai/evidence`
+/// Read the AI evidence trail
+///
+/// What AI did, for an auditor, over a period (the last 30 days by default), oldest first and keyset
+/// paged: either every action an agent session invoked, with its outcome and the person it acted for
+/// (results left out), or every model-written suggestion with its model, prompt version and what a
+/// person did with it. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/evidence",

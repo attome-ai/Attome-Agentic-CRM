@@ -432,6 +432,11 @@ pub async fn runs(
     Ok(CursorPage::new(items, next))
 }
 
+/// Compare agent performance
+///
+/// One row per agent over the date range, from the nightly rollup: tasks done and resolved, hand-offs,
+/// tokens and cost, with resolution, accuracy, hand-off rate and cost per task worked out at read time.
+/// AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/agents/performance",
@@ -455,6 +460,9 @@ async fn get_performance(
     Ok(Json(PaginatedResponse::new(items, total, 1, MAX_AGENTS)))
 }
 
+/// Read an agent's daily performance
+///
+/// The agent's rollup day by day over the range, for charts. AI administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/agents/{id}/performance/daily",
@@ -484,6 +492,10 @@ async fn get_performance_daily(
     )))
 }
 
+/// List what is behind an agent's figure
+///
+/// The outcome rows (tasks or hand-offs) behind one day's number for the agent, keyset paged. AI
+/// administrators only.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/agents/{id}/runs",
