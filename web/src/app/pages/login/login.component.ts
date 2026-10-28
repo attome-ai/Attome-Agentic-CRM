@@ -615,7 +615,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
     const remember = this.rememberAllowed() && this.rememberDevice();
     const req$ = this.useRecoveryCode()
       ? this.auth.verifyMfaRecovery({ pending_token: this.pendingToken, code })
-      : this.auth.verifyMfa({ pending_token: this.pendingToken, code, remember });
+      : this.auth.verifyMfa({ pending_token: this.pendingToken, code, ...(remember ? { remember: true } : {}) });
 
     req$.subscribe({
       next: () => this.goHome(),
