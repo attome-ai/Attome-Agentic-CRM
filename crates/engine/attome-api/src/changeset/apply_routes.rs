@@ -70,6 +70,10 @@ pub struct ChangesetDocumentsBody {
     /// `attome-changeset/v1` documents, any order.
     #[schema(value_type = Vec<Object>)]
     pub changesets: Vec<Value>,
+    /// Y11-T11 (plan only): plan an app's changeset even where it sets
+    /// properties another installed app set; the clashes are still listed.
+    #[serde(default)]
+    pub accept_clashes: bool,
 }
 
 /// `POST …/apply`.
@@ -299,6 +303,7 @@ async fn plan_changesets(
         source: ApplySource::Admin,
         requested_by: Some(ctx.user_id),
         trusted: false,
+        accept_clashes: body.accept_clashes,
     };
     let mut planned = plan::plan(&state, &body.changesets, plan_ctx).await?;
     let mut stx = SecurityTx::begin(

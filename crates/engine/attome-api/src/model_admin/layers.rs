@@ -619,3 +619,39 @@ pub(crate) async fn upgrade_impact(
             .collect(),
     )))
 }
+
+/// Installed apps in layer order
+///
+/// Y11-T11: every installed app (a pack's product changesets) and its place in the layer order; a later app sits above an earlier one, and the customer above all apps.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/metadata/app-layers",
+    tag = "admin",
+    params(OnePageQuery),
+    responses(
+        (status = 200, description = "One page of installed apps, first installed first", body = PaginatedResponse<attome_metadata::provision::app_layers::AppLayer>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(crate) async fn list_app_layers(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
+    Query(page): Query<OnePageQuery>,
+) -> Result<Json<PaginatedResponse<attome_metadata::provision::app_layers::AppLayer>>, AppError> {
+    let window = page.window();
+    let (items, total) = attome_metadata::provision::app_layers::list(
+        &state.base.db,
+        window.page_size,
+        window.offset,
+    )
+    .await?;
+    Ok(Json(PaginatedResponse {
+        items,
+        total,
+        page: window.page,
+        page_size: window.page_size,
+        warnings: Vec::new(),
+    }))
+}

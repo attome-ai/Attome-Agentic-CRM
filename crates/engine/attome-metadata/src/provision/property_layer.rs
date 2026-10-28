@@ -117,16 +117,24 @@ pub(super) async fn record_in_tx(
     if values.is_empty() {
         return Ok(());
     }
+    let layer = layer_of(stamp);
+    // Y11-T11: an app's rows carry the app applying them.
+    let app = if layer == "app" {
+        super::app_layers::current_app()
+    } else {
+        String::new()
+    };
     sqlx::query(
         "INSERT INTO metadata_property_layer (object_kind, object_key, property, layer, app, value) \
-         SELECT $1, $2, p.key, $3, '', p.value FROM jsonb_each($4) AS p \
+         SELECT $1, $2, p.key, $3, $5, p.value FROM jsonb_each($4) AS p \
          ON CONFLICT (object_kind, object_key, property, layer, app) \
          DO UPDATE SET value = EXCLUDED.value, set_at = now()",
     )
     .bind(kind)
     .bind(key)
-    .bind(layer_of(stamp))
+    .bind(layer)
     .bind(Value::Object(values.clone()))
+    .bind(app)
     .execute(&mut **tx)
     .await
     .map_err(AppError::internal)?;
@@ -197,7 +205,10 @@ pub(super) async fn seed_keeps(
         record_in_tx(&mut tx, kind, key, Stamp::Customer, &differing).await?;
         tx.commit().await.map_err(AppError::internal)?;
     }
-    Ok(differing.into_iter().map(|(property, _)| property).collect())
+    Ok(differing
+        .into_iter()
+        .map(|(property, _)| property)
+        .collect())
 }
 
 /// Y11-T6: records `conflicts` open (one per property; a later platform

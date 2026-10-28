@@ -37,6 +37,8 @@ mod grants;
 mod identifiers;
 /// AA3-T1: indexes for the attributes views and definitions filter and sort on.
 pub mod index_advisor;
+/// Y11-T11: app layers in install order, and clashes between apps.
+pub mod app_layers;
 /// Y11-T7: listing and resolving upgrade conflicts.
 pub mod layer_conflicts;
 /// Y11-T9: resetting a customisation, with a preview and an undo.

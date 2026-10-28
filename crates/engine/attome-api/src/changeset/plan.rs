@@ -1325,9 +1325,13 @@ pub struct PlannedChangeset {
     /// `planned`, `already_applied` or `blocked`.
     pub status: String,
     /// Changeset-level blocks (`missing_dependency`, `platform_floor`,
-    /// `module_off`).
+    /// `module_off`, `app_clash`).
     pub blocked: Vec<String>,
     pub phases: Vec<PlannedPhase>,
+    /// Y11-T11: for an app's (`product`) changeset, the properties other
+    /// installed apps already set on what it touches. They block the
+    /// changeset unless the plan request accepts them.
+    pub clashes: Vec<attome_metadata::provision::app_layers::AppClash>,
 }
 
 /// `POST /api/v1/admin/metadata/changesets/plan`'s response.
@@ -1354,6 +1358,31 @@ pub struct PlanContext {
     /// check (D-383: the platform schema is provisioned whatever the
     /// licence says).
     pub trusted: bool,
+    /// Y11-T11: plan an app's changeset even where it clashes with another
+    /// installed app (the clashes are still listed).
+    pub accept_clashes: bool,
+}
+
+/// Y11-T11: the entities and fields `doc` creates or updates, as
+/// `(object_kind, object_key)` layer keys. Pure.
+pub fn layer_targets(doc: &Document) -> Vec<(String, String)> {
+    let mut out: Vec<(String, String)> = doc
+        .operations
+        .iter()
+        .filter_map(|op| match op.op {
+            Op::CreateEntity | Op::UpdateEntity => {
+                Some(("entity".to_owned(), op.t("entity").to_owned()))
+            }
+            Op::AddField | Op::UpdateField => Some((
+                "attribute".to_owned(),
+                format!("{}.{}", op.t("entity"), op.t("field")),
+            )),
+            _ => None,
+        })
+        .collect();
+    out.sort();
+    out.dedup();
+    out
 }
 
 /// The planner's result before it is persisted.
@@ -1855,6 +1884,25 @@ pub async fn plan(
                 ));
             }
         }
+        // Y11-T11: an app touching what another app set lists the clashes.
+        let clashes = if doc.layer == Layer::Product {
+            attome_metadata::provision::app_layers::clashes(
+                &state.base.db,
+                &doc.scope,
+                &layer_targets(doc),
+            )
+            .await?
+        } else {
+            Vec::new()
+        };
+        if !clashes.is_empty() && !ctx.accept_clashes {
+            blocked.push(format!(
+                "app_clash: {} propert{} another installed app already set; plan again with \
+                 accept_clashes to apply over them",
+                clashes.len(),
+                if clashes.len() == 1 { "y" } else { "ies" }
+            ));
+        }
 
         let already = done.get(&doc.id).cloned().unwrap_or_default();
         let mut phases = Vec::new();
@@ -2049,6 +2097,7 @@ pub async fn plan(
             status: status.to_owned(),
             blocked,
             phases,
+            clashes,
         });
     }
     let applicable = planned

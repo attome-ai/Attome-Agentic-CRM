@@ -2756,6 +2756,10 @@ pub fn routes() -> Router<EngineState> {
             get(layers::upgrade_impact),
         )
         .route(
+            "/api/v1/admin/metadata/app-layers",
+            get(layers::list_app_layers),
+        )
+        .route(
             "/api/v1/admin/metadata/{kind}/{key}/layers/diff",
             get(layers::layer_diff),
         )
@@ -2846,6 +2850,7 @@ pub fn routes() -> Router<EngineState> {
         layers::reset_customisation,
         layers::undo_reset,
         layers::upgrade_impact,
+        layers::list_app_layers,
         flow_template::instantiate,
         export_files,
         import_files,

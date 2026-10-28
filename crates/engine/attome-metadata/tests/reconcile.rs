@@ -1329,3 +1329,70 @@ async fn renamed_item_customisation_listed_with_target() {
         "{impacts:?}"
     );
 }
+
+/// Y11-T11: the properties one app set on a field it added are clashes for a
+/// second app touching that field, and the first app's rows carry its name.
+#[tokio::test]
+async fn second_app_clash_is_listed() {
+    use attome_core::changeset::{Layer, Recording};
+    use attome_metadata::provision::app_layers::{clashes, ensure_installed, with_app};
+    use attome_metadata::provision::changeset::RecordAs;
+    let db = skip_if_no_db!(test_db().await);
+    let entity_ln = unique_logicalname("test_layer");
+    let (entity_id, _) = reconcile_entity(
+        &db,
+        &entity_desc(&entity_ln, "Layers"),
+        ReconcilePolicy::Seed,
+    )
+    .await
+    .expect("create entity");
+    let app_a = unique_logicalname("app_a");
+    ensure_installed(&db, &app_a).await.expect("install app a");
+    let applying = Recording::Applying {
+        layer: Layer::Product,
+    };
+    with_app(
+        app_a.clone(),
+        attome_metadata::provision::reconcile_attribute_recorded(
+            &db,
+            entity_id,
+            &sized_attr("Title", 40),
+            ReconcilePolicy::Bundle {
+                is_customized: false,
+            },
+            None,
+            Some(RecordAs::stamp_only(&applying)),
+        ),
+    )
+    .await
+    .expect("app a adds the field");
+    let key = format!("{entity_ln}.title");
+    let app_rows: Vec<String> = sqlx::query_scalar(
+        "SELECT app FROM metadata_property_layer \
+          WHERE object_kind = 'attribute' AND object_key = $1 AND layer = 'app'",
+    )
+    .bind(&key)
+    .fetch_all(&db)
+    .await
+    .expect("read app rows");
+    assert!(app_rows.iter().all(|a| a == &app_a), "{app_rows:?}");
+    assert!(!app_rows.is_empty());
+
+    let app_b = unique_logicalname("app_b");
+    let found = clashes(&db, &app_b, &[("attribute".to_owned(), key.clone())])
+        .await
+        .expect("clashes");
+    assert!(
+        found
+            .iter()
+            .any(|c| c.property == "max_length" && c.other_app == app_a && c.object_key == key),
+        "{found:?}"
+    );
+    assert!(
+        clashes(&db, &app_a, &[("attribute".to_owned(), key)])
+            .await
+            .expect("clashes")
+            .is_empty(),
+        "an app never clashes with itself"
+    );
+}

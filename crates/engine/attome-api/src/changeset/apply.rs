@@ -366,7 +366,16 @@ async fn run_one_row(state: &EngineState, apply_id: Uuid) -> Result<RunOutcome, 
     };
 
     let mut summary = RunSummary::default();
-    let result = apply_claimed(state, &row, &mut summary).await;
+    // Y11-T11: an app's changeset writes its layer rows under its name.
+    let result = if row.layer == Layer::Product.as_str() {
+        attome_metadata::provision::app_layers::with_app(
+            row.scope.clone(),
+            apply_claimed(state, &row, &mut summary),
+        )
+        .await
+    } else {
+        apply_claimed(state, &row, &mut summary).await
+    };
     let result = match result {
         Ok(()) => {
             ledger::mark_succeeded(&state.base.db, apply_id).await?;
@@ -483,6 +492,12 @@ async fn apply_claimed(
         }
     }
 
+    // Y11-T11: an app takes the next place in the layer order on its first
+    // apply.
+    if doc.layer == Layer::Product {
+        attome_metadata::provision::app_layers::ensure_installed(&state.base.db, &doc.scope)
+            .await?;
+    }
     let ops = doc.ops_of(row.phase);
     let steps = steps_of(&ops);
     let start = usize::try_from(row.cursor).unwrap_or(0);

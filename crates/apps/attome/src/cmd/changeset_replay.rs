@@ -520,6 +520,7 @@ async fn apply_chunk(state: &EngineState, chunk: &[Value]) -> Result<(usize, usi
         source: ApplySource::Replay,
         requested_by: None,
         trusted: false,
+        accept_clashes: true,
     };
     let mut planned = plan::plan(state, chunk, ctx).await?;
     if !planned.plan.applicable {

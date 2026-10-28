@@ -781,6 +781,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `ATTOME_LISTEN_PROTOCOL_INFO` (Windows, the base64 `WSAPROTOCOL_INFOW` from
   `WSADuplicateSocketW`, or `-` to read it from stdin) is set, so a supervisor can hand the same
   socket to the next version; otherwise it binds as before.
+- App layers in order, and clashes (Y11-T11): an app's (a pack's `product` changesets) first apply
+  gives it the next place in the layer order, listed by `GET /api/v1/admin/metadata/app-layers`, and
+  the properties it sets are recorded under its name. Planning an app's changeset lists in
+  `clashes` the properties another installed app already set on the entities and fields it touches,
+  and blocks it (`app_clash`) unless the plan request sets `accept_clashes`.
 - Sign-in provider screens (Q1-T14): Security > Sign-in Providers lists the OIDC providers (those
   from `config.json` marked and read-only) and edits one added on screen: a preset picker, a test
   sign-in, its email domains with the TXT record to publish and a verify button, its group mappings

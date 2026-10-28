@@ -610,6 +610,7 @@ async fn replay(state: &EngineState, document: &Value) {
         source: ApplySource::Replay,
         requested_by: None,
         trusted: false,
+        accept_clashes: true,
     };
     let mut planned = plan::plan(state, std::slice::from_ref(document), ctx)
         .await
