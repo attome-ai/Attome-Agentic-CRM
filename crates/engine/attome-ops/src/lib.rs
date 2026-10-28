@@ -28,6 +28,8 @@ pub mod freshness;
 /// AB3-T2: the live recovery point from three sources.
 pub mod live_rpo;
 pub mod model;
+/// AB11-T2: component status and the status banner for signed-in users.
+pub mod public_status;
 /// AB3-T1: recovery targets per profile and scenario, with their proof.
 pub mod recovery_targets;
 /// AB2-T7: the cluster's status and failover history routes.
@@ -50,6 +52,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = upgrades::openapi_fragment();
     doc.merge(disasters::openapi_fragment());
     doc.merge(status::openapi_fragment());
+    doc.merge(public_status::openapi_fragment());
     doc.merge(drills::openapi_fragment());
     doc.merge(drill_schedules::openapi_fragment());
     doc.merge(auditor_pack::openapi_fragment());

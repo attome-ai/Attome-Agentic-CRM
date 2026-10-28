@@ -45,6 +45,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Status page data and reads (AB11-T1, AB11-T2): migration 0314 adds components (seeded sign-in,
+  records, search, email, AI, portal, integrations), incidents with append-only updates,
+  maintenance windows and status subscribers. `GET /api/v1/ops/status` (any signed-in user) gives
+  each component's state from the capability probes, raised by open incidents, plus open incidents
+  and maintenance; internal ones need `ops.read`. `GET /api/v1/ops/status/banner` gives the one
+  notice to show (the worst open incident, or maintenance within 24 hours) in the
+  `Accept-Language` language, or `204`. Both need the `ops` module.
 - Formula fields take `options.mode` (A9-T1): `stored` (the default, computed on every write) or
   `read_time`, computed whenever a record is read (`GET /api/v1/{entity}/{id}`, lists and
   `query/execute`), so a formula over `today()` is never stale; its column stays empty, and other
