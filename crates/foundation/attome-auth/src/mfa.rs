@@ -979,6 +979,62 @@ pub async fn complete_pending_login(
     Ok(user_id)
 }
 
+/// Q5-T5: the purpose a sign-in's one-time code is issued for.
+pub const OTP_LOGIN_PURPOSE: &str = "mfa_login";
+
+/// Q5-T5: the account a live `MfaPendingLogin` token names, without using
+/// the token up: the code-send route checks it before issuing a code.
+pub async fn pending_login_subject(
+    redis: &Store,
+    pending_token: &str,
+    jwt_ring: &KeyRing,
+    issuer: &str,
+    audience: &str,
+) -> Result<Uuid, AppError> {
+    let (user_id, jti) = verify_pending_token(
+        pending_token,
+        TokenType::MfaPendingLogin,
+        jwt_ring,
+        issuer,
+        audience,
+    )?;
+    require_live_challenge(redis, jti).await?;
+    Ok(user_id)
+}
+
+/// Q5-T5: [`complete_pending_login`] with a one-time code sent to the person
+/// ([`crate::otp`], purpose [`OTP_LOGIN_PURPOSE`]) instead of a TOTP code.
+/// The challenge marker gates it the same way, so a refused code spends one
+/// of the token's attempts and a used token is refused.
+#[allow(clippy::too_many_arguments)]
+pub async fn complete_pending_login_otp(
+    db: &DbPool,
+    pepper: &crate::apikey_hash::PepperRing,
+    redis: &Store,
+    pending_token: &str,
+    code: &str,
+    jwt_ring: &KeyRing,
+    issuer: &str,
+    audience: &str,
+    max_attempts: u32,
+) -> Result<Uuid, AppError> {
+    let (user_id, jti) = verify_pending_token(
+        pending_token,
+        TokenType::MfaPendingLogin,
+        jwt_ring,
+        issuer,
+        audience,
+    )?;
+    require_live_challenge(redis, jti).await?;
+    let outcome = match crate::otp::verify(db, pepper, user_id, OTP_LOGIN_PURPOSE, code).await {
+        Ok(crate::otp::OtpOutcome::Verified) => Ok(()),
+        Ok(crate::otp::OtpOutcome::Refused) => Err(AppError::Unauthorized),
+        Err(other) => Err(other),
+    };
+    consume_or_record_failure(redis, jti, max_attempts, outcome).await?;
+    Ok(user_id)
+}
+
 /// Same as `complete_pending_login` but via a recovery code.
 #[allow(clippy::too_many_arguments)]
 pub async fn complete_pending_login_recovery(

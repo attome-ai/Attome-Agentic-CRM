@@ -31,7 +31,7 @@ use super::failed_login;
 use super::login_guard;
 
 use super::dto::{
-    Ack, AuthResponse, LoginRequest, MfaChallengeResponse, MfaEnrollResponse,
+    Ack, AuthResponse, LoginRequest, MfaChallengeResponse, MfaCodeSendBody, MfaEnrollResponse,
     MfaPendingConfirmResponse, MfaPendingEnrollBody, MfaVerifyBody, RegisterRequest,
     ResetConfirmBody, ResetRequestBody, VerifyEmailConfirmBody,
 };
@@ -816,6 +816,191 @@ pub(super) async fn mfa_verify(
         .into_response())
 }
 
+/// Send a sign-in code
+///
+/// Q5-T5: with the `MfaRequired` pending token, sends a one-time code by
+/// `channel` as the second factor, when every role of the person allows that
+/// weaker factor. Never for an administrator (403), and never to an email
+/// address that is not verified (403). `email` is the channel today; `sms`
+/// and `whatsapp` answer 503 until those channels exist. The code works
+/// once, for a minute; sending again replaces it. The token stays usable for
+/// `mfa/code/verify`. Bypass-listed like `mfa/verify`; rate limited in the
+/// `mfa` class.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/mfa/code/send",
+    tag = "auth",
+    request_body = MfaCodeSendBody,
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::Delegated,
+        Some("EngineJob::SendEmail"),
+        "issues a one-time code and queues its email; the sign-in it completes is audited by mfa/code/verify",
+    )))),
+    responses(
+        (status = 202, description = "The code is on its way"),
+        (status = 401, description = "The pending token is not a live sign-in token", body = ErrorResponse),
+        (status = 403, description = "The person's roles do not allow this factor, the person is an administrator, or the email address is not verified", body = ErrorResponse),
+        (status = 422, description = "An unknown channel", body = ErrorResponse),
+        (status = 503, description = "The channel is not available on this deployment", body = ErrorResponse),
+    ),
+)]
+pub(super) async fn mfa_code_send(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<MfaCodeSendBody>,
+) -> Result<StatusCode, AppError> {
+    use attome_auth::otp::OtpChannel;
+    let user_id = mfa::pending_login_subject(
+        &state.redis_coordination,
+        &body.pending_token,
+        &state.secrets.load().jwt_secret,
+        &state.config.auth.jwt_issuer,
+        state.config.jwt_audience(),
+    )
+    .await?;
+    let channel = match body.channel.as_str() {
+        "email" => OtpChannel::Email,
+        "sms" => OtpChannel::Sms,
+        "whatsapp" => OtpChannel::WhatsApp,
+        _ => {
+            return Err(AppError::Validation(
+                "channel must be email, sms or whatsapp".into(),
+            ));
+        }
+    };
+    if channel != OtpChannel::Email {
+        // No role can allow a channel that does not exist yet; an
+        // administrator is refused every weak one.
+        if attome_security::delegation::holds_system_admin(&state.db, user_id).await? {
+            return Err(AppError::Forbidden);
+        }
+        return Err(AppError::FeatureUnavailable);
+    }
+    let requirement = attome_security::mfa_policy::requirement_for(
+        &state.db,
+        user_id,
+        &state.config.auth.mfa_policy,
+    )
+    .await?;
+    if !requirement.email_code {
+        return Err(AppError::Forbidden);
+    }
+    let lang = headers
+        .get(axum::http::header::ACCEPT_LANGUAGE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("en");
+    let frontend_url = state.config.frontend_url();
+    let sender = attome_security::otp_sender::PlatformOtpSender {
+        db: &state.db,
+        frontend_url: &frontend_url,
+        lang,
+    };
+    attome_auth::otp::issue(
+        &state.db,
+        &state.pepper_ring(),
+        &sender,
+        user_id,
+        mfa::OTP_LOGIN_PURPOSE,
+        channel,
+    )
+    .await?;
+    Ok(StatusCode::ACCEPTED)
+}
+
+/// Finish sign-in with a sent code
+///
+/// Q5-T5: like `mfa/verify`, with the one-time code `mfa/code/send` sent
+/// instead of a TOTP code. The session records the weaker factor
+/// (`otp_weak`), which no step-up counts as phishing-resistant. Refused when
+/// the person's roles no longer allow email codes.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/mfa/code/verify",
+    tag = "auth",
+    request_body = MfaVerifyBody,
+    extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Security, AuditOperation::Login)])))),
+    responses(
+        (status = 200, description = "Signed in"),
+        (status = 401, description = "The pending token or the code was refused", body = ErrorResponse),
+        (status = 403, description = "The person's roles do not allow email codes", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+)]
+pub(super) async fn mfa_code_verify(
+    State(state): State<AppState>,
+    Extension(auditor): Extension<SecurityAuditor>,
+    Json(body): Json<MfaVerifyBody>,
+) -> Result<Response, AppError> {
+    // Shares the second-factor account budget with mfa/verify.
+    if let Some(user_id) = pending_token_subject(&body.pending_token)
+        && let Some(rejected) = enforce_account_budget(
+            &state.redis_coordination,
+            &mfa_account_key(user_id),
+            MFA_ATTEMPTS_PER_ACCOUNT_RPM,
+            "mfa_code_verify",
+        )
+        .await?
+    {
+        return Ok(rejected);
+    }
+    let subject = mfa::pending_login_subject(
+        &state.redis_coordination,
+        &body.pending_token,
+        &state.secrets.load().jwt_secret,
+        &state.config.auth.jwt_issuer,
+        state.config.jwt_audience(),
+    )
+    .await?;
+    let requirement = attome_security::mfa_policy::requirement_for(
+        &state.db,
+        subject,
+        &state.config.auth.mfa_policy,
+    )
+    .await?;
+    if !requirement.email_code {
+        return Err(AppError::Forbidden);
+    }
+    let user_id = match mfa::complete_pending_login_otp(
+        &state.db,
+        &state.pepper_ring(),
+        &state.redis_coordination,
+        &body.pending_token,
+        &body.code,
+        &state.secrets.load().jwt_secret,
+        &state.config.auth.jwt_issuer,
+        state.config.jwt_audience(),
+        state.config.auth.mfa_challenge_max_attempts,
+    )
+    .await
+    {
+        Ok(user_id) => user_id,
+        Err(e) => {
+            return Err(record_failed_second_factor(
+                &state,
+                &auditor,
+                &body.pending_token,
+                attome_auth::session::TokenType::MfaPendingLogin,
+                "mfa_verify_failed email_code",
+                e,
+            )
+            .await);
+        }
+    };
+    let cookies = issue_session_cookies_for(
+        &state,
+        user_id,
+        &AuthContext::password_and_weak_otp(),
+        Some((&auditor, "password+email_code")),
+    )
+    .await?;
+    Ok((
+        StatusCode::OK,
+        AppendHeaders(cookies),
+        Json(AuthResponse { user_id }),
+    )
+        .into_response())
+}
+
 /// Finish sign-in with a recovery code
 ///
 /// Same as `mfa_verify` but via a single-use recovery code instead of a live
@@ -1341,6 +1526,8 @@ pub(super) async fn verify_email_confirm(
     mfa_pending_enroll,
     mfa_pending_confirm,
     mfa_postpone,
+    mfa_code_send,
+    mfa_code_verify,
     reset_request,
     reset_confirm,
     verify_email_confirm

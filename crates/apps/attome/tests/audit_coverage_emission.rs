@@ -872,6 +872,34 @@ fn with_cookies(mut req: Request<Body>, cookies: &[String]) -> Request<Body> {
 }
 
 /// A pending-MFA token of `typ` for `user_id`, minted the way login mints one.
+/// Q5-T5: a sign-in code issued to `user_id`, captured instead of sent.
+async fn sign_in_code(fx: &Fx, user_id: Uuid) -> String {
+    struct Capture(std::sync::Mutex<String>);
+    impl attome_auth::otp::OtpSender for Capture {
+        async fn send(
+            &self,
+            _user_id: Uuid,
+            _channel: attome_auth::otp::OtpChannel,
+            code: &str,
+        ) -> Result<(), attome_types::AppError> {
+            *self.0.lock().expect("capture lock") = code.to_owned();
+            Ok(())
+        }
+    }
+    let capture = Capture(std::sync::Mutex::new(String::new()));
+    attome_auth::otp::issue(
+        &fx.base.db,
+        &fx.base.pepper_ring(),
+        &capture,
+        user_id,
+        attome_auth::mfa::OTP_LOGIN_PURPOSE,
+        attome_auth::otp::OtpChannel::Email,
+    )
+    .await
+    .expect("issue a sign-in code");
+    capture.0.into_inner().expect("capture lock")
+}
+
 async fn pending_token(fx: &Fx, user_id: Uuid, typ: attome_auth::TokenType) -> String {
     attome_auth::mfa::start_challenge(
         &fx.base.redis_coordination,
@@ -4228,6 +4256,33 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 "/api/v1/auth/mfa/verify-recovery",
                 None,
                 Some(json!({"pending_token": token, "code": codes[0]})),
+            )
+        }
+        "POST /api/v1/auth/mfa/code/verify" => {
+            // Q5-T5: a role that allows an emailed code as the second factor.
+            let (user, _) = seed_user(&fx.base, "mfa-code").await;
+            let allows = role(fx).await;
+            sqlx::query(
+                "INSERT INTO role_auth_policy (role_ref, mfa_mode, mfa_factors) \
+                 VALUES ($1, 'required', ARRAY['email', 'totp'])",
+            )
+            .bind(allows)
+            .execute(&fx.base.db)
+            .await
+            .expect("role policy");
+            sqlx::query("INSERT INTO user_account_mm_role (user_ref, role_ref) VALUES ($1, $2)")
+                .bind(user)
+                .bind(allows)
+                .execute(&fx.base.db)
+                .await
+                .expect("grant the role");
+            let token = pending_token(fx, user, attome_auth::TokenType::MfaPendingLogin).await;
+            let code = sign_in_code(fx, user).await;
+            request(
+                "POST",
+                "/api/v1/auth/mfa/code/verify",
+                None,
+                Some(json!({"pending_token": token, "code": code})),
             )
         }
         "POST /api/v1/auth/mfa/postpone" => {

@@ -358,6 +358,9 @@ pub struct UserMfaRequirement {
     /// factor; 0 never (an administrator's policy, and the deployment-wide
     /// switch alone).
     pub remember_device_days: i32,
+    /// Q5-T5: an emailed one-time code may serve as the (weaker) second
+    /// factor: every role allows it, and the person is not an administrator.
+    pub email_code: bool,
 }
 
 impl UserMfaRequirement {
@@ -370,6 +373,7 @@ impl UserMfaRequirement {
             grace_until: None,
             postponed_until: None,
             remember_device_days: 0,
+            email_code: false,
         }
     }
 
@@ -573,7 +577,10 @@ pub async fn login_with_policy(
     if !requirement.required && !requirement.optional {
         return Ok(LoginOutcome::Session(user_id));
     }
-    let enrolled = crate::mfa::is_enrolled(db, user_id).await?;
+    // Q5-T5: a person whose roles allow email codes has a second factor in
+    // their verified email address, TOTP or not.
+    let enrolled =
+        crate::mfa::is_enrolled(db, user_id).await? || (requirement.email_code && email_verified);
     let mut step = mfa_step(&requirement, enrolled, chrono::Utc::now());
     // Q5-T4: a browser remembered after a second factor skips the challenge
     // while the policy remembers devices and the device is still good.

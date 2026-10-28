@@ -20,6 +20,10 @@ pub enum AuthMethod {
     Totp,
     /// A single-use recovery code (`rcode`).
     RecoveryCode,
+    /// Q5-T5: a one-time code sent by email (or SMS, WhatsApp): a weaker
+    /// factor (`otp_weak`), never phishing-resistant and never counted as a
+    /// strong second factor.
+    WeakOtp,
     /// An external identity provider: OIDC or Google (`fed`).
     Federated,
     /// Multi-factor authentication the identity provider reported and this
@@ -36,6 +40,7 @@ impl AuthMethod {
             AuthMethod::Password => "pwd",
             AuthMethod::Totp => "otp",
             AuthMethod::RecoveryCode => "rcode",
+            AuthMethod::WeakOtp => "otp_weak",
             AuthMethod::Federated => "fed",
             AuthMethod::IdpMfa => "mfa",
         }
@@ -87,6 +92,14 @@ impl AuthContext {
     }
 
     /// A password sign-in completed with a recovery code.
+    /// Q5-T5: a password and a one-time code sent to the person.
+    pub fn password_and_weak_otp() -> Self {
+        Self {
+            amr: vec![AuthMethod::Password, AuthMethod::WeakOtp],
+            ..Self::password()
+        }
+    }
+
     pub fn password_and_recovery_code() -> Self {
         Self {
             auth_time: AuthTime::AtIssue,

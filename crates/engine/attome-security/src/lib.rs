@@ -24,6 +24,8 @@ pub mod model;
 /// T2-T2: the caller's own role names.
 pub mod my_roles;
 pub mod oidc_mapping;
+/// Q5-T5: delivers sign-in one-time codes.
+pub mod otp_sender;
 pub mod parent_access;
 pub mod permission_sets;
 pub mod reconcile;

@@ -163,3 +163,157 @@ async fn provider_mfa_satisfies_required_policy() {
     assert!(federated_mfa_met(&requirement, true, now));
     assert!(!federated_mfa_met(&requirement, false, now));
 }
+
+/// Q5-T5: a role that requires a factor and allows email codes, given to
+/// `user`.
+async fn require_mfa_allowing_email(db: &DbPool, user: Uuid) {
+    let role = Uuid::now_v7();
+    sqlx::query("INSERT INTO role (id, name, owner_layer) VALUES ($1, $2, 'project')")
+        .bind(role)
+        .bind(format!("mfa-email-{}", &role.simple().to_string()[20..]))
+        .execute(db)
+        .await
+        .expect("insert role");
+    sqlx::query(
+        "INSERT INTO role_auth_policy (role_ref, mfa_mode, mfa_factors) \
+         VALUES ($1, 'required', ARRAY['email', 'totp'])",
+    )
+    .bind(role)
+    .execute(db)
+    .await
+    .expect("role policy");
+    sqlx::query("INSERT INTO user_account_mm_role (user_ref, role_ref) VALUES ($1, $2)")
+        .bind(user)
+        .bind(role)
+        .execute(db)
+        .await
+        .expect("grant the role");
+}
+
+/// A sender that keeps the code instead of sending it.
+struct Capture(std::sync::Mutex<String>);
+
+impl attome_auth::otp::OtpSender for Capture {
+    async fn send(
+        &self,
+        _user_id: Uuid,
+        _channel: attome_auth::otp::OtpChannel,
+        code: &str,
+    ) -> Result<(), attome_types::AppError> {
+        *self.0.lock().unwrap() = code.to_owned();
+        Ok(())
+    }
+}
+
+fn pepper() -> attome_auth::PepperRing {
+    attome_auth::PepperRing::new(0, "mfa-role-policy-test-pepper-0123456789", &[])
+}
+
+#[tokio::test]
+async fn email_code_completes_login_for_allowed_role() {
+    let db = skip_if_no_db!(test_db().await);
+    let user = seed_user(&db).await;
+    require_mfa_allowing_email(&db, user).await;
+
+    // Allowed by the role, so a person without TOTP has a factor and is
+    // challenged rather than sent to enrol.
+    let requirement = requirement_for(&db, user, "optional").await.unwrap();
+    assert!(
+        requirement.required && requirement.email_code,
+        "{requirement:?}"
+    );
+
+    // The code the sign-in sends verifies once.
+    let capture = Capture(std::sync::Mutex::new(String::new()));
+    attome_auth::otp::issue(
+        &db,
+        &pepper(),
+        &capture,
+        user,
+        attome_auth::mfa::OTP_LOGIN_PURPOSE,
+        attome_auth::otp::OtpChannel::Email,
+    )
+    .await
+    .unwrap();
+    let code = capture.0.into_inner().unwrap();
+    let verify = |presented: String| {
+        let db = db.clone();
+        async move {
+            attome_auth::otp::verify(
+                &db,
+                &pepper(),
+                user,
+                attome_auth::mfa::OTP_LOGIN_PURPOSE,
+                &presented,
+            )
+            .await
+            .unwrap()
+        }
+    };
+    assert_eq!(
+        verify(code.clone()).await,
+        attome_auth::otp::OtpOutcome::Verified
+    );
+    assert_eq!(verify(code).await, attome_auth::otp::OtpOutcome::Refused);
+
+    // The platform sender sends only to a verified address.
+    let sender = attome_security::otp_sender::PlatformOtpSender {
+        db: &db,
+        frontend_url: "https://crm.example.test",
+        lang: "ar",
+    };
+    let unverified = attome_auth::otp::OtpSender::send(
+        &sender,
+        user,
+        attome_auth::otp::OtpChannel::Email,
+        "123456",
+    )
+    .await;
+    assert!(
+        matches!(unverified, Err(attome_types::AppError::Forbidden)),
+        "{unverified:?}"
+    );
+    let sms = attome_auth::otp::OtpSender::send(
+        &sender,
+        user,
+        attome_auth::otp::OtpChannel::Sms,
+        "123456",
+    )
+    .await;
+    assert!(
+        matches!(sms, Err(attome_types::AppError::FeatureUnavailable)),
+        "{sms:?}"
+    );
+}
+
+#[tokio::test]
+async fn admin_cannot_use_email_code() {
+    let db = skip_if_no_db!(test_db().await);
+    let user = seed_user(&db).await;
+    require_mfa_allowing_email(&db, user).await;
+    let admin: Uuid = sqlx::query_scalar("SELECT id FROM privilege WHERE key = 'system.admin'")
+        .fetch_one(&db)
+        .await
+        .expect("system.admin is seeded");
+    sqlx::query(
+        "INSERT INTO user_account_mm_privilege (id, user_ref, privilege_ref, is_active, created_at) \
+         VALUES ($1, $2, $3, true, now())",
+    )
+    .bind(Uuid::now_v7())
+    .bind(user)
+    .bind(admin)
+    .execute(&db)
+    .await
+    .expect("grant system.admin");
+
+    let requirement = requirement_for(&db, user, "optional").await.unwrap();
+    assert!(
+        requirement.required,
+        "an administrator always needs a factor"
+    );
+    assert!(
+        !requirement.email_code,
+        "never an emailed code for an administrator, whatever the role allows"
+    );
+    assert_eq!(requirement.remember_device_days, 0);
+}

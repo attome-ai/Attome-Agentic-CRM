@@ -212,12 +212,14 @@ pub async fn requirement_for(
         MfaMode::Optional => Ok(UserMfaRequirement {
             optional: true,
             remember_device_days: policy.remember_device_days,
+            email_code: allows_email_code(&policy, is_admin),
             ..UserMfaRequirement::default()
         }),
         MfaMode::Required => {
             let mut requirement = UserMfaRequirement {
                 required: true,
                 remember_device_days: policy.remember_device_days,
+                email_code: allows_email_code(&policy, is_admin),
                 ..UserMfaRequirement::default()
             };
             if attome_auth::mfa::is_enrolled(db, user_id).await? {
@@ -241,6 +243,13 @@ pub async fn requirement_for(
             Ok(requirement)
         }
     }
+}
+
+/// Q5-T5: whether an emailed code may be the second factor: the roles'
+/// factors include it, and never for an administrator (whose factors
+/// exclude every weak one already, Q5-T2). Pure.
+pub fn allows_email_code(policy: &EffectiveMfaPolicy, is_admin: bool) -> bool {
+    !is_admin && policy.factors.contains(&FactorKind::Email)
 }
 
 /// Q5-T3: puts `user_id`'s enrolment off for [`POSTPONE_HOURS`], never past

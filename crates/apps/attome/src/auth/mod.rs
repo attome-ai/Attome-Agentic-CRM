@@ -166,6 +166,12 @@ pub fn public_routes(
             "/api/v1/auth/mfa/postpone",
             post(local::mfa_postpone),
         )
+        .route(
+            // Q5-T5: a one-time code as the weaker second factor.
+            "/api/v1/auth/mfa/code/send",
+            post(local::mfa_code_send),
+        )
+        .route("/api/v1/auth/mfa/code/verify", post(local::mfa_code_verify))
         .layer(Extension(license))
         .layer(Extension(auditor))
 }

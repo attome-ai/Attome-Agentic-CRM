@@ -56,6 +56,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Emailed sign-in codes as a weaker second factor (Q5-T5): `POST /api/v1/auth/mfa/code/send` and
+  `POST /api/v1/auth/mfa/code/verify`, for a person every one of whose roles lists `email` among its
+  factors and whose address is verified; never for an administrator. The session records `otp_weak`.
 - Remembered browsers (Q5-T4): `POST /api/v1/auth/mfa/verify` takes `remember`, and a browser
   remembered after a second factor skips it at later password sign-ins for the role's
   `remember_device_days`, until the account's sessions or password change. Never for an administrator.

@@ -40,6 +40,8 @@ pub const RATE_LIMIT_CATEGORIES: &[(&str, &str, &str)] = &[
     ("POST", "/api/v1/auth/mfa/pending-enroll", "mfa"),
     ("POST", "/api/v1/auth/mfa/pending-confirm", "mfa"),
     ("POST", "/api/v1/auth/mfa/postpone", "mfa"),
+    ("POST", "/api/v1/auth/mfa/code/send", "mfa"),
+    ("POST", "/api/v1/auth/mfa/code/verify", "mfa"),
     ("POST", "/api/v1/auth/mfa/enroll", "mfa"),
     ("POST", "/api/v1/auth/mfa/confirm", "mfa"),
     ("POST", "/api/v1/auth/mfa/disable", "mfa"),

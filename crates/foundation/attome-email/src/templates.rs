@@ -157,6 +157,23 @@ static INVITATION: LazyLock<Email> = LazyLock::new(|| {
     )
 });
 
+/// Q5-T5: a sign-in code, a weaker second factor. The code is the `body`
+/// value; it is never a link.
+static SIGN_IN_CODE: LazyLock<Email> = LazyLock::new(|| {
+    email(
+        "Your sign-in code",
+        "رمز تسجيل الدخول",
+        [
+            "Your sign-in code is {{ body }}\n\nIt works once, within a minute. If you are not signing in, do not share it with anyone and change your password.",
+            "<p>Your sign-in code is <strong>{{ body }}</strong></p><p>It works once, within a minute. If you are not signing in, do not share it with anyone and change your password.</p>",
+        ],
+        [
+            "رمز تسجيل الدخول هو {{ body }}\n\nيصلح مرة واحدة خلال دقيقة. إن لم تكن تسجّل الدخول، فلا تشاركه مع أحد وغيّر كلمة المرور.",
+            "<p>رمز تسجيل الدخول هو <strong>{{ body }}</strong></p><p>يصلح مرة واحدة خلال دقيقة. إن لم تكن تسجّل الدخول، فلا تشاركه مع أحد وغيّر كلمة المرور.</p>",
+        ],
+    )
+});
+
 static GENERIC: LazyLock<TemplateSet> = LazyLock::new(|| {
     set(vec![
         ("en", OutputKey::Text, "{{ body }}".to_owned()),
@@ -301,6 +318,29 @@ pub fn invitation_in(
     compose(&INVITATION, lang, register_link, brand)
 }
 
+/// Q5-T5: the email carrying a one-time sign-in `code`, in `lang`.
+pub fn sign_in_code_in(lang: &str, code: &str, brand: &BrandContext) -> (String, String, String) {
+    let lang = language(lang);
+    let values = values(lang, "", brand, code);
+    (
+        render(
+            &SIGN_IN_CODE.subject,
+            lang,
+            Output::Text,
+            &values,
+            "Your sign-in code",
+        ),
+        render(&SIGN_IN_CODE.body, lang, Output::Text, &values, code),
+        render(
+            &SIGN_IN_CODE.body,
+            lang,
+            Output::Html,
+            &values,
+            &format!("<p>{}</p>", escape_html(code)),
+        ),
+    )
+}
+
 /// Generic notification — plain body text wrapped in a single `<p>`. For
 /// anything that doesn't need its own dedicated template.
 pub fn generic_notification(subject: &str, body: &str) -> (String, String, String) {
@@ -340,7 +380,7 @@ mod tests {
             logo_url: Some("https://crm.acme.test/logo.png".into()),
             primary: Some("#0b4f6c".into()),
         };
-        for email in [&*RESET, &*VERIFY, &*INVITATION] {
+        for email in [&*RESET, &*VERIFY, &*INVITATION, &*SIGN_IN_CODE] {
             for lang in ["en", "ar"] {
                 let values = values(lang, "https://x.test/l", &brand, "");
                 for (set, output) in [
@@ -354,6 +394,19 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn the_sign_in_code_email_carries_the_code_in_both_languages() {
+        let brand = BrandContext::default();
+        let (subject, text, html) = sign_in_code_in("en", "042917", &brand);
+        assert_eq!(subject, "Your sign-in code");
+        assert!(text.starts_with("Your sign-in code is 042917"), "{text}");
+        assert!(html.contains("<strong>042917</strong>"), "{html}");
+        let (subject, text, html) = sign_in_code_in("ar", "042917", &brand);
+        assert_eq!(subject, "رمز تسجيل الدخول");
+        assert!(text.contains("042917"), "{text}");
+        assert!(html.starts_with("<div dir=\"rtl\">"), "{html}");
     }
 
     #[test]

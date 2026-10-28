@@ -210,6 +210,23 @@ impl std::fmt::Debug for MfaChallengeResponse {
     }
 }
 
+/// Q5-T5: send a one-time sign-in code.
+#[derive(Deserialize, ToSchema)]
+pub struct MfaCodeSendBody {
+    /// The `MfaRequired` pending token.
+    pub pending_token: String,
+    /// `email`; `sms` and `whatsapp` once those channels exist.
+    pub channel: String,
+}
+
+impl std::fmt::Debug for MfaCodeSendBody {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MfaCodeSendBody")
+            .field("channel", &self.channel)
+            .finish_non_exhaustive()
+    }
+}
+
 #[derive(Deserialize, ToSchema)]
 pub struct MfaVerifyBody {
     pub pending_token: String,
