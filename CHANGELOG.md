@@ -45,6 +45,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Formula fields take `options.mode` (A9-T1): `stored` (the default, computed on every write) or
+  `read_time`, computed whenever a record is read (`GET /api/v1/{entity}/{id}`, lists and
+  `query/execute`), so a formula over `today()` is never stale; its column stays empty, and other
+  surfaces (exports, search) read it empty. Not with `generated: true`.
 - `geolocation` and `json` field types (A2-T3), both `JSONB`. A point is stored as `{"lat", "lng"}`
   (`"lat,lng"` is accepted and exported in CSV/XLSX), indexed by GiST as a point when the field is
   indexed, filtered with the new `within_km` operator (`"lat,lng,km"`) and sorted nearest first by

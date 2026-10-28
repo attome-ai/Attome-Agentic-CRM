@@ -2988,6 +2988,19 @@ pub async fn execute_stored_query_with_definition(
     // live-sample behavior) — read off the first returned row instead of a
     // separate discovery query. Falls back to the whitelist when there are
     // no rows to read columns from.
+    // A9-T1: read_time formulas of a single-entity result are computed now,
+    // from the row's own fields, before hidden fields are dropped.
+    if let Some(entity_id) = qrow.entity_logical_name {
+        let entity = state
+            .entities
+            .load()
+            .get_by_id(entity_id)
+            .map(|meta| (meta.logicalname.clone(), meta.attrs.clone()));
+        if let Some((name, attrs)) = entity {
+            crate::entity_mutation::fill_read_time_formulas(state, &name, &attrs, &mut records)
+                .await;
+        }
+    }
     for record in &mut records {
         if let Some(object) = record.as_object_mut() {
             object.retain(|name, _| !sensitive.contains(name.as_str()));

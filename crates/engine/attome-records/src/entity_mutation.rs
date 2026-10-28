@@ -1433,6 +1433,48 @@ async fn compute_formula_values(
     Ok(out)
 }
 
+/// A9-T1: fills each `read_time` formula field present in `rows` (a field
+/// the caller may not read, or did not select, is absent and stays absent)
+/// with its value computed now from the row's own fields. A blank input or
+/// a failed evaluation reads as empty; a read never fails on a formula.
+pub async fn fill_read_time_formulas(
+    state: &EngineState,
+    entity_name: &str,
+    attrs: &[AttrInfo],
+    rows: &mut [Value],
+) {
+    let formulas = crate::rule_engine::formula_rules_when(entity_name, attrs, true);
+    if formulas.is_empty() || rows.is_empty() {
+        return;
+    }
+    let now = chrono::Utc::now();
+    let mut compiled = Vec::with_capacity(formulas.len());
+    for (target, rule) in &formulas {
+        match crate::rule_engine::get_or_compile_formula(state, attrs, rule).await {
+            Ok(c) => compiled.push((target, rule, c)),
+            Err(e) => tracing::warn!(
+                entity = %entity_name, field = %target, error = %e,
+                "a read_time formula no longer compiles; it reads as empty"
+            ),
+        }
+    }
+    for row in rows.iter_mut() {
+        let Some(obj) = row.as_object_mut() else {
+            continue;
+        };
+        let rules_ctx = crate::rule_engine::context_for_record(now, attrs, obj);
+        for (target, rule, c) in &compiled {
+            if !obj.contains_key(target.as_str()) {
+                continue;
+            }
+            let value = crate::rule_engine::evaluate_value(rule, c, &rules_ctx)
+                .map(|v| crate::rule_engine::json_from_rules_value(&v))
+                .unwrap_or(Value::Null);
+            obj.insert((*target).clone(), value);
+        }
+    }
+}
+
 /// `base` with `delta` laid over it, borrowing `base` when there is nothing
 /// to add.
 fn overlay<'a>(

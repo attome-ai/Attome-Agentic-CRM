@@ -337,10 +337,21 @@ pub fn cache_key(rule_id: Uuid, version: i32, row_version: i64) -> String {
 /// saved, so this can only be a hand-edited metadata row, and
 /// [`get_or_compile_formula`] would reject it anyway.
 pub fn formula_rules(entity_name: &str, attrs: &[AttrInfo]) -> Vec<(String, RuleDef)> {
+    formula_rules_when(entity_name, attrs, false)
+}
+
+/// A9-T1: the `read_time` formulas' rules (`read_time: true`), computed when
+/// a record is read, or the stored ones ([`formula_rules`]).
+pub fn formula_rules_when(
+    entity_name: &str,
+    attrs: &[AttrInfo],
+    read_time: bool,
+) -> Vec<(String, RuleDef)> {
     attrs
         .iter()
         // Y2-T11: a generated formula is the database's to compute.
         .filter(|a| a.is_formula() && !a.is_generated_formula())
+        .filter(|a| attome_core::formula::is_read_time(a.options.as_ref()) == read_time)
         .filter_map(|attr| {
             let opts = attome_core::formula::parse_options(attr.options.as_ref()).ok()?;
             Some((
@@ -631,6 +642,32 @@ mod tests {
         let mut a = attr(name, 16, false);
         a.options = Some(serde_json::json!({"expression": expr, "result_type": result_type}));
         a
+    }
+
+    /// A9-T1: the write path computes stored formulas, the read path the
+    /// read_time ones.
+    #[test]
+    fn formula_mode_splits_stored_from_read_time() {
+        let mut age = formula_attr("age_days", "today() - born", "number");
+        age.options = Some(serde_json::json!({
+            "expression": "today() - born", "result_type": "number", "mode": "read_time"
+        }));
+        let attrs = vec![
+            attr("quantity", 1, false),
+            attr("price", 2, false),
+            formula_attr("total", "quantity * price", "number"),
+            age,
+        ];
+        let stored: Vec<String> = formula_rules("order_line", &attrs)
+            .into_iter()
+            .map(|(t, _)| t)
+            .collect();
+        assert_eq!(stored, ["total"]);
+        let live: Vec<String> = formula_rules_when("order_line", &attrs, true)
+            .into_iter()
+            .map(|(t, _)| t)
+            .collect();
+        assert_eq!(live, ["age_days"]);
     }
 
     #[test]

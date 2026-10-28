@@ -15,7 +15,11 @@ export type FieldType =
 // Mirrors attome_core::formula::FormulaOptions (B-R6, D-604). The value
 // is computed by the server on every write; the form shows it read-only.
 export type FormulaResultType = 'text' | 'number' | 'currency' | 'date' | 'date_time' | 'bool';
-export interface FormulaOptions { expression: string; result_type: FormulaResultType; }
+// A9-T1: `read_time` is computed on every read (never stale over today());
+// `stored` (the default) on every write.
+export interface FormulaOptions {
+  expression: string; result_type: FormulaResultType; generated?: boolean; mode?: 'stored' | 'read_time';
+}
 
 // Per-value display hints for a `choice` field — a colored pill and/or icon
 // in the grid instead of plain text. Mirrors attome_field::ChoiceStyle.

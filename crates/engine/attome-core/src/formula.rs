@@ -20,6 +20,12 @@
 //! language whose SQL meaning is the evaluator's translates
 //! ([`to_generated_sql`]); any other expression is refused at save. The
 //! entity engine skips such a field when it computes formulas.
+//!
+//! A9-T1: a formula's `mode` is `stored` (the default: computed on every
+//! write and kept in its column) or `read_time` (computed whenever a record
+//! is read, so an expression over `today()` or `now()` is never stale; its
+//! column stays empty). A stored formula reads only its own record's fields,
+//! so it recomputes in the write that changes them.
 
 use attome_rules::{BinaryOp, Compiled, Expr, Schema, Type, UnaryOp, compile};
 use attome_types::AppError;
@@ -44,6 +50,31 @@ pub struct FormulaOptions {
     /// Y2-T11: stored as a database generated column.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub generated: bool,
+    /// A9-T1: when the value is computed.
+    #[serde(default, skip_serializing_if = "FormulaMode::is_stored")]
+    pub mode: FormulaMode,
+}
+
+/// A9-T1: when a formula's value is computed.
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum FormulaMode {
+    /// On every write, kept in the field's column.
+    #[default]
+    Stored,
+    /// On every read; the column stays empty.
+    ReadTime,
+}
+
+impl FormulaMode {
+    pub fn is_stored(&self) -> bool {
+        *self == Self::Stored
+    }
+}
+
+/// A9-T1: whether a formula field's options say `mode: read_time`.
+pub fn is_read_time(options: Option<&Value>) -> bool {
+    options.and_then(|o| o.get("mode")).and_then(Value::as_str) == Some("read_time")
 }
 
 /// Parses and shape-checks a formula field's options. Does not compile the
@@ -74,10 +105,16 @@ pub fn parse_options(options: Option<&Value>) -> Result<FormulaOptions, AppError
             FORMULA_RESULT_TYPES.join("|")
         )));
     }
+    if opts.generated && opts.mode == FormulaMode::ReadTime {
+        return Err(AppError::Validation(
+            "a formula is generated (a stored column) or read_time, not both".into(),
+        ));
+    }
     Ok(FormulaOptions {
         expression: expression.to_owned(),
         result_type: opts.result_type,
         generated: opts.generated,
+        mode: opts.mode,
     })
 }
 
@@ -278,6 +315,31 @@ mod tests {
     use super::*;
     use crate::meta_registry::{DataClassification, OnTargetDelete};
     use serde_json::json;
+
+    /// A9-T1: `mode` defaults to stored, reads `read_time`, and cannot be
+    /// combined with a generated column.
+    #[test]
+    fn formula_mode_defaults_to_stored_and_reads_read_time() {
+        let stored = json!({"expression": "1", "result_type": "number"});
+        assert_eq!(
+            parse_options(Some(&stored)).unwrap().mode,
+            FormulaMode::Stored
+        );
+        assert!(!is_read_time(Some(&stored)));
+        let live = json!({"expression": "today()", "result_type": "date", "mode": "read_time"});
+        assert_eq!(
+            parse_options(Some(&live)).unwrap().mode,
+            FormulaMode::ReadTime
+        );
+        assert!(is_read_time(Some(&live)));
+        let both = json!({"expression": "1", "result_type": "number", "mode": "read_time", "generated": true});
+        assert!(parse_options(Some(&both)).is_err());
+        let unknown = json!({"expression": "1", "result_type": "number", "mode": "later"});
+        assert!(parse_options(Some(&unknown)).is_err());
+        // a stored formula serialises without a mode, as before
+        let back = serde_json::to_value(parse_options(Some(&stored)).unwrap()).unwrap();
+        assert!(back.get("mode").is_none());
+    }
 
     fn attr(name: &str, type_int: i32, options: Option<Value>) -> AttrInfo {
         AttrInfo {

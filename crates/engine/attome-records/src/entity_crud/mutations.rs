@@ -406,7 +406,15 @@ pub(crate) async fn read_record_projection(
         .await
         .map_err(AppError::internal)?;
 
-    let row = row.ok_or(AppError::NotFound)?;
+    let mut row = row.ok_or(AppError::NotFound)?;
+    // A9-T1: read_time formulas are computed now.
+    crate::entity_mutation::fill_read_time_formulas(
+        state,
+        entity_name,
+        attrs,
+        std::slice::from_mut(&mut row),
+    )
+    .await;
     // Q15-T5: a full read of a Financial or Health value is logged.
     attome_security::view_log::record(
         &state.base.db,
