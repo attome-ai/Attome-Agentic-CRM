@@ -264,14 +264,15 @@ struct ExecuteResponse {
     outcome: ActionOutcome,
 }
 
-/// `POST /api/v1/decisions/{id}/execute` — runs the decision's chosen
-/// option through [`dispatch`], the platform's one execution path (I-2), and
-/// records the invocation id + result status on the decision.
+/// Run a decision's chosen option
+///
+/// Runs the approved option through the platform's one action path, with its gate, and records the
+/// invocation and its result on the decision. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/decisions/{id}/execute",
     tag = "dashboard",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The decision")),
     request_body = ExecuteBody,
     responses(
         (status = 200, description = "Success", body = ExecuteResponse),

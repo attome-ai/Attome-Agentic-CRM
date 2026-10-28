@@ -204,11 +204,15 @@ async fn insert_render(
     Ok(render_id)
 }
 
+/// Render a document template
+///
+/// Queues a render (202) of the template against a record, read as the caller so it sees only what
+/// the caller may read.
 #[utoipa::path(
     post,
     path = "/api/v1/docgen/templates/{id}/render",
     tag = "docgen",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The template")),
     request_body = RenderTemplateBody,
     extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
         attome_audit::security::ExemptReason::Delegated,
@@ -258,11 +262,14 @@ async fn render_document(
     ))
 }
 
+/// Read a document render
+///
+/// A render's status and, once done, its document.
 #[utoipa::path(
     get,
     path = "/api/v1/docgen/renders/{render_id}",
     tag = "docgen",
-    params(("render_id" = Uuid, Path)),
+    params(("render_id" = Uuid, Path, description = "The render")),
     responses(
         (status = 200, description = "Success", body = RenderStatusResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

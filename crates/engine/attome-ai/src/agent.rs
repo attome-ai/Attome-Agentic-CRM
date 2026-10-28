@@ -747,8 +747,10 @@ fn risk_ceiling_wire(tier: RiskTier) -> &'static str {
     }
 }
 
-/// `POST /api/v1/agents/{id}/sessions` — opens a new, killable session from
-/// an active agent definition, with an explicit ceiling.
+/// Start an agent session
+///
+/// Opens a new session, which can be ended at any time, from an active agent definition with an
+/// explicit risk ceiling.
 #[utoipa::path(
     post,
     path = "/api/v1/agents/{id}/sessions",
@@ -1055,8 +1057,9 @@ pub struct ObjectSessionResponse {
     pub allowed_action_ids: Option<Vec<String>>,
 }
 
-/// `POST /api/v1/model/agents/{agent}/sessions` — opens a session from a
-/// published agent object (V2-D487).
+/// Start a session from an agent object
+///
+/// Opens a session from a published agent object, under its limits.
 #[utoipa::path(
     post,
     path = "/api/v1/model/agents/{agent}/sessions",

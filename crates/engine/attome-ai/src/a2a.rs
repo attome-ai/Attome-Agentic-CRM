@@ -67,7 +67,10 @@ pub struct A2aTask {
     pub issues: Vec<String>,
 }
 
-/// `GET /api/v1/a2a/agents`
+/// List agent cards
+///
+/// Every published agent object that declares a hand-off contract, with its role and its input and
+/// output schemas, for trusted partners; an agent without a contract takes no outside work.
 #[utoipa::path(
     get,
     path = "/api/v1/a2a/agents",
@@ -121,7 +124,10 @@ async fn list_agents(
     }))
 }
 
-/// `POST /api/v1/a2a/agents/{agent}/tasks`
+/// Hand an agent a task
+///
+/// Checks the input against the agent's contract and runs one bounded turn of the agent in a session
+/// of its own, answering with the contract's output.
 #[utoipa::path(
     post,
     path = "/api/v1/a2a/agents/{agent}/tasks",

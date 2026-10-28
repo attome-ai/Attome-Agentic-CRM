@@ -133,11 +133,14 @@ pub async fn start_assessment(
     })
 }
 
+/// Start a GRC assessment
+///
+/// Moves a planned assessment to in progress under its record lock. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/grc/assessments/{id}/start",
     tag = "grc",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The assessment")),
     responses(
         (status = 200, description = "Assessment started (or already past `planned`)", body = AssessmentStartResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -228,11 +231,15 @@ pub async fn remediate_finding(
     })
 }
 
+/// Remediate a GRC finding
+///
+/// Marks an open finding remediated under its record lock; one already remediated, accepted as a risk
+/// or closed is refused. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/grc/findings/{id}/remediate",
     tag = "grc",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The finding")),
     responses(
         (status = 200, description = "Finding remediated (or already past open/in_progress)", body = FindingRemediateResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),

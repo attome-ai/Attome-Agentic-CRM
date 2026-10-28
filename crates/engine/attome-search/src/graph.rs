@@ -1110,6 +1110,10 @@ pub async fn traverse(
 
 // ── HTTP route ───────────────────────────────────────────────────────────────
 
+/// Walk the record graph
+///
+/// From a record, follows its lookups, record relationships and hierarchy a bounded number of hops,
+/// checking the caller's read access at every hop, and returns the records reached.
 #[utoipa::path(
     post,
     path = "/api/v1/graph/traverse",

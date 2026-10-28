@@ -253,12 +253,14 @@ async fn require_document(
     .await
 }
 
-/// A recording's transcript, for anyone who may read the document.
+/// Read a recording's transcript
+///
+/// Anyone who may read the document.
 #[utoipa::path(
     get,
     path = "/api/v1/documents/{id}/transcript",
     tag = "entity",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The document")),
     responses(
         (status = 200, description = "Success", body = TranscriptView),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -295,13 +297,15 @@ pub(crate) async fn get_transcript(
     }))
 }
 
-/// Asks for a recording to be transcribed (again); needs update access to the
-/// document. The work runs on the job queue.
+/// Transcribe a recording
+///
+/// Queues a transcription of the recording (again, if it has one). Needs update rights on the
+/// document. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/documents/{id}/transcribe",
     tag = "entity",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The document")),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::BusinessEvent, AuditOperation::Update)])))),
     responses(
         (status = 202, description = "Queued"),

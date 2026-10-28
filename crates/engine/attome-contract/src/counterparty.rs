@@ -280,6 +280,9 @@ pub struct CounterpartyDecideBody {
     pub decision: Decision,
 }
 
+/// Decide a counterparty proposal
+///
+/// Confirms the proposed account on the contract, or rejects the proposal. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/contract/counterparty-proposals/{id}/decide",
@@ -311,6 +314,11 @@ pub struct RunQueued {
     pub queued: bool,
 }
 
+/// Match contract counterparties
+///
+/// Proposes an account for each contract that names its counterparty only as text: an equal name, or
+/// an account whose name starts the text or the other way round (at least four characters), with names
+/// folded the same way, Arabic included. A tie makes no proposal. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/contract/counterparty-match/run",

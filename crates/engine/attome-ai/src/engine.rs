@@ -463,12 +463,12 @@ async fn invoke_action(
     Ok(Json(outcome))
 }
 
-/// AE1-T2: runs the published custom action `custom.{name}` as the calling
-/// person. The arguments are checked against its input schema first (every
-/// problem by field); a consequential action needs an `Idempotency-Key` (or
-/// `x-idempotency-key`) header, which becomes the invocation's key, so a
-/// retry with the same key never runs it twice. A completed action answers
-/// 200; one that waits (a confirmation, an approval, an undo window) 202.
+/// Run a custom action
+///
+/// Runs the published custom action `custom.{name}` as the calling person, after checking the
+/// arguments against its input schema (every problem by field). A consequential action needs an
+/// `Idempotency-Key` and `X-Confirm: true`. A finished action answers 200; one that waits for a
+/// confirmation, an approval or an undo window answers 202.
 #[utoipa::path(
     post,
     path = "/api/v1/actions/{name}",

@@ -246,6 +246,11 @@ pub async fn release(redis: &Store, admission: &Admission) {
     }
 }
 
+/// Receive an integration webhook
+///
+/// Where an outside system posts its events, with no session: the call must carry a timestamp within
+/// five minutes and an HMAC-SHA256 signature with the system's credential over the timestamp and the
+/// raw body.
 #[utoipa::path(
     post,
     path = "/api/v1/integrations/{system}/webhook",

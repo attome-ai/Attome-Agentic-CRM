@@ -191,6 +191,10 @@ async fn document_rls_fragment(
     Ok((pred.sql, pred.binds.to_text_params()))
 }
 
+/// Browse documents
+///
+/// The documents the caller may read, grouped by entity, record and folder with counts, for the
+/// documents browser.
 #[utoipa::path(
     get,
     path = "/api/v1/documents/tree",
@@ -249,6 +253,9 @@ pub(crate) async fn get_tree(
     }
 }
 
+/// Create a document folder
+///
+/// A named folder on one record for its documents. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/documents/folders",

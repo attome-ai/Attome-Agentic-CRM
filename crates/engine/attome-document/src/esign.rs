@@ -1146,6 +1146,10 @@ pub struct EnvelopeCreated {
     pub id: Uuid,
 }
 
+/// Create a signature envelope
+///
+/// A draft envelope with documents the caller may read and its signers (name, email, role, signing
+/// order); each file is hashed now, so the certificate names exactly what was signed. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/esign/envelopes",
@@ -1161,7 +1165,7 @@ pub struct EnvelopeCreated {
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-/// Creates a draft envelope from documents the caller may read.
+// Creates a draft envelope from documents the caller may read.
 async fn post_envelope(
     State(state): State<EngineState>,
     ctx: Authorized<SelfService>,
@@ -1171,6 +1175,9 @@ async fn post_envelope(
     Ok((StatusCode::CREATED, Json(EnvelopeCreated { id })))
 }
 
+/// Get a signature envelope
+///
+/// The envelope with its documents, signers and where each signer is.
 #[utoipa::path(
     get,
     path = "/api/v1/esign/envelopes/{id}",
@@ -1184,7 +1191,7 @@ async fn post_envelope(
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-/// An envelope of the caller's (or any, for an administrator).
+// An envelope of the caller's (or any, for an administrator).
 async fn get_envelope(
     State(state): State<EngineState>,
     ctx: Authorized<SelfService>,
@@ -1194,6 +1201,10 @@ async fn get_envelope(
     Ok(Json(load_view(&state, id).await?))
 }
 
+/// Send a signature envelope
+///
+/// Emails the first signers in order a personal link; when everyone at one position has signed, the
+/// next position is emailed. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/esign/envelopes/{id}/send",
@@ -1209,7 +1220,7 @@ async fn get_envelope(
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-/// Sends a draft envelope to its first signers.
+// Sends a draft envelope to its first signers.
 async fn post_send(
     State(state): State<EngineState>,
     ctx: Authorized<SelfService>,
@@ -1219,6 +1230,9 @@ async fn post_send(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Void a signature envelope
+///
+/// Stops the envelope; its links no longer work. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/esign/envelopes/{id}/void",
@@ -1234,7 +1248,7 @@ async fn post_send(
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-/// Voids a draft or sent envelope.
+// Voids a draft or sent envelope.
 async fn post_void(
     State(state): State<EngineState>,
     ctx: Authorized<SelfService>,
@@ -1244,6 +1258,9 @@ async fn post_void(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Open a signing link
+///
+/// What the signer is asked to sign. No session; the link's signed token is the credential.
 #[utoipa::path(
     get,
     path = "/api/v1/esign/sign/{token}",
@@ -1255,7 +1272,7 @@ async fn post_void(
         (status = 404, description = "An unknown, expired or voided link", body = ErrorResponse),
     ),
 )]
-/// The envelope a signer's link opens. No sign-in: the link is the authority.
+// The envelope a signer's link opens. No sign-in: the link is the authority.
 async fn get_sign(
     State(state): State<EngineState>,
     Path(token): Path<String>,
@@ -1263,6 +1280,10 @@ async fn get_sign(
     Ok(Json(signer_view(&state, &token).await?))
 }
 
+/// Act on a signing link
+///
+/// The signer asks for a code, signs or declines. No session: the link and the emailed code are the
+/// credential.
 #[utoipa::path(
     post,
     path = "/api/v1/esign/sign/{token}",
@@ -1278,8 +1299,8 @@ async fn get_sign(
         (status = 422, description = "A wrong code, or no typed name", body = ErrorResponse),
     ),
 )]
-/// A signer asks for a code, signs or declines. No sign-in: the link and
-/// the emailed code are the authority.
+// A signer asks for a code, signs or declines. No sign-in: the link and
+// the emailed code are the authority.
 async fn post_sign(
     State(state): State<EngineState>,
     ConnectInfo(peer): ConnectInfo<SocketAddr>,

@@ -196,10 +196,9 @@ struct ApproveResponse {
     row_version: i64,
 }
 
-/// `POST /api/v1/decisions/{id}/approve` — the human picks which option runs.
-/// `dashboard_decision.update`: reuses the entity's own generic update privilege
-/// for this bespoke business action, same convention `DashboardUpdate`/
-/// `MetricUpdate` already use in this crate.
+/// Approve a decision
+///
+/// A person picks which of the decision's options runs. Needs update rights on decisions. Audited.
 #[utoipa::path(
     post,
     // Disambiguates from `attome_dashboard::lifecycle`'s own `approve` handler
@@ -211,7 +210,7 @@ struct ApproveResponse {
     operation_id = "approve_decision",
     path = "/api/v1/decisions/{id}/approve",
     tag = "dashboard",
-    params(("id" = Uuid, Path)),
+    params(("id" = Uuid, Path, description = "The decision")),
     request_body = ApproveBody,
     responses(
         (status = 200, description = "Success", body = ApproveResponse),
