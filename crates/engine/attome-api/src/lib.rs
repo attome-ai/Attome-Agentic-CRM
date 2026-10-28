@@ -45,10 +45,10 @@ pub mod business_event;
 /// `reconcile_calendar`/`retire_calendar` service reconcile API `bundle`
 /// calls. `pub` for that same reason `view_admin` is.
 pub mod calendar_admin;
-/// Z12-T7: country holiday packs and the yearly review reminder.
-pub mod calendar_packs;
 /// Z12-T8: holidays from iCal feeds.
 pub mod calendar_feed;
+/// Z12-T7: country holiday packs and the yearly review reminder.
+pub mod calendar_packs;
 mod capability_probe;
 /// M18 Data Catalog Phase 1 (D-466) — `/api/v1/catalog/entities*` +
 /// the dashboard-lineage outbox sweep + usage rollup jobs. `pub` for the two
