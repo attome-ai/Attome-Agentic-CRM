@@ -197,7 +197,7 @@ pub(super) async fn seed_keeps(
         record_in_tx(&mut tx, kind, key, Stamp::Customer, &differing).await?;
         tx.commit().await.map_err(AppError::internal)?;
     }
-    Ok(differing.into_keys().collect())
+    Ok(differing.into_iter().map(|(property, _)| property).collect())
 }
 
 /// Y11-T6: records `conflicts` open (one per property; a later platform
