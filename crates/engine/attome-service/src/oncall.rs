@@ -19,6 +19,9 @@ use chrono::{DateTime, Duration, NaiveTime, Utc};
 use serde::Serialize;
 use uuid::Uuid;
 
+/// H7-T2: the on-call calendar route over stored schedules.
+pub mod calendar;
+
 /// One rotation layer.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Layer {
@@ -114,6 +117,92 @@ pub fn on_call(schedule: &Schedule, at: DateTime<Utc>) -> Option<OnCall> {
         .enumerate()
         .rev()
         .find_map(|(i, layer)| layer_member(layer, at).map(|user| OnCall::Layer { user, layer: i }))
+}
+
+/// H7-T2: the most change points [`timeline`] walks; a schedule whose shifts
+/// are so short that a range holds more is refused.
+pub const MAX_TIMELINE_POINTS: usize = 20_000;
+
+/// One stretch of a schedule with one person on call: `[start, end)`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Stretch {
+    pub start: DateTime<Utc>,
+    pub end: DateTime<Utc>,
+    pub on_call: OnCall,
+}
+
+/// H7-T2: who is on call over `[from, to)`, as stretches in time order;
+/// gaps with nobody on call are left out. The answer can only change at a
+/// handover, a daily window's edge, a layer's end or an override's edge, so
+/// [`on_call`] is asked once per stretch between those points. `None` when
+/// the range holds more than [`MAX_TIMELINE_POINTS`] of them. Pure.
+pub fn timeline(
+    schedule: &Schedule,
+    from: DateTime<Utc>,
+    to: DateTime<Utc>,
+) -> Option<Vec<Stretch>> {
+    if to <= from {
+        return Some(Vec::new());
+    }
+    let mut points = vec![from];
+    for layer in &schedule.layers {
+        let shift = layer.shift.num_seconds();
+        if shift > 0 {
+            let mut turn = if from <= layer.handover {
+                0
+            } else {
+                (from - layer.handover).num_seconds() / shift
+            };
+            loop {
+                let at = layer.handover + Duration::seconds(turn.checked_mul(shift)?);
+                if at >= to {
+                    break;
+                }
+                points.push(at);
+                if points.len() > MAX_TIMELINE_POINTS {
+                    return None;
+                }
+                turn += 1;
+            }
+        }
+        if let Some(until) = layer.until {
+            points.push(until);
+        }
+        if let Some((open, close)) = layer.daily_window {
+            let mut day = from.date_naive().pred_opt()?;
+            while day <= to.date_naive() {
+                points.push(day.and_time(open).and_utc());
+                points.push(day.and_time(close).and_utc());
+                if points.len() > MAX_TIMELINE_POINTS {
+                    return None;
+                }
+                day = day.succ_opt()?;
+            }
+        }
+    }
+    for o in &schedule.overrides {
+        points.push(o.start);
+        points.push(o.end);
+    }
+    points.retain(|at| *at >= from && *at < to);
+    points.sort_unstable();
+    points.dedup();
+    let mut out: Vec<Stretch> = Vec::new();
+    for (i, start) in points.iter().enumerate() {
+        let end = points.get(i + 1).copied().unwrap_or(to);
+        let Some(on_call) = on_call(schedule, *start) else {
+            continue;
+        };
+        match out.last_mut() {
+            Some(last) if last.end == *start && last.on_call == on_call => last.end = end,
+            _ => out.push(Stretch {
+                start: *start,
+                end,
+                on_call,
+            }),
+        }
+    }
+    Some(out)
 }
 
 /// Who a step notifies.
@@ -216,6 +305,72 @@ mod oncall_resolution {
             daily_window: None,
             until: None,
         }
+    }
+
+    #[test]
+    fn the_timeline_lists_who_is_on_call_between_two_moments() {
+        let schedule = Schedule {
+            layers: vec![weekly()],
+            overrides: vec![Override {
+                user: u(9),
+                start: at(10, 12),
+                end: at(11, 12),
+            }],
+        };
+        let stretches = timeline(&schedule, at(1, 0), at(17, 0)).expect("a bounded range");
+        let shown: Vec<(DateTime<Utc>, DateTime<Utc>, Uuid)> = stretches
+            .iter()
+            .map(|s| (s.start, s.end, s.on_call.user()))
+            .collect();
+        assert_eq!(
+            shown,
+            vec![
+                (at(2, 9), at(9, 9), u(1)),
+                (at(9, 9), at(10, 12), u(2)),
+                (at(10, 12), at(11, 12), u(9)),
+                (at(11, 12), at(16, 9), u(2)),
+                (at(16, 9), at(17, 0), u(3)),
+            ],
+            "nobody before the first handover; the override splits the week"
+        );
+        assert!(timeline(&schedule, at(5, 0), at(5, 0)).is_some_and(|s| s.is_empty()));
+        let minutely = Schedule {
+            layers: vec![Layer {
+                shift: Duration::minutes(1),
+                ..weekly()
+            }],
+            overrides: vec![],
+        };
+        assert!(
+            timeline(&minutely, at(2, 9), at(30, 0)).is_none(),
+            "too many points"
+        );
+    }
+
+    #[test]
+    fn the_timeline_follows_a_daily_window() {
+        let nights = Layer {
+            members: vec![u(7)],
+            handover: at(1, 0),
+            shift: Duration::days(7),
+            daily_window: NaiveTime::from_hms_opt(20, 0, 0).zip(NaiveTime::from_hms_opt(6, 0, 0)),
+            until: None,
+        };
+        let schedule = Schedule {
+            layers: vec![nights],
+            overrides: vec![],
+        };
+        let stretches = timeline(&schedule, at(3, 0), at(5, 0)).expect("a bounded range");
+        let shown: Vec<(DateTime<Utc>, DateTime<Utc>)> =
+            stretches.iter().map(|s| (s.start, s.end)).collect();
+        assert_eq!(
+            shown,
+            vec![
+                (at(3, 0), at(3, 6)),
+                (at(3, 20), at(4, 6)),
+                (at(4, 20), at(5, 0))
+            ]
+        );
     }
 
     #[test]

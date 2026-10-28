@@ -71,6 +71,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(returns::openapi_fragment());
     doc.merge(schedule_candidates::openapi_fragment());
     doc.merge(major_incident::openapi_fragment());
+    doc.merge(oncall::calendar::openapi_fragment());
     doc.merge(survey_send::openapi_fragment());
     doc.merge(schedule_optimise::openapi_fragment());
     doc.merge(iot::openapi_fragment());

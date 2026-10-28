@@ -1,0 +1,48 @@
+<section class="oc">
+  <h2>{{ 'oncallCalendar.title' | translate }}</h2>
+  @if (error(); as message) { <p class="oc-error" role="alert">{{ message }}</p> }
+
+  <div class="oc-bar" role="toolbar" [attr.aria-label]="'oncallCalendar.actions' | translate">
+    <label>
+      <span class="sr-only">{{ 'oncallCalendar.schedule' | translate }}</span>
+      <select (change)="onSchedule($event)" [value]="schedule()" data-testid="oc-schedule">
+        @for (s of schedules(); track s.id) { <option [value]="s.id">{{ s.name }}</option> }
+      </select>
+    </label>
+    <button type="button" (click)="shift(-1)" data-testid="oc-previous">{{ 'oncallCalendar.previous' | translate }}</button>
+    <button type="button" (click)="thisWeek()" data-testid="oc-this-week">{{ 'oncallCalendar.thisWeek' | translate }}</button>
+    <button type="button" (click)="shift(1)" data-testid="oc-next">{{ 'oncallCalendar.next' | translate }}</button>
+    <a [routerLink]="layersPath">{{ 'oncallCalendar.layers' | translate }}</a>
+    <a [routerLink]="overridesPath">{{ 'oncallCalendar.overrides' | translate }}</a>
+  </div>
+
+  @if (!schedules().length) {
+    <p class="oc-muted" data-none>{{ 'oncallCalendar.noSchedules' | translate }}</p>
+  } @else {
+    <ol class="oc-days" [attr.aria-busy]="loading()">
+      @for (d of days(); track d.day) {
+        <li class="oc-day" [attr.data-day]="d.day">
+          <h3>{{ d.day | localDate: { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'UTC' } }}</h3>
+          <ul>
+            @for (s of d.stretches; track s.start) {
+              <li [attr.data-via]="s.via" [attr.data-user]="s.user_id">
+                <span class="oc-time">
+                  {{ s.start | localDate: { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' } }}
+                  – {{ s.end | localDate: { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' } }}
+                </span>
+                <span dir="auto">{{ who(s) }}</span>
+                @if (s.via === 'override') {
+                  <small class="oc-tag">{{ 'oncallCalendar.override' | translate }}</small>
+                } @else if (s.layer !== null) {
+                  <small class="oc-muted">{{ 'oncallCalendar.layer' | translate: { n: s.layer + 1 } }}</small>
+                }
+              </li>
+            } @empty {
+              <li class="oc-muted">{{ 'oncallCalendar.nobody' | translate }}</li>
+            }
+          </ul>
+        </li>
+      }
+    </ol>
+  }
+</section>

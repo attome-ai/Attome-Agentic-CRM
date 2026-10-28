@@ -28,5 +28,9 @@ export { ServiceHandoffService, canHandBack, partyIcon } from './handoff/service
 export type { ServiceHandoff } from './handoff/service-handoff.service';
 // G4-T3: my queues ('service/queues') over the V7 queue items.
 export { MyQueuesComponent } from './queues/my-queues.component';
+// H7-T2: the on-call calendar ('service/oncall').
+export { OncallCalendarComponent } from './oncall/oncall-calendar.component';
+export { OncallCalendarService, byDay, weekStart } from './oncall/oncall-calendar.service';
+export type { OncallScheduleRef, OnCallStretch, CalendarDay } from './oncall/oncall-calendar.service';
 export { MyQueuesService, STARTER_SETS, groupByQueue, missingStarters } from './queues/my-queues.service';
 export type { QueueRef, QueueItemRow, QueueItemState, QueueGroup, StarterSetKey, StarterQueue, BulkOutcome } from './queues/my-queues.service';

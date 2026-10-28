@@ -271,6 +271,17 @@ async fn on_call_now(
     schedule: Uuid,
     now: DateTime<Utc>,
 ) -> Result<Option<Uuid>, AppError> {
+    let schedule = load_schedule(state, schedule, now).await?;
+    Ok(crate::oncall::on_call(&schedule, now).map(crate::oncall::OnCall::user))
+}
+
+/// Schedule `schedule` from its stored layers, members and overrides; an
+/// override that ended before `since` is left out. H7-T2 reads it too.
+pub(crate) async fn load_schedule(
+    state: &EngineState,
+    schedule: Uuid,
+    since: DateTime<Utc>,
+) -> Result<Schedule, AppError> {
     let db = &state.base.db;
     let layers: Vec<StoredLayer> = sqlx::query_as(
         "SELECT id, layer_order::float8, handover_at::timestamptz, shift_hours::float8, \
@@ -298,7 +309,7 @@ async fn on_call_now(
             AND ends_at::timestamptz > $2",
     )
     .bind(schedule)
-    .bind(now)
+    .bind(since)
     .fetch_all(db)
     .await
     .map_err(AppError::internal)?;
@@ -316,8 +327,7 @@ async fn on_call_now(
             },
         )
         .collect();
-    let schedule = schedule_of(&rows, &members, &overrides);
-    Ok(crate::oncall::on_call(&schedule, now).map(crate::oncall::OnCall::user))
+    Ok(schedule_of(&rows, &members, &overrides))
 }
 
 async fn page(state: &EngineState, users: &[Uuid], ticket: Uuid, subject: &str) {

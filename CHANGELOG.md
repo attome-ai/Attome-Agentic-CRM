@@ -781,6 +781,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `ATTOME_LISTEN_PROTOCOL_INFO` (Windows, the base64 `WSAPROTOCOL_INFOW` from
   `WSADuplicateSocketW`, or `-` to read it from stdin) is set, so a supervisor can hand the same
   socket to the next version; otherwise it binds as before.
+- On-call calendar (H7-T2): `GET /api/v1/service/oncall/schedules/{id}/calendar?from&to` answers who
+  is on call on a schedule over up to 62 days, stretch by stretch, from the rotation or an override,
+  and the Service > On-call screen (`service/oncall`) shows it a week at a time in English and Arabic,
+  with links to the schedule's layers and overrides.
 - Reference code mappings (L1-T8): `POST /api/v1/admin/data/code-maps` maps a source system's code
   in one of its code lists to the value stored here, always as a new version; earlier versions are
   kept and `GET /api/v1/admin/data/code-maps` lists the mappings in effect, or with `history=true`

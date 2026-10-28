@@ -626,6 +626,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/service').then(m => m.MyQueuesComponent),
           },
           {
+            // H7-T2: who is on call each day of a week, by schedule.
+            path: 'service/oncall',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/service').then(m => m.OncallCalendarComponent),
+          },
+          {
             // AI7-T6: the tickets handed to me or my queues.
             path: 'service/handoffs',
             canActivate: [authGuard],

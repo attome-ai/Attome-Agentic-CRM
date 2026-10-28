@@ -982,6 +982,12 @@ export const xrmEn = {
   },
   // AI7-T6 — ticket hand-offs between agents and people.
   // G4-T3 — my queues.
+  oncallCalendar: {
+    title: 'On-call calendar', actions: 'On-call calendar actions', schedule: 'Schedule',
+    previous: 'Previous week', thisWeek: 'This week', next: 'Next week',
+    layers: 'Rotation layers', overrides: 'Overrides', override: 'Override', layer: 'Layer {n}',
+    nobody: 'Nobody on call.', noSchedules: 'There is no on-call schedule yet.',
+  },
   myQueues: {
     title: 'My queues', actions: 'Queue item actions', selected: '{count} selected',
     pick: 'Pick', release: 'Release', transfer: 'Transfer', transferTo: 'Transfer to queue',

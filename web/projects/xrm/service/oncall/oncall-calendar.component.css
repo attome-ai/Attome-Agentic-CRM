@@ -1,0 +1,26 @@
+:host { display: block; padding-block: 1rem; padding-inline: 1rem; }
+
+.oc { display: flex; flex-direction: column; gap: 0.75rem; max-inline-size: 64rem; }
+
+.oc h2 { margin-block: 0; font-size: 1.125rem; }
+
+.oc h3 { margin-block: 0; font-size: 0.9375rem; }
+
+.oc-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+
+.oc-days { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+
+.oc-day { padding-block: 0.5rem; border-block-end: 1px solid var(--color-border); }
+
+.oc-day ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.25rem; }
+
+.oc-day ul li { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: baseline; }
+
+/* Times read left to right in both languages. */
+.oc-time { font-variant-numeric: tabular-nums; unicode-bidi: isolate; direction: ltr; }
+
+.oc-tag { font-weight: 600; }
+
+.oc-muted { color: var(--color-text-muted); }
+
+.oc-error { color: var(--color-danger); }

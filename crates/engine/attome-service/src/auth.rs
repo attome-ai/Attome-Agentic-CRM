@@ -54,6 +54,16 @@ impl PrivilegeKey for OfferingUpdate {
     const KEY: &'static str = "service_offering.update";
 }
 
+/// `oncall_schedule.read` — the on-call calendar's compile-time policy
+/// (H7-T2); the route also reads the schedule record itself, so record-level
+/// access applies.
+#[derive(Debug)]
+pub struct OncallScheduleRead;
+
+impl PrivilegeKey for OncallScheduleRead {
+    const KEY: &'static str = "oncall_schedule.read";
+}
+
 /// `service_ticket.read` — M85's `timeline::ticket_timeline` compile-time policy.
 /// A read-only route, unlike `TicketUpdate` above; the entity-level gate here
 /// only proves the caller may read tickets at all — `timeline::build_timeline`

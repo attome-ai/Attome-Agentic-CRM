@@ -897,6 +897,12 @@ export const xrmAr = {
   },
   // AI7-T6 — تحويل التذاكر بين الوكلاء والموظفين.
   // G4-T3 — قوائم الانتظار.
+  oncallCalendar: {
+    title: 'تقويم المناوبة', actions: 'إجراءات تقويم المناوبة', schedule: 'الجدول',
+    previous: 'الأسبوع السابق', thisWeek: 'هذا الأسبوع', next: 'الأسبوع التالي',
+    layers: 'طبقات التناوب', overrides: 'الاستبدالات', override: 'استبدال', layer: 'الطبقة {n}',
+    nobody: 'لا أحد في المناوبة.', noSchedules: 'لا يوجد جدول مناوبة بعد.',
+  },
   myQueues: {
     title: 'قوائم الانتظار', actions: 'إجراءات عناصر قوائم الانتظار', selected: 'تم تحديد {count}',
     pick: 'استلام', release: 'إعادة', transfer: 'نقل', transferTo: 'النقل إلى قائمة',
