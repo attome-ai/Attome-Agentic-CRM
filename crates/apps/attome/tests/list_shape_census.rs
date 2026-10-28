@@ -48,7 +48,13 @@ use std::path::{Path, PathBuf};
 /// handlers. The ratchet still only goes down from here.
 ///
 /// 29 (2026-10-16): the MFA coverage summary, an exemption below.
-const MAX_BARE_LIST_HANDLERS: usize = 29;
+///
+/// 37 (2026-10-28): eight handlers added since, every one bounded by what it
+/// answers rather than by record volume, each an exemption below: the
+/// sightings of one year, a legal hold's newly added custodians, a group
+/// trial balance, the built-in role templates, live and own adherence, and a
+/// person's own schedule and preferences.
+const MAX_BARE_LIST_HANDLERS: usize = 37;
 
 /// Handler return-type signatures that are a *deliberate* exception to the
 /// `PaginatedResponse<T>` rule, not backlog — this scan still counts them
@@ -69,10 +75,30 @@ const MAX_BARE_LIST_HANDLERS: usize = 29;
 /// - `attome-security/src/admin/mfa_coverage.rs::coverage_summary` — an
 ///   aggregate, one row per role plus one for users with no role: bounded by
 ///   the role count, not by records, and meaningless split across pages.
+/// - `attome-api/src/calendar_admin.rs::list_sightings` (Z12-T5) — one row
+///   per sighted holiday rule expected in one Gregorian year (its other two
+///   bare lists, holidays and exceptions, are backlog counted since v1).
+/// - `attome-compliance/src/legal_hold_admin.rs::add_custodians` — echoes
+///   the custodians this request added, bounded by the request.
+/// - `attome-ledger/src/intercompany.rs::get_group_trial_balance` — an
+///   aggregate, one row per account, meaningless split across pages.
+/// - `attome-security/src/admin/role_templates.rs::list_templates` — the
+///   templates built into the binary, a fixed list.
+/// - `attome-workforce/src/adherence.rs` — `get_live`, one row per group
+///   member for the last five minutes; `get_mine`, the caller's last 31 days.
+/// - `attome-workforce/src/self_service.rs` — `get_my_schedule`, the caller's
+///   own shifts in at most two months; `put_my_preferences`, the caller's
+///   own preferences, at most one per weekday.
 const EXEMPT_BARE_LIST_HANDLERS: &[&str] = &[
     "attome-security/src/admin/role_grant_conditions.rs",
     "attome-api/src/sidebar.rs",
     "attome-security/src/admin/mfa_coverage.rs",
+    "attome-api/src/calendar_admin.rs",
+    "attome-compliance/src/legal_hold_admin.rs",
+    "attome-ledger/src/intercompany.rs",
+    "attome-security/src/admin/role_templates.rs",
+    "attome-workforce/src/adherence.rs",
+    "attome-workforce/src/self_service.rs",
 ];
 
 /// Every non-test, non-target `.rs` file under `crates/`.
