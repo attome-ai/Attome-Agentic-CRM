@@ -191,11 +191,11 @@ pub(crate) async fn apply_mapping_to_record(
         let Some(raw_value) = source_obj.get(&field.source) else {
             continue;
         };
-        let mapped;
+        let code_mapped;
         let raw_value = match &field.code_map {
             Some(codes) => {
-                mapped = map_cell(db, field, codes, raw_value).await?;
-                &mapped
+                code_mapped = map_cell(db, field, codes, raw_value).await?;
+                &code_mapped
             }
             None => raw_value,
         };

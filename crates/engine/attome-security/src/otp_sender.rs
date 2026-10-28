@@ -11,6 +11,7 @@ use uuid::Uuid;
 
 /// The platform's sender: email in `lang` (`ar` for Arabic, else English),
 /// carrying the deployment's email brand.
+#[derive(Debug)]
 pub struct PlatformOtpSender<'a> {
     pub db: &'a DbPool,
     /// The frontend URL the email brand is read for.
