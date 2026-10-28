@@ -60,13 +60,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if git diff --quiet -- openapi.json web/projects/base/src/lib/generated web/projects/sdk/src/lib/generated; then
+          if git diff --quiet -- openapi.json openapi.ar.json web/projects/base/src/lib/generated web/projects/sdk/src/lib/generated; then
             echo "the API contract is current"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add openapi.json web/projects/base/src/lib/generated web/projects/sdk/src/lib/generated
+          git add openapi.json openapi.ar.json web/projects/base/src/lib/generated web/projects/sdk/src/lib/generated
           git commit -m "chore(api): regenerate openapi.json and api-types"
           # npm ci and the build can touch tracked files the contract does not
           # own; set them aside so the rebase onto a newer main can run.

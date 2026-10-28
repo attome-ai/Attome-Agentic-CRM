@@ -169,6 +169,30 @@ fn findings(document: &Value) -> BTreeSet<String> {
     out
 }
 
+/// S2-T11: every operation the Arabic catalog names exists, so a renamed
+/// or removed operation cannot leave a stale translation behind.
+#[test]
+fn arabic_catalog_keys_are_real_operation_ids() {
+    let document = document();
+    let ids: BTreeSet<String> = operations(&document)
+        .iter()
+        .filter_map(|(_, _, op)| op.get("operationId").and_then(Value::as_str))
+        .map(str::to_owned)
+        .collect();
+    let catalog: Value =
+        serde_json::from_str(attome::openapi::ARABIC_CATALOG).expect("the Arabic catalog parses");
+    let stale: Vec<&String> = catalog["operations"]
+        .as_object()
+        .expect("an operations object")
+        .keys()
+        .filter(|key| !ids.contains(*key))
+        .collect();
+    assert!(
+        stale.is_empty(),
+        "catalog keys that are no operationId: {stale:?}"
+    );
+}
+
 fn baseline() -> BTreeSet<String> {
     let text = std::fs::read_to_string(baseline_path()).expect("the lint baseline is readable");
     serde_json::from_str::<Vec<String>>(&text)

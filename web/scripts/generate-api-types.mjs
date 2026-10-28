@@ -178,6 +178,30 @@ if (specArg >= 0) {
   );
 }
 
+// S2-T11: the Arabic parallel document, from the translation catalog: the
+// summaries, descriptions and tag descriptions it has, nothing else.
+const AR_CATALOG = join(ROOT, 'docs', 'api', 'openapi-ar.catalog.json');
+const SPEC_AR = join(ROOT, 'openapi.ar.json');
+if (existsSync(AR_CATALOG)) {
+  const catalog = JSON.parse(readFileSync(AR_CATALOG, 'utf8'));
+  const doc = JSON.parse(readFileSync(SPEC, 'utf8'));
+  let translated = 0;
+  for (const item of Object.values(doc.paths ?? {})) {
+    for (const op of Object.values(item)) {
+      const text = op && typeof op === 'object' ? catalog.operations?.[op.operationId] : undefined;
+      if (!text) continue;
+      if (text.summary) op.summary = text.summary;
+      if (text.description) op.description = text.description;
+      translated += 1;
+    }
+  }
+  for (const tag of doc.tags ?? []) {
+    if (catalog.tags?.[tag.name]) tag.description = catalog.tags[tag.name];
+  }
+  writeFileSync(SPEC_AR, `${JSON.stringify(doc, null, 2)}\n`, { encoding: 'utf8' });
+  console.log(`openapi.ar.json <- ${translated} operations in Arabic`);
+}
+
 mkdirSync(dirname(OUT), { recursive: true });
 // Invoked through `node <cli.js>` rather than `npx openapi-typescript`: it uses
 // the version pinned in package-lock.json instead of whatever npx resolves, and

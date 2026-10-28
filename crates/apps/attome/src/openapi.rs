@@ -384,6 +384,81 @@ pub fn document() -> Arc<utoipa::openapi::OpenApi> {
     Arc::clone(&DOCUMENT)
 }
 
+/// S2-T11: the Arabic catalog for the document: `operations` keyed by
+/// operationId with `summary` and optional `description`, and `tags` keyed
+/// by tag name. An operation it does not list stays English.
+pub const ARABIC_CATALOG: &str = include_str!("../../../../docs/api/openapi-ar.catalog.json");
+
+/// S2-T11: `document` with the summaries, descriptions and tag descriptions
+/// `catalog` has in Arabic; operationIds, paths and schema names are never
+/// touched. Pure.
+pub fn localize(document: &mut serde_json::Value, catalog: &serde_json::Value) {
+    let operations = catalog
+        .get("operations")
+        .and_then(serde_json::Value::as_object);
+    if let (Some(paths), Some(operations)) = (
+        document
+            .get_mut("paths")
+            .and_then(serde_json::Value::as_object_mut),
+        operations,
+    ) {
+        for item in paths.values_mut() {
+            let Some(item) = item.as_object_mut() else {
+                continue;
+            };
+            for op in item.values_mut() {
+                let Some(id) = op.get("operationId").and_then(serde_json::Value::as_str) else {
+                    continue;
+                };
+                let Some(text) = operations.get(id) else {
+                    continue;
+                };
+                for field in ["summary", "description"] {
+                    if let Some(value) = text.get(field).and_then(serde_json::Value::as_str) {
+                        op[field] = serde_json::Value::String(value.to_owned());
+                    }
+                }
+            }
+        }
+    }
+    let tags = catalog.get("tags").and_then(serde_json::Value::as_object);
+    if let (Some(list), Some(tags)) = (
+        document
+            .get_mut("tags")
+            .and_then(serde_json::Value::as_array_mut),
+        tags,
+    ) {
+        for tag in list {
+            let name = tag
+                .get("name")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_owned);
+            if let Some(text) = name
+                .and_then(|n| tags.get(&n))
+                .and_then(serde_json::Value::as_str)
+            {
+                tag["description"] = serde_json::Value::String(text.to_owned());
+            }
+        }
+    }
+}
+
+static ARABIC: LazyLock<serde_json::Value> = LazyLock::new(|| {
+    serde_json::from_str(ARABIC_CATALOG).unwrap_or_else(|error| {
+        tracing::error!(%error, "the Arabic API catalog does not parse; the document stays English");
+        serde_json::Value::Null
+    })
+});
+
+/// S2-T11: which language the document is in.
+#[derive(Debug, serde::Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct DocumentQuery {
+    /// `ar` for the Arabic summaries where the catalog has them; anything
+    /// else, or none, is English.
+    pub lang: Option<String>,
+}
+
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(openapi_json))]
 struct SelfDoc;
@@ -395,8 +470,13 @@ struct SelfDoc;
     summary = "This API's own OpenAPI 3.1 document, as this caller may use it",
     description = "Only the operations of the modules switched on here, and none under \
         `/api/v1/admin` for a caller who is not an administrator (S2-T14). Send the \
-        `ETag` back in `If-None-Match` to get a 304 while nothing has changed.",
-    params(("If-None-Match" = Option<String>, Header, description = "The ETag of a document the client holds")),
+        `ETag` back in `If-None-Match` to get a 304 while nothing has changed. With \
+        `lang=ar` the summaries and tag descriptions are Arabic where the catalog has \
+        them (S2-T11).",
+    params(
+        ("If-None-Match" = Option<String>, Header, description = "The ETag of a document the client holds"),
+        DocumentQuery,
+    ),
     responses(
         (status = 200, description = "The generated OpenAPI 3.1 document, filtered for the caller"),
         (status = 304, description = "Unchanged since the ETag in If-None-Match"),
@@ -408,11 +488,17 @@ async fn openapi_json(
     State(state): State<EngineState>,
     ctx: Authorized<SelfService>,
     headers: HeaderMap,
+    axum::extract::Query(query): axum::extract::Query<DocumentQuery>,
 ) -> Result<Response, AppError> {
     let modules = state.modules.load();
     let enabled: BTreeSet<String> = modules.names().map(str::to_owned).collect();
     let is_admin = ctx.is_admin;
-    let etag = crate::openapi_filter::etag(env!("CARGO_PKG_VERSION"), &enabled, is_admin);
+    let arabic = query.lang.as_deref() == Some("ar");
+    let mut etag = crate::openapi_filter::etag(env!("CARGO_PKG_VERSION"), &enabled, is_admin);
+    if arabic {
+        // A different document, so a different validator and cache entry.
+        etag = format!("{}-ar\"", etag.trim_end_matches('"'));
+    }
     let etag_header = HeaderValue::from_str(&etag).map_err(AppError::internal)?;
     let unchanged = headers
         .get(header::IF_NONE_MATCH)
@@ -423,7 +509,11 @@ async fn openapi_json(
     }
     let full = serde_json::to_value(&*document()).map_err(AppError::internal)?;
     let filtered = crate::openapi_filter::cached(&etag, || {
-        crate::openapi_filter::filter_document(&full, &enabled, is_admin)
+        let mut doc = crate::openapi_filter::filter_document(&full, &enabled, is_admin);
+        if arabic {
+            localize(&mut doc, &ARABIC);
+        }
+        doc
     });
     Ok(([(header::ETAG, etag_header)], Json(filtered)).into_response())
 }
@@ -434,6 +524,38 @@ pub fn routes() -> Router<EngineState> {
 
 #[cfg(test)]
 mod tests {
+    /// S2-T11: the catalog's text replaces summaries, descriptions and tag
+    /// descriptions, and nothing else.
+    #[test]
+    fn arabic_catalog_replaces_only_text() {
+        let mut doc = serde_json::json!({
+            "tags": [{ "name": "entity", "description": "Records" }],
+            "paths": { "/api/v1/{entity}": {
+                "get": { "operationId": "list_records", "summary": "List records", "tags": ["entity"] },
+                "post": { "operationId": "create_record", "summary": "Create a record" }
+            }}
+        });
+        let catalog = serde_json::json!({
+            "tags": { "entity": "السجلات" },
+            "operations": { "list_records": { "summary": "عرض السجلات" } }
+        });
+        super::localize(&mut doc, &catalog);
+        let get = &doc["paths"]["/api/v1/{entity}"]["get"];
+        assert_eq!(get["summary"], "عرض السجلات");
+        assert_eq!(get["operationId"], "list_records");
+        assert_eq!(
+            doc["paths"]["/api/v1/{entity}"]["post"]["summary"],
+            "Create a record"
+        );
+        assert_eq!(doc["tags"][0]["description"], "السجلات");
+        let parsed: serde_json::Value = serde_json::from_str(super::ARABIC_CATALOG).unwrap();
+        assert!(
+            parsed["operations"]
+                .as_object()
+                .is_some_and(|o| !o.is_empty())
+        );
+    }
+
     /// S2-T8: the version is the release's, not a placeholder.
     #[test]
     fn document_version_is_package_version() {
