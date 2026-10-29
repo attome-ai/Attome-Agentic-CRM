@@ -47687,7 +47687,7 @@
             "api_key": []
           }
         ],
-        "x-cache": "private-revalidate",
+        "x-cache": "no-store",
         "x-idempotent": "natural",
         "x-module": "core",
         "x-privilege": "admin",
@@ -239788,7 +239788,6 @@
     }
   ],
   "x-api-version": "2026-10",
-  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -239840,5 +239839,6 @@
         ]
       }
     }
-  }
+  },
+  "x-version-adapters": []
 }

@@ -35602,7 +35602,7 @@
             "api_key": []
           }
         ],
-        "x-cache": "private-revalidate",
+        "x-cache": "no-store",
         "x-idempotent": "natural",
         "x-module": "core",
         "x-privilege": "admin",
