@@ -3268,3 +3268,97 @@ async fn compare_lists_entered_and_left_records() {
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
 }
+
+// ── P7-T9: each listed record's trail ───────────────────────────────────────
+
+/// A deal an agent last changed carries that agent's session as its trail's
+/// run; every listed record links its timeline.
+#[tokio::test]
+async fn records_carry_trail_with_agent_run() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let (admin_id, admin_cookie) = seed_user(&system, true).await;
+    let db = system.state().base.db.clone();
+    let (deals, _) = provision_deals(&system).await;
+    let by_agent = insert_deal(
+        &db,
+        &deals,
+        Some("won"),
+        5.0,
+        "2025-02-10T10:00:00Z",
+        None,
+        Some(true),
+    )
+    .await;
+    let by_person = insert_deal(
+        &db,
+        &deals,
+        Some("won"),
+        6.0,
+        "2025-02-11T10:00:00Z",
+        None,
+        Some(true),
+    )
+    .await;
+    let session = Uuid::now_v7();
+    for (record, initiator, agent) in [(by_agent, 1_i16, Some(session)), (by_person, 0_i16, None)] {
+        let header: Uuid = sqlx::query_scalar(
+            "INSERT INTO audit_header \
+             (entity_name, record_id, category, operation, event_hash, changed_on, initiator, agent_session_id) \
+             VALUES ($1, $2, 1, 2, 'test-only-placeholder', now(), $3, $4) RETURNING id",
+        )
+        .bind(&deals)
+        .bind(record)
+        .bind(initiator)
+        .bind(agent)
+        .fetch_one(&db)
+        .await
+        .expect("audit header");
+        sqlx::query(
+            "INSERT INTO audit_detail (audit_ref, field_name, old_value, new_value) \
+             VALUES ($1, 'status', 'open', 'won')",
+        )
+        .bind(header)
+        .execute(&db)
+        .await
+        .expect("audit detail");
+    }
+    let chart = build_data_dashboard(
+        &db,
+        admin_id,
+        &json!({ "data": {
+            "source": deals,
+            "measures": [{ "aggregation": "count" }],
+            "group": { "field": "status" },
+            "filters": [{ "field": "status", "op": "eq", "value": "won" }]
+        }}),
+    )
+    .await;
+    let app = full_app(system);
+    publish(&app, &admin_cookie, chart.dashboard_id, &db).await;
+
+    let (status, body) = widget_route(
+        &app,
+        &admin_cookie,
+        &chart,
+        "records",
+        json!({ "bucket_key": { "kind": "value", "value": "won" } }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let trails = body["trails"].as_array().unwrap();
+    let trail = |id: Uuid| {
+        trails
+            .iter()
+            .find(|t| t["record_id"] == json!(id))
+            .unwrap_or_else(|| panic!("a trail for {id}: {body}"))
+            .clone()
+    };
+    let agent_trail = trail(by_agent);
+    assert_eq!(agent_trail["agent_run_id"], json!(session), "{body}");
+    assert!(agent_trail["last_change_audit_id"].is_string(), "{body}");
+    assert_eq!(
+        agent_trail["timeline_url"],
+        format!("/api/v1/{deals}/{by_agent}/timeline")
+    );
+    assert!(trail(by_person)["agent_run_id"].is_null(), "{body}");
+}

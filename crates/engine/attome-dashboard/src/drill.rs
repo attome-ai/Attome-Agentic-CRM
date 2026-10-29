@@ -114,6 +114,79 @@ pub struct WidgetRecordsResponse {
     /// the click sets; absent when the widget has no `drill_through`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub drill_through: Option<ResolvedDrillThrough>,
+    /// P7-T9: each listed record's trail, in the rows' order.
+    pub trails: Vec<RecordTrail>,
+}
+
+/// P7-T9: where a listed record came from: its timeline, the last change
+/// to a field the widget filters on, and the agent session when an agent
+/// made that change.
+#[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
+pub struct RecordTrail {
+    pub record_id: Uuid,
+    pub timeline_url: String,
+    pub last_change_audit_id: Option<Uuid>,
+    /// The agent session (`audit_header.agent_session_id`) whose run made
+    /// that change; absent when a person or the system made it.
+    pub agent_run_id: Option<Uuid>,
+}
+
+/// P7-T9: the trails of a page of records, in one query: the newest audit
+/// header per record that touched one of `fields` (any field when the
+/// widget filters on none).
+async fn record_trails(
+    state: &EngineState,
+    records: &StructuredRecords,
+    applied: &[AppliedFilter],
+) -> Result<Vec<RecordTrail>, AppError> {
+    let ids: Vec<Uuid> = records
+        .rows
+        .iter()
+        .filter_map(|r| r.get("id").and_then(Value::as_str))
+        .filter_map(|s| Uuid::parse_str(s).ok())
+        .collect();
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut fields: Vec<String> = applied.iter().map(|a| a.filter.field.clone()).collect();
+    fields.sort();
+    fields.dedup();
+    let rows: Vec<(Uuid, Uuid, i16, Option<Uuid>)> = sqlx::query_as(
+        "SELECT DISTINCT ON (h.record_id) h.record_id, h.id, h.initiator::int2, h.agent_session_id \
+         FROM audit_header h \
+         WHERE h.entity_name = $1 AND h.record_id = ANY($2) \
+           AND (cardinality($3::text[]) = 0 OR EXISTS ( \
+                SELECT 1 FROM audit_detail d WHERE d.audit_ref = h.id AND d.field_name = ANY($3))) \
+         ORDER BY h.record_id, h.changed_on DESC NULLS LAST, h.id DESC",
+    )
+    .bind(&records.entity_logical_name)
+    .bind(&ids)
+    .bind(&fields)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let latest: BTreeMap<Uuid, (Uuid, Option<Uuid>)> = rows
+        .into_iter()
+        .map(|(record, audit, initiator, session)| {
+            // `Initiator::Agent` is 1 (attome_audit::initiator).
+            (record, (audit, session.filter(|_| initiator == 1)))
+        })
+        .collect();
+    Ok(ids
+        .into_iter()
+        .map(|id| {
+            let (audit, agent) = latest
+                .get(&id)
+                .copied()
+                .map_or((None, None), |(a, s)| (Some(a), s));
+            RecordTrail {
+                record_id: id,
+                timeline_url: format!("/api/v1/{}/{id}/timeline", records.entity_logical_name),
+                last_change_audit_id: audit,
+                agent_run_id: agent,
+            }
+        })
+        .collect())
 }
 
 /// P7-T6: the widget config key sending a click elsewhere.
@@ -374,6 +447,7 @@ async fn widget_records(
             chart.as_ref().and_then(|c| c.group_by_field.as_deref()),
             &inputs,
         )?;
+        let trails = record_trails(&state, &records, &applied_filters).await?;
         return Ok(Json(WidgetRecordsResponse {
             widget_id: wc.widget_id,
             drillability: wc.drillability,
@@ -390,6 +464,7 @@ async fn widget_records(
             metric_parity: None,
             some_records_hidden: false,
             drill_through,
+            trails,
         }));
     }
     // P7-T2: a builder metric's KPI lists the records its definition counts
@@ -397,6 +472,7 @@ async fn widget_records(
     if wc.data_class == DataClass::Kpi {
         let (records, applied_filters, parity, some_records_hidden) =
             metric_records(&state, &ctx, &wc, &inputs).await?;
+        let trails = record_trails(&state, &records, &applied_filters).await?;
         return Ok(Json(WidgetRecordsResponse {
             widget_id: wc.widget_id,
             drillability: wc.drillability,
@@ -413,6 +489,7 @@ async fn widget_records(
             metric_parity: Some(parity),
             some_records_hidden,
             drill_through: click_target(&wc.config, None, None, &inputs)?,
+            trails,
         }));
     }
     let plan = structured_plan(&state, &wc)?;
@@ -461,6 +538,7 @@ async fn widget_records(
         plan.data.series.as_deref(),
         &inputs,
     )?;
+    let trails = record_trails(&state, &records, &applied_filters).await?;
     Ok(Json(WidgetRecordsResponse {
         widget_id: wc.widget_id,
         drillability: wc.drillability,
@@ -477,6 +555,7 @@ async fn widget_records(
         some_records_hidden: false,
         parity,
         drill_through,
+        trails,
     }))
 }
 

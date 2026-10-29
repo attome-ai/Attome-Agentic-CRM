@@ -62,6 +62,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Record trails in drills (P7-T9): the records route's answer gains `trails`, one per listed record
+  in the rows' order: its `timeline_url`, the `last_change_audit_id` of the newest change to a field
+  the widget filters on (any field when it filters on none), and `agent_run_id`, the agent session,
+  when an agent made that change. One query per page.
 - Comparing periods (P7-T8): `POST /api/v1/attome-dashboard/{id}/widgets/{widget_id}/compare` with
   `period_a` and `period_b` (`{from, to}`) lists, for a chart grouped by a date, the records that
   entered (in B and not in A) and left (in A and not in B), paged by id, and, for records in both,
