@@ -62,6 +62,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Related columns in lists and views (A13-T1): `select` in `POST /api/v1/query/execute`, and a
+  view's columns, may name a field of a related record through one or two lookups
+  (`account_ref.industry`, `account_ref.owner_ref.name`). The value is read for the page with
+  the caller's access to the related record and field: one the caller may not read, a deleted
+  one or an empty lookup reads as null, and a path through a field the caller may not read is
+  refused like an unknown attribute. A related column is shown, not filtered, sorted or searched
+  on. A view's own query must return the first lookup.
 - Rollup fields, definition (A10-T1): a new `rollup` field type (code 23) holds a value computed
   from related records. Its options name the function (`count`, `distinct_count`, `sum`, `min`,
   `max`, `avg`, `first`, `last`), the path to the related records (one to three steps, each an

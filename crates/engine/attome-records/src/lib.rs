@@ -84,6 +84,8 @@ pub mod query_admin;
 pub mod query_exec;
 pub mod query_spec;
 pub mod rejection_log;
+/// A13-T1: list and view columns read through lookups.
+pub mod related_columns;
 pub mod rule_engine;
 pub mod rw_pin;
 pub mod stage_move;

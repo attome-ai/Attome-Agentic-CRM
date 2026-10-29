@@ -108,7 +108,8 @@ pub struct ExecuteQueryRequest {
     /// S1-T1: the attributes to return, in this order; `id` is always
     /// included. Absent returns the query's full column list. A name the
     /// query does not return, or one the caller may not read, is the same
-    /// 422 `unknown attribute`.
+    /// 422 `unknown attribute`. A13-T1: a name may follow one or two lookups
+    /// (`account_ref.industry`) to read a related record's field.
     #[serde(default)]
     select: Option<Vec<String>>,
     /// L7-T4: a delta token from an earlier answer, or `latest` for a first
@@ -975,6 +976,70 @@ async fn attach_lookup_display_names(
             }
         }
     }
+}
+
+/// A13-T1: resolves the related columns a view declares and a `select`
+/// names, fills their values on `records` and describes them in `columns`.
+/// A requested path the caller may not follow is the caller's error, as an
+/// unknown attribute is; a view's own related column the caller may not
+/// follow is left out of the answer.
+async fn attach_related_columns(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_id: Uuid,
+    select: Option<&[String]>,
+    columns: &mut Vec<ColumnDef>,
+    records: &mut [Value],
+) -> Result<(), AppError> {
+    use crate::related_columns::{self, RelatedColumn};
+    let mut paths: Vec<String> = columns
+        .iter()
+        .filter(|c| related_columns::is_path(&c.name))
+        .map(|c| c.name.clone())
+        .collect();
+    for name in select.unwrap_or_default() {
+        if related_columns::is_path(name) && !paths.contains(name) {
+            paths.push(name.clone());
+        }
+    }
+    if paths.is_empty() {
+        return Ok(());
+    }
+    let mut related: Vec<RelatedColumn> = Vec::with_capacity(paths.len());
+    for path in &paths {
+        match related_columns::resolve(state, ctx, entity_id, path) {
+            Ok(column) => related.push(column),
+            Err(e) if select.is_some_and(|names| names.contains(path)) => return Err(e),
+            Err(_) => {}
+        }
+    }
+    related_columns::fill(state, ctx, &related, records).await?;
+    columns
+        .retain(|c| !related_columns::is_path(&c.name) || related.iter().any(|r| r.path == c.name));
+    for r in &related {
+        if let Some(column) = columns.iter_mut().find(|c| c.name == r.path) {
+            column.data_type.clone_from(&r.data_type);
+            column.is_sortable = false;
+            column.is_searchable = false;
+            column
+                .lookup_target_entity
+                .clone_from(&r.lookup_target_entity);
+        } else {
+            columns.push(ColumnDef {
+                name: r.path.clone(),
+                display_name: r.path.clone(),
+                data_type: r.data_type.clone(),
+                is_visible: true,
+                is_sortable: false,
+                is_searchable: false,
+                is_clickable: false,
+                route_template: String::new(),
+                lookup_target_entity: r.lookup_target_entity.clone(),
+                choice_styles: None,
+            });
+        }
+    }
+    Ok(())
 }
 
 /// Declared `logicalName`s from `table_definition` — used as the identifier
@@ -2426,7 +2491,18 @@ pub async fn execute_stored_query_with_definition(
             .as_deref()
             .and_then(|s| serde_json::from_str(s).ok()),
     };
-    let td_names: Option<Vec<String>> = td_json.as_ref().and_then(table_definition_names);
+    // A13-T1: a related column (`account_ref.industry`) is read after the
+    // query, so it is never an identifier the SQL below may name.
+    let td_names: Option<Vec<String>> = td_json
+        .as_ref()
+        .and_then(table_definition_names)
+        .map(|names| {
+            names
+                .into_iter()
+                .filter(|n| !crate::related_columns::is_path(n))
+                .collect::<Vec<_>>()
+        })
+        .filter(|names| !names.is_empty());
 
     let needs_validation =
         !body.search.is_empty() || !body.filters.is_empty() || !body.order_by.is_empty();
@@ -3048,6 +3124,20 @@ pub async fn execute_stored_query_with_definition(
         .into_iter()
         .filter(|column| !sensitive.contains(column.name.as_str()))
         .collect();
+    // A13-T1: related columns, from the view's definition and the select
+    // list, read for this page through the caller's access.
+    if let Some(entity_id) = qrow.entity_logical_name {
+        attach_related_columns(
+            state,
+            ctx,
+            entity_id,
+            select_names.as_deref(),
+            &mut columns,
+            &mut records,
+        )
+        .await?;
+    }
+
     // S1-T1: only the named columns, in the caller's order; a hidden column
     // is not in `columns`, so it reads as unknown, like a missing one.
     if let Some(names) = &select_names {
