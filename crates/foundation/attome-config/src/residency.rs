@@ -27,6 +27,8 @@ pub const COMPONENTS: &[&str] = &[
     "ai",
     "email",
     "traces",
+    // AB2-T9: the standby cluster in another region.
+    "standby",
 ];
 
 /// `residency`.
@@ -70,6 +72,8 @@ pub struct Facts<'a> {
     pub backup_enabled: bool,
     /// The audit anchor bucket, when one is configured.
     pub anchor_s3_region: Option<&'a str>,
+    /// AB2-T9: the standby cluster's region, when one is configured.
+    pub standby_region: Option<&'a str>,
 }
 
 /// The residency map: every component in use with its region.
@@ -96,6 +100,11 @@ pub fn map(section: &ResidencySection, facts: &Facts<'_>) -> Vec<Placement> {
                 "audit_anchor" => (
                     facts.anchor_s3_region.is_some(),
                     facts.anchor_s3_region.and_then(declared),
+                    false,
+                ),
+                "standby" => (
+                    facts.standby_region.is_some(),
+                    facts.standby_region.and_then(declared),
                     false,
                 ),
                 // Only what the operator names: a model provider, a mail relay
@@ -181,6 +190,7 @@ mod tests {
             storage_region: "me-central-1",
             backup_enabled: true,
             anchor_s3_region: None,
+            standby_region: None,
         }
     }
 

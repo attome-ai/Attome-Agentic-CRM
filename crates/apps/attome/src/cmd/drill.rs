@@ -14,9 +14,16 @@
 //!   is readable, and the size of the last backup, which a restore drill needs
 //!   twice over in free disk.
 //!
-//! The scenarios (`restore`, `failover`, `standby-promote`, `chaos`,
-//! `upgrade-check`) are arms of [`Command`] that later tasks fill in; until
-//! then they answer that the scenario is not in this build.
+//! - `attome drill standby-promote --cluster <name> --confirm <name>`
+//!   (AB2-T9) promotes the standby region configured in
+//!   `ops.standby_region`: both names must be the same and the standby's own
+//!   Patroni must report that scope, then `standby_cluster` is removed from
+//!   its configuration (`attome_ops::standby`). Only when the main region is
+//!   lost: `deploy/ha/README-standby.md`.
+//!
+//! The other scenarios (`restore`, `failover`, `chaos`, `upgrade-check`) are
+//! arms of [`Command`] that later tasks fill in; until then they answer that
+//! the scenario is not in this build.
 //!
 //! Exit codes: 0 ok, 1 usage, 2 bad signature, 3 drill failed (or the
 //! verified report says it failed), 4 not ready.
@@ -55,7 +62,8 @@ const USAGE: &str = "usage:
   attome drill keygen --out <dir>
   attome drill verify <file> [--public-key <file>]
   attome drill readiness [--config <path>]
-  attome drill <restore|failover|standby-promote|chaos|upgrade-check> ...";
+  attome drill standby-promote --cluster <name> --confirm <name>
+  attome drill <restore|failover|chaos|upgrade-check> ...";
 
 /// One parsed `attome drill` command.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -69,6 +77,10 @@ pub enum Command {
     },
     Readiness {
         config: Option<String>,
+    },
+    /// AB2-T9: promote the standby region.
+    StandbyPromote {
+        cluster: String,
     },
     /// A scenario: its name and its own arguments.
     Scenario {
@@ -98,6 +110,24 @@ pub fn parse(args: &[String]) -> Result<Command, String> {
         ["readiness", "--config", path] => Ok(Command::Readiness {
             config: Some((*path).to_owned()),
         }),
+        [
+            "standby-promote",
+            "--cluster",
+            cluster,
+            "--confirm",
+            confirm,
+        ]
+        | [
+            "standby-promote",
+            "--confirm",
+            confirm,
+            "--cluster",
+            cluster,
+        ] => attome_ops::standby::confirmed_cluster(cluster, confirm)
+            .map(|cluster| Command::StandbyPromote { cluster }),
+        ["standby-promote", ..] => {
+            Err("standby-promote needs --cluster <name> and --confirm <name>".into())
+        }
         [name, rest @ ..] if SCENARIOS.contains(name) => Ok(Command::Scenario {
             name: (*name).to_owned(),
             args: rest.iter().map(|a| (*a).to_owned()).collect(),
@@ -123,11 +153,64 @@ pub fn run(args: &[String]) -> ExitCode {
         Command::Keygen { out } => keygen(&out),
         Command::Verify { file, public_key } => verify(&file, public_key.as_deref()),
         Command::Readiness { config } => readiness(config),
+        Command::StandbyPromote { cluster } => standby_promote(&cluster),
         Command::Scenario { name, .. } => {
             eprintln!("attome drill: the `{name}` scenario is not in this build");
             EXIT_USAGE
         }
     })
+}
+
+/// AB2-T9: promotes `ops.standby_region` when `cluster` is its scope, as
+/// configured and as its own Patroni reports it.
+#[tokio::main]
+async fn standby_promote(cluster: &str) -> u8 {
+    let config = match AppConfig::from_file() {
+        Ok(config) => config,
+        Err(error) => {
+            eprintln!("attome drill: the configuration does not load: {error}");
+            return EXIT_NOT_READY;
+        }
+    };
+    let Some(standby) = config.ops.standby_region.as_ref() else {
+        eprintln!("attome drill: no standby region is configured (ops.standby_region)");
+        return EXIT_NOT_READY;
+    };
+    if standby.scope != cluster {
+        eprintln!(
+            "attome drill: {cluster} is not the configured standby ({}); nothing was changed",
+            standby.scope
+        );
+        return EXIT_USAGE;
+    }
+    match attome_ops::standby::patroni_scope(&standby.patroni_api_url).await {
+        Ok(scope) if scope == cluster => {}
+        Ok(scope) => {
+            eprintln!(
+                "attome drill: the Patroni at {} runs cluster {scope}, not {cluster}; nothing was changed",
+                standby.patroni_api_url
+            );
+            return EXIT_USAGE;
+        }
+        Err(error) => {
+            eprintln!("attome drill: the standby's Patroni did not answer: {error}");
+            return EXIT_NOT_READY;
+        }
+    }
+    match attome_ops::standby::promote(&standby.patroni_api_url).await {
+        Ok(()) => {
+            println!(
+                "standby cluster {cluster} ({}) is promoting: it no longer follows the main region \
+                 and will take writes once its leader is elected. Point the application at it.",
+                standby.region_code
+            );
+            EXIT_OK
+        }
+        Err(error) => {
+            eprintln!("attome drill: promotion failed: {error}");
+            EXIT_DRILL_FAILED
+        }
+    }
 }
 
 /// Writes a new key pair under `out`; never overwrites an existing key.
@@ -373,6 +456,46 @@ mod tests {
                 config: Some("c.json".into())
             })
         );
+    }
+
+    #[test]
+    fn promote_refuses_mismatched_confirmation() {
+        assert_eq!(
+            parse(&args(&[
+                "standby-promote",
+                "--cluster",
+                "attome-dr",
+                "--confirm",
+                "attome-dr"
+            ])),
+            Ok(Command::StandbyPromote {
+                cluster: "attome-dr".into()
+            })
+        );
+        assert_eq!(
+            parse(&args(&[
+                "standby-promote",
+                "--confirm",
+                "attome-dr",
+                "--cluster",
+                "attome-dr"
+            ])),
+            Ok(Command::StandbyPromote {
+                cluster: "attome-dr".into()
+            })
+        );
+        assert!(
+            parse(&args(&[
+                "standby-promote",
+                "--cluster",
+                "attome-dr",
+                "--confirm",
+                "attome"
+            ]))
+            .is_err()
+        );
+        assert!(parse(&args(&["standby-promote", "--cluster", "attome-dr"])).is_err());
+        assert!(parse(&args(&["standby-promote"])).is_err());
     }
 
     #[test]

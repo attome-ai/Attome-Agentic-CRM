@@ -2691,6 +2691,17 @@
           "default": "solo",
           "description": "AB3-T1: the deployment profile recovery targets are read for: `solo`,\n`team`, `ha` or `scale`.",
           "type": "string"
+        },
+        "standby_region": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StandbyRegion"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "AB2-T9: this deployment's standby cluster in another region, promoted by `attome drill standby-promote`. Its region must be listed in `residency.allowed_regions`."
         }
       },
       "type": "object"
@@ -3399,6 +3410,29 @@
           "type": "object"
         }
       },
+      "type": "object"
+    },
+    "StandbyRegion": {
+      "description": "AB2-T9: a standby cluster in another region, replicating the main one through Patroni's `standby_cluster`.",
+      "properties": {
+        "patroni_api_url": {
+          "description": "The standby's Patroni REST API (`http://dr-db1:8008`), where promotion is asked.",
+          "type": "string"
+        },
+        "region_code": {
+          "description": "The region the standby runs in (`sa-jeddah`), as `residency.allowed_regions` names regions.",
+          "type": "string"
+        },
+        "scope": {
+          "description": "The standby cluster's Patroni scope (its cluster name), typed twice to promote it.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "patroni_api_url",
+        "region_code",
+        "scope"
+      ],
       "type": "object"
     },
     "StatementClassOverrides": {

@@ -498,6 +498,9 @@ AB4-T1 — the reliability engine's settings (Patroni, recovery drills). Empty b
 | `ops.drill_signing_key_path` | string, optional | `null` |  | The private key that signs recovery-drill reports. |
 | `ops.patroni_api_urls` | array of string | `[]` |  | The Patroni REST API of each database node (`http://db1:8008`), for cluster status and switchover. Empty: no Patroni cluster. |
 | `ops.profile` | string | `"solo"` |  | AB3-T1: the deployment profile recovery targets are read for: `solo`, `team`, `ha` or `scale`. |
+| `ops.standby_region.patroni_api_url` | string |  |  | The standby's Patroni REST API (`http://dr-db1:8008`), where promotion is asked. |
+| `ops.standby_region.region_code` | string |  |  | The region the standby runs in (`sa-jeddah`), as `residency.allowed_regions` names regions. |
+| `ops.standby_region.scope` | string |  |  | The standby cluster's Patroni scope (its cluster name), typed twice to promote it. |
 
 ## `portal`
 

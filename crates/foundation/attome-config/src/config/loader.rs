@@ -34,6 +34,11 @@ impl AppConfig {
             storage_region: if s3 { &self.storage.s3_region } else { "" },
             backup_enabled: self.backup.enabled,
             anchor_s3_region: None,
+            standby_region: self
+                .ops
+                .standby_region
+                .as_ref()
+                .map(|s| s.region_code.as_str()),
         };
         crate::residency::map(&self.residency, &facts)
     }
@@ -751,6 +756,16 @@ impl AppConfig {
             && let Some((field, reason)) = self.sovereign_violations().into_iter().next()
         {
             return Err(ConfigError::Insecure { field, reason });
+        }
+        // AB2-T9 — a standby region must be listed as allowed.
+        if let Some(reason) = self
+            .ops
+            .standby_region_error(&self.residency.allowed_regions)
+        {
+            return Err(ConfigError::Insecure {
+                field: "ops.standby_region".into(),
+                reason,
+            });
         }
         // R7-T1 — a component outside the allowed regions stops boot.
         let residency = self.residency_violations();

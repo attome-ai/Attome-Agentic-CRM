@@ -36,6 +36,8 @@ pub mod model;
 pub mod public_status;
 /// AB3-T1: recovery targets per profile and scenario, with their proof.
 pub mod recovery_targets;
+/// AB2-T9: promoting the standby region.
+pub mod standby;
 /// AB2-T7: the cluster's status and failover history routes.
 pub mod status;
 /// AB11-T4: draft incidents for components that stay down.

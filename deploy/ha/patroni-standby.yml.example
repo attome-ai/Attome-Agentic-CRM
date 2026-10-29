@@ -1,0 +1,48 @@
+# AB2-T9: Patroni for the optional standby region. One file per standby
+# database node (change `name` and the connect addresses). The standby
+# cluster streams from the main cluster through its HAProxy write port and
+# accepts no writes until `attome drill standby-promote` removes
+# `standby_cluster` (deploy/ha/README-standby.md).
+#
+# Passwords never go in this file: Patroni reads them from the environment
+# (PATRONI_SUPERUSER_PASSWORD, PATRONI_REPLICATION_PASSWORD).
+
+scope: attome-dr              # the standby cluster's name: ops.standby_region.scope
+namespace: /service/
+name: dr-db1
+
+restapi:
+  listen: 0.0.0.0:8008
+  connect_address: dr-db1:8008   # ops.standby_region.patroni_api_url
+
+etcd3:
+  hosts: dr-etcd1:2379,dr-etcd2:2379,dr-etcd3:2379   # the standby region's own DCS
+
+bootstrap:
+  dcs:
+    ttl: 30
+    loop_wait: 10
+    retry_timeout: 10
+    maximum_lag_on_failover: 1048576
+    standby_cluster:
+      host: main-haproxy.example.internal   # the main cluster's HAProxy
+      port: 5000                            # its write (primary) port
+      create_replica_methods:
+        - basebackup
+    postgresql:
+      use_pg_rewind: true
+      parameters:
+        wal_level: replica
+        hot_standby: "on"
+        max_wal_senders: 10
+        max_replication_slots: 10
+
+postgresql:
+  listen: 0.0.0.0:5432
+  connect_address: dr-db1:5432
+  data_dir: /var/lib/postgresql/data
+  authentication:
+    superuser:
+      username: postgres
+    replication:
+      username: replicator   # the main cluster's replication user

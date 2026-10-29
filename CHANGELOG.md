@@ -59,6 +59,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- An optional standby region (AB2-T9): `ops.standby_region` (`region_code`, `patroni_api_url`,
+  `scope`) names a Patroni standby cluster in another region (`deploy/ha/patroni-standby.yml.example`,
+  `deploy/ha/README-standby.md`). Boot refuses it unless its region is in `residency.allowed_regions`.
+  `attome drill standby-promote --cluster <name> --confirm <name>` promotes it after checking both
+  names against the configuration and the standby's own Patroni.
+- Python, C# and Java SDKs for the record API and `query/execute`, generated from `openapi.json` with
+  Attome's layer for API keys, retries, idempotency keys and paging (S3-T1, `sdks/README.md`).
 - Dashboard data definitions can keep their result in an aggregate cache (`cache`:
   `{ "refresh": "on_change" | "scheduled", "max_age_seconds": 60-86400 }`) so a dashboard read does
   not scan the entity again (AA11-T1, migration 0331). Entries are keyed by the caller's exact
