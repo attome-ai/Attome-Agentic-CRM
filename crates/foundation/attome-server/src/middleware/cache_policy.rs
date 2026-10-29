@@ -58,6 +58,7 @@ pub static CACHE_CLASSES: &[(&str, &str, CacheClass)] = &[
 const NO_STORE_WORDS: &[&str] = &[
     "auth",
     "token",
+    "tokens",
     "api-key",
     "api-keys",
     "apikey",

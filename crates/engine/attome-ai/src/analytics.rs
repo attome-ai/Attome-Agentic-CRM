@@ -104,7 +104,8 @@ impl Window {
             .map(|s| {
                 Surface::parse(s).ok_or_else(|| {
                     AppError::Validation(
-                        "`surface` must be one of internal, webchat, mcp, workflow".into(),
+                        "`surface` must be one of internal, webchat, mcp, workflow, whatsapp, sms"
+                            .into(),
                     )
                 })
             })
@@ -569,8 +570,10 @@ mod tests {
             refused(Some(at("2025-01-01T00:00:00Z")), None, None),
             "over 366 days"
         );
-        assert!(refused(None, None, Some("sms")), "unknown surface");
+        assert!(refused(None, None, Some("fax")), "unknown surface");
         assert!(Window::resolve(None, None, Some("webchat"), now).is_ok());
+        // N18-T1: the channel bots' surfaces.
+        assert!(Window::resolve(None, None, Some("sms"), now).is_ok());
     }
 
     #[test]

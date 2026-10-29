@@ -52,6 +52,12 @@ pub fn with_database(url: &str, database: &str) -> Option<String> {
     })
 }
 
+/// `name` as a quoted PostgreSQL identifier: in double quotes, with every
+/// double quote inside doubled. Pure.
+fn quote_ident(name: &str) -> String {
+    format!("\"{}\"", name.replace('"', "\"\""))
+}
+
 /// The throwaway database's name for `label` (lowercase letters, digits and
 /// underscores only). Pure.
 pub fn database_name(label: &str) -> String {
@@ -102,7 +108,10 @@ impl Drop for Cleanup {
     fn drop(&mut self) {
         if let Err(error) = psql(
             &self.server_url,
-            &format!("DROP DATABASE IF EXISTS \"{}\" WITH (FORCE)", self.database),
+            &format!(
+                "DROP DATABASE IF EXISTS {} WITH (FORCE)",
+                quote_ident(&self.database)
+            ),
         ) {
             eprintln!(
                 "    upgrade_rehearsal: could not drop {}: {error}",
@@ -187,9 +196,15 @@ pub fn step(root: &Path) -> Result<(), String> {
 
     psql(
         &server_url,
-        &format!("DROP DATABASE IF EXISTS \"{database}\" WITH (FORCE)"),
+        &format!(
+            "DROP DATABASE IF EXISTS {} WITH (FORCE)",
+            quote_ident(&database)
+        ),
     )?;
-    psql(&server_url, &format!("CREATE DATABASE \"{database}\""))?;
+    psql(
+        &server_url,
+        &format!("CREATE DATABASE {}", quote_ident(&database)),
+    )?;
     let mut cleanup = Cleanup {
         root: root.to_path_buf(),
         server_url: server_url.clone(),

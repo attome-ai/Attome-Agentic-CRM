@@ -655,16 +655,25 @@ mod tests {
 
     #[test]
     fn rollup_definition_follows_two_hops_and_counts_without_attribute() {
+        let two_hops = json!([
+            { "entity": "opportunity", "via": "account_ref" },
+            { "entity": "opportunity_line", "via": "opportunity_ref" },
+        ]);
         check(json!({
             "function": "count",
-            "path": [
-                { "entity": "opportunity", "via": "account_ref" },
-                { "entity": "opportunity_line", "via": "opportunity_ref" },
-            ],
-            "mode": "exact",
+            "path": two_hops,
             "result_type": "number",
         }))
         .expect("valid");
+        // A10-T3: exact mode adjusts the parent in the child's own write, so
+        // it follows one lookup only.
+        let m = message(check(json!({
+            "function": "count",
+            "path": two_hops,
+            "mode": "exact",
+            "result_type": "number",
+        })));
+        assert!(m.contains("an exact rollup follows one lookup"), "{m}");
     }
 
     #[test]

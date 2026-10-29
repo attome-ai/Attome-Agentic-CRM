@@ -786,6 +786,14 @@ fn without_test_modules(text: &str) -> String {
     out
 }
 
+/// Source files whose routers are never mounted on the application: each
+/// serves its own socket, outside the API and its middleware.
+const NOT_APPLICATION_ROUTERS: &[(&str, &str)] = &[(
+    "crates/apps/attome/src/cmd/supervise.rs",
+    "AB7-T4: the supervisor's own control endpoint (POST /restart), bound to a \
+     loopback address and checked against its token file's secret",
+)];
+
 fn walk(dir: &Path, out: &mut Vec<(String, String)>) {
     let entries = std::fs::read_dir(dir).unwrap_or_else(|e| panic!("read_dir {dir:?}: {e}"));
     for entry in entries {
@@ -800,6 +808,13 @@ fn walk(dir: &Path, out: &mut Vec<(String, String)>) {
             }
             walk(&path, out);
         } else if path.extension().is_some_and(|e| e == "rs") {
+            let shown = path.display().to_string().replace('\\', "/");
+            if NOT_APPLICATION_ROUTERS
+                .iter()
+                .any(|(file, _)| shown.ends_with(file))
+            {
+                continue;
+            }
             let text =
                 std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path:?}: {e}"));
             let text = without_test_modules(&text);

@@ -1,4 +1,5 @@
 {
+  "_ops_comment": "ops (AB4-T1, the reliability engine) is left out: a single server needs none of it. A clustered deployment adds patroni_api_urls and the recovery-drill signing keys as in config.example.json.",
   "_einvoice_comment": "AG2 ZATCA e-invoicing ships dark (einvoice.enabled false), so it is left out here. A deployment that invoices in Saudi Arabia adds \"einvoice\": {\"enabled\": true, \"key_encryption_key\": \"${EINVOICE_KEY_ENCRYPTION_KEY}\"} with a 64-hex key of its own (D-069).",
   "_readme": "P-bootstrap-credential-scoping (D-204) — the `server`/`worker` counterpart to config.production.example.json. Identical to that file in every field EXCEPT database.password (see database._comment_password below): this variant never carries the schema-bootstrap/CREATE-ROLE-capable credential, because a long-lived server/worker container has no legitimate need to hold it once database.migrate_on_boot=false and database.migrator/.runtime are configured (D-148) — the dedicated one-shot `migrate` binary is the only process that uses config.production.example.json's full credential and DB_PASSWORD. Render THIS file (not config.production.example.json) as server/worker's config.json — docker-compose.yml's `x-config-volume-runtime` anchor mounts it as config.runtime.json. Copy to config.runtime.json, replace every \"__TODO__: ...\" placeholder with a real deployment value (identical values to whatever config.json's migrate-shaped render uses for the same fields — host, TLS paths, CORS origins, etc.), and set the referenced ${VAR}s in .env.runtime before boot. Same live-verification caveat as config.production.example.json: not booted against a live Postgres/Redis/S3 stack in the session that authored it — see document/DECISIONS.md's D-204 entry for what remains to be confirmed against real infrastructure. Config-surface reduction (item 23): pure internal tuning that no deployment ever varied was removed from the schema entirely and now lives as Rust constants — see config.example.json's _readme and document/DECISIONS.md for the full list.",
   "_events_comment": "Omitted: production keeps the ships-dark defaults (webhooks_enabled false). Enabling webhooks needs events.webhook_signing_key — see config.example.json's events block.",
@@ -15,6 +16,7 @@
   "_backup_comment": "Omitted: on a single server (cache.backend memory) the daily backup of the database and files runs with its defaults (02:00 UTC, 7 kept, next to the config file); several servers use pgBackRest or the database host. See config.example.json and docs/backup.md.",
   "_docgen_comment": "Omitted: document generation is off until docgen's render sidecar address is set (D-463); see config.example.json.",
   "app": {
+    "_tls_comment": "app.tls is left at its default (off): in production TLS ends at the nginx edge in front of the app (see nginx). Set tls only for a single node that terminates TLS itself.",
     "port": 8080,
     "server_host": "0.0.0.0",
     "frontend_host": "__TODO__: real public hostname, e.g. app.customer.com",
@@ -104,6 +106,7 @@
     "sovereign_allowed_hosts": []
   },
   "auth": {
+    "_step_up_phishing_resistant_comment": "auth.step_up_phishing_resistant is left at its default (false). Set it true to accept only a passkey or security key for step-up re-authentication.",
     "jwt_secret": "${JWT_SECRET}",
     "jwt_issuer": "attome",
     "jwt_audience": "",

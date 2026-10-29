@@ -61,6 +61,10 @@ impl EngineModel for ServiceModel {
             "service_request_item",
             "service_fulfilment_task",
             "service_order_guide",
+            // G4-T1: skills on the V7 queue items of the service queues.
+            "queue_item_skill",
+            // J10-T1: the unified router's per-agent channel capacity.
+            "agent_channel_capacity",
         ]
     }
 

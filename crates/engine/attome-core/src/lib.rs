@@ -91,7 +91,7 @@ pub mod consent_rules;
 /// for it — one of the edges that makes ARCH-1 a dependency cycle.
 pub mod credential_columns;
 pub mod crud;
-/// T6-T2: customer flags, read by rules and flows as `flag('name')`.
+/// T6-T2: customer flags, read by rules and flows as `flag("name")`.
 pub mod customer_flags;
 pub mod data_definition;
 pub mod data_domain;

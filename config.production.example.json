@@ -1,4 +1,5 @@
 {
+  "_ops_comment": "ops (AB4-T1, the reliability engine) is left out: a single server needs none of it. A clustered deployment adds patroni_api_urls and the recovery-drill signing keys as in config.example.json.",
   "_einvoice_comment": "AG2 ZATCA e-invoicing ships dark (einvoice.enabled false), so it is left out here. A deployment that invoices in Saudi Arabia adds \"einvoice\": {\"enabled\": true, \"key_encryption_key\": \"${EINVOICE_KEY_ENCRYPTION_KEY}\"} with a 64-hex key of its own (D-069).",
   "_readme": "P-production-safety-profile — a fully-compliant starting point for app.deployment_profile='production' (see config.example.json's app._deployment_profile_comment and AppConfig::validate_production_profile in crates/base/attome-config/src/config/loader.rs). Copy to config.json, replace every \"__TODO__: ...\" placeholder with a real deployment value, and set the referenced ${VAR}s in .env/the environment before boot. Everything NOT called out with __TODO__ is a value validate_production_profile actually requires and this file already sets correctly — do not relax it back to config.example.json's dev defaults. This file has NOT been booted against a live Postgres/Redis/S3 stack (no such infra was reachable while authoring it) — see the __TODO__/VERIFY markers below and the corresponding row in document/DECISIONS.md and document_v2/docs/base/config/plans/attome-config-plan.md for what remains to be confirmed against real infrastructure. P-bootstrap-credential-scoping (D-204): THIS file is the `migrate` binary's config only — it is the one process that legitimately needs database.password/DB_PASSWORD. `server`/`worker` must instead render config.production.runtime.example.json (identical except database.password is null), wired into docker-compose.yml's `x-config-volume-runtime` mount, so the bootstrap credential never sits in their container environment or in the AppConfig they hold in memory for the process's lifetime. D-549 removed HashiCorp Vault (D-331's 'Vault-mandatory production' ruling) — every secret here is config-file-sourced, same as development. Config-surface reduction (item 23): pure internal tuning that no deployment ever varied was removed from the schema entirely and now lives as Rust constants — see config.example.json's _readme and document/DECISIONS.md for the full list.",
   "_events_comment": "Omitted: production keeps the ships-dark defaults (webhooks_enabled false). Enabling webhooks needs events.webhook_signing_key — see config.example.json's events block.",
@@ -15,6 +16,7 @@
   "_backup_comment": "Omitted: on a single server (cache.backend memory) the daily backup of the database and files runs with its defaults (02:00 UTC, 7 kept, next to the config file); several servers use pgBackRest or the database host. See config.example.json and docs/backup.md.",
   "_docgen_comment": "Omitted: document generation is off until docgen's render sidecar address is set (D-463); see config.example.json.",
   "app": {
+    "_tls_comment": "app.tls is left at its default (off): in production TLS ends at the nginx edge in front of the app (see nginx). Set tls only for a single node that terminates TLS itself.",
     "port": 8080,
     "server_host": "0.0.0.0",
     "frontend_host": "__TODO__: real public hostname, e.g. app.customer.com",
@@ -104,6 +106,7 @@
     "sovereign_allowed_hosts": []
   },
   "auth": {
+    "_step_up_phishing_resistant_comment": "auth.step_up_phishing_resistant is left at its default (false). Set it true to accept only a passkey or security key for step-up re-authentication.",
     "jwt_secret": "${JWT_SECRET}",
     "jwt_issuer": "attome",
     "jwt_audience": "",

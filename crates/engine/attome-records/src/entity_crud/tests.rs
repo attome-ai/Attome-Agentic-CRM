@@ -38,7 +38,9 @@ fn sql_cast_maps_numeric_family_types() {
 
 #[test]
 fn sql_cast_maps_date_bool_and_lookup() {
-    assert_eq!(sql_cast(&attr(5, None)), "::timestamptz");
+    // Y2-T1: `date` (5) is a calendar day, `date_time` (19) an instant.
+    assert_eq!(sql_cast(&attr(5, None)), "::date");
+    assert_eq!(sql_cast(&attr(19, None)), "::timestamptz");
     assert_eq!(sql_cast(&attr(6, None)), "::boolean");
     assert_eq!(sql_cast(&attr(11, None)), "::uuid");
 }

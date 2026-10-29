@@ -38,8 +38,9 @@ fn two_hop_path_reads_context() {
 }
 
 #[test]
-fn four_hop_path_rejected() {
-    let err = v2("deal.account.owner.region.name == \"x\"").unwrap_err();
+fn six_hop_path_rejected() {
+    // A9-T2 allows up to five lookups after the first field.
+    let err = v2("deal.account.owner.region.country.zone.name == \"x\"").unwrap_err();
     assert_eq!(err.code(), "rules.lookup.multi_hop");
     // A path the schema does not declare is an unknown field.
     assert_eq!(

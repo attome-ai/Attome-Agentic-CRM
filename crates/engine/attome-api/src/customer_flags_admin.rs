@@ -1,5 +1,5 @@
 //! `/api/v1/admin/customer-flags` (roadmap T6-T2): flags a builder defines
-//! and rules and flows read as `flag('name')`. A deployment's own state,
+//! and rules and flows read as `flag("name")`. A deployment's own state,
 //! like environment variable values: defined and switched here, never
 //! promoted. Every change is a `Configuration` event in its own
 //! transaction, and readers take the table as it is now

@@ -169,6 +169,10 @@ pub const SECRETS: &[SecretSpec] = &[
         &["server-to-server clients seeded at boot"],
     ),
     value("storage.s3_secret_key", &["file storage (object store)"]),
+    ring(
+        "storage.encryption_key",
+        &["stored files' per-file keys at rest (Z6-T4)"],
+    ),
     value(
         "storage.local.url_signing_key",
         &["file storage links (local disk)"],

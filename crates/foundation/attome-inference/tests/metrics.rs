@@ -147,7 +147,12 @@ fn assert_one_call(
         format!("{REQUESTS_TOTAL}{{class={class},endpoint={endpoint},outcome={outcome}}}");
     let histogram = format!("{REQUEST_SECONDS}{{endpoint={endpoint},outcome={outcome}}}");
     let mut delta: HashMap<&str, u64> = HashMap::new();
-    for (key, value) in after {
+    // AB6-T3: the call runs through attome-outbound, which records its own
+    // `outbound_*` series; this test is about the inference series only.
+    for (key, value) in after
+        .iter()
+        .filter(|(key, _)| !key.starts_with("outbound_"))
+    {
         let added = value - before.get(key).copied().unwrap_or(0);
         if added > 0 {
             delta.insert(key.as_str(), added);

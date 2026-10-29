@@ -1524,7 +1524,16 @@ mod tests {
             crate::compile("prev(customer.tier) == \"gold\"", &schema()).is_err(),
             "prev takes a field of this record"
         );
-        assert!(crate::compile("changed(amount)", &schema()).is_ok());
+        // prev and changed are V2 functions; plain `compile` is V1.
+        assert!(
+            crate::compile_versioned(
+                "changed(amount)",
+                &schema(),
+                crate::LanguageVersion::V2,
+                crate::Budgets::default(),
+            )
+            .is_ok()
+        );
     }
 
     #[test]

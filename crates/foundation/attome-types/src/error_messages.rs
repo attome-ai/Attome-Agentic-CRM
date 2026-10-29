@@ -156,6 +156,16 @@ const MESSAGES: &[(&str, &str, &str)] = &[
         "رابط الصفحة هذا غير صالح. ابدأ من الصفحة الأولى.",
     ),
     (
+        "resync_needed",
+        "These changes are too old to replay. Load the list again.",
+        "هذه التغييرات أقدم من أن تُعاد. حمّل القائمة من جديد.",
+    ),
+    (
+        "cascade_restricted",
+        "This record can't be deleted while other records still point to it.",
+        "لا يمكن حذف هذا السجل ما دامت سجلات أخرى تشير إليه.",
+    ),
+    (
         "idempotency_outcome_unknown",
         "It is not known whether the earlier request finished. Check before retrying.",
         "لا يُعرف إن كان الطلب السابق قد اكتمل. تحقّق قبل إعادة المحاولة.",

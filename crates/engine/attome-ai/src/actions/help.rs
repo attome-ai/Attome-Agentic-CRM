@@ -207,6 +207,10 @@ pub const DOCS: &[(&str, &str)] = &[
         include_str!("../../../../../docs/model-servers.md"),
     ),
     (
+        "docs/money.md",
+        include_str!("../../../../../docs/money.md"),
+    ),
+    (
         "docs/odata.md",
         include_str!("../../../../../docs/odata.md"),
     ),
@@ -221,6 +225,10 @@ pub const DOCS: &[(&str, &str)] = &[
     (
         "docs/org-chart.md",
         include_str!("../../../../../docs/org-chart.md"),
+    ),
+    (
+        "docs/polymorphic-lookups.md",
+        include_str!("../../../../../docs/polymorphic-lookups.md"),
     ),
     (
         "docs/procurement.md",

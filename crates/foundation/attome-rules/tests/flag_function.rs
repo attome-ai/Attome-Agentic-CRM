@@ -24,15 +24,15 @@ fn flag_function_reads_the_context() {
         ("beta".to_owned(), true),
         ("old".to_owned(), false),
     ]));
-    assert_eq!(eval("flag('beta')", &ctx), Value::Bool(true));
-    assert_eq!(eval("flag('old')", &ctx), Value::Bool(false));
+    assert_eq!(eval("flag(\"beta\")", &ctx), Value::Bool(true));
+    assert_eq!(eval("flag(\"old\")", &ctx), Value::Bool(false));
     assert_eq!(
-        eval("flag('missing')", &ctx),
+        eval("flag(\"missing\")", &ctx),
         Value::Bool(false),
         "an unknown flag is off"
     );
     assert_eq!(
-        eval("flag('beta')", &Context::new(Utc::now())),
+        eval("flag(\"beta\")", &Context::new(Utc::now())),
         Value::Bool(false)
     );
 }
@@ -41,7 +41,7 @@ fn flag_function_reads_the_context() {
 fn flag_function_is_v2_and_takes_text() {
     assert!(
         compile_versioned(
-            "flag('beta')",
+            "flag(\"beta\")",
             &Schema::new(),
             LanguageVersion::V1,
             Budgets::default()

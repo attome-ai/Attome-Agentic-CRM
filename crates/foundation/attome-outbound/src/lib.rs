@@ -359,14 +359,17 @@ mod tests {
                 .enable_time()
                 .build()
                 .unwrap();
+            // The registry holds services weakly: `svc` must outlive the
+            // publish, or (in a process of its own) there is nothing to publish.
+            let svc = quick_service();
             runtime.block_on(async {
-                let svc = quick_service();
                 let ok: Result<u8, OutboundError<Flaky>> =
                     call(&svc, CallClass::Interactive, true, || async { Ok(1) }).await;
                 assert!(ok.is_ok());
                 let _ = attempts(&svc, true, Flaky(true)).await;
             });
             registry::publish();
+            drop(svc);
         });
         let names = names.0.into_inner().unwrap();
         for expected in [

@@ -262,15 +262,26 @@ async fn preview_ranking(
         .as_object()
         .filter(|r| !r.is_empty())
         .ok_or_else(|| AppError::Validation("ranks names at least one attribute".into()))?;
-    let attrs = state
+    let (attrs, primary_name) = state
         .entities
         .load()
         .get(entity)
-        .map(|m| m.attrs.clone())
+        .map(|m| (m.attrs.clone(), m.primary_name_attribute.clone()))
         .ok_or(AppError::NotFound)?;
+    // D-589: the preview reads these attributes across many records, so the
+    // bulk field gate decides (confirmed sensitivity labels, fields hidden
+    // from AI), not the sensitive flag alone.
     let attributes = ranked_attributes(
         &attrs,
-        |a| !a.is_sensitive || security.has_field_read_grant(entity, &a.logicalname),
+        |a| {
+            attome_security::field_gate::readable(
+                security,
+                entity,
+                a,
+                primary_name.as_deref(),
+                attome_security::field_gate::Surface::Bulk,
+            )
+        },
         ranks,
     )?;
     let mut config = json!({ "ranks": ranks });

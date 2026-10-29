@@ -1,4 +1,4 @@
-//! T6-T2: customer flags, which rules and flows read as `flag('name')`.
+//! T6-T2: customer flags, which rules and flows read as `flag("name")`.
 //!
 //! The source of truth is `customer_flag`, read on each use with no cache,
 //! so a change (an emergency off above all) holds on every node at once. A

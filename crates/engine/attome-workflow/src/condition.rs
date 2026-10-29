@@ -253,7 +253,7 @@ mod tests {
     /// emergency-off flag (absent from the loaded set) takes the off branch.
     #[test]
     fn flag_function_drives_a_flow_branch() {
-        let config = json!({ "expression": "flag('new_checkout') && amount > 5" });
+        let config = json!({ "expression": "flag(\"new_checkout\") and amount > 5" });
         assert!(reads_flags(&config));
         assert!(!reads_flags(&json!({ "expression": "amount > 5" })));
         let on = HashMap::from([("new_checkout".to_owned(), true)]);

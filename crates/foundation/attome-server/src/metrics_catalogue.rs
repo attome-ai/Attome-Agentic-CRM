@@ -17,6 +17,13 @@ pub struct MetricInfo {
 /// Every metric, sorted by name.
 pub const CATALOGUE: &[MetricInfo] = &[
     MetricInfo {
+        name: "aggregate_cache_total",
+        kind: "counter",
+        unit: "reads",
+        en: "Dashboard aggregate cache reads, by hit or miss.",
+        ar: "قراءات ذاكرة تجميعات لوحات المعلومات المؤقتة حسب الإصابة أو الإخفاق.",
+    },
+    MetricInfo {
         name: "ai_delta_publish_failures_total",
         kind: "counter",
         unit: "failures",

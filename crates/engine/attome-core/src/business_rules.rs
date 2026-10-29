@@ -2100,7 +2100,15 @@ fn check_set_value(
                 ));
             }
         }
-        (None, Some(src)) => match attome_rules::compile(src, expr_schema) {
+        // A11-T2: a value reads related records through lookup paths, which
+        // the rules language has only from V2 (Z11-T7); V1 refused every
+        // path of two or more lookups as multi-hop.
+        (None, Some(src)) => match attome_rules::compile_versioned(
+            src,
+            expr_schema,
+            attome_rules::LanguageVersion::V2,
+            attome_rules::Budgets::default(),
+        ) {
             Ok(compiled) => {
                 let target = kind.rules_type();
                 let produced = compiled.result_type();
@@ -2204,7 +2212,15 @@ mod tests {
         assert_eq!(refs[1].segments, vec!["account", "owner", "region"]);
         assert_eq!(refs[1].entities, vec!["account", "app_user"]);
         let schema = with_related_schema(condition_schema(&deal), &refs);
-        assert!(attome_rules::compile(src, &schema).is_ok());
+        assert!(
+            attome_rules::compile_versioned(
+                src,
+                &schema,
+                attome_rules::LanguageVersion::V2,
+                attome_rules::Budgets::default(),
+            )
+            .is_ok()
+        );
         // A field that is not a lookup, and an unknown field, resolve to nothing.
         assert!(related_refs("amount.x", &deal, &registry).is_empty());
         assert!(related_refs("account.missing", &deal, &registry).is_empty());

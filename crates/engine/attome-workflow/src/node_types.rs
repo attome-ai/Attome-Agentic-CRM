@@ -940,7 +940,8 @@ mod tests {
         for node in NodeType::ALL {
             let _ = node.capability();
         }
-        assert_eq!(NodeType::ALL.len(), 21, "the node set is closed (I-5)");
+        // AE1-T3 added `CustomAction` as the 22nd.
+        assert_eq!(NodeType::ALL.len(), 22, "the node set is closed (I-5)");
     }
 
     /// `Split`/`Join` are graph-shape markers, not the branching type

@@ -229,6 +229,21 @@ const UNGATED_BY_DESIGN: &[(&str, &str)] = &[
         "call_daily_aggregate",
         "attome-callintel claims it through EngineModel::owned_entities at runtime",
     ),
+    // V7-T1: one queue for any record, shared by attome-project, attome-service
+    // and the core omnichannel inbox (WhatsApp, social), so no one engine owns it.
+    (
+        "queue",
+        "shared queue (V7-T1): project, service and the core inbox",
+    ),
+    (
+        "queue_item",
+        "shared queue (V7-T1): project, service and the core inbox",
+    ),
+    // J8-T2: social direct messages are the core omnichannel inbox.
+    (
+        "social_profile",
+        "core omnichannel (apps/attome social.rs, J8-T2)",
+    ),
 ];
 
 fn owner(model_name: &'static str, module_id: ModuleId) -> EntityModuleOwner {
@@ -313,6 +328,9 @@ fn production_map() -> EntityModuleMap {
         "service_request_item",
         "service_fulfilment_task",
         "service_order_guide",
+        // G4-T1 and J10-T1: queue skills and the unified router's capacity.
+        "queue_item_skill",
+        "agent_channel_capacity",
     ] {
         map.claim(entity, owner("attome-service", MODULE_SERVICE));
     }

@@ -99,9 +99,9 @@ use Classification::{ExcludesSystemCols, Projection, ServerConstructed};
 const ATTRIBUTE_SQL_SITES: &[(&str, &str, Classification, &str)] = &[
     (
         "crates/engine/attome-api/src/data_profile_admin.rs",
-        "profile_field",
+        "one_scan",
         Projection,
-        "COUNT/COUNT DISTINCT over one column: a read-only profile.",
+        "every profiled column, quoted and cast to text, in one read-only (optionally sampled) scan.",
     ),
     (
         "crates/engine/attome-api/src/quality_score.rs",

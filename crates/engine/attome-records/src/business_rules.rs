@@ -221,8 +221,14 @@ async fn compile_set_value(
         }
         None => condition_schema(attrs),
     };
-    let compiled = attome_rules::compile(src, &schema)
-        .map_err(|e| format!("expression does not compile: {e}"))?;
+    // V2, as the rule was checked when saved: lookup paths are V2 (Z11-T7).
+    let compiled = attome_rules::compile_versioned(
+        src,
+        &schema,
+        attome_rules::LanguageVersion::V2,
+        attome_rules::Budgets::default(),
+    )
+    .map_err(|e| format!("expression does not compile: {e}"))?;
     let target_type = target.rules_type();
     if !result_fits(compiled.result_type(), &target_type) {
         return Err(format!(

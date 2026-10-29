@@ -19,7 +19,7 @@
 //! asked for it or a supervisor.
 
 use attome_core::EngineState;
-use attome_server::authz::{Authorized, PrivilegeKey, SelfService};
+use attome_server::authz::{Authorized, Privilege, PrivilegeKey, SelfService};
 use attome_server::security::SecurityContext;
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
@@ -223,13 +223,10 @@ pub(crate) async fn post_undo(
 )]
 pub(crate) async fn get_rollback_preview(
     State(state): State<EngineState>,
-    ctx: Authorized<SelfService>,
+    ctx: Authorized<Privilege<AgentSupervise>>,
     Path(agent): Path<Uuid>,
     Query(query): Query<RollbackSince>,
 ) -> Result<Json<RollbackPreview>, AppError> {
-    if !may_supervise(&ctx) {
-        return Err(AppError::Forbidden);
-    }
     let audit_days = state.base.config.retention.audit_days;
     check_since(query.since, Utc::now(), audit_days)?;
     let db = &state.base.db;
@@ -263,13 +260,10 @@ pub(crate) async fn get_rollback_preview(
 )]
 pub(crate) async fn post_rollback(
     State(state): State<EngineState>,
-    ctx: Authorized<SelfService>,
+    ctx: Authorized<Privilege<AgentSupervise>>,
     Path(agent): Path<Uuid>,
     Json(body): Json<RollbackSince>,
 ) -> Result<(StatusCode, Json<UndoStarted>), AppError> {
-    if !may_supervise(&ctx) {
-        return Err(AppError::Forbidden);
-    }
     let audit_days = state.base.config.retention.audit_days;
     check_since(body.since, Utc::now(), audit_days)?;
     let run = crate::undo::start_rollback_since(&state, &ctx, agent, body.since).await?;
