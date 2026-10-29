@@ -273,6 +273,7 @@ pub struct BackfillMetricQueued {
 #[utoipa::path(
     post,
     path = "/api/v1/metrics/{id}/backfill",
+    operation_id = "backfill_metric",
     tag = "dashboard",
     params(("id" = Uuid, Path, description = "The metric")),
     request_body = BackfillMetricBody,

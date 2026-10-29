@@ -40,6 +40,7 @@ pub struct MetricCertification {
 #[utoipa::path(
     post,
     path = "/api/v1/metrics/{id}/certify",
+    operation_id = "certify_metric",
     tag = "dashboard",
     params(("id" = Uuid, Path, description = "The metric")),
     request_body = CertifyMetricBody,
