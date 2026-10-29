@@ -17,6 +17,7 @@
 - [Architecture](architecture.md)
 - [Rollup fields](rollups.md): values computed from related records, fast and exact modes, backfill, the nightly heal and explaining a value.
 - [Master data](master-data.md): master entities, contributions, survivorship by source system, golden records, stewards, cross-references and distribution.
+- [Dashboard drill-down and explain](dashboard-drill.md): the records behind a number, parity, drill levels, drill-through, comparing periods and explanations in words.
 - [Metadata layers](metadata-layers.md): the platform, app and customer layers, upgrade conflicts, resets, reserved names, locks and retiring `is_customized`.
 - [The access model](access-model.md): privileges, levels per operation, child units, permission sets, sharing rules, masked fields, conflict rules and explaining access.
 - [Secrets in the configuration](secrets.md): placeholders, environment variables, secret files, AWS Secrets Manager or Azure Key Vault read once at start, key rings and the rotation runbook.

@@ -62,6 +62,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Dashboard drill guide (P7-T13): `docs/dashboard-drill.md` covers the records route and its
+  parity, filters and trails, `aggregate_only`, `drill_levels` and the drill-down route,
+  `drill_through`, comparing periods, explanations in words and the drawer and explain panel.
 - Explaining a dashboard number (P7-T10): the read-only agent action `dashboard.explain_number`
   restates a widget's explanation in plain words, in the person's language, citing each filter and
   its origin. It reads the explanation as the caller, with the dashboard read privilege.
