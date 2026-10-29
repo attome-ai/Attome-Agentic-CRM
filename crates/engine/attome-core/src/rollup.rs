@@ -42,7 +42,8 @@ use attome_types::AppError;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{AttrInfo, EntityMetaRegistry, FieldType};
+use crate::rules_sql::SqlParam;
+use crate::{AttrInfo, EntityMetaRegistry, FieldType, quote_ident};
 
 /// How many lookups a rollup's path may cross.
 pub const MAX_ROLLUP_HOPS: usize = 3;
@@ -358,6 +359,121 @@ fn check_filter(filter: &str, attrs: &[AttrInfo]) -> Result<(), AppError> {
     })
 }
 
+/// A10-T2: the statement that recomputes a rollup for a batch of parents,
+/// and its text binds from `$2` on (`$1` is the parents' ids, a `uuid[]`
+/// the caller binds). One `UPDATE ... FROM (SELECT ... GROUP BY)` over the
+/// path's joins: a parent with no matching related record gets the empty
+/// value (0 for a count or sum, null otherwise), only live related records
+/// count, and a parent whose value is unchanged is not written.
+/// `last_attrs` are the last step's entity's attributes, which the filter
+/// is translated against. Identifiers come from validated metadata and are
+/// quoted; every value is bound.
+pub fn recompute_sql(
+    parent_table: &str,
+    column: &str,
+    opts: &RollupOptions,
+    last_attrs: &[AttrInfo],
+) -> Result<(String, Vec<Option<String>>), AppError> {
+    let n = opts.path.len();
+    if n == 0 {
+        return Err(AppError::Validation("a rollup's path is empty".into()));
+    }
+    let alias = |i: usize| format!("t{}", i + 1);
+    let live = |a: &str| format!("({a}.is_active IS NULL OR {a}.is_active = true)");
+    let mut binds: Vec<Option<String>> = Vec::new();
+    let mut joins = String::new();
+    for (i, step) in opts.path.iter().enumerate() {
+        let a = alias(i);
+        let up = if i == 0 {
+            "ids.id".to_owned()
+        } else {
+            format!("{}.id", alias(i - 1))
+        };
+        let mut on = format!("{a}.{} = {up} AND {}", quote_ident(&step.via), live(&a));
+        if i == n - 1 {
+            if let Some(filter) = opts.filter.as_deref().filter(|f| !f.trim().is_empty()) {
+                let expr = attome_rules::parse(filter).map_err(|e| {
+                    AppError::Validation(format!("the rollup's filter does not parse: {e}"))
+                })?;
+                let by_name: HashMap<String, AttrInfo> = last_attrs
+                    .iter()
+                    .filter(|a| !a.is_formula())
+                    .map(|a| (a.logicalname.clone(), a.clone()))
+                    .collect();
+                let (sql, params) =
+                    crate::rules_sql::to_sql_text_binds(&expr, &by_name, &a, 2 + binds.len())
+                        .map_err(|e| {
+                            AppError::Validation(format!(
+                                "the rollup's filter must run in the database: {}",
+                                e.reason
+                            ))
+                        })?;
+                on.push_str(&format!(" AND {sql}"));
+                binds.extend(params.into_iter().map(|p| match p {
+                    SqlParam::Number(n) => Some(n.to_string()),
+                    SqlParam::Text(t) => Some(t),
+                    SqlParam::Bool(b) => Some(b.to_string()),
+                    SqlParam::Date(d) => Some(d.to_rfc3339()),
+                    SqlParam::Uuid(u) => Some(u.to_string()),
+                    SqlParam::Null => None,
+                }));
+            }
+            if let Some(window) = &opts.window {
+                binds.push(Some(window.days.to_string()));
+                on.push_str(&format!(
+                    " AND {a}.{} >= now() - make_interval(days => ${}::int)",
+                    quote_ident(&window.date_attribute),
+                    1 + binds.len()
+                ));
+            }
+        }
+        joins.push_str(&format!(
+            " LEFT JOIN {} {a} ON {on}",
+            quote_ident(&step.entity)
+        ));
+    }
+    let last = alias(n - 1);
+    let attr = opts
+        .attribute
+        .as_deref()
+        .map(|name| format!("{last}.{}", quote_ident(name)));
+    let agg = match (opts.function, attr) {
+        (RollupFunction::Count, _) => format!("COUNT({last}.id)"),
+        (RollupFunction::DistinctCount, Some(a)) => format!("COUNT(DISTINCT {a})"),
+        (RollupFunction::Sum, Some(a)) => format!("COALESCE(SUM({a}), 0)"),
+        (RollupFunction::Avg, Some(a)) => format!("AVG({a})"),
+        (RollupFunction::Min, Some(a)) => format!("MIN({a})"),
+        (RollupFunction::Max, Some(a)) => format!("MAX({a})"),
+        (function @ (RollupFunction::First | RollupFunction::Last), Some(a)) => {
+            let order = quote_ident(opts.order_by.as_deref().unwrap_or(DEFAULT_ORDER_BY));
+            let dir = if function == RollupFunction::First {
+                "ASC"
+            } else {
+                "DESC"
+            };
+            format!(
+                "(array_agg({a} ORDER BY {last}.{order} {dir}) FILTER (WHERE {last}.id IS NOT NULL))[1]"
+            )
+        }
+        (function, None) => {
+            return Err(AppError::Validation(format!(
+                "a {} rollup needs an attribute",
+                function.as_str()
+            )));
+        }
+    };
+    let col = quote_ident(column);
+    let sql = format!(
+        "UPDATE {} p SET {col} = agg.v \
+         FROM (SELECT ids.id AS parent_id, {agg} AS v \
+               FROM unnest($1::uuid[]) AS ids(id){joins} \
+               GROUP BY ids.id) agg \
+         WHERE p.id = agg.parent_id AND p.{col} IS DISTINCT FROM agg.v",
+        quote_ident(parent_table)
+    );
+    Ok((sql, binds))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -546,6 +662,68 @@ mod tests {
             "result_type": "number",
         })));
         assert!(m.contains("only to the first and last"), "{m}");
+    }
+
+    #[test]
+    fn rollup_fast_recompute_sql_joins_the_path_and_binds_values() {
+        let opts = check(json!({
+            "function": "sum",
+            "path": [{ "entity": "opportunity", "via": "account_ref" }],
+            "attribute": "amount",
+            "filter": "status == \"won\"",
+            "window": { "days": 90, "date_attribute": "close_date" },
+            "result_type": "currency",
+        }))
+        .unwrap();
+        let registry = registry();
+        let attrs = &registry.get("opportunity").unwrap().attrs;
+        let (sql, binds) = recompute_sql("account", "won_total", &opts, attrs).unwrap();
+        assert!(
+            sql.starts_with("UPDATE \"account\" p SET \"won_total\" = agg.v"),
+            "{sql}"
+        );
+        assert!(sql.contains("COALESCE(SUM(t1.\"amount\"), 0)"), "{sql}");
+        assert!(
+            sql.contains("LEFT JOIN \"opportunity\" t1 ON t1.\"account_ref\" = ids.id"),
+            "{sql}"
+        );
+        assert!(sql.contains("make_interval(days => $3::int)"), "{sql}");
+        assert!(sql.contains("IS DISTINCT FROM agg.v"), "{sql}");
+        assert_eq!(binds, vec![Some("won".to_owned()), Some("90".to_owned())]);
+        assert!(
+            !sql.contains("won'"),
+            "the value is bound, not written: {sql}"
+        );
+    }
+
+    #[test]
+    fn rollup_fast_recompute_sql_follows_two_hops_and_orders_last() {
+        let opts = check(json!({
+            "function": "count",
+            "path": [
+                { "entity": "opportunity", "via": "account_ref" },
+                { "entity": "opportunity_line", "via": "opportunity_ref" },
+            ],
+            "result_type": "number",
+        }))
+        .unwrap();
+        let (sql, binds) = recompute_sql("account", "lines", &opts, &[]).unwrap();
+        assert!(
+            sql.contains("LEFT JOIN \"opportunity_line\" t2 ON t2.\"opportunity_ref\" = t1.id"),
+            "{sql}"
+        );
+        assert!(sql.contains("COUNT(t2.id)"), "{sql}");
+        assert!(binds.is_empty());
+        let last = check(json!({
+            "function": "last",
+            "path": [{ "entity": "opportunity", "via": "account_ref" }],
+            "attribute": "amount",
+            "order_by": "close_date",
+            "result_type": "currency",
+        }))
+        .unwrap();
+        let (sql, _) = recompute_sql("account", "latest", &last, &[]).unwrap();
+        assert!(sql.contains("ORDER BY t1.\"close_date\" DESC"), "{sql}");
     }
 
     #[test]

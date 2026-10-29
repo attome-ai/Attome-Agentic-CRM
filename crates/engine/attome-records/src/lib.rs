@@ -86,6 +86,8 @@ pub mod query_spec;
 pub mod rejection_log;
 /// A13-T1: list and view columns read through lookups.
 pub mod related_columns;
+/// A10-T2: rollups recomputed from the change feed.
+pub mod rollup_fast;
 pub mod rule_engine;
 pub mod rw_pin;
 pub mod stage_move;

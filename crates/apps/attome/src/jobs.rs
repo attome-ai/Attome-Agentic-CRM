@@ -3183,6 +3183,7 @@ const DEDUP_KEY_LEAD_ASSIGNMENT: &str = "lead-assignment";
 /// AA11-T1: entities the change feed saw change, marked for the aggregate
 /// cache (a registered job type).
 const DEDUP_KEY_AGGREGATE_CACHE_MARKS: &str = "aggregate-cache-marks";
+const DEDUP_KEY_ROLLUP_FAST: &str = "rollup-fast";
 const DEDUP_KEY_LEAD_FIRST_TOUCH: &str = "lead-first-touch";
 const DEDUP_KEY_LEAD_REBALANCE: &str = "lead-rebalance";
 /// E14-T8: closed web sessions summarised onto timelines (a registered job type).
@@ -3553,6 +3554,10 @@ pub const LEAD_ASSIGNMENT: attome_jobs::JobType =
 /// AA11-T1: changed entities marked so their cached aggregates are recomputed.
 pub const AGGREGATE_CACHE_MARKS: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_search::aggregate_cache::JOB, 1);
+
+/// A10-T2: fast rollups recomputed from the change feed.
+pub const ROLLUP_FAST: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_records::rollup_fast::JOB, 1);
 
 /// D4-T2: new leads given their first-touch timer.
 pub const LEAD_FIRST_TOUCH: attome_jobs::JobType =
@@ -4768,6 +4773,20 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            ROLLUP_FAST,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let read = attome_records::rollup_fast::tick(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if read > 0 {
+                    tracing::debug!(read, "rollup fast mode read change events");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             AGGREGATE_CACHE_MARKS,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let marked = attome_search::aggregate_cache::mark_changes(&state)
@@ -5827,6 +5846,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == AGGREGATE_CACHE_MARKS.name => {
             DEDUP_KEY_AGGREGATE_CACHE_MARKS
         }
+        EngineJob::Registered(job) if job.name == ROLLUP_FAST.name => DEDUP_KEY_ROLLUP_FAST,
         EngineJob::Registered(job) if job.name == LEAD_FIRST_TOUCH.name => {
             DEDUP_KEY_LEAD_FIRST_TOUCH
         }
@@ -7117,6 +7137,22 @@ pub fn spawn_aggregate_cache_marks_scheduler(db: DbPool, interval: std::time::Du
             "aggregate cache marks",
         ),
         Err(error) => tracing::error!(%error, "aggregate cache marks: not scheduled"),
+    }
+}
+
+/// A10-T2: every few seconds, fast rollups the change feed's events affect
+/// recomputed.
+pub fn spawn_rollup_fast_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(ROLLUP_FAST.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_ROLLUP_FAST,
+            "rollup fast mode",
+        ),
+        Err(error) => tracing::error!(%error, "rollup fast mode: not scheduled"),
     }
 }
 

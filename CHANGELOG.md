@@ -62,6 +62,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Rollup fast mode (A10-T2): a `fast` rollup is recomputed a few seconds after a related record
+  changes. The `rollup_fast` job (every 5 seconds) reads the change feed, follows each changed
+  record up the rollup's path, by its lookup now and before the change, so a record moved to
+  another parent updates both, and recomputes each affected parent with one statement per batch.
+  The value is written as the platform's own: it does not bump the record's row version and
+  emits no change event.
 - A view from a sentence (A13-T5): the agent action `view.plan` turns "deals closing this month over
   50k" into a personal view to confirm: its name, columns (related fields included) and filters,
   checked like `query.plan`'s. It saves nothing; it returns the description and the
