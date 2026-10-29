@@ -3180,6 +3180,9 @@ const DEDUP_KEY_FULFILMENT_SPLIT: &str = "fulfilment-split";
 const DEDUP_KEY_FULFILMENT_BILLING: &str = "fulfilment-billing";
 /// D4-T1: new leads assigned by the rule set (a registered job type).
 const DEDUP_KEY_LEAD_ASSIGNMENT: &str = "lead-assignment";
+/// AA11-T1: entities the change feed saw change, marked for the aggregate
+/// cache (a registered job type).
+const DEDUP_KEY_AGGREGATE_CACHE_MARKS: &str = "aggregate-cache-marks";
 const DEDUP_KEY_LEAD_FIRST_TOUCH: &str = "lead-first-touch";
 const DEDUP_KEY_LEAD_REBALANCE: &str = "lead-rebalance";
 /// E14-T8: closed web sessions summarised onto timelines (a registered job type).
@@ -3546,6 +3549,10 @@ pub const FULFILMENT_BILLING: attome_jobs::JobType =
 /// D4-T1: new leads given an owner by the lead assignment rule set.
 pub const LEAD_ASSIGNMENT: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_workflow::lead_assignment::JOB, 1);
+
+/// AA11-T1: changed entities marked so their cached aggregates are recomputed.
+pub const AGGREGATE_CACHE_MARKS: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_search::aggregate_cache::JOB, 1);
 
 /// D4-T2: new leads given their first-touch timer.
 pub const LEAD_FIRST_TOUCH: attome_jobs::JobType =
@@ -4761,6 +4768,20 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            AGGREGATE_CACHE_MARKS,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let marked = attome_search::aggregate_cache::mark_changes(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if marked > 0 {
+                    tracing::debug!(marked, "entities marked changed for the aggregate cache");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             LEAD_ASSIGNMENT,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let assigned = attome_workflow::lead_assignment::sweep(&state)
@@ -5803,6 +5824,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
             DEDUP_KEY_FULFILMENT_BILLING
         }
         EngineJob::Registered(job) if job.name == LEAD_ASSIGNMENT.name => DEDUP_KEY_LEAD_ASSIGNMENT,
+        EngineJob::Registered(job) if job.name == AGGREGATE_CACHE_MARKS.name => {
+            DEDUP_KEY_AGGREGATE_CACHE_MARKS
+        }
         EngineJob::Registered(job) if job.name == LEAD_FIRST_TOUCH.name => {
             DEDUP_KEY_LEAD_FIRST_TOUCH
         }
@@ -7077,6 +7101,22 @@ pub fn spawn_fulfilment_billing_scheduler(db: DbPool, interval: std::time::Durat
             "fulfilment billing",
         ),
         Err(error) => tracing::error!(%error, "fulfilment billing: not scheduled"),
+    }
+}
+
+/// AA11-T1: every 30 seconds, entities changed since the last run marked
+/// for the aggregate cache.
+pub fn spawn_aggregate_cache_marks_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(AGGREGATE_CACHE_MARKS.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_AGGREGATE_CACHE_MARKS,
+            "aggregate cache marks",
+        ),
+        Err(error) => tracing::error!(%error, "aggregate cache marks: not scheduled"),
     }
 }
 

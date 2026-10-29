@@ -80,6 +80,36 @@ pub struct DataDefinition {
     pub bindings: Vec<Binding>,
     #[serde(default)]
     pub presentation: Presentation,
+    /// AA11-T1: keep the result in the aggregate cache
+    /// (`attome_search::aggregate_cache`); absent, every read runs live.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cache: Option<CachePolicy>,
+}
+
+/// AA11-T1: the shortest and longest a cached aggregate may be kept.
+pub const MIN_CACHE_SECONDS: u32 = 60;
+pub const MAX_CACHE_SECONDS: u32 = 86_400;
+
+/// AA11-T1: when a cached aggregate is computed again.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum CacheRefresh {
+    /// As soon as the change feed has seen a change to the entity (within
+    /// the marking job's 30 seconds), and at the latest after `max_age_seconds`.
+    #[default]
+    OnChange,
+    /// Every `max_age_seconds`, whatever changed in between.
+    Scheduled,
+}
+
+/// AA11-T1: how a definition's result is kept.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct CachePolicy {
+    #[serde(default)]
+    pub refresh: CacheRefresh,
+    /// 60-86,400 seconds.
+    pub max_age_seconds: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -434,6 +464,13 @@ impl DataDefinition {
             .is_some_and(|value| !value.is_finite())
         {
             errors.push("presentation.threshold must be a finite number".to_string());
+        }
+        if let Some(cache) = &self.cache
+            && !(MIN_CACHE_SECONDS..=MAX_CACHE_SECONDS).contains(&cache.max_age_seconds)
+        {
+            errors.push(format!(
+                "cache.max_age_seconds must be between {MIN_CACHE_SECONDS} and {MAX_CACHE_SECONDS}"
+            ));
         }
         if errors.is_empty() {
             Ok(())

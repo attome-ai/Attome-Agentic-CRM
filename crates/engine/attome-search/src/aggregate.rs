@@ -707,111 +707,145 @@ pub async fn run_structured_aggregate(
         format!("SELECT {} FROM {table} t {where_sql}", select.join(", "))
     };
 
-    let mut tx = begin_bounded(db).await?;
-    let as_of: DateTime<Utc> = sqlx::query_scalar("SELECT now()")
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(AppError::internal)?;
-    enforce_cost_ceiling(&mut tx, &sql, &scope.params).await?;
-    let mut query = sqlx::query(&sql);
-    for param in &scope.params {
-        query = query.bind(param);
-    }
-    let rows = query
-        .fetch_all(&mut *tx)
-        .await
-        .map_err(AppError::internal)?;
-
-    let measure_count = definition.measures.len();
-    let values_of = |row: &sqlx::postgres::PgRow| -> Result<Vec<Option<f64>>, AppError> {
-        (0..measure_count)
-            .map(|i| {
-                row.try_get::<Option<f64>, _>(format!("m{i}").as_str())
-                    .map_err(AppError::internal)
-            })
-            .collect()
-    };
-
-    let (rows, truncated) = split_at_cap(rows, limit);
-    let mut buckets = Vec::with_capacity(rows.len());
-    for row in &rows {
-        let key = match (&definition.group, bucket) {
-            (None, _) => BucketKey::Total,
-            (Some(_), Some(_)) => {
-                let start: Option<DateTime<Utc>> =
-                    row.try_get("g_start").map_err(AppError::internal)?;
-                let end: Option<DateTime<Utc>> =
-                    row.try_get("g_end").map_err(AppError::internal)?;
-                match (start, end) {
-                    (Some(start), Some(end)) => BucketKey::Range { start, end },
-                    _ => BucketKey::Null,
-                }
-            }
-            (Some(_), None) => value_key(
-                row.try_get::<Option<String>, _>("g")
-                    .map_err(AppError::internal)?,
-            ),
-        };
-        let label = match (&key, bucket) {
-            (BucketKey::Value { value }, _) => Some(value.clone()),
-            (BucketKey::Range { start, .. }, Some(bucket)) => Some(range_label(*start, bucket, tz)),
-            _ => None,
-        };
-        let series_key = if definition.series.is_some() {
-            Some(value_key(
-                row.try_get::<Option<String>, _>("s")
-                    .map_err(AppError::internal)?,
-            ))
-        } else {
-            None
-        };
-        let series_label = match &series_key {
-            Some(BucketKey::Value { value }) => Some(value.clone()),
-            _ => None,
-        };
-        buckets.push(StructuredBucket {
-            key,
-            series_key,
-            label,
-            series_label,
-            values: values_of(row)?,
+    // AA11-T1: a definition marked `cache` answers from the aggregate cache
+    // while its entry is fresh (`crate::aggregate_cache`).
+    let cache_entry = definition
+        .cache
+        .filter(|_| crate::aggregate_cache::usable_by(ctx))
+        .map(|policy| {
+            let key = crate::aggregate_cache::cache_key(definition, tz.name(), &sql, &scope.params);
+            (policy, key)
         });
-    }
-
-    let mut other = None;
-    if truncated
-        && definition.presentation.other_bucket
-        && let Some(group) = &definition.group
-    {
-        let top: Vec<BucketKey> = buckets.iter().map(|b| b.key.clone()).collect();
-        let placeholder = scope.params.len() + 1;
-        let (complement, bind) = other_complement_filter_sql(&group.field, &top, placeholder);
-        if let Some(bind) = bind {
-            scope.bind(bind);
-        }
-        let measures = measure_sql(&scope, definition)?;
-        let other_sql = format!(
-            "SELECT {measures} FROM {table} t {}",
-            scope.where_sql(&[complement])
-        );
-        enforce_cost_ceiling(&mut tx, &other_sql, &scope.params).await?;
-        let mut query = sqlx::query(&other_sql);
-        for param in &scope.params {
-            query = query.bind(param);
-        }
-        let row = query
+    let cached = match &cache_entry {
+        Some((policy, key)) => crate::aggregate_cache::get(state, key, policy).await,
+        None => None,
+    };
+    let (mut buckets, other, truncated, as_of) = if let Some(hit) = cached {
+        (hit.buckets, hit.other, hit.truncated, hit.as_of)
+    } else {
+        let mut tx = begin_bounded(db).await?;
+        let as_of: DateTime<Utc> = sqlx::query_scalar("SELECT now()")
             .fetch_one(&mut *tx)
             .await
             .map_err(AppError::internal)?;
-        other = Some(StructuredBucket {
-            key: BucketKey::Other,
-            series_key: None,
-            label: None,
-            series_label: None,
-            values: values_of(&row)?,
-        });
-    }
-    tx.commit().await.map_err(AppError::internal)?;
+        enforce_cost_ceiling(&mut tx, &sql, &scope.params).await?;
+        let mut query = sqlx::query(&sql);
+        for param in &scope.params {
+            query = query.bind(param);
+        }
+        let rows = query
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+
+        let measure_count = definition.measures.len();
+        let values_of = |row: &sqlx::postgres::PgRow| -> Result<Vec<Option<f64>>, AppError> {
+            (0..measure_count)
+                .map(|i| {
+                    row.try_get::<Option<f64>, _>(format!("m{i}").as_str())
+                        .map_err(AppError::internal)
+                })
+                .collect()
+        };
+
+        let (rows, truncated) = split_at_cap(rows, limit);
+        let mut buckets = Vec::with_capacity(rows.len());
+        for row in &rows {
+            let key = match (&definition.group, bucket) {
+                (None, _) => BucketKey::Total,
+                (Some(_), Some(_)) => {
+                    let start: Option<DateTime<Utc>> =
+                        row.try_get("g_start").map_err(AppError::internal)?;
+                    let end: Option<DateTime<Utc>> =
+                        row.try_get("g_end").map_err(AppError::internal)?;
+                    match (start, end) {
+                        (Some(start), Some(end)) => BucketKey::Range { start, end },
+                        _ => BucketKey::Null,
+                    }
+                }
+                (Some(_), None) => value_key(
+                    row.try_get::<Option<String>, _>("g")
+                        .map_err(AppError::internal)?,
+                ),
+            };
+            let label = match (&key, bucket) {
+                (BucketKey::Value { value }, _) => Some(value.clone()),
+                (BucketKey::Range { start, .. }, Some(bucket)) => {
+                    Some(range_label(*start, bucket, tz))
+                }
+                _ => None,
+            };
+            let series_key = if definition.series.is_some() {
+                Some(value_key(
+                    row.try_get::<Option<String>, _>("s")
+                        .map_err(AppError::internal)?,
+                ))
+            } else {
+                None
+            };
+            let series_label = match &series_key {
+                Some(BucketKey::Value { value }) => Some(value.clone()),
+                _ => None,
+            };
+            buckets.push(StructuredBucket {
+                key,
+                series_key,
+                label,
+                series_label,
+                values: values_of(row)?,
+            });
+        }
+
+        let mut other = None;
+        if truncated
+            && definition.presentation.other_bucket
+            && let Some(group) = &definition.group
+        {
+            let top: Vec<BucketKey> = buckets.iter().map(|b| b.key.clone()).collect();
+            let placeholder = scope.params.len() + 1;
+            let (complement, bind) = other_complement_filter_sql(&group.field, &top, placeholder);
+            if let Some(bind) = bind {
+                scope.bind(bind);
+            }
+            let measures = measure_sql(&scope, definition)?;
+            let other_sql = format!(
+                "SELECT {measures} FROM {table} t {}",
+                scope.where_sql(&[complement])
+            );
+            enforce_cost_ceiling(&mut tx, &other_sql, &scope.params).await?;
+            let mut query = sqlx::query(&other_sql);
+            for param in &scope.params {
+                query = query.bind(param);
+            }
+            let row = query
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(AppError::internal)?;
+            other = Some(StructuredBucket {
+                key: BucketKey::Other,
+                series_key: None,
+                label: None,
+                series_label: None,
+                values: values_of(&row)?,
+            });
+        }
+        tx.commit().await.map_err(AppError::internal)?;
+        if let Some((_, key)) = &cache_entry {
+            crate::aggregate_cache::put(
+                state,
+                key,
+                &scope.logicalname,
+                &crate::aggregate_cache::CachedAggregate {
+                    buckets: buckets.clone(),
+                    other: other.clone(),
+                    truncated,
+                    as_of,
+                },
+            )
+            .await;
+        }
+        (buckets, other, truncated, as_of)
+    };
 
     if let Some(group) = definition.group.as_ref().filter(|g| g.bucket.is_none()) {
         let values = buckets.iter().filter_map(|b| match &b.key {

@@ -2831,3 +2831,61 @@ async fn scoped_viewer_sees_hidden_flag_without_count() {
     assert_eq!(body["some_records_hidden"], false, "{body}");
     assert_eq!(body["records"]["total"], 3);
 }
+
+// ── AA11-T1: the aggregate cache ────────────────────────────────────────────
+
+/// A definition marked `cache` answers from its entry: a row written after
+/// it was computed does not show until the change feed marks the entity
+/// changed, and then the number is computed again.
+#[tokio::test]
+async fn a_cached_definition_reads_its_entry_until_the_entity_changes() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let (admin_id, admin_cookie) = seed_user(&system, true).await;
+    let db = system.state().base.db.clone();
+    let (deals, _) = provision_deals(&system).await;
+    let day = "2026-05-10T10:00:00Z";
+    for _ in 0..2 {
+        insert_deal(&db, &deals, Some("won"), 5.0, day, None, Some(true)).await;
+    }
+    let config = json!({ "data": {
+        "source": deals,
+        "measures": [{ "aggregation": "count" }],
+        "group": { "field": "status" },
+        "cache": { "refresh": "on_change", "max_age_seconds": 300 }
+    }});
+    let dashboard = build_data_dashboard(&db, admin_id, &config).await;
+    let app = full_app(system);
+    publish(&app, &admin_cookie, dashboard.dashboard_id, &db).await;
+
+    let (status, first) = widget_data(&app, &admin_cookie, &dashboard, json!({})).await;
+    assert_eq!(status, StatusCode::OK, "{first}");
+    assert_eq!(bucket_value(&first, "won"), 2.0);
+    let stored: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM aggregate_cache WHERE entity_logicalname = $1")
+            .bind(&deals)
+            .fetch_one(&db)
+            .await
+            .unwrap();
+    assert_eq!(stored, 1, "the result is kept");
+
+    // Written straight to the table: no change event, so the entry stands.
+    insert_deal(&db, &deals, Some("won"), 5.0, day, None, Some(true)).await;
+    let (_, cached) = widget_data(&app, &admin_cookie, &dashboard, json!({})).await;
+    assert_eq!(bucket_value(&cached, "won"), 2.0, "served from the entry");
+
+    // The marking job saw the entity change: the next read computes again.
+    sqlx::query(
+        "INSERT INTO aggregate_cache_mark (entity_logicalname, changed_at) VALUES ($1, now()) \
+         ON CONFLICT (entity_logicalname) DO UPDATE SET changed_at = EXCLUDED.changed_at",
+    )
+    .bind(&deals)
+    .execute(&db)
+    .await
+    .unwrap();
+    let (_, fresh) = widget_data(&app, &admin_cookie, &dashboard, json!({})).await;
+    assert_eq!(
+        bucket_value(&fresh, "won"),
+        3.0,
+        "computed again after the mark"
+    );
+}

@@ -223,6 +223,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_fulfilment_split_scheduler(db.clone(), std::time::Duration::from_secs(30));
     // F6-T13: shipped and delivered shipments asked for billing, every minute.
     crate::jobs::spawn_fulfilment_billing_scheduler(db.clone(), std::time::Duration::from_secs(60));
+    // AA11-T1: changed entities marked for the aggregate cache, every 30 seconds.
+    crate::jobs::spawn_aggregate_cache_marks_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(30),
+    );
     // D4-T1: new leads assigned by the rule set, every 30 seconds.
     crate::jobs::spawn_lead_assignment_scheduler(db.clone(), std::time::Duration::from_secs(30));
     // D4-T2: first-touch timers for new leads every minute; stale leads rebalanced daily.

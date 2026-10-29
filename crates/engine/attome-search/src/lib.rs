@@ -26,6 +26,8 @@ pub mod access_cache;
 /// A25-T9: search administration routes.
 pub mod admin;
 pub mod aggregate;
+/// AA11-T1: the aggregate cache.
+pub mod aggregate_cache;
 /// A25-T7: searching in words (`mode=ask`).
 pub mod ask;
 pub mod backfill;

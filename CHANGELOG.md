@@ -59,6 +59,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Dashboard data definitions can keep their result in an aggregate cache (`cache`:
+  `{ "refresh": "on_change" | "scheduled", "max_age_seconds": 60-86400 }`) so a dashboard read does
+  not scan the entity again (AA11-T1, migration 0331). Entries are keyed by the caller's exact
+  statement and values, so only callers with the same access share one; see `docs/caching.md`.
 - Formulas computed when read (`mode: read_time`) can read through lookups, up to five of them
   (`account.owner.manager.region`), resolved for each record when it is read (A9-T2). A path may end
   at another entity's formula; a save that would make formulas read each other in a cycle is refused

@@ -85,3 +85,27 @@ Administrators see each cache's entries, hit rate and evictions under **Admin > 
 is audited and reaches every server through a PostgreSQL notification sent in the audit's
 transaction. A whole-cache purge, or a purge of a partitioned key, clears the in-process tier. A shared
 key is also deleted from the shared store. No route ever returns a cached value.
+
+## Aggregate cache
+
+A dashboard data definition can ask to keep its result (AA11-T1):
+
+```json
+{ "source": "deal", "measures": [{ "aggregation": "sum", "field": "amount" }],
+  "group": { "field": "status" },
+  "cache": { "refresh": "on_change", "max_age_seconds": 300 } }
+```
+
+The result is stored in PostgreSQL (`aggregate_cache`), keyed by a hash of the definition, the
+timezone, the exact statement the caller would run and every value bound to it. The caller's record
+filter is part of that statement, so two people share an entry only when they would get the same
+answer; people who see only their own, their team's or their unit's records never share. Anyone with
+condition grants always runs the statement live. Lookup bucket names are read for each caller and
+never stored.
+
+`on_change` (the default) uses an entry while it is younger than `max_age_seconds` (60 to 86,400) and
+the entity has not changed since it was computed: the `aggregate_cache_marks` job reads the change
+feed every 30 seconds and marks each changed entity, so a change shows within about 30 seconds.
+`scheduled` uses an entry until it is `max_age_seconds` old, whatever changed. Entries older than a day
+are deleted. A failed cache read or write is logged and the aggregate runs live. Hits and misses
+count `aggregate_cache_total{outcome}`.
