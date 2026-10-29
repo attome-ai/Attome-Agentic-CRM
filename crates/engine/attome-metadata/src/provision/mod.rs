@@ -15,6 +15,8 @@
 //! wires the submodules and re-exports every item that was previously
 //! reachable as `attome_metadata::provision::<name>`.
 
+/// Y11-T11: app layers in install order, and clashes between apps.
+pub mod app_layers;
 mod attribute;
 mod bundle_walk;
 /// Solution 7 Phase 2 (D-787 rule 7, D-791 rule 7) — entity business keys:
@@ -37,14 +39,12 @@ mod grants;
 mod identifiers;
 /// AA3-T1: indexes for the attributes views and definitions filter and sort on.
 pub mod index_advisor;
-/// Y11-T11: app layers in install order, and clashes between apps.
-pub mod app_layers;
 /// Y11-T7: listing and resolving upgrade conflicts.
 pub mod layer_conflicts;
-/// Y11-T9: resetting a customisation, with a preview and an undo.
-pub mod layer_reset;
 /// Y11-T12: customisations a release's removals and renames affect.
 pub mod layer_impact;
+/// Y11-T9: resetting a customisation, with a preview and an undo.
+pub mod layer_reset;
 /// Y2-T4 — the orphan scan: lookup values that point at no record.
 pub mod lookup_fk;
 /// L1-T2: a master entity's contribution and provenance side tables.

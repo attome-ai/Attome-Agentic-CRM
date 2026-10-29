@@ -83,9 +83,9 @@ pub mod mtls;
 /// S11-T1: the OAuth client credentials token endpoint's core.
 pub mod oauth_token;
 pub mod oidc;
-pub mod oidc_registry;
 /// Q2-T1: identity provider presets, brokers included.
 pub mod oidc_presets;
+pub mod oidc_registry;
 pub mod otp;
 pub mod password;
 /// Q7-T1: breached and reused passwords.

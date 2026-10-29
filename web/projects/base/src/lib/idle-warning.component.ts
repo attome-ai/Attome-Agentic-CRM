@@ -16,7 +16,7 @@ import { TranslatePipe } from './translate.pipe';
       position: fixed; inset-block-end: 1rem; inset-inline-end: 1rem; z-index: 1000;
       max-inline-size: 22rem; padding: 1rem; border-radius: 0.5rem;
       background: var(--color-surface, #fff); color: var(--color-text, #111);
-      box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
+      box-shadow: 0 4px 16px var(--color-card-shadow);
     }
     .idle-warning p { margin-block: 0 0.75rem; }
   `],

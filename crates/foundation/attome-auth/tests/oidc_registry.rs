@@ -75,7 +75,10 @@ async fn a_database_provider_signs_in_through_the_registry() {
         .unwrap(),
     )]);
     let registry = OidcRegistry::from_config(&configured, &HashMap::new());
-    assert!(registry.get(&key).is_none(), "configuration only until a reload");
+    assert!(
+        registry.get(&key).is_none(),
+        "configuration only until a reload"
+    );
 
     registry
         .reload(&db, &configured, &HashMap::new(), &right)
