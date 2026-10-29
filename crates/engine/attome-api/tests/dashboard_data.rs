@@ -3472,3 +3472,127 @@ async fn a_role_limited_metric_shows_only_to_its_role() {
     assert_eq!(res.status(), StatusCode::OK);
     assert!(listed(cookie, app).await);
 }
+
+/// P9-T11: a breakdown by a lookup shows a member only to a viewer who may
+/// read the record it names.
+#[tokio::test]
+async fn breakdown_hides_owner_members_viewer_cannot_read() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let db = system.state().base.db.clone();
+    let security = system.state().base.security.clone();
+    let (deals, deals_entity) = provision_deals(&system).await;
+    let teams = format!("dash_data_team_{}", Uuid::now_v7().simple());
+    let teams_entity = attome_metadata::provision::ensure_entity(&db, &teams, "Team", None, false)
+        .await
+        .expect("provision team entity");
+    attome_metadata::provision::ensure_attribute(
+        &db,
+        teams_entity,
+        "name",
+        "name",
+        "text",
+        false,
+        false,
+        true,
+        true,
+        None,
+        None,
+    )
+    .await
+    .expect("team name");
+    attome_metadata::provision::ensure_attribute(
+        &db,
+        deals_entity,
+        "team_ref",
+        "team_ref",
+        "lookup",
+        false,
+        false,
+        true,
+        true,
+        Some(teams_entity),
+        None,
+    )
+    .await
+    .expect("deal team lookup");
+    sync_registry(&system).await;
+
+    let mut team_ids = Vec::new();
+    for name in ["shared", "hidden"] {
+        let id = Uuid::now_v7();
+        sqlx::query(&format!(
+            "INSERT INTO \"{teams}\" (id, name, is_active) VALUES ($1, $2, true)"
+        ))
+        .bind(id)
+        .bind(name)
+        .execute(&db)
+        .await
+        .expect("insert team");
+        team_ids.push(id);
+    }
+    let (shared, hidden) = (team_ids[0], team_ids[1]);
+
+    let (reader_id, cookie) = seed_user(&system, false).await;
+    let role_id = create_role(&db).await;
+    grant_privileges(&db, role_id, "dashboard_metric_definition", &["read"]).await;
+    assign_role_to_user(&db, reader_id, role_id).await;
+    scope_role_for_entity(&db, &security, role_id, reader_id, teams_entity, 0).await;
+    sqlx::query(
+        "INSERT INTO record_share (record_id, entity_ref, principal_type, principal_id, capability) \
+         VALUES ($1, $2, 0, $3, 0)",
+    )
+    .bind(shared)
+    .bind(teams_entity)
+    .bind(reader_id)
+    .execute(&db)
+    .await
+    .expect("share one team");
+    security.invalidate(reader_id).await;
+
+    let metric_id = insert_metric(&db, "a / b").await;
+    sqlx::query(
+        "UPDATE dashboard_metric_definition \
+            SET entity_logicalname = $2, dimension_attributes = 'team_ref' WHERE id = $1",
+    )
+    .bind(metric_id)
+    .bind(&deals)
+    .execute(&db)
+    .await
+    .expect("break the metric down by team");
+    for (team, actual) in [(shared, 3.0), (hidden, 4.0)] {
+        sqlx::query(
+            "INSERT INTO metric_snapshot \
+             (id, metric_ref, period_start, actual, source_version, status, \
+              dimension_attribute, dimension_value) \
+             VALUES ($1, $2, '2026-05-01', $3, 'formula', 'on_track', 'team_ref', $4)",
+        )
+        .bind(Uuid::now_v7())
+        .bind(metric_id)
+        .bind(actual)
+        .bind(team.to_string())
+        .execute(&db)
+        .await
+        .expect("insert member snapshot");
+    }
+
+    let app = full_app(system);
+    let res = app
+        .oneshot(req(
+            "GET",
+            &format!("/api/v1/metrics/{metric_id}/snapshots?dimension_attribute=team_ref"),
+            Some(&cookie),
+            None,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let body = body_json(res).await;
+    let members: Vec<String> = body["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|r| r["dimension_value"].as_str().unwrap().to_owned())
+        .collect();
+    assert_eq!(members, vec![shared.to_string()], "{body}");
+    assert_eq!(body["total"], 1, "the hidden member is not counted: {body}");
+}
