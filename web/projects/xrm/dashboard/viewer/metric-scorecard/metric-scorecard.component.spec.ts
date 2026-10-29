@@ -4,7 +4,7 @@ import { of } from 'rxjs';
 import { describe, expect, it } from 'vitest';
 import { LangService } from '@attome/base';
 import { DashboardService, ScorecardItem, ScorecardRead } from '@attome/xrm/dashboard/data';
-import { MetricScorecardComponent, freshnessBadge, statusBand } from './metric-scorecard.component';
+import { MetricScorecardComponent, freshnessBadge, periodLabel, statusBand } from './metric-scorecard.component';
 import { previewChildren, sharesBody } from '../target-spread-dialog/target-spread-dialog.component';
 
 function item(over: Partial<ScorecardItem> = {}): ScorecardItem {
@@ -25,6 +25,13 @@ describe('metric scorecard (P9-T15)', () => {
     expect(freshnessBadge(item())).toBeNull();
     expect(freshnessBadge(item({ freshness: { computed_at: null, is_stale: true, failed: false } }))).toBe('stale');
     expect(freshnessBadge(item({ freshness: { computed_at: null, is_stale: true, failed: true } }))).toBe('failed');
+  });
+
+  it('names a Hijri period by its Umm al-Qura month', () => {
+    // 1 Ramadan 1447 is 18 February 2026 in the Umm al-Qura table.
+    const ramadan = item({ calendar_kind: 'hijri', period_start: '2026-02-18' });
+    expect(periodLabel(ramadan, 'en')).toContain('1447');
+    expect(periodLabel(item(), 'en')).toBe('2026-09-01');
   });
 
   it('only sends shares that add up to 100%', () => {

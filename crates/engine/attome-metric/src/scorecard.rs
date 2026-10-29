@@ -59,6 +59,8 @@ pub struct ScorecardItem {
     pub name: String,
     pub key: String,
     pub period: String,
+    /// `hijri` when the metric's periods are Umm al-Qura months and years.
+    pub calendar_kind: Option<String>,
     pub unit: Option<String>,
     pub sort_order: Option<f64>,
     /// The newest total value: its period, value and status.
@@ -84,6 +86,7 @@ type ItemRow = (
     String,
     String,
     String,
+    Option<String>,
     Option<String>,
     Option<f64>,
     Option<NaiveDate>,
@@ -130,7 +133,8 @@ pub(crate) async fn get_scorecard(
     };
     let roles = crate::governance::role_names(&state.base.db, ctx.user_id).await?;
     let rows: Vec<ItemRow> = sqlx::query_as(&format!(
-        "SELECT d.id, d.name, d.key, d.period, d.unit, i.sort_order::double precision, \
+        "SELECT d.id, d.name, d.key, d.period, to_jsonb(d)->>'calendar_kind', d.unit, \
+                i.sort_order::double precision, \
                 s.period_start, s.actual, s.status, s.computed_at, s.error_message, \
                 (SELECT t.target_value::double precision FROM dashboard_metric_target t \
                   WHERE t.metric_ref = d.id AND t.period_start = s.period_start \
@@ -166,6 +170,7 @@ pub(crate) async fn get_scorecard(
                 name,
                 key,
                 period,
+                calendar_kind,
                 unit,
                 sort_order,
                 period_start,
@@ -185,6 +190,7 @@ pub(crate) async fn get_scorecard(
                     name,
                     key,
                     period,
+                    calendar_kind,
                     unit,
                     sort_order,
                     period_start,

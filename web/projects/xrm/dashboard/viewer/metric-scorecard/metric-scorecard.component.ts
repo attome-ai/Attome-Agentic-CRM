@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { TranslatePipe } from '@attome/base';
+import { LangService, TranslatePipe, hijriMonthName, toHijri } from '@attome/base';
 import { DashboardService, ScorecardItem, ScorecardRead } from '@attome/xrm/dashboard/data';
 import { TargetSpreadDialogComponent } from '../target-spread-dialog/target-spread-dialog.component';
 
@@ -14,6 +14,17 @@ export function statusBand(status: string | null): 'good' | 'warn' | 'bad' | 'no
     case 'failed': return 'bad';
     default: return 'none';
   }
+}
+
+/** A row's period as people read it: the Umm al-Qura month and year for a
+ * Hijri metric, else the period's first day. Pure. */
+export function periodLabel(item: ScorecardItem, lang: string): string {
+  if (!item.period_start) return '';
+  if (item.calendar_kind === 'hijri') {
+    const h = toHijri(item.period_start);
+    if (h) return `${hijriMonthName(h.month, lang)} ${h.year}`;
+  }
+  return item.period_start;
 }
 
 /** The freshness badge a row shows, if any. Pure. */
@@ -38,6 +49,7 @@ export function freshnessBadge(item: ScorecardItem): 'failed' | 'stale' | null {
 })
 export class MetricScorecardComponent implements OnInit {
   private readonly svc = inject(DashboardService);
+  private readonly lang = inject(LangService);
 
   readonly id = input<string | null>(null);
   readonly scorecard = signal<ScorecardRead | null>(null);
@@ -49,6 +61,10 @@ export class MetricScorecardComponent implements OnInit {
 
   readonly band = statusBand;
   readonly badge = freshnessBadge;
+
+  period(item: ScorecardItem): string {
+    return periodLabel(item, this.lang.current());
+  }
 
   ngOnInit(): void {
     this.load();

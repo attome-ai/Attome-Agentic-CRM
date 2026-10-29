@@ -27,7 +27,7 @@
               <b>{{ item.actual ?? '—' }}</b> {{ item.unit ?? '' }}</span>
             <span>{{ 'metricViews.scorecard.target' | translate }}: {{ item.target ?? '—' }}</span>
             <span class="xms-status">{{ item.status ? (('metricViews.status.' + item.status) | translate) : '—' }}</span>
-            @if (item.period_start) { <span class="xms-muted">{{ item.period_start }}</span> }
+            @if (item.period_start) { <span class="xms-muted">{{ period(item) }}</span> }
           </div>
           @if (comments()[item.metric_id]; as comment) {
             <p class="xms-comment">{{ comment }}</p>

@@ -489,6 +489,8 @@ export interface ScorecardItem {
   name: string;
   key: string;
   period: string;
+  /** `hijri` for Umm al-Qura periods. */
+  calendar_kind?: string | null;
   unit: string | null;
   sort_order: number | null;
   period_start: string | null;
