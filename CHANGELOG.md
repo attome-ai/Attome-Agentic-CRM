@@ -62,6 +62,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Polymorphic lookups take a delete rule per target entity (A8-T2): `options.polymorphic.on_delete`
+  (`restrict`, `orphan` or `cascade-deactivate`, `"*"` for the rest); a cascade is undone by
+  restoring the target.
 - Metric snapshots follow the metric's own calendar (P9-T16): a Hijri metric's values now land on
   Umm al-Qura months, and `week_start` sets a weekly metric's weeks. `docs/metrics.md` describes
   periods, dimensions, bands, versions and the rest of KPI management (P9-T17).

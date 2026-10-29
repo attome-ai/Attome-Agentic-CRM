@@ -391,6 +391,14 @@ fn validate_attribute_options(
                 "polymorphic needs targets or extends".into(),
             ));
         }
+        // A8-T2: a delete rule per target entity (or "*").
+        if let Some((entity, mode)) = poly.on_delete.iter().find(|(_, mode)| {
+            !matches!(mode.as_str(), "restrict" | "orphan" | "cascade-deactivate")
+        }) {
+            return Err(AppError::Validation(format!(
+                "polymorphic.on_delete.{entity} must be restrict, orphan or cascade-deactivate, not {mode}"
+            )));
+        }
     }
     attome_field::validate_options(&ft, options)
 }

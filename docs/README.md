@@ -32,6 +32,7 @@
 - [Delta tokens](delta-tokens.md): keeping a copy of a list up to date with only what changed.
 - [Change data capture](change-data-capture.md): change-stream subscriptions, erasure and schema events, a first copy without gaps, resync and consumer health.
 - [Marketing profiles](marketing-profiles.md): profile events and traits, identity links and their conflicts, attribution of won deals, and campaign members from a list.
+- [Polymorphic lookups](polymorphic-lookups.md): fields that point at a record of several entities, their targets and per-target delete rules.
 - [Metrics](metrics.md): building a metric from its parts, periods and calendars, dimensions, status bands, KPI trees, versions, backfill, cascading targets, who sees what, scorecards and the drafting actions.
 - [Delivery by your own drivers](fulfilment-delivery.md): out for delivery, delivery codes, proof, cash on delivery, and where an order ships from (sourcing rules and the override).
 - [Data lineage](lineage.md): the graph of what uses what, impact before a field change, hand-documented links and the OpenLineage export.

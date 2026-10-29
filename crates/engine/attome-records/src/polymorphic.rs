@@ -38,6 +38,23 @@ pub struct PolymorphicOptions {
     /// Every entity is a target.
     #[serde(default)]
     pub any: bool,
+    /// A8-T2: what deleting a target does to the records pointing at it, per
+    /// target entity (`"*"` for every other): `restrict`, `orphan` (the
+    /// default) or `cascade-deactivate`.
+    #[serde(default)]
+    pub on_delete: std::collections::BTreeMap<String, String>,
+}
+
+impl PolymorphicOptions {
+    /// A8-T2: the delete rule for a target of `entity`: its own, else the
+    /// `"*"` rule, else orphan. Pure.
+    pub fn delete_rule(&self, entity: &str) -> attome_core::OnTargetDelete {
+        self.on_delete
+            .get(entity)
+            .or_else(|| self.on_delete.get("*"))
+            .map(|mode| attome_core::OnTargetDelete::from_db_str(mode))
+            .unwrap_or(attome_core::OnTargetDelete::Orphan)
+    }
 }
 
 /// The polymorphic options of `attr`, if it is a polymorphic id attribute.

@@ -3953,6 +3953,16 @@ pub(crate) async fn apply_dependents_on_delete(
     let mut cascade_summary =
         crate::cascade::links_on_delete(tx, target_entity_name, &[record_id], target_entity_name)
             .await?;
+    // A8-T2: the delete rules of polymorphic pairs pointing at it.
+    cascade_summary.extend(
+        crate::cascade::polymorphic_on_delete(
+            tx,
+            target_entity_name,
+            &[record_id],
+            target_entity_name,
+        )
+        .await?,
+    );
     let mut tree_budget = crate::cascade::CASCADE_TREE_LIMIT;
     for (dep_entity, dep_field, mode) in &dependents {
         if *mode != OnTargetDelete::CascadeDeactivate {

@@ -11175,6 +11175,111 @@ fn cascade_preview_shows_the_tree_before_a_delete() {
     })
 }
 
+// op: POST /api/v1/{entity}, DELETE /api/v1/{entity}/{id}, POST /api/v1/{entity}/{id}/restore, GET /api/v1/{entity}/{id}
+/// A8-T2: a polymorphic pair's delete rule per target entity: a restrict
+/// target cannot be deleted while a record points at it; deleting a
+/// cascade target deactivates the records pointing at it, and restoring it
+/// brings them back.
+#[test]
+fn polymorphic_delete_rules_follow_the_target_entity() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let cookie = seed_admin(&system).await;
+        let state = system.state().clone();
+        let app = full_app(system);
+        let (account, account_id) = create_entity(&app, &cookie, "a8d_account").await;
+        let (case, case_id) = create_entity(&app, &cookie, "a8d_case").await;
+        for id in [&account_id, &case_id] {
+            create_field(
+                &app,
+                &cookie,
+                id,
+                r#"{"logicalname":"title","name":"Title","field_type":"text"}"#,
+            )
+            .await;
+        }
+        let (task, task_id) = create_entity(&app, &cookie, "a8d_task").await;
+        create_field(
+            &app,
+            &cookie,
+            &task_id,
+            r#"{"logicalname":"regarding_entity","name":"Regarding type","field_type":"text"}"#,
+        )
+        .await;
+        create_field(
+            &app,
+            &cookie,
+            &task_id,
+            &format!(r#"{{"logicalname":"regarding_id","name":"Regarding","field_type":"text","options":{{"polymorphic":{{"pair":"regarding_entity","targets":["{account}","{case}"],"on_delete":{{"{account}":"restrict","{case}":"cascade-deactivate"}}}}}}}}"#),
+        )
+        .await;
+        sync_registry(&state).await;
+        let a = cascade_record(&app, &cookie, &account, r#"{"title":"a"}"#.into()).await;
+        let c = cascade_record(&app, &cookie, &case, r#"{"title":"c"}"#.into()).await;
+        cascade_record(
+            &app,
+            &cookie,
+            &task,
+            format!(r#"{{"regarding_entity":"{account}","regarding_id":"{a}"}}"#),
+        )
+        .await;
+        let on_case = cascade_record(
+            &app,
+            &cookie,
+            &task,
+            format!(r#"{{"regarding_entity":"{case}","regarding_id":"{c}"}}"#),
+        )
+        .await;
+
+        let (status, body) = cascade_call(
+            &app,
+            &cookie,
+            "DELETE",
+            format!("/api/v1/{account}/{a}"),
+            None,
+        )
+        .await;
+        assert_eq!(status, StatusCode::CONFLICT, "{body:?}");
+        assert_eq!(body["error"], "cascade_restricted");
+
+        let (status, body) =
+            cascade_call(&app, &cookie, "DELETE", format!("/api/v1/{case}/{c}"), None).await;
+        assert_eq!(status, StatusCode::NO_CONTENT, "{body:?}");
+        let (status, _) = cascade_call(
+            &app,
+            &cookie,
+            "GET",
+            format!("/api/v1/{task}/{on_case}"),
+            None,
+        )
+        .await;
+        assert_eq!(
+            status,
+            StatusCode::NOT_FOUND,
+            "the task on the case went with it"
+        );
+
+        let (status, body) = cascade_call(
+            &app,
+            &cookie,
+            "POST",
+            format!("/api/v1/{case}/{c}/restore"),
+            None,
+        )
+        .await;
+        assert!(status.is_success(), "{body:?}");
+        let (status, _) = cascade_call(
+            &app,
+            &cookie,
+            "GET",
+            format!("/api/v1/{task}/{on_case}"),
+            None,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "the restore brings the task back");
+    })
+}
+
 // op: POST /api/v1/{entity}
 #[test]
 fn polymorphic_lookup_accepts_only_allowed_live_targets() {

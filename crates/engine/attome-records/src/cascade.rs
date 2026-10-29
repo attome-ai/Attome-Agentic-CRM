@@ -67,6 +67,104 @@ pub(crate) async fn dependents_of(
         .collect())
 }
 
+/// A8-T2: the polymorphic pairs that may point at `entity` and carry a
+/// delete rule for it other than orphan: (dependent entity, id attribute,
+/// entity attribute, rule), from the metadata tables.
+pub(crate) async fn polymorphic_dependents_of(
+    conn: &mut PgConnection,
+    entity: &str,
+) -> Result<Vec<(String, String, String, OnTargetDelete)>, AppError> {
+    let rows: Vec<(Option<String>, Option<String>, Option<serde_json::Value>)> = sqlx::query_as(
+        "SELECT de.logicalname, a.logicalname, a.options \
+           FROM attribute_info a \
+           JOIN entity_info de ON de.id = a.entity_ref \
+          WHERE a.options ? 'polymorphic' \
+            AND (a.is_active IS NULL OR a.is_active = true) \
+            AND (de.is_active IS NULL OR de.is_active = true) \
+          ORDER BY de.logicalname, a.logicalname",
+    )
+    .fetch_all(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(rows
+        .into_iter()
+        .filter_map(|(dep, attr, options)| {
+            let options: crate::polymorphic::PolymorphicOptions =
+                serde_json::from_value(options?.get("polymorphic")?.clone()).ok()?;
+            if !crate::polymorphic::allowed(&options, entity, None) {
+                return None;
+            }
+            let (dep, attr) = (dep?, attr?);
+            let rule = options.delete_rule(entity);
+            (rule != OnTargetDelete::Orphan).then(|| (dep, attr, options.pair.clone(), rule))
+        })
+        .collect())
+}
+
+/// A8-T2: the delete rule of every polymorphic pair that may point at
+/// records of `entity` being deleted (`ids`, reached by `path`): `restrict`
+/// refuses while a live record points at one of them, `cascade-deactivate`
+/// deactivates the records pointing at them (recorded in the
+/// `cascade_deactivation` ledger, so a restore brings them back); the walk
+/// does not continue below them. Returns the summary lines.
+pub(crate) async fn polymorphic_on_delete(
+    tx: &mut Transaction<'_, Postgres>,
+    entity: &str,
+    ids: &[Uuid],
+    path: &str,
+) -> Result<Vec<String>, AppError> {
+    let mut summary = Vec::new();
+    let texts: Vec<String> = ids.iter().map(Uuid::to_string).collect();
+    for (dep_entity, id_attr, pair_attr, rule) in polymorphic_dependents_of(tx, entity).await? {
+        let table = quote_ident(&dep_entity);
+        let id_col = quote_ident(&id_attr);
+        let pair_col = quote_ident(&pair_attr);
+        let step = format!("{path} -> {dep_entity}.{id_attr}");
+        match rule {
+            OnTargetDelete::Orphan => {}
+            OnTargetDelete::Restrict => {
+                let blocked: bool = sqlx::query_scalar(&format!(
+                    "SELECT EXISTS(SELECT 1 FROM {table} \
+                      WHERE {pair_col} = $1 AND {id_col} = ANY($2) \
+                        AND (is_active IS NULL OR is_active = true))"
+                ))
+                .bind(entity)
+                .bind(&texts)
+                .fetch_one(&mut **tx)
+                .await
+                .map_err(AppError::internal)?;
+                if blocked {
+                    return Err(AppError::CascadeRestricted(step));
+                }
+            }
+            OnTargetDelete::CascadeDeactivate => {
+                let mut total = 0usize;
+                for (parent, text) in ids.iter().zip(&texts) {
+                    let taken: Vec<Uuid> = sqlx::query_scalar(&format!(
+                        "UPDATE {table} SET is_active = false, modified_at = NOW(), \
+                                row_version = row_version + 1 \
+                          WHERE {pair_col} = $1 AND {id_col} = $2 \
+                            AND (is_active IS NULL OR is_active = true) \
+                          RETURNING id"
+                    ))
+                    .bind(entity)
+                    .bind(text)
+                    .fetch_all(&mut **tx)
+                    .await
+                    .map_err(AppError::internal)?;
+                    record_cascade_batch(&mut **tx, entity, *parent, &dep_entity, &id_attr, &taken)
+                        .await?;
+                    total += taken.len();
+                }
+                if total > 0 {
+                    summary.push(format!("{step}: {total} deactivated"));
+                }
+            }
+        }
+    }
+    Ok(summary)
+}
+
 /// A7-T1: the many-to-many relationships' rule for records of `entity`
 /// being deleted (`ids`, reached by `path`): `restrict` refuses while a
 /// live link to a live record still holds one of them, `cascade-deactivate`
@@ -175,6 +273,8 @@ pub(crate) async fn cascade_below(
                 continue;
             }
             summary.extend(links_on_delete(tx, &level.entity, &level.ids, &level.path).await?);
+            summary
+                .extend(polymorphic_on_delete(tx, &level.entity, &level.ids, &level.path).await?);
             let dependents = dependents_of(tx, &level.entity).await?;
             for (dep_entity, dep_field, mode) in dependents {
                 let dep_table = quote_ident(&dep_entity);
@@ -333,7 +433,7 @@ pub(crate) async fn restore_below(
             let back: Vec<(Uuid,)> = sqlx::query_as(&format!(
                 "UPDATE {dep_table} SET is_active = true, modified_at = NOW(), modified_by = $2, \
                         row_version = row_version + 1 \
-                  WHERE {dep_field_ident} = ANY($1) AND is_active = FALSE \
+                  WHERE {dep_field_ident}::text = ANY($5::text[]) AND is_active = FALSE \
                     AND id IN ( \
                         SELECT dependent_record_id FROM cascade_deactivation \
                          WHERE parent_record_id = ANY($1) AND dependent_entity = $3 AND dependent_field = $4 \
@@ -344,6 +444,8 @@ pub(crate) async fn restore_below(
             .bind(user_id)
             .bind(&dep_entity)
             .bind(&dep_field)
+            // A8-T2: a polymorphic id is text; a lookup compares as text too.
+            .bind(frontier.iter().map(Uuid::to_string).collect::<Vec<_>>())
             .fetch_all(&mut *conn)
             .await
             .map_err(AppError::internal)?;
