@@ -21601,6 +21601,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/metrics/scorecards/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a scorecard
+         * @description The scorecard with each metric's newest total value, status, target and freshness, from stored
+         *     values only. Metrics the caller may not see are left out. Anyone who may read the scorecard and
+         *     metric definitions.
+         */
+        get: operations["read_metric_scorecard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/metrics/{id}/backfill": {
         parameters: {
             query?: never;
@@ -21659,6 +21681,27 @@ export interface paths {
          *     update rights on metric definitions. Audited.
          */
         post: operations["certify_metric"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/metrics/{id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a metric's comments
+         * @description The comments on the metric the caller may read, newest first, optionally for one period.
+         *     Anyone who may read metric definitions and the comments.
+         */
+        get: operations["list_metric_comments"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -41871,22 +41914,14 @@ export interface components {
             /** @description `agent` or `customer`. */
             sender: string;
         };
-        /** @description One kind's freshness. */
+        /** @description How fresh a metric's newest value is. */
         Freshness: {
-            /** @description The checks the last run failed (or skipped). */
-            failing_checks: string[];
-            kind: string;
             /** Format: date-time */
-            last_ok_run_at?: string | null;
-            /** Format: date-time */
-            last_run_at?: string | null;
-            /**
-             * Format: int64
-             * @description How old a passing run may be.
-             */
-            period_days: number;
-            /** @description `fresh`, `stale`, `failed` or `never`. */
-            status: string;
+            computed_at?: string | null;
+            /** @description The newest value failed to compute. */
+            failed: boolean;
+            /** @description No value, or the newest is older than twice the period. */
+            is_stale: boolean;
         };
         /** @description Adding a list to a campaign. */
         FromListBody: {
@@ -45100,6 +45135,19 @@ export interface components {
             /** Format: uuid */
             metric_id: string;
         };
+        /** @description One comment on a metric. */
+        MetricComment: {
+            /** Format: uuid */
+            author_ref?: string | null;
+            body?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            dimension_value?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            period_start?: string | null;
+        };
         /** @description One thing that uses a metric. */
         MetricConsumer: {
             /** Format: uuid */
@@ -45109,7 +45157,16 @@ export interface components {
             label: string;
         };
         MetricDefinitionSummary: {
+            /**
+             * @description P9-T12: the catalogue facts, `null` where the governance fields are
+             *     unset.
+             */
+            certified?: boolean | null;
+            /** Format: int32 */
+            definition_version?: number | null;
             direction: string;
+            /** Format: uuid */
+            glossary_term_ref?: string | null;
             /** Format: uuid */
             id: string;
             key: string;
@@ -45120,8 +45177,17 @@ export interface components {
             lineage_entities: string[];
             name: string;
             period: string;
+            /** Format: date-time */
+            review_due?: string | null;
             source_kind: string;
+            /** Format: uuid */
+            steward_ref?: string | null;
             unit?: string | null;
+            /**
+             * Format: int64
+             * @description The scorecards that show it (dashboards are not counted here).
+             */
+            used_in: number;
             /** Format: double */
             weight?: number | null;
         };
@@ -51961,9 +52027,44 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_MetricComment: {
+            items: {
+                /** Format: uuid */
+                author_ref?: string | null;
+                body?: string | null;
+                /** Format: date-time */
+                created_at: string;
+                dimension_value?: string | null;
+                /** Format: uuid */
+                id: string;
+                /** Format: date-time */
+                period_start?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_MetricDefinitionSummary: {
             items: {
+                /**
+                 * @description P9-T12: the catalogue facts, `null` where the governance fields are
+                 *     unset.
+                 */
+                certified?: boolean | null;
+                /** Format: int32 */
+                definition_version?: number | null;
                 direction: string;
+                /** Format: uuid */
+                glossary_term_ref?: string | null;
                 /** Format: uuid */
                 id: string;
                 key: string;
@@ -51974,8 +52075,17 @@ export interface components {
                 lineage_entities: string[];
                 name: string;
                 period: string;
+                /** Format: date-time */
+                review_due?: string | null;
                 source_kind: string;
+                /** Format: uuid */
+                steward_ref?: string | null;
                 unit?: string | null;
+                /**
+                 * Format: int64
+                 * @description The scorecards that show it (dashboards are not counted here).
+                 */
+                used_in: number;
                 /** Format: double */
                 weight?: number | null;
             }[];
@@ -61210,6 +61320,41 @@ export interface components {
              * @description Added because a team of the caller's owns it.
              */
             team: number;
+        };
+        /** @description One metric on a scorecard. */
+        ScorecardItem: {
+            /** Format: double */
+            actual?: number | null;
+            /** @description `hijri` when the metric's periods are Umm al-Qura months and years. */
+            calendar_kind?: string | null;
+            freshness: components["schemas"]["Freshness"];
+            key: string;
+            /** Format: uuid */
+            metric_id: string;
+            name: string;
+            period: string;
+            /**
+             * Format: date
+             * @description The newest total value: its period, value and status.
+             */
+            period_start?: string | null;
+            /** Format: double */
+            sort_order?: number | null;
+            status?: string | null;
+            /**
+             * Format: double
+             * @description That period's total target.
+             */
+            target?: number | null;
+            unit?: string | null;
+        };
+        /** @description A scorecard and its metrics. */
+        ScorecardRead: {
+            description?: string | null;
+            /** Format: uuid */
+            id: string;
+            items: components["schemas"]["ScorecardItem"][];
+            name?: string | null;
         };
         /** @description A screen pop: the record a caller's number belongs to. */
         ScreenPop: {
@@ -128820,6 +128965,56 @@ export interface operations {
             };
         };
     };
+    read_metric_scorecard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The scorecard */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScorecardRead"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such scorecard */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     backfill_metric: {
         parameters: {
             query?: never;
@@ -128990,6 +129185,63 @@ export interface operations {
                 };
             };
             /** @description Caller lacks the update or the certify privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such metric */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_metric_comments: {
+        parameters: {
+            query?: {
+                /** @description One-based: page 1 is the first page. */
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
+                /** @description Only the comments on this period. */
+                period_start?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The metric */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_MetricComment"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
             403: {
                 headers: {
                     [name: string]: unknown;

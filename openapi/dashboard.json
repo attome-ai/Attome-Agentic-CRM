@@ -3283,6 +3283,84 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/metrics/scorecards/{id}": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Read a scorecard",
+        "description": "The scorecard with each metric's newest total value, status, target and freshness, from stored\nvalues only. Metrics the caller may not see are left out. Anyone who may read the scorecard and\nmetric definitions.",
+        "operationId": "read_metric_scorecard",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The scorecard",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScorecardRead"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such scorecard",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "dashboard",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/metrics/{id}/backfill": {
       "post": {
         "tags": [
@@ -3604,6 +3682,116 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/metrics/{id}/comments": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "List a metric's comments",
+        "description": "The comments on the metric the caller may read, newest first, optionally for one period.\nAnyone who may read metric definitions and the comments.",
+        "operationId": "list_metric_comments",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The metric",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based: page 1 is the first page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "period_start",
+            "in": "query",
+            "description": "Only the comments on this period.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_MetricComment"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such metric",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "dashboard",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/metrics/{id}/compute": {
@@ -6187,6 +6375,31 @@
         ],
         "description": "Where an applied filter came from — carried to the response so the\nexplanation (Phase 3.2) and the records drill use the same list."
       },
+      "Freshness": {
+        "type": "object",
+        "description": "How fresh a metric's newest value is.",
+        "required": [
+          "is_stale",
+          "failed"
+        ],
+        "properties": {
+          "computed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "failed": {
+            "type": "boolean",
+            "description": "The newest value failed to compute."
+          },
+          "is_stale": {
+            "type": "boolean",
+            "description": "No value, or the newest is older than twice the period."
+          }
+        }
+      },
       "GateIssue": {
         "type": "object",
         "required": [
@@ -7100,6 +7313,84 @@
           }
         }
       },
+      "PaginatedResponse_MetricComment": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One comment on a metric.",
+              "required": [
+                "id",
+                "created_at"
+              ],
+              "properties": {
+                "author_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "body": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "dimension_value": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "period_start": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_MetricDefinitionSummary": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -7121,11 +7412,33 @@
                 "source_kind",
                 "direction",
                 "period",
-                "lineage_entities"
+                "lineage_entities",
+                "used_in"
               ],
               "properties": {
+                "certified": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "P9-T12: the catalogue facts, `null` where the governance fields are\nunset."
+                },
+                "definition_version": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int32"
+                },
                 "direction": {
                   "type": "string"
+                },
+                "glossary_term_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
                 },
                 "id": {
                   "type": "string",
@@ -7147,14 +7460,33 @@
                 "period": {
                   "type": "string"
                 },
+                "review_due": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
                 "source_kind": {
                   "type": "string"
+                },
+                "steward_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
                 },
                 "unit": {
                   "type": [
                     "string",
                     "null"
                   ]
+                },
+                "used_in": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "The scorecards that show it (dashboards are not counted here)."
                 },
                 "weight": {
                   "type": [
@@ -7893,6 +8225,116 @@
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "ScorecardItem": {
+        "type": "object",
+        "description": "One metric on a scorecard.",
+        "required": [
+          "metric_id",
+          "name",
+          "key",
+          "period",
+          "freshness"
+        ],
+        "properties": {
+          "actual": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "calendar_kind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`hijri` when the metric's periods are Umm al-Qura months and years."
+          },
+          "freshness": {
+            "$ref": "#/components/schemas/Freshness"
+          },
+          "key": {
+            "type": "string"
+          },
+          "metric_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "period": {
+            "type": "string"
+          },
+          "period_start": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "The newest total value: its period, value and status."
+          },
+          "sort_order": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "target": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "That period's total target."
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "ScorecardRead": {
+        "type": "object",
+        "description": "A scorecard and its metrics.",
+        "required": [
+          "id",
+          "items"
+        ],
+        "properties": {
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScorecardItem"
+            }
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
