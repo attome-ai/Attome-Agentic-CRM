@@ -1939,6 +1939,16 @@ pub(crate) fn apply_engine_managed_initial_values(
     )
 }
 
+/// An initial value as the body carries it: `true` and `false` (a yes/no
+/// field's, P9-T11) as booleans, anything else as text. Pure.
+fn initial_value(initial: &str) -> Value {
+    match initial {
+        "true" => Value::Bool(true),
+        "false" => Value::Bool(false),
+        other => Value::String(other.to_owned()),
+    }
+}
+
 /// The pure core of [`apply_engine_managed_initial_values`], split out so every
 /// branch is unit-tested without building an `EngineState`.
 fn engine_managed_initial_body(
@@ -1957,10 +1967,12 @@ fn engine_managed_initial_body(
             (None | Some(Value::Null), Some(initial)) => {
                 merged
                     .get_or_insert_with(|| obj.clone())
-                    .insert(field.clone(), Value::String(initial.clone()));
+                    .insert(field.clone(), initial_value(initial));
             }
             (None | Some(Value::Null), None) => {}
             (Some(Value::String(given)), Some(initial)) if given == initial => {}
+            // P9-T11: a yes/no field's initial value, sent as a boolean.
+            (Some(Value::Bool(given)), Some(initial)) if given.to_string() == *initial => {}
             (Some(_), Some(initial)) => {
                 return Err(AppError::Validation(format!(
                     "'{field}' is managed by the {entity_name} engine; a new record must start \
@@ -5017,6 +5029,45 @@ mod engine_managed_initial_value_tests {
         v: serde_json::Value,
     ) -> Result<Option<serde_json::Map<String, Value>>, AppError> {
         engine_managed_initial_body(&managed(), &initials(), entity, &body(v))
+    }
+
+    #[test]
+    fn a_yes_no_initial_value_is_a_boolean_and_accepts_one() {
+        let managed: HashSet<(String, String)> =
+            [("metric".to_owned(), "certified".to_owned())].into();
+        let initials: HashMap<(String, String), String> = [(
+            ("metric".to_owned(), "certified".to_owned()),
+            "false".to_owned(),
+        )]
+        .into();
+        let merged = engine_managed_initial_body(
+            &managed,
+            &initials,
+            "metric",
+            &body(serde_json::json!({ "name": "x" })),
+        )
+        .unwrap()
+        .expect("written");
+        assert_eq!(merged["certified"], serde_json::json!(false));
+        assert!(
+            engine_managed_initial_body(
+                &managed,
+                &initials,
+                "metric",
+                &body(serde_json::json!({ "certified": false })),
+            )
+            .unwrap()
+            .is_none()
+        );
+        assert!(
+            engine_managed_initial_body(
+                &managed,
+                &initials,
+                "metric",
+                &body(serde_json::json!({ "certified": true })),
+            )
+            .is_err()
+        );
     }
 
     #[test]
