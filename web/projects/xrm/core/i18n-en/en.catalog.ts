@@ -1031,6 +1031,19 @@ export const xrmEn = {
     unknownDevice: 'Unknown device', end: 'End session', endOthers: 'End all other sessions',
   },
   // Q8-T9: an administrator's sessions screen.
+  // Q6-T2: the person's own passkeys, on /settings/security.
+  passkeys: {
+    title: 'Passkeys', subtitle: 'Sign in with your device’s screen lock or a security key instead of a code. A passkey never leaves your device.',
+    loading: 'Loading your passkeys…', empty: 'You have no passkeys yet.',
+    colName: 'Name', colAdded: 'Added', colLastUsed: 'Last used', colActions: 'Actions',
+    unnamed: 'Unnamed passkey', never: 'Never',
+    label: 'Name for a new passkey', labelPlaceholder: 'Work laptop',
+    add: 'Add a passkey', added: 'The passkey is added.',
+    remove: 'Remove', removed: 'The passkey is removed.', cancel: 'Cancel',
+    confirmRemove: 'Remove this passkey? You can no longer sign in with it.',
+    unsupported: 'This browser cannot use passkeys.',
+    failed: 'The passkey could not be set up. Please try again.',
+  },
   sessionsAdmin: {
     title: 'Sessions', subtitle: 'Who is signed in, and where. End one session, all of a person’s, or all of a role’s.',
     refresh: 'Refresh', loading: 'Loading…', empty: 'No live session matches.', role: 'Role', allRoles: 'All roles',
@@ -1482,7 +1495,8 @@ export const xrmEn = {
       weak: '(weaker: a sent code)', adminHint: 'This role grants administration: codes sent by email or message are never used for it.',
       graceDays: 'Days to set it up once required', rememberDays: 'Days a browser stays remembered',
       rememberHint: '0 never remembers a browser. An administrator\'s browser is never remembered.',
-      phishingOnly: 'Only phishing-resistant factors (passkeys)', save: 'Save sign-in policy', saved: 'Saved.',
+      phishingOnly: 'Only phishing-resistant factors (passkeys)',
+      passkeySignIn: 'Holders may sign in with a passkey alone, without a password', save: 'Save sign-in policy', saved: 'Saved.',
       noFactor: 'Allow at least one factor.',
     },
     editRole: 'Edit role', newRole: 'New role', createRole: 'Create Role',

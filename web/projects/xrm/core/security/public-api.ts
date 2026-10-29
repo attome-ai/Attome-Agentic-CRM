@@ -88,3 +88,5 @@ export { AccessReviewsService, evidenceCsv } from './access-reviews/access-revie
 export type {
   AccessReviewCampaign, AccessReviewItem, AccessReviewDecision,
 } from './access-reviews/access-reviews.service';
+// Q6-T2: the person's own passkeys.
+export { PasskeysComponent, PASSKEY_MANAGE, type MyPasskey } from './passkeys/passkeys.component';

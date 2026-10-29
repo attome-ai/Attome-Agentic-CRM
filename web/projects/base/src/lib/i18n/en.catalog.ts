@@ -113,6 +113,7 @@ export const en = {
     factor: { password: 'Password', totp: 'Authenticator app code', recovery_code: 'Recovery code' },
     verify: 'Confirm', verifying: 'Confirming…', cancel: 'Cancel', close: 'Close',
     federatedIntro: 'Confirm with a sign-in provider linked to your account.',
+    usePasskey: 'Use a passkey',
     providersLoading: 'Loading your sign-in providers…',
     noProviders: 'No linked sign-in provider is available.',
     continueWith: 'Continue with {provider}',

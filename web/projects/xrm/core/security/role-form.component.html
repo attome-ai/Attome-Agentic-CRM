@@ -480,6 +480,9 @@
         <label class="checkbox-row">
           <input type="checkbox" [(ngModel)]="editPhishingOnly" name="phishing_only"> {{ 'roleForm.mfa.phishingOnly' | translate }}
         </label>
+        <label class="checkbox-row">
+          <input type="checkbox" [(ngModel)]="editPasskeySignIn" name="passkey_sign_in" data-testid="mfa-passkey-sign-in"> {{ 'roleForm.mfa.passkeySignIn' | translate }}
+        </label>
         <div class="btn-row">
           <button type="button" class="btn-primary" (click)="saveAuthPolicy()" [disabled]="savingPolicy()" data-testid="mfa-save">
             {{ 'roleForm.mfa.save' | translate }}

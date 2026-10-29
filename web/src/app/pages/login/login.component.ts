@@ -9,10 +9,12 @@ import {
   LangService,
   MfaEnrollResponse,
   OidcProviderInfo,
+  PASSKEY_BROWSER,
   ThemeService,
   consumeReturnUrl,
   initGoogleIdentityOnce,
   isMfaChallenge,
+  isPasskeyCancelled,
   type GoogleIdentityGlobal,
 } from '@attome/base';
 import { solvePow } from './pow';
@@ -68,6 +70,12 @@ const DAY_MS = 86_400_000;
 
           @if (hasGoogleAuth()) {
             <div [id]="googleBtnId" class="google-btn-slot"></div>
+          }
+
+          @if (passkeysSupported) {
+            <button type="button" class="btn-provider" (click)="signInWithPasskey()" [disabled]="loading()" data-testid="passkey-sign-in">
+              {{ t('xrmLogin.passkeySignIn') }}
+            </button>
           }
 
           @if (hasEnterpriseProviders()) {
@@ -164,6 +172,13 @@ const DAY_MS = 86_400_000;
             </button>
           </form>
 
+          @if (passkeyOffered()) {
+            <p class="auth-link">
+              <button type="button" class="link-button" (click)="useMfaPasskey()" [disabled]="loading()" data-testid="mfa-passkey">
+                {{ t('xrmLogin.passkeyUse') }}
+              </button>
+            </p>
+          }
           <p class="auth-link">
             <button type="button" class="link-button" (click)="toggleRecoveryCode()">
               {{ useRecoveryCode() ? 'Use my authenticator app instead' : 'Use a recovery code instead' }}
@@ -344,6 +359,12 @@ export class LoginComponent implements OnInit, AfterViewInit {
   private readonly fb     = inject(FormBuilder);
   private readonly theme  = inject(ThemeService);
   private readonly lang   = inject(LangService);
+  private readonly passkeys = inject(PASSKEY_BROWSER);
+
+  /** Q6-T2: this browser can use passkeys. */
+  readonly passkeysSupported = this.passkeys.supported();
+  /** Q6-T2: the person has a passkey for the second factor. */
+  readonly passkeyOffered = signal(false);
 
   readonly stage           = signal<Stage>('credentials');
   readonly loading         = signal(false);
@@ -572,6 +593,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
         if (res.mfa === 'required') {
           this.loading.set(false);
           this.rememberAllowed.set(res.remember_device === true);
+          this.passkeyOffered.set(res.passkey === true && this.passkeysSupported);
           this.stage.set('mfa-code');
           return;
         }
@@ -624,6 +646,43 @@ export class LoginComponent implements OnInit, AfterViewInit {
         this.error.set(err.status === 401 ? this.lang.translate('xrmLogin.invalidCode') : this.lang.errorText(err));
       },
     });
+  }
+
+  /**
+   * Q6-T2: a passkey alone. A role must allow it (403 says so); a cancelled
+   * browser prompt leaves the page as it was.
+   */
+  signInWithPasskey(): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.auth.signInWithPasskey().subscribe({
+      next: () => this.goHome(),
+      error: (err: unknown) => this.passkeyFailed(err),
+    });
+  }
+
+  /** Q6-T2: the person's passkey as the second factor. */
+  useMfaPasskey(): void {
+    this.loading.set(true);
+    this.error.set(null);
+    const remember = this.rememberAllowed() && this.rememberDevice();
+    this.auth.verifyMfaPasskey(this.pendingToken, remember).subscribe({
+      next: () => this.goHome(),
+      error: (err: unknown) => this.passkeyFailed(err),
+    });
+  }
+
+  private passkeyFailed(err: unknown): void {
+    this.loading.set(false);
+    if (isPasskeyCancelled(err)) return;
+    const api = err as ApiError;
+    if (api?.status === 403) {
+      this.error.set(this.lang.translate('xrmLogin.passkeyNotAllowed'));
+    } else if (api?.status === 401 || !api?.kind) {
+      this.error.set(this.lang.translate('xrmLogin.passkeyFailed'));
+    } else {
+      this.error.set(this.lang.errorText(api));
+    }
   }
 
   submitEnrollConfirm(): void {
@@ -685,6 +744,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
   startOver(): void {
     this.pendingToken = '';
     this.useRecoveryCode.set(false);
+    this.passkeyOffered.set(false);
     this.submitAttempted.set(false);
     this.error.set(null);
     this.codeForm.reset();

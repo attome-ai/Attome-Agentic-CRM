@@ -1,3 +1,4 @@
+import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -11,9 +12,18 @@ import {
   authInterceptor,
 } from '@attome/base';
 import { STEP_UP_NAVIGATE, StepUpService } from '@attome/base/step-up';
+import { PasskeysComponent } from '@attome/xrm/core/security';
 import { Observable, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SecuritySettingsComponent } from './security-settings.component';
+
+/** The passkeys card has its own spec; here it is an inert element. */
+function withoutPasskeysCard(): void {
+  TestBed.overrideComponent(SecuritySettingsComponent, {
+    remove: { imports: [PasskeysComponent] },
+    add: { schemas: [CUSTOM_ELEMENTS_SCHEMA] },
+  });
+}
 
 /**
  * Self-service identity linking (P-federation-linking-policy §4.3(a)). Two
@@ -115,6 +125,7 @@ function mount(
       { provide: LangService,    useValue: { translate: (key: string) => key, errorText: (e: ApiError) => `errors.${e.kind}` } },
     ],
   });
+  withoutPasskeysCard();
 
   const fixture = TestBed.createComponent(SecuritySettingsComponent);
   fixture.detectChanges();
@@ -448,6 +459,7 @@ describe('SecuritySettingsComponent with the real interceptor (D-129, D-510)', (
         { provide: STEP_UP_NAVIGATE, useValue: vi.fn() },
       ],
     });
+    withoutPasskeysCard();
     httpMock = TestBed.inject(HttpTestingController);
     const fixture = TestBed.createComponent(SecuritySettingsComponent);
     fixture.detectChanges();

@@ -228,6 +228,8 @@ export interface MfaChallenge {
   grace_until?:  string | null;
   /** Q5-T10: with `required`, this browser may be remembered. */
   remember_device?: boolean;
+  /** Q6-T2: with `required`, the person has a passkey to answer with. */
+  passkey?: boolean;
 }
 
 export function isMfaChallenge(res: AuthResponse | MfaChallenge): res is MfaChallenge {

@@ -30,6 +30,12 @@ export { AuthService }                     from './lib/auth.service';
 // Q8-T9: the idle sign-out and its warning.
 export { IdleSessionService, IDLE_WARNING_SECS, ACTIVITY_THROTTLE_MS } from './lib/idle-session.service';
 export { IdleWarningComponent }            from './lib/idle-warning.component';
+// Q6-T2: the browser half of a passkey ceremony.
+export {
+  createPasskey, getPasskey, passkeysSupported, creationOptions, requestOptions, credentialJson,
+  PASSKEY_BROWSER, isPasskeyCancelled, type PasskeyBrowser,
+  fromBase64Url, toBase64Url,
+} from './lib/passkey';
 export { authInterceptor }                 from './lib/auth.interceptor';
 export { authGuard }                       from './lib/auth.guard';
 export { provideAttomeBase, provideAttomeI18n } from './lib/provide';

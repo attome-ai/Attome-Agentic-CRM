@@ -210,6 +210,8 @@ export class RoleFormComponent implements OnInit {
   editGraceDays = 7;
   editRememberDays = 30;
   editPhishingOnly = false;
+  /** Q6-T2: holders may sign in with a passkey alone. */
+  editPasskeySignIn = false;
   editSsoOnly = false;
 
   /** A weak factor cannot be chosen for a role that grants administration. */
@@ -234,6 +236,7 @@ export class RoleFormComponent implements OnInit {
     this.editGraceDays = policy.mfa_grace_days;
     this.editRememberDays = policy.remember_device_days;
     this.editPhishingOnly = policy.phishing_resistant_only;
+    this.editPasskeySignIn = policy.passkey_sign_in;
     this.editSsoOnly = policy.sso_only;
   }
 
@@ -262,6 +265,7 @@ export class RoleFormComponent implements OnInit {
       mfa_grace_days: Math.trunc(Number(this.editGraceDays)),
       remember_device_days: Math.trunc(Number(this.editRememberDays)),
       phishing_resistant_only: this.editPhishingOnly,
+      passkey_sign_in: this.editPasskeySignIn,
     }).subscribe({
       next: policy => { this.applyPolicy(policy); this.savingPolicy.set(false); this.policySaved.set(true); },
       error: (e: ApiError) => { this.savingPolicy.set(false); this.policyError.set(this.lang.errorText(e)); },

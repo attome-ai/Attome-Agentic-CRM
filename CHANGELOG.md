@@ -70,6 +70,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   counts as an enrolled second factor and as a break-glass account's authenticator, and an
   administrator's MFA reset removes the person's passkeys too. `auth.passkey_rp_id` and
   `auth.passkey_origins` name the relying party; unset, the frontend URL's host and origin.
+- Passkeys on screen (Q6-T2): a Passkeys card on `/settings/security` (list, add with a name, remove),
+  "Sign in with a passkey" on the sign-in page, "Use a passkey instead" for the second factor,
+  "Use a passkey" in the step-up prompt, and the passkey sign-in switch on the role form.
 - Your own sessions (Q8-T4): `GET /api/v1/auth/sessions` lists where you are signed in (browser,
   sign-in method, country when `auth.geoip_database` is set, start and last activity, and which
   one is this browser); `DELETE /api/v1/auth/sessions/{id}` ends one and

@@ -139,6 +139,22 @@ export const KNOWN_OPERATIONS = ['identity_link', 'api_key_create'] as const;
                   <p class="attome-step-up-error" role="alert">{{ s.error | translate }}</p>
                 }
               </div>
+              @if (s.passkey) {
+                <div class="attome-step-up-passkey">
+                  <button
+                    type="button"
+                    class="attome-step-up-btn attome-step-up-btn-secondary"
+                    data-testid="step-up-passkey"
+                    [disabled]="s.busy"
+                    (click)="usePasskey()"
+                  >
+                    {{ 'stepUp.usePasskey' | translate }}
+                  </button>
+                  @if (s.error && s.localFactors.length === 0 && !s.federated) {
+                    <p class="attome-step-up-error" role="alert">{{ s.error | translate }}</p>
+                  }
+                </div>
+              }
               @if (s.localFactors.length === 0) {
                 <div class="attome-step-up-actions">
                   <button type="button" class="attome-step-up-btn attome-step-up-btn-secondary" (click)="cancel()">
@@ -173,6 +189,7 @@ export const KNOWN_OPERATIONS = ['identity_link', 'api_key_create'] as const;
     .attome-step-up-notice { font-size: 13px; color: #fde68a; margin: 0 0 16px; }
     .attome-step-up-form, .attome-step-up-federated { display: flex; flex-direction: column; gap: 8px; }
     .attome-step-up-federated { margin-top: 12px; }
+    .attome-step-up-passkey { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
     .attome-step-up-factors { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 12px; }
     .attome-step-up-factor, .attome-step-up-label { font-size: 13px; color: var(--color-text-secondary, #cbd5e1); }
     .attome-step-up-input {
@@ -274,6 +291,11 @@ export class StepUpPromptComponent {
     if (!credential) return;
     this.credential.set('');
     this.stepUp.submit(this.factor(), credential);
+  }
+
+  usePasskey(): void {
+    this.credential.set('');
+    this.stepUp.submitPasskey();
   }
 
   startFederated(p: StepUpProvider): void {

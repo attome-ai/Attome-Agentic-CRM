@@ -1,9 +1,10 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { Router } from '@angular/router';
-import { Observable, catchError, map, of, shareReplay, tap } from 'rxjs';
+import { Observable, catchError, from, map, of, shareReplay, switchMap, tap } from 'rxjs';
 import { ApiService } from './api.service';
 import { ConditionalCache } from './conditional-cache';
+import { PASSKEY_BROWSER } from './passkey';
 import { ATTOME_CONFIG } from './config';
 import {
   Ack,
@@ -44,6 +45,7 @@ export interface PowChallenge {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly api    = inject(ApiService);
+  private readonly passkeys = inject(PASSKEY_BROWSER);
   private readonly conditional = inject(ConditionalCache);
   private readonly router = inject(Router);
   private readonly document = inject(DOCUMENT);
@@ -88,6 +90,33 @@ export class AuthService {
   /** Completes an `MfaChallenge` (`mfa: 'required'`) with a live TOTP code. */
   verifyMfa(req: MfaVerifyBody): Observable<AuthResponse> {
     return this.api.post<AuthResponse>('/api/v1/auth/mfa/verify', req).pipe(
+      tap(res => this.setSession(res.user_id)),
+    );
+  }
+
+  /**
+   * Q6-T2: signs in with a passkey alone, where a role of the person allows
+   * it (403 otherwise). Asks the browser for any passkey it holds for this
+   * site; rejects when the person cancels.
+   */
+  signInWithPasskey(): Observable<AuthResponse> {
+    return this.api.post<{ options: unknown }>('/api/v1/auth/passkey/start', {}).pipe(
+      switchMap(started => from(this.passkeys.get(started.options))),
+      switchMap(response => this.api.post<AuthResponse>('/api/v1/auth/passkey/verify', { response })),
+      tap(res => this.setSession(res.user_id)),
+    );
+  }
+
+  /**
+   * Q6-T2: completes an `MfaChallenge` (`mfa: 'required'`) with one of the
+   * person's passkeys.
+   */
+  verifyMfaPasskey(pendingToken: string, remember = false): Observable<AuthResponse> {
+    return this.api.post<{ options: unknown }>('/api/v1/auth/mfa/passkey/start', { pending_token: pendingToken }).pipe(
+      switchMap(started => from(this.passkeys.get(started.options))),
+      switchMap(response => this.api.post<AuthResponse>('/api/v1/auth/mfa/passkey/verify', {
+        pending_token: pendingToken, response, remember,
+      })),
       tap(res => this.setSession(res.user_id)),
     );
   }

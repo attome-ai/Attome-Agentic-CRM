@@ -1,7 +1,7 @@
 import { Injectable, InjectionToken, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { EMPTY, Observable, catchError, defer, forkJoin, from, of, switchMap, throwError } from 'rxjs';
-import { ApiService, AuthService, ATTOME_CONFIG, isSafeReturnUrl } from '@attome/base';
+import { ApiService, AuthService, ATTOME_CONFIG, PASSKEY_BROWSER, isPasskeyCancelled, isSafeReturnUrl } from '@attome/base';
 import type { ApiError, IdentityLinkInfo, OidcProviderInfo, StepUpChallenge, StepUpElevation, StepUpStatus, StepUpVerifyRequest } from '@attome/base';
 
 /**
@@ -50,6 +50,8 @@ export interface StepUpPromptState {
   readonly operation:          string;
   readonly localFactors:       readonly StepUpLocalFactor[];
   readonly federated:          boolean;
+  /** Q6-T1: the account has a passkey and this browser can use it. */
+  readonly passkey:            boolean;
   readonly enrollmentRequired: boolean;
   readonly providers:          readonly StepUpProvider[];
   readonly providersLoading:   boolean;
@@ -109,6 +111,7 @@ export class StepUpService {
   private readonly router   = inject(Router);
   private readonly config   = inject(ATTOME_CONFIG);
   private readonly navigate = inject(STEP_UP_NAVIGATE);
+  private readonly passkeys = inject(PASSKEY_BROWSER);
 
   private readonly promptSignal = signal<StepUpPromptState | null>(null);
   readonly prompt = this.promptSignal.asReadonly();
@@ -143,8 +146,9 @@ export class StepUpService {
     const localFactors = acceptableFactors.filter(
       (f): f is StepUpLocalFactor => (STEP_UP_LOCAL_FACTORS as readonly string[]).includes(f),
     );
+    const passkeyOffered = acceptableFactors.includes('passkey') && this.passkeys.supported();
     const enrollmentRequired = acceptableFactors.includes('totp_enrollment_required')
-      || (localFactors.length === 0 && !acceptableFactors.includes('federated'));
+      || (localFactors.length === 0 && !acceptableFactors.includes('federated') && !passkeyOffered);
     const federated = !enrollmentRequired && acceptableFactors.includes('federated');
 
     return new Promise<boolean>(resolve => {
@@ -156,6 +160,7 @@ export class StepUpService {
         operation,
         localFactors:     enrollmentRequired ? [] : localFactors,
         federated,
+        passkey:          !enrollmentRequired && passkeyOffered,
         enrollmentRequired,
         providers:        [],
         providersLoading: federated,
@@ -186,6 +191,34 @@ export class StepUpService {
     ).subscribe({
       next:  () => { if (this.isCurrent(id)) this.finish(true); },
       error: (err: unknown) => { if (this.isCurrent(id)) this.onFailure(err); },
+    });
+  }
+
+  /**
+   * Q6-T1: answers the step-up with a passkey: the server's request options,
+   * the browser's assertion, then the verify route. A cancelled browser
+   * prompt leaves the step-up prompt open with no error.
+   */
+  submitPasskey(): void {
+    const state = this.promptSignal();
+    if (!state || state.busy || !state.passkey) return;
+    const id = state.id;
+    const operation = encodeURIComponent(state.operation);
+    this.patch({ busy: true, error: null });
+
+    this.api.post<{ options: unknown }>(`/api/v1/auth/step-up/${operation}/passkey`, {}).pipe(
+      switchMap(started => (this.isCurrent(id) ? from(this.passkeys.get(started.options)) : EMPTY)),
+      switchMap(response => {
+        if (!this.isCurrent(id)) return EMPTY;
+        return this.api.post<StepUpElevation>(`/api/v1/auth/step-up/${operation}/passkey/verify`, { response });
+      }),
+    ).subscribe({
+      next:  () => { if (this.isCurrent(id)) this.finish(true); },
+      error: (err: unknown) => {
+        if (!this.isCurrent(id)) return;
+        if (isPasskeyCancelled(err)) this.patch({ busy: false });
+        else this.onFailure(err);
+      },
     });
   }
 
@@ -292,7 +325,7 @@ export class StepUpService {
     if (e.kind === 'reauth_required' && e.acceptableFactors?.includes('totp_enrollment_required')) {
       this.patch({
         busy: false, error: null, enrollmentRequired: true,
-        localFactors: [], federated: false, providers: [], providersLoading: false,
+        localFactors: [], federated: false, passkey: false, providers: [], providersLoading: false,
       });
       return;
     }

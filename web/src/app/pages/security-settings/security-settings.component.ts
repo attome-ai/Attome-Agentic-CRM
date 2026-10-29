@@ -15,6 +15,7 @@ import {
   type GoogleIdentityGlobal,
 } from '@attome/base';
 import { StepUpService, type StepUpPendingAction } from '@attome/base/step-up';
+import { PasskeysComponent } from '@attome/xrm/core/security';
 
 declare const google: GoogleIdentityGlobal;
 
@@ -60,7 +61,7 @@ const SETTINGS_PATH = '/settings/security';
   selector:   'app-security-settings',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe],
+  imports: [PasskeysComponent, TranslatePipe],
   template: `
     <div class="page">
       <div class="card">
@@ -113,6 +114,9 @@ const SETTINGS_PATH = '/settings/security';
           }
         }
       </div>
+
+      <!-- Q6-T2: the person's passkeys. -->
+      <xrm-passkeys />
 
       <section class="card" aria-labelledby="api-keys-title">
         <h2 id="api-keys-title">{{ 'securitySettings.apiKey.title' | translate }}</h2>

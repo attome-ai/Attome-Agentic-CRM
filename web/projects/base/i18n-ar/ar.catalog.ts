@@ -100,6 +100,7 @@ export const ar = {
     factor: { password: 'كلمة المرور', totp: 'رمز تطبيق المصادقة', recovery_code: 'رمز الاسترداد' },
     verify: 'تأكيد', verifying: 'جاري التأكيد…', cancel: 'إلغاء', close: 'إغلاق',
     federatedIntro: 'أكّد باستخدام مزوّد تسجيل دخول مرتبط بحسابك.',
+    usePasskey: 'استخدام مفتاح مرور',
     providersLoading: 'جاري تحميل مزوّدي تسجيل الدخول…',
     noProviders: 'لا يتوفر مزوّد تسجيل دخول مرتبط.',
     continueWith: 'المتابعة باستخدام {provider}',

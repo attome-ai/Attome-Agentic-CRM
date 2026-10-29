@@ -5,6 +5,7 @@ import {
   AuthService,
   LangService,
   MfaChallenge,
+  PASSKEY_BROWSER,
   ThemeService,
 } from '@attome/base';
 import { Observable, of, throwError } from 'rxjs';
@@ -46,6 +47,8 @@ function authStub(overrides: Record<string, unknown> = {}) {
     discoverOidc:          vi.fn((): Observable<unknown> => of({ provider: null })),
     loginWithOidc:         vi.fn(),
     postponeMfa:           vi.fn((): Observable<unknown> => of({ user_id: 'user-1' })),
+    signInWithPasskey:     vi.fn((): Observable<unknown> => of({ user_id: 'user-1' })),
+    verifyMfaPasskey:      vi.fn((): Observable<unknown> => of({ user_id: 'user-1' })),
     ...overrides,
   };
 }
@@ -448,5 +451,73 @@ describe('LoginComponent second-factor prompts (Q5-T10)', () => {
     component.codeForm.setValue({ code: '٤٥٦٧٨٩' });
     component.submitMfaCode();
     expect(auth.verifyMfa).toHaveBeenCalledWith({ pending_token: 'pending-1', code: '456789', remember: true });
+  });
+});
+
+describe('LoginComponent passkeys (Q6-T2)', () => {
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  function mountWithPasskeys(overrides: Record<string, unknown> = {}): Mounted {
+    const auth = configure({
+      signInWithPasskey: vi.fn((): Observable<unknown> => of({ user_id: 'user-1' })),
+      verifyMfaPasskey:  vi.fn((): Observable<unknown> => of({ user_id: 'user-1' })),
+      ...overrides,
+    });
+    TestBed.overrideProvider(PASSKEY_BROWSER, {
+      useValue: { supported: () => true, create: vi.fn(), get: vi.fn() },
+    });
+    return create(auth);
+  }
+
+  it('offers a passkey sign-in and goes home when it succeeds', () => {
+    const { fixture, auth, navigate } = mountWithPasskeys();
+    const button = fixture.nativeElement.querySelector('[data-testid="passkey-sign-in"]') as HTMLButtonElement;
+    expect(button).not.toBeNull();
+    button.click();
+    expect(auth.signInWithPasskey).toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalled();
+  });
+
+  it('says a role does not allow a passkey alone on 403', () => {
+    const { fixture, component } = mountWithPasskeys({
+      signInWithPasskey: vi.fn(() => throwError(() => apiError(403))),
+    });
+    component.signInWithPasskey();
+    fixture.detectChanges();
+    expect(text(fixture)).toContain('xrmLogin.passkeyNotAllowed');
+  });
+
+  it('shows nothing when the person cancels the browser prompt', () => {
+    const cancelled = Object.assign(new Error('cancelled'), { name: 'NotAllowedError' });
+    const { fixture, component } = mountWithPasskeys({
+      signInWithPasskey: vi.fn(() => throwError(() => cancelled)),
+    });
+    component.signInWithPasskey();
+    fixture.detectChanges();
+    expect(component.error()).toBeNull();
+    expect(component.loading()).toBe(false);
+  });
+
+  it('offers the passkey as the second factor only when the person has one', () => {
+    const { fixture, component, auth } = mountWithPasskeys({
+      login: vi.fn((): Observable<unknown> => of({ ...CHALLENGE_REQUIRED, passkey: true })),
+    });
+    signIn(component);
+    fixture.detectChanges();
+    const button = fixture.nativeElement.querySelector('[data-testid="mfa-passkey"]') as HTMLButtonElement;
+    expect(button).not.toBeNull();
+    button.click();
+    expect(auth.verifyMfaPasskey).toHaveBeenCalledWith('pending-1', false);
+  });
+
+  it('does not offer a passkey second factor without one', () => {
+    const { fixture, component } = mountWithPasskeys({
+      login: vi.fn((): Observable<unknown> => of(CHALLENGE_REQUIRED)),
+    });
+    signIn(component);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="mfa-passkey"]')).toBeNull();
   });
 });
