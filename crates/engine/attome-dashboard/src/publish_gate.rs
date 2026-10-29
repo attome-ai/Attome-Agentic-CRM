@@ -183,6 +183,96 @@ fn check_drill_levels(
     }
 }
 
+/// P7-T6: what is wrong with a widget's `drill_through`, given the target
+/// dashboard's parameters on the target page (`None` when that dashboard
+/// does not exist): `(blocking, code, message)`. Pure.
+pub fn drill_through_issues(
+    target: &crate::drill::DrillThrough,
+    target_parameters: Option<&BTreeSet<String>>,
+) -> Vec<(bool, &'static str, String)> {
+    use crate::drill::DrillThroughKind;
+    let mut issues = Vec::new();
+    match target.target_kind {
+        DrillThroughKind::Dashboard => match (target.target_dashboard_id, target_parameters) {
+            (None, _) => issues.push((
+                true,
+                "drill_through_without_target",
+                "drill_through to a dashboard names no target_dashboard_id".to_owned(),
+            )),
+            (Some(id), None) => issues.push((
+                true,
+                "drill_through_target_missing",
+                format!("drill_through names dashboard {id}, which does not exist"),
+            )),
+            (Some(_), Some(declared)) => {
+                for parameter in target.param_map.keys() {
+                    if !declared.contains(parameter) {
+                        issues.push((
+                            false,
+                            "drill_through_parameter_undeclared",
+                            format!(
+                                "drill_through sets {parameter}, which the target page does not declare"
+                            ),
+                        ));
+                    }
+                }
+            }
+        },
+        DrillThroughKind::Route => {
+            if !target.route.as_deref().is_some_and(|r| r.starts_with('/')) {
+                issues.push((
+                    true,
+                    "drill_through_bad_route",
+                    "drill_through's route must be an application path starting with /".to_owned(),
+                ));
+            }
+        }
+    }
+    issues
+}
+
+/// P7-T6: checks a widget's `drill_through` against its target.
+async fn check_drill_through(
+    state: &EngineState,
+    gate: &mut PublishGate,
+    config: &serde_json::Map<String, Value>,
+    page: Option<&str>,
+    widget: Option<&str>,
+) -> Result<(), AppError> {
+    let target = match crate::drill::drill_through(config) {
+        Ok(Some(target)) => target,
+        Ok(None) => return Ok(()),
+        Err(error) => {
+            gate.block("invalid_drill_through", error.to_string(), page, widget);
+            return Ok(());
+        }
+    };
+    let parameters = match target.target_dashboard_id {
+        Some(id) => match crate::lifecycle::do_load_draft(&state.base.db, id).await {
+            Ok(snapshot) => {
+                let page_id = target.target_page_id.map(|p| p.to_string());
+                Some(
+                    declared_parameters(&snapshot, page_id.as_deref())
+                        .into_iter()
+                        .map(|p| p.name)
+                        .collect::<BTreeSet<String>>(),
+                )
+            }
+            Err(AppError::NotFound) => None,
+            Err(other) => return Err(other),
+        },
+        None => None,
+    };
+    for (blocking, code, message) in drill_through_issues(&target, parameters.as_ref()) {
+        if blocking {
+            gate.block(code, message, page, widget);
+        } else {
+            gate.warn(code, message, page, widget);
+        }
+    }
+    Ok(())
+}
+
 /// The gate for `dashboard_id`'s working copy. Performs no authorization.
 pub async fn do_publish_gate(
     state: &EngineState,
@@ -338,6 +428,7 @@ async fn check_widget(
     }
     check_aggregate_only(gate, &config, classify(widget).0, page_id, widget_id);
     check_drill_levels(gate, &config, classify(widget).0, page_id, widget_id);
+    check_drill_through(state, gate, &config, page_id, widget_id).await?;
 
     match classify(widget).0 {
         DataClass::Structured => {
@@ -589,8 +680,55 @@ pub async fn do_activate_gate(
 
 #[cfg(test)]
 mod tests {
-    use super::declares_actions;
+    use super::{declares_actions, drill_through_issues};
     use serde_json::json;
+    use std::collections::BTreeSet;
+    use uuid::Uuid;
+
+    fn drill_target(
+        kind: crate::drill::DrillThroughKind,
+        id: Option<Uuid>,
+        route: Option<&str>,
+    ) -> crate::drill::DrillThrough {
+        crate::drill::DrillThrough {
+            target_kind: kind,
+            target_dashboard_id: id,
+            target_page_id: None,
+            route: route.map(str::to_owned),
+            param_map: [("region".to_owned(), "region".to_owned())]
+                .into_iter()
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn drill_through_to_missing_dashboard_blocks_publish() {
+        use crate::drill::DrillThroughKind;
+        let missing = drill_target(DrillThroughKind::Dashboard, Some(Uuid::now_v7()), None);
+        let issues = drill_through_issues(&missing, None);
+        assert_eq!(issues.len(), 1);
+        assert!(issues[0].0, "blocking");
+        assert_eq!(issues[0].1, "drill_through_target_missing");
+        // An existing target that does not declare the parameter: a warning.
+        let declared: BTreeSet<String> = BTreeSet::new();
+        let issues = drill_through_issues(&missing, Some(&declared));
+        assert_eq!(issues.len(), 1);
+        assert!(!issues[0].0, "not blocking");
+        let declared: BTreeSet<String> = ["region".to_owned()].into_iter().collect();
+        assert!(drill_through_issues(&missing, Some(&declared)).is_empty());
+        // A route must be an application path.
+        let bad = drill_target(DrillThroughKind::Route, None, Some("https://elsewhere"));
+        assert_eq!(
+            drill_through_issues(&bad, None)[0].1,
+            "drill_through_bad_route"
+        );
+        let good = drill_target(
+            DrillThroughKind::Route,
+            None,
+            Some("/xrm/entity/account/list"),
+        );
+        assert!(drill_through_issues(&good, None).is_empty());
+    }
 
     fn map(value: serde_json::Value) -> serde_json::Map<String, serde_json::Value> {
         value.as_object().unwrap().clone()

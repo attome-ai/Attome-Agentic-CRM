@@ -110,6 +110,126 @@ pub struct WidgetRecordsResponse {
     /// P7-T4: whether the listed total equals the widget's number, and why
     /// not.
     pub parity: Parity,
+    /// P7-T6: where a click on this bucket goes, with the parameter values
+    /// the click sets; absent when the widget has no `drill_through`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub drill_through: Option<ResolvedDrillThrough>,
+}
+
+/// P7-T6: the widget config key sending a click elsewhere.
+pub const DRILL_THROUGH: &str = "drill_through";
+
+/// P7-T6: where a widget's click goes.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum DrillThroughKind {
+    /// A page of another dashboard (or this one).
+    Dashboard,
+    /// An application path, such as a list or a record page.
+    Route,
+}
+
+/// P7-T6: a widget's `drill_through`.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DrillThrough {
+    pub target_kind: DrillThroughKind,
+    #[serde(default)]
+    pub target_dashboard_id: Option<Uuid>,
+    #[serde(default)]
+    pub target_page_id: Option<Uuid>,
+    #[serde(default)]
+    pub route: Option<String>,
+    /// Target parameter name -> the clicked attribute whose value it takes.
+    #[serde(default)]
+    pub param_map: BTreeMap<String, String>,
+}
+
+/// P7-T6: a click's destination, resolved for the bucket clicked. The target
+/// applies its own access checks when it opens.
+#[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
+pub struct ResolvedDrillThrough {
+    pub target_kind: DrillThroughKind,
+    pub target_dashboard_id: Option<Uuid>,
+    pub target_page_id: Option<Uuid>,
+    pub route: Option<String>,
+    /// Each mapped parameter with the clicked value; a parameter whose
+    /// attribute the click does not set is left out.
+    #[schema(value_type = Object)]
+    pub parameters: BTreeMap<String, Value>,
+}
+
+/// P7-T6: the widget's `drill_through`, when it has one. Pure.
+pub fn drill_through(
+    config: &serde_json::Map<String, Value>,
+) -> Result<Option<DrillThrough>, AppError> {
+    match config.get(DRILL_THROUGH) {
+        None | Some(Value::Null) => Ok(None),
+        Some(raw) => serde_json::from_value(raw.clone())
+            .map(Some)
+            .map_err(|e| AppError::Validation(format!("drill_through is malformed: {e}"))),
+    }
+}
+
+/// A clicked key as a parameter value: the value itself, a time bucket's
+/// start, or null for the NULL group. Pure.
+fn key_value(key: &BucketKey) -> Option<Value> {
+    match key {
+        BucketKey::Value { value } => Some(Value::String(value.clone())),
+        BucketKey::Range { start, .. } => Some(Value::String(start.to_rfc3339())),
+        BucketKey::Null => Some(Value::Null),
+        BucketKey::Total | BucketKey::Other => None,
+    }
+}
+
+/// P7-T6: `target` resolved for a click on `bucket_key` (of the grouping
+/// field `group`) and `series_key` (of `series`). Pure.
+pub fn resolve_drill_through(
+    target: &DrillThrough,
+    group: Option<&str>,
+    series: Option<&str>,
+    bucket_key: Option<&BucketKey>,
+    series_key: Option<&BucketKey>,
+) -> ResolvedDrillThrough {
+    let mut parameters = BTreeMap::new();
+    for (parameter, attribute) in &target.param_map {
+        let clicked = if Some(attribute.as_str()) == group {
+            bucket_key
+        } else if Some(attribute.as_str()) == series {
+            series_key
+        } else {
+            None
+        };
+        if let Some(value) = clicked.and_then(key_value) {
+            parameters.insert(parameter.clone(), value);
+        }
+    }
+    ResolvedDrillThrough {
+        target_kind: target.target_kind.clone(),
+        target_dashboard_id: target.target_dashboard_id,
+        target_page_id: target.target_page_id,
+        route: target.route.clone(),
+        parameters,
+    }
+}
+
+/// P7-T6: the widget's drill-through for this click, given its grouping
+/// fields.
+fn click_target(
+    config: &serde_json::Map<String, Value>,
+    group: Option<&str>,
+    series: Option<&str>,
+    inputs: &WidgetRecordsInputs,
+) -> Result<Option<ResolvedDrillThrough>, AppError> {
+    Ok(drill_through(config)?.map(|target| {
+        resolve_drill_through(
+            &target,
+            group,
+            series,
+            inputs.bucket_key.as_ref(),
+            inputs.series_key.as_ref(),
+        )
+    }))
 }
 
 /// P7-T4: why a drill's listed total and the widget's number differ, or
@@ -246,8 +366,14 @@ async fn widget_records(
     // P7-T1: a query or view widget over one entity drills through its own
     // stored query, filtered by the clicked bucket.
     if wc.data_class == DataClass::Query {
-        let (records, applied_filters) =
+        let (records, applied_filters, chart) =
             query_records(&state, &ctx, &definition, &wc, &inputs).await?;
+        let drill_through = click_target(
+            &wc.config,
+            chart.as_ref().map(|c| c.x_field.as_str()),
+            chart.as_ref().and_then(|c| c.group_by_field.as_deref()),
+            &inputs,
+        )?;
         return Ok(Json(WidgetRecordsResponse {
             widget_id: wc.widget_id,
             drillability: wc.drillability,
@@ -263,6 +389,7 @@ async fn widget_records(
             records,
             metric_parity: None,
             some_records_hidden: false,
+            drill_through,
         }));
     }
     // P7-T2: a builder metric's KPI lists the records its definition counts
@@ -285,6 +412,7 @@ async fn widget_records(
             records,
             metric_parity: Some(parity),
             some_records_hidden,
+            drill_through: click_target(&wc.config, None, None, &inputs)?,
         }));
     }
     let plan = structured_plan(&state, &wc)?;
@@ -327,6 +455,12 @@ async fn widget_records(
         None
     };
     let parity = parity_of(value, records.total, counts);
+    let drill_through = click_target(
+        &wc.config,
+        plan.data.group.as_ref().map(|g| g.field.as_str()),
+        plan.data.series.as_deref(),
+        &inputs,
+    )?;
     Ok(Json(WidgetRecordsResponse {
         widget_id: wc.widget_id,
         drillability: wc.drillability,
@@ -342,6 +476,7 @@ async fn widget_records(
         metric_parity: None,
         some_records_hidden: false,
         parity,
+        drill_through,
     }))
 }
 
@@ -697,7 +832,14 @@ async fn query_records(
     definition: &crate::execution::DashboardDefinition,
     wc: &WidgetContext<'_>,
     inputs: &WidgetRecordsInputs,
-) -> Result<(StructuredRecords, Vec<AppliedFilter>), AppError> {
+) -> Result<
+    (
+        StructuredRecords,
+        Vec<AppliedFilter>,
+        Option<ChartViewMetadata>,
+    ),
+    AppError,
+> {
     let bound = query_bindings(wc)?;
     let mut filters: Vec<attome_core::Filter> =
         bound.iter().map(|applied| applied.filter.clone()).collect();
@@ -716,6 +858,7 @@ async fn query_records(
     let chart: Option<ChartViewMetadata> = probe
         .view_metadata()
         .and_then(|v| serde_json::from_value(v.clone()).ok());
+    let chart_for_click = chart.clone();
     filters.extend(bucket_filters(
         chart.as_ref(),
         inputs.bucket_key.as_ref(),
@@ -760,6 +903,7 @@ async fn query_records(
             drill_filters: Some(filters),
         },
         bound,
+        chart_for_click,
     ))
 }
 
@@ -1325,6 +1469,44 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 #[cfg(test)]
 mod query_drill_tests {
     use super::*;
+
+    #[test]
+    fn drill_through_resolves_the_clicked_values() {
+        let target = DrillThrough {
+            target_kind: DrillThroughKind::Dashboard,
+            target_dashboard_id: Some(Uuid::nil()),
+            target_page_id: None,
+            route: None,
+            param_map: [
+                ("region".to_owned(), "region".to_owned()),
+                ("status".to_owned(), "status".to_owned()),
+                ("owner".to_owned(), "owner_ref".to_owned()),
+            ]
+            .into_iter()
+            .collect(),
+        };
+        let resolved = resolve_drill_through(
+            &target,
+            Some("region"),
+            Some("status"),
+            Some(&BucketKey::Value {
+                value: "Riyadh".into(),
+            }),
+            Some(&BucketKey::Null),
+        );
+        assert_eq!(
+            resolved.parameters.get("region"),
+            Some(&Value::String("Riyadh".into()))
+        );
+        assert_eq!(resolved.parameters.get("status"), Some(&Value::Null));
+        assert!(
+            !resolved.parameters.contains_key("owner"),
+            "not part of the click"
+        );
+        assert_eq!(resolved.target_dashboard_id, Some(Uuid::nil()));
+        let config = serde_json::json!({ "drill_through": { "target_kind": "teleport" } });
+        assert!(drill_through(config.as_object().unwrap()).is_err());
+    }
 
     #[test]
     fn drill_levels_read_from_the_widget_config() {

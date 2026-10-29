@@ -62,6 +62,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Drill-through (P7-T6): a widget's `drill_through` (`target_kind` `dashboard` with
+  `target_dashboard_id` and optional `target_page_id`, or `route` with an application path, plus
+  `param_map` from a target parameter to the clicked attribute) sends a click elsewhere. The
+  records route's answer gains `drill_through` with the target and the parameter values the click
+  sets. The target applies its own access checks when it opens. Publishing blocks a missing target
+  dashboard or a route that does not start with `/`, and warns about a parameter the target page does
+  not declare.
 - Drill by dimension (P7-T5): a chart widget's `drill_levels`, an ordered list of `{attribute, grain}`
   (grain `year`, `quarter`, `month`, `week`, `day`, `hijri_month` or `hijri_year` for a date field),
   lets a click open the next level: `POST /api/v1/attome-dashboard/{id}/widgets/{widget_id}/drill-down`

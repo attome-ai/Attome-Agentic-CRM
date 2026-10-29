@@ -3062,3 +3062,59 @@ async fn drill_down_past_last_level_is_422() {
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
 }
+
+// ── P7-T6: drill-through ────────────────────────────────────────────────────
+
+/// A click on a status bucket goes to the target dashboard with the clicked
+/// status as its `region` parameter.
+#[tokio::test]
+async fn drill_through_resolves_clicked_values() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let (admin_id, admin_cookie) = seed_user(&system, true).await;
+    let db = system.state().base.db.clone();
+    let (deals, _) = provision_deals(&system).await;
+    insert_deal(
+        &db,
+        &deals,
+        Some("won"),
+        5.0,
+        "2025-02-10T10:00:00Z",
+        None,
+        Some(true),
+    )
+    .await;
+    let (target, _) = insert_dashboard(&db, admin_id, "Regional detail").await;
+    let chart = build_data_dashboard(
+        &db,
+        admin_id,
+        &json!({
+            "data": {
+                "source": deals,
+                "measures": [{ "aggregation": "count" }],
+                "group": { "field": "status" }
+            },
+            "drill_through": {
+                "target_kind": "dashboard",
+                "target_dashboard_id": target,
+                "param_map": { "region": "status" },
+            },
+        }),
+    )
+    .await;
+    let app = full_app(system);
+    publish(&app, &admin_cookie, chart.dashboard_id, &db).await;
+
+    let (status, body) = widget_route(
+        &app,
+        &admin_cookie,
+        &chart,
+        "records",
+        json!({ "bucket_key": { "kind": "value", "value": "won" } }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let through = &body["drill_through"];
+    assert_eq!(through["target_kind"], "dashboard", "{body}");
+    assert_eq!(through["target_dashboard_id"], json!(target), "{body}");
+    assert_eq!(through["parameters"], json!({ "region": "won" }), "{body}");
+}
