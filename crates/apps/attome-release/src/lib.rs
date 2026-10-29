@@ -27,6 +27,8 @@
 //! (`--override <step>=<reason> --by <person>`, AC4-T6): the step still runs,
 //! its failure is kept in the report as `overridden` with who and why, and
 //! `format` and `clippy` can never be overridden (they are always fixable).
+//! `--skip <step>` leaves a step to another job (CI shards `tests`); it is
+//! absent from that run's report.
 
 pub mod advisories;
 pub mod chaos;
@@ -80,6 +82,10 @@ pub struct Options {
     pub overrides: Vec<Override>,
     /// The person taking responsibility for the overrides.
     pub by: Option<String>,
+    /// Steps not run here because another job runs them (`--skip <step>`):
+    /// CI runs `tests` in parallel shards. A skipped step is absent from the
+    /// report, so that report alone never shows it green.
+    pub skip: Vec<String>,
 }
 
 /// One override: the step and why its failure may be accepted.
@@ -178,6 +184,21 @@ pub fn check_with(options: &Options) -> ExitCode {
     if options.perf {
         steps.push(("perf_compare", perf::step as Step));
     }
+    if let Some(unknown) = options
+        .skip
+        .iter()
+        .find(|name| !steps.iter().any(|(id, _)| id == name))
+    {
+        eprintln!("attome release --check: --skip names no step: {unknown}");
+        return ExitCode::from(2);
+    }
+    steps.retain(|(id, _)| {
+        let skipped = options.skip.iter().any(|name| name == id);
+        if skipped {
+            say(&format!("==> {id}: skipped (--skip; run by another job)"));
+        }
+        !skipped
+    });
     let ids: Vec<&str> = steps.iter().map(|(id, _)| *id).collect();
     if let Err(error) = validate_overrides(options, &ids) {
         eprintln!("attome release --check: {error}");
@@ -456,6 +477,7 @@ pub fn dispatch(args: &[String]) -> Option<ExitCode> {
                     "--reproducible" => options.reproducible = true,
                     "--perf" => options.perf = true,
                     "--by" => options.by = Some(rest.next()?.clone()),
+                    "--skip" => options.skip.push(rest.next()?.clone()),
                     "--override" => match parse_override(rest.next()?) {
                         Ok(item) => options.overrides.push(item),
                         Err(error) => {
@@ -1337,6 +1359,7 @@ mod tests {
             slo_evidence: false,
             reproducible: false,
             perf: false,
+            skip: Vec::new(),
             overrides: overrides
                 .iter()
                 .map(|(step, reason)| Override {

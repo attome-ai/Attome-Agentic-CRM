@@ -23,6 +23,8 @@ sed -e 's/\x1b\[[0-9;]*m//g' "$log" > "$clean"
     | grep -vE '^--$|^note: run with|^stack backtrace|^ +[0-9]+: |^ +at ' | head -400
   echo "== failing targets"
   grep -E 'rerun pass' "$clean" | sed -E 's/.*rerun pass `(.*)`/\1/' | sort -u
+  # cargo-nextest (the CI test shards) names each failing test on its own line.
+  grep -E '^ *(FAIL|TIMEOUT|SIGSEGV|SIGABRT|SIGKILL) +\[' "$clean" | sed -E 's/^ +//' | sort -u | head -150
   echo "== compile and lint errors"
   grep -E -A1 '^error(\[E[0-9]+\])?: ' "$clean" \
     | grep -vE '^--$|could not compile|aborting due to|test failed, to rerun|^ +Running |targets failed|exit successfully' \
