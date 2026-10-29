@@ -15,16 +15,19 @@ attome-audit.workspace    = true
 attome-calendar.workspace = true
 attome-core.workspace     = true
 attome-db.workspace       = true
+attome-jobs.workspace     = true
 attome-metadata.workspace = true
 attome-modules.workspace  = true
 attome-notification.workspace = true
 attome-records.workspace  = true
 attome-rules.workspace    = true
+attome-search.workspace   = true
 attome-security.workspace = true
 attome-server.workspace   = true
 attome-types.workspace    = true
 axum.workspace            = true
 chrono.workspace          = true
+chrono-tz.workspace       = true
 hex.workspace             = true
 serde.workspace           = true
 serde_json.workspace      = true
@@ -37,7 +40,6 @@ uuid.workspace            = true
 [dev-dependencies]
 attome-cache.workspace   = true
 attome-config.workspace  = true
-attome-jobs.workspace    = true
 attome-storage.workspace = true
 attome-testkit = { workspace = true, features = ["app-config"] }
 tokio                    = { workspace = true, features = ["macros", "rt-multi-thread"] }

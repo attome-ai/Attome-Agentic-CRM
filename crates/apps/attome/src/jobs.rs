@@ -3564,6 +3564,10 @@ pub const ROLLUP_FAST: attome_jobs::JobType =
 pub const ROLLUP_BACKFILL: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_records::rollup_heal::BACKFILL_JOB, 1);
 
+/// P9-T10: a metric's past periods, twelve per run.
+pub const METRIC_BACKFILL: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_metric::backfill::BACKFILL_JOB, 1);
+
 /// A10-T4: rollups verified and healed nightly.
 pub const ROLLUP_HEAL: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_records::rollup_heal::HEAL_JOB, 1);
@@ -4775,6 +4779,36 @@ pub fn register_job_types() {
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 if created > 0 {
                     tracing::info!(created, "shipments asked for billing");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            METRIC_BACKFILL,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: attome_metric::backfill::BackfillPayload =
+                    serde_json::from_value(job.payload)
+                        .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                let run = attome_metric::backfill::backfill(
+                    &state,
+                    payload.metric_id,
+                    payload.from,
+                    payload.to,
+                )
+                .await
+                .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                // The next run is queued without the dedup key: this run's
+                // own row still holds it.
+                if let Some(from) = run.next {
+                    let next = attome_metric::backfill::BackfillPayload { from, ..payload };
+                    attome_jobs::enqueue_on_pool(
+                        &state.base.db,
+                        attome_metric::backfill::backfill_job(&next),
+                    )
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },

@@ -31,6 +31,30 @@ answer lists each metric's outcome: `computed`, `skipped` (a snapshot for the pe
 `failed` with the reason. One failure does not stop the rest. A cycle is refused with `422` naming
 the metrics in it.
 
+## Backfilling past periods
+
+`POST /api/v1/metrics/{id}/backfill` with `{from, to}` queues a job that computes the metric for
+each period from the one containing `from` up to `to`, stopping before the current period (the
+schedule computes that one). The answer is `202` with the range and `queued: false` when a backfill
+of the metric is already queued. A range over ten years is refused with `422`. The job computes
+twelve periods a run, oldest first, and queues itself for the rest.
+
+Each value is a new snapshot with `is_backfill: true`. A period that already has a snapshot that did
+not fail is left alone, so running a backfill again, or over a range that overlaps, never adds a
+second value.
+
+Only two kinds of metric can be backfilled:
+
+- **A metric built from its parts**: its records are placed in periods by its date field and
+  aggregated as the metric service principal. Filters read the records' values now, so a filter on
+  a field that changes over time, such as a status, counts records as they are today. A metric with
+  dimensions gets its total, not its members.
+- **A formula metric**: computed from its inputs' snapshots for the same period, so backfill the
+  inputs first. A period whose inputs have no value is left empty.
+
+Any other query metric measures the current period only, and a manual metric has nothing to
+compute; both are refused with `422`.
+
 The scheduled sweep computes query and formula metrics in the same order. When the definitions form
 a cycle, it computes query metrics only and logs the cycle.
 

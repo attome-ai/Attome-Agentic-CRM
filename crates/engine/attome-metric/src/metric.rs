@@ -559,11 +559,14 @@ pub struct SnapshotRow {
     /// P9-T9: [`definition_fingerprint`] of the definition fields at compute
     /// time; `None` on rows written before P9-T9.
     pub definition_fingerprint: Option<String>,
+    /// P9-T10: computed later for a past period by the backfill job.
+    pub is_backfill: bool,
 }
 
 const SNAPSHOT_COLUMNS: &str = "id, metric_ref, period_start, actual, computed_at, \
      source_version, status, superseded_ref, evaluated_by, error_message, \
-     dimension_attribute, dimension_value, definition_version, definition_fingerprint";
+     dimension_attribute, dimension_value, definition_version, definition_fingerprint, \
+     is_backfill";
 
 /// P9-T5: the most members a dimensioned metric stores per period.
 pub const MAX_MEMBERS: usize = 1_000;
@@ -755,7 +758,9 @@ pub async fn latest_snapshot(
 /// two concurrent computes (a scheduler tick racing an on-demand `/compute`
 /// call) can't both read the same "previous" row and both link
 /// `superseded_ref` to it, which would silently fork the history instead of
-/// forming a single chain.
+/// forming a single chain. A backfilled row (P9-T10) is refused with a
+/// conflict when, under the lock, the period already has a snapshot that did
+/// not fail.
 #[allow(clippy::too_many_arguments)]
 async fn insert_snapshot(
     db: &DbPool,
@@ -771,6 +776,7 @@ async fn insert_snapshot(
     dimension_attribute: Option<&str>,
     definition_version: i32,
     definition_fingerprint: &str,
+    is_backfill: bool,
 ) -> Result<SnapshotRow, AppError> {
     let mut tx = attome_db::tx::begin(db).await?;
     let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
@@ -787,8 +793,8 @@ async fn insert_snapshot(
         ));
     }
 
-    let previous_id: Option<Uuid> = sqlx::query_scalar(
-        "SELECT id FROM metric_snapshot WHERE metric_ref = $1 AND period_start = $2 \
+    let previous: Option<(Uuid, String)> = sqlx::query_as(
+        "SELECT id, status FROM metric_snapshot WHERE metric_ref = $1 AND period_start = $2 \
            AND dimension_attribute IS NULL \
          ORDER BY computed_at DESC, id DESC LIMIT 1",
     )
@@ -797,13 +803,21 @@ async fn insert_snapshot(
     .fetch_optional(&mut *tx)
     .await
     .map_err(AppError::internal)?;
+    if is_backfill
+        && previous
+            .as_ref()
+            .is_some_and(|(_, status)| status != SnapshotStatus::Failed.as_str())
+    {
+        return Err(AppError::Conflict("the period already has a snapshot"));
+    }
+    let previous_id = previous.map(|(id, _)| id);
 
     let id = Uuid::now_v7();
     let row: SnapshotRow = sqlx::query_as(&format!(
         "INSERT INTO metric_snapshot \
          (id, metric_ref, period_start, actual, source_version, status, superseded_ref, \
-          evaluated_by, error_message, definition_version, definition_fingerprint) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) \
+          evaluated_by, error_message, definition_version, definition_fingerprint, is_backfill) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) \
          RETURNING {SNAPSHOT_COLUMNS}"
     ))
     .bind(id)
@@ -817,6 +831,7 @@ async fn insert_snapshot(
     .bind(error_message)
     .bind(definition_version)
     .bind(definition_fingerprint)
+    .bind(is_backfill)
     .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -1373,6 +1388,7 @@ pub async fn compute_and_record(
             .as_deref(),
         definition_version,
         &fingerprint,
+        false,
     )
     .await?;
     // P11-T1: a worse status than the last one notifies the owner, once.
@@ -1383,6 +1399,49 @@ pub async fn compute_and_record(
         snapshot: row,
         skipped: false,
     })
+}
+
+/// P9-T10: records `actual` for the past period `period_start` as a
+/// backfilled snapshot: judged against that period's targets, under the
+/// definition's current version, evaluated by the metric service principal.
+/// A conflict when the period already has a snapshot that did not fail.
+pub(crate) async fn record_backfill(
+    db: &DbPool,
+    metric: &MetricDefinitionRow,
+    period_start: NaiveDate,
+    actual: f64,
+    source_version: &str,
+) -> Result<SnapshotRow, AppError> {
+    let DefinitionShape {
+        declared_version,
+        fingerprint,
+        ..
+    } = metric_dimensions(db, metric.id).await?;
+    let last = last_definition_version(db, metric.id).await?;
+    let definition_version = next_definition_version(
+        declared_version,
+        last.as_ref().map(|(v, fp)| (*v, fp.as_deref())),
+        &fingerprint,
+    );
+    let targets = fetch_targets(db, metric.id, period_start).await?;
+    let status = evaluate_status(actual, &metric.direction, pick_target(&targets, None));
+    insert_snapshot(
+        db,
+        metric.id,
+        period_start,
+        Some(actual),
+        Some(source_version),
+        status,
+        Some(crate::principal::METRIC_PRINCIPAL_ID),
+        None,
+        &[],
+        &[],
+        None,
+        definition_version,
+        &fingerprint,
+        true,
+    )
+    .await
 }
 
 /// The scheduled snapshot job's entry point (`crates/server/src/jobs.rs`
@@ -1972,6 +2031,10 @@ pub fn routes() -> Router<EngineState> {
         .route("/api/v1/metrics/{id}/compute", post(compute_metric))
         .route("/api/v1/metrics/{id}/compute-tree", post(compute_tree))
         .route(
+            "/api/v1/metrics/{id}/backfill",
+            post(crate::backfill::post_backfill),
+        )
+        .route(
             "/api/v1/metrics/{id}/lineage",
             get(crate::lineage::metric_lineage),
         )
@@ -1987,6 +2050,7 @@ pub fn routes() -> Router<EngineState> {
     list_snapshots,
     compute_metric,
     compute_tree,
+    crate::backfill::post_backfill,
     build_metric,
     crate::targets::post_spread,
     crate::lineage::metric_lineage,

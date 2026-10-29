@@ -835,6 +835,91 @@ async fn a_formula_referencing_two_metrics_computes_correctly() {
     assert_eq!(outcome.snapshot.source_version.as_deref(), Some("formula"));
 }
 
+/// P9-T10: a backfill over three months, one of which already has a
+/// snapshot, writes the other two marked as backfilled and leaves the third
+/// alone; running it again writes nothing.
+#[tokio::test]
+async fn backfill_marks_rows_and_skips_existing() {
+    let state = skip_if_no_db!(test_state(None).await);
+    let db = state.base.db.clone();
+    seed_once(&db).await;
+    let months = [
+        NaiveDate::from_ymd_opt(2025, 1, 1).unwrap(),
+        NaiveDate::from_ymd_opt(2025, 2, 1).unwrap(),
+        NaiveDate::from_ymd_opt(2025, 3, 1).unwrap(),
+    ];
+
+    let input_key = format!("bf_input_{}", Uuid::now_v7().simple());
+    let input = insert_metric(&db, &input_key, "manual", None).await;
+    for (n, month) in months.iter().enumerate() {
+        attome_metric::metric::compute_and_record(
+            &state,
+            input,
+            Some(*month),
+            Some(100.0 * (n as f64 + 1.0)),
+            false,
+            None,
+        )
+        .await
+        .expect("seed input snapshot");
+    }
+    let formula_id = insert_metric(
+        &db,
+        &format!("bf_double_{}", Uuid::now_v7().simple()),
+        "formula",
+        Some(&format!("{input_key} * 2")),
+    )
+    .await;
+    // February already has its value.
+    attome_metric::metric::compute_and_record(
+        &state,
+        formula_id,
+        Some(months[1]),
+        None,
+        false,
+        None,
+    )
+    .await
+    .expect("seed February");
+
+    let run = attome_metric::backfill::backfill(
+        &state,
+        formula_id,
+        months[0],
+        NaiveDate::from_ymd_opt(2025, 4, 1).unwrap(),
+    )
+    .await
+    .expect("backfill");
+    assert_eq!((run.written, run.skipped, run.next), (2, 1, None));
+
+    let rows: Vec<(NaiveDate, Option<f64>, bool)> = sqlx::query_as(
+        "SELECT period_start, actual, is_backfill FROM metric_snapshot \
+         WHERE metric_ref = $1 AND dimension_attribute IS NULL ORDER BY period_start, computed_at",
+    )
+    .bind(formula_id)
+    .fetch_all(&db)
+    .await
+    .expect("read snapshots");
+    assert_eq!(
+        rows,
+        vec![
+            (months[0], Some(200.0), true),
+            (months[1], Some(400.0), false),
+            (months[2], Some(600.0), true),
+        ]
+    );
+
+    let again = attome_metric::backfill::backfill(
+        &state,
+        formula_id,
+        months[0],
+        NaiveDate::from_ymd_opt(2025, 4, 1).unwrap(),
+    )
+    .await
+    .expect("backfill again");
+    assert_eq!((again.written, again.skipped), (0, 3));
+}
+
 #[tokio::test]
 async fn a_formula_referencing_a_metric_with_no_snapshot_fails_cleanly_not_a_panic() {
     let state = skip_if_no_db!(test_state(None).await);

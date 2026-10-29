@@ -62,6 +62,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Metric backfill (P9-T10): `POST /api/v1/metrics/{id}/backfill` with `{from, to}` queues a job
+  that computes a builder or formula metric's past periods, twelve per run, as snapshots marked
+  `is_backfill` (migration 0334). A period that already has a snapshot is skipped.
 - Account hierarchy and group totals (D2-T1, CRM changeset 0008): `parent_account_ref` is the
   account hierarchy, and a hierarchy lookup's new `top_field` option keeps `top_parent_ref` on
   every account at its group's root. `sales_parent_ref` is a separate sales parent.
