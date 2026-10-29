@@ -62,6 +62,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Metric drafting actions (P9-T13): `metric.draft_definition` drafts a builder spec from a sentence
+  and saves nothing; `metric.draft_commentary` drafts a period's commentary and returns the
+  `record.create` call that would save it.
 - Metric scorecards and catalogue (P9-T12): `GET /api/v1/metrics/scorecards/{id}` (newest stored
   values with targets and stale/failed flags), catalogue fields on `GET /api/v1/metrics`, and
   `GET /api/v1/metrics/{id}/comments`.

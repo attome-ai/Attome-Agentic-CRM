@@ -121,6 +121,11 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
 - Dashboards (P7-T10): `dashboard.explain_number` explains a widget's number in words from its
   explanation, read as the caller: what is measured, over which records, each filter and where it
   comes from, the grouping and when it was computed. It changes nothing.
+- Metrics (P9-T13): `metric.draft_definition` turns a sentence into a metric builder spec, checked
+  against the deployment's entities, and saves nothing; `metric.draft_commentary` drafts a period's
+  commentary from the metric's stored values and returns the `record.create` call that would save
+  it as a comment, so the save goes through the ordinary guarded write. Neither can certify, set a
+  target or name a steward.
 - Views (A13-T5): `view.plan` turns a sentence ("deals closing this month over 50k") into a
   personal view to save: its name, columns and filters, which may use `@me`, `@my_team`, `@my_unit`,
   `@today`, `@this_month` or `@last_n_days(n)`. It saves nothing. It returns the description and the

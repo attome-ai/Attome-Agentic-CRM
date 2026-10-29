@@ -39,6 +39,8 @@ pub mod claim_check;
 pub mod classify;
 pub mod collections;
 pub mod commission;
+/// P7-T10: a dashboard number explained in words.
+pub mod dashboard_explain;
 /// E6-T12: deliverability explanation and a cleaner segment draft.
 pub mod deliverability;
 pub mod draft_article;
@@ -63,8 +65,6 @@ pub mod knowledge;
 pub mod knowledge_answer;
 /// Y11-T8: an agent's proposal for an upgrade conflict.
 pub mod layer_conflict_propose;
-/// P7-T10: a dashboard number explained in words.
-pub mod dashboard_explain;
 /// AI1-T1: the lead qualifier's consent-checked contact steps.
 pub mod lead_qualifier;
 /// L5-T8: lineage.downstream, lineage.upstream, lineage.impact.
@@ -75,6 +75,8 @@ pub mod mass_operation;
 pub mod master;
 pub mod meeting;
 pub mod memory;
+/// P9-T13: a metric and a period's commentary, drafted for a person.
+pub mod metric_draft;
 pub mod model_edit;
 pub mod nl_query;
 /// A13-T5: a view from plain language.
@@ -157,6 +159,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(query_run::descriptor());
     all.push(layer_conflict_propose::descriptor());
     all.push(dashboard_explain::descriptor());
+    all.extend(metric_draft::descriptors());
     all.extend(search_ask::descriptors());
     all.extend(catalog::descriptors());
     all.extend(timeline::descriptors());
@@ -262,6 +265,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(query_run::QueryRun));
     all.push(Box::new(layer_conflict_propose::ProposeConflictResolution));
     all.push(Box::new(dashboard_explain::DashboardExplain));
+    all.extend(metric_draft::executors());
     all.extend(search_ask::executors());
     all.extend(catalog::executors());
     all.extend(timeline::executors());

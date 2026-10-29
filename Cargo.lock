@@ -647,6 +647,7 @@ dependencies = [
  "attome-jobs",
  "attome-marketing",
  "attome-metadata",
+ "attome-metric",
  "attome-model",
  "attome-modules",
  "attome-notification",
