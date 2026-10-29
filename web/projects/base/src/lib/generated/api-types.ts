@@ -55695,6 +55695,25 @@ export interface components {
          * @enum {string}
          */
         ParamType: "text" | "number" | "date" | "uuid" | "bool";
+        /** @description P7-T4: a drill's listed total beside the widget's number. */
+        Parity: {
+            /** Format: int64 */
+            listed_total: number;
+            matches: boolean;
+            reason: components["schemas"]["ParityReason"];
+            /**
+             * Format: double
+             * @description The widget's number for the drilled bucket; absent when there is none
+             *     to compare.
+             */
+            value?: number | null;
+        };
+        /**
+         * @description P7-T4: why a drill's listed total and the widget's number differ, or
+         *     that they agree.
+         * @enum {string}
+         */
+        ParityReason: "equal" | "data_changed_since_computed" | "currency_converted_at_other_date" | "rounding" | "not_comparable";
         PartUpload: {
             /** Format: int64 */
             expires_in_secs: number;
@@ -66018,6 +66037,11 @@ export interface components {
             definition_source: components["schemas"]["DefinitionSource"];
             drillability: components["schemas"]["Drillability"];
             metric_parity?: null | components["schemas"]["MetricParity"];
+            /**
+             * @description P7-T4: whether the listed total equals the widget's number, and why
+             *     not.
+             */
+            parity: components["schemas"]["Parity"];
             /** Format: int64 */
             published_version_number?: number | null;
             records: components["schemas"]["StructuredRecords"];

@@ -6657,6 +6657,46 @@
           }
         }
       },
+      "Parity": {
+        "type": "object",
+        "description": "P7-T4: a drill's listed total beside the widget's number.",
+        "required": [
+          "listed_total",
+          "matches",
+          "reason"
+        ],
+        "properties": {
+          "listed_total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "matches": {
+            "type": "boolean"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/ParityReason"
+          },
+          "value": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "The widget's number for the drilled bucket; absent when there is none\nto compare."
+          }
+        }
+      },
+      "ParityReason": {
+        "type": "string",
+        "description": "P7-T4: why a drill's listed total and the widget's number differ, or\nthat they agree.",
+        "enum": [
+          "equal",
+          "data_changed_since_computed",
+          "currency_converted_at_other_date",
+          "rounding",
+          "not_comparable"
+        ]
+      },
       "PinnedDependencyStatus": {
         "type": "object",
         "description": "D-521 — one widget's pinned query version in the live snapshot. A pinned\ndashboard keeps running `pinned_version_id` until it is republished;\n`newer_version_available` tells an editor that a republish would pick up a\nchanged query. `query_active` false means the pinned SQL will not run at\nall (pinned SQL, live security).",
@@ -8451,7 +8491,8 @@
           "timezone_source",
           "applied_filters",
           "records",
-          "some_records_hidden"
+          "some_records_hidden",
+          "parity"
         ],
         "properties": {
           "applied_filters": {
@@ -8491,6 +8532,10 @@
                 "description": "P7-T2: for a KPI widget, the snapshot and the records listed now."
               }
             ]
+          },
+          "parity": {
+            "$ref": "#/components/schemas/Parity",
+            "description": "P7-T4: whether the listed total equals the widget's number, and why\nnot."
           },
           "published_version_number": {
             "type": [
