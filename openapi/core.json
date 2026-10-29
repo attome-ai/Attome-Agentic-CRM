@@ -44573,6 +44573,103 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/security/roles/{id}/sessions/revoke-all": {
+      "post": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "End every session of a role's holders",
+        "description": "Q8-T5: ends the sessions of everyone holding the role (directly or\nthrough a team) and moves their auth epochs on. Up to 500 holders this\nhappens in the request, in one transaction; beyond that a job ends them\nin batches of 500, each its own transaction, and only sessions started\nbefore this request, so a retried batch never ends a newer sign-in.",
+        "operationId": "admin_revoke_role_sessions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The role",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The holders' sessions ended, or a job is ending them",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionsEnded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "credential",
+              "operation": "session_revoked"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/api/v1/admin/security/roles/{id}/users": {
       "get": {
         "tags": [
@@ -44672,6 +44769,104 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/security/sessions": {
+      "get": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "All sessions",
+        "description": "Q8-T5: every live session in the deployment, most recently active first;\n`role_id` narrows it to that role's holders (directly or through a team).",
+        "operationId": "admin_list_sessions",
+        "parameters": [
+          {
+            "name": "role_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Live sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_AdminSessionItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/api/v1/admin/security/sessions/revoke": {
       "post": {
         "tags": [
@@ -44706,6 +44901,96 @@
           },
           "403": {
             "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "credential",
+              "operation": "session_revoked"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/security/sessions/{id}": {
+      "delete": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "End a session",
+        "description": "Q8-T5: ends one session of anyone's, and forgets the browser if it was\nremembered in it. It can no longer be refreshed; its access token lapses\nat its own short expiry (end it at once by `jti` with\n`POST /api/v1/admin/security/sessions/revoke`, or end every session of the\nperson, which also stops their access tokens).",
+        "operationId": "admin_end_session",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Session id from a session list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Ended"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such live session",
             "content": {
               "application/json": {
                 "schema": {
@@ -46373,6 +46658,212 @@
             {
               "category": "access",
               "operation": "revoke"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/security/users/{id}/sessions": {
+      "get": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "A person's sessions",
+        "description": "Q8-T5: every live session of one person, most recently active first.",
+        "operationId": "admin_list_user_sessions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The person",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The person's live sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_AdminSessionItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such person",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/security/users/{id}/sessions/revoke-all": {
+      "post": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "End every session of a person",
+        "description": "Q8-T5: ends all of the person's sessions and moves their auth epoch on in\none transaction, so their access tokens stop at once as well, and forgets\ntheir remembered browsers.",
+        "operationId": "admin_revoke_user_sessions",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The person",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The person's sessions ended",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionsEnded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such person",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "credential",
+              "operation": "session_revoked"
             }
           ],
           "policy": "mandatory"
@@ -52903,6 +53394,253 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/auth/sessions": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "My sessions",
+        "description": "Q8-T4: the caller's own live sessions (one per sign-in), most recently\nactive first, so they can end the ones they do not recognise. `is_current`\nmarks the session this request was made with. No token, secret or\naddress is ever part of an item.",
+        "operationId": "list_my_sessions",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The caller's live sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_SessionItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/auth/sessions/end-others": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "End my other sessions",
+        "description": "Q8-T4: ends every session of the caller except the one this request was\nmade with, and forgets the browsers remembered in them. Needs a signed-in\nbrowser session: an API key has no session of its own to keep.",
+        "operationId": "end_my_other_sessions",
+        "responses": {
+          "204": {
+            "description": "Every other session ended"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not made with a browser session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "credential",
+              "operation": "session_revoked"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/auth/sessions/{id}": {
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "End one of my sessions",
+        "description": "Q8-T4: ends one of the caller's own sessions and forgets the browser if it\nwas remembered in it. It can no longer be refreshed; its access token\nlapses at its own short expiry. Another person's session, or one already\nended, answers 404.",
+        "operationId": "end_my_session",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Session id from the list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Ended"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such live session of the caller's",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "credential",
+              "operation": "session_revoked"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "high"
       }
     },
     "/api/v1/auth/step-up-callback/oidc/{provider}": {
@@ -99887,6 +100625,102 @@
           }
         }
       },
+      "PaginatedResponse_AdminSessionItem": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Q8-T5: one live session in an administrator's list — the person's own\nsession row (Q8-T4) plus whose it is. Never a token, secret or address.",
+              "required": [
+                "id",
+                "user_id",
+                "client_kind",
+                "created_at"
+              ],
+              "properties": {
+                "client_kind": {
+                  "type": "string",
+                  "description": "`web`, `mobile` or `agent`."
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "device_label": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The browser family, such as `chrome/windows`."
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "The session's id, for ending it."
+                },
+                "last_activity_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "sign_in_method": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "How the session signed in, such as `password+totp` or `oidc:okta`."
+                },
+                "user_agent": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "user_email": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "user_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_ApiKeyMeta": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -112049,6 +112883,105 @@
           }
         }
       },
+      "PaginatedResponse_SessionItem": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Q8-T4: one of the caller's own sessions in `GET /api/v1/auth/sessions`.\nNever a token, secret, token id or address.",
+              "required": [
+                "id",
+                "client_kind",
+                "created_at",
+                "is_current"
+              ],
+              "properties": {
+                "client_kind": {
+                  "type": "string",
+                  "description": "`web`, `mobile` or `agent`."
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "When the session signed in."
+                },
+                "device_label": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The browser family, such as `chrome/windows`."
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "The session's id, for ending it."
+                },
+                "is_current": {
+                  "type": "boolean",
+                  "description": "The session this request was made with."
+                },
+                "last_activity_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "description": "The last request made with it, recorded once a minute."
+                },
+                "sign_in_country": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The ISO country it signed in from, when `auth.geoip_database` is set."
+                },
+                "sign_in_method": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "How the session signed in, such as `password+totp` or `oidc:okta`."
+                },
+                "user_agent": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_ShareLinkSummary": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -120471,11 +121404,17 @@
         "description": "P-session-refresh-hardening (D-129) — `GET /api/v1/auth/session`'s\nresponse shape; see `session_info`.",
         "required": [
           "user_id",
-          "email"
+          "email",
+          "idle_secs"
         ],
         "properties": {
           "email": {
             "type": "string"
+          },
+          "idle_secs": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Q8-T9: seconds without activity before the app signs the person\nout, from their roles (`role_auth_policy.idle_timeout_secs`) or the\ndeployment default; the app warns a minute ahead."
           },
           "user_id": {
             "type": "string",
@@ -120517,6 +121456,25 @@
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "SessionsEnded": {
+        "type": "object",
+        "description": "How many people's sessions ended, or that a job is ending them.",
+        "required": [
+          "ended_users",
+          "queued"
+        ],
+        "properties": {
+          "ended_users": {
+            "type": "integer",
+            "description": "People whose sessions ended in this request.",
+            "minimum": 0
+          },
+          "queued": {
+            "type": "boolean",
+            "description": "The role had more than 500 holders: a job ends their sessions in\nbatches, and `ended_users` is 0."
           }
         }
       },

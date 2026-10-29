@@ -1023,6 +1023,25 @@ export const xrmEn = {
     empty: 'No account matches.', colEmail: 'Account', colRoles: 'Roles', colFactors: 'Second factors',
     admin: 'Administrator', none: 'None', needsPasskey: 'An administrator without a passkey',
   },
+  // Q8-T9: the person's own sessions on My Access.
+  mySessions: {
+    title: 'Sessions', subtitle: 'Where you are signed in. End any session you do not recognise.',
+    loading: 'Loading…', colDevice: 'Device', colMethod: 'Signed in with', colStarted: 'Signed in',
+    colLastActive: 'Last active', colActions: 'Actions', thisDevice: 'This device',
+    unknownDevice: 'Unknown device', end: 'End session', endOthers: 'End all other sessions',
+  },
+  // Q8-T9: an administrator's sessions screen.
+  sessionsAdmin: {
+    title: 'Sessions', subtitle: 'Who is signed in, and where. End one session, all of a person’s, or all of a role’s.',
+    refresh: 'Refresh', loading: 'Loading…', empty: 'No live session matches.', role: 'Role', allRoles: 'All roles',
+    user: 'Person', userPlaceholder: 'User id', show: 'Show', clear: 'Clear',
+    colUser: 'Person', colDevice: 'Device', colMethod: 'Signed in with', colStarted: 'Signed in',
+    colLastActive: 'Last active', colActions: 'Actions', unknownDevice: 'Unknown device',
+    end: 'End', endAllOfUser: 'End every session of this person', endAllOfRole: 'End every session of this role',
+    confirmRole: 'End every session of everyone holding this role?', queued: 'A job is ending the sessions of this role’s holders.',
+    ended: '{count, plural, one {Sessions of one person ended.} other {Sessions of # people ended.}}',
+    prev: 'Previous', next: 'Next', cancel: 'Cancel',
+  },
   myQueues: {
     title: 'My queues', actions: 'Queue item actions', selected: '{count} selected',
     pick: 'Pick', release: 'Release', transfer: 'Transfer', transferTo: 'Transfer to queue',

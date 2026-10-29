@@ -395,6 +395,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/security').then(m => m.MfaCoverageComponent),
           },
           {
+            // Q8-T9: live sessions per person or role, and ending them.
+            path: 'security/sessions',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/security').then(m => m.SessionsAdminComponent),
+          },
+          {
             // Q1-T14: sign-in providers added on screen.
             path: 'security/oidc-providers',
             canActivate: [authGuard],

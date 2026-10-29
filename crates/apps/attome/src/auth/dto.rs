@@ -365,6 +365,10 @@ impl std::fmt::Debug for Ack {
 pub struct SessionInfo {
     pub user_id: Uuid,
     pub email: String,
+    /// Q8-T9: seconds without activity before the app signs the person
+    /// out, from their roles (`role_auth_policy.idle_timeout_secs`) or the
+    /// deployment default; the app warns a minute ahead.
+    pub idle_secs: i64,
 }
 
 impl std::fmt::Debug for SessionInfo {

@@ -70,6 +70,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and `POST .../users/{id}/sessions/revoke-all` and `.../roles/{id}/sessions/revoke-all`, which
   also move the people's auth epoch on so their access tokens stop at once; a role with more than
   500 holders is ended by the `revoke_role_sessions` job in batches of 500.
+- Sessions on screen and the idle warning (Q8-T9): a Sessions card on My Access, the
+  `admin/security/sessions` screen, and a warning a minute before the roles' idle limit
+  (`idle_secs`, now in `GET /api/v1/auth/session`) with "Stay signed in". The notification and
+  work-offer pollers send `x-attome-background: 1`, so they no longer keep a session alive.
 - Customisations a release affects (Y11-T12): when a platform or app release retires, deletes or
   renames an entity or field this system customised, the release report gets a
   `customisation_affected` item naming the properties and, for a rename, the new name, and

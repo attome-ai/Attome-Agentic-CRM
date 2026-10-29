@@ -552,9 +552,22 @@ pub(super) async fn session_info(
     .await
     .map_err(AppError::internal)?;
     let email = email.ok_or(AppError::Unauthorized)?;
+    // Q8-T9: the idle limit the person's roles set, for the app's warning.
+    let lifetimes = refresh_lifetimes(&state);
+    let policy = attome_security::session_policy::load(
+        &state.db,
+        claims.sub,
+        attome_security::session_policy::SessionDefaults {
+            idle_secs: lifetimes.idle_secs,
+            absolute_secs: lifetimes.absolute_secs,
+        },
+    )
+    .await
+    .map_err(AppError::internal)?;
     Ok(Json(SessionInfo {
         user_id: claims.sub,
         email,
+        idle_secs: policy.idle_secs,
     }))
 }
 

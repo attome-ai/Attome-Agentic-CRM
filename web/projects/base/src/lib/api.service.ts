@@ -48,6 +48,11 @@ export interface WriteOptions {
    * changed since its `If-Match`, and answers `merged_over`.
    */
   mergeAttributes?: boolean;
+  /**
+   * Q8-T9: a poller's request, sent with `x-attome-background: 1` so it is
+   * not the person's activity (Q8-T3).
+   */
+  background?: boolean;
 }
 
 /** `If-Match` from `etag`, plus the idempotency key. */
@@ -58,6 +63,7 @@ function writeHeaders(options: WriteOptions, etag?: number): Record<string, stri
   if (options.operationId) headers['Attome-Operation-Id'] = options.operationId;
   if (options.duplicateReason) headers['Attome-Duplicate-Reason'] = options.duplicateReason;
   if (options.mergeAttributes) headers['If-Match-Merge'] = 'attributes';
+  if (options.background) headers[BACKGROUND_HEADER] = '1';
   return headers;
 }
 
@@ -111,6 +117,8 @@ function logTooManyPages(total: number, maxItems: number): void {
  * would buy a CORS preflight for nothing.
  */
 export const CHANGESET_HEADER = 'X-Attome-Changeset';
+/** Q8-T9: marks a poller's request; the server does not count it as activity. */
+export const BACKGROUND_HEADER = 'x-attome-background';
 
 /**
  * The stable codes a changeset refusal's message starts with
@@ -196,6 +204,19 @@ export class ApiService {
     if (path.startsWith(SCHEMA_PATH)) return this.revalidated<T>('GET', path, httpParams, undefined, {});
     return this.http.get<T>(this.url(path), { params: httpParams, withCredentials: true })
       .pipe(catchError(this.handleError));
+  }
+
+  /**
+   * Q8-T9: a poller's read, marked `x-attome-background: 1` so the server
+   * does not count it as the person's activity (Q8-T3) and an idle session
+   * still times out.
+   */
+  getBackground<T>(path: string, params?: Record<string, string>): Observable<T> {
+    return this.http.get<T>(this.url(path), {
+      params: new HttpParams({ fromObject: params ?? {} }),
+      headers: { [BACKGROUND_HEADER]: '1' },
+      withCredentials: true,
+    }).pipe(catchError(this.handleError));
   }
 
   /**

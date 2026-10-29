@@ -120,6 +120,11 @@ export const en = {
     failed: 'That did not work. Check what you entered and try again.',
     tooManyAttempts: 'Too many attempts. Wait a few minutes and try again.',
   },
+  // Q8-T9: the warning a minute before an idle sign-out.
+  idleWarning: {
+    text: '{seconds, plural, one {You will be signed out in # second for inactivity.} other {You will be signed out in # seconds for inactivity.}}',
+    stay: 'Stay signed in',
+  },
   // C4-T2: the mention picker in text editors.
   mentionPicker: {
     label: 'Mention a person, team or record',

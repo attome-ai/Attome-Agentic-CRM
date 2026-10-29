@@ -14,7 +14,7 @@ export type {
 } from './lib/generated/api-types';
 
 export { ATTOME_CONFIG, AttomeBaseConfig } from './lib/config';
-export { ApiService, MAX_ALL_PAGES_ITEMS } from './lib/api.service';
+export { ApiService, BACKGROUND_HEADER, MAX_ALL_PAGES_ITEMS } from './lib/api.service';
 // Q13-T2: the view-as / act-as session this tab works in.
 export {
   IMPERSONATION_HEADER, IMPERSONATION_ROUTES, ImpersonationService, impersonationInterceptor,
@@ -27,6 +27,9 @@ export type { ConditionalEntry } from './lib/conditional-cache';
 export { CHANGESET_HEADER, CHANGESET_REFUSAL_CODES, changesetRefusalCode } from './lib/api.service';
 export type { ChangesetRefusalCode } from './lib/api.service';
 export { AuthService }                     from './lib/auth.service';
+// Q8-T9: the idle sign-out and its warning.
+export { IdleSessionService, IDLE_WARNING_SECS, ACTIVITY_THROTTLE_MS } from './lib/idle-session.service';
+export { IdleWarningComponent }            from './lib/idle-warning.component';
 export { authInterceptor }                 from './lib/auth.interceptor';
 export { authGuard }                       from './lib/auth.guard';
 export { provideAttomeBase, provideAttomeI18n } from './lib/provide';

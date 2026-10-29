@@ -11507,6 +11507,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/security/roles/{id}/sessions/revoke-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End every session of a role's holders
+         * @description Q8-T5: ends the sessions of everyone holding the role (directly or
+         *     through a team) and moves their auth epochs on. Up to 500 holders this
+         *     happens in the request, in one transaction; beyond that a job ends them
+         *     in batches of 500, each its own transaction, and only sessions started
+         *     before this request, so a retried batch never ends a newer sign-in.
+         */
+        post: operations["admin_revoke_role_sessions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/security/roles/{id}/users": {
         parameters: {
             query?: never;
@@ -11532,6 +11556,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/security/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * All sessions
+         * @description Q8-T5: every live session in the deployment, most recently active first;
+         *     `role_id` narrows it to that role's holders (directly or through a team).
+         */
+        get: operations["admin_list_sessions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/security/sessions/revoke": {
         parameters: {
             query?: never;
@@ -11549,6 +11594,30 @@ export interface paths {
          */
         post: operations["revoke_session"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/sessions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * End a session
+         * @description Q8-T5: ends one session of anyone's, and forgets the browser if it was
+         *     remembered in it. It can no longer be refreshed; its access token lapses
+         *     at its own short expiry (end it at once by `jti` with
+         *     `POST /api/v1/admin/security/sessions/revoke`, or end every session of the
+         *     person, which also stops their access tokens).
+         */
+        delete: operations["admin_end_session"];
         options?: never;
         head?: never;
         patch?: never;
@@ -11882,6 +11951,48 @@ export interface paths {
          *     that path.
          */
         delete: operations["remove_user_role"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/users/{id}/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A person's sessions
+         * @description Q8-T5: every live session of one person, most recently active first.
+         */
+        get: operations["admin_list_user_sessions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/users/{id}/sessions/revoke-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End every session of a person
+         * @description Q8-T5: ends all of the person's sessions and moves their auth epoch on in
+         *     one transaction, so their access tokens stop at once as well, and forgets
+         *     their remembered browsers.
+         */
+        post: operations["admin_revoke_user_sessions"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -15334,6 +15445,74 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My sessions
+         * @description Q8-T4: the caller's own live sessions (one per sign-in), most recently
+         *     active first, so they can end the ones they do not recognise. `is_current`
+         *     marks the session this request was made with. No token, secret or
+         *     address is ever part of an item.
+         */
+        get: operations["list_my_sessions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/sessions/end-others": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End my other sessions
+         * @description Q8-T4: ends every session of the caller except the one this request was
+         *     made with, and forgets the browsers remembered in them. Needs a signed-in
+         *     browser session: an API key has no session of its own to keep.
+         */
+        post: operations["end_my_other_sessions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/sessions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * End one of my sessions
+         * @description Q8-T4: ends one of the caller's own sessions and forgets the browser if it
+         *     was remembered in it. It can no longer be refreshed; its access token
+         *     lapses at its own short expiry. Another person's session, or one already
+         *     ended, answers 404.
+         */
+        delete: operations["end_my_session"];
         options?: never;
         head?: never;
         patch?: never;
@@ -31157,6 +31336,31 @@ export interface components {
             status: string;
             suggestion?: string | null;
         };
+        /**
+         * @description Q8-T5: one live session in an administrator's list — the person's own
+         *     session row (Q8-T4) plus whose it is. Never a token, secret or address.
+         */
+        AdminSessionItem: {
+            /** @description `web`, `mobile` or `agent`. */
+            client_kind: string;
+            /** Format: date-time */
+            created_at: string;
+            /** @description The browser family, such as `chrome/windows`. */
+            device_label?: string | null;
+            /**
+             * Format: uuid
+             * @description The session's id, for ending it.
+             */
+            id: string;
+            /** Format: date-time */
+            last_activity_at?: string | null;
+            /** @description How the session signed in, such as `password+totp` or `oidc:okta`. */
+            sign_in_method?: string | null;
+            user_agent?: string | null;
+            user_email?: string | null;
+            /** Format: uuid */
+            user_id: string;
+        };
         /** @description `POST …/adopt`. */
         AdoptResponse: {
             changesets: components["schemas"]["AdoptedChangeset"][];
@@ -46671,6 +46875,41 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_AdminSessionItem: {
+            items: {
+                /** @description `web`, `mobile` or `agent`. */
+                client_kind: string;
+                /** Format: date-time */
+                created_at: string;
+                /** @description The browser family, such as `chrome/windows`. */
+                device_label?: string | null;
+                /**
+                 * Format: uuid
+                 * @description The session's id, for ending it.
+                 */
+                id: string;
+                /** Format: date-time */
+                last_activity_at?: string | null;
+                /** @description How the session signed in, such as `password+totp` or `oidc:okta`. */
+                sign_in_method?: string | null;
+                user_agent?: string | null;
+                user_email?: string | null;
+                /** Format: uuid */
+                user_id: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_AgeingRow: {
             items: {
                 /** Format: uuid */
@@ -53741,6 +53980,48 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_SessionItem: {
+            items: {
+                /** @description `web`, `mobile` or `agent`. */
+                client_kind: string;
+                /**
+                 * Format: date-time
+                 * @description When the session signed in.
+                 */
+                created_at: string;
+                /** @description The browser family, such as `chrome/windows`. */
+                device_label?: string | null;
+                /**
+                 * Format: uuid
+                 * @description The session's id, for ending it.
+                 */
+                id: string;
+                /** @description The session this request was made with. */
+                is_current: boolean;
+                /**
+                 * Format: date-time
+                 * @description The last request made with it, recorded once a minute.
+                 */
+                last_activity_at?: string | null;
+                /** @description The ISO country it signed in from, when `auth.geoip_database` is set. */
+                sign_in_country?: string | null;
+                /** @description How the session signed in, such as `password+totp` or `oidc:okta`. */
+                sign_in_method?: string | null;
+                user_agent?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_SessionSummary: {
             items: {
                 /** Format: uuid */
@@ -60709,8 +60990,47 @@ export interface components {
          */
         SessionInfo: {
             email: string;
+            /**
+             * Format: int64
+             * @description Q8-T9: seconds without activity before the app signs the person
+             *     out, from their roles (`role_auth_policy.idle_timeout_secs`) or the
+             *     deployment default; the app warns a minute ahead.
+             */
+            idle_secs: number;
             /** Format: uuid */
             user_id: string;
+        };
+        /**
+         * @description Q8-T4: one of the caller's own sessions in `GET /api/v1/auth/sessions`.
+         *     Never a token, secret, token id or address.
+         */
+        SessionItem: {
+            /** @description `web`, `mobile` or `agent`. */
+            client_kind: string;
+            /**
+             * Format: date-time
+             * @description When the session signed in.
+             */
+            created_at: string;
+            /** @description The browser family, such as `chrome/windows`. */
+            device_label?: string | null;
+            /**
+             * Format: uuid
+             * @description The session's id, for ending it.
+             */
+            id: string;
+            /** @description The session this request was made with. */
+            is_current: boolean;
+            /**
+             * Format: date-time
+             * @description The last request made with it, recorded once a minute.
+             */
+            last_activity_at?: string | null;
+            /** @description The ISO country it signed in from, when `auth.geoip_database` is set. */
+            sign_in_country?: string | null;
+            /** @description How the session signed in, such as `password+totp` or `oidc:okta`. */
+            sign_in_method?: string | null;
+            user_agent?: string | null;
         };
         /** @description The customer's side of a joined session. */
         SessionJoined: {
@@ -60782,6 +61102,16 @@ export interface components {
             status: components["schemas"]["SessionStatus"];
             surface: string;
             tainted: boolean;
+        };
+        /** @description How many people's sessions ended, or that a job is ending them. */
+        SessionsEnded: {
+            /** @description People whose sessions ended in this request. */
+            ended_users: number;
+            /**
+             * @description The role had more than 500 holders: a job ends their sessions in
+             *     batches, and `ended_users` is 0.
+             */
+            queued: boolean;
         };
         SetAutonomy: {
             currency?: string | null;
@@ -100555,6 +100885,65 @@ export interface operations {
             };
         };
     };
+    admin_revoke_role_sessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The role */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The holders' sessions ended, or a job is ending them */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionsEnded"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such role */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_role_users: {
         parameters: {
             query?: {
@@ -100585,6 +100974,65 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaginatedResponse_RoleUserItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    admin_list_sessions: {
+        parameters: {
+            query?: {
+                role_id?: string;
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Live sessions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_AdminSessionItem"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -100647,6 +101095,63 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    admin_end_session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Session id from a session list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ended */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such live session */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -101630,6 +102135,135 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    admin_list_user_sessions: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The person */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The person's live sessions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_AdminSessionItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such person */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    admin_revoke_user_sessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The person */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The person's sessions ended */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionsEnded"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such person */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -111044,6 +111678,166 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_my_sessions: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's live sessions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_SessionItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    end_my_other_sessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every other session ended */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not made with a browser session */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    end_my_session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Session id from the list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ended */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such live session of the caller's */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

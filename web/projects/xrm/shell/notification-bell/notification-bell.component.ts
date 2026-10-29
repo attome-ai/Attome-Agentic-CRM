@@ -185,7 +185,7 @@ export class NotificationBellComponent implements OnInit {
   /** One poll that always completes, recording success or failure for the backoff. */
   private pollOnce(): Observable<void> {
     return this.api.post<{ notifications: XrmNotif[]; unread_count: number }>(
-      '/api/v1/notification/poll', {}
+      '/api/v1/notification/poll', {}, { background: true },
     ).pipe(
       tap(res => {
         this.notifications.set(res.notifications ?? []);

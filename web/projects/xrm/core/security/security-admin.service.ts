@@ -13,6 +13,9 @@ import { RecordSharingService } from '@attome/xrm/core/entity';
 // `admin.service.ts` for a real example of that trap in a sibling file).
 
 export type PrivilegeItem = ApiComponents['schemas']['PrivilegeItem'];
+// Q8-T5: an administrator's session lists and revocations.
+export type AdminSessionItem = ApiComponents['schemas']['AdminSessionItem'];
+export type SessionsEnded = ApiComponents['schemas']['SessionsEnded'];
 
 // D-111: roles replace jobs as the grant-bundling concept (supersedes
 // D-011/D-012). See DECISIONS.md.
@@ -648,6 +651,38 @@ export class SecurityAdminService {
   deleteOidcGroupMapping(providerId: string, mappingId: string): Observable<void> {
     return this.api.delete(
       `/api/v1/admin/security/oidc-providers/${encodeURIComponent(providerId)}/group-mappings/${encodeURIComponent(mappingId)}`,
+    );
+  }
+
+  // ── Q8-T5: sessions ──────────────────────────────────────────────────────
+
+  /** Live sessions, deployment-wide or of one role's holders. */
+  listSessions(roleId?: string, page = 1, pageSize = 50): Observable<Page<AdminSessionItem>> {
+    const params: Record<string, string> = { page: String(page), page_size: String(pageSize) };
+    if (roleId) params['role_id'] = roleId;
+    return this.api.get<Page<AdminSessionItem>>('/api/v1/admin/security/sessions', params);
+  }
+
+  listUserSessions(userId: string, page = 1, pageSize = 50): Observable<Page<AdminSessionItem>> {
+    return this.api.get<Page<AdminSessionItem>>(
+      `/api/v1/admin/security/users/${encodeURIComponent(userId)}/sessions`,
+      { page: String(page), page_size: String(pageSize) },
+    );
+  }
+
+  endSession(familyId: string): Observable<void> {
+    return this.api.delete(`/api/v1/admin/security/sessions/${encodeURIComponent(familyId)}`);
+  }
+
+  revokeUserSessions(userId: string): Observable<SessionsEnded> {
+    return this.api.post<SessionsEnded>(
+      `/api/v1/admin/security/users/${encodeURIComponent(userId)}/sessions/revoke-all`, {},
+    );
+  }
+
+  revokeRoleSessions(roleId: string): Observable<SessionsEnded> {
+    return this.api.post<SessionsEnded>(
+      `/api/v1/admin/security/roles/${encodeURIComponent(roleId)}/sessions/revoke-all`, {},
     );
   }
 }

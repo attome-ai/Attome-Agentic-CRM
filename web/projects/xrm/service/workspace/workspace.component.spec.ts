@@ -46,7 +46,7 @@ describe('WorkspaceComponent', () => {
         provideRouter([]),
         { provide: WorkspaceService, useValue: svc },
         // G11-T2: the article suggestions in the context panel.
-        { provide: ApiService, useValue: { get: vi.fn(() => of({ items: [] })), post: vi.fn(() => of({})) } },
+        { provide: ApiService, useValue: { get: vi.fn(() => of({ items: [] })), getBackground: vi.fn(() => of({ items: [] })), post: vi.fn(() => of({})) } },
         {
           provide: LangService,
           useValue: { translate: (key: string) => key, intlLocale: () => 'en-US' },

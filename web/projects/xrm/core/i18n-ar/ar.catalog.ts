@@ -938,6 +938,25 @@ export const xrmAr = {
     empty: 'لا يوجد حساب مطابق.', colEmail: 'الحساب', colRoles: 'الأدوار', colFactors: 'العوامل الثانية',
     admin: 'مسؤول', none: 'لا شيء', needsPasskey: 'مسؤول بلا مفتاح مرور',
   },
+  // Q8-T9: the person's own sessions on My Access.
+  mySessions: {
+    title: 'الجلسات', subtitle: 'الأماكن التي سجّلت الدخول منها. أنهِ أي جلسة لا تعرفها.',
+    loading: 'جارٍ التحميل…', colDevice: 'الجهاز', colMethod: 'طريقة الدخول', colStarted: 'وقت الدخول',
+    colLastActive: 'آخر نشاط', colActions: 'الإجراءات', thisDevice: 'هذا الجهاز',
+    unknownDevice: 'جهاز غير معروف', end: 'إنهاء الجلسة', endOthers: 'إنهاء كل الجلسات الأخرى',
+  },
+  // Q8-T9: an administrator's sessions screen.
+  sessionsAdmin: {
+    title: 'الجلسات', subtitle: 'من سجّل الدخول ومن أين. أنهِ جلسة واحدة، أو كل جلسات شخص، أو كل جلسات دور.',
+    refresh: 'تحديث', loading: 'جارٍ التحميل…', empty: 'لا توجد جلسة مطابقة.', role: 'الدور', allRoles: 'كل الأدوار',
+    user: 'الشخص', userPlaceholder: 'معرّف المستخدم', show: 'عرض', clear: 'مسح',
+    colUser: 'الشخص', colDevice: 'الجهاز', colMethod: 'طريقة الدخول', colStarted: 'وقت الدخول',
+    colLastActive: 'آخر نشاط', colActions: 'الإجراءات', unknownDevice: 'جهاز غير معروف',
+    end: 'إنهاء', endAllOfUser: 'إنهاء كل جلسات هذا الشخص', endAllOfRole: 'إنهاء كل جلسات هذا الدور',
+    confirmRole: 'إنهاء كل جلسات جميع من يحملون هذا الدور؟', queued: 'تعمل مهمة على إنهاء جلسات حاملي هذا الدور.',
+    ended: '{count, plural, one {انتهت جلسات شخص واحد.} two {انتهت جلسات شخصين.} few {انتهت جلسات # أشخاص.} many {انتهت جلسات # شخصًا.} other {انتهت جلسات # شخص.}}',
+    prev: 'السابق', next: 'التالي', cancel: 'إلغاء',
+  },
   myQueues: {
     title: 'قوائم الانتظار', actions: 'إجراءات عناصر قوائم الانتظار', selected: 'تم تحديد {count}',
     pick: 'استلام', release: 'إعادة', transfer: 'نقل', transferTo: 'النقل إلى قائمة',

@@ -104,7 +104,7 @@ export class OfferToastComponent {
     const destroy = inject(DestroyRef);
     interval(OFFER_POLL_MS).pipe(
       startWith(0),
-      switchMap(() => this.api.get<Page<WorkOffer>>('/api/v1/queue-offers/mine').pipe(catchError(() => of(null)))),
+      switchMap(() => this.api.getBackground<Page<WorkOffer>>('/api/v1/queue-offers/mine').pipe(catchError(() => of(null)))),
       takeUntilDestroyed(destroy),
     ).subscribe(page => {
       if (page) this.offers.set(page.items);

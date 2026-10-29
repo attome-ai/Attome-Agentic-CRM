@@ -1,0 +1,60 @@
+<section class="card" aria-labelledby="my-sessions-title">
+  <h3 id="my-sessions-title">
+    {{ 'mySessions.title' | translate }}
+    <span class="count">{{ sessions().length }}</span>
+  </h3>
+  <p class="subtitle">{{ 'mySessions.subtitle' | translate }}</p>
+  @if (loading()) {
+    <p class="state-msg">{{ 'mySessions.loading' | translate }}</p>
+  } @else {
+    @if (error()) {
+      <p class="error-msg" role="alert">{{ error() }}</p>
+    }
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">{{ 'mySessions.colDevice' | translate }}</th>
+            <th scope="col">{{ 'mySessions.colMethod' | translate }}</th>
+            <th scope="col">{{ 'mySessions.colStarted' | translate }}</th>
+            <th scope="col">{{ 'mySessions.colLastActive' | translate }}</th>
+            <th scope="col"><span class="visually-hidden">{{ 'mySessions.colActions' | translate }}</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of sessions(); track s.id) {
+            <tr>
+              <td [attr.title]="s.user_agent">
+                {{ s.device_label ?? ('mySessions.unknownDevice' | translate) }}
+                @if (s.is_current) {
+                  <span class="badge badge-boolean">{{ 'mySessions.thisDevice' | translate }}</span>
+                }
+              </td>
+              <td class="cell-mono">{{ s.sign_in_method ?? '—' }}</td>
+              <td class="cell-muted">{{ s.created_at | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}</td>
+              <td class="cell-muted">
+                @if (s.last_activity_at) {
+                  {{ s.last_activity_at | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}
+                } @else {
+                  —
+                }
+              </td>
+              <td>
+                @if (!s.is_current) {
+                  <button type="button" class="btn-text" [disabled]="busy()" (click)="end(s)">
+                    {{ 'mySessions.end' | translate }}
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (hasOthers()) {
+      <button type="button" class="btn-ghost" [disabled]="busy()" (click)="endOthers()">
+        <i class="las la-sign-out-alt" aria-hidden="true"></i> {{ 'mySessions.endOthers' | translate }}
+      </button>
+    }
+  }
+</section>

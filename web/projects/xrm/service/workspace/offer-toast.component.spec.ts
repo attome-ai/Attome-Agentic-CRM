@@ -34,7 +34,7 @@ describe('work offer toast (J10-T2)', () => {
     TestBed.configureTestingModule({
       imports: [OfferToastComponent],
       providers: [
-        { provide: ApiService, useValue: { get, post } },
+        { provide: ApiService, useValue: { getBackground: get, post } },
         { provide: LangService, useValue: { translate: (k: string) => k, isRtl: signal(false), errorText: () => 'error' } },
       ],
     });

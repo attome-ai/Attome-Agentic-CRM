@@ -1,7 +1,9 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { ApiService, AuthService, BrandService, CommandRegistry, LangService, ThemeService } from '@attome/base';
+import {
+  ApiService, AuthService, BrandService, CommandRegistry, IdleSessionService, LangService, ThemeService,
+} from '@attome/base';
 import { of, Subject } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { AdminService } from '@attome/xrm/core/admin/data';
@@ -17,6 +19,10 @@ function createComponent() {
       { provide: AuthService, useValue: { userId: signal('user-id'), logout: () => of(undefined) } },
       { provide: ApiService, useValue: { post: () => of({}) } },
       { provide: BrandService, useValue: { loadMine: vi.fn() } },
+      {
+        provide: IdleSessionService,
+        useValue: { startFromSession: vi.fn(), warning: signal(false), secondsLeft: signal(null), stay: vi.fn() },
+      },
       { provide: AdminService, useValue: { getSidebar: () => of([]) } },
       {
         provide: Router,

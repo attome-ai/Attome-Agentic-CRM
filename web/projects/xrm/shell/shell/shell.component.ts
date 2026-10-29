@@ -1,11 +1,11 @@
 import {
-  ChangeDetectionStrategy, Component, computed, effect, inject, OnInit, signal, untracked, viewChild,
+  ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, OnInit, signal, untracked, viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterOutlet } from '@angular/router';
 import {
-  BrandService, CommandRegistry, LangService, ShortcutRegistry, TranslatePipe, UiTextOverrides,
-  isTypingTarget,
+  AuthService, BrandService, CommandRegistry, IdleSessionService, IdleWarningComponent, LangService,
+  ShortcutRegistry, TranslatePipe, UiTextOverrides, isTypingTarget,
 } from '@attome/base';
 import { AdminService, SidebarItem } from '@attome/xrm/core/admin/data';
 import { entityFormRoute, entityListRoute, urlPathToLogical } from '@attome/xrm/core/entity';
@@ -119,7 +119,7 @@ const PALETTE_RECORDS = 8;
     ShellSidebarComponent, NotificationBellComponent, ProfileMenuComponent, AppSwitcherComponent,
     CopilotLauncherComponent, SoftphoneLauncherComponent, OmniSearchComponent, ChangesetIndicatorComponent, FavouritesComponent,
     StatusBannerComponent, ImpersonationBannerComponent, FirstRunPromptComponent, TourOverlayComponent, ScanFindComponent,
-    SyncStatusComponent,
+    SyncStatusComponent, IdleWarningComponent,
   ],
   host: {
     '(window:keydown)': 'onKeydown($event)',
@@ -141,6 +141,9 @@ export class ShellComponent implements OnInit {
   private readonly search = inject(SearchService);
   private readonly commandRegistry = inject(CommandRegistry);
   private readonly paletteUses = inject(PaletteUses);
+  private readonly idle = inject(IdleSessionService);
+  private readonly auth = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
   readonly shortcutRegistry = inject(ShortcutRegistry);
   /** B10-T2: the `?` help listing the shortcuts that work here. */
   readonly shortcutsOpen = signal(false);
@@ -345,6 +348,8 @@ export class ShellComponent implements OnInit {
     this.uiText.start();
     // AA12-T1: page speed, reported when the page is hidden.
     this.vitals.start();
+    // Q8-T9: the roles' idle limit, warned a minute ahead.
+    this.idle.startFromSession(() => this.auth.logout().subscribe({ error: () => undefined }), this.destroyRef);
     // B11-T2: the person's settings apply at once; a chosen start page opens
     // when they land on the app's front door.
     this.personalSettings.load().subscribe({

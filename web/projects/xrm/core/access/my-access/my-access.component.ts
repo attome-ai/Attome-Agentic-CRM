@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { ApiError, ApiService } from '@attome/base';
+import { MySessionsComponent } from './my-sessions.component';
 
 interface SecurityContext {
   user_id:    string;
@@ -11,6 +12,7 @@ interface SecurityContext {
   selector:   'xrm-my-access',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [MySessionsComponent],
   styleUrls:  ['../../../styles/admin-page.css', './my-access.component.css'],
   templateUrl: './my-access.component.html',
 })

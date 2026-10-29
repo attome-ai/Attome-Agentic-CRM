@@ -49,6 +49,9 @@ export { RecordSharesComponent }          from './record-shares.component';
 export { MfaCoverageComponent }           from './mfa-coverage.component';
 export { MFA_FACTORS, MFA_MODES, WEAK_MFA_FACTORS } from './security-admin.service';
 export type { RoleAuthPolicy, RoleAuthPolicyBody, MfaCoverageRow, MfaCoverageSummary } from './security-admin.service';
+// Q8-T9: an administrator's sessions screen (Q8-T5 routes).
+export { SessionsAdminComponent }         from './sessions-admin.component';
+export type { AdminSessionItem, SessionsEnded } from './security-admin.service';
 // Q1-T14: the sign-in provider screens.
 export { OidcProvidersComponent }         from './oidc-providers.component';
 export { OidcProviderFormComponent, applyPreset, bodyOf, draftOf, emptyDraft } from './oidc-provider-form.component';
