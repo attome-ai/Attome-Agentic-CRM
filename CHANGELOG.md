@@ -8,6 +8,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Fixed
+- Undoing a deal discount now also removes the discount (D6-T11). Before, the lines came back but
+  the deal kept its discount percent, so repricing applied it to them again. Migration 0333 keeps
+  the deal's previous discount with the snapshot.
 - The OpenAPI document gave two routes each the operation ids `list_rules`, `create_rule`,
   `delete_rule` and `list_templates`, which broke the generated `api-types.ts` and the Angular build.
   The role conflict rule routes are now `list_role_conflict_rules`, `create_role_conflict_rule` and

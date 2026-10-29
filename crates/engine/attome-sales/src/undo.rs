@@ -88,6 +88,25 @@ pub async fn record_in_tx(
     .map_err(AppError::internal)
 }
 
+/// D6-T11: a deal discount's snapshot also keeps the percent the deal had
+/// before (`None` for none), which undo puts back.
+pub async fn record_discount_in_tx(
+    tx: &mut attome_db::Tx<'_>,
+    snapshot: Uuid,
+    before: Option<&str>,
+) -> Result<(), AppError> {
+    sqlx::query(
+        "UPDATE sales_line_snapshot \
+         SET deal_discount_percent = $2::numeric, deal_discount_saved = true WHERE id = $1",
+    )
+    .bind(snapshot)
+    .bind(before)
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
+}
+
 /// Whether the lines are as the change left them.
 pub fn untouched(stored: &BTreeMap<String, i64>, live: &BTreeMap<String, i64>) -> bool {
     stored == live
@@ -99,7 +118,7 @@ pub struct SalesUndone {
     pub lines_restored: usize,
 }
 
-type SnapshotRow = (Uuid, Value, Value, Uuid, bool, bool);
+type SnapshotRow = (Uuid, Value, Value, Uuid, bool, bool, bool, Option<String>);
 
 /// Undo a bulk line change
 ///
@@ -154,7 +173,8 @@ pub(crate) async fn post_sales_undo(
     crate::split_store::lock_deal(&mut tx, deal).await?;
     let row: Option<SnapshotRow> = sqlx::query_as(
         "SELECT parent_id, lines, row_versions, created_by, used_at IS NOT NULL, \
-                created_at < now() - make_interval(mins => $2) \
+                created_at < now() - make_interval(mins => $2), deal_discount_saved, \
+                deal_discount_percent::text \
          FROM sales_line_snapshot WHERE id = $1 FOR UPDATE",
     )
     .bind(snapshot)
@@ -162,7 +182,7 @@ pub(crate) async fn post_sales_undo(
     .fetch_optional(&mut *tx)
     .await
     .map_err(AppError::internal)?;
-    let Some((_, lines, versions, author, used, expired)) = row else {
+    let Some((_, lines, versions, author, used, expired, discount_saved, discount)) = row else {
         return Err(AppError::NotFound);
     };
     if author != ctx.user_id {
@@ -204,6 +224,16 @@ pub(crate) async fn post_sales_undo(
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
+    // D6-T11: a deal discount's undo puts the deal's discount back, or the
+    // reprice below would apply it to the restored lines again.
+    if discount_saved {
+        sqlx::query("UPDATE opportunity SET deal_discount_percent = $2::numeric WHERE id = $1")
+            .bind(deal)
+            .bind(&discount)
+            .execute(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+    }
     crate::opportunity_lines::reprice_in_tx(&mut tx, deal).await?;
     sqlx::query("UPDATE sales_line_snapshot SET used_at = now() WHERE id = $1")
         .bind(snapshot)

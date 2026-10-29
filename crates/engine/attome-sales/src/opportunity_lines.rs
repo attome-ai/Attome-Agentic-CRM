@@ -821,6 +821,12 @@ pub(crate) async fn post_sales_deal_discount(
     require(&state, &ctx, opportunity, RecordAction::Update).await?;
     let (mut tx, _, _) = begin_change(&state, opportunity, expected).await?;
     let before = crate::undo::capture_lines(&mut tx, opportunity).await?;
+    let discount_before: Option<String> =
+        sqlx::query_scalar("SELECT deal_discount_percent::text FROM opportunity WHERE id = $1")
+            .bind(opportunity)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
     sqlx::query("UPDATE opportunity SET deal_discount_percent = $2::numeric WHERE id = $1")
         .bind(opportunity)
         .bind(percent.map(|p| p.to_string()))
@@ -829,6 +835,7 @@ pub(crate) async fn post_sales_deal_discount(
         .map_err(AppError::internal)?;
     let totals = reprice_in_tx(&mut tx, opportunity).await?;
     let snapshot = crate::undo::record_in_tx(&mut tx, opportunity, before, ctx.user_id).await?;
+    crate::undo::record_discount_in_tx(&mut tx, snapshot, discount_before.as_deref()).await?;
     attome_audit::write_business_event_in_tx(
         &mut tx,
         &attome_audit::audit_service(&state),
