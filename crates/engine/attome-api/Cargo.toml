@@ -82,7 +82,14 @@ tracing.workspace             = true
 utoipa.workspace              = true
 uuid.workspace                = true
 
+[features]
+# AB9-T5: the changeset apply's crash windows (`changeset::apply::crash`),
+# armed only by integration tests. Never on in a release build.
+test-support = []
+
 [dev-dependencies]
+# Itself with `test-support`, so integration tests can arm crash windows.
+attome-api                   = { path = ".", features = ["test-support"] }
 attome-docgen.workspace      = true
 attome-search.workspace      = true
 attome-testkit               = { workspace = true, features = ["app-config", "examples"] }

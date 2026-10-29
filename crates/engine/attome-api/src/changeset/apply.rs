@@ -210,6 +210,61 @@ pub enum RunOutcome {
     NotClaimed,
 }
 
+/// AB9-T5: test-only crash windows in an apply run. A test arms one window
+/// for one ledger row; when the run reaches it, the run panics, which drops
+/// the future exactly where a killed process would stop: whatever committed
+/// stays, nothing after it runs (no cursor advance, no ledger close, no
+/// report close). Compiled only with the `test-support` feature.
+#[cfg(feature = "test-support")]
+pub mod crash {
+    use std::sync::Mutex;
+    use uuid::Uuid;
+
+    /// Where a run stops.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    pub enum Window {
+        /// The step with this index (0-based, counted in this run) committed, before
+        /// its cursor advance.
+        AfterStep(u32),
+        /// Every step committed and advanced, before the ledger row is marked
+        /// `succeeded`.
+        BeforeLedger,
+        /// The ledger row is `succeeded` and the doorbell rang, before the
+        /// run's release report is marked ready.
+        BeforeReport,
+    }
+
+    static ARMED: Mutex<Vec<(Uuid, Window)>> = Mutex::new(Vec::new());
+
+    /// Arms `window` for the next run of `apply_id` (once).
+    pub fn arm(apply_id: Uuid, window: Window) {
+        ARMED
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .push((apply_id, window));
+    }
+
+    /// Panics when `window` is armed for `apply_id`, disarming it.
+    pub(super) fn hit(apply_id: Uuid, window: Window) {
+        let fired = {
+            let mut armed = ARMED
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            match armed.iter().position(|a| *a == (apply_id, window)) {
+                Some(i) => {
+                    armed.remove(i);
+                    true
+                }
+                None => false,
+            }
+        };
+        assert!(
+            !fired,
+            "AB9-T5 crash window {window:?} reached for {apply_id}"
+        );
+    }
+}
+
 // ── Worker entry ────────────────────────────────────────────────────────────
 
 /// `EngineJob::ApplyChangesets { apply_ids }`: applies the rows in order,
@@ -332,6 +387,8 @@ pub async fn run_one(state: &EngineState, apply_id: Uuid) -> Result<RunOutcome, 
         run_one_row(state, apply_id),
     )
     .await?;
+    #[cfg(feature = "test-support")]
+    crash::hit(apply_id, crash::Window::BeforeReport);
     if let RunOutcome::Applied(_) = outcome {
         close_report(state, report_id).await;
     }
@@ -378,6 +435,8 @@ async fn run_one_row(state: &EngineState, apply_id: Uuid) -> Result<RunOutcome, 
     };
     let result = match result {
         Ok(()) => {
+            #[cfg(feature = "test-support")]
+            crash::hit(apply_id, crash::Window::BeforeLedger);
             ledger::mark_succeeded(&state.base.db, apply_id).await?;
             match export_bundle(&state.base.db).await {
                 Ok(bundle) => state
@@ -526,6 +585,8 @@ async fn apply_claimed(
                 lost_claim: false,
             });
         }
+        #[cfg(feature = "test-support")]
+        crash::hit(row.id, crash::Window::AfterStep(summary.steps));
         summary.steps += 1;
         applied_count += i32::try_from(summary.written - before).unwrap_or(i32::MAX);
         let cursor = i32::try_from(step.end).unwrap_or(i32::MAX);
