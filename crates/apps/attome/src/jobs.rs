@@ -3726,6 +3726,24 @@ pub fn register_job_types() {
         ) {
             tracing::error!(%error, "job type registration failed");
         }
+        // Q8-T5: a large role's holders' sessions, ended in batches.
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            attome_security::admin::REVOKE_ROLE_SESSIONS,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: attome_security::admin::RevokeRoleSessionsPayload = job.payload()?;
+                let ended = attome_security::admin::revoke_role_sessions_job(
+                    &state,
+                    payload.role_id,
+                    payload.cutoff,
+                )
+                .await
+                .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(role_id = %payload.role_id, ended, "role sessions ended");
+                Ok(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             HEAVY_OP_UNDO_RETENTION,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {

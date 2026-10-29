@@ -70,6 +70,12 @@ pub use user_roles::{
 /// above).
 pub use access_reviews::sweep_due_campaigns;
 
+/// Q8-T5: the job a role-wide session revocation runs, registered by the
+/// binary's job registry.
+pub use sessions::{
+    REVOKE_ROLE_SESSIONS, ROLE_REVOKE_BATCH, RevokeRoleSessionsPayload, revoke_role_sessions_job,
+};
+
 /// P-api-contract Phase 1 — this sub-tree's slice of the workspace OpenAPI
 /// document. Mirrors `routes()` below one-for-one: every module merged there
 /// is merged here; a new admin sub-domain that forgets its fragment is a

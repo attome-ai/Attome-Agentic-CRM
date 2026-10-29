@@ -65,6 +65,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `POST /api/v1/auth/sessions/end-others` ends every other, forgetting a browser remembered in an
   ended session. A new sign-in now records its browser, method and country on the session
   (migration 0328), and a refresh keeps them.
+- Administrators' session lists (Q8-T5): `GET /api/v1/admin/security/sessions?role_id=`,
+  `GET /api/v1/admin/security/users/{id}/sessions`, `DELETE /api/v1/admin/security/sessions/{id}`,
+  and `POST .../users/{id}/sessions/revoke-all` and `.../roles/{id}/sessions/revoke-all`, which
+  also move the people's auth epoch on so their access tokens stop at once; a role with more than
+  500 holders is ended by the `revoke_role_sessions` job in batches of 500.
 - Customisations a release affects (Y11-T12): when a platform or app release retires, deletes or
   renames an entity or field this system customised, the release report gets a
   `customisation_affected` item naming the properties and, for a rename, the new name, and

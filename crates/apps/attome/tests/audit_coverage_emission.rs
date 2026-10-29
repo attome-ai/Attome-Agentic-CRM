@@ -3094,6 +3094,43 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             t,
             Some(json!({"jti": Uuid::now_v7()})),
         ),
+        // ── sessions (Q8-T5) ────────────────────────────────────────────────
+        "DELETE /api/v1/admin/security/sessions/{id}" => {
+            let (user, email) = seed_user(&fx.base, "admin-end-session").await;
+            login_cookies(fx, &email).await;
+            let family: Uuid = sqlx::query_scalar(
+                "SELECT family_id FROM refresh_token WHERE user_ref = $1 AND revoked_at IS NULL LIMIT 1",
+            )
+            .bind(user)
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("the person's session");
+            request("DELETE", &format!("{S}/sessions/{family}"), t, None)
+        }
+        "POST /api/v1/admin/security/users/{id}/sessions/revoke-all" => {
+            let (user, _) = seed_user(&fx.base, "admin-revoke-all").await;
+            request(
+                "POST",
+                &format!("{S}/users/{user}/sessions/revoke-all"),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/admin/security/roles/{id}/sessions/revoke-all" => {
+            let role = Uuid::now_v7();
+            sqlx::query("INSERT INTO role (id, name, owner_layer) VALUES ($1, $2, 'customer')")
+                .bind(role)
+                .bind(format!("q8-t5-role-{role}"))
+                .execute(&fx.base.db)
+                .await
+                .expect("insert a role");
+            request(
+                "POST",
+                &format!("{S}/roles/{role}/sessions/revoke-all"),
+                t,
+                None,
+            )
+        }
         "POST /api/v1/admin/security/users/{id}/mfa/reset" => {
             let (user, _) = enrolled_user(fx, "mfa-reset").await;
             request("POST", &format!("{S}/users/{user}/mfa/reset"), t, None)

@@ -1173,6 +1173,63 @@ pub async fn revoke_all_for_user_in_tx(
     Ok(())
 }
 
+/// Q8-T5: an administrator ends the live session `family_id`, whoever's it
+/// is, in the caller's transaction, with the browsers remembered in it.
+/// Returns its owner, or `None` when no such live session exists.
+pub async fn end_family_in_tx(
+    tx: &mut attome_db::Tx<'_>,
+    family_id: Uuid,
+) -> Result<Option<Uuid>, AppError> {
+    let owners: Vec<Uuid> = sqlx::query_scalar(
+        "UPDATE refresh_token SET revoked_at = NOW()
+          WHERE family_id = $1 AND revoked_at IS NULL
+         RETURNING user_ref",
+    )
+    .bind(family_id)
+    .fetch_all(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(owner) = owners.first().copied() else {
+        return Ok(None);
+    };
+    end_remembered_in(tx, owner, &[family_id]).await?;
+    Ok(Some(owner))
+}
+
+/// Q8-T5: ends, in the caller's transaction, every session of `users`
+/// started before `cutoff`, and forgets the browsers they remembered before
+/// it. A session started later is kept, so a retried batch never ends a
+/// newer sign-in. Returns the people whose sessions ended. The caller holds
+/// their account rows (D-509 rule 6) and moves their epochs on.
+pub async fn end_families_started_before_in_tx(
+    tx: &mut attome_db::Tx<'_>,
+    users: &[Uuid],
+    cutoff: DateTime<Utc>,
+) -> Result<Vec<Uuid>, AppError> {
+    let mut ended: Vec<Uuid> = sqlx::query_scalar(
+        "UPDATE refresh_token SET revoked_at = NOW()
+          WHERE user_ref = ANY($1) AND revoked_at IS NULL AND family_started_at < $2
+         RETURNING user_ref",
+    )
+    .bind(users)
+    .bind(cutoff)
+    .fetch_all(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    ended.sort_unstable();
+    ended.dedup();
+    sqlx::query(
+        "UPDATE remembered_device SET revoked_at = now()
+          WHERE user_ref = ANY($1) AND created_at < $2 AND revoked_at IS NULL",
+    )
+    .bind(users)
+    .bind(cutoff)
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(ended)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
