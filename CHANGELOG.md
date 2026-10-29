@@ -62,6 +62,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Explanations in words (P7-T7): a widget's explanation now carries `definition_en` and
+  `definition_ar` ("Total Amount of Deals where Status is won, by Owner" and its Arabic), the
+  `measure_basis` (the date field and grain a chart is bucketed by), and, for a governed metric,
+  `computed_at` and `lineage_url` (`/api/v1/metrics/{id}/lineage`). Every filter keeps its origin.
+  `glossary_term_id` and `currency` are in the shape but stay empty for now: glossary terms link to
+  entities, not measures, and amounts carry no currency code yet.
 - Drill-through (P7-T6): a widget's `drill_through` (`target_kind` `dashboard` with
   `target_dashboard_id` and optional `target_page_id`, or `route` with an application path, plus
   `param_map` from a target parameter to the clicked attribute) sends a click elsewhere. The

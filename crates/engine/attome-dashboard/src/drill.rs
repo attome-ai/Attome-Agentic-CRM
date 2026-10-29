@@ -1052,6 +1052,142 @@ pub struct WidgetExplanation {
     pub kpi: Option<KpiExplanation>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub query: Option<QueryExplanation>,
+    /// P7-T7: what the number is, in plain English.
+    pub definition_en: String,
+    /// P7-T7: the same in Arabic.
+    pub definition_ar: String,
+    /// P7-T7: the glossary term defining the measure. Always absent today:
+    /// a glossary term links to an entity, not to a metric or an attribute.
+    pub glossary_term_id: Option<Uuid>,
+    /// P7-T7: the date field and grain the number is bucketed by.
+    pub measure_basis: Option<MeasureBasis>,
+    /// P7-T7: the currency of a money measure and when it was converted.
+    /// Always absent today: amounts carry no currency code yet (A19-T1).
+    pub currency: Option<CurrencyFact>,
+    /// P7-T7: when a metric's number was computed (a KPI's latest point).
+    pub computed_at: Option<DateTime<Utc>>,
+    /// P7-T7: a governed metric's lineage route.
+    pub lineage_url: Option<String>,
+}
+
+/// P7-T7: the date field and grain a number is bucketed by.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct MeasureBasis {
+    pub attribute: String,
+    pub grain: DateBucket,
+}
+
+/// P7-T7: a money measure's currency.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct CurrencyFact {
+    pub code: String,
+    pub converted_at: Option<DateTime<Utc>>,
+}
+
+/// P7-T7: an operator in words, English and Arabic. Pure.
+fn op_words(op: &str) -> (&str, &str) {
+    match op {
+        "eq" => ("is", "يساوي"),
+        "neq" => ("is not", "لا يساوي"),
+        "gt" => ("is more than", "أكبر من"),
+        "gte" => ("is at least", "لا يقل عن"),
+        "lt" => ("is less than", "أقل من"),
+        "lte" => ("is at most", "لا يزيد عن"),
+        "contains" => ("contains", "يحتوي على"),
+        "starts_with" => ("starts with", "يبدأ بـ"),
+        "ends_with" => ("ends with", "ينتهي بـ"),
+        "in" => ("is one of", "أحد"),
+        "is_null" => ("is empty", "فارغ"),
+        "is_not_null" => ("is not empty", "غير فارغ"),
+        other => (other, other),
+    }
+}
+
+/// P7-T7: a structured number in words: the measure over the entity, its
+/// filters and its grouping, as `(english, arabic)`. Pure.
+pub fn plain_definition(
+    entity: &str,
+    measure: Option<&ExplainedMeasure>,
+    filters: &[ExplainedFilter],
+    group: Option<&str>,
+) -> (String, String) {
+    let field = measure
+        .and_then(|m| m.field_display_name.clone().or_else(|| m.field.clone()))
+        .unwrap_or_default();
+    let (mut en, mut ar) = match measure.map(|m| m.aggregation) {
+        None | Some(MeasureFn::Count) => (format!("Count of {entity}"), format!("عدد {entity}")),
+        Some(MeasureFn::CountDistinct) => (
+            format!("Number of different {field} values of {entity}"),
+            format!("عدد القيم المختلفة لـ {field} في {entity}"),
+        ),
+        Some(MeasureFn::Sum) => (
+            format!("Total {field} of {entity}"),
+            format!("مجموع {field} في {entity}"),
+        ),
+        Some(MeasureFn::Avg) => (
+            format!("Average {field} of {entity}"),
+            format!("متوسط {field} في {entity}"),
+        ),
+        Some(MeasureFn::Min) => (
+            format!("Lowest {field} of {entity}"),
+            format!("أدنى {field} في {entity}"),
+        ),
+        Some(MeasureFn::Max) => (
+            format!("Highest {field} of {entity}"),
+            format!("أعلى {field} في {entity}"),
+        ),
+        Some(MeasureFn::Median) => (
+            format!("Median {field} of {entity}"),
+            format!("وسيط {field} في {entity}"),
+        ),
+    };
+    if !filters.is_empty() {
+        let conditions: Vec<(String, String)> = filters
+            .iter()
+            .map(|f| {
+                let name = f
+                    .field_display_name
+                    .clone()
+                    .unwrap_or_else(|| f.field.clone());
+                let value = f.value_display.clone().unwrap_or_else(|| match &f.value {
+                    Some(Value::String(s)) => s.clone(),
+                    Some(Value::Null) | None => String::new(),
+                    Some(other) => other.to_string(),
+                });
+                let (op_en, op_ar) = op_words(&f.op);
+                let tail = if value.is_empty() {
+                    String::new()
+                } else {
+                    format!(" {value}")
+                };
+                (
+                    format!("{name} {op_en}{tail}"),
+                    format!("{name} {op_ar}{tail}"),
+                )
+            })
+            .collect();
+        en.push_str(" where ");
+        en.push_str(
+            &conditions
+                .iter()
+                .map(|c| c.0.as_str())
+                .collect::<Vec<_>>()
+                .join(" and "),
+        );
+        ar.push_str(" حيث ");
+        ar.push_str(
+            &conditions
+                .iter()
+                .map(|c| c.1.as_str())
+                .collect::<Vec<_>>()
+                .join(" و"),
+        );
+    }
+    if let Some(group) = group {
+        en.push_str(&format!(", by {group}"));
+        ar.push_str(&format!("، حسب {group}"));
+    }
+    (en, ar)
 }
 
 impl std::fmt::Debug for WidgetExplanation {
@@ -1209,6 +1345,13 @@ async fn widget_explain(
         structured: None,
         kpi: None,
         query: None,
+        definition_en: String::new(),
+        definition_ar: String::new(),
+        glossary_term_id: None,
+        measure_basis: None,
+        currency: None,
+        computed_at: None,
+        lineage_url: None,
     };
     let mut applied = Vec::new();
 
@@ -1248,6 +1391,27 @@ async fn widget_explain(
                 })
                 .collect();
             explanation.filters = explain_filters(&state, &ctx, &applied, &names).await?;
+            let entity_words = entity_display_name
+                .clone()
+                .unwrap_or_else(|| plan.data.source.clone());
+            let group_words = plan.data.group.as_ref().map(|g| {
+                names
+                    .get(&g.field)
+                    .cloned()
+                    .unwrap_or_else(|| g.field.clone())
+            });
+            (explanation.definition_en, explanation.definition_ar) = plain_definition(
+                &entity_words,
+                measures.first(),
+                &explanation.filters,
+                group_words.as_deref(),
+            );
+            explanation.measure_basis = plan.data.group.as_ref().and_then(|g| {
+                g.bucket.map(|grain| MeasureBasis {
+                    attribute: g.field.clone(),
+                    grain,
+                })
+            });
             explanation.structured = Some(StructuredExplanation {
                 entity_logical_name: plan.data.source.clone(),
                 entity_display_name,
@@ -1282,6 +1446,24 @@ async fn widget_explain(
             for metric in kpi.metrics {
                 metrics.push(explain_metric(&state, &definition, widget, metric).await?);
             }
+            if let Some(first) = metrics.first() {
+                let name = first
+                    .metric
+                    .name
+                    .clone()
+                    .or_else(|| first.metric.key.clone())
+                    .unwrap_or_default();
+                explanation.definition_en = format!(
+                    "The governed metric {name}, computed by the platform for a fixed scope"
+                );
+                explanation.definition_ar =
+                    format!("المؤشر المعتمد {name}، تحسبه المنصة لنطاق ثابت");
+                explanation.computed_at = first.metric.current.as_ref().map(|p| p.computed_at);
+                explanation.lineage_url = Some(format!(
+                    "/api/v1/metrics/{}/lineage",
+                    first.metric.metric_id
+                ));
+            }
             explanation.kpi = Some(KpiExplanation {
                 service_scoped: true,
                 metrics,
@@ -1290,6 +1472,9 @@ async fn widget_explain(
         DataClass::Query => {
             let mut query = explain_query(&state, &definition, widget).await?;
             query.rows_are_the_result = wc.drillability != Drillability::Exact;
+            let name = query.query_name.clone().unwrap_or_default();
+            explanation.definition_en = format!("The rows of the stored query {name}");
+            explanation.definition_ar = format!("صفوف الاستعلام المحفوظ {name}");
             explanation.query = Some(query);
         }
         DataClass::None => {}
@@ -1469,6 +1654,31 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 #[cfg(test)]
 mod query_drill_tests {
     use super::*;
+
+    #[test]
+    fn plain_definition_reads_in_english_and_arabic() {
+        let measure = ExplainedMeasure {
+            aggregation: MeasureFn::Sum,
+            field: Some("amount".into()),
+            field_display_name: Some("Amount".into()),
+            label: None,
+            expression: "SUM(amount)".into(),
+        };
+        let filter = ExplainedFilter {
+            field: "status".into(),
+            field_display_name: Some("Status".into()),
+            op: "eq".into(),
+            value: Some(Value::String("won".into())),
+            value_display: None,
+            origin: FilterOrigin::Definition,
+        };
+        let (en, ar) = plain_definition("Deals", Some(&measure), &[filter], Some("Owner"));
+        assert_eq!(en, "Total Amount of Deals where Status is won, by Owner");
+        assert_eq!(ar, "مجموع Amount في Deals حيث Status يساوي won، حسب Owner");
+        let (en, ar) = plain_definition("Deals", None, &[], None);
+        assert_eq!(en, "Count of Deals");
+        assert_eq!(ar, "عدد Deals");
+    }
 
     #[test]
     fn drill_through_resolves_the_clicked_values() {

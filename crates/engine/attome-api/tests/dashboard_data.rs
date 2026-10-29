@@ -3118,3 +3118,52 @@ async fn drill_through_resolves_clicked_values() {
     assert_eq!(through["target_dashboard_id"], json!(target), "{body}");
     assert_eq!(through["parameters"], json!({ "region": "won" }), "{body}");
 }
+
+// ── P7-T7: the explanation in words ─────────────────────────────────────────
+
+/// The explanation says what the number is in English and Arabic, and every
+/// filter keeps its origin.
+#[tokio::test]
+async fn explain_has_bilingual_definition_and_origins() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let (admin_id, admin_cookie) = seed_user(&system, true).await;
+    let db = system.state().base.db.clone();
+    let (deals, _) = provision_deals(&system).await;
+    insert_deal(
+        &db,
+        &deals,
+        Some("won"),
+        5.0,
+        "2025-02-10T10:00:00Z",
+        None,
+        Some(true),
+    )
+    .await;
+    let chart = build_data_dashboard(
+        &db,
+        admin_id,
+        &json!({ "data": {
+            "source": deals,
+            "measures": [{ "aggregation": "sum", "field": "amount" }],
+            "group": { "field": "closed_on", "bucket": "month" },
+            "filters": [{ "field": "status", "op": "eq", "value": "won" }]
+        }}),
+    )
+    .await;
+    let app = full_app(system);
+    publish(&app, &admin_cookie, chart.dashboard_id, &db).await;
+
+    let (status, body) = widget_route(&app, &admin_cookie, &chart, "explain", json!({})).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let en = body["definition_en"].as_str().unwrap();
+    let ar = body["definition_ar"].as_str().unwrap();
+    assert!(en.starts_with("Total "), "{body}");
+    assert!(en.contains(" where "), "{body}");
+    assert!(ar.starts_with("مجموع "), "{body}");
+    assert!(ar.contains(" حيث "), "{body}");
+    assert_eq!(body["measure_basis"]["attribute"], "closed_on", "{body}");
+    assert_eq!(body["measure_basis"]["grain"], "month", "{body}");
+    let filters = body["filters"].as_array().unwrap();
+    assert!(!filters.is_empty(), "{body}");
+    assert!(filters.iter().all(|f| f["origin"]["kind"].is_string()), "{body}");
+}
