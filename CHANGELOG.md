@@ -62,6 +62,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Master data guide (L1-T12): `docs/master-data.md` covers master entities and hub styles,
+  contributions and survivorship by source system, provenance, the steward routes, cross-references
+  and point-in-time reads, distribution to subscribed systems, reference code mappings, the steward
+  agent tools, and what is not built yet.
 - Rollup editor and drill-down (A10-T6): the entity editor has "Add rollup", where you pick the
   function, the related entity and its lookup back, the field, a filter, a window and the mode
   (exact only for a count or sum with no filter or window). It shows how many records the
