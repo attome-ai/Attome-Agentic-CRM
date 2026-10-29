@@ -129,6 +129,37 @@ fn check_bindings(
     }
 }
 
+/// P7-T3: `config.aggregate_only` (totals only, no records list). Never
+/// blocks: a value that is not a boolean is ignored by the records route
+/// (which refuses only on `true`), and the flag on a widget that shows no
+/// data does nothing. v2 has no separate drill-through target to contradict
+/// it: the records drawer is the drill-through, and the flag turns it off.
+fn check_aggregate_only(
+    gate: &mut PublishGate,
+    config: &serde_json::Map<String, Value>,
+    class: DataClass,
+    page: Option<&str>,
+    widget: Option<&str>,
+) {
+    match config.get(crate::drill::AGGREGATE_ONLY) {
+        None | Some(Value::Bool(false)) => {}
+        Some(Value::Bool(true)) if class == DataClass::None => gate.warn(
+            "aggregate_only_without_data",
+            "aggregate_only is set on a widget that shows no data; it has no effect".to_owned(),
+            page,
+            widget,
+        ),
+        Some(Value::Bool(true)) => {}
+        Some(_) => gate.warn(
+            "invalid_aggregate_only",
+            "aggregate_only must be true or false; this value is ignored and the records stay listable"
+                .to_owned(),
+            page,
+            widget,
+        ),
+    }
+}
+
 /// The gate for `dashboard_id`'s working copy. Performs no authorization.
 pub async fn do_publish_gate(
     state: &EngineState,
@@ -282,6 +313,7 @@ async fn check_widget(
     for error in validate_widget_config(&config, &state.entities.load()) {
         gate.block("invalid_data_definition", error, page_id, widget_id);
     }
+    check_aggregate_only(gate, &config, classify(widget).0, page_id, widget_id);
 
     match classify(widget).0 {
         DataClass::Structured => {

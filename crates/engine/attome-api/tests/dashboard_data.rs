@@ -2675,3 +2675,159 @@ async fn formula_metric_widget_stays_explain_only() {
     let (status, body) = widget_route(&app, &admin_cookie, &dashboard, "records", json!({})).await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
 }
+
+// ── P7-T3: aggregate-only widgets and the hidden-records flag ───────────────
+
+/// A builder metric counting won deals this month, and a published scorecard
+/// on it with `extra` merged into the widget config. Returns the app, the
+/// dashboard, the deals entity and its id, and the three won deals.
+async fn builder_metric_dashboard(
+    system: EngineSystem,
+    admin_id: Uuid,
+    admin_cookie: &str,
+    extra: Value,
+) -> (axum::Router, DataDashboard, String, Uuid, Vec<Uuid>) {
+    let db = system.state().base.db.clone();
+    let (deal, deal_entity) = provision_deals(&system).await;
+    let app = full_app(system);
+    let metric_id = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO dashboard_metric_definition \
+         (id, name, key, source_kind, direction, period, is_active) \
+         VALUES ($1, 'Deals won', $2, 'manual', 'higher_is_better', 'month', true)",
+    )
+    .bind(metric_id)
+    .bind(format!("deals_won_{}", metric_id.simple()))
+    .execute(&db)
+    .await
+    .expect("insert metric definition");
+    let res = app
+        .clone()
+        .oneshot(req(
+            "POST",
+            &format!("/api/v1/metrics/{metric_id}/builder"),
+            Some(admin_cookie),
+            Some(&json!({
+                "entity_logicalname": deal,
+                "aggregate": "count",
+                "date_attribute": "closed_on",
+                "filters": [{ "attribute": "status", "op": "eq", "value": "won" }],
+            })),
+        ))
+        .await
+        .unwrap();
+    let status = res.status();
+    assert_eq!(status, StatusCode::OK, "{}", body_json(res).await);
+    let day = chrono::Utc::now().date_naive().to_string();
+    let mut won = Vec::new();
+    for _ in 0..3 {
+        won.push(
+            insert_deal(
+                &db,
+                &deal,
+                Some("won"),
+                10.0,
+                &day,
+                Some(admin_id),
+                Some(true),
+            )
+            .await,
+        );
+    }
+    let dashboard = build_data_dashboard(&db, admin_id, &json!({})).await;
+    let mut config = json!({ "metric_refs": [metric_id] });
+    if let (Some(config), Some(extra)) = (config.as_object_mut(), extra.as_object()) {
+        config.extend(extra.clone());
+    }
+    sqlx::query("UPDATE dashboard_widget SET widget_type = 'scorecard', config = $1 WHERE id = $2")
+        .bind(config.to_string())
+        .bind(dashboard.widget_id)
+        .execute(&db)
+        .await
+        .unwrap();
+    publish(&app, admin_cookie, dashboard.dashboard_id, &db).await;
+    (app, dashboard, deal, deal_entity, won)
+}
+
+/// A widget marked `aggregate_only` refuses its records with the
+/// `aggregate_only` code, and still explains its number.
+#[tokio::test]
+async fn aggregate_only_widget_refuses_records() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let (admin_id, admin_cookie) = seed_user(&system, true).await;
+    let (app, dashboard, _, _, _) = builder_metric_dashboard(
+        system,
+        admin_id,
+        &admin_cookie,
+        json!({ "aggregate_only": true }),
+    )
+    .await;
+
+    let (status, body) = widget_route(&app, &admin_cookie, &dashboard, "records", json!({})).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    assert_eq!(body["details"][0]["code"], "aggregate_only", "{body}");
+    assert!(body.get("records").is_none(), "no record leaks: {body}");
+
+    let (status, body) = widget_route(&app, &admin_cookie, &dashboard, "explain", json!({})).await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "the explanation still works: {body}"
+    );
+}
+
+/// A viewer who reads only some deals drills a whole-entity metric: the
+/// records listed are theirs, `some_records_hidden` is true, and nothing in
+/// the body counts the records they cannot read. The administrator, who
+/// reads every deal, gets false.
+#[tokio::test]
+async fn scoped_viewer_sees_hidden_flag_without_count() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let db = system.state().base.db.clone();
+    let security = system.state().base.security.clone();
+    let (admin_id, admin_cookie) = seed_user(&system, true).await;
+    let (reader_id, reader_cookie) = seed_user(&system, false).await;
+    let (app, dashboard, deal, deal_entity, won) =
+        builder_metric_dashboard(system, admin_id, &admin_cookie, json!({})).await;
+
+    // The reader may read the dashboard and one of the three won deals.
+    let dashboard_entity = entity_id_for(&db, "attome_dashboard").await;
+    let role_id = create_role(&db).await;
+    grant_privileges(&db, role_id, "attome_dashboard", &["read"]).await;
+    grant_privileges(&db, role_id, &deal, &["read"]).await;
+    assign_role_to_user(&db, reader_id, role_id).await;
+    scope_role_for_entity(&db, &security, role_id, reader_id, dashboard_entity, 0).await;
+    scope_role_for_entity(&db, &security, role_id, reader_id, deal_entity, 0).await;
+    for (record, entity) in [
+        (dashboard.dashboard_id, dashboard_entity),
+        (won[0], deal_entity),
+    ] {
+        sqlx::query(
+            "INSERT INTO record_share (record_id, entity_ref, principal_type, principal_id, capability) \
+             VALUES ($1, $2, 0, $3, 0)",
+        )
+        .bind(record)
+        .bind(entity)
+        .bind(reader_id)
+        .execute(&db)
+        .await
+        .unwrap();
+    }
+    security.invalidate(reader_id).await;
+
+    let (status, body) = widget_route(&app, &reader_cookie, &dashboard, "records", json!({})).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["some_records_hidden"], true, "{body}");
+    assert_eq!(body["records"]["total"], 1, "only what the reader can read");
+    assert_eq!(body["metric_parity"]["listed_total"], 1, "{body}");
+    let text = body.to_string();
+    assert!(
+        !text.contains("hidden_count") && !text.contains("hidden_total"),
+        "no count of hidden records: {body}"
+    );
+
+    let (status, body) = widget_route(&app, &admin_cookie, &dashboard, "records", json!({})).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["some_records_hidden"], false, "{body}");
+    assert_eq!(body["records"]["total"], 3);
+}

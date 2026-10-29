@@ -114,8 +114,10 @@ export class DashboardWidgetViewComponent implements OnChanges, OnInit, OnDestro
   readonly emittedVariables  = computed(() => parseVariableList(this.widget().data['emits']));
   readonly listenedVariables = computed(() => parseVariableList(this.widget().data['listens']));
   readonly canCrossFilter    = computed(() => this.emittedVariables().length > 0);
-  /** Phase 3.1: a structured widget's values open their records. */
-  readonly canDrill = computed(() => this.data()?.drillability === 'exact' && !!this.dashboardId());
+  /** Phase 3.1: a structured widget's values open their records; P7-T3: never
+   * an `aggregate_only` widget's (the server refuses them too). */
+  readonly canDrill = computed(() =>
+    this.data()?.drillability === 'exact' && !!this.dashboardId() && this.config()?.['aggregate_only'] !== true);
   /** Whether a value or bucket responds to click and keyboard at all. */
   readonly interactive = computed(() => this.canDrill() || this.canCrossFilter());
   /** Phase 3.2: every data widget can explain itself. */

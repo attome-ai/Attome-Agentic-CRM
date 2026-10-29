@@ -102,6 +102,20 @@ pub struct WidgetRecordsResponse {
     /// P7-T2: for a KPI widget, the snapshot and the records listed now.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metric_parity: Option<MetricParity>,
+    /// P7-T3: for a KPI widget, whether the caller's read scope on the
+    /// metric's entity is narrower than the whole entity the metric was
+    /// computed over, so the number counts records this list leaves out.
+    /// Only the flag: how many are hidden is never counted or returned.
+    pub some_records_hidden: bool,
+}
+
+/// P7-T3: the widget config flag that shows a widget's totals and never its
+/// records. The explanation stays available.
+pub const AGGREGATE_ONLY: &str = "aggregate_only";
+
+/// Whether a widget's config asks for totals only. Pure.
+pub fn is_aggregate_only(config: &serde_json::Map<String, Value>) -> bool {
+    config.get(AGGREGATE_ONLY).and_then(Value::as_bool) == Some(true)
 }
 
 impl std::fmt::Debug for WidgetRecordsResponse {
@@ -149,6 +163,15 @@ async fn widget_records(
         &inputs.cross_filters,
     )
     .await?;
+    if is_aggregate_only(&wc.config) {
+        return Err(AppError::FieldValidation(vec![attome_types::FieldError {
+            field: AGGREGATE_ONLY.to_owned(),
+            code: AGGREGATE_ONLY.to_owned(),
+            message: "this widget shows totals only; its records cannot be listed (its \
+                      explanation can be read)"
+                .to_owned(),
+        }]));
+    }
     if wc.drillability != Drillability::Exact {
         return Err(AppError::Validation(format!(
             "this widget's data is not exactly drillable (drillability: {})",
@@ -176,12 +199,14 @@ async fn widget_records(
             series_key: inputs.series_key,
             records,
             metric_parity: None,
+            some_records_hidden: false,
         }));
     }
     // P7-T2: a builder metric's KPI lists the records its definition counts
     // now, as the viewer, next to the snapshot.
     if wc.data_class == DataClass::Kpi {
-        let (records, applied_filters, parity) = metric_records(&state, &ctx, &wc, &inputs).await?;
+        let (records, applied_filters, parity, some_records_hidden) =
+            metric_records(&state, &ctx, &wc, &inputs).await?;
         return Ok(Json(WidgetRecordsResponse {
             widget_id: wc.widget_id,
             drillability: wc.drillability,
@@ -195,6 +220,7 @@ async fn widget_records(
             series_key: inputs.series_key,
             records,
             metric_parity: Some(parity),
+            some_records_hidden,
         }));
     }
     let plan = structured_plan(&state, &wc)?;
@@ -226,19 +252,21 @@ async fn widget_records(
         series_key: inputs.series_key,
         records,
         metric_parity: None,
+        some_records_hidden: false,
     }))
 }
 
 /// P7-T2: the records behind a builder metric's KPI: the metric's spec as a
 /// structured definition over its current period, run as the viewer (record
 /// and attribute security apply, never the metric principal's scope), with
-/// the latest snapshot of that period beside the exact total.
+/// the latest snapshot of that period beside the exact total, and (P7-T3)
+/// whether the viewer's scope is narrower than the metric's.
 async fn metric_records(
     state: &EngineState,
     ctx: &SecurityContext,
     wc: &WidgetContext<'_>,
     inputs: &WidgetRecordsInputs,
-) -> Result<(StructuredRecords, Vec<AppliedFilter>, MetricParity), AppError> {
+) -> Result<(StructuredRecords, Vec<AppliedFilter>, MetricParity, bool), AppError> {
     let refs = crate::execution::kpi_metric_refs(wc.widget);
     let [metric_id] = refs.as_slice() else {
         return Err(AppError::Validation(
@@ -293,7 +321,33 @@ async fn metric_records(
         as_of_available: false,
         as_of_unavailable_reason: Some("record history (A1) is not enabled".to_owned()),
     };
-    Ok((records, applied_filters, parity))
+    let hidden = narrower_than_whole_entity(state, ctx, &spec.entity_logicalname).await?;
+    Ok((records, applied_filters, parity, hidden))
+}
+
+/// P7-T3: whether `ctx` reads less than every record of `entity`. A builder
+/// metric is computed over the whole entity (the metric principal's read),
+/// so the comparison is of scope kinds: anything below `Global` (own, team,
+/// business unit, shares) may leave records out. Nothing is counted.
+async fn narrower_than_whole_entity(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity: &str,
+) -> Result<bool, AppError> {
+    if ctx.is_admin {
+        return Ok(false);
+    }
+    let (entity_id, entity_name, _, _) =
+        attome_records::entity_crud::resolve_entity(state, entity).await?;
+    let (level, _) = attome_records::entity_crud::resolve_record_access_inputs(
+        state,
+        ctx,
+        entity_id,
+        &entity_name,
+        attome_security::RecordAction::Read,
+    )
+    .await?;
+    Ok(level < AccessLevel::Global)
 }
 
 /// The filters that select one bucket of a chart over a query's rows: the
