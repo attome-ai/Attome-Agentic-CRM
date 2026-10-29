@@ -54,7 +54,8 @@ export function nextIndex(current: number, key: string, count: number): number {
             [attr.aria-activedescendant]="selectedId() ? 'sv-' + selectedId() : null"
             (keydown)="onKey($event)">
           @for (r of records(); track r.id; let i = $index) {
-            <li role="option" [id]="'sv-' + r.id" class="sv-item" dir="auto"
+            <li role="option" [id]="'sv-' + r.id" class="sv-item" dir="auto" tabindex="-1"
+                (keyup.enter)="index.set(i)"
                 [class.sv-active]="i === index()" [attr.aria-selected]="i === index()"
                 (click)="index.set(i)" (dblclick)="openRecord.emit(r.id)">{{ r.title }}</li>
           }
