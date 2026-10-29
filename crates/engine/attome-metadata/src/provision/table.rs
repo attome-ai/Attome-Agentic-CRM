@@ -603,6 +603,16 @@ pub fn is_hierarchy_lookup(options: Option<&serde_json::Value>) -> bool {
         .unwrap_or(false)
 }
 
+/// D2-T1: the lookup a hierarchy's options name as its top
+/// (`"top_field": "top_parent_ref"`): the platform keeps it pointing at each
+/// row's root, the row itself for a root.
+pub fn hierarchy_top_field(options: Option<&serde_json::Value>) -> Option<&str> {
+    options
+        .and_then(|o| o.get("top_field"))
+        .and_then(serde_json::Value::as_str)
+        .filter(|s| !s.is_empty())
+}
+
 /// A17-T1: the stored tree path of `entity`'s hierarchy lookup `field`.
 /// Each row's `hier_path` is its ancestors' ids and its own, joined by `/`
 /// (`root/…/parent/id`), with a `text_pattern_ops` index so a subtree is one
@@ -610,32 +620,21 @@ pub fn is_hierarchy_lookup(options: Option<&serde_json::Value>) -> bool {
 /// row inserted, or whose parent changes, takes its parent's path plus its
 /// id; a moved row's descendants are rewritten in one `UPDATE` by the old
 /// prefix. Existing rows are filled once, when the triggers are first
-/// created. Idempotent: a later reconcile finds the column and triggers and
-/// does nothing.
+/// created. A `top` lookup (D2-T1) is set from the path on every write, so
+/// it follows moves too and a value written to it is replaced. Idempotent: a
+/// later reconcile finds the column, the triggers and the same trigger body
+/// and does nothing; naming a different `top` rewrites the body and fills it.
 pub(super) async fn ensure_hierarchy_path(
     db: &DbPool,
     entity_id: uuid::Uuid,
     entity: &str,
     field: &str,
+    top: Option<&str>,
 ) -> Result<(), AppError> {
-    if !valid_identifier(entity) || !valid_identifier(field) {
+    if !valid_identifier(entity) || !valid_identifier(field) || !top.is_none_or(valid_identifier) {
         return Err(AppError::internal(format!(
-            "invalid identifier for a hierarchy path: entity={entity}, field={field}"
+            "invalid identifier for a hierarchy path: entity={entity}, field={field}, top={top:?}"
         )));
-    }
-    let installed: bool = sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_trigger t \
-           JOIN pg_catalog.pg_class c ON c.oid = t.tgrelid \
-           JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace \
-          WHERE n.nspname = current_schema() AND c.relname = $1 \
-            AND t.tgname = 'hier_path_move' AND NOT t.tgisinternal)",
-    )
-    .bind(entity)
-    .fetch_one(db)
-    .await
-    .map_err(AppError::internal)?;
-    if installed && column_exists(db, entity, HIERARCHY_PATH_COLUMN).await? {
-        return Ok(());
     }
     let table = quote_ident(entity);
     let col = quote_ident(field);
@@ -644,13 +643,16 @@ pub(super) async fn ensure_hierarchy_path(
     let tag = entity_id.simple();
     let set_fn = format!("\"hier_{tag}_set\"");
     let move_fn = format!("\"hier_{tag}_move\"");
-    let statements = [
-        format!("ALTER TABLE {table} ADD COLUMN IF NOT EXISTS hier_path text"),
-        format!(
-            "CREATE INDEX IF NOT EXISTS \"hier_{tag}_idx\" ON {table} (hier_path text_pattern_ops)"
-        ),
-        format!(
-            "CREATE OR REPLACE FUNCTION {set_fn}() RETURNS trigger LANGUAGE plpgsql AS $fn$ \
+    let set_top = top
+        .map(|t| {
+            format!(
+                "NEW.{} := split_part(NEW.hier_path, '/', 1)::uuid; ",
+                quote_ident(t)
+            )
+        })
+        .unwrap_or_default();
+    let set_body = format!(
+        " \
              DECLARE recompute boolean := NEW.hier_path IS NULL; \
              BEGIN \
                IF TG_OP = 'INSERT' THEN \
@@ -667,8 +669,35 @@ pub(super) async fn ensure_hierarchy_path(
                      NEW.{col}::text) || '/' || NEW.id::text; \
                  END IF; \
                END IF; \
-               RETURN NEW; \
-             END $fn$"
+               {set_top}RETURN NEW; \
+             END "
+    );
+    let installed: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_trigger t \
+           JOIN pg_catalog.pg_class c ON c.oid = t.tgrelid \
+           JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace \
+          WHERE n.nspname = current_schema() AND c.relname = $1 \
+            AND t.tgname = 'hier_path_move' AND NOT t.tgisinternal) \
+         AND EXISTS (SELECT 1 FROM pg_catalog.pg_proc p \
+           JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace \
+          WHERE n.nspname = current_schema() AND p.proname = $2 AND p.prosrc = $3)",
+    )
+    .bind(entity)
+    .bind(format!("hier_{tag}_set"))
+    .bind(&set_body)
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)?;
+    if installed && column_exists(db, entity, HIERARCHY_PATH_COLUMN).await? {
+        return Ok(());
+    }
+    let mut statements = vec![
+        format!("ALTER TABLE {table} ADD COLUMN IF NOT EXISTS hier_path text"),
+        format!(
+            "CREATE INDEX IF NOT EXISTS \"hier_{tag}_idx\" ON {table} (hier_path text_pattern_ops)"
+        ),
+        format!(
+            "CREATE OR REPLACE FUNCTION {set_fn}() RETURNS trigger LANGUAGE plpgsql AS $fn${set_body}$fn$"
         ),
         format!(
             "CREATE OR REPLACE FUNCTION {move_fn}() RETURNS trigger LANGUAGE plpgsql AS $fn$ \
@@ -704,13 +733,23 @@ pub(super) async fn ensure_hierarchy_path(
               WHERE e.id = tree.id AND e.hier_path IS DISTINCT FROM tree.path"
         ),
     ];
+    // Rows whose path was already right were not rewritten above; fill
+    // their top here (the set trigger computes it from the path).
+    if let Some(t) = top {
+        let t = quote_ident(t);
+        statements.push(format!(
+            "UPDATE {table} SET {t} = split_part(hier_path, '/', 1)::uuid \
+              WHERE hier_path IS NOT NULL \
+                AND {t} IS DISTINCT FROM split_part(hier_path, '/', 1)::uuid"
+        ));
+    }
     for sql in &statements {
         exec_ddl_locked(db, &[], sql).await.map_err(|e| {
             tracing::error!(error = %e, %entity, %field, "hierarchy path provisioning failed");
             AppError::internal(e)
         })?;
     }
-    tracing::info!(%entity, %field, "provision: hierarchy path installed");
+    tracing::info!(%entity, %field, ?top, "provision: hierarchy path installed");
     Ok(())
 }
 

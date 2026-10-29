@@ -966,6 +966,12 @@ pub(super) async fn reconcile_attribute_with_lookup_ref(
     let hierarchy = field_type == "lookup"
         && lookup_entity_ref == Some(entity_id)
         && super::table::is_hierarchy_lookup(desired.options.as_ref());
+    // D2-T1: the self lookup the hierarchy keeps pointing at each row's root.
+    let hierarchy_top = if hierarchy {
+        validate_hierarchy_top(db, key, entity_id, desired.options.as_ref()).await?
+    } else {
+        None
+    };
 
     let state_differs = current
         .as_ref()
@@ -1007,6 +1013,7 @@ pub(super) async fn reconcile_attribute_with_lookup_ref(
                     entity_id,
                     &entity_logicalname,
                     logicalname,
+                    hierarchy_top,
                 )
                 .await?;
             }
@@ -1048,6 +1055,7 @@ pub(super) async fn reconcile_attribute_with_lookup_ref(
                     entity_id,
                     &entity_logicalname,
                     logicalname,
+                    hierarchy_top,
                 )
                 .await?;
             }
@@ -1375,6 +1383,45 @@ async fn validate_rollup_field(
             AppError::Validation(msg) => named(msg),
             other => other,
         })
+}
+
+/// D2-T1: a hierarchy's `top_field`, when its options name one: another live
+/// lookup from the entity to itself, which the hierarchy triggers then keep.
+async fn validate_hierarchy_top<'o>(
+    db: &DbPool,
+    key: AttributeKey<'_>,
+    entity_id: Uuid,
+    options: Option<&'o serde_json::Value>,
+) -> Result<Option<&'o str>, AppError> {
+    let Some(top) = super::table::hierarchy_top_field(options) else {
+        return Ok(None);
+    };
+    let AttributeKey {
+        entity_logicalname,
+        logicalname,
+        ..
+    } = key;
+    let refused = || {
+        AppError::Validation(format!(
+            "{entity_logicalname}.{logicalname}: top_field {top} must be another lookup from \
+             {entity_logicalname} to itself, created before the hierarchy names it"
+        ))
+    };
+    if top == logicalname {
+        return Err(refused());
+    }
+    let found: bool = sqlx::query_scalar(
+        r#"SELECT EXISTS (SELECT 1 FROM attribute_info
+            WHERE entity_ref = $1 AND logicalname = $2 AND "type" = $3
+              AND lookup_entity_ref = $1 AND (is_active IS NULL OR is_active = true))"#,
+    )
+    .bind(entity_id)
+    .bind(top)
+    .bind(attome_core::FieldType::Lookup.to_int())
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)?;
+    if found { Ok(Some(top)) } else { Err(refused()) }
 }
 
 /// The entity's live attributes other than `except`, as the minimal

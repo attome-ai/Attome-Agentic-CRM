@@ -62,6 +62,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Account hierarchy and group totals (D2-T1, CRM changeset 0008): `parent_account_ref` is the
+  account hierarchy, and a hierarchy lookup's new `top_field` option keeps `top_parent_ref` on
+  every account at its group's root. `sales_parent_ref` is a separate sales parent.
+  `group_open_pipeline` and `group_won_revenue` total the group's open and last year's won deals
+  on the top parent.
 - Dashboard drill guide (P7-T13): `docs/dashboard-drill.md` covers the records route and its
   parity, filters and trails, `aggregate_only`, `drill_levels` and the drill-down route,
   `drill_through`, comparing periods, explanations in words and the drawer and explain panel.

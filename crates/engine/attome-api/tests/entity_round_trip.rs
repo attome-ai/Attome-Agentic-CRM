@@ -4907,6 +4907,105 @@ fn hierarchy_path_follows_moves() {
     })
 }
 
+/// D2-T1: a hierarchy's `top_field` points each row at its root (a root at
+/// itself) and follows a moved subtree; a top that is not a self lookup is
+/// refused.
+// op: POST /api/v1/admin/entities/{id}/fields, PATCH /api/v1/{entity}/{id}
+#[test]
+fn hierarchy_top_field_follows_moves() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let db = state.base.db.clone();
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+
+        let (logicalname, entity_id) = create_entity(&app, &admin_cookie, "hiertop").await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            r#"{"logicalname":"name","name":"Name","field_type":"text"}"#,
+        )
+        .await;
+
+        // A top that does not exist yet is refused.
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!("/api/v1/admin/entities/{entity_id}/fields"))
+            .header("cookie", &admin_cookie)
+            .header("content-type", "application/json")
+            .body(Body::from(format!(
+                r#"{{"logicalname":"parent_ref","name":"Parent","field_type":"lookup","lookup_entity_ref":"{entity_id}","options":{{"hierarchy":true,"top_field":"top_ref"}}}}"#
+            )))
+            .unwrap();
+        let res = app.clone().oneshot(req).await.expect("refused top");
+        assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
+
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            &format!(
+                r#"{{"logicalname":"top_ref","name":"Top","field_type":"lookup","lookup_entity_ref":"{entity_id}"}}"#
+            ),
+        )
+        .await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            &format!(
+                r#"{{"logicalname":"parent_ref","name":"Parent","field_type":"lookup","lookup_entity_ref":"{entity_id}","options":{{"hierarchy":true,"top_field":"top_ref"}}}}"#
+            ),
+        )
+        .await;
+        sync_registry(&state).await;
+
+        let (a, _) = create_hierarchy_node(&app, &admin_cookie, &logicalname, "a", None).await;
+        let (b, b_rv) =
+            create_hierarchy_node(&app, &admin_cookie, &logicalname, "b", Some(&a)).await;
+        let (c, _) = create_hierarchy_node(&app, &admin_cookie, &logicalname, "c", Some(&b)).await;
+        let (d, _) = create_hierarchy_node(&app, &admin_cookie, &logicalname, "d", None).await;
+
+        let top_of = |id: String| {
+            let db = db.clone();
+            let logicalname = logicalname.clone();
+            async move {
+                sqlx::query_scalar::<_, Option<uuid::Uuid>>(&format!(
+                    "SELECT top_ref FROM \"{logicalname}\" WHERE id = $1"
+                ))
+                .bind(uuid::Uuid::parse_str(&id).unwrap())
+                .fetch_one(&db)
+                .await
+                .unwrap()
+                .map(|u| u.to_string())
+            }
+        };
+        assert_eq!(
+            top_of(a.clone()).await,
+            Some(a.clone()),
+            "a root is its own top"
+        );
+        assert_eq!(top_of(c.clone()).await, Some(a.clone()));
+
+        // Move b (with c under it) from a to d.
+        let req = Request::builder()
+            .method("PATCH")
+            .uri(format!("/api/v1/{logicalname}/{b}"))
+            .header("cookie", &admin_cookie)
+            .header("content-type", "application/json")
+            .header("if-match", format!("\"{b_rv}\""))
+            .body(Body::from(format!(r#"{{"parent_ref":"{d}"}}"#)))
+            .unwrap();
+        let res = app.clone().oneshot(req).await.expect("move b");
+        assert_eq!(res.status(), StatusCode::OK);
+        assert_eq!(top_of(b.clone()).await, Some(d.clone()));
+        assert_eq!(top_of(c.clone()).await, Some(d.clone()));
+        assert_eq!(top_of(a.clone()).await, Some(a.clone()));
+    })
+}
+
 /// A1-T1: a field's sensitivity label is set on create, changed on update,
 /// marked confirmed once written, and an unknown label is refused.
 #[test]

@@ -1,0 +1,244 @@
+{
+  "author": "packs",
+  "checksum": "sha256:0a30cc7ceb8b7d572f60f0280960d0f2fbd3a5db27d5cd8873459130d7e25a5d",
+  "closed_at": "2026-10-29T00:00:00Z",
+  "description": "Account hierarchy (D2-T1): parent_account_ref is the account hierarchy, keeping top_parent_ref on every account at its group's root (a root at itself); sales_parent_ref is a second, sales-only parent; group_open_pipeline and group_won_revenue on the top parent add up the open and the last year's won opportunity amounts across the whole group.",
+  "format": "attome-changeset/v1",
+  "id": "01a187a4-4b68-7712-96ba-892d827ab45d",
+  "layer": "product",
+  "name": "crm-account-hierarchy",
+  "opened_at": "2026-10-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Top Parent",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "top_parent_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "account",
+        "field": "top_parent_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Parent Account",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "parent_account_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "hierarchy": true,
+            "top_field": "top_parent_ref"
+          }
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "account",
+        "field": "parent_account_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Sales Parent",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "sales_parent_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "account",
+        "field": "sales_parent_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Group Open Pipeline",
+          "field_type": "rollup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "group_open_pipeline",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "function": "sum",
+            "path": [
+              {
+                "entity": "account",
+                "via": "top_parent_ref"
+              },
+              {
+                "entity": "opportunity",
+                "via": "account_ref"
+              }
+            ],
+            "attribute": "amount",
+            "filter": "stage != \"closed_won\" and stage != \"closed_lost\"",
+            "mode": "fast",
+            "result_type": "number"
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "account",
+        "field": "group_open_pipeline"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Group Won Revenue (12 Months)",
+          "field_type": "rollup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "group_won_revenue",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "function": "sum",
+            "path": [
+              {
+                "entity": "account",
+                "via": "top_parent_ref"
+              },
+              {
+                "entity": "opportunity",
+                "via": "account_ref"
+              }
+            ],
+            "attribute": "amount",
+            "filter": "stage == \"closed_won\"",
+            "window": {
+              "days": 365,
+              "date_attribute": "close_date"
+            },
+            "mode": "fast",
+            "result_type": "number"
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "account",
+        "field": "group_won_revenue"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الشركة الأم العليا"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "locale": "ar",
+        "object_key": "account.top_parent_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الأصل في هيكل المبيعات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "locale": "ar",
+        "object_key": "account.sales_parent_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "فرص المجموعة المفتوحة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "locale": "ar",
+        "object_key": "account.group_open_pipeline",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إيرادات المجموعة المكتسبة (12 شهرًا)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "locale": "ar",
+        "object_key": "account.group_won_revenue",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "crm",
+  "seq": 8,
+  "title": "Pack: account hierarchy and group totals"
+}

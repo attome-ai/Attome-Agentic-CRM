@@ -61,3 +61,19 @@ On a record, **How is this calculated?** under a rollup field lists the related 
 counts that you may open, and how many more it counts that you may not.
 `GET /api/v1/{entity}/{id}/rollups/{attribute}/explain` returns the same: the definition, the
 stored value, `counted`, `hidden` and the first 100 readable records with their amounts.
+
+## Group totals over a hierarchy
+
+A lookup from an entity to itself flagged as its hierarchy (`"hierarchy": true`) can name a
+second self lookup as its top: `"top_field": "top_parent_ref"`. The platform then keeps that field
+pointing at each record's root, a root at itself, on every save and when a branch moves; a value
+written to it is replaced. The top field must exist before the hierarchy names it.
+
+A rollup over the top field then totals a whole group on its root. The CRM pack's account has
+two, with the path `account (via top_parent_ref) ← opportunity (via account_ref)`:
+`group_open_pipeline` (open deal amounts) and `group_won_revenue` (deals won in the last 365
+days). Accounts below the root show their top parent; the group totals are on the root.
+`sales_parent_ref` is a second parent for sales reporting that the group totals do not follow.
+
+When a branch moves, the `rollup_fast` job recomputes both the old and the new root from the
+moved account's change, so both groups' totals take in the whole branch within seconds.
