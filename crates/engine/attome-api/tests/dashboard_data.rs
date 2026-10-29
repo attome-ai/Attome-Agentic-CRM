@@ -2889,3 +2889,58 @@ async fn a_cached_definition_reads_its_entry_until_the_entity_changes() {
         "computed again after the mark"
     );
 }
+
+// ── P7-T4: the parity block ─────────────────────────────────────────────────
+
+/// On data that does not change between the number and the drill, a
+/// structured count's records total is the bucket's number: the parity block
+/// says they are equal. A sum is not a count of the records, so it says it
+/// cannot be compared.
+#[tokio::test]
+async fn structured_drill_parity_is_equal_on_static_data() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let (admin_id, admin_cookie) = seed_user(&system, true).await;
+    let db = system.state().base.db.clone();
+    let (deals, _) = provision_deals(&system).await;
+    let day = "2026-05-10T10:00:00Z";
+    for status in ["won", "won", "won", "lost"] {
+        insert_deal(&db, &deals, Some(status), 7.5, day, None, Some(true)).await;
+    }
+    let counted = build_data_dashboard(
+        &db,
+        admin_id,
+        &json!({ "data": {
+            "source": deals,
+            "measures": [{ "aggregation": "count" }],
+            "group": { "field": "status" }
+        }}),
+    )
+    .await;
+    let summed = build_data_dashboard(
+        &db,
+        admin_id,
+        &json!({ "data": {
+            "source": deals,
+            "measures": [{ "aggregation": "sum", "field": "amount" }],
+            "group": { "field": "status" }
+        }}),
+    )
+    .await;
+    let app = full_app(system);
+    publish(&app, &admin_cookie, counted.dashboard_id, &db).await;
+    publish(&app, &admin_cookie, summed.dashboard_id, &db).await;
+
+    let won = json!({ "bucket_key": { "kind": "value", "value": "won" } });
+    let (status, body) = widget_route(&app, &admin_cookie, &counted, "records", won.clone()).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let parity = &body["parity"];
+    assert_eq!(parity["reason"], "equal", "{body}");
+    assert_eq!(parity["matches"], true);
+    assert_eq!(parity["value"], 3.0);
+    assert_eq!(parity["listed_total"], 3);
+
+    let (status, body) = widget_route(&app, &admin_cookie, &summed, "records", won).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["parity"]["reason"], "not_comparable", "{body}");
+    assert_eq!(body["parity"]["matches"], false);
+}

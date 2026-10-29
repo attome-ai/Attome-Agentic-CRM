@@ -107,6 +107,68 @@ pub struct WidgetRecordsResponse {
     /// computed over, so the number counts records this list leaves out.
     /// Only the flag: how many are hidden is never counted or returned.
     pub some_records_hidden: bool,
+    /// P7-T4: whether the listed total equals the widget's number, and why
+    /// not.
+    pub parity: Parity,
+}
+
+/// P7-T4: why a drill's listed total and the widget's number differ, or
+/// that they agree.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ParityReason {
+    /// The records listed are exactly the ones the number counts.
+    Equal,
+    /// The number was computed earlier (a metric snapshot, or the records
+    /// changed between the two reads).
+    DataChangedSinceComputed,
+    /// An amount was converted at another date's rate.
+    CurrencyConvertedAtOtherDate,
+    /// The number is a fraction within half of the listed total.
+    Rounding,
+    /// The number is not a count of these records (a sum, an average, a
+    /// stored query's own figure), so the two cannot be compared.
+    NotComparable,
+}
+
+/// P7-T4: a drill's listed total beside the widget's number.
+#[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
+pub struct Parity {
+    /// The widget's number for the drilled bucket; absent when there is none
+    /// to compare.
+    pub value: Option<f64>,
+    pub listed_total: i64,
+    pub matches: bool,
+    pub reason: ParityReason,
+}
+
+/// P7-T4: the parity of `listed_total` against `value`, a count of the same
+/// records when `comparable`. A difference is a change since the number was
+/// computed, unless it is a fraction within half of the total. Pure.
+pub fn parity_of(value: Option<f64>, listed_total: i64, comparable: bool) -> Parity {
+    let reason = match value {
+        _ if !comparable => ParityReason::NotComparable,
+        None => ParityReason::NotComparable,
+        #[allow(
+            clippy::cast_precision_loss,
+            reason = "record counts are far below 2^52"
+        )]
+        Some(v) if v == listed_total as f64 => ParityReason::Equal,
+        #[allow(
+            clippy::cast_precision_loss,
+            reason = "record counts are far below 2^52"
+        )]
+        Some(v) if v.fract() != 0.0 && (v - listed_total as f64).abs() < 0.5 => {
+            ParityReason::Rounding
+        }
+        Some(_) => ParityReason::DataChangedSinceComputed,
+    };
+    Parity {
+        value,
+        listed_total,
+        matches: reason == ParityReason::Equal,
+        reason,
+    }
 }
 
 /// P7-T3: the widget config flag that shows a widget's totals and never its
@@ -197,6 +259,7 @@ async fn widget_records(
             applied_filters,
             bucket_key: inputs.bucket_key,
             series_key: inputs.series_key,
+            parity: parity_of(None, records.total, false),
             records,
             metric_parity: None,
             some_records_hidden: false,
@@ -218,6 +281,7 @@ async fn widget_records(
             applied_filters,
             bucket_key: inputs.bucket_key,
             series_key: inputs.series_key,
+            parity: parity_of(parity.snapshot_value, records.total, parity.counts_records),
             records,
             metric_parity: Some(parity),
             some_records_hidden,
@@ -239,6 +303,30 @@ async fn widget_records(
     )
     .await?;
     let applied_filters = plan.applied_filters();
+    // P7-T4: the same aggregate the data route returns, for this bucket.
+    let counts = plan
+        .data
+        .measures
+        .first()
+        .is_some_and(|m| m.aggregation == MeasureFn::Count);
+    let value = if counts {
+        let aggregate = attome_search::run_structured_aggregate(
+            &state,
+            &ctx,
+            &plan.data,
+            &plan.extra_filters(),
+            wc.tz,
+        )
+        .await?;
+        bucket_value(
+            &aggregate,
+            inputs.bucket_key.as_ref(),
+            inputs.series_key.as_ref(),
+        )
+    } else {
+        None
+    };
+    let parity = parity_of(value, records.total, counts);
     Ok(Json(WidgetRecordsResponse {
         widget_id: wc.widget_id,
         drillability: wc.drillability,
@@ -253,7 +341,29 @@ async fn widget_records(
         records,
         metric_parity: None,
         some_records_hidden: false,
+        parity,
     }))
+}
+
+/// P7-T4: the first measure of the bucket a drill names (the whole number
+/// when it names none; the Other bucket for `Other`). Pure.
+pub fn bucket_value(
+    aggregate: &attome_search::StructuredAggregate,
+    bucket_key: Option<&BucketKey>,
+    series_key: Option<&BucketKey>,
+) -> Option<f64> {
+    if matches!(bucket_key, Some(BucketKey::Other)) {
+        return aggregate
+            .other
+            .as_ref()
+            .and_then(|b| b.values.first().copied().flatten());
+    }
+    let key = bucket_key.cloned().unwrap_or(BucketKey::Total);
+    aggregate
+        .buckets
+        .iter()
+        .find(|b| b.key == key && b.series_key.as_ref() == series_key)
+        .and_then(|b| b.values.first().copied().flatten())
 }
 
 /// P7-T2: the records behind a builder metric's KPI: the metric's spec as a
@@ -1013,6 +1123,23 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 #[cfg(test)]
 mod query_drill_tests {
     use super::*;
+
+    #[test]
+    fn parity_names_why_the_total_differs() {
+        assert_eq!(parity_of(Some(3.0), 3, true).reason, ParityReason::Equal);
+        assert!(parity_of(Some(3.0), 3, true).matches);
+        assert_eq!(
+            parity_of(Some(4.0), 3, true).reason,
+            ParityReason::DataChangedSinceComputed
+        );
+        assert_eq!(parity_of(Some(3.4), 3, true).reason, ParityReason::Rounding);
+        assert_eq!(
+            parity_of(Some(3.0), 3, false).reason,
+            ParityReason::NotComparable
+        );
+        assert_eq!(parity_of(None, 3, true).reason, ParityReason::NotComparable);
+        assert!(!parity_of(Some(3.4), 3, true).matches);
+    }
 
     fn chart(x: &str, series: Option<&str>) -> ChartViewMetadata {
         let mut v = serde_json::json!({
