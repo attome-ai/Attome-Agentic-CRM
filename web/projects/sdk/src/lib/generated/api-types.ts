@@ -147095,7 +147095,12 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        /** @description The record's field values by logical name; the fields depend on the deployment's metadata (`GET /api/v1/schema/{entity}`) */
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
         responses: {
             /** @description Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag` */
             201: {
@@ -149346,7 +149351,10 @@ export interface operations {
     update_record: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description The record's row_version as read, quoted (`"7"`); missing or malformed is 422 (D-711) */
+                "If-Match": string;
+            };
             path: {
                 /** @description The entity's logical name */
                 entity: string;
@@ -149355,7 +149363,12 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        /** @description The fields to change by logical name; the fields depend on the deployment's metadata (`GET /api/v1/schema/{entity}`) */
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
         responses: {
             /** @description Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag`. With `If-Match-Merge: attributes` over a stale version whose changes touched none of the attributes sent, the update is applied at the current version and `merged_over` lists the attributes others changed (`merged_hidden` counts those the caller cannot read) */
             200: {
