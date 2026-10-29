@@ -70,7 +70,7 @@ pub async fn ensure_ahead(ddl: &DbPool, today: NaiveDate) -> Result<u32, AppErro
         // computed, never request data.
         let from = format!("{day} 00:00:00+00");
         let to = format!("{} 00:00:00+00", day + Duration::days(1));
-        let mut tx = ddl.begin().await.map_err(AppError::internal)?;
+        let mut tx = attome_db::tx::begin(ddl).await?;
         sqlx::query("SET LOCAL lock_timeout = '5s'")
             .execute(&mut *tx)
             .await
@@ -127,7 +127,7 @@ pub async fn drop_expired(
         if !attome_db::ident::is_identifier(&name) {
             continue;
         }
-        let mut tx = ddl.begin().await.map_err(AppError::internal)?;
+        let mut tx = attome_db::tx::begin(ddl).await?;
         sqlx::query("SET LOCAL lock_timeout = '5s'")
             .execute(&mut *tx)
             .await

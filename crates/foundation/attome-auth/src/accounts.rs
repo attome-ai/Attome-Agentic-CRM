@@ -655,6 +655,8 @@ mod mfa_step_tests {
             optional: false,
             grace_until: Some(at(2_000)),
             postponed_until: Some(at(1_500)),
+            remember_device_days: 0,
+            email_code: false,
         };
         assert_eq!(mfa_step(&required, false, at(1_000)), MfaStep::Session);
         assert_eq!(mfa_step(&required, false, at(1_600)), MfaStep::Enrol);

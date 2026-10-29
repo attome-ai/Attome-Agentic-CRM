@@ -16,6 +16,7 @@
 //!
 //! A dev-dependency only: no production crate depends on this one.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     reason = "test support: a failed setup step should stop the test with its message"

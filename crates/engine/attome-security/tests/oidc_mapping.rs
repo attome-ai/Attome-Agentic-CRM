@@ -127,7 +127,7 @@ async fn sign_in(
 ) -> MappingChanges {
     let audit = AuditService::new(db, None);
     let groups: Vec<String> = groups.iter().map(|g| (*g).to_owned()).collect();
-    let mut tx = db.begin().await.expect("begin");
+    let mut tx = attome_db::tx::begin(db).await.expect("begin");
     let changes = apply_mappings_in_tx(&mut tx, &audit, provider.0, provider.1, user, &groups)
         .await
         .expect("apply mappings");
