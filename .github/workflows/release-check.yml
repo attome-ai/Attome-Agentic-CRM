@@ -35,7 +35,8 @@ jobs:
   linux:
     name: release check (linux, with postgres and redis)
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    # The Linux gate (with its database suites) also runs past 3 hours.
+    timeout-minutes: 360
     services:
       postgres:
         image: pgvector/pgvector:pg18
