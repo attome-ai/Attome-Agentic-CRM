@@ -247,6 +247,22 @@ const UNDRIVABLE: &[(&str, &str)] = &[
          elevation, the same hook the local verify driver below exercises",
     ),
     (
+        "POST /api/v1/auth/passkeys/register/finish",
+        "needs an authenticator's signature over a fresh random challenge; passkey_http.rs drives it with a software authenticator and checks its event",
+    ),
+    (
+        "POST /api/v1/auth/passkey/verify",
+        "needs an authenticator's signature over a fresh random challenge; passkey_http.rs drives it with a software authenticator and checks its event",
+    ),
+    (
+        "POST /api/v1/auth/mfa/passkey/verify",
+        "needs an authenticator's signature over a fresh random challenge; passkey_http.rs drives it with a software authenticator and checks its event",
+    ),
+    (
+        "POST /api/v1/auth/step-up/{operation}/passkey/verify",
+        "needs an authenticator's signature over a fresh random challenge; passkey_http.rs drives it with a software authenticator and checks its event",
+    ),
+    (
         "POST /api/v1/auth/identity-link/google",
         "needs a Google ID token that verifies against Google's JWKS; the event is \
          written by `account_event_hook` inside `link_google_to_user_with`, the same \
@@ -4284,6 +4300,27 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             with_cookies(
                 request("POST", "/api/v1/auth/logout", None, Some(json!({}))),
                 &cookies,
+            )
+        }
+        "DELETE /api/v1/auth/passkeys/{id}" => {
+            // Q6-T1: the person removes a passkey, stepped up.
+            let (user, _) = seed_user(&fx.base, "passkey-remove").await;
+            let passkey: Uuid = sqlx::query_scalar(
+                "INSERT INTO webauthn_credential (user_ref, credential_id, public_key, dynamic_state)                  VALUES ($1, $2, $3, $4) RETURNING id",
+            )
+            .bind(user)
+            .bind(Uuid::now_v7().as_bytes().to_vec())
+            .bind(vec![0u8])
+            .bind(vec![0u8; 7])
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("insert a passkey");
+            let token = session_token(&fx.base, user, true).await;
+            request(
+                "DELETE",
+                &format!("/api/v1/auth/passkeys/{passkey}"),
+                Some(&token),
+                None,
             )
         }
         "DELETE /api/v1/auth/sessions/{id}" => {

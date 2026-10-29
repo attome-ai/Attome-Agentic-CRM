@@ -579,8 +579,10 @@ pub async fn login_with_policy(
     }
     // Q5-T5: a person whose roles allow email codes has a second factor in
     // their verified email address, TOTP or not.
-    let enrolled =
-        crate::mfa::is_enrolled(db, user_id).await? || (requirement.email_code && email_verified);
+    // Q6-T1: a live passkey is a second factor too.
+    let enrolled = crate::mfa::is_enrolled(db, user_id).await?
+        || crate::webauthn::has_passkey(db, user_id).await?
+        || (requirement.email_code && email_verified);
     let mut step = mfa_step(&requirement, enrolled, chrono::Utc::now());
     // Q5-T4: a browser remembered after a second factor skips the challenge
     // while the policy remembers devices and the device is still good.
@@ -624,6 +626,17 @@ pub async fn login_with_policy(
         // grace period: the password alone is a full session.
         MfaStep::Session => Ok(LoginOutcome::Session(user_id)),
     }
+}
+
+/// Q6-T1: the email address of `user_id` while the account is active (an
+/// empty string when it has none); `None` for an inactive or unknown
+/// account.
+pub async fn active_account_email(db: &DbPool, user_id: Uuid) -> Result<Option<String>, AppError> {
+    sqlx::query_scalar("SELECT COALESCE(email, '') FROM user_account WHERE id = $1 AND is_active")
+        .bind(user_id)
+        .fetch_optional(db)
+        .await
+        .map_err(AppError::internal)
 }
 
 #[cfg(test)]

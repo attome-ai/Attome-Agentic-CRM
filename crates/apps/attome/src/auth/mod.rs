@@ -32,6 +32,7 @@ mod jwks;
 mod local;
 mod login_guard;
 mod oidc;
+mod passkey;
 mod session;
 mod step_up;
 
@@ -69,6 +70,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
         session::openapi_fragment(),
         oidc::openapi_fragment(),
         step_up::openapi_fragment(),
+        passkey::openapi_fragment(),
         jwks::openapi_fragment(),
         challenge::openapi_fragment(),
     ] {
@@ -172,6 +174,18 @@ pub fn public_routes(
             post(local::mfa_code_send),
         )
         .route("/api/v1/auth/mfa/code/verify", post(local::mfa_code_verify))
+        // Q6-T1: a passkey as the second factor, with the same pending
+        // sign-in token, and a passkey sign-in that names no one yet.
+        .route(
+            "/api/v1/auth/mfa/passkey/start",
+            post(passkey::start_second_factor),
+        )
+        .route(
+            "/api/v1/auth/mfa/passkey/verify",
+            post(passkey::finish_second_factor),
+        )
+        .route("/api/v1/auth/passkey/start", post(passkey::start_sign_in))
+        .route("/api/v1/auth/passkey/verify", post(passkey::finish_sign_in))
         .layer(Extension(license))
         .layer(Extension(auditor))
 }
@@ -241,6 +255,29 @@ pub fn protected_routes(auditor: attome_audit::security::SecurityAuditor) -> Rou
         .route(
             "/api/v1/auth/step-up/{operation}/oidc/{provider}",
             get(step_up::start_oidc_step_up),
+        )
+        // Q6-T1: the caller's own passkeys, and a passkey step-up.
+        // `register` is a static segment, so it never matches `{id}`.
+        .route("/api/v1/auth/passkeys", get(passkey::list_passkeys))
+        .route(
+            "/api/v1/auth/passkeys/register/start",
+            post(passkey::start_registration),
+        )
+        .route(
+            "/api/v1/auth/passkeys/register/finish",
+            post(passkey::finish_registration),
+        )
+        .route(
+            "/api/v1/auth/passkeys/{id}",
+            axum::routing::delete(passkey::delete_passkey),
+        )
+        .route(
+            "/api/v1/auth/step-up/{operation}/passkey",
+            post(passkey::start_step_up),
+        )
+        .route(
+            "/api/v1/auth/step-up/{operation}/passkey/verify",
+            post(passkey::verify_step_up),
         )
         .layer(Extension(auditor))
 }

@@ -60,6 +60,12 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     // Q5-T5: the pending sign-in token, as for mfa/verify.
     "/api/v1/auth/mfa/code/send",
     "/api/v1/auth/mfa/code/verify",
+    // Q6-T1: a passkey second factor with the same pending sign-in token,
+    // and a passkey sign-in, whose assertion is the credential.
+    "/api/v1/auth/mfa/passkey/start",
+    "/api/v1/auth/mfa/passkey/verify",
+    "/api/v1/auth/passkey/start",
+    "/api/v1/auth/passkey/verify",
     "/health",
     "/health/ready",
     // U9-T1: the startup probe, same unauthenticated convention.
@@ -646,6 +652,20 @@ mod tests {
         assert!(is_bypass("/api/v1/auth/mfa/verify-recovery"));
         assert!(is_bypass("/api/v1/auth/mfa/pending-enroll"));
         assert!(is_bypass("/api/v1/auth/mfa/pending-confirm"));
+    }
+
+    #[test]
+    fn passkey_sign_in_paths_are_bypassed_and_management_is_not() {
+        // Q6-T1: the sign-in ceremonies are public; the caller's own
+        // passkeys and the passkey step-up need a session.
+        assert!(is_bypass("/api/v1/auth/passkey/start"));
+        assert!(is_bypass("/api/v1/auth/passkey/verify"));
+        assert!(is_bypass("/api/v1/auth/mfa/passkey/start"));
+        assert!(is_bypass("/api/v1/auth/mfa/passkey/verify"));
+        assert!(!is_bypass("/api/v1/auth/passkeys"));
+        assert!(!is_bypass("/api/v1/auth/passkeys/register/start"));
+        assert!(!is_bypass("/api/v1/auth/passkey/verify/extra"));
+        assert!(!is_bypass("/api/v1/auth/step-up/passkey_manage/passkey"));
     }
 
     #[test]

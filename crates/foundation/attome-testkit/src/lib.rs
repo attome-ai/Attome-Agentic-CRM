@@ -45,6 +45,10 @@ pub mod query_counter;
 #[cfg(feature = "jobs")]
 pub mod jobs;
 
+/// Q6-T1: a software passkey authenticator (feature `passkey`).
+#[cfg(feature = "passkey")]
+pub mod passkey;
+
 /// S2-T10: request and response examples for the API document (feature
 /// `examples`).
 #[cfg(feature = "examples")]

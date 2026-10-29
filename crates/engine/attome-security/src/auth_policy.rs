@@ -9,6 +9,9 @@
 //! The local login asks [`password_login`] after the password verifies and
 //! answers a refusal exactly as it answers a wrong password, so the response
 //! never reveals the policy.
+//!
+//! Q6-T1: a passkey alone signs in only where a role allows it
+//! ([`passkey_sign_in`]), and never past an SSO-only rule.
 
 use attome_db::DbPool;
 use attome_types::AppError;
@@ -111,6 +114,44 @@ pub fn decide(break_glass: bool, sso_only: bool) -> PasswordLogin {
         (false, true) => PasswordLogin::Refused,
         (false, false) => PasswordLogin::Allowed,
     }
+}
+
+/// Q6-T1: what [`passkey_sign_in`] decided.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PasskeySignIn {
+    /// A role the person holds allows a passkey alone.
+    Allowed,
+    /// No role allows it: the passkey is a second factor after a password.
+    NotAllowed,
+    /// An SSO-only domain or role applies and the person is not a
+    /// break-glass account: sign in through the provider.
+    SsoOnly,
+}
+
+/// Q6-T1: whether `user_id` (whose email is `email`) may sign in with a
+/// passkey alone. A role allows it with `role_auth_policy.passkey_sign_in`,
+/// held directly or through a team; an SSO-only rule refuses it as it
+/// refuses a password, except for a break-glass account.
+pub async fn passkey_sign_in(
+    db: &DbPool,
+    user_id: Uuid,
+    email: &str,
+) -> Result<PasskeySignIn, AppError> {
+    if password_login(db, user_id, email).await? == PasswordLogin::Refused {
+        return Ok(PasskeySignIn::SsoOnly);
+    }
+    let allowed: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM role_auth_policy p                          WHERE p.passkey_sign_in AND p.role_ref IN (                                SELECT ur.role_ref FROM user_account_mm_role ur                                 WHERE ur.user_ref = $1 AND NOT ur.is_deleted                                UNION                                SELECT rt.role_ref FROM user_account_mm_team ut                                  JOIN role_mm_team rt ON rt.team_ref = ut.team_ref                                       AND NOT rt.is_deleted                                 WHERE ut.user_ref = $1 AND NOT ut.is_deleted))",
+    )
+    .bind(user_id)
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(if allowed {
+        PasskeySignIn::Allowed
+    } else {
+        PasskeySignIn::NotAllowed
+    })
 }
 
 /// Counts a break-glass password sign-in (`auth_break_glass_sign_in_total`).

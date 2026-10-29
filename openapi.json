@@ -57379,7 +57379,7 @@
           "admin-security"
         ],
         "summary": "Set a role's sign-in policy",
-        "description": "Sets whether a role signs in only through single sign-on (Q1-T7) and its second-factor policy: mode, allowed factors, grace days, remember-browser days and phishing-resistant only (Q5-T10). Only the fields given change. Administrators only.",
+        "description": "Sets whether a role signs in only through single sign-on (Q1-T7), its second-factor policy: mode, allowed factors, grace days, remember-browser days and phishing-resistant only (Q5-T10), and whether its holders may sign in with a passkey alone (Q6-T1). Only the fields given change. Administrators only.",
         "operationId": "put_role_auth_policy",
         "parameters": [
           {
@@ -74552,6 +74552,155 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/auth/mfa/passkey/start": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Start a passkey second factor",
+        "description": "Q6-T1: with the `mfa: \"required\"` pending token, the request options for\n`navigator.credentials.get`, limited to the person's own passkeys. The\ntoken stays usable for `mfa/passkey/verify` and the other second factors.",
+        "operationId": "start_passkey_second_factor",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyMfaStartBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The request options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyOptions"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The pending token is not a live sign-in token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Passkeys are not configured on this deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit-exempt": {
+          "note": "starts a ceremony: one single-use challenge that expires in 300 seconds; the audited sign-in is mfa/passkey/verify",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "mfa",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/auth/mfa/passkey/verify": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Finish sign-in with a passkey",
+        "description": "Q6-T1: completes an `mfa: \"required\"` password sign-in with one of the\nperson's passkeys. Shares the second-factor attempt budget with\n`mfa/verify`; a refused passkey spends one of the token's attempts. The\nsession's `amr` is `pwd`, `hwk`.",
+        "operationId": "finish_passkey_second_factor",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyMfaVerifyBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Signed in"
+          },
+          "401": {
+            "description": "The pending token or the passkey was refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many second-factor attempts for this account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Passkeys are not configured on this deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "login"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "mfa",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/auth/mfa/pending-confirm": {
       "post": {
         "tags": [
@@ -75307,6 +75456,465 @@
         "x-privilege": "public",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/auth/passkey/start": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Start a passkey sign-in",
+        "description": "Q6-T1: the request options for `navigator.credentials.get`, naming no\nperson: the browser offers the passkeys it holds for this site.",
+        "operationId": "start_passkey_sign_in",
+        "responses": {
+          "200": {
+            "description": "The request options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyOptions"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Passkeys are not configured on this deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit-exempt": {
+          "note": "starts a ceremony: one single-use challenge that expires in 300 seconds naming no one; the audited sign-in is passkey/verify",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "credential",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/auth/passkey/verify": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Sign in with a passkey",
+        "description": "Q6-T1: signs in with a passkey alone, when a role the person holds allows\nit (`passkey_sign_in` on the role's sign-in policy) and no single sign-on\nrule applies. The passkey verified the person, so a refusal by policy is\n`403` rather than a disguised `401`. The session's `amr` is `hwk`.",
+        "operationId": "finish_passkey_sign_in",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyAssertionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Signed in"
+          },
+          "401": {
+            "description": "The response does not answer a live challenge with a live passkey of an active account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No role of the person allows a passkey alone, or the person signs in through single sign-on",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A malformed response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Passkeys are not configured on this deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "login"
+            },
+            {
+              "category": "security",
+              "operation": "failed_login"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "credential",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/auth/passkeys": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "My passkeys",
+        "description": "Q6-T1: the caller's passkeys, newest first, with the name, the transports\nand when each was added and last used.",
+        "operationId": "list_my_passkeys",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The caller's passkeys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PasskeyItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/auth/passkeys/register/finish": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Finish adding a passkey",
+        "description": "Q6-T1: stores the passkey the browser created. Needs the same fresh\nstep-up as the start. The passkey and its `Credential` + `Create` event\ncommit together.",
+        "operationId": "finish_passkey_registration",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyRegisterBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The passkey is added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyRegistered"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session, `reauth_required`, or the response does not answer a live challenge",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "An API-key or S2S caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "That passkey is already registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A malformed response or a label over 100 characters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Passkeys are not configured on this deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "credential",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "mfa",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/auth/passkeys/register/start": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Start adding a passkey",
+        "description": "Q6-T1: the creation options for `navigator.credentials.create`. Needs a\nfresh step-up for `passkey_manage` (`reauth_required` otherwise). The\ncaller's passkeys are excluded, so one authenticator is not added twice.",
+        "operationId": "start_passkey_registration",
+        "responses": {
+          "200": {
+            "description": "The creation options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyOptions"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No session, or `reauth_required`: step up for `passkey_manage` first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "An API-key or S2S caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Passkeys are not configured on this deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "starts a ceremony: one single-use challenge that expires in 300 seconds, no credential or session changes; the audited change is register/finish",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "mfa",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/auth/passkeys/{id}": {
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Remove a passkey",
+        "description": "Q6-T1: removes one of the caller's passkeys (404 for any other). Needs a\nfresh step-up for `passkey_manage`. The removal and its `Credential` +\n`SoftDelete` event commit together.",
+        "operationId": "delete_my_passkey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The passkey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The passkey is removed"
+          },
+          "401": {
+            "description": "No session, or `reauth_required`: step up for `passkey_manage` first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "An API-key or S2S caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The caller has no such passkey",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "credential",
+              "operation": "soft_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "high"
       }
     },
     "/api/v1/auth/refresh": {
@@ -76304,6 +76912,212 @@
         "x-privilege": "authenticated",
         "x-rate-class": "mfa",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/auth/step-up/{operation}/passkey": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Start a passkey step-up",
+        "description": "Q6-T1: the request options for a passkey step-up for `operation` on the\ncaller's own session, limited to the caller's passkeys. An account with\nno passkey, or an operation that does not accept one, is `reauth_required`\nnaming what it accepts.",
+        "operationId": "start_passkey_step_up",
+        "parameters": [
+          {
+            "name": "operation",
+            "in": "path",
+            "description": "The operation to step up for.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyOptions"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No live session with a refresh family, or `reauth_required`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "An API-key or S2S caller, which can never step up",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not a step-up operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Passkeys are not configured on this deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "starts a ceremony: one single-use challenge that expires in 300 seconds; the audited change is the verify route's elevation",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "mfa",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/auth/step-up/{operation}/passkey/verify": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Verify a passkey step-up",
+        "description": "Q6-T1: answers a passkey step-up and elevates the caller's session for\n`operation`, with `hwk` as its last `amr`. Every refusal is\n`reauth_required` and elevates nothing.",
+        "operationId": "verify_passkey_step_up",
+        "parameters": [
+          {
+            "name": "operation",
+            "in": "path",
+            "description": "The operation the step-up was started for.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyAssertionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Session elevated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyElevation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "`reauth_required`, or no live session with a refresh family",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "An API-key or S2S caller, which can never step up",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not a step-up operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many second-factor attempts for this account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Passkeys are not configured on this deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "login"
+            },
+            {
+              "category": "security",
+              "operation": "failed_login"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "mfa",
+        "x-risk": "medium"
       }
     },
     "/api/v1/auth/step-up/{operation}/verify": {
@@ -201178,6 +201992,80 @@
           }
         }
       },
+      "PaginatedResponse_PasskeyItem": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One of the caller's passkeys. The key itself never leaves the server.",
+              "required": [
+                "id",
+                "transports",
+                "created_at"
+              ],
+              "properties": {
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "label": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The name the person gave it, if any."
+                },
+                "last_used_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "transports": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "How the browser reaches the authenticator: `internal`, `hybrid`,\n`usb`, `nfc`, `ble`, `smart-card`."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_PatchOpView": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -209729,6 +210617,160 @@
           "upload_url": {
             "type": "string",
             "description": "PUT the part's bytes here."
+          }
+        }
+      },
+      "PasskeyAssertionBody": {
+        "type": "object",
+        "description": "A passkey assertion: the browser's response to the request options.",
+        "required": [
+          "response"
+        ],
+        "properties": {
+          "response": {
+            "type": "object",
+            "description": "`PublicKeyCredential.toJSON()` of `navigator.credentials.get`."
+          }
+        },
+        "additionalProperties": false
+      },
+      "PasskeyElevation": {
+        "type": "object",
+        "description": "The caller's session is elevated until `elevated_until`.",
+        "required": [
+          "operation",
+          "elevated_until"
+        ],
+        "properties": {
+          "elevated_until": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "operation": {
+            "type": "string"
+          }
+        }
+      },
+      "PasskeyItem": {
+        "type": "object",
+        "description": "One of the caller's passkeys. The key itself never leaves the server.",
+        "required": [
+          "id",
+          "transports",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The name the person gave it, if any."
+          },
+          "last_used_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "transports": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "How the browser reaches the authenticator: `internal`, `hybrid`,\n`usb`, `nfc`, `ble`, `smart-card`."
+          }
+        }
+      },
+      "PasskeyMfaStartBody": {
+        "type": "object",
+        "description": "Starts a passkey second factor for a password sign-in.",
+        "required": [
+          "pending_token"
+        ],
+        "properties": {
+          "pending_token": {
+            "type": "string",
+            "description": "The `pending_token` of the `mfa: \"required\"` sign-in answer."
+          }
+        },
+        "additionalProperties": false
+      },
+      "PasskeyMfaVerifyBody": {
+        "type": "object",
+        "description": "Finishes a password sign-in with a passkey.",
+        "required": [
+          "pending_token",
+          "response"
+        ],
+        "properties": {
+          "pending_token": {
+            "type": "string"
+          },
+          "remember": {
+            "type": "boolean",
+            "description": "Remember this browser, where the person's policy allows it."
+          },
+          "response": {
+            "type": "object",
+            "description": "`PublicKeyCredential.toJSON()` of `navigator.credentials.get`."
+          }
+        },
+        "additionalProperties": false
+      },
+      "PasskeyOptions": {
+        "type": "object",
+        "description": "The options a ceremony's browser call takes.",
+        "required": [
+          "options"
+        ],
+        "properties": {
+          "options": {
+            "type": "object",
+            "description": "Pass to `navigator.credentials.create` (registration) or `get`\n(sign-in and step-up) after decoding its base64url fields."
+          }
+        }
+      },
+      "PasskeyRegisterBody": {
+        "type": "object",
+        "description": "A new passkey: the browser's response to the registration options.",
+        "required": [
+          "response"
+        ],
+        "properties": {
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A name for it, such as \"Work laptop\" (at most 100 characters)."
+          },
+          "response": {
+            "type": "object",
+            "description": "`PublicKeyCredential.toJSON()` of `navigator.credentials.create`."
+          }
+        },
+        "additionalProperties": false
+      },
+      "PasskeyRegistered": {
+        "type": "object",
+        "description": "The registered passkey.",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -218761,6 +219803,7 @@
           "mfa_grace_days",
           "remember_device_days",
           "phishing_resistant_only",
+          "passkey_sign_in",
           "is_admin_role",
           "row_version"
         ],
@@ -218781,6 +219824,10 @@
           },
           "mfa_mode": {
             "type": "string"
+          },
+          "passkey_sign_in": {
+            "type": "boolean",
+            "description": "Q6-T1: holders may sign in with a passkey alone."
           },
           "phishing_resistant_only": {
             "type": "boolean"
@@ -218830,6 +219877,13 @@
               "null"
             ],
             "description": "Q5-T10: `inherit` (the deployment's `auth.mfa_policy`), `off`,\n`optional` or `required`."
+          },
+          "passkey_sign_in": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Q6-T1: holders may sign in with a passkey alone, no password."
           },
           "phishing_resistant_only": {
             "type": [
@@ -236734,7 +237788,6 @@
     }
   ],
   "x-api-version": "2026-10",
-  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -236786,5 +237839,6 @@
         ]
       }
     }
-  }
+  },
+  "x-version-adapters": []
 }

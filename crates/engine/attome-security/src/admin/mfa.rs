@@ -134,7 +134,9 @@ pub async fn do_reset_user_mfa(
     .await
     .map_err(AppError::internal)?
     .rows_affected();
-    if disabled == 0 {
+    // Q6-T1: a lost device may be a passkey; the reset removes those too.
+    let passkeys = attome_auth::webauthn::delete_all_in_tx(tx.tx(), user_id).await?;
+    if disabled == 0 && passkeys == 0 {
         return Err(AppError::NotFound);
     }
     sqlx::query("DELETE FROM user_mfa_recovery_code WHERE user_ref = $1")

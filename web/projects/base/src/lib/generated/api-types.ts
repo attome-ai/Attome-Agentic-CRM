@@ -11449,7 +11449,7 @@ export interface paths {
         get: operations["get_role_auth_policy"];
         /**
          * Set a role's sign-in policy
-         * @description Sets whether a role signs in only through single sign-on (Q1-T7) and its second-factor policy: mode, allowed factors, grace days, remember-browser days and phishing-resistant only (Q5-T10). Only the fields given change. Administrators only.
+         * @description Sets whether a role signs in only through single sign-on (Q1-T7), its second-factor policy: mode, allowed factors, grace days, remember-browser days and phishing-resistant only (Q5-T10), and whether its holders may sign in with a passkey alone (Q6-T1). Only the fields given change. Administrators only.
          */
         put: operations["put_role_auth_policy"];
         post?: never;
@@ -14997,6 +14997,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/mfa/passkey/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a passkey second factor
+         * @description Q6-T1: with the `mfa: "required"` pending token, the request options for
+         *     `navigator.credentials.get`, limited to the person's own passkeys. The
+         *     token stays usable for `mfa/passkey/verify` and the other second factors.
+         */
+        post: operations["start_passkey_second_factor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/mfa/passkey/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Finish sign-in with a passkey
+         * @description Q6-T1: completes an `mfa: "required"` password sign-in with one of the
+         *     person's passkeys. Shares the second-factor attempt budget with
+         *     `mfa/verify`; a refused passkey spends one of the token's attempts. The
+         *     session's `amr` is `pwd`, `hwk`.
+         */
+        post: operations["finish_passkey_second_factor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/mfa/pending-confirm": {
         parameters: {
             query?: never;
@@ -15292,6 +15337,137 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/passkey/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a passkey sign-in
+         * @description Q6-T1: the request options for `navigator.credentials.get`, naming no
+         *     person: the browser offers the passkeys it holds for this site.
+         */
+        post: operations["start_passkey_sign_in"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/passkey/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign in with a passkey
+         * @description Q6-T1: signs in with a passkey alone, when a role the person holds allows
+         *     it (`passkey_sign_in` on the role's sign-in policy) and no single sign-on
+         *     rule applies. The passkey verified the person, so a refusal by policy is
+         *     `403` rather than a disguised `401`. The session's `amr` is `hwk`.
+         */
+        post: operations["finish_passkey_sign_in"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/passkeys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My passkeys
+         * @description Q6-T1: the caller's passkeys, newest first, with the name, the transports
+         *     and when each was added and last used.
+         */
+        get: operations["list_my_passkeys"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/passkeys/register/finish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Finish adding a passkey
+         * @description Q6-T1: stores the passkey the browser created. Needs the same fresh
+         *     step-up as the start. The passkey and its `Credential` + `Create` event
+         *     commit together.
+         */
+        post: operations["finish_passkey_registration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/passkeys/register/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start adding a passkey
+         * @description Q6-T1: the creation options for `navigator.credentials.create`. Needs a
+         *     fresh step-up for `passkey_manage` (`reauth_required` otherwise). The
+         *     caller's passkeys are excluded, so one authenticator is not added twice.
+         */
+        post: operations["start_passkey_registration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/passkeys/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a passkey
+         * @description Q6-T1: removes one of the caller's passkeys (404 for any other). Needs a
+         *     fresh step-up for `passkey_manage`. The removal and its `Credential` +
+         *     `SoftDelete` event commit together.
+         */
+        delete: operations["delete_my_passkey"];
         options?: never;
         head?: never;
         patch?: never;
@@ -15621,6 +15797,51 @@ export interface paths {
         get: operations["start_oidc_step_up"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/step-up/{operation}/passkey": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a passkey step-up
+         * @description Q6-T1: the request options for a passkey step-up for `operation` on the
+         *     caller's own session, limited to the caller's passkeys. An account with
+         *     no passkey, or an operation that does not accept one, is `reauth_required`
+         *     naming what it accepts.
+         */
+        post: operations["start_passkey_step_up"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/step-up/{operation}/passkey/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify a passkey step-up
+         * @description Q6-T1: answers a passkey step-up and elevates the caller's session for
+         *     `operation`, with `hwk` as its last `amr`. Every refusal is
+         *     `reauth_required` and elevates nothing.
+         */
+        post: operations["verify_passkey_step_up"];
         delete?: never;
         options?: never;
         head?: never;
@@ -52158,6 +52379,35 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_PasskeyItem: {
+            items: {
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                id: string;
+                /** @description The name the person gave it, if any. */
+                label?: string | null;
+                /** Format: date-time */
+                last_used_at?: string | null;
+                /**
+                 * @description How the browser reaches the authenticator: `internal`, `hybrid`,
+                 *     `usb`, `nfc`, `ble`, `smart-card`.
+                 */
+                transports: string[];
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_PatchOpView: {
             items: {
                 op: string;
@@ -55400,6 +55650,66 @@ export interface components {
             part: number;
             /** @description PUT the part's bytes here. */
             upload_url: string;
+        };
+        /** @description A passkey assertion: the browser's response to the request options. */
+        PasskeyAssertionBody: {
+            /** @description `PublicKeyCredential.toJSON()` of `navigator.credentials.get`. */
+            response: Record<string, never>;
+        };
+        /** @description The caller's session is elevated until `elevated_until`. */
+        PasskeyElevation: {
+            /** Format: date-time */
+            elevated_until: string;
+            operation: string;
+        };
+        /** @description One of the caller's passkeys. The key itself never leaves the server. */
+        PasskeyItem: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            /** @description The name the person gave it, if any. */
+            label?: string | null;
+            /** Format: date-time */
+            last_used_at?: string | null;
+            /**
+             * @description How the browser reaches the authenticator: `internal`, `hybrid`,
+             *     `usb`, `nfc`, `ble`, `smart-card`.
+             */
+            transports: string[];
+        };
+        /** @description Starts a passkey second factor for a password sign-in. */
+        PasskeyMfaStartBody: {
+            /** @description The `pending_token` of the `mfa: "required"` sign-in answer. */
+            pending_token: string;
+        };
+        /** @description Finishes a password sign-in with a passkey. */
+        PasskeyMfaVerifyBody: {
+            pending_token: string;
+            /** @description Remember this browser, where the person's policy allows it. */
+            remember?: boolean;
+            /** @description `PublicKeyCredential.toJSON()` of `navigator.credentials.get`. */
+            response: Record<string, never>;
+        };
+        /** @description The options a ceremony's browser call takes. */
+        PasskeyOptions: {
+            /**
+             * @description Pass to `navigator.credentials.create` (registration) or `get`
+             *     (sign-in and step-up) after decoding its base64url fields.
+             */
+            options: Record<string, never>;
+        };
+        /** @description A new passkey: the browser's response to the registration options. */
+        PasskeyRegisterBody: {
+            /** @description A name for it, such as "Work laptop" (at most 100 characters). */
+            label?: string | null;
+            /** @description `PublicKeyCredential.toJSON()` of `navigator.credentials.create`. */
+            response: Record<string, never>;
+        };
+        /** @description The registered passkey. */
+        PasskeyRegistered: {
+            /** Format: uuid */
+            id: string;
         };
         PasswordChangeBody: {
             current_password: string;
@@ -58967,6 +59277,8 @@ export interface components {
             /** Format: int32 */
             mfa_grace_days: number;
             mfa_mode: string;
+            /** @description Q6-T1: holders may sign in with a passkey alone. */
+            passkey_sign_in: boolean;
             phishing_resistant_only: boolean;
             /** Format: int32 */
             remember_device_days: number;
@@ -58995,6 +59307,8 @@ export interface components {
              *     `optional` or `required`.
              */
             mfa_mode?: string | null;
+            /** @description Q6-T1: holders may sign in with a passkey alone, no password. */
+            passkey_sign_in?: boolean | null;
             /** @description Q5-T10: only phishing-resistant factors (passkeys) count. */
             phishing_resistant_only?: boolean | null;
             /**
@@ -111026,6 +111340,106 @@ export interface operations {
             };
         };
     };
+    start_passkey_second_factor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasskeyMfaStartBody"];
+            };
+        };
+        responses: {
+            /** @description The request options */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasskeyOptions"];
+                };
+            };
+            /** @description The pending token is not a live sign-in token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Passkeys are not configured on this deployment */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    finish_passkey_second_factor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasskeyMfaVerifyBody"];
+            };
+        };
+        responses: {
+            /** @description Signed in */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The pending token or the passkey was refused */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many second-factor attempts for this account */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Passkeys are not configured on this deployment */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     mfa_pending_confirm: {
         parameters: {
             query?: never;
@@ -111482,6 +111896,306 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    start_passkey_sign_in: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request options */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasskeyOptions"];
+                };
+            };
+            /** @description Passkeys are not configured on this deployment */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    finish_passkey_sign_in: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasskeyAssertionBody"];
+            };
+        };
+        responses: {
+            /** @description Signed in */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The response does not answer a live challenge with a live passkey of an active account */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No role of the person allows a passkey alone, or the person signs in through single sign-on */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A malformed response */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Passkeys are not configured on this deployment */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_my_passkeys: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's passkeys */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_PasskeyItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    finish_passkey_registration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasskeyRegisterBody"];
+            };
+        };
+        responses: {
+            /** @description The passkey is added */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasskeyRegistered"];
+                };
+            };
+            /** @description No session, `reauth_required`, or the response does not answer a live challenge */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An API-key or S2S caller */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description That passkey is already registered */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A malformed response or a label over 100 characters */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Passkeys are not configured on this deployment */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    start_passkey_registration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The creation options */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasskeyOptions"];
+                };
+            };
+            /** @description No session, or `reauth_required`: step up for `passkey_manage` first */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An API-key or S2S caller */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Passkeys are not configured on this deployment */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_my_passkey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The passkey */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The passkey is removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No session, or `reauth_required`: step up for `passkey_manage` first */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An API-key or S2S caller */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller has no such passkey */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -112123,6 +112837,137 @@ export interface operations {
             };
             /** @description Too many attempts */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    start_passkey_step_up: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The operation to step up for. */
+                operation: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request options */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasskeyOptions"];
+                };
+            };
+            /** @description No live session with a refresh family, or `reauth_required` */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An API-key or S2S caller, which can never step up */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a step-up operation */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Passkeys are not configured on this deployment */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    verify_passkey_step_up: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The operation the step-up was started for. */
+                operation: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasskeyAssertionBody"];
+            };
+        };
+        responses: {
+            /** @description Session elevated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasskeyElevation"];
+                };
+            };
+            /** @description `reauth_required`, or no live session with a refresh family */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An API-key or S2S caller, which can never step up */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a step-up operation */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many second-factor attempts for this account */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Passkeys are not configured on this deployment */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

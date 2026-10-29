@@ -54,6 +54,20 @@ pub const RATE_LIMIT_CATEGORIES: &[(&str, &str, &str)] = &[
     ("POST", "/api/v1/auth/step-up/{operation}/verify", "mfa"),
     // attome-auth plan BAU-8c: the Google step-up is a second-factor attempt too.
     ("POST", "/api/v1/auth/step-up/{operation}/google", "mfa"),
+    // Q6-T1: a passkey sign-in is a credential attempt; a passkey second
+    // factor, step-up or registration shares the MFA budget.
+    ("POST", "/api/v1/auth/passkey/start", "credential"),
+    ("POST", "/api/v1/auth/passkey/verify", "credential"),
+    ("POST", "/api/v1/auth/mfa/passkey/start", "mfa"),
+    ("POST", "/api/v1/auth/mfa/passkey/verify", "mfa"),
+    ("POST", "/api/v1/auth/step-up/{operation}/passkey", "mfa"),
+    (
+        "POST",
+        "/api/v1/auth/step-up/{operation}/passkey/verify",
+        "mfa",
+    ),
+    ("POST", "/api/v1/auth/passkeys/register/start", "mfa"),
+    ("POST", "/api/v1/auth/passkeys/register/finish", "mfa"),
     // attome-auth hardening 2.1c (D-510 rule 5): federated step-up starts share
     // the MFA budget; the IdP callbacks are credential-class, like the login
     // callbacks.

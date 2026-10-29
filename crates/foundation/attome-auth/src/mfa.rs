@@ -1035,6 +1035,41 @@ pub async fn complete_pending_login_otp(
     Ok(user_id)
 }
 
+/// Q6-T1: [`complete_pending_login`] with a passkey assertion instead of a
+/// TOTP code. The assertion must answer a challenge started for the token's
+/// account and be one of that account's passkeys; the challenge marker gates
+/// it the same way, so a refused assertion spends one of the token's
+/// attempts and a used token is refused.
+#[allow(clippy::too_many_arguments)]
+pub async fn complete_pending_login_passkey(
+    db: &DbPool,
+    rp: &crate::webauthn::RelyingParty,
+    redis: &Store,
+    pending_token: &str,
+    response_json: &[u8],
+    jwt_ring: &KeyRing,
+    issuer: &str,
+    audience: &str,
+    max_attempts: u32,
+) -> Result<Uuid, AppError> {
+    let (user_id, jti) = verify_pending_token(
+        pending_token,
+        TokenType::MfaPendingLogin,
+        jwt_ring,
+        issuer,
+        audience,
+    )?;
+    require_live_challenge(redis, jti).await?;
+    let outcome =
+        match crate::webauthn::finish_assertion(db, rp, Some(user_id), response_json).await {
+            Ok(asserted) if asserted.user_ref == user_id => Ok(()),
+            Ok(_) | Err(AppError::Validation(_)) => Err(AppError::Unauthorized),
+            Err(other) => Err(other),
+        };
+    consume_or_record_failure(redis, jti, max_attempts, outcome).await?;
+    Ok(user_id)
+}
+
 /// Same as `complete_pending_login` but via a recovery code.
 #[allow(clippy::too_many_arguments)]
 pub async fn complete_pending_login_recovery(

@@ -1025,6 +1025,17 @@ impl AppConfig {
                 ),
             });
         }
+        // Q6-T1: a passkey relying party id is a host name.
+        if let Some(rp_id) = &self.auth.passkey_rp_id
+            && !rp_id.split('.').all(|label| {
+                !label.is_empty() && label.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+            })
+        {
+            return Err(ConfigError::Invalid {
+                field: "auth.passkey_rp_id".into(),
+                reason: "must be a host name such as crm.example.com".into(),
+            });
+        }
         const VALID_REGISTRATION_MODES: &[&str] = &["public", "invite", "disabled"];
         if !VALID_REGISTRATION_MODES.contains(&self.auth.registration_mode.as_str()) {
             return Err(ConfigError::Invalid {

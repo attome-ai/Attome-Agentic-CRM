@@ -210,6 +210,10 @@ pub struct MfaChallengeResponse {
     /// (`"remember": true` on `/mfa/verify`); absent when it may not.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub remember_device: bool,
+    /// Q6-T1: with `required`, the account has a passkey, so the sign-in
+    /// page may offer `/mfa/passkey/start`; absent when it has none.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub passkey: bool,
 }
 
 impl std::fmt::Debug for MfaChallengeResponse {

@@ -454,6 +454,21 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
         "Q5-T5: finishes sign-in with the sent code, same pending_token credential as mfa/verify.",
     ),
     (
+        "POST",
+        "/api/v1/auth/mfa/passkey/start",
+        "Q6-T1: starts a passkey second factor, same pending_token credential as mfa/verify.",
+    ),
+    (
+        "POST",
+        "/api/v1/auth/mfa/passkey/verify",
+        "Q6-T1: finishes sign-in with a passkey, same pending_token credential as mfa/verify.",
+    ),
+    (
+        "POST",
+        "/api/v1/auth/passkey/start",
+        "Q6-T1: starts a passkey sign-in, before any session exists; the options name no one.",
+    ),
+    (
         "GET",
         "/api/v1/auth/oidc/providers",
         "Public provider discovery for the sign-in page, read before any session exists. Bypass-listed subtree.",

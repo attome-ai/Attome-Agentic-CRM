@@ -212,6 +212,16 @@ pub struct AuthSection {
     /// exit addresses change country.
     #[serde(default = "default_true")]
     pub refresh_device_binding: bool,
+    /// Q6-T1: the passkey relying party id, the host name passkeys are bound
+    /// to (`crm.example.com`). Unset, the host of the frontend URL. A
+    /// passkey registered under one id never works under another, so set it
+    /// before people register and do not change it.
+    #[serde(default)]
+    pub passkey_rp_id: Option<String>,
+    /// Q6-T1: the origins a passkey response may come from
+    /// (`https://crm.example.com`). Empty, the frontend URL alone.
+    #[serde(default)]
+    pub passkey_origins: Vec<String>,
 }
 
 /// `auth.kdf` — see [`AuthSection::kdf`]. Every default is the value the
@@ -325,6 +335,8 @@ impl std::fmt::Debug for AuthSection {
             .field("kdf", &self.kdf)
             .field("geoip_database", &self.geoip_database)
             .field("refresh_device_binding", &self.refresh_device_binding)
+            .field("passkey_rp_id", &self.passkey_rp_id)
+            .field("passkey_origins", &self.passkey_origins)
             .finish()
     }
 }

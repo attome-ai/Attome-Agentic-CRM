@@ -72,6 +72,8 @@ pub enum Operation {
     RoleChange,
     /// Q13-T1: starting a view-as or act-as session.
     Impersonation,
+    /// Q6-T1: adding or removing one of the caller's own passkeys.
+    PasskeyManage,
 }
 
 /// Where an operation's freshness comes from.
@@ -85,7 +87,7 @@ pub enum Freshness {
 }
 
 impl Operation {
-    pub const ALL: [Operation; 9] = [
+    pub const ALL: [Operation; 10] = [
         Operation::MfaDisable,
         Operation::RecoveryCodesRegenerate,
         Operation::IdentityLink,
@@ -95,6 +97,7 @@ impl Operation {
         Operation::PlatformUpgrade,
         Operation::RoleChange,
         Operation::Impersonation,
+        Operation::PasskeyManage,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -108,6 +111,7 @@ impl Operation {
             Operation::PlatformUpgrade => "platform_upgrade",
             Operation::RoleChange => "role_change",
             Operation::Impersonation => "impersonation",
+            Operation::PasskeyManage => "passkey_manage",
         }
     }
 
@@ -122,7 +126,8 @@ impl Operation {
             | Operation::AdminMfaReset
             | Operation::ApprovalDecision
             | Operation::RoleChange
-            | Operation::Impersonation => 5 * 60,
+            | Operation::Impersonation
+            | Operation::PasskeyManage => 5 * 60,
         }
     }
 
@@ -137,7 +142,8 @@ impl Operation {
             | Operation::ApprovalDecision
             | Operation::PlatformUpgrade
             | Operation::RoleChange
-            | Operation::Impersonation => Freshness::Elevation,
+            | Operation::Impersonation
+            | Operation::PasskeyManage => Freshness::Elevation,
         }
     }
 
@@ -261,17 +267,23 @@ impl AccountFactors {
     }
 
     /// The factors this account may step up with (rule 4). Empty means the
-    /// account is refused with [`TOTP_ENROLLMENT_REQUIRED`].
+    /// account is refused with [`TOTP_ENROLLMENT_REQUIRED`]. Q6-T1: a live
+    /// passkey is always accepted too, after the rule-4 factors; it is at
+    /// least as strong as TOTP.
     pub fn accepted(self) -> Vec<Factor> {
-        if self.totp_enrolled {
-            return vec![Factor::Totp, Factor::RecoveryCode];
-        }
         let mut accepted = Vec::new();
-        if self.has_password {
-            accepted.push(Factor::Password);
+        if self.totp_enrolled {
+            accepted.extend([Factor::Totp, Factor::RecoveryCode]);
+        } else {
+            if self.has_password {
+                accepted.push(Factor::Password);
+            }
+            if self.federated_linked {
+                accepted.push(Factor::Federated);
+            }
         }
-        if self.federated_linked {
-            accepted.push(Factor::Federated);
+        if self.passkey_registered {
+            accepted.push(Factor::Passkey);
         }
         accepted
     }
@@ -1578,6 +1590,23 @@ mod tests {
 
         let google_only = AccountFactors::default();
         assert!(google_only.accepted().is_empty());
+
+        let totp_and_passkey = AccountFactors {
+            totp_enrolled: true,
+            has_password: true,
+            passkey_registered: true,
+            ..AccountFactors::default()
+        };
+        assert_eq!(
+            totp_and_passkey.accepted(),
+            vec![Factor::Totp, Factor::RecoveryCode, Factor::Passkey],
+            "Q6-T1: a passkey answers a step-up beside TOTP"
+        );
+        let passkey_only = AccountFactors {
+            passkey_registered: true,
+            ..AccountFactors::default()
+        };
+        assert_eq!(passkey_only.accepted(), vec![Factor::Passkey]);
     }
 
     #[test]

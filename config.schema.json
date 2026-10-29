@@ -543,6 +543,22 @@
           "type": "string",
           "writeOnly": true
         },
+        "passkey_origins": {
+          "default": [],
+          "description": "Q6-T1: the origins a passkey response may come from\n(`https://crm.example.com`). Empty, the frontend URL alone.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "passkey_rp_id": {
+          "default": null,
+          "description": "Q6-T1: the passkey relying party id, the host name passkeys are bound\nto (`crm.example.com`). Unset, the host of the frontend URL. A\npasskey registered under one id never works under another, so set it\nbefore people register and do not change it.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "refresh_absolute_lifetime_days": {
           "default": 30,
           "description": "D-504 — absolute lifetime of a refresh family, in days. A family ends\nthis long after the credential verification that started it, however\noften it rotates. Default 30. `AppConfig::validate` requires 1 to 365;\nmigration 0462's fallback anchor for an inconsistent lineage relies on\nthat ceiling to be expired.",

@@ -134,7 +134,7 @@ fn reset_throttle_key(email: &str) -> String {
 /// The verified alternative (`PendingClaims`/`decode_claims` are
 /// `pub(crate)` in `attome-auth`) needs a public accessor there; until one
 /// exists this is the honest shape.
-fn pending_token_subject(token: &str) -> Option<Uuid> {
+pub(super) fn pending_token_subject(token: &str) -> Option<Uuid> {
     #[derive(Deserialize)]
     struct PendingSubject {
         sub: Uuid,
@@ -609,8 +609,8 @@ pub(super) async fn login(
 
     // Q5-T10: what the sign-in page offers with a challenge: "later" while
     // the grace period runs, and remembering the browser where allowed.
-    let (grace_until, remember_device) = match &outcome {
-        accounts::LoginOutcome::Session(_) => (None, false),
+    let (grace_until, remember_device, passkey) = match &outcome {
+        accounts::LoginOutcome::Session(_) => (None, false, false),
         _ => challenge_hints(&state, &body.email).await,
     };
     match outcome {
@@ -636,6 +636,7 @@ pub(super) async fn login(
                 pending_token,
                 grace_until: None,
                 remember_device,
+                passkey,
             }),
         )
             .into_response()),
@@ -646,6 +647,7 @@ pub(super) async fn login(
                 pending_token,
                 grace_until,
                 remember_device: false,
+                passkey: false,
             }),
         )
             .into_response()),
@@ -660,7 +662,7 @@ pub(super) async fn login(
 /// charged before the attempt bounds the volume. Only an `Unauthorized`
 /// rejection is recorded; the original error is returned unless the audit
 /// write itself fails.
-async fn record_failed_second_factor(
+pub(super) async fn record_failed_second_factor(
     state: &AppState,
     auditor: &SecurityAuditor,
     pending_token: &str,
@@ -709,15 +711,24 @@ async fn record_failed_second_factor(
 /// unknown identifier yields [`failed_login::Subject::Unknown`] and nothing
 /// about the typed string is kept (D-541 G3-1 a).
 /// Q5-T10: the grace period's end while it runs, and whether the browser may
-/// be remembered, for `email`'s challenge. A failure shows neither: the
-/// challenge itself is what matters.
+/// be remembered, for `email`'s challenge; Q6-T1: and whether the account
+/// has a passkey. A failure shows none of them: the challenge itself is what
+/// matters.
 async fn challenge_hints(
     state: &AppState,
     email: &str,
-) -> (Option<chrono::DateTime<chrono::Utc>>, bool) {
+) -> (Option<chrono::DateTime<chrono::Utc>>, bool, bool) {
     let Ok(failed_login::Subject::Known { user_id, .. }) = failed_login_subject(state, email).await
     else {
-        return (None, false);
+        return (None, false, false);
+    };
+    // Q6-T1: whether to offer a passkey; a failed read offers none.
+    let passkey = match attome_auth::webauthn::has_passkey(&state.db, user_id).await {
+        Ok(has) => has,
+        Err(error) => {
+            tracing::warn!(%user_id, %error, "auth: whether the account has a passkey could not be read");
+            false
+        }
     };
     match attome_security::mfa_policy::requirement_for(
         &state.db,
@@ -731,11 +742,12 @@ async fn challenge_hints(
             (
                 requirement.grace_until.filter(|until| *until > now),
                 requirement.remember_device_days > 0,
+                passkey,
             )
         }
         Err(error) => {
             tracing::warn!(%user_id, %error, "auth: the challenge hints could not be read");
-            (None, false)
+            (None, false, passkey)
         }
     }
 }
@@ -856,56 +868,11 @@ pub(super) async fn mfa_verify(
     )
     .await?;
     let mut cookies = issued.cookies.to_vec();
-    // Q5-T4: remember this browser when asked and the policy allows it.
-    if body.remember {
-        let requirement = attome_security::mfa_policy::requirement_for(
-            &state.db,
-            user_id,
-            &state.config.auth.mfa_policy,
-        )
-        .await?;
-        if requirement.may_remember() {
-            let epoch = attome_auth::epoch::current_epoch(&state.db, user_id).await?;
-            let label = headers
-                .get(axum::http::header::USER_AGENT)
-                .and_then(|v| v.to_str().ok());
-            // Q8-T4: ending this session from the session list forgets it.
-            let bearer = attome_auth::remembered_device::remember_in_family(
-                &state.db,
-                &state.pepper_ring(),
-                user_id,
-                epoch,
-                requirement.remember_device_days,
-                label,
-                Some(issued.family_id),
-            )
-            .await?;
-            // Q5-T11: a remembered browser is a credential; its creation is
-            // audited (the bearer never is).
-            let device_id = bearer
-                .split_once('.')
-                .and_then(|(id, _)| id.parse::<Uuid>().ok());
-            auditor
-                .write(
-                    SecurityEvent::new(
-                        MandatoryCategory::Credential,
-                        AuditOperation::Create,
-                        user_id,
-                        "remembered_device",
-                        device_id,
-                    )
-                    .named("mfa device remembered"),
-                )
-                .await?;
-            cookies.push((
-                axum::http::header::SET_COOKIE,
-                attome_auth::remembered_device::cookie(
-                    &bearer,
-                    requirement.remember_device_days,
-                    state.config.auth.secure_cookies,
-                ),
-            ));
-        }
+    if body.remember
+        && let Some(cookie) =
+            remember_browser(&state, &auditor, &headers, user_id, issued.family_id).await?
+    {
+        cookies.push(cookie);
     }
 
     Ok((
@@ -914,6 +881,68 @@ pub(super) async fn mfa_verify(
         Json(AuthResponse { user_id }),
     )
         .into_response())
+}
+
+/// Q5-T4: remembers this browser after a second factor when the person's
+/// policy allows it, returning the cookie to set; `None` when it may not.
+/// Q8-T4: tied to the new session's family, so ending that session from
+/// the session list forgets it. Q6-T1: shared by the TOTP and passkey
+/// second factors.
+pub(super) async fn remember_browser(
+    state: &AppState,
+    auditor: &SecurityAuditor,
+    headers: &HeaderMap,
+    user_id: Uuid,
+    family_id: Uuid,
+) -> Result<Option<(axum::http::HeaderName, String)>, AppError> {
+    let requirement = attome_security::mfa_policy::requirement_for(
+        &state.db,
+        user_id,
+        &state.config.auth.mfa_policy,
+    )
+    .await?;
+    if !requirement.may_remember() {
+        return Ok(None);
+    }
+    let epoch = attome_auth::epoch::current_epoch(&state.db, user_id).await?;
+    let label = headers
+        .get(axum::http::header::USER_AGENT)
+        .and_then(|v| v.to_str().ok());
+    let bearer = attome_auth::remembered_device::remember_in_family(
+        &state.db,
+        &state.pepper_ring(),
+        user_id,
+        epoch,
+        requirement.remember_device_days,
+        label,
+        Some(family_id),
+    )
+    .await?;
+    // Q5-T11: a remembered browser is a credential; its creation is
+    // audited (the bearer never is).
+    let device_id = bearer
+        .split_once('.')
+        .and_then(|(id, _)| id.parse::<Uuid>().ok());
+    auditor
+        .write(
+            SecurityEvent::new(
+                MandatoryCategory::Credential,
+                AuditOperation::Create,
+                user_id,
+                "remembered_device",
+                device_id,
+            )
+            .named("mfa device remembered"),
+        )
+        .await?;
+    Ok(Some((
+        axum::http::header::SET_COOKIE,
+        attome_auth::remembered_device::cookie(
+            &bearer,
+            requirement.remember_device_days,
+            state.config.auth.secure_cookies,
+        ),
+    )))
 }
 
 /// Send a sign-in code

@@ -105,6 +105,7 @@ fn mfa_challenge_response_serializes_mfa_and_pending_token() {
         pending_token: "pt".to_string(),
         grace_until: None,
         remember_device: false,
+        passkey: false,
     })
     .unwrap();
     assert_eq!(

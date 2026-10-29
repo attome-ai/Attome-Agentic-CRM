@@ -151,7 +151,7 @@ attome-fleet.workspace    = true
 # AA14-T3: request_counts counts each request's Redis commands.
 attome-cache              = { workspace = true, features = ["count-redis"] }
 attome-testapp.workspace  = true
-attome-testkit            = { workspace = true, features = ["app-config", "query-counter"] }
+attome-testkit            = { workspace = true, features = ["app-config", "passkey", "query-counter"] }
 base64.workspace          = true
 jsonwebtoken.workspace    = true
 rsa.workspace             = true

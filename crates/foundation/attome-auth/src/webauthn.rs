@@ -162,6 +162,20 @@ pub async fn finish_registration(
     response_json: &[u8],
     label: Option<&str>,
 ) -> Result<Uuid, AppError> {
+    finish_registration_with(db, rp, user_ref, response_json, label, &attome_db::NoHook).await
+}
+
+/// Q6-T1: [`finish_registration`], running `hook` with the account id in
+/// the credential's insert transaction, so its audit event commits with it
+/// (D-062).
+pub async fn finish_registration_with(
+    db: &DbPool,
+    rp: &RelyingParty,
+    user_ref: Uuid,
+    response_json: &[u8],
+    label: Option<&str>,
+    hook: &dyn attome_db::BeforeCommit<Uuid>,
+) -> Result<Uuid, AppError> {
     let registration = Registration::from_json_relaxed(response_json)
         .map_err(|_| AppError::Validation("passkey registration response is malformed".into()))?;
     let challenge = registration
@@ -184,6 +198,7 @@ pub async fn finish_registration(
     let dynamic = credential.dynamic_state();
     let dynamic_state = dynamic.encode().map_err(AppError::internal)?;
     let transports = transport_names(credential.transports());
+    let mut tx = attome_db::tx::begin(db).await?;
     let id: Option<Uuid> = sqlx::query_scalar(
         "INSERT INTO webauthn_credential \
              (user_ref, credential_id, public_key, dynamic_state, sign_count, transports, label) \
@@ -197,10 +212,13 @@ pub async fn finish_registration(
     .bind(i64::from(dynamic.sign_count))
     .bind(&transports)
     .bind(label)
-    .fetch_optional(db)
+    .fetch_optional(&mut *tx)
     .await
     .map_err(AppError::internal)?;
-    id.ok_or(AppError::Conflict("passkey already registered"))
+    let id = id.ok_or(AppError::Conflict("passkey already registered"))?;
+    hook.before_commit(&mut tx, &user_ref).await?;
+    tx.commit().await.map_err(AppError::internal)?;
+    Ok(id)
 }
 
 /// Starts a passkey assertion. `user_ref` is the account a second factor is
@@ -306,6 +324,93 @@ pub async fn finish_assertion(
         user_ref: owner,
         credential_ref,
     })
+}
+
+/// Q6-T1: one of an account's passkeys, as its owner sees it. The key and
+/// the authenticator state never leave the database.
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow)]
+pub struct Passkey {
+    pub id: Uuid,
+    pub label: Option<String>,
+    pub transports: Vec<String>,
+    pub created_at: chrono::DateTime<Utc>,
+    pub last_used_at: Option<chrono::DateTime<Utc>>,
+}
+
+/// Q6-T1: one page of the live passkeys of `user_ref`, newest first.
+pub async fn list(
+    db: &DbPool,
+    user_ref: Uuid,
+    window: attome_types::PageWindow,
+) -> Result<attome_types::PaginatedResponse<Passkey>, AppError> {
+    let total: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM webauthn_credential WHERE user_ref = $1 AND NOT is_deleted",
+    )
+    .bind(user_ref)
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)?;
+    let items: Vec<Passkey> = sqlx::query_as(
+        "SELECT id, label, transports, created_at, last_used_at FROM webauthn_credential           WHERE user_ref = $1 AND NOT is_deleted ORDER BY created_at DESC, id DESC           LIMIT $2 OFFSET $3",
+    )
+    .bind(user_ref)
+    .bind(window.page_size)
+    .bind(window.offset)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(attome_types::PaginatedResponse::new(
+        items,
+        total,
+        window.page,
+        window.page_size,
+    ))
+}
+
+/// Q6-T1: whether `user_ref` has a live passkey (a second factor it can
+/// answer a challenge with).
+pub async fn has_passkey(db: &DbPool, user_ref: Uuid) -> Result<bool, AppError> {
+    sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM webauthn_credential WHERE user_ref = $1 AND NOT is_deleted)",
+    )
+    .bind(user_ref)
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// Q6-T1: removes passkey `id` of `user_ref` in the caller's transaction.
+/// False when the account has no such live passkey (another account's is
+/// never touched).
+pub async fn delete_in_tx(
+    tx: &mut attome_db::Tx<'_>,
+    user_ref: Uuid,
+    id: Uuid,
+) -> Result<bool, AppError> {
+    let removed = sqlx::query(
+        "UPDATE webauthn_credential SET is_deleted = true \
+          WHERE id = $1 AND user_ref = $2 AND NOT is_deleted",
+    )
+    .bind(id)
+    .bind(user_ref)
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?
+    .rows_affected();
+    Ok(removed == 1)
+}
+
+/// Q6-T1: removes every passkey of `user_ref` in the caller's transaction
+/// (an administrator's reset of a lost device). Returns how many.
+pub async fn delete_all_in_tx(tx: &mut attome_db::Tx<'_>, user_ref: Uuid) -> Result<u64, AppError> {
+    Ok(sqlx::query(
+        "UPDATE webauthn_credential SET is_deleted = true WHERE user_ref = $1 AND NOT is_deleted",
+    )
+    .bind(user_ref)
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?
+    .rows_affected())
 }
 
 /// The account id as a 16-byte WebAuthn user handle.

@@ -31,6 +31,10 @@ pub enum AuthMethod {
     ///
     /// [`Federated`]: AuthMethod::Federated
     IdpMfa,
+    /// Q6-T1: a passkey (WebAuthn) assertion with user verification
+    /// (`hwk`): a phishing-resistant factor, and on its own a sign-in that
+    /// needs no password.
+    Passkey,
 }
 
 impl AuthMethod {
@@ -43,6 +47,7 @@ impl AuthMethod {
             AuthMethod::WeakOtp => "otp_weak",
             AuthMethod::Federated => "fed",
             AuthMethod::IdpMfa => "mfa",
+            AuthMethod::Passkey => "hwk",
         }
     }
 }
@@ -120,6 +125,22 @@ impl AuthContext {
     pub fn password_and_weak_otp() -> Self {
         Self {
             amr: vec![AuthMethod::Password, AuthMethod::WeakOtp],
+            ..Self::password()
+        }
+    }
+
+    /// Q6-T1: a password sign-in completed with a passkey.
+    pub fn password_and_passkey() -> Self {
+        Self {
+            amr: vec![AuthMethod::Password, AuthMethod::Passkey],
+            ..Self::password()
+        }
+    }
+
+    /// Q6-T1: a sign-in with a passkey alone (passwordless).
+    pub fn passkey() -> Self {
+        Self {
+            amr: vec![AuthMethod::Passkey],
             ..Self::password()
         }
     }
@@ -204,6 +225,11 @@ mod tests {
     fn local_sign_ins_record_their_methods_at_issue_time() {
         assert_eq!(AuthContext::password().amr(), vec!["pwd"]);
         assert_eq!(AuthContext::password_and_totp().amr(), vec!["pwd", "otp"]);
+        assert_eq!(AuthContext::passkey().amr(), vec!["hwk"]);
+        assert_eq!(
+            AuthContext::password_and_passkey().amr(),
+            vec!["pwd", "hwk"]
+        );
         assert_eq!(
             AuthContext::password_and_recovery_code().amr(),
             vec!["pwd", "rcode"]

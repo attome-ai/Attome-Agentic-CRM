@@ -5,8 +5,8 @@
 //!   role signs in only through single sign-on.
 //! - `POST /api/v1/admin/security/break-glass-accounts` adds one of
 //!   the accounts that keep their password whatever the SSO-only rules say.
-//!   An account must have a confirmed authenticator (TOTP; passkeys are not
-//!   built yet) to be one.
+//!   An account must have a confirmed authenticator (TOTP or a passkey) to
+//!   be one.
 //! - `DELETE /api/v1/admin/security/break-glass-accounts/{user_id}` removes
 //!   one, refused while it is the last and any SSO-only rule is in force.
 //!
@@ -55,6 +55,9 @@ pub struct RoleAuthPolicyBody {
     /// Q5-T10: only phishing-resistant factors (passkeys) count.
     #[serde(default)]
     pub phishing_resistant_only: Option<bool>,
+    /// Q6-T1: holders may sign in with a passkey alone, no password.
+    #[serde(default)]
+    pub passkey_sign_in: Option<bool>,
 }
 
 /// A role's stored sign-in policy.
@@ -67,6 +70,8 @@ pub struct RoleAuthPolicy {
     pub mfa_grace_days: i32,
     pub remember_device_days: i32,
     pub phishing_resistant_only: bool,
+    /// Q6-T1: holders may sign in with a passkey alone.
+    pub passkey_sign_in: bool,
     /// The role grants `system.admin`: weak factors never apply to it.
     pub is_admin_role: bool,
     pub row_version: i64,
@@ -120,6 +125,7 @@ const POLICY_SELECT: &str = "SELECT r.id AS role_id, \
         COALESCE(p.mfa_grace_days, 7) AS mfa_grace_days, \
         COALESCE(p.remember_device_days, 30) AS remember_device_days, \
         COALESCE(p.phishing_resistant_only, false) AS phishing_resistant_only, \
+        COALESCE(p.passkey_sign_in, false) AS passkey_sign_in, \
         EXISTS (SELECT 1 FROM role_mm_privilege rp \
                   JOIN privilege pr ON pr.id = rp.privilege_ref AND pr.is_active \
                  WHERE rp.role_ref = r.id AND NOT rp.is_deleted AND pr.key = $2) AS is_admin_role, \
@@ -169,7 +175,7 @@ pub struct BreakGlassBody {
 
 /// Set a role's sign-in policy
 ///
-/// Sets whether a role signs in only through single sign-on (Q1-T7) and its second-factor policy: mode, allowed factors, grace days, remember-browser days and phishing-resistant only (Q5-T10). Only the fields given change. Administrators only.
+/// Sets whether a role signs in only through single sign-on (Q1-T7), its second-factor policy: mode, allowed factors, grace days, remember-browser days and phishing-resistant only (Q5-T10), and whether its holders may sign in with a passkey alone (Q6-T1). Only the fields given change. Administrators only.
 #[utoipa::path(
     put,
     path = "/api/v1/admin/security/roles/{id}/auth-policy",
@@ -200,6 +206,7 @@ async fn put_role_auth_policy(
         "mfa_grace_days": body.mfa_grace_days,
         "remember_device_days": body.remember_device_days,
         "phishing_resistant_only": body.phishing_resistant_only,
+        "passkey_sign_in": body.passkey_sign_in,
     }))
     .map_err(AppError::internal)?;
     let mut tx = SecurityTx::begin(
@@ -225,10 +232,11 @@ async fn put_role_auth_policy(
     }
     sqlx::query(
         "INSERT INTO role_auth_policy (role_ref, sso_only, mfa_mode, mfa_factors, mfa_grace_days, \
-                                       remember_device_days, phishing_resistant_only) \
+                                       remember_device_days, phishing_resistant_only, \
+                                       passkey_sign_in) \
          VALUES ($1, COALESCE($2, false), COALESCE($3, 'inherit'), \
                  COALESCE($4, '{passkey,push,totp,recovery}'::text[]), COALESCE($5, 7), \
-                 COALESCE($6, 30), COALESCE($7, false)) \
+                 COALESCE($6, 30), COALESCE($7, false), COALESCE($8, false)) \
          ON CONFLICT (role_ref) DO UPDATE SET \
              sso_only = COALESCE($2, role_auth_policy.sso_only), \
              mfa_mode = COALESCE($3, role_auth_policy.mfa_mode), \
@@ -236,6 +244,7 @@ async fn put_role_auth_policy(
              mfa_grace_days = COALESCE($5, role_auth_policy.mfa_grace_days), \
              remember_device_days = COALESCE($6, role_auth_policy.remember_device_days), \
              phishing_resistant_only = COALESCE($7, role_auth_policy.phishing_resistant_only), \
+             passkey_sign_in = COALESCE($8, role_auth_policy.passkey_sign_in), \
              row_version = role_auth_policy.row_version + 1, updated_at = now()",
     )
     .bind(role_id)
@@ -245,6 +254,7 @@ async fn put_role_auth_policy(
     .bind(body.mfa_grace_days)
     .bind(body.remember_device_days)
     .bind(body.phishing_resistant_only)
+    .bind(body.passkey_sign_in)
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -306,7 +316,9 @@ async fn add_break_glass(
     let (exists, has_factor): (bool, bool) = sqlx::query_as(
         "SELECT EXISTS (SELECT 1 FROM user_account WHERE id = $1 AND is_active), \
                 EXISTS (SELECT 1 FROM user_mfa \
-                         WHERE user_ref = $1 AND NOT is_deleted AND confirmed_at IS NOT NULL)",
+                         WHERE user_ref = $1 AND NOT is_deleted AND confirmed_at IS NOT NULL) \
+             OR EXISTS (SELECT 1 FROM webauthn_credential \
+                         WHERE user_ref = $1 AND NOT is_deleted)",
     )
     .bind(body.user_id)
     .fetch_one(&mut *tx)

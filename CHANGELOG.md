@@ -59,6 +59,17 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Passkeys (Q6-T1): `GET /api/v1/auth/passkeys`, `POST .../passkeys/register/start` and `/finish`,
+  and `DELETE .../passkeys/{id}` (adding or removing one needs a fresh `passkey_manage` step-up);
+  a passkey as the second factor of a password sign-in (`POST /api/v1/auth/mfa/passkey/start` and
+  `/verify`, and `passkey: true` on the challenge), a passkey step-up for any operation a person
+  with a passkey must step up for (`POST /api/v1/auth/step-up/{operation}/passkey` and `/verify`;
+  `passkey` is now named in `acceptable_factors`), and a sign-in with a passkey
+  alone (`POST /api/v1/auth/passkey/start` and `/verify`) for holders of a role whose sign-in policy
+  sets the new `passkey_sign_in` (migration 0329), never past a single sign-on rule. A passkey now
+  counts as an enrolled second factor and as a break-glass account's authenticator, and an
+  administrator's MFA reset removes the person's passkeys too. `auth.passkey_rp_id` and
+  `auth.passkey_origins` name the relying party; unset, the frontend URL's host and origin.
 - Your own sessions (Q8-T4): `GET /api/v1/auth/sessions` lists where you are signed in (browser,
   sign-in method, country when `auth.geoip_database` is set, start and last activity, and which
   one is this browser); `DELETE /api/v1/auth/sessions/{id}` ends one and

@@ -192,11 +192,20 @@ nothing. A role may set its own mode instead, stricter or not.
   the failures count. What was seen is kept per person without the address; a person with no
   history yet is not judged.
 
+- **Passkeys.** A person adds passkeys on Settings > Security after a fresh step-up
+  (`passkey_manage`); a passkey is then a second factor like an authenticator app
+  (`POST /api/v1/auth/mfa/passkey/start` and `/verify` with the pending sign-in token), and a
+  step-up factor. Signing in with a passkey alone, with no password
+  (`POST /api/v1/auth/passkey/start` and `/verify`), works only for a person holding a role whose
+  sign-in policy sets `passkey_sign_in`, and never past a single sign-on rule. Passkeys are bound
+  to `auth.passkey_rp_id` (the frontend URL's host when unset); one registered under a host never
+  works under another. An administrator's MFA reset removes the person's passkeys.
+
 A role's mode is stored with its sign-in policy (`role_auth_policy`) and edited on the role form's
 Sign-in tab, through `GET` and `PUT /api/v1/admin/security/roles/{id}/auth-policy`: single sign-on
 only, the second-factor mode, the allowed factors (codes sent by email or message are never used,
 nor offered, for a role that grants administration), grace days (0 to 90), remember-browser days
-(0 to 365) and phishing-resistant only. Each field of the `PUT` is optional; the ones given change.
+(0 to 365), phishing-resistant only and passkey sign-in. Each field of the `PUT` is optional; the ones given change.
 Security > MFA Coverage lists who has which factor, by role. While a person's grace period runs, the
 sign-in page offers "Set up now" or "Later (N days left)"; a code may be typed in Arabic-Indic
 digits.
