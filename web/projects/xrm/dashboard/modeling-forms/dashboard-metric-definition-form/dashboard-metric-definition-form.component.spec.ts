@@ -40,11 +40,9 @@ const ARABIC: Record<string, string> = {
 };
 
 describe('DashboardMetricDefinitionFormComponent (P9-T14)', () => {
-  let post: ReturnType<typeof vi.fn>;
   let privileged: boolean;
 
   beforeEach(() => {
-    post = vi.fn(() => of({ metric_id: 'm1', certified: true, certified_at: '2026-10-29T00:00:00Z' }));
     privileged = false;
     TestBed.configureTestingModule({
       imports: [DashboardMetricDefinitionFormComponent],
@@ -59,7 +57,6 @@ describe('DashboardMetricDefinitionFormComponent (P9-T14)', () => {
             get: () => of({ id: 'm1', row_version: 1, data: { name: 'Win rate', certified: false } }),
           },
         },
-        { provide: ApiService, useValue: { post } },
         { provide: AccessService, useValue: { hasPrivilege: (key: string) => privileged && key === CERTIFY_PRIVILEGE } },
         {
           provide: Router,
@@ -115,7 +112,6 @@ describe('DashboardMetricDefinitionFormComponent (P9-T14)', () => {
             get: () => of({ id: 'm1', row_version: 1, data: { name: 'Win rate', certified: false } }),
           },
         },
-        { provide: ApiService, useValue: { post } },
         { provide: AccessService, useValue: { hasPrivilege: (key: string) => privileged && key === CERTIFY_PRIVILEGE } },
         {
           provide: Router,
@@ -128,6 +124,11 @@ describe('DashboardMetricDefinitionFormComponent (P9-T14)', () => {
       remove: { imports: [RecordTabPanelsComponent] },
       add: { imports: [RecordTabPanelsStubComponent] },
     });
+    // The real ApiService serves the form's other parts; only the certify
+    // call is answered here.
+    const post = vi.spyOn(TestBed.inject(ApiService), 'post').mockReturnValue(
+      of({ metric_id: 'm1', certified: true, certified_at: '2026-10-29T00:00:00Z' }) as never,
+    );
     ({ el } = create());
     const button = el.querySelector<HTMLButtonElement>('[data-testid="certify-button"]');
     expect(button).not.toBeNull();
