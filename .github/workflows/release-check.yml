@@ -17,7 +17,9 @@ permissions:
 # full; pushes made while one runs wait, and only the newest of them is kept
 # (GitHub replaces an older pending run in the group with a newer one).
 concurrency:
-  group: release-check-${{ github.ref }}
+  # v2 (2026-10-29): a new group, so the first run with the gate fixes did not
+  # queue behind a 6-hour run of the code before them.
+  group: release-check-v2-${{ github.ref }}
   cancel-in-progress: false
 
 env:
