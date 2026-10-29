@@ -22,3 +22,13 @@ text attributes: the target entity's logical name and the target record's id. Th
 Every write sets both attributes together, to an allowed, live record the writer may read. A filter
 can follow the pair into the target's own fields: `regarding_entity = account AND regarding_id.city
 = Riyadh`.
+
+## Many parties: activity parties
+
+One activity can involve several people of different kinds. The CRM pack's `activity_party`
+(changeset 0009) links an activity (`activity_ref`) to a contact, account, lead or user (the
+polymorphic pair `party_entity`/`party_id`) with how they take part: `organizer`, `required`,
+`optional`, `from`, `to`, `cc` or `bcc`. A link goes with its activity (a cascade lookup) and with
+the person when they are deleted (`on_delete: {"*": "cascade-deactivate"}`). Filtering by the
+party's own fields works through the pair, as for any polymorphic lookup: `party_entity = contact
+AND party_id.city = Riyadh`.
