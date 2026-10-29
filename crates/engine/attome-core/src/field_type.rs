@@ -29,8 +29,6 @@ pub enum FieldType {
     Time,
     Geolocation,
     Json,
-    /// A10-T1: computed from related records (`crate::rollup`), stored in a
-    /// column of its `options.result_type`.
     Rollup,
 }
 
@@ -214,8 +212,9 @@ impl FieldType {
                 .filter(|t| FORMULA_RESULT_TYPES.contains(t))
                 .and_then(|t| Self::try_from(t).ok())
                 .unwrap_or(Self::Text),
-            // A10-T1: a rollup's column is its result type (a number when
-            // absent or unknown).
+            // A10-T1: a rollup (computed from related records,
+            // `crate::rollup`) is stored in a column of its result type (a
+            // number when absent or unknown).
             Self::Rollup => options
                 .and_then(|o| o.get("result_type"))
                 .and_then(Value::as_str)
