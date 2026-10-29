@@ -125,6 +125,12 @@ function down(node) {
       else Object.assign(node, rest[0]);
     } else node[key] = rest;
   }
+  // A union with a list member (ErrorResponse.details) is beyond some
+  // generators' union classes (Java's names a type after `List<...>`): it
+  // reads as any JSON value instead, its description kept.
+  for (const key of ['oneOf', 'anyOf']) {
+    if (Array.isArray(node[key]) && node[key].some(s => s && s.type === 'array')) delete node[key];
+  }
   if ('const' in node) {
     node.enum = [node.const];
     delete node.const;
