@@ -254,6 +254,7 @@ mod tests {
             targets: vec!["account".into()],
             extends: None,
             any: false,
+            on_delete: Default::default(),
         };
         assert!(allowed(&listed, "account", None));
         assert!(!allowed(&listed, "contact", None));
@@ -262,6 +263,7 @@ mod tests {
             targets: vec![],
             extends: Some("party".into()),
             any: false,
+            on_delete: Default::default(),
         };
         assert!(allowed(&based, "person", Some("party")));
         assert!(allowed(&based, "party", None));
