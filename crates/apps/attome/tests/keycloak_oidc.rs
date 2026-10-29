@@ -66,6 +66,15 @@ const OIDC_CLIENT_SECRET: &str = "oidc-test-client-secret-throwaway";
 const TEST_USERNAME: &str = "attome-test-user";
 const TEST_PASSWORD: &str = "attome-test-Passw0rd!";
 const TEST_EMAIL: &str = "attome-test-user@attome-test.invalid";
+/// Q1-T15: the provider added through the admin API, signing in through the
+/// same Keycloak client (its redirect and back-channel URLs name this key).
+const DB_PROVIDER_KEY: &str = "keycloak-db";
+const SALES_USERNAME: &str = "attome-sales-user";
+const SALES_PASSWORD: &str = "attome-sales-Passw0rd!";
+const SALES_EMAIL: &str = "attome-sales-user@attome-test.invalid";
+const SEAL_KEY_HEX: &str = "abababababababababababababababababababababababababababababababab";
+/// Where the realm's back-channel logout URL points (`host.docker.internal`).
+const BACKCHANNEL_PORT: u16 = 9998;
 
 fn keycloak_base_url() -> String {
     std::env::var("KEYCLOAK_BASE_URL").unwrap_or_else(|_| "http://localhost:8090".into())
@@ -177,13 +186,22 @@ fn test_config() -> AppConfig {
         client_secret = OIDC_CLIENT_SECRET,
     );
 
-    serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig")
+    let mut config: AppConfig =
+        serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig");
+    // Q1-T15: a provider added through the admin API has its secret sealed.
+    config.oidc.client_secret_encryption_key =
+        serde_json::from_value(serde_json::json!(SEAL_KEY_HEX)).expect("seal key");
+    config
 }
 
 /// Same harness shape as `middleware_pipeline.rs`/`audit_throughput_load.rs`
 /// — a real Postgres/Redis, the real `auth::public_routes()` + `EngineSystem`
 /// composition, no real TCP listener (`tower::ServiceExt::oneshot` instead).
 async fn test_app() -> Option<(axum::Router, AppState)> {
+    // Q21-T1: the identity-provider client refuses a private host unless
+    // boot lists its issuer; the test Keycloak is on localhost.
+    let issuer = oidc_issuer();
+    attome_auth::oidc::configure_identity_providers([issuer.as_str()]);
     let throwaway_url = attome_testkit::migrated_db_url()?;
     let mut config = test_config();
     point_config_at(&mut config, &throwaway_url);
@@ -318,19 +336,23 @@ fn extract_code_and_state(location: &str) -> (String, String) {
 /// `oneshot`), follows it to Keycloak's login page (or straight through, if
 /// this `client`'s cookie jar already has a live Keycloak SSO session from an
 /// earlier call in the same test), submits the test user's credentials, and
-/// returns the `code`/`state` our own callback route needs next.
+/// returns the `code`/`state` our own callback route needs next, signing in
+/// through `provider` as `username`.
 ///
 /// Also returns the `Set-Cookie` pair the `/login` response issued — the
 /// BAU-4a browser-binding cookie. A real browser stores it and replays it on
 /// the cross-site redirect back, which is the whole point of the binding; a
 /// harness that drops it is not modelling a browser, and without the cookie
 /// the callback is (correctly) refused.
-async fn drive_oidc_login_to_code(
+async fn drive_login_to_code_as(
     app: &axum::Router,
     client: &reqwest::Client,
+    provider: &str,
+    username: &str,
+    password: &str,
 ) -> (String, String, String) {
     let login_req = Request::builder()
-        .uri(format!("/api/v1/auth/oidc/{OIDC_PROVIDER_KEY}/login"))
+        .uri(format!("/api/v1/auth/oidc/{provider}/login"))
         .body(Body::empty())
         .unwrap();
     let login_res = app
@@ -379,8 +401,8 @@ async fn drive_oidc_login_to_code(
     let html = resp.text().await.expect("read Keycloak login page body");
     let action = extract_login_form_action(&html);
     let body = form_urlencode(&[
-        ("username", TEST_USERNAME),
-        ("password", TEST_PASSWORD),
+        ("username", username),
+        ("password", password),
         ("credentialId", ""),
     ]);
     let login_submit = client
@@ -408,10 +430,22 @@ async fn drive_full_oidc_login(
     app: &axum::Router,
     client: &reqwest::Client,
 ) -> axum::http::Response<Body> {
-    let (code, state, binding_cookie) = drive_oidc_login_to_code(app, client).await;
+    drive_full_login_as(app, client, OIDC_PROVIDER_KEY, TEST_USERNAME, TEST_PASSWORD).await
+}
+
+/// [`drive_full_oidc_login`] through `provider` as `username`.
+async fn drive_full_login_as(
+    app: &axum::Router,
+    client: &reqwest::Client,
+    provider: &str,
+    username: &str,
+    password: &str,
+) -> axum::http::Response<Body> {
+    let (code, state, binding_cookie) =
+        drive_login_to_code_as(app, client, provider, username, password).await;
     let callback_req = Request::builder()
         .uri(format!(
-            "/api/v1/auth/oidc/{OIDC_PROVIDER_KEY}/callback?code={code}&state={state}"
+            "/api/v1/auth/oidc/{provider}/callback?code={code}&state={state}"
         ))
         // The browser replays the binding cookie the start route set (BAU-4a).
         // Without it the callback is refused before the single-use state is
@@ -648,4 +682,361 @@ async fn oidc_login_after_account_disabled_is_rejected() {
     // Restore the shared test account for every other test in this file (and
     // any future run) — see `ensure_test_account_active`'s doc comment.
     ensure_test_account_active(&state.db).await;
+}
+
+// ── Q1-T15: a provider added through the admin API ───────────────────────────
+
+/// A `system.admin` and their session cookie (`secure_cookies = false`).
+async fn seed_admin_cookie(state: &AppState) -> String {
+    let user_id = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO user_account (id, user_name, email, is_active) \
+         VALUES ($1, $2, $2 || '@admin.invalid', true)",
+    )
+    .bind(user_id)
+    .bind(format!("keycloak-admin-{user_id}"))
+    .execute(&state.db)
+    .await
+    .expect("insert admin");
+    sqlx::query(
+        "INSERT INTO user_account_mm_privilege (id, user_ref, privilege_ref, is_active, created_at) \
+         SELECT $1, $2, id, true, NOW() FROM privilege WHERE key = 'system.admin'",
+    )
+    .bind(Uuid::now_v7())
+    .bind(user_id)
+    .execute(&state.db)
+    .await
+    .expect("grant system.admin");
+    let now = chrono::Utc::now().timestamp();
+    let claims = attome_auth::SessionClaims {
+        sub: user_id,
+        iat: now,
+        exp: now + 3600,
+        jti: Uuid::now_v7(),
+        epoch: 0,
+        iss: state.config.auth.jwt_issuer.clone(),
+        aud: state.config.jwt_audience().to_string(),
+        typ: attome_auth::TokenType::Session,
+    };
+    let token = attome_auth::create_token(&claims, &state.secrets.load().jwt_secret)
+        .expect("encode admin token");
+    format!(
+        "{}={token}",
+        attome_auth::cookie::session_cookie_name(false)
+    )
+}
+
+async fn admin_call(
+    app: &axum::Router,
+    cookie: &str,
+    method: &str,
+    uri: &str,
+    body: serde_json::Value,
+) -> (StatusCode, serde_json::Value) {
+    let res = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(method)
+                .uri(uri)
+                .header(header::COOKIE, cookie)
+                .header("origin", "http://allowed.test")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .expect("admin request");
+    let status = res.status();
+    let bytes = axum::body::to_bytes(res.into_body(), usize::MAX)
+        .await
+        .expect("read body");
+    (
+        status,
+        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
+    )
+}
+
+/// Adds the Keycloak client as a provider through the admin API (sign-ups
+/// allowed, the `groups` claim read), verifies the realm's email domain for
+/// it, and loads it into the sign-in list. Returns its id.
+async fn add_db_provider(app: &axum::Router, state: &AppState, admin: &str) -> Uuid {
+    let (status, created) = admin_call(
+        app,
+        admin,
+        "POST",
+        "/api/v1/admin/security/oidc-providers",
+        serde_json::json!({
+            "key": DB_PROVIDER_KEY,
+            "display_name": "Keycloak (database)",
+            "issuer": oidc_issuer(),
+            "client_id": OIDC_CLIENT_ID,
+            "client_secret": OIDC_CLIENT_SECRET,
+            "scopes": ["openid", "email", "profile"],
+            "claim_map": { "groups": "groups" },
+            "link_mode": "create",
+        }),
+    )
+    .await;
+    // Both tests in this binary add it; the second finds it there.
+    let provider_id: Uuid = if status == StatusCode::CONFLICT {
+        sqlx::query_scalar("SELECT id FROM oidc_provider WHERE key = $1 AND NOT is_deleted")
+            .bind(DB_PROVIDER_KEY)
+            .fetch_one(&state.db)
+            .await
+            .expect("the provider an earlier test added")
+    } else {
+        assert_eq!(
+            status,
+            StatusCode::CREATED,
+            "create the provider: {created}"
+        );
+        created["id"].as_str().unwrap().parse().unwrap()
+    };
+    // The domain proof is DNS, out of a test's reach; the row it leaves.
+    sqlx::query(
+        "INSERT INTO oidc_domain (domain, provider_ref, verification_token, verified_at) \
+         VALUES ('attome-test.invalid', $1, 'token', now()) \
+         ON CONFLICT (domain) DO UPDATE SET provider_ref = EXCLUDED.provider_ref, verified_at = now()",
+    )
+    .bind(provider_id)
+    .execute(&state.db)
+    .await
+    .expect("verify the realm's domain");
+    state
+        .oidc_providers
+        .reload(
+            &state.db,
+            &state.config.oidc.providers,
+            &state.secrets.load().oidc_client_secrets,
+            &state.config.oidc.client_secret_encryption_key,
+        )
+        .await
+        .expect("reload providers");
+    assert!(state.oidc_providers.get(DB_PROVIDER_KEY).is_some());
+    provider_id
+}
+
+fn cookie_named(res: &axum::http::Response<Body>, name: &str) -> Option<String> {
+    res.headers()
+        .get_all(header::SET_COOKIE)
+        .iter()
+        .filter_map(|value| value.to_str().ok()?.split(';').next())
+        .find_map(|pair| pair.strip_prefix(&format!("{name}=")).map(str::to_owned))
+}
+
+#[tokio::test]
+async fn db_provider_login_applies_group_mapping() {
+    wait_for_keycloak_ready().await;
+    let (app, state) = skip_if_no_db!(test_app().await);
+    let admin = seed_admin_cookie(&state).await;
+    let provider_id = add_db_provider(&app, &state, &admin).await;
+
+    let team_id = Uuid::now_v7();
+    sqlx::query("INSERT INTO team (id, name) VALUES ($1, $2)")
+        .bind(team_id)
+        .bind(format!("keycloak-sales-{team_id}"))
+        .execute(&state.db)
+        .await
+        .expect("insert team");
+    let (status, mapping) = admin_call(
+        &app,
+        &admin,
+        "POST",
+        &format!("/api/v1/admin/security/oidc-providers/{provider_id}/group-mappings"),
+        serde_json::json!({ "claim_value": "sales", "team_id": team_id }),
+    )
+    .await;
+    assert!(
+        status.is_success(),
+        "create the mapping: {status} {mapping}"
+    );
+
+    let client = reqwest_client_with_cookies();
+    let res = drive_full_login_as(
+        &app,
+        &client,
+        DB_PROVIDER_KEY,
+        SALES_USERNAME,
+        SALES_PASSWORD,
+    )
+    .await;
+    let location = res
+        .headers()
+        .get(header::LOCATION)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default()
+        .to_owned();
+    assert_eq!(res.status(), StatusCode::FOUND);
+    assert!(
+        !location.contains("oidc_error"),
+        "sign-in failed: {location}"
+    );
+    assert!(
+        cookie_named(&res, "session_token").is_some(),
+        "a session was issued"
+    );
+
+    let in_team: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM user_account_mm_team ut \
+                          JOIN user_account u ON u.id = ut.user_ref \
+                         WHERE u.email = $1 AND ut.team_ref = $2 AND NOT ut.is_deleted)",
+    )
+    .bind(SALES_EMAIL)
+    .bind(team_id)
+    .fetch_one(&state.db)
+    .await
+    .expect("read team membership");
+    assert!(
+        in_team,
+        "the Keycloak group `sales` put the person in the mapped team"
+    );
+}
+
+/// A Keycloak administrator's admin token (the master realm's `admin-cli`).
+async fn keycloak_admin_token(client: &reqwest::Client) -> String {
+    let res = client
+        .post(format!(
+            "{}/realms/master/protocol/openid-connect/token",
+            keycloak_base_url()
+        ))
+        .header(
+            reqwest::header::CONTENT_TYPE,
+            "application/x-www-form-urlencoded",
+        )
+        .body(form_urlencode(&[
+            ("grant_type", "password"),
+            ("client_id", "admin-cli"),
+            ("username", "admin"),
+            ("password", "admin-throwaway-pw"),
+        ]))
+        .send()
+        .await
+        .expect("Keycloak admin token request");
+    let body: serde_json::Value = res.json().await.expect("admin token JSON");
+    body["access_token"]
+        .as_str()
+        .expect("an admin access token")
+        .to_owned()
+}
+
+#[tokio::test]
+async fn keycloak_backchannel_logout_ends_session() {
+    wait_for_keycloak_ready().await;
+    let (app, state) = skip_if_no_db!(test_app().await);
+    let admin = seed_admin_cookie(&state).await;
+    add_db_provider(&app, &state, &admin).await;
+
+    // Keycloak posts the logout token to this listener (the realm's
+    // back-channel URL), from inside its container.
+    let listener = tokio::net::TcpListener::bind(("0.0.0.0", BACKCHANNEL_PORT))
+        .await
+        .expect("bind the back-channel listener");
+    let served = app.clone();
+    let server = tokio::spawn(async move {
+        let _ = axum::serve(listener, served).await;
+    });
+
+    let client = reqwest_client_with_cookies();
+    let res = drive_full_login_as(
+        &app,
+        &client,
+        DB_PROVIDER_KEY,
+        SALES_USERNAME,
+        SALES_PASSWORD,
+    )
+    .await;
+    assert_eq!(res.status(), StatusCode::FOUND);
+    let refresh = cookie_named(&res, "refresh_token").expect("a refresh cookie");
+    let user_id: Uuid = sqlx::query_scalar("SELECT id FROM user_account WHERE email = $1")
+        .bind(SALES_EMAIL)
+        .fetch_one(&state.db)
+        .await
+        .expect("the signed-in person");
+    // This sign-in's family only: an earlier test may have left the same
+    // person signed in through the same provider.
+    let public_id: Uuid = refresh
+        .split_once('.')
+        .and_then(|(id, _)| id.parse().ok())
+        .expect("the refresh token's public id");
+    let live = || async {
+        sqlx::query_scalar::<_, i64>(
+            "SELECT count(*) FROM refresh_token \
+              WHERE user_ref = $1 AND oidc_provider = $2 AND revoked_at IS NULL \
+                AND family_id = (SELECT family_id FROM refresh_token WHERE public_id = $3)",
+        )
+        .bind(user_id)
+        .bind(DB_PROVIDER_KEY)
+        .bind(public_id)
+        .fetch_one(&state.db)
+        .await
+        .expect("count live families")
+    };
+    assert!(live().await > 0, "the sign-in left a live session");
+
+    // Sign the person out in Keycloak: it ends their session there and
+    // posts a logout token to every client's back-channel URL.
+    let kc = reqwest::Client::new();
+    let token = keycloak_admin_token(&kc).await;
+    let users: serde_json::Value = kc
+        .get(format!(
+            "{}/admin/realms/attome-test/users?username={SALES_USERNAME}&exact=true",
+            keycloak_base_url()
+        ))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .expect("find the Keycloak user")
+        .json()
+        .await
+        .expect("users JSON");
+    let kc_user = users[0]["id"].as_str().expect("the Keycloak user id");
+    let logout = kc
+        .post(format!(
+            "{}/admin/realms/attome-test/users/{kc_user}/logout",
+            keycloak_base_url()
+        ))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .expect("sign the user out in Keycloak");
+    assert!(
+        logout.status().is_success(),
+        "Keycloak logout: {}",
+        logout.status()
+    );
+
+    let mut ended = false;
+    for _ in 0..40 {
+        if live().await == 0 {
+            ended = true;
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(250)).await;
+    }
+    server.abort();
+    assert!(
+        ended,
+        "the provider's back-channel logout ended the session"
+    );
+
+    let refreshed = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/auth/refresh")
+                .header(header::COOKIE, format!("refresh_token={refresh}"))
+                .header("origin", "http://allowed.test")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from("{}"))
+                .unwrap(),
+        )
+        .await
+        .expect("refresh request");
+    assert_eq!(
+        refreshed.status(),
+        StatusCode::UNAUTHORIZED,
+        "the next refresh is refused"
+    );
 }

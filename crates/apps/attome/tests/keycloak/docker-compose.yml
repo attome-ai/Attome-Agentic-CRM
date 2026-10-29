@@ -34,3 +34,8 @@ services:
       - "9091:9000"
     volumes:
       - ./realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    # Q1-T15: the realm's back-channel logout posts to the test's own
+    # listener on the host (port 9998); Docker Desktop resolves this name
+    # already, Linux needs the mapping.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

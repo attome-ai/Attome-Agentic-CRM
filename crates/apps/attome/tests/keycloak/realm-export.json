@@ -3,6 +3,11 @@
   "enabled": true,
   "sslRequired": "none",
   "registrationAllowed": false,
+  "groups": [
+    {
+      "name": "sales"
+    }
+  ],
   "users": [
     {
       "username": "attome-test-user",
@@ -15,6 +20,24 @@
         {
           "type": "password",
           "value": "attome-test-Passw0rd!",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "attome-sales-user",
+      "email": "attome-sales-user@attome-test.invalid",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Sales",
+      "lastName": "Test",
+      "groups": [
+        "/sales"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "attome-sales-Passw0rd!",
           "temporary": false
         }
       ]
@@ -32,8 +55,30 @@
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
+      "frontchannelLogout": false,
       "redirectUris": [
-        "http://localhost:9999/api/v1/auth/oidc/keycloak/callback"
+        "http://localhost:9999/api/v1/auth/oidc/keycloak/callback",
+        "http://localhost:9999/api/v1/auth/oidc/keycloak-db/callback"
+      ],
+      "attributes": {
+        "backchannel.logout.url": "http://host.docker.internal:9998/api/v1/auth/oidc/keycloak-db/backchannel-logout",
+        "backchannel.logout.session.required": "true",
+        "backchannel.logout.revoke.offline.tokens": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "groups",
+            "full.path": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "false",
+            "userinfo.token.claim": "true"
+          }
+        }
       ],
       "webOrigins": [],
       "defaultClientScopes": [
