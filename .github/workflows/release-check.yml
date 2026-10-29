@@ -21,9 +21,9 @@ permissions:
 # full; pushes made while one runs wait, and only the newest of them is kept
 # (GitHub replaces an older pending run in the group with a newer one).
 concurrency:
-  # v4 (2026-10-29): a new group each time the gate fixes or the CI split had
+  # v5 (2026-10-29): a new group each time the gate fixes or the CI split had
   # to start without waiting on an hours-long run of the code before them.
-  group: release-check-v4-${{ github.ref }}
+  group: release-check-v5-${{ github.ref }}
   cancel-in-progress: false
 
 env:
