@@ -793,6 +793,51 @@ pub async fn decide_request_step_with_evidence(
     let step = plan.steps.get(step_index).ok_or_else(|| {
         AppError::internal("approval request step index out of range for its own plan")
     })?;
+    // Z10-T3: a parallel group's branches are decided at once, each by its
+    // own approvers. The decider decides the first branch they may decide;
+    // the other branches' populations let the stage close only when each
+    // has what it needs.
+    let stage = plan.active_stage(step_index, &request.skipped_steps);
+    if stage.len() > 1 {
+        let mut branches = Vec::with_capacity(stage.len());
+        for &index in &stage {
+            branches.push((
+                index,
+                resolve_step_approvers(state, &plan.steps[index], request).await?,
+            ));
+        }
+        if let Some((index, (population, principals, allowed, delegate_of))) = branches
+            .iter()
+            .find(|(_, (_, _, allowed, _))| allowed.contains(&decider_id))
+        {
+            let on_behalf_of = decider_on_behalf_of(decider_id, principals, delegate_of);
+            let siblings: Vec<(i32, usize)> = branches
+                .iter()
+                .filter(|(other, _)| other != index)
+                .map(|(other, (population, ..))| {
+                    i32::try_from(*other)
+                        .map(|other| (other, *population))
+                        .map_err(AppError::internal)
+                })
+                .collect::<Result<_, _>>()?;
+            return attome_approval::decide_stage_step_with_evidence(
+                &state.base.db,
+                request.id,
+                i32::try_from(*index).map_err(AppError::internal)?,
+                decider_id,
+                on_behalf_of,
+                allowed,
+                *population,
+                &siblings,
+                decision,
+                expected_row_version,
+                comment,
+                grant,
+                hook,
+            )
+            .await;
+        }
+    }
     let (population, principals, allowed, delegate_of) =
         resolve_step_approvers(state, step, request).await?;
     let on_behalf_of = decider_on_behalf_of(decider_id, &principals, &delegate_of);

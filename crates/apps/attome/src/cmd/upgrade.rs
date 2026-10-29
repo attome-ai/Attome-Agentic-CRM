@@ -270,7 +270,7 @@ pub async fn run_plan(plan: &Plan, fleet: &dyn Fleet) -> Outcome {
 
 /// The real fleet: HTTP for metrics, local processes for commands.
 struct Real {
-    client: reqwest::Client,
+    client: attome_outbound::http::Outbound,
 }
 
 impl Fleet for Real {
@@ -331,16 +331,18 @@ pub async fn run(args: &[String]) -> ExitCode {
             return ExitCode::from(2);
         }
     };
-    let client = match reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
-        .build()
-    {
-        Ok(c) => c,
-        Err(e) => {
-            println!("{e}");
-            return ExitCode::from(1);
-        }
-    };
+    // The nodes' metrics addresses come from the operator's plan and are
+    // usually private (the fleet's own network).
+    let purpose = attome_outbound::http::Purpose::public("cli-upgrade")
+        .with_private_urls(plan.nodes.iter().map(|node| node.metrics_url.as_str()));
+    let client =
+        match attome_outbound::http::client(purpose, |b| b.timeout(Duration::from_secs(10))) {
+            Ok(c) => c,
+            Err(e) => {
+                println!("{e}");
+                return ExitCode::from(1);
+            }
+        };
     match run_plan(&plan, &Real { client }).await {
         Outcome::Done { upgraded } => {
             println!("upgraded: {}", upgraded.join(", "));

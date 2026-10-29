@@ -87,6 +87,9 @@ pub struct BackfillRun {
     pub next: Option<NaiveDate>,
 }
 
+/// One period's first and last day.
+type Period = (NaiveDate, NaiveDate);
+
 /// The periods of `period` starting in `[from, to)`, at most `limit` of
 /// them, oldest first, beginning with the period that contains `from`, and
 /// the first day of the next one when more remain. Pure.
@@ -96,7 +99,7 @@ pub fn periods(
     from: NaiveDate,
     to: NaiveDate,
     limit: usize,
-) -> Result<(Vec<(NaiveDate, NaiveDate)>, Option<NaiveDate>), AppError> {
+) -> Result<(Vec<Period>, Option<NaiveDate>), AppError> {
     let bounds = |day: NaiveDate| {
         crate::metric::period_bounds(
             period,

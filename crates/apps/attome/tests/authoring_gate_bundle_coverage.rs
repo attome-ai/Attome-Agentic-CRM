@@ -33,6 +33,7 @@ const GATED: &[(&str, &str)] = &[
         "field_security_profiles",
         "/api/v1/admin/security/field-profiles",
     ),
+    ("permission_sets", "/api/v1/admin/security/permission-sets"),
     ("state_models", "/api/v1/admin/state-models"),
     ("relationships", "/api/v1/admin/relationships"),
     ("apps", "/api/v1/admin/apps"),

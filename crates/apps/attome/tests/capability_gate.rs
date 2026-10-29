@@ -68,6 +68,21 @@ const GATED_HANDLERS: &[(&str, &str, &str)] = &[
          store turns a diagnosable dependency outage into an opaque 500.",
     ),
     (
+        "start_multipart",
+        "ObjectStorage",
+        "Creates the object-store multipart upload the caller's parts go into; against a dead store the session is recorded but no part can ever land.",
+    ),
+    (
+        "part_url",
+        "ObjectStorage",
+        "Hands the caller a presigned part PUT the object store has to honour, the multipart form of create_upload_session.",
+    ),
+    (
+        "complete",
+        "ObjectStorage",
+        "Lists and assembles the uploaded parts in the object store; an unreachable store turns a diagnosable dependency outage into an opaque 500.",
+    ),
+    (
         "enqueue",
         "BatchJobs",
         "Returns 201 'durably accepted, applied later' for a batch job \
@@ -84,6 +99,11 @@ const GATED_HANDLERS: &[(&str, &str, &str)] = &[
         "BatchJobs",
         "Returns 202 for the bulk update that puts a bulk edit back (B5-T3); with no worker \
          the undo is accepted and never applied.",
+    ),
+    (
+        "apply_fix",
+        "BatchJobs",
+        "Submits a data-quality fix as one bulk edit and returns 202 (A3); with no worker the fix is accepted and never applied.",
     ),
     (
         "enqueue_bulk_transform",

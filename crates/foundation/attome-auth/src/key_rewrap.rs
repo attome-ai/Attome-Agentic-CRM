@@ -70,10 +70,10 @@ fn row_aad(
     pair: Option<(&str, &str)>,
     bound: bool,
 ) -> Result<Vec<u8>, AppError> {
-    Ok(match col.sealing {
-        Sealing::Text if bound => RowBinding {
-            table: col.table,
-            column: col.column,
+    let bound_to = |table: &str, column: &str| -> Result<Vec<u8>, AppError> {
+        Ok(RowBinding {
+            table,
+            column,
             row_id: key.parse().map_err(|_| {
                 AppError::internal(format!(
                     "{}.{}: a bound value's row key is not a UUID",
@@ -81,8 +81,12 @@ fn row_aad(
                 ))
             })?,
         }
-        .aad(),
-        Sealing::Text => Vec::new(),
+        .aad())
+    };
+    Ok(match col.sealing {
+        Sealing::Text if bound => bound_to(col.table, col.column)?,
+        Sealing::TextBoundAs { table, column } if bound => bound_to(table, column)?,
+        Sealing::Text | Sealing::TextBoundAs { .. } => Vec::new(),
         Sealing::BytesKeyAad => key
             .parse::<uuid::Uuid>()
             .map_err(|_| {
@@ -177,7 +181,7 @@ async fn fetch_batch(
     );
     let sql = attome_db::tag_dynamic("key_rewrap.batch", &sql);
     let rows = match col.sealing {
-        Sealing::Text => {
+        Sealing::Text | Sealing::TextBoundAs { .. } => {
             sqlx::query_as::<_, (String, String, Option<String>, Option<String>)>(&sql)
                 .bind(after)
                 .bind(batch)
@@ -460,6 +464,28 @@ mod tests {
                 .unwrap()
                 .into_exposed(),
             "tok"
+        );
+
+        // A text value sealed through another column's helper keeps that
+        // column's binding.
+        let borrowed = column(
+            "borrowed_t",
+            Sealing::TextBoundAs {
+                table: "bound_t",
+                column: "secret",
+            },
+        );
+        let stored = Stored::Text(encrypt_bound("f", &first_before, "hook", binding).unwrap());
+        let Some(Stored::Text(fresh)) =
+            reseal_row(&borrowed, &first_after, &id.to_string(), None, &stored).unwrap()
+        else {
+            panic!("resealed")
+        };
+        assert_eq!(
+            crate::envelope::decrypt_bound("f", &first_after, &fresh, binding)
+                .unwrap()
+                .into_exposed(),
+            "hook"
         );
 
         // Domain two: the three bytea shapes.

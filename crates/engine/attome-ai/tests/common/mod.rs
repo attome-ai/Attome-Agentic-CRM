@@ -158,6 +158,18 @@ pub async fn test_state_with(configure: impl FnOnce(&mut AppConfig)) -> Option<E
     state
         .modules
         .store(Arc::new(ModuleSet::from_bits([u64::MAX; 4])));
+    // The real resolver, as `EngineSystem::build` installs it: the state
+    // starts with the fail-closed DenyAllResolver, under which a job that
+    // resolves its requester (`undo::run_undo`) is always Forbidden.
+    state
+        .base
+        .security
+        .store(Arc::new(attome_security::EngineSecurityResolver::new(
+            state.base.db.clone(),
+            state.base.redis.clone(),
+            state.base.redis_coordination.clone(),
+            state.base.config.security.strict_revocation,
+        )));
     Some(state)
 }
 

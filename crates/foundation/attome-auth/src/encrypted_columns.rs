@@ -27,6 +27,13 @@ pub enum Sealing {
     /// Base64 text; a `0x02` value is bound to `table|column|key`
     /// ([`crate::envelope::RowBinding`]), a `0x01` value to nothing.
     Text,
+    /// Base64 text whose `0x02` value is bound to another column's
+    /// `table|column` and this row's key: the value was sealed through that
+    /// column's helper, so the binding names it, not where it is stored.
+    TextBoundAs {
+        table: &'static str,
+        column: &'static str,
+    },
     /// `bytea`, sealed against the row key's 16 UUID bytes.
     BytesKeyAad,
     /// `bytea`, sealed against `"{prefix}{key}"`.
@@ -91,7 +98,33 @@ pub const ENCRYPTED_COLUMNS: &[EncryptedColumn] = &[
         "id",
         Sealing::BytesKeyAad,
     ),
+    // A hook's signing secret goes through `attome_integration::crypto::
+    // encrypt_credential`, so it is bound as an integration credential.
+    sealed(
+        "inbound_hook",
+        "secret_sealed",
+        "integration",
+        "id",
+        Sealing::TextBoundAs {
+            table: "integration_credential",
+            column: "secret_encrypted",
+        },
+    ),
     col("integration_credential", "secret_encrypted", "integration"),
+    sealed(
+        "integration_oauth_token",
+        "access_token_encrypted",
+        "integration",
+        "system_id",
+        Sealing::Text,
+    ),
+    sealed(
+        "integration_oauth_token",
+        "refresh_token_encrypted",
+        "integration",
+        "system_id",
+        Sealing::Text,
+    ),
     col("mcp_server", "credential_encrypted", "mcp"),
     col("oidc_provider", "client_secret_enc", "oidc"),
     sealed(
@@ -141,6 +174,18 @@ pub const PLAIN_BY_DESIGN: &[(&str, &str, &str)] = &[
         "einvoice_device",
         "production_token",
         "ZATCA's production CSID: the certificate it issued (public); its secret is encrypted apart",
+    ),
+    (
+        "webauthn_credential",
+        "credential_id",
+        "the authenticator's public credential ID, sent to the browser at every sign-in",
+    ),
+    (
+        "email_campaign_recipient",
+        "unsubscribe_token",
+        "a random per-recipient bearer token the send path reads back into every unsubscribe \
+         link; it can only unsubscribe that one address. Hashing it means building the links \
+         at insert time (open follow-up)",
     ),
     (
         "theme",

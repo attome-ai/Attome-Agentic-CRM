@@ -753,11 +753,13 @@ async fn challenged(app: &axum::Router, state: &AppState, n: u8) -> (Uuid, Strin
 async fn failed_totp_attempt_is_audited() {
     let (app, state, _) = skip_if_no_db!(test_app().await);
     let (user_id, token, _) = challenged(&app, &state, 31).await;
+    // Not "000000": the event's nil record id carries that run of zeros.
+    let wrong_code = "731946";
     let res = app
         .clone()
         .oneshot(post_json_from(
             "/api/v1/auth/mfa/verify",
-            serde_json::json!({ "pending_token": token, "code": "000000" }),
+            serde_json::json!({ "pending_token": token, "code": wrong_code }),
             31,
         ))
         .await
@@ -772,8 +774,9 @@ async fn failed_totp_attempt_is_audited() {
     );
     assert_eq!(rows[0].outcome.as_deref(), Some("Failed"));
     assert!(
-        !rows[0].payload.contains("000000"),
-        "the code is never written"
+        !rows[0].payload.contains(wrong_code),
+        "the code is never written: {}",
+        rows[0].payload
     );
 }
 

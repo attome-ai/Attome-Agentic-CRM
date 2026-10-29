@@ -23,6 +23,7 @@ use attome_core::EngineState;
 use attome_records::entity_crud;
 use attome_security::SecurityContextExt;
 use attome_server::authz::{Authorized, Privilege, SelfService, area};
+use attome_server::capability::{Available, BatchJobs};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use attome_types::{DEFAULT_PAGE_SIZE, PageBase, PageWindow};
 use axum::{
@@ -1326,7 +1327,7 @@ async fn preview_fix(
 async fn apply_fix(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<area::DataModel>>,
-    _jobs: attome_server::capability::Available<attome_server::capability::BatchJobs>,
+    _jobs: Available<BatchJobs>,
     Json(body): Json<QualityFixBody>,
 ) -> Result<
     (

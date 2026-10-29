@@ -32,7 +32,9 @@ const HEAVY: &[(&str, &str, &str)] = &[
     ),
     (
         "crates/engine/attome-api/src/admin/attribute.rs",
-        "do_create_attribute_recorded",
+        // A1-T4: the recorded entry point copies the field down to extending
+        // entities; each copy's index build lives in `do_create_attribute_one`.
+        "do_create_attribute_one",
         "attribute index build on create",
     ),
     (

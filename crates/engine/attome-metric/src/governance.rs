@@ -27,6 +27,10 @@ use uuid::Uuid;
 
 use crate::metric::SnapshotRow;
 
+/// A dimension list's shape: its dimension count, and each lookup position
+/// with its target entity's id and name.
+type DimensionShape = (usize, Vec<(usize, Uuid, String)>);
+
 /// The privilege a manual value needs.
 pub const ENTER_VALUE: &str = "attome_metric.enter_value";
 /// The privilege certification needs.
@@ -149,7 +153,7 @@ pub async fn visible_members(
     let meta = entity.as_deref().and_then(|e| registry.get(e));
     // Per dimension list: (dimension count, lookup positions with their
     // target entity), or None when the metric's fields are unknown.
-    let mut shapes: HashMap<String, Option<(usize, Vec<(usize, Uuid, String)>)>> = HashMap::new();
+    let mut shapes: HashMap<String, Option<DimensionShape>> = HashMap::new();
     for row in &rows {
         let Some(attrs) = &row.dimension_attribute else {
             continue;

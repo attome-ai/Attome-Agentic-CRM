@@ -332,7 +332,9 @@ mod tests {
             workflow_nodes: true,
         };
         let security = security_context_with(true, &[]);
-        let ctx = ActionContext::agent(security, RiskTier::Consequential);
+        // Every surface attaches a per-call key; draft_policy requires one.
+        let ctx = ActionContext::agent(security, RiskTier::Consequential)
+            .with_idempotency_key("governance-test-call");
         let inputs = gate::GateInputs {
             licensed: true,
             ai: &ai,

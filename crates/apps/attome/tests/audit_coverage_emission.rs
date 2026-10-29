@@ -556,6 +556,8 @@ async fn fixture() -> Option<Fx> {
         .register(attome_ops::OpsModel)
         // P8-T1: dashboard embeds and their tokens.
         .register(attome_dashboard::DashboardModel)
+        // A25-T9: search settings, synonyms, stop words and pins.
+        .register(attome_search::SearchModel)
         .build()
         .await
         .expect("build EngineSystem");

@@ -880,12 +880,14 @@ async fn visible_tools(
 
 /// Y4-T2: the tool names `tools/list` would show a user with `security`,
 /// for tests and diagnostics; the same listing, so an off module's tools are
-/// absent here exactly when they are absent there.
+/// absent here exactly when they are absent there. As an agent, as every MCP
+/// caller is: an untainted session with no allow-list at the highest ceiling,
+/// since there is no session here to take them from.
 pub async fn visible_tool_names(
     state: &EngineState,
     security: Arc<SecurityContext>,
 ) -> Vec<String> {
-    let ctx = crate::context::ActionContext::user(security);
+    let ctx = crate::context::ActionContext::agent(security, RiskTier::Consequential);
     visible_tools(state, &ctx)
         .await
         .into_iter()

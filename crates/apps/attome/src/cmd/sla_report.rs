@@ -250,7 +250,7 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
     Ok(out)
 }
 
-async fn probe_once(client: &reqwest::Client, url: &str) -> Probe {
+async fn probe_once(client: &attome_outbound::http::Outbound, url: &str) -> Probe {
     let started = std::time::Instant::now();
     let answer = client.get(format!("{url}/health/ready")).send().await;
     let ms = u64::try_from(started.elapsed().as_millis()).ok();
@@ -298,9 +298,9 @@ async fn probe(args: Args) -> Result<(), String> {
         .transpose()?
         .unwrap_or(DEFAULT_INTERVAL_SECS)
         .max(5);
-    let client = reqwest::Client::builder()
-        .timeout(PROBE_TIMEOUT)
-        .build()
+    let purpose =
+        attome_outbound::http::Purpose::public("cli-sla-probe").with_private_urls([url.as_str()]);
+    let client = attome_outbound::http::client(purpose, |b| b.timeout(PROBE_TIMEOUT))
         .map_err(|e| e.to_string())?;
     let mut ticker = tokio::time::interval(Duration::from_secs(interval));
     loop {

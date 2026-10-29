@@ -142,9 +142,19 @@ pub async fn load_config_from(
 }
 
 async fn fetch(source: &Source) -> Result<Vec<(String, String)>, String> {
-    let client = reqwest::Client::builder()
-        .timeout(TOTAL_TIMEOUT)
-        .build()
+    // The store's own host may be a private endpoint inside the operator's
+    // network (a VPC endpoint, an Azure private link); it comes from the
+    // operator's environment, never from a request.
+    let store_host = match source {
+        Source::Aws { region, .. } => format!("secretsmanager.{region}.amazonaws.com"),
+        Source::Azure { vault_url, .. } => reqwest::Url::parse(vault_url)
+            .ok()
+            .and_then(|u| u.host_str().map(str::to_owned))
+            .unwrap_or_default(),
+    };
+    let purpose =
+        attome_outbound::http::Purpose::public("secret-sources").with_private_hosts([store_host]);
+    let client = attome_outbound::http::client(purpose, |b| b.timeout(TOTAL_TIMEOUT))
         .map_err(|_| "could not build the HTTP client".to_owned())?;
     match source {
         #[cfg(feature = "aws-secrets")]
@@ -263,7 +273,7 @@ mod aws {
     }
 
     pub(super) async fn fetch(
-        client: &reqwest::Client,
+        client: &attome_outbound::http::Outbound,
         region: &str,
         prefix: &str,
     ) -> Result<Vec<(String, String)>, String> {
@@ -343,7 +353,7 @@ mod azure {
 
     const API_VERSION: &str = "7.4";
 
-    async fn token(client: &reqwest::Client) -> Result<String, String> {
+    async fn token(client: &attome_outbound::http::Outbound) -> Result<String, String> {
         let need = "AZURE_TENANT_ID, AZURE_CLIENT_ID and AZURE_CLIENT_SECRET are needed";
         let tenant = super::env("AZURE_TENANT_ID").ok_or(need)?;
         let client_id = super::env("AZURE_CLIENT_ID").ok_or(need)?;
@@ -381,7 +391,11 @@ mod azure {
             .ok_or_else(|| "sign-in gave no access token".to_owned())
     }
 
-    async fn get(client: &reqwest::Client, token: &str, url: &str) -> Result<Value, String> {
+    async fn get(
+        client: &attome_outbound::http::Outbound,
+        token: &str,
+        url: &str,
+    ) -> Result<Value, String> {
         let response = client
             .get(url)
             .bearer_auth(token)
@@ -406,7 +420,7 @@ mod azure {
     }
 
     pub(super) async fn fetch(
-        client: &reqwest::Client,
+        client: &attome_outbound::http::Outbound,
         vault_url: &str,
         prefix: &str,
     ) -> Result<Vec<(String, String)>, String> {

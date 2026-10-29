@@ -97,6 +97,11 @@ pub(crate) const GOVERNED_ACTIONS: &[(&str, Verb)] = &[
     ("record.bulk.status", Verb::Read),
     ("record.bulk.update", Verb::Update),
     ("record.bulk.delete", Verb::Delete),
+    // AA10-T10: a mass start's verb follows its `kind` ([`call_verb`]); the
+    // listed `delete` answers a call whose kind is missing or unknown.
+    ("record.mass.estimate", Verb::Read),
+    ("record.mass.start", Verb::Delete),
+    ("record.mass.start_confirmed", Verb::Delete),
     // A15-T8: duplicates act on one entity's records.
     ("duplicates.check", Verb::Read),
     ("duplicates.list", Verb::Read),
@@ -153,6 +158,19 @@ pub(crate) fn governed_verb(action: &str) -> Option<Verb> {
         .iter()
         .find(|(id, _)| *id == action)
         .map(|(_, verb)| *verb)
+}
+
+/// The verb one call needs: the listed one, except a mass start, which needs
+/// what its `kind` does (a restore needs `update`, as `record.restore` does),
+/// so admission for `update` never lets an agent mass-delete.
+fn call_verb(action: &str, listed: Verb, args: &Value) -> Verb {
+    if action != "record.mass.start" && action != "record.mass.start_confirmed" {
+        return listed;
+    }
+    match args.get("kind").and_then(Value::as_str) {
+        Some("update" | "restore") => Verb::Update,
+        _ => Verb::Delete,
+    }
 }
 
 /// The code-owned exclusion for `entity`, if any.
@@ -248,9 +266,10 @@ pub(crate) fn check(
     if !ctx.is_mcp_agent() {
         return Ok(());
     }
-    let Some(verb) = governed_verb(action.as_str()) else {
+    let Some(listed) = governed_verb(action.as_str()) else {
         return Ok(());
     };
+    let verb = call_verb(action.as_str(), listed, args);
     // A governed call without an entity name reaches nothing; refuse it the
     // same dark way rather than let an executor decide what it meant.
     let Some(entity) = args.get("entity").and_then(Value::as_str) else {
@@ -819,6 +838,29 @@ mod tests {
         for name in ["account", "contact", "service_case", "rw_test_x"] {
             assert_eq!(excluded_reason(name), None, "{name}");
         }
+    }
+
+    /// A mass start needs the verb of its kind; admission for `update` never
+    /// admits a mass delete.
+    #[test]
+    fn a_mass_start_needs_the_verb_of_its_kind() {
+        for action in ["record.mass.start", "record.mass.start_confirmed"] {
+            let listed = governed_verb(action).expect("governed");
+            let verb = |kind: Value| call_verb(action, listed, &json!({ "kind": kind }));
+            assert_eq!(verb(json!("update")), Verb::Update, "{action}");
+            assert_eq!(verb(json!("restore")), Verb::Update, "{action}");
+            assert_eq!(verb(json!("delete")), Verb::Delete, "{action}");
+            assert_eq!(verb(json!("purge")), Verb::Delete, "{action}");
+            assert_eq!(call_verb(action, listed, &json!({})), Verb::Delete);
+        }
+        assert_eq!(
+            call_verb(
+                "record.bulk.update",
+                Verb::Update,
+                &json!({ "kind": "delete" })
+            ),
+            Verb::Update
+        );
     }
 
     /// The self-test: every registered `record.*` tool is governed, so a new

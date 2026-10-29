@@ -219,6 +219,7 @@ const SECTION_KEYS: &[(&str, &[&str])] = &[
     ("roles", &["name"]),
     ("privileges", &["key"]),
     ("field_security_profiles", &["name"]),
+    ("permission_sets", &["name"]),
     ("record_sets", &["entity"]),
     ("state_models", &["entity_logicalname"]),
     ("labels", &["object_kind", "object_ref", "locale"]),

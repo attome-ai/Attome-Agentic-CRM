@@ -44,13 +44,16 @@ fn contribution(row: &Value, opts: &RollupOptions) -> Option<(Uuid, String)> {
     Some((parent, amount))
 }
 
+/// One parent and the amount a record contributes to it.
+type Contribution = (Uuid, String);
+
 /// The changes a write makes to the parents: what to take back and what to
 /// add. Nothing when the record counts the same before and after. Pure.
 fn deltas(
     old: Option<&Value>,
     new: Option<&Value>,
     opts: &RollupOptions,
-) -> (Option<(Uuid, String)>, Option<(Uuid, String)>) {
+) -> (Option<Contribution>, Option<Contribution>) {
     let before = old.and_then(|row| contribution(row, opts));
     let after = new.and_then(|row| contribution(row, opts));
     if before == after {

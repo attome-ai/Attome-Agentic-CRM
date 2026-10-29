@@ -69,6 +69,10 @@ pub const DOCS: &[(&str, &str)] = &[
         include_str!("../../../../../docs/README.md"),
     ),
     (
+        "docs/access-model.md",
+        include_str!("../../../../../docs/access-model.md"),
+    ),
+    (
         "docs/agents.md",
         include_str!("../../../../../docs/agents.md"),
     ),
@@ -93,12 +97,20 @@ pub const DOCS: &[(&str, &str)] = &[
         include_str!("../../../../../docs/caching.md"),
     ),
     (
+        "docs/calendars.md",
+        include_str!("../../../../../docs/calendars.md"),
+    ),
+    (
         "docs/change-data-capture.md",
         include_str!("../../../../../docs/change-data-capture.md"),
     ),
     (
         "docs/config-reference.md",
         include_str!("../../../../../docs/config-reference.md"),
+    ),
+    (
+        "docs/dashboard-drill.md",
+        include_str!("../../../../../docs/dashboard-drill.md"),
     ),
     (
         "docs/data-catalog.md",
@@ -175,6 +187,14 @@ pub const DOCS: &[(&str, &str)] = &[
         include_str!("../../../../../docs/mass-operations.md"),
     ),
     (
+        "docs/metadata-layers.md",
+        include_str!("../../../../../docs/metadata-layers.md"),
+    ),
+    (
+        "docs/master-data.md",
+        include_str!("../../../../../docs/master-data.md"),
+    ),
+    (
         "docs/metadata-versions.md",
         include_str!("../../../../../docs/metadata-versions.md"),
     ),
@@ -215,6 +235,10 @@ pub const DOCS: &[(&str, &str)] = &[
         include_str!("../../../../../docs/recycle-bin.md"),
     ),
     (
+        "docs/rollups.md",
+        include_str!("../../../../../docs/rollups.md"),
+    ),
+    (
         "docs/rule-language.md",
         include_str!("../../../../../docs/rule-language.md"),
     ),
@@ -225,6 +249,10 @@ pub const DOCS: &[(&str, &str)] = &[
     (
         "docs/schema-changes.md",
         include_str!("../../../../../docs/schema-changes.md"),
+    ),
+    (
+        "docs/search-builder.md",
+        include_str!("../../../../../docs/search-builder.md"),
     ),
     (
         "docs/secrets.md",
@@ -246,6 +274,10 @@ pub const DOCS: &[(&str, &str)] = &[
     (
         "docs/state-models.md",
         include_str!("../../../../../docs/state-models.md"),
+    ),
+    (
+        "docs/status-page.md",
+        include_str!("../../../../../docs/status-page.md"),
     ),
     (
         "docs/storage.md",

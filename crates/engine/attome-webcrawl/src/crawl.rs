@@ -730,7 +730,14 @@ async fn source_headers(
         ));
     }
     let ring = state.base.secrets.load().integration_credential_key.clone();
-    let probe = reqwest::Client::new().get(root.clone());
+    // Never sent: the request only carries the connection's sign-in headers
+    // out of `apply_auth`.
+    let probe = attome_outbound::http::client(
+        attome_outbound::http::Purpose::public("webcrawl-sign-in"),
+        |b| b,
+    )
+    .map_err(AppError::internal)?
+    .get(root.as_str());
     let signed = connection
         .apply_auth(&state.base.db, &ring, probe, b"")
         .await?

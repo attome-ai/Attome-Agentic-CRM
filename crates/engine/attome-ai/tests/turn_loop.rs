@@ -529,6 +529,18 @@ async fn fixture(script: Vec<Value>) -> Option<Fixture> {
     fixture_opts(script, SessionOpts::default()).await
 }
 
+/// A session offered no tools. Every model call's token estimate carries the
+/// whole visible tool list, and the registry has grown past the point where
+/// a test making many calls in one session stays under the per-session token
+/// budget; a row about something else (the step bound, connection reuse)
+/// must not end as `BudgetExceeded`.
+fn no_tools() -> SessionOpts {
+    SessionOpts {
+        allowed_action_ids: Some(vec![]),
+        ..SessionOpts::default()
+    }
+}
+
 /// A fixture whose session ceiling admits `Consequential` actions — needed for
 /// any row that exercises one, since `visible_to` filters by ceiling before
 /// privilege even enters the question.
@@ -800,7 +812,7 @@ async fn the_step_bound_is_reported() {
     let script: Vec<Value> = (0..turn::MAX_TOOL_STEPS + 2)
         .map(|i| wants_tool(&format!("c{i}"), "record.nope", "{}"))
         .collect();
-    let f = skip_if_no_db!(fixture(script).await);
+    let f = skip_if_no_db!(fixture_opts(script, no_tools()).await);
     let outcome = f.run("loop forever").await;
 
     assert_eq!(outcome.terminal_state, TerminalState::MaxSteps);
@@ -1743,7 +1755,13 @@ async fn the_invocation_budget_is_consumed_once_per_dispatch() {
 /// generation client is built once per config, not once per turn.
 #[tokio::test]
 async fn ten_sequential_turns_reuse_one_connection() {
-    let f = skip_if_no_db!(fixture((0..10).map(|i| says(&format!("answer {i}"))).collect()).await);
+    let f = skip_if_no_db!(
+        fixture_opts(
+            (0..10).map(|i| says(&format!("answer {i}"))).collect(),
+            no_tools()
+        )
+        .await
+    );
     for i in 0..10 {
         let outcome = f.run(&format!("question {i}")).await;
         assert_eq!(outcome.terminal_state, TerminalState::Completed);

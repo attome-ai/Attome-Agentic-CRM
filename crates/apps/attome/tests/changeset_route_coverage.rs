@@ -456,6 +456,34 @@ const EXCLUDED: &[(&str, &str)] = &[
         "validates a rule body; writes nothing",
     ),
     (
+        "POST /api/v1/admin/business-rules/{id}/simulate",
+        "A3-T5: runs the stored rule over stored records in memory; writes nothing",
+    ),
+    (
+        "POST /api/v1/admin/entities/{entity_id}/rehearse",
+        "runs a field change on the configured copy database only; this deployment is not written",
+    ),
+    (
+        "POST /api/v1/workflow/definitions/{id}/versions/{version_id}/replay",
+        "M4-T3: replays a version over the flow's finished runs in simulation; writes nothing",
+    ),
+    (
+        "POST /api/v1/admin/security/roles/{id}/sessions/revoke-all",
+        "ends the sessions of a role's holders on this deployment: runtime state, not configuration (audited as a Credential event)",
+    ),
+    (
+        "PUT /api/v1/admin/security/roles/{id}/auth-policy",
+        "Q5-T3: a role's sign-in policy is role configuration, but RoleDef and upsert_role do not carry it yet, so it does not travel in bundles or changesets (open follow-up)",
+    ),
+    (
+        "POST /api/v1/admin/business-rules/{id}/test-cases",
+        "A11-T4: a rule's test cases live beside it (rule_test_case), not in its definition, and do not yet travel in bundles or changesets",
+    ),
+    (
+        "DELETE /api/v1/admin/business-rules/{id}/test-cases/{case_id}",
+        "A11-T4: a rule's test cases live beside it (rule_test_case), not in its definition, and do not yet travel in bundles or changesets",
+    ),
+    (
         "POST /api/v1/workflow/definitions/{id}/versions/{version_id}/simulate",
         "simulates a workflow version; writes nothing",
     ),

@@ -1628,6 +1628,43 @@ pub async fn decide_stage_step_with(
     .await
 }
 
+/// [`decide_stage_step_with`] storing `grant`'s attachments and evidence on
+/// the grant row (Z10-T9), for a decision made through the HTTP decide route
+/// on one branch of a parallel group.
+#[allow(clippy::too_many_arguments)]
+pub async fn decide_stage_step_with_evidence(
+    pool: &PgPool,
+    request_id: Uuid,
+    step_index: i32,
+    decider_id: Uuid,
+    on_behalf_of: Option<Uuid>,
+    allowed_decider_ids: &[Uuid],
+    step_population: usize,
+    sibling_populations: &[(i32, usize)],
+    decision: Decision,
+    expected_row_version: i64,
+    comment: Option<&str>,
+    grant: &GrantEvidence,
+    hook: &dyn attome_db::BeforeCommit<ApprovalRequest>,
+) -> Result<ApprovalRequest, AppError> {
+    decide_in_stage(
+        pool,
+        request_id,
+        Some(step_index),
+        decider_id,
+        on_behalf_of,
+        allowed_decider_ids,
+        step_population,
+        sibling_populations,
+        decision,
+        expected_row_version,
+        comment,
+        grant,
+        hook,
+    )
+    .await
+}
+
 /// How many approvals a stage step other than the one being decided needs,
 /// or `None` when that cannot be known (an `all` step with no population).
 fn sibling_required(step: &ApprovalStep, population: Option<usize>) -> Option<i32> {

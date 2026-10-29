@@ -1263,7 +1263,9 @@ async fn staff_bypass_lists_are_unchanged_and_staff_routes_still_need_a_session(
                 || path.starts_with("/health")
                 || *path == "/version"
                 // Z4-T4: the public signing keys, at the standard well-known path.
-                || *path == "/.well-known/jwks.json",
+                || *path == "/.well-known/jwks.json"
+                // Q3-T1: SCIM's own tree; its bearer token is the credential.
+                || *path == "/scim/v2/",
             "a bypass outside the staff tree: {path}"
         );
     }

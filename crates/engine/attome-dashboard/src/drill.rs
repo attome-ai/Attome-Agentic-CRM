@@ -898,6 +898,9 @@ async fn period_ids(
     Ok((ids, total))
 }
 
+/// A record's newest change of a field: record id, old value, new value, when.
+type FieldChange = (Uuid, Option<String>, Option<String>, DateTime<Utc>);
+
 /// Compare two periods of a widget
 ///
 /// The records of a widget's scope that entered, left or changed value between two periods of its date
@@ -1017,7 +1020,7 @@ async fn widget_compare(
         };
         let both: Vec<Uuid> = a.intersection(&b).copied().collect();
         if readable && !both.is_empty() {
-            let rows: Vec<(Uuid, Option<String>, Option<String>, DateTime<Utc>)> = sqlx::query_as(
+            let rows: Vec<FieldChange> = sqlx::query_as(
                 "SELECT DISTINCT ON (h.record_id) h.record_id, d.old_value, d.new_value, h.changed_on \
                  FROM audit_header h JOIN audit_detail d ON d.audit_ref = h.id \
                  WHERE h.entity_name = $1 AND h.record_id = ANY($2) AND d.field_name = $3 \
@@ -1718,8 +1721,8 @@ pub async fn explain_widget(
     let definition = load_definition(state, ctx, dashboard_id, inputs.preview).await?;
     let (page, widget) = find_widget(&definition.snapshot, widget_id).ok_or(AppError::NotFound)?;
     let wc = resolve_widget_context(
-        &state,
-        &ctx,
+        state,
+        ctx,
         &definition,
         page,
         widget,
@@ -1760,10 +1763,10 @@ pub async fn explain_widget(
 
     match wc.data_class {
         DataClass::Structured => {
-            let plan = structured_plan(&state, &wc)?;
+            let plan = structured_plan(state, &wc)?;
             applied = plan.applied_filters();
-            let (entity_display_name, names) = display_names(&state, &plan.data.source).await?;
-            let entity_id = crate::access::entity_id(&state, &plan.data.source)
+            let (entity_display_name, names) = display_names(state, &plan.data.source).await?;
+            let entity_id = crate::access::entity_id(state, &plan.data.source)
                 .map_err(|_| AppError::Validation("unknown source entity".into()))?;
             let level = attome_security::resolve_entity_access_level(
                 &state.base.db,
@@ -1793,7 +1796,7 @@ pub async fn explain_widget(
                     },
                 })
                 .collect();
-            explanation.filters = explain_filters(&state, &ctx, &applied, &names).await?;
+            explanation.filters = explain_filters(state, ctx, &applied, &names).await?;
             let entity_words = entity_display_name
                 .clone()
                 .unwrap_or_else(|| plan.data.source.clone());
@@ -1844,10 +1847,10 @@ pub async fn explain_widget(
         }
         DataClass::Kpi => {
             ctx.require_key("dashboard_metric_definition.read")?;
-            let kpi = kpi_data(&state, &definition, widget, &wc.widget_type).await?;
+            let kpi = kpi_data(state, &definition, widget, &wc.widget_type).await?;
             let mut metrics = Vec::with_capacity(kpi.metrics.len());
             for metric in kpi.metrics {
-                metrics.push(explain_metric(&state, &definition, widget, metric).await?);
+                metrics.push(explain_metric(state, &definition, widget, metric).await?);
             }
             if let Some(first) = metrics.first() {
                 let name = first
@@ -1873,7 +1876,7 @@ pub async fn explain_widget(
             });
         }
         DataClass::Query => {
-            let mut query = explain_query(&state, &definition, widget).await?;
+            let mut query = explain_query(state, &definition, widget).await?;
             query.rows_are_the_result = wc.drillability != Drillability::Exact;
             let name = query.query_name.clone().unwrap_or_default();
             explanation.definition_en = format!("The rows of the stored query {name}");

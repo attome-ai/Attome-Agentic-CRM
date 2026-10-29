@@ -11,12 +11,10 @@ use std::collections::BTreeSet;
 
 /// `(operation_id, status)` of error responses without the `ErrorResponse` body.
 const ERROR_SHAPE_EXEMPT: &[(&str, &str)] = &[
-    ("aggregate", "422"),
     ("bottlenecks", "501"),
     ("change_attribute_type", "409"),
     ("confirm_tool_call", "409"),
     ("confirm_tool_call", "429"),
-    ("conformance", "501"),
     ("create_api_key", "401"),
     ("delete_attribute", "409"),
     ("execute", "422"),
@@ -31,6 +29,39 @@ const ERROR_SHAPE_EXEMPT: &[(&str, &str)] = &[
     ("rename_attribute", "409"),
     // B16-T8: more than one record holds the code; the answer lists them to pick from.
     ("scan_act", "409"),
+    // Q3-T1: SCIM 2.0 answers errors in its own `application/scim+json` Error
+    // schema (RFC 7644 §3.12), which identity providers parse; not ErrorResponse.
+    ("scim_create_group", "400"),
+    ("scim_create_group", "401"),
+    ("scim_create_user", "400"),
+    ("scim_create_user", "401"),
+    ("scim_create_user", "409"),
+    ("scim_delete_group", "401"),
+    ("scim_delete_group", "404"),
+    ("scim_delete_user", "401"),
+    ("scim_delete_user", "404"),
+    ("scim_get_group", "401"),
+    ("scim_get_group", "404"),
+    ("scim_get_user", "401"),
+    ("scim_get_user", "404"),
+    ("scim_list_groups", "401"),
+    ("scim_list_users", "401"),
+    ("scim_list_users", "403"),
+    ("scim_patch_group", "400"),
+    ("scim_patch_group", "401"),
+    ("scim_patch_group", "404"),
+    ("scim_patch_user", "400"),
+    ("scim_patch_user", "401"),
+    ("scim_patch_user", "404"),
+    ("scim_replace_user", "400"),
+    ("scim_replace_user", "401"),
+    ("scim_replace_user", "404"),
+    ("scim_replace_user", "409"),
+    // OAuth 2.0 token endpoint: errors are the RFC 6749 §5.2 body (`error`,
+    // `error_description`) every OAuth client expects.
+    ("token", "400"),
+    ("token", "401"),
+    ("token", "500"),
     // D16-T1: a browser follows the tracked link; a bad token is a bare 404, no JSON.
     ("track_click", "404"),
 ];

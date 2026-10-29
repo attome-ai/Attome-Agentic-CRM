@@ -114,6 +114,9 @@ impl Action for QueryRun {
 
             let mut plan = spec.clone();
             plan.explain = true;
+            // The plan is validated like a run: a LIMIT over the page ceiling
+            // would refuse it before the run below caps it.
+            plan.page_size = plan.page_size.map(|n| n.clamp(1, MAX_ROWS));
             if let RunResponse::Explain(explained) =
                 execute_spec(state, &ctx.security, plan).await?
                 && explained.estimated_rows > EXPLAIN_FIRST_ROWS

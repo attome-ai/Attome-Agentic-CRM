@@ -80,12 +80,14 @@ struct Cached {
 
 static JWKS: LazyLock<Mutex<HashMap<String, Cached>>> = LazyLock::new(Default::default);
 
-static CLIENT: LazyLock<Option<reqwest::Client>> = LazyLock::new(|| {
-    reqwest::Client::builder()
-        .timeout(FETCH_TIMEOUT)
-        .redirect(reqwest::redirect::Policy::none())
-        .build()
-        .ok()
+/// The identity provider's keys are fetched over the public internet (Q21-T1):
+/// no redirects, and a private or metadata address is refused. This crate's
+/// unit tests serve their key sets on loopback.
+static CLIENT: LazyLock<Option<attome_outbound::http::Outbound>> = LazyLock::new(|| {
+    let purpose = attome_outbound::http::Purpose::public("s2s-federated-jwks").no_redirects();
+    #[cfg(test)]
+    let purpose = purpose.with_private_hosts(["127.0.0.1"]);
+    attome_outbound::http::client(purpose, |b| b.timeout(FETCH_TIMEOUT)).ok()
 });
 
 /// The `iss` of a JWT, read without verifying it, to pick the trusts whose

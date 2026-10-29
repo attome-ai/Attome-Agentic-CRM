@@ -11,6 +11,15 @@ use std::path::Path;
 /// migration above it is checked.
 const BASELINE: u32 = 88;
 
+/// Committed migrations above the baseline that remove structure, each
+/// reviewed and recorded in `crates/apps/attome/contract/README.md`. A
+/// committed migration never changes (boot checks its checksum), so it
+/// cannot move to the contract set; a new one never belongs here.
+const REVIEWED: &[(&str, &str)] = &[(
+    "0173_marketing_deliverability_reshape.sql",
+    "drops only tables still in 0084's early shape, which no release's code reads or writes",
+)];
+
 /// One destructive statement: its 1-based line and what it does.
 #[derive(Debug, PartialEq, Eq)]
 struct Finding {
@@ -80,7 +89,10 @@ fn new_migrations_are_expand_only() {
             .and_then(|n| n.to_str())
             .unwrap_or_default()
             .to_owned();
-        if !name.ends_with(".sql") || ordinal(&name).is_none_or(|n| n <= BASELINE) {
+        if !name.ends_with(".sql")
+            || ordinal(&name).is_none_or(|n| n <= BASELINE)
+            || REVIEWED.iter().any(|(file, _)| *file == name)
+        {
             continue;
         }
         checked += 1;

@@ -115,6 +115,15 @@ const DECLARED_CACHES: &[Declared] = &[
         "empty; the first batch for a site reads it",
     ),
     (
+        "crates/engine/attome-marketing/src/tracking/alerts.rs",
+        "watched pages by site key",
+        "PostgreSQL marketing_watched_page joined to marketing_tracked_site",
+        "60 s, at most 10,000 keys",
+        "none; an edited watched page applies within the TTL on every node",
+        "a failed read is returned and not cached",
+        "empty; the first batch for a site reads its watched pages",
+    ),
+    (
         "crates/engine/attome-portal/src/cache.rs",
         "attome-portal:portal and attome-portal:plan",
         "PostgreSQL portal tables",
@@ -141,6 +150,15 @@ const DECLARED_CACHES: &[Declared] = &[
         "the entity change feed's newest id is in the key",
         "process-local only; no position runs the query",
         "empty; bounded at 64 MiB",
+    ),
+    (
+        "crates/engine/attome-records/src/entity_crud/row_version_cache.rs",
+        "attome-records:rowver:{entity}:{id}",
+        "each entity table's row_version column",
+        "30 s",
+        "dropped on the writing node as a generic write commits; every node's change-feed bus drops the record's entry; the TTL bounds writes outside the feed",
+        "process memory only (FallBackToSource); a refused cache or a miss runs the primary-key probe",
+        "empty; the first conditional read of a record runs the probe",
     ),
     (
         "crates/engine/attome-search/src/access_cache.rs",

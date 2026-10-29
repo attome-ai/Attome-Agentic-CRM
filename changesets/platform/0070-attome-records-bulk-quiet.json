@@ -1,10 +1,10 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:66a23e80d8a528f0ad0ef08291e35d79b0300822870b21f503fadcdf0a916b01",
+  "checksum": "sha256:6ba9004e149083465a8fa50226d98e46c6464efcc632f47ddff54dbdf5d1e9e7",
   "closed_at": "2026-10-21T00:00:00Z",
   "description": "Converted from platform-bundles/attome-records-bulk-quiet.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
-  "id": "17d35c3e-2480-4b83-b80e-ac816427a1a3",
+  "id": "bc0ca7d9-28a0-7542-bad5-8d90d57b7ce7",
   "layer": "platform",
   "name": "attome-records-bulk-quiet",
   "opened_at": "2026-10-21T00:00:00Z",

@@ -133,6 +133,10 @@ async fn read_request_path(socket: &mut tokio::net::TcpStream) -> Option<String>
 }
 
 async fn mock_idp() -> MockIdp {
+    // Q21-T1: the identity-provider client refuses a private host unless
+    // boot lists its issuer; this provider listens on loopback. The first
+    // call in the binary wins, and every test builds the provider first.
+    let _ = attome_auth::oidc::configure_identity_providers(["http://127.0.0.1"]);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let idp = MockIdp {
         issuer: format!("http://{}", listener.local_addr().unwrap()),

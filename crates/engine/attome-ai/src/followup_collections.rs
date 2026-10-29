@@ -299,9 +299,14 @@ mod tests {
         // 05:00 UTC is 08:00 in Riyadh: that day.
         let eight = chrono::Utc.with_ymd_and_hms(2027, 3, 10, 5, 0, 0).unwrap();
         assert_eq!(collections_day(eight, riyadh), Some(day(3, 10)));
-        // 22:00 UTC is already the next day in Riyadh.
+        // 22:00 UTC is 01:00 the next day in Riyadh: that day has not
+        // reached eight yet.
         let late = chrono::Utc.with_ymd_and_hms(2027, 3, 10, 22, 0, 0).unwrap();
-        assert_eq!(collections_day(late, riyadh), Some(day(3, 11)));
+        assert_eq!(collections_day(late, riyadh), None);
+        // 20:00 UTC is 09:00 the next day in Auckland (UTC+13): that day.
+        let auckland: chrono_tz::Tz = "Pacific/Auckland".parse().expect("a zone");
+        let ahead = chrono::Utc.with_ymd_and_hms(2027, 3, 10, 20, 0, 0).unwrap();
+        assert_eq!(collections_day(ahead, auckland), Some(day(3, 11)));
         assert_eq!(collections_day(early, chrono_tz::UTC), None);
     }
 
