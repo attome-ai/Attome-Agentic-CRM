@@ -62,6 +62,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Metric snapshots follow the metric's own calendar (P9-T16): a Hijri metric's values now land on
+  Umm al-Qura months, and `week_start` sets a weekly metric's weeks. `docs/metrics.md` describes
+  periods, dimensions, bands, versions and the rest of KPI management (P9-T17).
 - Metric drafting actions (P9-T13): `metric.draft_definition` drafts a builder spec from a sentence
   and saves nothing; `metric.draft_commentary` drafts a period's commentary and returns the
   `record.create` call that would save it.

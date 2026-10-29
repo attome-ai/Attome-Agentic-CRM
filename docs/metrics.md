@@ -2,7 +2,9 @@
 
 A metric is a definition (`dashboard_metric_definition`) whose values are kept as snapshots, one per
 period. A snapshot is never changed: a recomputation is a new row. This page covers building a
-metric from its parts, the order metrics are computed in, and targets spread over a dimension.
+metric from its parts, periods and dimensions, status bands, the order metrics are computed in,
+versions, backfill, targets spread over a dimension, who sees what, scorecards, and the agent
+actions that draft metrics and commentary.
 
 ## Building a metric from its parts
 
@@ -21,6 +23,30 @@ metric's update privilege.
 The builder writes the metric's stored query and points the metric at it; building again republishes
 the same query. Sensitive attributes and a non-numeric measure (other than for `count`) are refused.
 
+## Periods
+
+A metric's `period` is `day`, `week`, `month`, `quarter` or `year`. Its `calendar_kind` decides how
+periods are cut: Gregorian by default, or `hijri` for Umm al-Qura months and years (a Hijri metric
+has no day, week or quarter periods). `week_start` (`sat`, `sun` or `mon`) sets where a week begins.
+A snapshot's `period_start` is the first day of its period on the metric's own calendar, for a
+computed value, a scheduled one and a backfilled one alike.
+
+## Dimensions
+
+A metric with `dimension_attributes` keeps, beside its total, one snapshot per member of each
+dimension (at most 1,000 members). `GET /api/v1/metrics/{id}/snapshots?dimension_attribute=` lists
+them. A member of a lookup dimension is a record, and is shown only to people who may read it (see
+"Who sees what").
+
+## Status bands
+
+Each value is judged against its period's target: `on_track`, `at_risk` or `off_track` (and
+`failed` when it could not be computed). With `threshold_warn` and `threshold_crit` on the target,
+those decide; otherwise `at_risk_tolerance` does: meeting the target is on track, missing it by up to
+that percent of the target is at risk, and missing it by more is off track. A member is judged
+against its own target when it has one, else the total's. `direction` says whether higher or lower
+is better.
+
 ## Computing
 
 `POST /api/v1/metrics/{id}/compute` computes one metric for its current period.
@@ -30,6 +56,14 @@ metric is always computed after its inputs, so a formula reads the snapshots of 
 answer lists each metric's outcome: `computed`, `skipped` (a snapshot for the period existed) or
 `failed` with the reason. One failure does not stop the rest. A cycle is refused with `422` naming
 the metrics in it.
+
+## Versions
+
+The fields that define a metric (its source, query, formula, period, filters, dimensions, calendar
+and the like) are fingerprinted with each snapshot. A snapshot computed under a different
+fingerprint starts the next `definition_version`, so a chart never joins values measured two ways
+without saying so; `definition_version` on the metric is a floor an administrator may raise. A new
+version withdraws the metric's certification.
 
 ## Backfilling past periods
 
@@ -103,3 +137,9 @@ is computed on read.
 are not counted). `GET /api/v1/metrics/{id}/comments` lists the comments on a metric the caller
 may read, newest first, optionally for one `period_start`.
 
+## Agent actions
+
+`metric.draft_definition` turns a sentence into a builder spec, checked against the deployment's
+entities, and saves nothing. `metric.draft_commentary` drafts a period's commentary from the stored
+values and returns the `record.create` call that would save it as a comment. Neither can certify,
+set a target or name a steward.
