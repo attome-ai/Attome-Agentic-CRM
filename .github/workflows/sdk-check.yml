@@ -1,0 +1,110 @@
+name: sdk-check
+
+# S3-T1: the Python, C# and Java SDKs. Each job cuts the SDK document out of
+# openapi.json (sdks/subset.mjs), generates its language with OpenAPI
+# Generator, adds Attome's layer (auth, retries, idempotency keys, paging),
+# builds it, and runs its smoke test against a Prism mock of the document.
+# The bot's openapi.json regeneration starts no workflow, so this runs on a
+# change under sdks/, by hand, and weekly.
+
+on:
+  push:
+    paths:
+      - "sdks/**"
+      - ".github/workflows/sdk-check.yml"
+  pull_request:
+    paths:
+      - "sdks/**"
+      - ".github/workflows/sdk-check.yml"
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sdk-check-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GENERATOR_IMAGE: openapitools/openapi-generator-cli:v7.10.0
+  PRISM: "@stoplight/prism-cli@5.12.0"
+
+jobs:
+  sdk:
+    name: ${{ matrix.language }} sdk
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python, csharp, java]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: SDK document
+        run: node sdks/subset.mjs
+      - name: generate
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ matrix.language }}" in
+            python) args=(-g python --package-name attome_sdk
+                          --additional-properties=projectName=attome-sdk,packageVersion=0.1.0) ;;
+            csharp) args=(-g csharp --library httpclient
+                          --additional-properties=packageName=Attome.Sdk,targetFramework=net8.0,nullableReferenceTypes=true,packageVersion=0.1.0) ;;
+            java)   args=(-g java --library native
+                          --additional-properties=groupId=io.attome,artifactId=attome-sdk,artifactVersion=0.1.0,invokerPackage=io.attome.sdk,apiPackage=io.attome.sdk.api,modelPackage=io.attome.sdk.model,hideGenerationTimestamp=true) ;;
+          esac
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/local" "$GENERATOR_IMAGE" generate \
+            -i /local/sdks/build/attome-sdk.json -o "/local/sdks/build/${{ matrix.language }}" "${args[@]}"
+      - name: mock server
+        shell: bash
+        run: |
+          npx --yes "$PRISM" mock -h 127.0.0.1 -p 4010 sdks/build/attome-sdk.json > prism.log 2>&1 &
+          for _ in $(seq 1 60); do
+            if curl -s -o /dev/null http://127.0.0.1:4010/; then exit 0; fi
+            sleep 2
+          done
+          cat prism.log
+          exit 1
+
+      - if: matrix.language == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - if: matrix.language == 'python'
+        name: python build and smoke
+        run: |
+          cp sdks/python/client.py sdks/build/python/attome_sdk/client.py
+          pip install ./sdks/build/python
+          python sdks/python/smoke.py http://127.0.0.1:4010
+
+      - if: matrix.language == 'csharp'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - if: matrix.language == 'csharp'
+        name: csharp build and smoke
+        run: |
+          cp sdks/csharp/AttomeClient.cs sdks/build/csharp/src/Attome.Sdk/AttomeClient.cs
+          dotnet run --project sdks/csharp/Smoke/Smoke.csproj -- http://127.0.0.1:4010
+
+      - if: matrix.language == 'java'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - if: matrix.language == 'java'
+        name: java build and smoke
+        run: |
+          cp sdks/java/AttomeClient.java sdks/build/java/src/main/java/io/attome/sdk/AttomeClient.java
+          mvn -B -q -f sdks/build/java/pom.xml install -DskipTests -Dmaven.javadoc.skip=true
+          mvn -B -q -f sdks/java/smoke/pom.xml compile exec:java -Dexec.args=http://127.0.0.1:4010
+
+      - if: failure()
+        name: mock server log
+        run: cat prism.log || true

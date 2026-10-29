@@ -1,0 +1,38 @@
+{
+  "description": "The record API every deployment has: list, read, create, change and delete records of any entity, and run a stored query. Entity fields come from each deployment's metadata (GET /api/v1/schema/{entity}), so a record's data is a map.",
+  "operations": [
+    "list_records",
+    "get_record",
+    "create_record",
+    "update_record",
+    "delete_record",
+    "execute"
+  ],
+  "patches": [
+    {
+      "operationId": "create_record",
+      "requestBody": {
+        "required": true,
+        "description": "The record's field values, by logical name.",
+        "content": { "application/json": { "schema": { "type": "object", "additionalProperties": true } } }
+      }
+    },
+    {
+      "operationId": "update_record",
+      "requestBody": {
+        "required": true,
+        "description": "The fields to change, by logical name.",
+        "content": { "application/json": { "schema": { "type": "object", "additionalProperties": true } } }
+      },
+      "parameters": [
+        {
+          "name": "If-Match",
+          "in": "header",
+          "required": true,
+          "description": "The record's row_version in quotes, as read: \"7\".",
+          "schema": { "type": "string" }
+        }
+      ]
+    }
+  ]
+}
