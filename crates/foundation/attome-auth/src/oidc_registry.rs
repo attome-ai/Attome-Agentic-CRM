@@ -267,7 +267,7 @@ pub fn open_with(ring: &KeyRing) -> impl Fn(&ProviderRow) -> Result<Secret, AppE
 pub fn seal_secret(ring: &KeyRing, id: Uuid, secret: &str) -> Result<String, AppError> {
     if ring.is_empty() {
         return Err(AppError::Validation(
-            "oidc.client_secret_encryption_key is not configured, so a provider cannot be added              on screen"
+            "oidc.client_secret_encryption_key is not configured, so a provider cannot be added on screen"
                 .into(),
         ));
     }

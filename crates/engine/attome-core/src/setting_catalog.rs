@@ -527,7 +527,7 @@ fn records_settings() -> Vec<SettingDescriptor> {
         // F6-T4: which location a fulfilment order ships from.
         SettingDescriptor::new(
             "fulfilment.sourcing.rules",
-            "The sourcing rules, tried in order (F6-T4): each has a `condition` (an attome-rules          expression over the order's fields; empty matches every order), a `strategy` (`fixed`,          `nearest_with_stock` or `fewest_shipments`) and, for `fixed`, a `location_id`. The first          rule whose condition holds decides; with none, the default location is used.",
+            "The sourcing rules, tried in order (F6-T4): each has a `condition` (an attome-rules expression over the order's fields; empty matches every order), a `strategy` (`fixed`, `nearest_with_stock` or `fewest_shipments`) and, for `fixed`, a `location_id`. The first rule whose condition holds decides; with none, the default location is used.",
             || {
                 json!({
                     "type": "array",
@@ -762,7 +762,7 @@ fn records_settings() -> Vec<SettingDescriptor> {
         // L5-T6: the lineage graph's OpenLineage export.
         SettingDescriptor::new(
             "lineage.export_enabled",
-            "Whether administrators may pull the lineage graph as OpenLineage events          (GET /api/v1/lineage/export/openlineage): names of definitions, entities and          attributes only, never record values. Off by default (L5-T6).",
+            "Whether administrators may pull the lineage graph as OpenLineage events (GET /api/v1/lineage/export/openlineage): names of definitions, entities and attributes only, never record values. Off by default (L5-T6).",
             || json!({"type": "boolean"}),
             &[SettingScope::Deployment],
             false,
@@ -936,7 +936,7 @@ fn billing_settings() -> Vec<SettingDescriptor> {
         ),
         SettingDescriptor::new(
             "billing.issue_approval_threshold",
-            "Invoices whose grand total is above this wait for an approval before          they are issued; zero issues every invoice without one.",
+            "Invoices whose grand total is above this wait for an approval before they are issued; zero issues every invoice without one.",
             || json!({"type": "number", "minimum": 0}),
             &[SettingScope::Deployment],
             false,
@@ -1019,7 +1019,7 @@ fn commission_settings() -> Vec<SettingDescriptor> {
         // D4-T2: speed to lead and stale-lead rebalancing.
         SettingDescriptor::new(
             "sales.first_touch_minutes",
-            "Minutes a new lead may wait for its first activity or communication; when it waits              longer, its owner's managers are notified (D4-T2). 0 turns it off.",
+            "Minutes a new lead may wait for its first activity or communication; when it waits longer, its owner's managers are notified (D4-T2). 0 turns it off.",
             || json!({"type": "integer", "minimum": 0, "maximum": 10080}),
             &[SettingScope::Deployment],
             false,
@@ -1027,7 +1027,7 @@ fn commission_settings() -> Vec<SettingDescriptor> {
         ),
         SettingDescriptor::new(
             "sales.stale_lead_days",
-            "Days an open lead given out by an assignment rule may go without activity or              change before the rule gives it to someone else (D4-T2). 0 turns it off.",
+            "Days an open lead given out by an assignment rule may go without activity or change before the rule gives it to someone else (D4-T2). 0 turns it off.",
             || json!({"type": "integer", "minimum": 0, "maximum": 365}),
             &[SettingScope::Deployment],
             false,

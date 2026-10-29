@@ -251,7 +251,7 @@ impl TlsListener {
 pub fn check_http3(tls: &TlsSection) -> Result<(), TlsError> {
     if tls.http3 && !cfg!(feature = "http3") {
         return Err(TlsError::Config(
-            "app.tls.http3 is on, but this server was built without the `http3` feature              (cargo build --features http3)"
+            "app.tls.http3 is on, but this server was built without the `http3` feature (cargo build --features http3)"
                 .into(),
         ));
     }
