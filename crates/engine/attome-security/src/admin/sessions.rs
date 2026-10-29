@@ -114,6 +114,7 @@ pub(super) struct AdminSessionItem {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub(super) struct SessionsFilter {
+    /// Only the sessions of people holding this role, directly or through a team.
     role_id: Option<Uuid>,
 }
 
