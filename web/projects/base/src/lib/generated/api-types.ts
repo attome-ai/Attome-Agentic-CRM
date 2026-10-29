@@ -40849,7 +40849,8 @@ export interface components {
              * @description S1-T1: the attributes to return, in this order; `id` is always
              *     included. Absent returns the query's full column list. A name the
              *     query does not return, or one the caller may not read, is the same
-             *     422 `unknown attribute`.
+             *     422 `unknown attribute`. A13-T1: a name may follow one or two lookups
+             *     (`account_ref.industry`) to read a related record's field.
              */
             select?: string[] | null;
             /**

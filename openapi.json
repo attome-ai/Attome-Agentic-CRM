@@ -171834,7 +171834,7 @@
             "items": {
               "type": "string"
             },
-            "description": "S1-T1: the attributes to return, in this order; `id` is always\nincluded. Absent returns the query's full column list. A name the\nquery does not return, or one the caller may not read, is the same\n422 `unknown attribute`."
+            "description": "S1-T1: the attributes to return, in this order; `id` is always\nincluded. Absent returns the query's full column list. A name the\nquery does not return, or one the caller may not read, is the same\n422 `unknown attribute`. A13-T1: a name may follow one or two lookups\n(`account_ref.industry`) to read a related record's field."
           },
           "view_id": {
             "type": [
@@ -238087,8 +238087,8 @@
       "description": "Health, readiness, and version probes"
     }
   ],
-  "x-version-adapters": [],
   "x-api-version": "2026-10",
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
