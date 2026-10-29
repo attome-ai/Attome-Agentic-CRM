@@ -57981,6 +57981,7 @@
           {
             "name": "role_id",
             "in": "query",
+            "description": "Only the sessions of people holding this role, directly or through a team.",
             "required": false,
             "schema": {
               "type": "string",
@@ -238042,6 +238043,7 @@
     }
   ],
   "x-version-adapters": [],
+  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -238093,6 +238095,5 @@
         ]
       }
     }
-  },
-  "x-api-version": "2026-10"
+  }
 }

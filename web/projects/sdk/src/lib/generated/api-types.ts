@@ -101381,6 +101381,7 @@ export interface operations {
     admin_list_sessions: {
         parameters: {
             query?: {
+                /** @description Only the sessions of people holding this role, directly or through a team. */
                 role_id?: string;
                 /**
                  * @description One-based (D-347): page 1 is the first page. Values below 1 are
