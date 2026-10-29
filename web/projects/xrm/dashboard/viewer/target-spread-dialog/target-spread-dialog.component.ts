@@ -93,9 +93,9 @@ export class TargetSpreadDialogComponent {
         this.saving.set(false);
         this.closed.emit(result);
       },
-      error: (e: unknown) => {
+      error: (e: ApiError) => {
         this.saving.set(false);
-        this.error.set(e instanceof ApiError ? e.message : 'metricViews.spread.failed');
+        this.error.set(e?.message || 'metricViews.spread.failed');
       },
     });
   }
