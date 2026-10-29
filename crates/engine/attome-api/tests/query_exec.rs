@@ -3961,3 +3961,83 @@ fn query_run_explain_does_not_execute() {
         assert!(plan["estimated_rows"].is_i64());
     })
 }
+
+/// A13-T1: a view saves a dynamic value as written ("due this month") and
+/// replays it as what it stands for on the day it runs; a value that is
+/// neither a date nor a dynamic value is still refused.
+#[test]
+fn saved_view_keeps_dynamic_values() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let admin_cookie = seed_admin(&system).await;
+        let state = system.state().clone();
+        let app = full_app(system);
+        let logicalname = format!("dynview_{}", Uuid::now_v7().simple());
+        let entity_id = create_entity(&app, &admin_cookie, &logicalname).await;
+        create_text_field(&app, &admin_cookie, entity_id, "title").await;
+        let (status, field) = send_json(
+            &app,
+            "POST",
+            &format!("/api/v1/admin/entities/{entity_id}/fields"),
+            &admin_cookie,
+            serde_json::json!({ "logicalname": "due_on", "name": "due_on", "field_type": "date" }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{field:?}");
+        sync_registry(&state).await;
+        let today = chrono::Utc::now().date_naive();
+        let last_year = today - chrono::Duration::days(400);
+        for (title, due) in [("now", today), ("old", last_year)] {
+            create_record(
+                &app,
+                &admin_cookie,
+                &logicalname,
+                serde_json::json!({ "title": title, "due_on": due.to_string() }),
+            )
+            .await;
+        }
+        let query_id = list_query(&state, entity_id, &logicalname, "id, title, due_on").await;
+
+        let refused = personal_view_body(
+            "Not a date",
+            &logicalname,
+            query_id,
+            serde_json::json!([{ "field": "due_on", "op": "eq", "value": "@next_year" }]),
+        );
+        let (status, _) = send_json(&app, "POST", "/api/v1/views", &admin_cookie, refused).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+
+        let filters =
+            serde_json::json!([{ "field": "due_on", "op": "eq", "value": "@this_month" }]);
+        let (status, created) = send_json(
+            &app,
+            "POST",
+            "/api/v1/views",
+            &admin_cookie,
+            personal_view_body("Due this month", &logicalname, query_id, filters.clone()),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "save view: {created:?}");
+        assert_eq!(created["view_metadata"]["filters"], filters);
+        let (status, replayed) = send_json(
+            &app,
+            "POST",
+            "/api/v1/query/execute",
+            &admin_cookie,
+            serde_json::json!({
+                "view_id": created["id"],
+                "filters": filters,
+                "include_total": true,
+            }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "replay: {replayed:?}");
+        let titles: Vec<&str> = replayed["data"]["records"]
+            .as_array()
+            .expect("records")
+            .iter()
+            .filter_map(|r| r["title"].as_str())
+            .collect();
+        assert_eq!(titles, vec!["now"], "{replayed:?}");
+    })
+}

@@ -392,18 +392,30 @@ fn validate_view_filters(
             })
             .collect(),
     };
+    // A13-T1: a dynamic value (`@me`, `@this_month`, ...) is saved as
+    // written and expanded for whoever runs the view; it is checked here as
+    // what it stands for, with stand-in values for the caller and the day.
+    let dynamic = attome_core::filter::DynamicValues {
+        user_id: Uuid::nil(),
+        team_ids: Vec::new(),
+        unit_ids: Vec::new(),
+        today: chrono::Utc::now().date_naive(),
+    };
     for (index, item) in items.iter().enumerate() {
         let filter: Filter = serde_json::from_value(item.clone()).map_err(|_| {
             AppError::Validation(format!(
                 "view_metadata.filters[{index}] must be an object with field, op and value"
             ))
         })?;
-        attome_core::filter::compile(&filter, &schema, 1).map_err(|err| match err {
+        let indexed = |err: AppError| match err {
             AppError::Validation(message) => {
                 AppError::Validation(format!("view_metadata.filters[{index}]: {message}"))
             }
             other => other,
-        })?;
+        };
+        for expanded in attome_core::filter::expand_dynamic(&filter, &dynamic).map_err(indexed)? {
+            attome_core::filter::compile(&expanded, &schema, 1).map_err(indexed)?;
+        }
     }
     Ok(())
 }
