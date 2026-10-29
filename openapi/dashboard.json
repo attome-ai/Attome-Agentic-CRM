@@ -3289,7 +3289,7 @@
           "dashboard"
         ],
         "summary": "Queues the computation of the metric's past periods in `[from, to)`. Each value is recorded as a\nbackfilled snapshot; a period that already has a snapshot is left alone. Only builder and\nformula metrics can be backfilled. Needs update rights on metric definitions. Audited.",
-        "operationId": "post_backfill",
+        "operationId": "backfill_metric",
         "parameters": [
           {
             "name": "id",
@@ -3501,6 +3501,102 @@
             }
           ],
           "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "dashboard",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/metrics/{id}/certify": {
+      "post": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Certifies the metric, or withdraws its certification. Needs `attome_metric.certify` as well as\nupdate rights on metric definitions. Audited.",
+        "operationId": "certify_metric",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The metric",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CertifyMetricBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricCertification"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the update or the certify privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such metric",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
         },
         "x-cache": "no-store",
         "x-idempotent": "key",
@@ -4836,6 +4932,19 @@
             "description": "The stored query the metric now reads."
           }
         }
+      },
+      "CertifyMetricBody": {
+        "type": "object",
+        "description": "Whether the metric is certified.",
+        "required": [
+          "certified"
+        ],
+        "properties": {
+          "certified": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
       },
       "ChangedRecord": {
         "type": "object",
@@ -6442,6 +6551,30 @@
           "max",
           "median"
         ]
+      },
+      "MetricCertification": {
+        "type": "object",
+        "description": "The metric's certification now.",
+        "required": [
+          "metric_id",
+          "certified"
+        ],
+        "properties": {
+          "certified": {
+            "type": "boolean"
+          },
+          "certified_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "metric_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
       },
       "MetricConsumer": {
         "type": "object",

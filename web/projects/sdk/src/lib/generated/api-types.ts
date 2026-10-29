@@ -21615,7 +21615,7 @@ export interface paths {
          *     backfilled snapshot; a period that already has a snapshot is left alone. Only builder and
          *     formula metrics can be backfilled. Needs update rights on metric definitions. Audited.
          */
-        post: operations["post_backfill"];
+        post: operations["backfill_metric"];
         delete?: never;
         options?: never;
         head?: never;
@@ -21639,6 +21639,26 @@ export interface paths {
          *     and points the metric at that query. Needs the metric's update privilege.
          */
         post: operations["build_metric"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/metrics/{id}/certify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Certifies the metric, or withdraws its certification. Needs `attome_metric.certify` as well as
+         *     update rights on metric definitions. Audited.
+         */
+        post: operations["certify_metric"];
         delete?: never;
         options?: never;
         head?: never;
@@ -35182,6 +35202,10 @@ export interface components {
             /** @description The entity's logical name. */
             asset_ref: string;
         };
+        /** @description Whether the metric is certified. */
+        CertifyMetricBody: {
+            certified: boolean;
+        };
         /** @description A change order. */
         ChangeBody: {
             /** @description The order's new total, as a decimal string. */
@@ -45067,6 +45091,14 @@ export interface components {
             published_by?: string | null;
             /** Format: int64 */
             version: number;
+        };
+        /** @description The metric's certification now. */
+        MetricCertification: {
+            certified: boolean;
+            /** Format: date-time */
+            certified_at?: string | null;
+            /** Format: uuid */
+            metric_id: string;
         };
         /** @description One thing that uses a metric. */
         MetricConsumer: {
@@ -128788,7 +128820,7 @@ export interface operations {
             };
         };
     };
-    post_backfill: {
+    backfill_metric: {
         parameters: {
             query?: never;
             header?: never;
@@ -128914,6 +128946,60 @@ export interface operations {
             };
             /** @description An unknown or sensitive attribute, a non-numeric measure, a bad filter, or a period without a calendar */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    certify_metric: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The metric */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CertifyMetricBody"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetricCertification"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the update or the certify privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such metric */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
