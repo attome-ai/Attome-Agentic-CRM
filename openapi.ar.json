@@ -237913,7 +237913,6 @@
       "description": "فحوص السلامة والجاهزية والإصدار"
     }
   ],
-  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -237966,5 +237965,6 @@
       }
     }
   },
-  "x-api-version": "2026-10"
+  "x-api-version": "2026-10",
+  "x-version-adapters": []
 }
