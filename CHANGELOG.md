@@ -7,6 +7,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
 
 ## [Unreleased]
 
+### Breaking
+- `dashboard_metric_definition.certified` and `certified_at` can no longer be set through the record
+  API (P9-T11): `POST`/`PATCH /api/v1/dashboard_metric_definition` naming them is a 422, and a new
+  metric starts uncertified. Certify with `POST /api/v1/metrics/{id}/certify`, which needs
+  `attome_metric.certify`.
+
 ### Fixed
 - Undoing a deal discount now also removes the discount (D6-T11). Before, the lines came back but
   the deal kept its discount percent, so repricing applied it to them again. Migration 0333 keeps
