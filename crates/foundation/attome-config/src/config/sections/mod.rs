@@ -18,6 +18,7 @@ pub(crate) mod events;
 pub(crate) mod fleet;
 pub(crate) mod inference;
 pub(crate) mod integration;
+pub(crate) mod ldap;
 pub(crate) mod metadata;
 pub(crate) mod observability;
 pub(crate) mod ops;

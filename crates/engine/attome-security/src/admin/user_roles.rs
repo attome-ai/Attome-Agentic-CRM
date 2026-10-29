@@ -193,7 +193,7 @@ pub async fn do_assign_user_role(
          VALUES ($1, $2, $3, $4, $5) \
          ON CONFLICT (user_ref, role_ref) DO UPDATE SET is_deleted = false, updated_at = NOW(), \
              valid_until = EXCLUDED.valid_until, grant_reason = EXCLUDED.grant_reason, \
-             source_provider_ref = NULL \
+             source_provider_ref = NULL, source_directory = false \
          RETURNING id",
     )
     .bind(Uuid::now_v7())

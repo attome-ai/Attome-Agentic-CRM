@@ -222,6 +222,10 @@ pub struct AuthSection {
     /// (`https://crm.example.com`). Empty, the frontend URL alone.
     #[serde(default)]
     pub passkey_origins: Vec<String>,
+    /// Q4-T1: sign in with a directory (LDAP) account. Unset, the directory
+    /// sign-in route answers 404.
+    #[serde(default)]
+    pub ldap: Option<super::ldap::LdapSection>,
 }
 
 /// `auth.kdf` — see [`AuthSection::kdf`]. Every default is the value the
@@ -337,6 +341,7 @@ impl std::fmt::Debug for AuthSection {
             .field("refresh_device_binding", &self.refresh_device_binding)
             .field("passkey_rp_id", &self.passkey_rp_id)
             .field("passkey_origins", &self.passkey_origins)
+            .field("ldap", &self.ldap)
             .finish()
     }
 }

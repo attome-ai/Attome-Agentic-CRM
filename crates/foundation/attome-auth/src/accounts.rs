@@ -571,6 +571,37 @@ pub async fn login_with_policy(
         return Err(AppError::Forbidden);
     }
 
+    second_factor_outcome(
+        db,
+        redis,
+        user_id,
+        email_verified,
+        policy,
+        jwt_ring,
+        issuer,
+        audience,
+        remembered,
+    )
+    .await
+}
+
+/// What a sign-in whose first factor `user_id` has just passed gets: a
+/// session, a second-factor challenge or enrolment, by the person's
+/// requirement (`policy`) and what they have enrolled. `email_verified` says
+/// whether their address can carry an email code (Q5-T5). Q4-T1: shared by
+/// the password and directory sign-ins.
+#[allow(clippy::too_many_arguments)]
+pub async fn second_factor_outcome(
+    db: &DbPool,
+    redis: &Store,
+    user_id: Uuid,
+    email_verified: bool,
+    policy: &dyn MfaPolicySource,
+    jwt_ring: &KeyRing,
+    issuer: &str,
+    audience: &str,
+    remembered: Option<RememberedDevice<'_>>,
+) -> Result<LoginOutcome, AppError> {
     // BAU-12e: `last_login` is stamped by `refresh::issue_with` when a
     // session is actually issued, never here before a second factor.
     let requirement = policy.policy_for(user_id).await?;

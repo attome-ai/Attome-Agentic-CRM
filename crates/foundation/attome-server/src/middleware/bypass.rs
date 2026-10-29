@@ -66,6 +66,8 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     "/api/v1/auth/mfa/passkey/verify",
     "/api/v1/auth/passkey/start",
     "/api/v1/auth/passkey/verify",
+    // Q4-T1: a directory (LDAP) username and password, before any session.
+    "/api/v1/auth/ldap/login",
     "/health",
     "/health/ready",
     // U9-T1: the startup probe, same unauthenticated convention.
@@ -666,6 +668,14 @@ mod tests {
         assert!(!is_bypass("/api/v1/auth/passkeys/register/start"));
         assert!(!is_bypass("/api/v1/auth/passkey/verify/extra"));
         assert!(!is_bypass("/api/v1/auth/step-up/passkey_manage/passkey"));
+    }
+
+    #[test]
+    fn the_directory_sign_in_is_bypassed_exactly() {
+        // Q4-T1.
+        assert!(is_bypass("/api/v1/auth/ldap/login"));
+        assert!(!is_bypass("/api/v1/auth/ldap"));
+        assert!(!is_bypass("/api/v1/auth/ldap/login/extra"));
     }
 
     #[test]

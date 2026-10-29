@@ -61,13 +61,14 @@ pub use config::{
     DatabaseSection, DocgenSection, EinvoiceSection, EmailDomainCheck, EmailFeedback,
     EmailProviders, EmailRateLimits, EmailSection, EmailStreamRates, EventsSection, FleetSection,
     GcsStorageSettings, GoogleAiSection, InferenceEndpoint, InferenceSection, IntegrationSection,
-    KdfSection, LETS_ENCRYPT_DIRECTORY, LocalStorageSettings, MetadataSection, ModelCapability,
-    ModelPrice, NotificationSection, ObservabilitySection, OidcProviderConfig, OidcSection,
-    OpsSection, PortalSection, RateLimitSection, ReleaseReportSection, RuntimeDbCredentials,
-    S2SSection, S2sMtlsSection, S2sSeededClient, S2sSeededPermission, S3Target, SendGridSettings,
-    SendingDomain, SesSettings, ShedPermits, ShedSection, SpendSection, StatementClassOverrides,
-    StatementClassTimeouts, StorageBackend, StorageSection, TlsSection, TranslationSection,
-    WebchatSection, WebcrawlSection, cidr_contains, config_json_schema, endpoint_is_in_deployment,
+    KdfSection, LETS_ENCRYPT_DIRECTORY, LdapGroupRole, LdapSection, LocalStorageSettings,
+    MetadataSection, ModelCapability, ModelPrice, NotificationSection, ObservabilitySection,
+    OidcProviderConfig, OidcSection, OpsSection, PortalSection, RateLimitSection,
+    ReleaseReportSection, RuntimeDbCredentials, S2SSection, S2sMtlsSection, S2sSeededClient,
+    S2sSeededPermission, S3Target, SendGridSettings, SendingDomain, SesSettings, ShedPermits,
+    ShedSection, SpendSection, StatementClassOverrides, StatementClassTimeouts, StorageBackend,
+    StorageSection, TlsSection, TranslationSection, WebchatSection, WebcrawlSection, cidr_contains,
+    config_json_schema, endpoint_is_in_deployment,
 };
 pub use env::{APP_ENV_VAR, DEBUG_APP_ENV, app_env, is_debug_app_env, is_debug_env};
 pub use keyring::{BARE_STRING_KEY_ID, KeyRing};

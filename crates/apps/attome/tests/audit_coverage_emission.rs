@@ -247,6 +247,10 @@ const UNDRIVABLE: &[(&str, &str)] = &[
          elevation, the same hook the local verify driver below exercises",
     ),
     (
+        "POST /api/v1/auth/ldap/login",
+        "needs a directory server answering over LDAPS; ldap_http.rs drives it against a throwaway OpenLDAP and checks its Login, FailedLogin, Grant and Revoke events",
+    ),
+    (
         "POST /api/v1/auth/passkeys/register/finish",
         "needs an authenticator's signature over a fresh random challenge; passkey_http.rs drives it with a software authenticator and checks its event",
     ),

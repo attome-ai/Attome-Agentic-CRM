@@ -571,8 +571,24 @@ pub(super) async fn login(
     if let failed_login::Subject::Known { user_id, .. } =
         failed_login_subject(&state, &body.email).await?
     {
+        password_policy_gate(&state, &auditor, user_id, &body.email).await?;
+    }
+    login_response(&state, &auditor, outcome, &body.email, "password").await
+}
+
+/// Q1-T7: an SSO-only domain or role refuses a password sign-in, with a
+/// `FailedLogin` event and a 401 that reads exactly like a wrong password; a
+/// break-glass account keeps its password and its use is recorded. Q4-T1:
+/// shared with the directory sign-in, whose password is a password too.
+pub(super) async fn password_policy_gate(
+    state: &AppState,
+    auditor: &SecurityAuditor,
+    user_id: Uuid,
+    email: &str,
+) -> Result<(), AppError> {
+    {
         use attome_security::auth_policy::{self, PasswordLogin};
-        match auth_policy::password_login(&state.db, user_id, &body.email).await? {
+        match auth_policy::password_login(&state.db, user_id, email).await? {
             PasswordLogin::Refused => {
                 auditor
                     .write(
@@ -606,20 +622,33 @@ pub(super) async fn login(
             PasswordLogin::Allowed => {}
         }
     }
+    Ok(())
+}
 
+/// The answer to a sign-in whose password was right: the session, or the
+/// second-factor challenge with what the sign-in page may offer. `method`
+/// names the sign-in in its `Login` event. Q4-T1: shared with the directory
+/// sign-in.
+pub(super) async fn login_response(
+    state: &AppState,
+    auditor: &SecurityAuditor,
+    outcome: accounts::LoginOutcome,
+    email: &str,
+    method: &str,
+) -> Result<Response, AppError> {
     // Q5-T10: what the sign-in page offers with a challenge: "later" while
     // the grace period runs, and remembering the browser where allowed.
     let (grace_until, remember_device, passkey) = match &outcome {
         accounts::LoginOutcome::Session(_) => (None, false, false),
-        _ => challenge_hints(&state, &body.email).await,
+        _ => challenge_hints(state, email).await,
     };
     match outcome {
         accounts::LoginOutcome::Session(user_id) => {
             let cookies = issue_session_cookies_for(
-                &state,
+                state,
                 user_id,
                 &AuthContext::password(),
-                Some((&auditor, "password")),
+                Some((auditor, method)),
             )
             .await?;
             Ok((

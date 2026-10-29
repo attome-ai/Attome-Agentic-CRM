@@ -192,6 +192,14 @@ nothing. A role may set its own mode instead, stricter or not.
   the failures count. What was seen is kept per person without the address; a person with no
   history yet is not judged.
 
+- **Directory accounts (LDAP).** With `auth.ldap` set, a person signs in with their directory
+  username and password (`POST /api/v1/auth/ldap/login`): Attome's service account finds their
+  entry and the directory itself checks the password, over LDAPS or StartTLS only. Their Attome
+  account is the entry's email address. Each sign-in gives the roles `auth.ldap.group_roles` maps
+  their groups to and takes back the roles the directory gave earlier that no group gives now;
+  a role an administrator gave is never touched, and a role carrying system administration is
+  never given by a group. A directory password counts as a password: SSO-only rules refuse it and
+  a role that requires a second factor asks for one.
 - **Passkeys.** A person adds passkeys on Settings > Security after a fresh step-up
   (`passkey_manage`); a passkey is then a second factor like an authenticator app
   (`POST /api/v1/auth/mfa/passkey/start` and `/verify` with the pending sign-in token), and a

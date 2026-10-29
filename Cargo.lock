@@ -590,6 +590,7 @@ dependencies = [
  "hex",
  "hmac 0.12.1",
  "jsonwebtoken",
+ "ldap3",
  "libc",
  "metrics",
  "opentelemetry",
@@ -842,11 +843,13 @@ dependencies = [
  "hmac 0.12.1",
  "http",
  "jsonwebtoken",
+ "ldap3",
  "metrics",
  "opentelemetry",
  "rand 0.8.8",
  "reqwest",
  "rsa",
+ "rustls",
  "serde",
  "serde_json",
  "sha1 0.10.7",
@@ -860,6 +863,7 @@ dependencies = [
  "tracing-subscriber",
  "uuid",
  "webauthn_rp",
+ "webpki-roots 0.26.11",
 ]
 
 [[package]]
@@ -4994,6 +4998,41 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20870f649af7073d53e38067b2a84312175d56ea15217e1b15bc83506ec50afb"
 dependencies = [
  "spin 0.9.9",
+]
+
+[[package]]
+name = "lber"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cbcf559624bfd9fe8d488329a8959766335a43a9b8b2cdd6a2c379fca02909a5"
+dependencies = [
+ "bytes",
+ "nom 7.1.3",
+]
+
+[[package]]
+name = "ldap3"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01fe89f5e7cfb7e4701e3a38ff9f00358e026a9aee940355d88ee9d81e5c7503"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "futures",
+ "futures-util",
+ "lber",
+ "log",
+ "nom 7.1.3",
+ "percent-encoding",
+ "rustls",
+ "rustls-native-certs 0.8.5",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-rustls",
+ "tokio-stream",
+ "tokio-util",
+ "url",
+ "x509-parser",
 ]
 
 [[package]]

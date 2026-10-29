@@ -106,7 +106,7 @@ pub async fn team_grants_admin(
 
 /// Whether the mappings leave `user_id` alone: a break-glass account, or a
 /// reserved service account.
-async fn exempt(tx: &mut sqlx::PgConnection, user_id: Uuid) -> Result<bool, AppError> {
+pub(crate) async fn exempt(tx: &mut sqlx::PgConnection, user_id: Uuid) -> Result<bool, AppError> {
     let (break_glass, email): (bool, Option<String>) = sqlx::query_as(
         "SELECT EXISTS (SELECT 1 FROM break_glass_account WHERE user_ref = $1), \
                 (SELECT email FROM user_account WHERE id = $1)",
@@ -213,7 +213,7 @@ pub async fn apply_mappings_in_tx(
              VALUES ($1, $2, $3, $4) \
              ON CONFLICT (user_ref, role_ref) DO UPDATE \
                  SET is_deleted = false, source_provider_ref = EXCLUDED.source_provider_ref, \
-                     valid_until = NULL, updated_at = now() \
+                     source_directory = false, valid_until = NULL, updated_at = now() \
                WHERE user_account_mm_role.is_deleted \
              RETURNING id",
         )

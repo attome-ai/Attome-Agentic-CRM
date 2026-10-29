@@ -11,6 +11,8 @@ pub mod conflicts;
 pub mod context;
 pub mod db;
 pub mod delegation;
+/// Q4-T1: the roles a directory's groups give at sign-in.
+pub mod directory_mapping;
 pub mod entity_privileges;
 pub mod explain;
 pub mod field_gate;

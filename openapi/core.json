@@ -51809,6 +51809,111 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/auth/ldap/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Sign in with a directory account",
+        "description": "Q4-T1: checks the username and password against `auth.ldap`'s directory,\nlinks or creates the Attome account by the directory's email address,\ngives the roles the person's groups map to (and takes back the ones the\ndirectory gave that they no longer map to), then answers like\n`POST /api/v1/auth/login`: a session, or a second-factor challenge.",
+        "operationId": "ldap_login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LdapLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Signed in, or a second factor is needed (as for a password)"
+          },
+          "401": {
+            "description": "Wrong username or password, or refused like a password",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No directory is configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No Attome account may be linked to this person",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many attempts for this username",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The directory is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "login"
+            },
+            {
+              "category": "security",
+              "operation": "failed_login"
+            },
+            {
+              "category": "access",
+              "operation": "grant"
+            },
+            {
+              "category": "access",
+              "operation": "revoke"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "credential",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "tags": [
@@ -97864,6 +97969,22 @@
           },
           "value": {
             "type": "object"
+          }
+        }
+      },
+      "LdapLoginRequest": {
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string",
+            "description": "The directory username: `sAMAccountName` or `userPrincipalName` by\ndefault (`auth.ldap.user_filter`)."
           }
         }
       },

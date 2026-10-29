@@ -14833,6 +14833,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/ldap/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign in with a directory account
+         * @description Q4-T1: checks the username and password against `auth.ldap`'s directory,
+         *     links or creates the Attome account by the directory's email address,
+         *     gives the roles the person's groups map to (and takes back the ones the
+         *     directory gave that they no longer map to), then answers like
+         *     `POST /api/v1/auth/login`: a session, or a second-factor challenge.
+         */
+        post: operations["ldap_login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -43540,6 +43564,14 @@ export interface components {
             /** @description `platform`, `app` or `customer`. */
             layer: string;
             value: Record<string, never>;
+        };
+        LdapLoginRequest: {
+            password: string;
+            /**
+             * @description The directory username: `sAMAccountName` or `userPrincipalName` by
+             *     default (`auth.ldap.user_filter`).
+             */
+            username: string;
         };
         /** @description A conversion undone. */
         LeadConversionUndone: {
@@ -111006,6 +111038,73 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    ldap_login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LdapLoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Signed in, or a second factor is needed (as for a password) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Wrong username or password, or refused like a password */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No directory is configured */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No Attome account may be linked to this person */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many attempts for this username */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The directory is unavailable */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -56,6 +56,8 @@ pub const RATE_LIMIT_CATEGORIES: &[(&str, &str, &str)] = &[
     ("POST", "/api/v1/auth/step-up/{operation}/google", "mfa"),
     // Q6-T1: a passkey sign-in is a credential attempt; a passkey second
     // factor, step-up or registration shares the MFA budget.
+    // Q4-T1: a directory password is a credential attempt.
+    ("POST", "/api/v1/auth/ldap/login", "credential"),
     ("POST", "/api/v1/auth/passkey/start", "credential"),
     ("POST", "/api/v1/auth/passkey/verify", "credential"),
     ("POST", "/api/v1/auth/mfa/passkey/start", "mfa"),

@@ -59,6 +59,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Directory sign-in (Q4-T1): `POST /api/v1/auth/ldap/login` signs a person in with their Active
+  Directory or OpenLDAP username and password over LDAPS (or StartTLS), set up with `auth.ldap`;
+  plain LDAP stops boot. The Attome account is the directory's email address, created on the
+  first sign-in unless `auth.ldap.create_users` is off, and `auth.ldap.group_roles` gives roles
+  from directory groups at each sign-in, taking back the ones the directory gave once the group no
+  longer lists the person (migration 0330). SSO-only rules and the role MFA policy apply as for a
+  password.
 - Passkeys (Q6-T1): `GET /api/v1/auth/passkeys`, `POST .../passkeys/register/start` and `/finish`,
   and `DELETE .../passkeys/{id}` (adding or removing one needs a fresh `passkey_manage` step-up);
   a passkey as the second factor of a password sign-in (`POST /api/v1/auth/mfa/passkey/start` and

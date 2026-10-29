@@ -19,6 +19,7 @@
 //! | Passkeys | `webauthn` (WebAuthn registration and assertion) |
 //! | Step-up | `step_up` (sensitive-operation guard, single-use challenges, elevation) |
 //! | Federation | `oidc` |
+//! | Directory | `ldap` (LDAPS sign-in and groups, Q4-T1) |
 //! | Browser transport | `cookie` |
 //!
 //! # Security contract
@@ -74,6 +75,8 @@ pub mod invitation;
 pub mod jwt;
 /// Q18-T4: the rewrap job for every registered encrypted column.
 pub mod key_rewrap;
+/// Q4-T1: LDAPS sign-in and group lookup.
+pub mod ldap;
 pub mod mfa;
 /// S11-T3: certificate-bound access tokens (RFC 8705).
 pub mod mtls;

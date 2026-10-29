@@ -500,6 +500,17 @@
           "$ref": "#/$defs/KdfSection",
           "description": "attome-auth plan BAU-15a (hardening 2.7) — the KDF executor and password\npolicy, formerly constants in `attome_auth::password`. Defaults equal\nthose constants, so a config without the block behaves as before.\nFloors and ceilings are enforced by `AppConfig::validate`."
         },
+        "ldap": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/LdapSection"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Q4-T1: sign in with a directory (LDAP) account. Unset, the directory\nsign-in route answers 404."
+        },
         "mfa_challenge_max_attempts": {
           "default": 5,
           "description": "P-mfa-challenge-hardening: per-challenge attempt ceiling enforced\natomically against the `mfa:pending:{jti}` Redis marker (see\n`attome_auth::mfa`) — reaching it kills the challenge outright (the\nclient must re-authenticate with the password for a fresh\n`pending_token`), independent of the general per-IP/user\n`rate_limit.categories.mfa` budget. Default `5`, same \"additive,\ndefault-safe\" posture as every other new config field in this\nsection — a deployment that never touches this sees a sane default,\nnot a behavior change requiring opt-in.",
@@ -2224,6 +2235,98 @@
           "type": "integer"
         }
       },
+      "type": "object"
+    },
+    "LdapGroupRole": {
+      "properties": {
+        "group": {
+          "description": "The group's distinguished name, as the group attribute lists it.",
+          "type": "string"
+        },
+        "role": {
+          "description": "The Attome role's name.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "group",
+        "role"
+      ],
+      "type": "object"
+    },
+    "LdapSection": {
+      "properties": {
+        "base_dn": {
+          "description": "Q4-T1: where people are looked up, e.g. `DC=example,DC=com`.",
+          "type": "string"
+        },
+        "bind_dn": {
+          "description": "Q4-T1: the service account that looks people up, e.g.\n`CN=attome,OU=Service,DC=example,DC=com`.",
+          "type": "string"
+        },
+        "bind_password": {
+          "description": "Q4-T1: the service account's password; `${VAR}`, never committed.",
+          "type": "string",
+          "writeOnly": true
+        },
+        "ca_file": {
+          "default": null,
+          "description": "Q4-T1: a PEM file of the certificate authorities the directory's\ncertificate is checked against. Unset, the public web roots.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "create_users": {
+          "default": true,
+          "description": "Q4-T1: create the Attome account the first time a person signs in.\nOff, only people who already have an account (with no other sign-in\nmethod) may sign in through the directory.",
+          "type": "boolean"
+        },
+        "email_attribute": {
+          "default": "mail",
+          "description": "Q4-T1: the attribute holding the person's email address, which is\ntheir Attome account.",
+          "type": "string"
+        },
+        "group_attribute": {
+          "default": "memberOf",
+          "description": "Q4-T1: the attribute listing the groups the person belongs to.",
+          "type": "string"
+        },
+        "group_roles": {
+          "description": "Q4-T1: the roles a directory group gives, each `{\"group\": \"<group\nDN>\", \"role\": \"<role name>\"}`. Group names compare without regard to\ncase. A role carrying system administration is never given this way.",
+          "items": {
+            "$ref": "#/$defs/LdapGroupRole"
+          },
+          "type": "array"
+        },
+        "start_tls": {
+          "default": false,
+          "description": "Q4-T1: upgrade an `ldap://` connection with StartTLS before anything\nis sent. Ignored for `ldaps://`.",
+          "type": "boolean"
+        },
+        "timeout_secs": {
+          "default": 10,
+          "description": "Q4-T1: seconds for each step with the directory (connect, bind,\nsearch) before the sign-in answers that the directory is unavailable.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "url": {
+          "description": "Q4-T1: the directory, `ldaps://dc.example.com:636`, or\n`ldap://dc.example.com:389` with `start_tls`. Plain LDAP without TLS\nstops boot: the person's password crosses this connection.",
+          "type": "string"
+        },
+        "user_filter": {
+          "default": "(|(sAMAccountName={username})(userPrincipalName={username}))",
+          "description": "Q4-T1: the search for one person, with `{username}` standing for what\nthey typed (escaped). The default finds an Active Directory account\nby `sAMAccountName` or `userPrincipalName`.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url",
+        "bind_dn",
+        "bind_password",
+        "base_dn"
+      ],
       "type": "object"
     },
     "LocalStorageSettings": {

@@ -465,6 +465,11 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
     ),
     (
         "POST",
+        "/api/v1/auth/ldap/login",
+        "Q4-T1: signs in with a directory username and password, before any session exists.",
+    ),
+    (
+        "POST",
         "/api/v1/auth/passkey/start",
         "Q6-T1: starts a passkey sign-in, before any session exists; the options name no one.",
     ),

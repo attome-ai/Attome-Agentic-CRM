@@ -154,6 +154,7 @@ attome-testapp.workspace  = true
 attome-testkit            = { workspace = true, features = ["app-config", "passkey", "query-counter"] }
 base64.workspace          = true
 jsonwebtoken.workspace    = true
+ldap3.workspace           = true
 rsa.workspace             = true
 totp-rs.workspace         = true
 tower.workspace           = true

@@ -47,6 +47,7 @@ pub use sections::inference::{
     ModelCapability, ModelPrice, SpendSection, TranslationSection, endpoint_is_in_deployment,
 };
 pub use sections::integration::IntegrationSection;
+pub use sections::ldap::{LdapGroupRole, LdapSection};
 pub use sections::metadata::{
     ChangesetLayer, ChangesetMode, ChangesetsSection, MetadataSection, ReleaseReportSection,
 };

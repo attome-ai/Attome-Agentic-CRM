@@ -32,6 +32,7 @@ mod jwks;
 mod local;
 mod login_guard;
 mod oidc;
+mod ldap;
 mod passkey;
 mod session;
 mod step_up;
@@ -70,6 +71,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
         session::openapi_fragment(),
         oidc::openapi_fragment(),
         step_up::openapi_fragment(),
+        ldap::openapi_fragment(),
         passkey::openapi_fragment(),
         jwks::openapi_fragment(),
         challenge::openapi_fragment(),
@@ -184,6 +186,8 @@ pub fn public_routes(
             "/api/v1/auth/mfa/passkey/verify",
             post(passkey::finish_second_factor),
         )
+        // Q4-T1: a directory (LDAP) account's username and password.
+        .route("/api/v1/auth/ldap/login", post(ldap::ldap_login))
         .route("/api/v1/auth/passkey/start", post(passkey::start_sign_in))
         .route("/api/v1/auth/passkey/verify", post(passkey::finish_sign_in))
         .layer(Extension(license))

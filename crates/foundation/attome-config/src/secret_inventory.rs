@@ -77,6 +77,7 @@ pub const SECRETS: &[SecretSpec] = &[
         "auth.jwt_signing_keys",
         &["session tokens (asymmetric signing)"],
     ),
+    value("auth.ldap.bind_password", &["directory sign-in (LDAP)"]),
     ring("auth.mfa_encryption_key", &["multi-factor secrets at rest"]),
     value("auth.oauth_google_client_secret", &["Google sign-in"]),
     ring("cache.encryption_key", &["cache values at rest"]),

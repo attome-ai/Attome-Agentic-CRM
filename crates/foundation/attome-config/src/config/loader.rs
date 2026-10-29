@@ -1025,6 +1025,15 @@ impl AppConfig {
                 ),
             });
         }
+        // Q4-T1: a directory sign-in is encrypted and names the person.
+        if let Some(ldap) = &self.auth.ldap
+            && let Some(problem) = ldap.problems().into_iter().next()
+        {
+            return Err(ConfigError::Invalid {
+                field: "auth.ldap".into(),
+                reason: problem,
+            });
+        }
         // Q6-T1: a passkey relying party id is a host name.
         if let Some(rp_id) = &self.auth.passkey_rp_id
             && !rp_id.split('.').all(|label| {
