@@ -35,6 +35,8 @@ export const ADMIN_SCREENS: readonly AdminScreen[] = [
   { title: 'adminConsole.screen.timers', route: '/xrm/admin/timers', area: 'operations' },
   { title: 'adminConsole.screen.rules', route: '/xrm/admin/rules', area: 'data' },
   { title: 'adminConsole.screen.duplicates', route: '/xrm/admin/duplicates', area: 'data' },
+  { title: 'adminConsole.screen.metadataLayers', route: '/xrm/admin/metadata-layers', area: 'data' },
+  { title: 'adminConsole.screen.metadataConflicts', route: '/xrm/admin/metadata-conflicts', area: 'data' },
   { title: 'adminConsole.screen.modules', route: '/xrm/admin/license/modules', area: 'features' },
 ];
 

@@ -753,6 +753,18 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/customer-tests').then(m => m.CustomerTestListComponent),
           },
           {
+            // Y11-T15: where an item's settings come from, and resetting a customisation.
+            path: 'metadata-layers',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/metadata-layers').then(m => m.LayerStackComponent),
+          },
+          {
+            // Y11-T15: upgrade conflicts, resolved by the builder.
+            path: 'metadata-conflicts',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/metadata-layers').then(m => m.MetadataConflictsComponent),
+          },
+          {
             // A30-T3: this deployment's environment variable values.
             path: 'env-variables',
             canActivate: [authGuard],
