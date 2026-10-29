@@ -62,6 +62,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Rollup editor and drill-down (A10-T6): the entity editor has "Add rollup", where you pick the
+  function, the related entity and its lookup back, the field, a filter, a window and the mode
+  (exact only for a count or sum with no filter or window). It shows how many records the
+  backfill fills and in how many batches. On a record, a rollup field's "How is this
+  calculated?" lists the related records it counts that you may open, and how many more it
+  counts that you may not. English and Arabic.
 - Rollup explain (A10-T5): `GET /api/v1/{entity}/{id}/rollups/{attribute}/explain` returns the
   rollup's definition (function, mode, path, field, filter, window), the stored value, how many
   related records it counts, and the first 100 the caller may read with their amounts. Records the

@@ -72,7 +72,15 @@
         </h2>
         <p class="ee-section-sub">{{ 'fieldChange.editor.fieldsHint' | translate }}</p>
       </div>
+      <button type="button" class="btn-sm btn-ghost" data-testid="rollup-add"
+              [attr.aria-expanded]="addingRollup()" (click)="addingRollup.set(!addingRollup())">
+        <i class="las la-plus" aria-hidden="true"></i> {{ 'rollupEditor.add' | translate }}
+      </button>
     </div>
+    @if (addingRollup()) {
+      <xrm-rollup-editor [entityId]="entity()!.id" [entity]="entity()!.logicalname"
+                         (saved)="onRollupSaved()" (cancelled)="addingRollup.set(false)" />
+    }
 
     <!-- Empty state -->
     @if (entity()!.attributes.length === 0) {

@@ -28,6 +28,7 @@ import { PolymorphicLookupComponent, type PolymorphicValue } from '../polymorphi
 import { ImageUploadComponent } from '../image-upload/image-upload.component';
 import { ScanFieldOptions, scanToValues } from './scan-to-values';
 import { checkFailure } from '../field-checks';
+import { RollupExplainComponent } from './rollup-explain.component';
 
 /** Y2-T1: a stored moment as a `datetime-local` value in the viewer's zone;
  *  empty for none or one that does not parse. */
@@ -54,6 +55,7 @@ export function fromLocalDateTimeInput(raw: string): string | null | undefined {
   imports: [
     ReactiveFormsModule, TranslatePipe, MultiAttachmentComponent, FileVersionsComponent,
     RichTextEditorComponent, ImageUploadComponent, FieldHistoryComponent, PolymorphicLookupComponent,
+    RollupExplainComponent,
   ],
   viewProviders: [{ provide: ControlContainer, useExisting: FormGroupDirective }],
   // The grid item is this host element, not the .xf-field inside it, so the
@@ -547,6 +549,9 @@ export class FieldInputComponent implements OnInit, OnDestroy {
       ? (this.field().options as FormulaOptions | null)
       : null;
   }
+
+  /** A10-T6: the rollup's explain list is open. */
+  readonly rollupExplainOpen = signal(false);
 
   /** A10-T1: what a rollup computes and over which related records. */
   rollupHint(): string {

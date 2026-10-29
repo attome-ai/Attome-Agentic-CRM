@@ -322,6 +322,15 @@
         <output [id]="field().name" class="xf-input formula-value"
                 [attr.aria-describedby]="field().name + '-rollup-hint'">{{ formulaDisplay() }}</output>
         <p class="file-hint" [id]="field().name + '-rollup-hint'">{{ rollupHint() }}</p>
+        @if (recordId() && entityName()) {
+          <button type="button" class="btn-link" data-testid="rollup-explain-toggle"
+                  [attr.aria-expanded]="rollupExplainOpen()" (click)="rollupExplainOpen.set(!rollupExplainOpen())">
+            {{ 'rollupExplain.toggle' | translate }}
+          </button>
+          @if (rollupExplainOpen()) {
+            <xrm-rollup-explain [entity]="entityName()!" [recordId]="recordId()!" [attribute]="field().name" />
+          }
+        }
       </div>
     }
 
