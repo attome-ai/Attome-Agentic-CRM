@@ -67,14 +67,21 @@ pub(crate) async fn dependents_of(
         .collect())
 }
 
+/// A8-T2: one polymorphic pair that may point at an entity: (dependent
+/// entity, id attribute, entity attribute, delete rule).
+type PolymorphicDependent = (String, String, String, OnTargetDelete);
+
+/// An id attribute's row as read: (dependent entity, attribute, options).
+type PolymorphicRow = (Option<String>, Option<String>, Option<serde_json::Value>);
+
 /// A8-T2: the polymorphic pairs that may point at `entity` and carry a
 /// delete rule for it other than orphan: (dependent entity, id attribute,
 /// entity attribute, rule), from the metadata tables.
 pub(crate) async fn polymorphic_dependents_of(
     conn: &mut PgConnection,
     entity: &str,
-) -> Result<Vec<(String, String, String, OnTargetDelete)>, AppError> {
-    let rows: Vec<(Option<String>, Option<String>, Option<serde_json::Value>)> = sqlx::query_as(
+) -> Result<Vec<PolymorphicDependent>, AppError> {
+    let rows: Vec<PolymorphicRow> = sqlx::query_as(
         "SELECT de.logicalname, a.logicalname, a.options \
            FROM attribute_info a \
            JOIN entity_info de ON de.id = a.entity_ref \
