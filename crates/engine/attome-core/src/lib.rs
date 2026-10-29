@@ -163,9 +163,9 @@ pub mod relationship_registry;
 /// Solution 7 Phase 2 (D-788 Topic 14, D-791) — the release report store and
 /// the record baseline (the three-way "customer wins" rule).
 pub mod release_report;
-pub mod rule_registry;
 /// Z11-T10: the SQL-safe part of a rule expression as a bound predicate.
 pub mod rollup;
+pub mod rule_registry;
 pub mod rules_sql;
 pub mod run_payload;
 /// A25-T7: the seam search asks in words through (`attome-ai` implements it).

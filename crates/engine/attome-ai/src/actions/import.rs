@@ -280,11 +280,8 @@ impl Action for ProposeMapping {
                 attome_document::import_routes::recent_mappings(state, &job.entity_logicalname, 3)
                     .await?;
             let headers: Vec<String> = columns.iter().map(|(n, _)| n.clone()).collect();
-            let writable: Vec<AttrInfo> = attrs
-                .iter()
-                .filter(|a| !a.is_computed())
-                .cloned()
-                .collect();
+            let writable: Vec<AttrInfo> =
+                attrs.iter().filter(|a| !a.is_computed()).cloned().collect();
 
             let client = crate::inference_client::client_for(state, IMPORT_PROPOSE_MAPPING).await?;
             let mut request =
