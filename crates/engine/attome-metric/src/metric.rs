@@ -1629,6 +1629,15 @@ struct MetricDefinitionSummary {
     /// Entities this metric's query touches, when `source_kind = "query"` —
     /// empty for manual/formula metrics or a query with no declared mapping.
     lineage_entities: Vec<String>,
+    /// P9-T12: the catalogue facts, `null` where the governance fields are
+    /// unset.
+    certified: Option<bool>,
+    steward_ref: Option<Uuid>,
+    review_due: Option<DateTime<Utc>>,
+    definition_version: Option<i32>,
+    glossary_term_ref: Option<Uuid>,
+    /// The scorecards that show it (dashboards are not counted here).
+    used_in: i64,
 }
 
 /// List metrics
@@ -1678,9 +1687,22 @@ async fn list_metrics(
         String,
         Option<String>,
         Option<f64>,
+        Option<bool>,
+        Option<Uuid>,
+        Option<DateTime<Utc>>,
+        Option<i32>,
+        Option<Uuid>,
+        i64,
     )> = sqlx::query_as(&format!(
         "SELECT d.id, d.name, d.key, d.source_kind, d.query_ref, d.direction, d.period, d.unit, \
-                d.weight::double precision \
+                d.weight::double precision, \
+                (to_jsonb(d)->>'certified')::boolean, \
+                (to_jsonb(d)->>'steward_ref')::uuid, \
+                (to_jsonb(d)->>'review_due')::timestamptz, \
+                (to_jsonb(d)->>'definition_version')::numeric::int, \
+                (to_jsonb(d)->>'glossary_term_ref')::uuid, \
+                (SELECT COUNT(*) FROM metric_scorecard_item i \
+                  WHERE i.metric_ref = d.id AND (i.is_active IS NULL OR i.is_active = true)) \
          FROM dashboard_metric_definition d \
          WHERE (d.is_active IS NULL OR d.is_active = true) AND {} \
          ORDER BY d.name LIMIT $1 OFFSET $2",
@@ -1700,7 +1722,24 @@ async fn list_metrics(
     let lineage_by_query = lineage_for_query(&state.base.db, &query_refs).await;
 
     let mut items = Vec::with_capacity(rows.len());
-    for (id, name, key, source_kind, query_ref, direction, period, unit, weight) in rows {
+    for (
+        id,
+        name,
+        key,
+        source_kind,
+        query_ref,
+        direction,
+        period,
+        unit,
+        weight,
+        certified,
+        steward_ref,
+        review_due,
+        definition_version,
+        glossary_term_ref,
+        used_in,
+    ) in rows
+    {
         let lineage_entities = query_ref
             .as_deref()
             .and_then(|r| r.parse::<Uuid>().ok())
@@ -1716,6 +1755,12 @@ async fn list_metrics(
             unit,
             weight,
             lineage_entities,
+            certified,
+            steward_ref,
+            review_due,
+            definition_version,
+            glossary_term_ref,
+            used_in,
         });
     }
 
@@ -2074,6 +2119,14 @@ pub fn routes() -> Router<EngineState> {
             post(crate::certify::post_certify),
         )
         .route(
+            "/api/v1/metrics/{id}/comments",
+            get(crate::scorecard::list_comments),
+        )
+        .route(
+            "/api/v1/metrics/scorecards/{id}",
+            get(crate::scorecard::get_scorecard),
+        )
+        .route(
             "/api/v1/metrics/{id}/lineage",
             get(crate::lineage::metric_lineage),
         )
@@ -2091,6 +2144,8 @@ pub fn routes() -> Router<EngineState> {
     compute_tree,
     crate::backfill::post_backfill,
     crate::certify::post_certify,
+    crate::scorecard::get_scorecard,
+    crate::scorecard::list_comments,
     build_metric,
     crate::targets::post_spread,
     crate::lineage::metric_lineage,

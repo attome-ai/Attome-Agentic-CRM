@@ -62,6 +62,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Metric scorecards and catalogue (P9-T12): `GET /api/v1/metrics/scorecards/{id}` (newest stored
+  values with targets and stale/failed flags), catalogue fields on `GET /api/v1/metrics`, and
+  `GET /api/v1/metrics/{id}/comments`.
 - Metric governance (P9-T11): role-limited metrics (`visible_role_keys`) show only to their roles;
   a lookup breakdown hides members whose record the viewer cannot read; hand-entered values need
   `attome_metric.enter_value`; certifying goes through `POST /api/v1/metrics/{id}/certify` under

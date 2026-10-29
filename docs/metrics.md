@@ -90,3 +90,16 @@ rather than adding new ones. A second spread of the same metric and period while
   record API refuses; a new metric starts uncertified. A value computed under a new definition
   version withdraws the certification.
 
+## Scorecards, freshness and comments
+
+`GET /api/v1/metrics/scorecards/{id}` reads a scorecard (as the caller, with the record's own
+access checks) and, for each of its metrics the caller may see, the newest stored total: its
+period, value and status, that period's target, and its freshness (`computed_at`, `is_stale` when
+it is older than twice the metric's period or missing, `failed` when it carries an error). Nothing
+is computed on read.
+
+`GET /api/v1/metrics` also gives each metric's `certified`, `steward_ref`, `review_due`,
+`definition_version`, `glossary_term_ref` and `used_in` (how many scorecards show it; dashboards
+are not counted). `GET /api/v1/metrics/{id}/comments` lists the comments on a metric the caller
+may read, newest first, optionally for one `period_start`.
+

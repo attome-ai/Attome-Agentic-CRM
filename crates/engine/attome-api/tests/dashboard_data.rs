@@ -3596,3 +3596,75 @@ async fn breakdown_hides_owner_members_viewer_cannot_read() {
     assert_eq!(members, vec![shared.to_string()], "{body}");
     assert_eq!(body["total"], 1, "the hidden member is not counted: {body}");
 }
+
+/// P9-T12: a scorecard reads each metric's newest stored value and flags a
+/// value older than twice its period as stale and one with an error as
+/// failed, without computing anything.
+#[tokio::test]
+async fn scorecard_flags_stale_snapshot() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let db = system.state().base.db.clone();
+    let (_, admin_cookie) = seed_user(&system, true).await;
+    let old = insert_metric(&db, "a / b").await;
+    let failing = insert_metric(&db, "a / b").await;
+    sqlx::query(
+        "INSERT INTO metric_snapshot (id, metric_ref, period_start, actual, source_version, status, computed_at) \
+         VALUES ($1, $2, '2026-01-01', 0.25, 'formula', 'on_track', now() - interval '90 days')",
+    )
+    .bind(Uuid::now_v7())
+    .bind(old)
+    .execute(&db)
+    .await
+    .expect("an old value");
+    sqlx::query(
+        "INSERT INTO metric_snapshot (id, metric_ref, period_start, actual, source_version, status, error_message) \
+         VALUES ($1, $2, date_trunc('month', now())::date, NULL, NULL, 'failed', 'query timed out')",
+    )
+    .bind(Uuid::now_v7())
+    .bind(failing)
+    .execute(&db)
+    .await
+    .expect("a failed value");
+    let scorecard = Uuid::now_v7();
+    sqlx::query("INSERT INTO metric_scorecard (id, name, is_active) VALUES ($1, 'Board', true)")
+        .bind(scorecard)
+        .execute(&db)
+        .await
+        .expect("insert scorecard");
+    for (n, metric) in [old, failing].into_iter().enumerate() {
+        sqlx::query(
+            "INSERT INTO metric_scorecard_item (id, scorecard_ref, metric_ref, sort_order, is_active) \
+             VALUES ($1, $2, $3, $4, true)",
+        )
+        .bind(Uuid::now_v7())
+        .bind(scorecard)
+        .bind(metric)
+        .bind(n as f64)
+        .execute(&db)
+        .await
+        .expect("insert scorecard item");
+    }
+
+    let app = full_app(system);
+    let res = app
+        .oneshot(req(
+            "GET",
+            &format!("/api/v1/metrics/scorecards/{scorecard}"),
+            Some(&admin_cookie),
+            None,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let body = body_json(res).await;
+    assert_eq!(body["name"], "Board", "{body}");
+    let items = body["items"].as_array().unwrap();
+    assert_eq!(items.len(), 2, "{body}");
+    assert_eq!(items[0]["metric_id"], json!(old));
+    assert_eq!(items[0]["actual"], 0.25);
+    assert_eq!(items[0]["freshness"]["is_stale"], true, "{body}");
+    assert_eq!(items[0]["freshness"]["failed"], false, "{body}");
+    assert_eq!(items[1]["metric_id"], json!(failing));
+    assert_eq!(items[1]["freshness"]["is_stale"], false, "{body}");
+    assert_eq!(items[1]["freshness"]["failed"], true, "{body}");
+}
