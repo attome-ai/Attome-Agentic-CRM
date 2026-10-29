@@ -118,6 +118,10 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   run it. The model never writes SQL. `query.run` runs a query in the text form (`SELECT … FROM …
   WHERE … GROUP BY … ORDER BY … LIMIT n`) as the caller and returns at most 50 rows, or the groups;
   a query estimated over 5,000 rows returns its plan instead, to be narrowed.
+- Views (A13-T5): `view.plan` turns a sentence ("deals closing this month over 50k") into a
+  personal view to save: its name, columns and filters, which may use `@me`, `@my_team`, `@my_unit`,
+  `@today`, `@this_month` or `@last_n_days(n)`. It saves nothing. It returns the description and the
+  `POST /api/v1/views` body, which is sent only after the person agrees.
 - Searching by question (A25-T7): `search.parse_filter` turns words into a checked filter over one
   entity; `search.answer_records` answers from the records found, citing only records the person may
   read.
