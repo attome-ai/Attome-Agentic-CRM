@@ -49,6 +49,11 @@ export type DateBucket          = ApiComponents['schemas']['DateBucket'];
 export type WidgetRecordsInputs   = ApiComponents['schemas']['WidgetRecordsInputs'];
 export type WidgetRecordsResponse = ApiComponents['schemas']['WidgetRecordsResponse'];
 export type WidgetExplanation     = ApiComponents['schemas']['WidgetExplanation'];
+// P7-T5/T8: drill by dimension and period comparison.
+export type WidgetDrillDownInputs   = ApiComponents['schemas']['WidgetDrillDownInputs'];
+export type WidgetDrillDownResponse = ApiComponents['schemas']['WidgetDrillDownResponse'];
+export type WidgetCompareInputs     = ApiComponents['schemas']['WidgetCompareInputs'];
+export type WidgetCompareResponse   = ApiComponents['schemas']['WidgetCompareResponse'];
 export type MetricLineageNode     = ApiComponents['schemas']['MetricLineageNode'];
 export type GateIssue             = ApiComponents['schemas']['GateIssue'];
 
@@ -361,6 +366,24 @@ export class DashboardService {
     return this.api.post<WidgetRecordsResponse>(
       `/api/v1/attome-dashboard/${dashboardId}/widgets/${widgetId}/records`,
       inputs,
+    );
+  }
+
+  /** P7-T5: `POST .../widgets/{widgetId}/drill-down` — the next level of
+   * buckets under the ones clicked (`path`), with a breadcrumb. */
+  drillDown(dashboardId: string, widgetId: string, body: WidgetDrillDownInputs): Observable<WidgetDrillDownResponse> {
+    return this.api.post<WidgetDrillDownResponse>(
+      `/api/v1/attome-dashboard/${dashboardId}/widgets/${widgetId}/drill-down`,
+      body,
+    );
+  }
+
+  /** P7-T8: `POST .../widgets/{widgetId}/compare` — the records that entered,
+   * left or changed between two periods. */
+  compare(dashboardId: string, widgetId: string, body: WidgetCompareInputs): Observable<WidgetCompareResponse> {
+    return this.api.post<WidgetCompareResponse>(
+      `/api/v1/attome-dashboard/${dashboardId}/widgets/${widgetId}/compare`,
+      body,
     );
   }
 

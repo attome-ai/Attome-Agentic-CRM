@@ -1921,6 +1921,21 @@ export const xrmAr = {
       snapshotMatches: 'القيمة المسجلة، {value}، تطابق السجلات الآن.',
       snapshotDiffers: 'القيمة المسجلة {value}، والسجلات الآن {total}. تغيّرت السجلات منذ تسجيلها.',
       someHidden: 'يحسب الرقم أيضًا سجلات لا يمكنك فتحها، لذلك هذه القائمة أقصر.',
+      tabRecords: 'السجلات', drillDown: 'تفصيل أعمق', openTarget: 'فتح التفاصيل',
+      breadcrumb: 'مستويات التفصيل', agentChanged: 'غيّره وكيل',
+      parity: {
+        equal: 'السجلات تطابق الرقم.',
+        data_changed_since_computed: 'كان الرقم {value}، والسجلات الآن {total}. تغيّرت السجلات منذ حسابه.',
+        currency_converted_at_other_date: 'حُوِّل الرقم بسعر تاريخ آخر، لذلك يختلف عن هذه السجلات.',
+        rounding: 'الرقم {value} مقرَّبًا، والسجلات {total}.',
+        not_comparable: 'الرقم ليس عددًا لهذه السجلات.',
+      },
+      compare: {
+        tab: 'مقارنة الفترات', period_a: 'الفترة الأولى', period_b: 'الفترة الثانية', from: 'من', to: 'إلى',
+        run: 'مقارنة', invalid: 'أدخل تاريخي كل فترة، والأول قبل الثاني.',
+        summary: '{a} سجلًا في الفترة الأولى و{b} في الثانية: دخل {entered} وخرج {left}.',
+        entered: 'دخلت', left: 'خرجت', changed: 'تغيّرت قيمتها',
+      },
     },
     explain: {
       title: 'كيف تم الحساب', inspect: 'فحص', calculation: 'الحساب', filters: 'عوامل التصفية',

@@ -1,5 +1,6 @@
 <div class="xwr-backdrop" aria-hidden="true"></div>
-<section #panel class="xwr-panel" role="dialog" aria-modal="true" aria-labelledby="xwr-title" tabindex="-1">
+<section #panel class="xwr-panel" role="dialog" aria-modal="true" aria-labelledby="xwr-title" tabindex="-1"
+         [attr.dir]="rtl() ? 'rtl' : 'ltr'">
   <header class="xwr-header">
     <div>
       <h2 id="xwr-title" class="xwr-title">{{ 'dashboard.records.title' | translate }}</h2>
@@ -14,7 +15,73 @@
     <div class="xf-error-banner" role="alert"><i class="las la-exclamation-circle"></i> {{ error() }}</div>
   }
 
-  @if (response(); as res) {
+  @if (canCompare()) {
+    <div class="xwr-tabs" role="tablist">
+      <button type="button" role="tab" class="xwr-tab" [attr.aria-selected]="tab() === 'records'" (click)="tab.set('records')">
+        {{ 'dashboard.records.tabRecords' | translate }}
+      </button>
+      <button type="button" role="tab" class="xwr-tab" data-testid="compare-tab" [attr.aria-selected]="tab() === 'compare'" (click)="tab.set('compare')">
+        {{ 'dashboard.records.compare.tab' | translate }}
+      </button>
+    </div>
+  }
+
+  @if (tab() === 'compare') {
+    <div class="xwr-compare" data-testid="compare">
+      @for (which of ['a', 'b']; track which) {
+        <fieldset class="xwr-period">
+          <legend>{{ ('dashboard.records.compare.period_' + which) | translate }}</legend>
+          <label>{{ 'dashboard.records.compare.from' | translate }}
+            <input type="date" (change)="setPeriod($any(which), 'from', $any($event.target).value)" /></label>
+          <label>{{ 'dashboard.records.compare.to' | translate }}
+            <input type="date" (change)="setPeriod($any(which), 'to', $any($event.target).value)" /></label>
+        </fieldset>
+      }
+      <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm" data-testid="compare-run" (click)="runCompare()">
+        {{ 'dashboard.records.compare.run' | translate }}
+      </button>
+      @if (comparison(); as c) {
+        <p class="xwr-meta">{{ 'dashboard.records.compare.summary' | translate: { a: c.in_a, b: c.in_b, entered: c.entered_total, left: c.left_total } }}</p>
+        <h3 class="xwr-subhead">{{ 'dashboard.records.compare.entered' | translate }}</h3>
+        <ul class="xwr-ids" data-testid="compare-entered">
+          @for (id of c.entered; track id) { <li><button type="button" class="xwr-link" (click)="openRecordId(id)">{{ id }}</button></li> }
+        </ul>
+        <h3 class="xwr-subhead">{{ 'dashboard.records.compare.left' | translate }}</h3>
+        <ul class="xwr-ids" data-testid="compare-left">
+          @for (id of c.left; track id) { <li><button type="button" class="xwr-link" (click)="openRecordId(id)">{{ id }}</button></li> }
+        </ul>
+        @if (c.changed.length > 0) {
+          <h3 class="xwr-subhead">{{ 'dashboard.records.compare.changed' | translate }}</h3>
+          <ul class="xwr-ids">
+            @for (ch of c.changed; track ch.record_id) {
+              <li><button type="button" class="xwr-link" (click)="openRecordId(ch.record_id)">{{ ch.record_id }}</button>
+                <span dir="ltr">{{ ch.old_value }} → {{ ch.new_value }}</span></li>
+            }
+          </ul>
+        }
+      }
+    </div>
+  } @else if (response(); as res) {
+    @if (parityText(); as text) {
+      <div class="xwr-parity" role="status" data-testid="parity">{{ text }}</div>
+    }
+    @if (level(); as lv) {
+      <nav class="xwr-crumbs" [attr.aria-label]="'dashboard.records.breadcrumb' | translate">
+        <button type="button" class="xwr-link" (click)="crumb(0)">{{ bucketLabel() || ('dashboard.records.title' | translate) }}</button>
+        @for (c of lv.breadcrumb; track $index; let i = $index) {
+          @if (i > 0) {
+            <span aria-hidden="true">›</span>
+            <button type="button" class="xwr-link" (click)="crumb(i)">{{ c.label ?? '—' }}</button>
+          }
+        }
+      </nav>
+      <ul class="xwr-levels" data-testid="drill-level">
+        @for (b of lv.buckets; track $index) {
+          <li><button type="button" class="xwr-link" (click)="drillDown(b.key)">{{ b.label ?? '—' }}</button>
+            <span dir="ltr">{{ b.value }}</span></li>
+        }
+      </ul>
+    }
     <div class="xwr-context">
       <p class="xwr-total">{{ 'dashboard.records.total' | translate: { total: res.records.total } }}</p>
       @if (res.metric_parity; as parity) {
@@ -53,6 +120,16 @@
           {{ 'dashboard.records.exportXlsx' | translate }}
         </button>
       }
+      @if (canDrillDown() && !level()) {
+        <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm" data-testid="drill-down" (click)="drillDown()">
+          {{ 'dashboard.records.drillDown' | translate }}
+        </button>
+      }
+      @if (res.drill_through) {
+        <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm" data-testid="drill-through" (click)="followThrough()">
+          {{ 'dashboard.records.openTarget' | translate }}
+        </button>
+      }
       @if (canCrossFilter() && bucketKey()?.kind === 'value') {
         <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm" (click)="crossFilter.emit()">
           <i class="las la-filter"></i> {{ 'dashboard.records.filterDashboard' | translate }}
@@ -77,6 +154,9 @@
                 <td>
                   @if (first) {
                     <button type="button" class="xwr-link" (click)="openRecord(r)">{{ cell(r, c.name) }}</button>
+                    @if (agentRun(r); as run) {
+                      <span class="xwr-agent" [attr.title]="run" data-testid="agent-changed">{{ 'dashboard.records.agentChanged' | translate }}</span>
+                    }
                   } @else {
                     {{ cell(r, c.name) }}
                   }

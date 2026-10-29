@@ -118,6 +118,16 @@ export class DashboardWidgetViewComponent implements OnChanges, OnInit, OnDestro
    * an `aggregate_only` widget's (the server refuses them too). */
   readonly canDrill = computed(() =>
     this.data()?.drillability === 'exact' && !!this.dashboardId() && this.config()?.['aggregate_only'] !== true);
+  /** P7-T11: the widget's buckets drill down a level (`drill_levels`). */
+  readonly canDrillDown = computed(() => {
+    const levels = this.config()?.['drill_levels'];
+    return Array.isArray(levels) && levels.length > 0;
+  });
+  /** P7-T11: a chart grouped by a date compares two periods. */
+  readonly canCompare = computed(() => {
+    const data = this.config()?.['data'] as { group?: { bucket?: string | null } } | undefined;
+    return !!data?.group?.bucket;
+  });
   /** Whether a value or bucket responds to click and keyboard at all. */
   readonly interactive = computed(() => this.canDrill() || this.canCrossFilter());
   /** Phase 3.2: every data widget can explain itself. */

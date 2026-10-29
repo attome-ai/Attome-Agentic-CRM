@@ -2,12 +2,12 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
-import { ATTOME_CONFIG, provideAttomeI18n } from '@attome/base';
+import { ATTOME_CONFIG, LangService, provideAttomeI18n } from '@attome/base';
 import { provideXrmI18n } from '@attome/xrm/core/i18n';
 import { xrmEn } from '@attome/xrm/core/i18n-en';
 import { EntityService } from '@attome/xrm/core/entity';
 import { DashboardService, WidgetRecordsResponse } from '@attome/xrm/dashboard/data';
-import { WidgetRecordsDrawerComponent } from './widget-records-drawer.component';
+import { WidgetRecordsDrawerComponent, parityKey, periodBody } from './widget-records-drawer.component';
 
 // Dashboard 10/10 Phase 3.1/3.4 — the drawer renders the server's records and
 // context, pages with the keyset cursor, and exports with the drill's filters.
@@ -35,7 +35,7 @@ function page(rows: Record<string, unknown>[], cursor?: string, drillFilters: un
   } as WidgetRecordsResponse;
 }
 
-function setup(responses: WidgetRecordsResponse[]) {
+function setup(responses: WidgetRecordsResponse[], lang?: unknown) {
   const widgetRecords = vi.fn((_dashboard: string, _widget: string, _inputs: unknown) => of(responses.shift()!));
   const exportRecords = vi.fn(() => of({ id: 'e1', status: 'pending', matching_rows: 3 }));
   const navigateByUrl = vi.fn();
@@ -47,6 +47,7 @@ function setup(responses: WidgetRecordsResponse[]) {
       { provide: Router, useValue: { navigateByUrl } },
       { provide: DashboardService, useValue: { widgetRecords } },
       { provide: EntityService, useValue: { exportRecords } },
+      ...(lang ? [{ provide: LangService, useValue: lang }] : []),
     ],
   });
   const fixture = TestBed.createComponent(WidgetRecordsDrawerComponent);
@@ -101,5 +102,41 @@ describe('WidgetRecordsDrawerComponent', () => {
   it('offers no export for the Other bucket', () => {
     const { fixture } = setup([page([{ id: 'r1' }], undefined, null)]);
     expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Export CSV');
+  });
+
+  it('shows parity reason when counts differ', () => {
+    const differs = {
+      ...page([{ id: 'r1' }]),
+      parity: { value: 4, listed_total: 3, matches: false, reason: 'data_changed_since_computed' },
+    } as unknown as WidgetRecordsResponse;
+    const { fixture } = setup([differs]);
+    const banner = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="parity"]');
+    expect(banner?.textContent).toContain('Records changed since it was computed');
+    expect(parityKey('rounding')).toBe('dashboard.records.parity.rounding');
+  });
+
+  it('shows no parity banner when the records match', () => {
+    const equal = {
+      ...page([{ id: 'r1' }]),
+      parity: { value: 3, listed_total: 3, matches: true, reason: 'equal' },
+    } as unknown as WidgetRecordsResponse;
+    const { fixture } = setup([equal]);
+    expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="parity"]')).toBeNull();
+  });
+
+  it('renders right to left in Arabic', () => {
+    const arabic = {
+      translate: (k: string) => k, isRtl: () => true, intlLocale: () => 'ar', errorText: () => 'x',
+    };
+    const { fixture } = setup([page([{ id: 'r1' }])], arabic);
+    const panel = (fixture.nativeElement as HTMLElement).querySelector('.xwr-panel');
+    expect(panel?.getAttribute('dir')).toBe('rtl');
+  });
+
+  it('turns two date pairs into periods', () => {
+    expect(periodBody({ from: '2025-01-01', to: '2025-04-01' }))
+      .toEqual({ from: '2025-01-01T00:00:00Z', to: '2025-04-01T00:00:00Z' });
+    expect(periodBody({ from: '2025-04-01', to: '2025-01-01' })).toBeNull();
+    expect(periodBody({ from: '', to: '2025-01-01' })).toBeNull();
   });
 });

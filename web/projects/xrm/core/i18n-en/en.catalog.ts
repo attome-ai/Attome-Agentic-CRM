@@ -1966,6 +1966,21 @@ export const xrmEn = {
       snapshotMatches: 'The recorded value, {value}, matches the records now.',
       snapshotDiffers: 'The recorded value is {value}; the records now come to {total}. Records changed since it was recorded.',
       someHidden: 'The number also counts records you cannot open, so this list is shorter.',
+      tabRecords: 'Records', drillDown: 'Drill down', openTarget: 'Open details',
+      breadcrumb: 'Drill levels', agentChanged: 'changed by an agent',
+      parity: {
+        equal: 'The records match the number.',
+        data_changed_since_computed: 'The number was {value}; the records now come to {total}. Records changed since it was computed.',
+        currency_converted_at_other_date: 'The number was converted at another date\'s rate, so it differs from these records.',
+        rounding: 'The number is {value}, rounded; the records come to {total}.',
+        not_comparable: 'The number is not a count of these records.',
+      },
+      compare: {
+        tab: 'Compare periods', period_a: 'First period', period_b: 'Second period', from: 'From', to: 'To',
+        run: 'Compare', invalid: 'Enter both dates of each period, the first before the second.',
+        summary: '{a} records in the first period, {b} in the second: {entered} entered, {left} left.',
+        entered: 'Entered', left: 'Left', changed: 'Changed value',
+      },
     },
     explain: {
       title: 'How this was calculated', inspect: 'Inspect', calculation: 'Calculation', filters: 'Filters',

@@ -102,3 +102,19 @@
   text-decoration: underline;
   font: inherit;
 }
+
+/* P7-T11: tabs, parity banner, breadcrumb, levels and compare. */
+.xwr-tabs { display: flex; gap: .25rem; margin-block-end: .5rem; }
+.xwr-tab { border: 1px solid var(--color-border); background: none; padding-block: .25rem; padding-inline: .75rem; border-radius: 4px; cursor: pointer; }
+.xwr-tab[aria-selected="true"] { border-color: var(--color-primary); font-weight: 600; }
+.xwr-parity { border-inline-start: 3px solid var(--color-accent); padding-block: .5rem; padding-inline: .75rem; margin-block-end: .5rem; background: var(--color-bg-alt); }
+.xwr-crumbs { display: flex; flex-wrap: wrap; gap: .25rem; align-items: center; margin-block-end: .5rem; }
+.xwr-levels, .xwr-ids { list-style: none; margin: 0 0 .75rem; padding: 0; display: flex; flex-direction: column; gap: .25rem; }
+.xwr-levels li, .xwr-ids li { display: flex; gap: .5rem; justify-content: space-between; }
+.xwr-compare { display: flex; flex-direction: column; gap: .5rem; }
+.xwr-period { display: flex; gap: .5rem; border: 1px solid var(--color-border); border-radius: 4px; padding: .5rem; }
+.xwr-subhead { font-size: .875rem; margin: .5rem 0 .25rem; }
+.xwr-agent { margin-inline-start: .5rem; font-size: .75rem; color: var(--color-text-secondary); }
+@media (max-width: 600px) {
+  .xwr-panel { inset-inline: 0; inline-size: 100%; max-inline-size: 100%; }
+}
