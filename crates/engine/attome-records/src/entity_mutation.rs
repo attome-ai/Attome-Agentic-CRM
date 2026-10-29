@@ -2182,6 +2182,16 @@ pub async fn create_one_as(
     };
     validate_body(attrs, obj, true)?;
     validate_principal_field_writes(principal, entity_name, attrs, obj)?;
+    // A19-T1: each money amount with its currency, rounded to it
+    // (after the field-write check: the engine fills the currency itself).
+    let priced;
+    let obj = match crate::money::apply(&mut **tx, state, entity_name, None, attrs, obj).await? {
+        Some(map) => {
+            priced = map;
+            &priced
+        }
+        None => obj,
+    };
     validate_self_addressed(principal, entity_name, obj, true)?;
     validate_model_record_validators(state, entity_name, obj)?;
     // M7-T1: a record of an entity with a stage process starts in a stage
@@ -3279,6 +3289,18 @@ pub async fn update_one_as(
     }
     validate_body(attrs, obj, false)?;
     validate_principal_field_writes(principal, entity_name, attrs, obj)?;
+    // A19-T1: each money amount with its currency, rounded to it
+    // (after the field-write check: the engine fills the currency itself).
+    let priced;
+    let obj = match crate::money::apply(&mut **tx, state, entity_name, Some(record_id), attrs, obj)
+        .await?
+    {
+        Some(map) => {
+            priced = map;
+            &priced
+        }
+        None => obj,
+    };
     validate_create_only_fields(attrs, obj)?;
     validate_self_addressed(principal, entity_name, obj, false)?;
     validate_engine_managed_fields(state, entity_name, obj, mode)?;

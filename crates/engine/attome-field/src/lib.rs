@@ -55,11 +55,10 @@ pub struct LookupOptions {
 /// Range enforcement for `Number`/`Currency` fields. Either bound may be
 /// omitted; omitting both makes the field unbounded (today's implicit
 /// behavior). `Currency` reuses this struct rather than defining its own —
-/// a currency field is a plain NUMERIC amount in the system base (USD,
-/// always 1:1); it carries no currency-code option because there is nothing
-/// server-side to store per field (display conversion to a viewer's
-/// preferred currency is entirely an Angular concern against a static rate
-/// table, never persisted or validated here).
+/// a currency field's amount is a NUMERIC validated like a number; its ISO
+/// 4217 code lives in the companion field `<name>_currency` (A19-T1,
+/// `attome_core::money`), and rounding to the currency's decimals happens on
+/// the record write path, not here.
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct NumberOptions {
     /// Inclusive lower bound. `None` means no lower bound.
@@ -1536,10 +1535,8 @@ mod tests {
 
     #[test]
     fn currency_accepts_number_rejects_string() {
-        // A currency field is a plain NUMERIC amount in the system base
-        // (USD) — validation is identical to `Number`; only the client's
-        // rendering (amount + the viewer's preferred-currency symbol,
-        // converted against a static rate table) differs.
+        // A currency field's amount validates like a `Number`; its code is
+        // the companion field's (A19-T1).
         assert!(validate(&FieldType::Currency, &json!(19.99), None).is_ok());
         assert!(validate(&FieldType::Currency, &json!("19.99"), None).is_err());
     }

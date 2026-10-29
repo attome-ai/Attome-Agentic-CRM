@@ -129,11 +129,9 @@ impl FieldType {
     /// `int_to_type`/`field_type_of` used to repeat — `1|4|9|10` are
     /// reserved numeric subtypes (integer/percent/duration/…) that only `1`
     /// is actually written today; `2` is no longer one of them — it is now
-    /// `Currency`'s own canonical code (a plain NUMERIC amount; the platform
-    /// carries no exchange-rate/conversion state server-side — display
-    /// conversion to a viewer's preferred currency happens entirely in
-    /// Angular against a static rate table, USD is always the 1:1 system
-    /// base). `7|8` and `12|13` are the "canonical/reserved-alias" pair for
+    /// `Currency`'s own canonical code (a NUMERIC amount whose ISO 4217 code
+    /// is the companion `<name>_currency` field, A19-T1 — see
+    /// [`crate::money`]; no exchange rates are kept server-side). `7|8` and `12|13` are the "canonical/reserved-alias" pair for
     /// `choice`/`file` (multi-ness itself is carried on `options.multi`, see
     /// [`Self::is_multi_valued`], not by which of the pair is stored —
     /// D-078/D-362). Any value outside all of these (including the canonical

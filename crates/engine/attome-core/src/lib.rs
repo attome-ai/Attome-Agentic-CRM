@@ -141,6 +141,8 @@ pub mod metadata_reference;
 pub mod model;
 /// Y4-T1: engine module manifests and their dependency check.
 pub mod module_manifest;
+/// A19-T1: money amounts, their currency companion and rounding.
+pub mod money;
 pub mod my_work;
 pub mod partition_maintenance;
 /// R1-T1: restriction of processing, shared by every processing path.

@@ -68,6 +68,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Money amounts carry their currency (A19-T1). Each `currency` field gets a companion text field
+  `<field>_currency` holding an ISO 4217 code, filled with the deployment's base currency
+  (`core.base_currency`, `USD` by default) when a write names none, and the amount is rounded to
+  its currency's decimals on write (KWD, BHD and OMR 3, JPY 0). Migration 0335 adds the
+  `currency` table; new money columns are `NUMERIC(20,6)`; amounts stored before get the base
+  currency at the next boot. See `docs/money.md`.
 - Polymorphic lookups take a delete rule per target entity (A8-T2): `options.polymorphic.on_delete`
   (`restrict`, `orphan` or `cascade-deactivate`, `"*"` for the rest); a cascade is undone by
   restoring the target.

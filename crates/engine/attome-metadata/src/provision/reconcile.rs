@@ -890,6 +890,42 @@ pub(super) async fn reconcile_attribute_with_lookup_ref(
     desired_id: Option<Uuid>,
     rec: Option<RecordAs<'_>>,
 ) -> Result<(Uuid, ReconcileOutcome), AppError> {
+    let result = reconcile_attribute_inner(
+        db,
+        entity_id,
+        desc,
+        lookup_entity_ref,
+        policy,
+        desired_id,
+        rec,
+    )
+    .await?;
+    // A19-T1: a money amount keeps its currency in the attribute beside it.
+    if desc.field_type == "currency" {
+        super::money::ensure_companion(
+            db,
+            entity_id,
+            &desc.logicalname,
+            &desc.display_name,
+            policy,
+            rec,
+        )
+        .await?;
+    }
+    Ok(result)
+}
+
+/// [`reconcile_attribute_with_lookup_ref`] without the money companion
+/// (A19-T1), which the companion itself is reconciled through.
+pub(super) async fn reconcile_attribute_inner(
+    db: &DbPool,
+    entity_id: Uuid,
+    desc: &AttributeDesc,
+    lookup_entity_ref: Option<Uuid>,
+    policy: ReconcilePolicy,
+    desired_id: Option<Uuid>,
+    rec: Option<RecordAs<'_>>,
+) -> Result<(Uuid, ReconcileOutcome), AppError> {
     let logicalname = desc.logicalname.as_str();
     let field_type = desc.field_type.as_str();
     validate_attribute_shape(logicalname, field_type, lookup_entity_ref, policy)?;

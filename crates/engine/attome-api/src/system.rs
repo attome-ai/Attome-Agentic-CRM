@@ -1244,6 +1244,9 @@ impl EngineSystemBuilder {
         // predicate's columns on tables registered before their backfill
         // existed (a non-admin read of one 500s without them).
         attome_metadata::provision::backfill_rls_columns(&state.base.db_migrator).await?;
+        // A19-T1: money attributes made before currencies get their
+        // currency companion, and their stored amounts the base currency.
+        attome_metadata::provision::backfill_currency_companions(&state.base.db_migrator).await?;
 
         // D-372 UI grouping follow-up: gives every entity registered by now a
         // sensible default `category` (Role form's Privilege Grants tab)

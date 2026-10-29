@@ -49,6 +49,8 @@ pub mod layer_reset;
 pub mod lookup_fk;
 /// L1-T2: a master entity's contribution and provenance side tables.
 pub mod master;
+/// A19-T1: the currency companion of a money attribute.
+mod money;
 /// Y12-T6 — backfill batch sizes that follow the load.
 pub mod pacing;
 mod property_layer;
@@ -94,6 +96,7 @@ pub use identifiers::{
     MAX_IDENTIFIER_LEN, attribute_index_name, external_id_index_name, is_multi_valued,
     physical_field_type, trigram_index_name, valid_field_type, valid_identifier,
 };
+pub use money::{backfill_currency_companions, base_currency};
 pub use reconcile::{
     AttributeDesc, EntityDesc, RECONCILE_SCHEMA_CHANGE_INLINE_ROW_LIMIT, ReconcileOutcome,
     ReconcilePolicy, reactivate_attribute, reactivate_attribute_recorded, reactivate_entity,

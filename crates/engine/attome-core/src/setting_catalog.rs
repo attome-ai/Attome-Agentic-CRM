@@ -558,6 +558,18 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!("SA"),
         ),
+        // A19-T1: the currency a money amount written without one is in.
+        SettingDescriptor::new(
+            crate::money::BASE_CURRENCY_SETTING,
+            "The currency (ISO 4217 code) of a money amount written without one, such as SAR \
+         (A19-T1). Each money field keeps its currency in the field beside it named \
+         `<field>_currency`, and an amount is rounded to its currency's decimals (KWD, BHD and \
+         OMR 3, JPY 0). Amounts stored before currencies existed are given this currency.",
+            || json!({"type": "string", "pattern": "^[A-Z]{3}$"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(crate::money::DEFAULT_BASE_CURRENCY),
+        ),
         // L4-T3: whether the catalogue names attributes a person may not read.
         SettingDescriptor::new(
             "catalog.show_hidden_existence",

@@ -779,7 +779,12 @@ pub(super) async fn provision_column(
         return Ok(());
     }
 
-    let pg_type = pg_type_for(field_type, is_multi);
+    // A19-T1: a stored money amount has a fixed precision.
+    let pg_type = if field_type == "currency" && generated.is_none() {
+        attome_core::money::AMOUNT_COLUMN_TYPE
+    } else {
+        pg_type_for(field_type, is_multi)
+    };
     // Y2-T7: new text and JSON columns compress with lz4 (faster than the
     // default pglz at a similar ratio). Existing columns are left alone;
     // their new values keep pglz.

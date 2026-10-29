@@ -42,9 +42,8 @@ use uuid::Uuid;
 /// `File`) has no slot `File` could map to. `Icon`/`Color` are plain
 /// TEXT-backed columns (a CSS glyph class, a `#rrggbb` hex string) with the
 /// same evaluation semantics as `Text` — no dedicated `Type` needed for
-/// either. `Currency` is a plain NUMERIC amount in the system base (USD) —
-/// evaluated identically to `Number`; display conversion to a viewer's
-/// preferred currency never reaches this engine.
+/// either. `Currency` is a NUMERIC amount (its code is the companion
+/// `<name>_currency` field, A19-T1) — evaluated identically to `Number`.
 ///
 /// U9 (D-604): the map itself moved to `attome_core::formula::rules_type`
 /// so `attome-metadata`'s reconcile can compile a formula field's expression

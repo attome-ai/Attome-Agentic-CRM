@@ -65,6 +65,8 @@ pub mod import_undo;
 pub mod import_validate;
 /// AA10-T3: mass operations over a filter, sized by `heavy_op`.
 pub mod mass;
+/// A19-T1: money amounts carry their currency and round to its decimals.
+pub mod money;
 /// C-10 — the shared mutation-commit orchestration helper (creator share,
 /// file mirror, audit write, commit, post-commit invalidation, rw-pin).
 /// `pub`, not `pub(crate)`: `attome-server::communication` and
