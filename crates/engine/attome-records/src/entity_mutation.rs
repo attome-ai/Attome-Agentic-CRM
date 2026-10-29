@@ -1578,21 +1578,68 @@ pub async fn recompute_time_based_formulas(
 /// the caller may not read, or did not select, is absent and stays absent)
 /// with its value computed now from the row's own fields. A blank input or
 /// a failed evaluation reads as empty; a read never fails on a formula.
+/// A9-T2: a formula's lookup paths are read for each row
+/// ([`crate::formula_paths`]).
 pub async fn fill_read_time_formulas(
     state: &EngineState,
     entity_name: &str,
     attrs: &[AttrInfo],
     rows: &mut [Value],
 ) {
+    if rows.is_empty() || !attrs.iter().any(|a| a.is_formula()) {
+        return;
+    }
+    let reads_paths = crate::rule_engine::formula_rules_when(entity_name, attrs, true)
+        .iter()
+        .any(|(_, rule)| attome_core::formula::reads_through_lookup(&rule.expression));
+    let registry = if reads_paths {
+        match crate::formula_paths::registry_for(state, entity_name).await {
+            Ok(registry) => Some(registry),
+            Err(e) => {
+                tracing::warn!(entity = %entity_name, error = %e,
+                    "read_time formulas: the metadata for their lookups could not be read; they read as empty");
+                None
+            }
+        }
+    } else {
+        None
+    };
+    let empty = attome_core::EntityMetaRegistry::default();
+    fill_read_time_formulas_at(
+        state,
+        registry.as_deref().unwrap_or(&empty),
+        entity_name,
+        attrs,
+        rows,
+        0,
+    )
+    .await;
+}
+
+/// [`fill_read_time_formulas`] `depth` formulas deep (A9-T2: a path ending
+/// at another record's `read_time` formula computes it one level down).
+pub(crate) async fn fill_read_time_formulas_at(
+    state: &EngineState,
+    registry: &attome_core::EntityMetaRegistry,
+    entity_name: &str,
+    attrs: &[AttrInfo],
+    rows: &mut [Value],
+    depth: usize,
+) {
     let formulas = crate::rule_engine::formula_rules_when(entity_name, attrs, true);
     if formulas.is_empty() || rows.is_empty() {
         return;
     }
+    let expressions: Vec<&str> = formulas
+        .iter()
+        .map(|(_, r)| r.expression.as_str())
+        .collect();
+    let paths = crate::formula_paths::paths_of(registry, attrs, &expressions);
     let now = chrono::Utc::now();
     let mut compiled = Vec::with_capacity(formulas.len());
-    for (target, rule) in &formulas {
+    for ((target, rule), refs) in formulas.iter().zip(&paths) {
         match crate::rule_engine::get_or_compile_formula(state, attrs, rule).await {
-            Ok(c) => compiled.push((target, rule, c)),
+            Ok(c) => compiled.push((target, rule, c, refs)),
             Err(e) => tracing::warn!(
                 entity = %entity_name, field = %target, error = %e,
                 "a read_time formula no longer compiles; it reads as empty"
@@ -1603,11 +1650,33 @@ pub async fn fill_read_time_formulas(
         let Some(obj) = row.as_object_mut() else {
             continue;
         };
-        let rules_ctx = crate::rule_engine::context_for_record(now, attrs, obj);
-        for (target, rule, c) in &compiled {
+        let base_ctx = crate::rule_engine::context_for_record(now, attrs, obj);
+        for (target, rule, c, refs) in &compiled {
             if !obj.contains_key(target.as_str()) {
                 continue;
             }
+            let rules_ctx = if refs.is_empty() {
+                base_ctx.clone()
+            } else {
+                match crate::formula_paths::with_paths(
+                    state,
+                    registry,
+                    obj,
+                    refs,
+                    base_ctx.clone(),
+                    depth,
+                )
+                .await
+                {
+                    Ok(ctx) => ctx,
+                    Err(e) => {
+                        tracing::warn!(entity = %entity_name, field = %target, error = %e,
+                            "a read_time formula's lookups could not be read; it reads as empty");
+                        obj.insert((*target).clone(), Value::Null);
+                        continue;
+                    }
+                }
+            };
             let value = crate::rule_engine::evaluate_value(rule, c, &rules_ctx)
                 .map(|v| crate::rule_engine::json_from_rules_value(&v))
                 .unwrap_or(Value::Null);

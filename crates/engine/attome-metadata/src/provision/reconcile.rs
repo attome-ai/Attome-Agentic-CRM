@@ -1281,7 +1281,47 @@ async fn validate_formula_field(
         }
         other => other,
     };
-    attome_core::formula::compile_formula(&attrs, desired.options.as_ref()).map_err(named)?;
+    // A9-T2: a formula reading through lookups compiles against the other
+    // entities as they are now (read from the database, like `attrs`), and
+    // may not close a cycle among formulas that read each other.
+    let expression = attome_core::formula::parse_options(desired.options.as_ref())
+        .map(|o| o.expression)
+        .unwrap_or_default();
+    if attome_core::formula::reads_through_lookup(&expression) {
+        let registry = attome_core::build_registry(db).await?;
+        // The registry's attributes carry each lookup's target, which the
+        // minimal list above does not.
+        let with_targets: Vec<attome_core::AttrInfo> = registry
+            .get(entity_logicalname)
+            .map(|meta| {
+                meta.attrs
+                    .iter()
+                    .filter(|a| a.logicalname != logicalname)
+                    .cloned()
+                    .collect()
+            })
+            .unwrap_or_else(|| attrs.clone());
+        attome_core::formula::compile_formula_in(
+            &with_targets,
+            desired.options.as_ref(),
+            Some(&registry),
+        )
+        .map_err(named)?;
+        if let Some(cycle) = attome_core::formula::formula_cycle(
+            &registry,
+            entity_logicalname,
+            logicalname,
+            &expression,
+        ) {
+            return Err(AppError::Validation(format!(
+                "{entity_logicalname}.{logicalname}: the formula would read itself through \
+                 lookups ({}); formulas computed when read cannot form a cycle",
+                cycle.join(" -> ")
+            )));
+        }
+    } else {
+        attome_core::formula::compile_formula(&attrs, desired.options.as_ref()).map_err(named)?;
+    }
     attome_core::formula::generated_sql(&attrs, desired.options.as_ref()).map_err(named)
 }
 

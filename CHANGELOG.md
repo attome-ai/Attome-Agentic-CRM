@@ -59,6 +59,16 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Formulas computed when read (`mode: read_time`) can read through lookups, up to five of them
+  (`account.owner.manager.region`), resolved for each record when it is read (A9-T2). A path may end
+  at another entity's formula; a save that would make formulas read each other in a cycle is refused
+  naming the cycle. A stored formula still reads only its own record's fields and is refused if it
+  reads through a lookup. The rules language now accepts paths of up to five hops; business rules
+  still follow three.
+- Dashboard widgets can be marked `aggregate_only`: their records cannot be listed (422,
+  `details[0].code` `aggregate_only`), and the explanation still works (P7-T3). A KPI drill now says
+  `some_records_hidden` when the viewer reads less of the entity than the metric counts, without
+  saying how many.
 - Directory sign-in (Q4-T1): `POST /api/v1/auth/ldap/login` signs a person in with their Active
   Directory or OpenLDAP username and password over LDAPS (or StartTLS), set up with `auth.ldap`;
   plain LDAP stops boot. The Attome account is the directory's email address, created on the

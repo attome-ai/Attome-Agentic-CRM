@@ -51,6 +51,8 @@ pub mod entity_crud;
 pub mod entity_mutation;
 /// Z11-T12: one expression checked for an editor or agent.
 pub mod expression_check;
+/// A9-T2: lookup paths a read_time formula reads.
+mod formula_paths;
 /// AA10-T2: the size check that sends a heavy operation inline or to the
 /// background.
 pub mod heavy_op;

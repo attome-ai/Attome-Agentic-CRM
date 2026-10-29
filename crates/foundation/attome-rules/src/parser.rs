@@ -119,8 +119,10 @@ enum SpannedKind {
     Path(Vec<String>),
 }
 
-/// Z11-T7: the most hops a path may take (four segments).
-pub(crate) const MAX_PATH_HOPS: usize = 3;
+/// Z11-T7: the most hops a path may take; A9-T2 raised it from three to
+/// five (six segments) for formulas. Each caller still caps its own depth
+/// (business rules follow three, `attome_core::business_rules::MAX_RELATED_HOPS`).
+pub(crate) const MAX_PATH_HOPS: usize = 5;
 
 impl Parser {
     fn peek(&self) -> &TokKind {
@@ -565,14 +567,16 @@ mod tests {
     }
 
     #[test]
-    fn rejects_a_path_past_three_hops() {
-        // Z11-T7: two and three hops are paths (V2 only, checked at compile).
+    fn rejects_a_path_past_five_hops() {
+        // Z11-T7: two hops and more are paths (V2 only, checked at compile);
+        // A9-T2: up to five.
         assert_eq!(
             parse("a.b.c").unwrap(),
             Expr::Path(vec!["a".into(), "b".into(), "c".into()])
         );
         assert!(parse("a.b.c.d").is_ok());
-        let err = parse("a.b.c.d.e").unwrap_err();
+        assert!(parse("a.b.c.d.e.f").is_ok());
+        let err = parse("a.b.c.d.e.f.g").unwrap_err();
         assert!(matches!(err, RulesError::MultiHopLookup(_)), "{err:?}");
     }
 

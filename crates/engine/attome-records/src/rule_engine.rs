@@ -446,12 +446,27 @@ pub async fn get_or_compile_formula(
         .iter()
         .find(|a| a.logicalname == field)
         .and_then(|a| a.options.as_ref());
-    let compiled = attome_core::formula::compile_formula(attrs, options).map_err(|e| match e {
-        AppError::Validation(msg) => {
-            AppError::Validation(format!("formula field '{field}' is invalid: {msg}"))
-        }
-        other => other,
-    })?;
+    // A9-T2: lookup paths compile against the registry; with the metadata
+    // cache off it is empty, so the database is read once for the compile.
+    let through_lookup = attome_core::formula::reads_through_lookup(&rule.expression);
+    let built;
+    let loaded = std::sync::Arc::clone(&state.entities.load());
+    let registry: Option<&attome_core::EntityMetaRegistry> = if !through_lookup {
+        None
+    } else if loaded.get(&rule.entity_logicalname).is_some() {
+        Some(&*loaded)
+    } else {
+        built = attome_core::build_registry(&state.base.db).await?;
+        Some(&built)
+    };
+    let compiled = attome_core::formula::compile_formula_in(attrs, options, registry).map_err(
+        |e| match e {
+            AppError::Validation(msg) => {
+                AppError::Validation(format!("formula field '{field}' is invalid: {msg}"))
+            }
+            other => other,
+        },
+    )?;
     let compiled = Arc::new(compiled);
     state.rule_compiled.insert(key, compiled.clone()).await;
     Ok(compiled)

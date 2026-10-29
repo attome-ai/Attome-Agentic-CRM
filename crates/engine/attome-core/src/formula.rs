@@ -26,6 +26,15 @@
 //! is read, so an expression over `today()` or `now()` is never stale; its
 //! column stays empty). A stored formula reads only its own record's fields,
 //! so it recomputes in the write that changes them.
+//!
+//! A9-T2: a `read_time` formula may also read through lookups, up to
+//! [`MAX_FORMULA_HOPS`] of them (`account.owner.manager.region`), resolved
+//! when the record is read. A stored formula may not: nothing would
+//! recompute it when the related record changes. A path may end at another
+//! entity's formula; a `read_time` one there is computed in turn, so the
+//! formulas reading each other through lookups form a graph, and a save
+//! that would close a cycle in it is refused naming the cycle
+//! ([`formula_cycle`]).
 
 use attome_rules::{BinaryOp, Compiled, Expr, Schema, Type, UnaryOp, compile};
 use attome_types::AppError;
@@ -34,6 +43,9 @@ use serde_json::Value;
 
 use crate::field_type::{FORMULA_RESULT_TYPES, FieldType};
 use crate::meta_registry::AttrInfo;
+
+/// A9-T2: the most lookups a `read_time` formula follows to a value.
+pub const MAX_FORMULA_HOPS: usize = 5;
 
 /// Longest expression a formula may carry. The evaluator has its own node
 /// and step budgets; this only keeps an absurd metadata value out of the
@@ -318,10 +330,73 @@ pub fn formula_input_schema(attrs: &[AttrInfo]) -> Schema {
 /// it (it is excluded either way). A failure is `AppError::Validation` —
 /// a 422 at field save, before the field exists.
 pub fn compile_formula(attrs: &[AttrInfo], options: Option<&Value>) -> Result<Compiled, AppError> {
+    compile_formula_in(attrs, options, None)
+}
+
+/// A9-T2: whether `expression` reads anything through a lookup
+/// (`owner.region`, `account.owner.manager.region`). Pure; an expression
+/// that does not parse reads none.
+pub fn reads_through_lookup(expression: &str) -> bool {
+    fn walk(expr: &Expr) -> bool {
+        match expr {
+            Expr::FieldRef(r) => r.hop.is_some(),
+            Expr::Path(_) => true,
+            Expr::Unary { expr, .. } => walk(expr),
+            Expr::Binary { lhs, rhs, .. } => walk(lhs) || walk(rhs),
+            Expr::Call { args, .. } | Expr::ListLit(args) => args.iter().any(walk),
+            Expr::Lambda { body, .. } => walk(body),
+            Expr::NullLit | Expr::BoolLit(_) | Expr::NumberLit(_) | Expr::StringLit(_) => false,
+        }
+    }
+    attome_rules::parse(expression).is_ok_and(|e| walk(&e))
+}
+
+/// A9-T2: the lookup paths a formula's `expression` on an entity with
+/// `attrs` reads, resolved in `registry` (at most [`MAX_FORMULA_HOPS`]
+/// lookups; one that does not resolve is left out, so the compile names it).
+pub fn formula_paths(
+    expression: &str,
+    attrs: &[AttrInfo],
+    registry: &crate::EntityMetaRegistry,
+) -> Vec<crate::business_rules::RelatedRef> {
+    crate::business_rules::related_refs_within(expression, attrs, registry, MAX_FORMULA_HOPS)
+}
+
+/// [`compile_formula`] with the other entities in `registry`: a `read_time`
+/// formula's lookup paths are declared, and a stored formula reading
+/// through a lookup is refused. Without a registry no path resolves.
+pub fn compile_formula_in(
+    attrs: &[AttrInfo],
+    options: Option<&Value>,
+    registry: Option<&crate::EntityMetaRegistry>,
+) -> Result<Compiled, AppError> {
     let opts = parse_options(options)?;
-    let schema = formula_input_schema(attrs);
-    let compiled = compile(&opts.expression, &schema)
-        .map_err(|e| AppError::Validation(format!("formula expression does not compile: {e}")))?;
+    let mut schema = formula_input_schema(attrs);
+    let through_lookup = reads_through_lookup(&opts.expression);
+    if through_lookup && opts.mode.is_stored() {
+        return Err(AppError::Validation(
+            "a stored formula reads only its own record's fields; to read through a lookup, set \
+             mode to read_time (computed when the record is read)"
+                .into(),
+        ));
+    }
+    if through_lookup && let Some(registry) = registry {
+        schema = crate::business_rules::with_related_schema(
+            schema,
+            &formula_paths(&opts.expression, attrs, registry),
+        );
+    }
+    let compiled = if through_lookup {
+        attome_rules::compile_versioned(
+            &opts.expression,
+            &schema,
+            attome_rules::LanguageVersion::V2,
+            attome_rules::Budgets::default(),
+        )
+    } else {
+        compile(&opts.expression, &schema)
+    }
+    .map_err(|e| AppError::Validation(format!("formula expression does not compile: {e}")))?;
     let target = FieldType::try_from(opts.result_type.as_str())
         .ok()
         .and_then(|ft| rules_type(&ft))
@@ -337,6 +412,94 @@ pub fn compile_formula(attrs: &[AttrInfo], options: Option<&Value>) -> Result<Co
         )));
     }
     Ok(compiled)
+}
+
+/// A9-T2: the formula fields `expression` (a formula on `entity` with
+/// `attrs`) depends on through lookups: each path that ends at another
+/// formula computed when read, as `(entity, field)`. A path ending at a
+/// stored formula reads its stored value, which depends on nothing here.
+fn formula_dependencies(
+    expression: &str,
+    attrs: &[AttrInfo],
+    registry: &crate::EntityMetaRegistry,
+) -> Vec<(String, String)> {
+    formula_paths(expression, attrs, registry)
+        .into_iter()
+        .filter_map(|r| {
+            let entity = r.entities.last()?.clone();
+            let field = r.segments.last()?.clone();
+            let target = registry
+                .get(&entity)?
+                .attrs
+                .iter()
+                .find(|a| a.logicalname == field)?;
+            (target.is_formula() && is_read_time(target.options.as_ref()))
+                .then_some((entity, field))
+        })
+        .collect()
+}
+
+/// A9-T2: the cycle saving `expression` as formula `entity.field` would
+/// close among the formulas that read each other through lookups, as
+/// `["a.f", "b.g", "a.f"]`; `None` when there is none. Every other formula
+/// is read from `registry` as it is now. Pure.
+pub fn formula_cycle(
+    registry: &crate::EntityMetaRegistry,
+    entity: &str,
+    field: &str,
+    expression: &str,
+) -> Option<Vec<String>> {
+    let start = (entity.to_owned(), field.to_owned());
+    let attrs = registry.get(entity).map_or(&[][..], |m| m.attrs.as_slice());
+    let mut path = vec![start.clone()];
+    let mut seen = std::collections::BTreeSet::new();
+    let found = walk_cycle(
+        registry,
+        &start,
+        formula_dependencies(expression, attrs, registry),
+        &mut path,
+        &mut seen,
+    );
+    found.then(|| path.iter().map(|(e, f)| format!("{e}.{f}")).collect())
+}
+
+/// Depth-first from the node on top of `path` (whose dependencies are
+/// `deps`); `true` with `path` ending at `start` again when a cycle closes.
+fn walk_cycle(
+    registry: &crate::EntityMetaRegistry,
+    start: &(String, String),
+    deps: Vec<(String, String)>,
+    path: &mut Vec<(String, String)>,
+    seen: &mut std::collections::BTreeSet<(String, String)>,
+) -> bool {
+    for dep in deps {
+        if &dep == start {
+            path.push(dep);
+            return true;
+        }
+        if !seen.insert(dep.clone()) {
+            continue;
+        }
+        let Some(meta) = registry.get(&dep.0) else {
+            continue;
+        };
+        let Some(expression) = meta
+            .attrs
+            .iter()
+            .find(|a| a.logicalname == dep.1)
+            .and_then(|a| parse_options(a.options.as_ref()).ok())
+            .map(|o| o.expression)
+        else {
+            continue;
+        };
+        let next = formula_dependencies(&expression, &meta.attrs, registry);
+        path.push(dep);
+        if walk_cycle(registry, start, next, path, seen) {
+            return true;
+        }
+        path.pop();
+    }
+    false
 }
 
 #[cfg(test)]
@@ -508,5 +671,152 @@ mod tests {
             Some(json!({"expression": "1", "result_type": "number"})),
         );
         assert_eq!(attr_rules_type(&formula), Some(Type::Number));
+    }
+
+    // ── A9-T2: reading through lookups ──────────────────────────────────────
+
+    fn lookup(name: &str, target: uuid::Uuid) -> AttrInfo {
+        let mut a = attr(name, 11, None);
+        a.lookup_entity_ref = Some(target);
+        a
+    }
+
+    fn formula(name: &str, expression: &str, read_time: bool) -> AttrInfo {
+        let mut options = json!({"expression": expression, "result_type": "text"});
+        if read_time {
+            options["mode"] = json!("read_time");
+        }
+        attr(name, 16, Some(options))
+    }
+
+    fn meta(id: uuid::Uuid, name: &str, attrs: Vec<AttrInfo>) -> crate::EntityMeta {
+        crate::EntityMeta {
+            entity_id: id,
+            logicalname: name.to_owned(),
+            attrs,
+            is_append_only: false,
+            primary_name_attribute: None,
+        }
+    }
+
+    /// contact -> account -> owner (user) -> manager (user) -> region.
+    fn people() -> (crate::EntityMetaRegistry, Vec<AttrInfo>) {
+        let user = uuid::Uuid::now_v7();
+        let account = uuid::Uuid::now_v7();
+        let registry = crate::EntityMetaRegistry::from_entities(vec![
+            meta(
+                user,
+                "app_user",
+                vec![attr("region", 0, None), lookup("manager", user)],
+            ),
+            meta(
+                account,
+                "account",
+                vec![attr("name", 0, None), lookup("owner", user)],
+            ),
+        ]);
+        (
+            registry,
+            vec![attr("name", 0, None), lookup("account", account)],
+        )
+    }
+
+    #[test]
+    fn formula_cross_entity_paths_compile_only_when_read() {
+        let (registry, contact) = people();
+        let live = json!({"expression": "account.owner.manager.region", "result_type": "text", "mode": "read_time"});
+        assert!(compile_formula_in(&contact, Some(&live), Some(&registry)).is_ok());
+        assert!(reads_through_lookup("account.owner.manager.region"));
+        assert!(reads_through_lookup("account.name"));
+        assert!(!reads_through_lookup("upper(name)"));
+        // Without the other entities nothing resolves.
+        assert!(compile_formula_in(&contact, Some(&live), None).is_err());
+        // A stored formula would never be recomputed when the account changes.
+        let stored = json!({"expression": "account.name", "result_type": "text"});
+        let err = compile_formula_in(&contact, Some(&stored), Some(&registry)).unwrap_err();
+        assert!(err.to_string().contains("read_time"), "{err}");
+    }
+
+    #[test]
+    fn formula_cross_entity_follows_at_most_five_lookups() {
+        let user = uuid::Uuid::now_v7();
+        let registry = crate::EntityMetaRegistry::from_entities(vec![meta(
+            user,
+            "app_user",
+            vec![attr("region", 0, None), lookup("manager", user)],
+        )]);
+        let me = vec![lookup("manager", user)];
+        let five = json!({"expression": "manager.manager.manager.manager.manager.region", "result_type": "text", "mode": "read_time"});
+        assert!(compile_formula_in(&me, Some(&five), Some(&registry)).is_ok());
+        let six = json!({"expression": "manager.manager.manager.manager.manager.manager.region", "result_type": "text", "mode": "read_time"});
+        assert!(compile_formula_in(&me, Some(&six), Some(&registry)).is_err());
+    }
+
+    #[test]
+    fn formula_cross_entity_cycle_is_refused_naming_the_path() {
+        let a = uuid::Uuid::now_v7();
+        let b = uuid::Uuid::now_v7();
+        let registry = crate::EntityMetaRegistry::from_entities(vec![
+            meta(
+                a,
+                "ent_a",
+                vec![lookup("b_ref", b), formula("f", "b_ref.g", true)],
+            ),
+            meta(
+                b,
+                "ent_b",
+                vec![lookup("a_ref", a), formula("g", "a_ref.f", true)],
+            ),
+        ]);
+        assert_eq!(
+            formula_cycle(&registry, "ent_a", "f", "b_ref.g"),
+            Some(vec![
+                "ent_a.f".to_owned(),
+                "ent_b.g".to_owned(),
+                "ent_a.f".to_owned()
+            ])
+        );
+        // Wrapping the path in a function still reads it; a constant reads nothing.
+        assert_eq!(
+            formula_cycle(&registry, "ent_a", "f", "upper(b_ref.g)"),
+            formula_cycle(&registry, "ent_a", "f", "b_ref.g")
+        );
+        assert_eq!(formula_cycle(&registry, "ent_a", "f", "\"x\""), None);
+    }
+
+    #[test]
+    fn formula_cross_entity_stored_target_is_no_dependency() {
+        let a = uuid::Uuid::now_v7();
+        let b = uuid::Uuid::now_v7();
+        // g is stored: reading it reads its column, which depends on nothing.
+        let registry = crate::EntityMetaRegistry::from_entities(vec![
+            meta(
+                a,
+                "ent_a",
+                vec![lookup("b_ref", b), formula("f", "b_ref.g", true)],
+            ),
+            meta(
+                b,
+                "ent_b",
+                vec![
+                    lookup("a_ref", a),
+                    attr("label", 0, None),
+                    formula("g", "upper(label)", false),
+                ],
+            ),
+        ]);
+        assert_eq!(formula_cycle(&registry, "ent_a", "f", "b_ref.g"), None);
+        // A self-lookup to the same formula is a cycle too (a parent chain
+        // could loop in the data).
+        let p = uuid::Uuid::now_v7();
+        let tree = crate::EntityMetaRegistry::from_entities(vec![meta(
+            p,
+            "node",
+            vec![lookup("parent", p), formula("path", "parent.path", true)],
+        )]);
+        assert_eq!(
+            formula_cycle(&tree, "node", "path", "parent.path"),
+            Some(vec!["node.path".to_owned(), "node.path".to_owned()])
+        );
     }
 }

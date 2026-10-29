@@ -1029,6 +1029,17 @@ pub fn related_refs(
     attrs: &[AttrInfo],
     registry: &crate::EntityMetaRegistry,
 ) -> Vec<RelatedRef> {
+    related_refs_within(src, attrs, registry, MAX_RELATED_HOPS)
+}
+
+/// [`related_refs`] following at most `max_hops` lookups (A9-T2: formulas
+/// follow up to [`crate::formula::MAX_FORMULA_HOPS`]).
+pub fn related_refs_within(
+    src: &str,
+    attrs: &[AttrInfo],
+    registry: &crate::EntityMetaRegistry,
+    max_hops: usize,
+) -> Vec<RelatedRef> {
     let Ok(expr) = attome_rules::parse(src) else {
         return Vec::new();
     };
@@ -1036,7 +1047,7 @@ pub fn related_refs(
     collect_related(&expr, &mut Vec::new(), &mut found);
     let mut out = Vec::new();
     'refs: for segments in found {
-        if segments.len() < 2 || segments.len() > MAX_RELATED_HOPS + 1 {
+        if segments.len() < 2 || segments.len() > max_hops + 1 {
             continue;
         }
         let mut current: &[AttrInfo] = attrs;
