@@ -51,6 +51,15 @@ describe('view kind metadata (U13)', () => {
     }
   });
 
+  it('map requires a location field and keeps its optional fields (B15-T2)', () => {
+    expect(buildViewMetadata('map', EMPTY_VIEW_KIND_DRAFT))
+      .toEqual({ ok: false, errorKey: 'queryAdmin.viewKind.locationRequired' });
+    expect(buildViewMetadata('map', { ...EMPTY_VIEW_KIND_DRAFT, locationField: ' location ', labelField: 'name' }))
+      .toEqual({ ok: true, metadata: { location_field: 'location', label_field: 'name' } });
+    expect(draftFromMetadata('map', { location_field: 'location', color_field: 'status' }))
+      .toEqual({ ...EMPTY_VIEW_KIND_DRAFT, locationField: 'location', colorField: 'status' });
+  });
+
   it('round-trips stored metadata into the draft', () => {
     expect(draftFromMetadata('kanban', { state_field: 'status', wip_limits: { open: 5, done: null } }))
       .toEqual({ ...EMPTY_VIEW_KIND_DRAFT, stateField: 'status', wipLimits: 'open=5' });

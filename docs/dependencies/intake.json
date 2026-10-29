@@ -143,6 +143,206 @@
       "licence": "Apache-2.0",
       "maintenance": "Apache Arrow project (arrow-rs), monthly releases.",
       "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "maplibre-gl",
+      "reason": "B15-T2: draws the map view (tiles, clustering, right-to-left labels) in the browser; loaded with a dynamic import so it is never in the main bundle.",
+      "licence": "BSD-3-Clause",
+      "maintenance": "MapLibre organisation (Linux Foundation-hosted community fork of Mapbox GL JS 1.x); releases every week or two in 2026.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@mapbox/jsonlint-lines-primitives",
+      "reason": "B15-T2: a dependency of maplibre-gl (a JSON parser with line numbers, used by maplibre's style checker).",
+      "licence": "MIT",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@mapbox/point-geometry",
+      "reason": "B15-T2: a dependency of maplibre-gl (2D point maths for maplibre).",
+      "licence": "ISC",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@mapbox/tiny-sdf",
+      "reason": "B15-T2: a dependency of maplibre-gl (draws glyph signed-distance fields for map labels).",
+      "licence": "BSD-2-Clause",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@mapbox/unitbezier",
+      "reason": "B15-T2: a dependency of maplibre-gl (easing curves for map animations).",
+      "licence": "BSD-2-Clause",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@mapbox/vector-tile",
+      "reason": "B15-T2: a dependency of maplibre-gl (reads vector tiles).",
+      "licence": "BSD-3-Clause",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@maplibre/geojson-vt",
+      "reason": "B15-T2: a dependency of maplibre-gl (cuts GeoJSON (the record points) into tiles on the fly).",
+      "licence": "ISC",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@maplibre/maplibre-gl-style-spec",
+      "reason": "B15-T2: a dependency of maplibre-gl (maplibre's style specification and expression engine).",
+      "licence": "ISC",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@maplibre/mlt",
+      "reason": "B15-T2: a dependency of maplibre-gl (reads MapLibre tiles).",
+      "licence": "(MIT OR Apache-2.0)",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@maplibre/vt-pbf",
+      "reason": "B15-T2: a dependency of maplibre-gl (writes vector tiles for GeoJSON sources).",
+      "licence": "MIT",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "@types/geojson",
+      "reason": "B15-T2: a dependency of maplibre-gl (type declarations for GeoJSON).",
+      "licence": "MIT",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "bidi-js",
+      "reason": "B15-T2: a dependency of maplibre-gl (the Unicode bidirectional algorithm, for Arabic map labels).",
+      "licence": "MIT",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "earcut",
+      "reason": "B15-T2: a dependency of maplibre-gl (polygon triangulation for maplibre).",
+      "licence": "ISC",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "gl-matrix",
+      "reason": "B15-T2: a dependency of maplibre-gl (matrix maths for WebGL).",
+      "licence": "MIT",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "json-stringify-pretty-compact",
+      "reason": "B15-T2: a dependency of maplibre-gl (formats styles in maplibre's style tools).",
+      "licence": "MIT",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "kdbush",
+      "reason": "B15-T2: a dependency of maplibre-gl (a static spatial index, used for point clustering).",
+      "licence": "ISC",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "minimist",
+      "reason": "B15-T2: a dependency of maplibre-gl (argument parsing in the protocol-buffers schema tooling).",
+      "licence": "MIT",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "murmurhash-js",
+      "reason": "B15-T2: a dependency of maplibre-gl (string hashing for maplibre).",
+      "licence": "MIT",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "pbf",
+      "reason": "B15-T2: a dependency of maplibre-gl (protocol-buffers decoding for tiles).",
+      "licence": "BSD-3-Clause",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "potpack",
+      "reason": "B15-T2: a dependency of maplibre-gl (packs glyph and icon images into a texture).",
+      "licence": "ISC",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "protocol-buffers-schema",
+      "reason": "B15-T2: a dependency of maplibre-gl (parses protocol-buffers schemas).",
+      "licence": "MIT",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "quickselect",
+      "reason": "B15-T2: a dependency of maplibre-gl (selection algorithm used by the spatial indexes).",
+      "licence": "ISC",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "require-from-string",
+      "reason": "B15-T2: a dependency of maplibre-gl (loads a module from a string in the style tooling).",
+      "licence": "MIT",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "resolve-protobuf-schema",
+      "reason": "B15-T2: a dependency of maplibre-gl (resolves protocol-buffers schema imports).",
+      "licence": "MIT",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
+    },
+    {
+      "ecosystem": "npm",
+      "name": "tinyqueue",
+      "reason": "B15-T2: a dependency of maplibre-gl (a small priority queue for label placement).",
+      "licence": "ISC",
+      "maintenance": "Pulled in by maplibre-gl, which pins and updates it.",
+      "windows_native": true
     }
   ]
 }

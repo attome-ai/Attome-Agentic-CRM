@@ -32,6 +32,12 @@
         @case ('timeline') {
         <ng-container *ngTemplateOutlet="dateFields" />
         }
+        @case ('map') {
+        <div class="xf-grid-3"><div class="xf-field"><label for="ve-location-field">{{ 'queryAdmin.viewKind.locationField' | translate }}</label><input id="ve-location-field" class="xf-input" list="ve-column-names" required [ngModel]="kindDraft().locationField" (ngModelChange)="setKindDraft('locationField', $event)"></div>
+          <div class="xf-field"><label for="ve-label-field">{{ 'queryAdmin.viewKind.labelField' | translate }}</label><input id="ve-label-field" class="xf-input" list="ve-column-names" [ngModel]="kindDraft().labelField" (ngModelChange)="setKindDraft('labelField', $event)"></div>
+          <div class="xf-field"><label for="ve-map-color-field">{{ 'queryAdmin.viewKind.colorField' | translate }}</label><input id="ve-map-color-field" class="xf-input" list="ve-column-names" [ngModel]="kindDraft().colorField" (ngModelChange)="setKindDraft('colorField', $event)"></div></div>
+        <p class="xf-helper">{{ 'queryAdmin.viewKind.mapHelp' | translate }}</p>
+        }
         @case ('chart') {
         @let chart = kindDraft().chart;
         <p class="xf-helper">{{ 'queryAdmin.viewKind.chartHelp' | translate }}</p>

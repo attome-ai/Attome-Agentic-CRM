@@ -1670,7 +1670,9 @@ export const xrmEn = {
     viewKind: {
       title: 'Presentation', desc: 'Choose how lists of this entity render with this View, and the fields each kind needs.',
       kind: 'View kind', list: 'List', kanban: 'Kanban board', calendar: 'Calendar', timeline: 'Timeline',
-      chart: 'Chart',
+      chart: 'Chart', map: 'Map',
+      locationField: 'Location field', labelField: 'Label field',
+      mapHelp: 'A location column from the query output places each record; the label names it. Both other fields are optional.',
       stateField: 'State field', stateFieldHelp: 'A choice column in the query output; its values become the board columns.',
       wipLimits: 'WIP limits', wipLimitsHelp: 'Optional, advisory only: state=limit pairs separated by commas.',
       wipPlaceholder: 'open=5, in_progress=3',
@@ -1709,6 +1711,7 @@ export const xrmEn = {
       stateFieldRequired: 'A kanban view needs a state field.',
       wipLimitsInvalid: 'WIP limits must be state=number pairs separated by commas.',
       datesRequired: 'Calendar and timeline views need a start field and an end field.',
+      locationRequired: 'A map view needs a location field.',
     },
 
   },
@@ -2295,6 +2298,17 @@ export const xrmEn = {
       noView: 'No timeline view is configured for this entity.',
       noFields: 'This timeline view has no start field configured.',
     },
+    // B15-T2 — `kind = map` on the entity list page.
+    map: {
+      loading: 'Loading map…',
+      label: 'Map of records',
+      list: 'Records on the map',
+      noView: 'No map view is configured for this entity.',
+      noField: 'This map view has no location field configured.',
+      loadFailed: 'The map could not be loaded.',
+      truncated: 'Showing the first {shown} of {total} records.',
+      withoutLocation: '{count} records have no location and are not on the map.',
+    },
     // Basic Units P1 follow-up — `kind = chart` on the entity list page.
     chart: {
       loading: 'Loading chart…',
@@ -2307,6 +2321,7 @@ export const xrmEn = {
     // U13 — the entity list page's view-kind switcher.
     switcher: {
       label: 'View kind', list: 'List', kanban: 'Kanban board', calendar: 'Calendar', timeline: 'Timeline', chart: 'Chart',
+      map: 'Map',
       loading: 'Loading views…', view: 'View', new: 'New',
     },
 

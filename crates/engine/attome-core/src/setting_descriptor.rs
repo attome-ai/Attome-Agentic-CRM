@@ -242,7 +242,7 @@ pub fn area(key: &str) -> &'static str {
         Some("compliance") => "security",
         Some("email" | "mail_capture" | "voice" | "service" | "marketing") => "channels",
         Some("scan" | "search" | "integration" | "catalog") => "data",
-        Some("i18n") => "general",
+        Some("i18n" | "maps") => "general",
         Some("notification") => "channels",
         Some("approval" | "jobs") => "operations",
         Some("data_profile") => "data",
@@ -646,6 +646,10 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
         "sales.lead_conversion_map" => {
             "كيف يملأ العميل المحتمل المحوَّل السجلات التي يصبحها: لكل من الحساب وجهة الاتصال والفرصة، حقل الهدف وحقل العميل المحتمل الذي يُنسخ منه؛ الفارغ يستخدم الخريطة المضمّنة."
         }
+        "maps.tile_url" => {
+            "عنوان المربعات الذي ترسم عليه عروض الخرائط، مع {z} و{x} و{y}. الافتراضي مربعات OpenStreetMap العامة للاستخدام الخفيف؛ وجّهه إلى خادم مربعاتك لما هو أكثر."
+        }
+        "maps.attribution" => "الإشارة التي تعرضها عروض الخرائط لمصدر مربعاتها كما يشترط مزوّدها.",
         "sales.first_touch_minutes" => {
             "عدد الدقائق التي يمكن أن ينتظرها العميل المحتمل الجديد قبل أول نشاط أو تواصل؛ إن طال الانتظار يُبلَّغ مديرو مالكه. صفر يوقفه."
         }

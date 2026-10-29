@@ -10,14 +10,14 @@ import { TranslatePipe } from '@attome/base';
 import type { EntityRecord } from '@attome/xrm';
 import { EntityListComponent, entityFormRoute } from '@attome/xrm/core/entity';
 import {
-  CalendarViewComponent, KanbanBoardComponent, TimelineViewComponent,
+  CalendarViewComponent, KanbanBoardComponent, MapViewComponent, TimelineViewComponent,
 } from '@attome/xrm/core/entity/views';
 import { AvailableView, ViewAdminService, ViewKind } from '@attome/xrm/core/query/data';
 
 /** The view kinds this page can render. `chart` is drawn by
  * `@attome/xrm/dashboard/chart`'s `ChartViewComponent`, loaded on demand. */
 export type RenderedViewKind = ViewKind;
-export const RENDERED_VIEW_KINDS: readonly RenderedViewKind[] = ['list', 'kanban', 'calendar', 'timeline', 'chart'];
+export const RENDERED_VIEW_KINDS: readonly RenderedViewKind[] = ['list', 'kanban', 'calendar', 'timeline', 'chart', 'map'];
 
 const KIND_ICONS: Record<RenderedViewKind, string> = {
   list:     'las la-list',
@@ -25,6 +25,7 @@ const KIND_ICONS: Record<RenderedViewKind, string> = {
   calendar: 'las la-calendar-alt',
   timeline: 'las la-stream',
   chart:    'las la-chart-bar',
+  map:      'las la-globe',
 };
 
 function renderedKind(kind: ViewKind | undefined): RenderedViewKind {

@@ -15,7 +15,7 @@ export type {
 export { ViewAdminService } from './services/view-admin.service';
 export type {
   AvailableView, ViewBody, ViewDetail, ViewKind,
-  KanbanViewMetadata, CalendarViewMetadata,
+  KanbanViewMetadata, CalendarViewMetadata, MapViewMetadata,
   ChartViewMetadata, ChartSeries, ChartType, ChartAggregation, ChartDateBucket, ChartSort,
   CreatePersonalViewBody, UpdatePersonalViewBody,
 } from './services/view-admin.service';

@@ -197,7 +197,7 @@ fn validate_view_kind_metadata(kind: &str, metadata: &Value) -> Result<(), AppEr
     }
     let obj = match kind {
         "list" => return Ok(()),
-        "kanban" | "calendar" | "timeline" => metadata.as_object().ok_or_else(|| {
+        "kanban" | "calendar" | "timeline" | "map" => metadata.as_object().ok_or_else(|| {
             AppError::Validation(format!("{kind} view_metadata must be a JSON object"))
         })?,
         other => {
@@ -259,6 +259,20 @@ fn validate_view_kind_metadata(kind: &str, metadata: &Value) -> Result<(), AppEr
                             "kanban view_metadata.stalled_after_days.{state} must be a non-negative integer or null"
                         )));
                     }
+                }
+            }
+        }
+        // B15-T2: a map places each record at its geolocation field.
+        "map" => {
+            non_empty_string("location_field")?;
+            for key in ["label_field", "color_field"] {
+                if let Some(field) = obj.get(key)
+                    && !field.is_null()
+                    && !field.as_str().is_some_and(|s| !s.trim().is_empty())
+                {
+                    return Err(AppError::Validation(format!(
+                        "map view_metadata.{key} must be a field name or null"
+                    )));
                 }
             }
         }

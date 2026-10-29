@@ -1631,7 +1631,9 @@ export const xrmAr = {
     viewKind: {
       title: 'طريقة العرض', desc: 'اختر كيف تُعرض قوائم هذا الكيان بهذا العرض، والحقول التي يحتاجها كل نوع.',
       kind: 'نوع العرض', list: 'قائمة', kanban: 'لوحة كانبان', calendar: 'تقويم', timeline: 'جدول زمني',
-      chart: 'مخطط',
+      chart: 'مخطط', map: 'خريطة',
+      locationField: 'حقل الموقع', labelField: 'حقل التسمية',
+      mapHelp: 'عمود موقع من نتيجة الاستعلام يضع كل سجل في مكانه، والتسمية تسمّيه. الحقلان الآخران اختياريان.',
       stateField: 'حقل الحالة', stateFieldHelp: 'عمود اختيار في نتيجة الاستعلام؛ تصبح قيمه أعمدة اللوحة.',
       wipLimits: 'حدود العمل الجاري', wipLimitsHelp: 'اختياري واسترشادي فقط: أزواج حالة=حد مفصولة بفواصل.',
       wipPlaceholder: 'open=5, in_progress=3',
@@ -1670,6 +1672,7 @@ export const xrmAr = {
       stateFieldRequired: 'يحتاج عرض الكانبان إلى حقل حالة.',
       wipLimitsInvalid: 'يجب أن تكون حدود العمل الجاري أزواج حالة=رقم مفصولة بفواصل.',
       datesRequired: 'تحتاج عروض التقويم والجدول الزمني إلى حقل بداية وحقل نهاية.',
+      locationRequired: 'يحتاج عرض الخريطة إلى حقل موقع.',
     },
 
   },
@@ -2224,6 +2227,17 @@ export const xrmAr = {
       noView: 'لا يوجد عرض جدول زمني مُهيأ لهذا الكيان.',
       noFields: 'عرض الجدول الزمني هذا لا يحتوي على حقل بداية مُهيأ.',
     },
+    // B15-T2 — `kind = map` on the entity list page.
+    map: {
+      loading: 'جارٍ تحميل الخريطة…',
+      label: 'خريطة السجلات',
+      list: 'السجلات على الخريطة',
+      noView: 'لا يوجد عرض خريطة مُهيأ لهذا الكيان.',
+      noField: 'عرض الخريطة هذا لا يحتوي على حقل موقع مُهيأ.',
+      loadFailed: 'تعذّر تحميل الخريطة.',
+      truncated: 'تُعرض أول {shown} من {total} سجلًا.',
+      withoutLocation: '{count} سجلًا بلا موقع، فهي ليست على الخريطة.',
+    },
     // Basic Units P1 follow-up — انظر en.catalog.ts
     chart: {
       loading: 'جارٍ تحميل المخطط…',
@@ -2236,6 +2250,7 @@ export const xrmAr = {
     // U13 — the entity list page's view-kind switcher.
     switcher: {
       label: 'نوع العرض', list: 'قائمة', kanban: 'لوحة كانبان', calendar: 'تقويم', timeline: 'جدول زمني', chart: 'مخطط',
+      map: 'خريطة',
       loading: 'جارٍ تحميل العروض…', view: 'العرض', new: 'جديد',
     },
 

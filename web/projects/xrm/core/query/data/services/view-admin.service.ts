@@ -5,7 +5,7 @@ import { QueryColumnDef } from './types';
 
 /** D-429 (+ chart, migration 0447) — how a view renders. Kind-specific
  * settings live in `view_metadata`. */
-export type ViewKind = 'list' | 'kanban' | 'calendar' | 'timeline' | 'chart';
+export type ViewKind = 'list' | 'kanban' | 'calendar' | 'timeline' | 'chart' | 'map';
 
 /** D-429 — `kanban` view_metadata: columns = the state field's choice values,
  * card template = the view's own `table_definition` columns. `wip_limits` is
@@ -32,6 +32,14 @@ export interface KanbanViewMetadata {
 export interface CalendarViewMetadata {
   start_field: string;
   end_field: string;
+  color_field?: string | null;
+}
+
+/** B15-T2 — `map` view_metadata: each record at its geolocation field. */
+export interface MapViewMetadata {
+  location_field: string;
+  /** The field named beside each point and in the list; else the first visible column. */
+  label_field?: string | null;
   color_field?: string | null;
 }
 

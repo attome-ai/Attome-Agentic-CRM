@@ -188,6 +188,11 @@
                 "glob": "*.wasm",
                 "input": "projects/base/src/lib/rules/wasm",
                 "output": "rules"
+              },
+              {
+                "glob": "maplibre-gl.css",
+                "input": "node_modules/maplibre-gl/dist",
+                "output": "maplibre"
               }
             ],
             "styles": [

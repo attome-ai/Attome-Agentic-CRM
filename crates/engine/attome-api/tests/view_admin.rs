@@ -1856,3 +1856,49 @@ fn kind_metadata_validation_covers_chart() {
         assert_eq!(resp.status(), StatusCode::CREATED);
     })
 }
+
+/// B15-T2: `kind = "map"` needs a `location_field`; `label_field` and
+/// `color_field` are optional names. The kind passes the table's CHECK
+/// (migration 0332).
+#[test]
+fn kind_metadata_validation_covers_map() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let db = system.state().base.db.clone();
+        let (_, _, admin_cookie) = seed_user(&system, true).await;
+        let (entity_id, _) = seed_entity(&db, "va_kind_map").await;
+        let query_id = seed_query(&db, None).await;
+        let app = full_app(system);
+
+        let missing_location = serde_json::json!({
+            "name": "Bad Map",
+            "entity_logical_name": entity_id,
+            "sql_query_ref": query_id,
+            "table_definition": [],
+            "kind": "map",
+            "view_metadata": { "label_field": "name" },
+        })
+        .to_string();
+        let resp = app
+            .clone()
+            .oneshot(admin_create_req(&admin_cookie, &missing_location))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
+
+        let good_map = serde_json::json!({
+            "name": "Good Map",
+            "entity_logical_name": entity_id,
+            "sql_query_ref": query_id,
+            "table_definition": [],
+            "kind": "map",
+            "view_metadata": { "location_field": "location", "label_field": "name", "color_field": null },
+        })
+        .to_string();
+        let resp = app
+            .oneshot(admin_create_req(&admin_cookie, &good_map))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+    })
+}

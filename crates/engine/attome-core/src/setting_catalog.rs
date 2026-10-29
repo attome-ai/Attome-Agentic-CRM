@@ -1016,6 +1016,23 @@ fn commission_settings() -> Vec<SettingDescriptor> {
             false,
             || json!({}),
         ),
+        // B15-T2: the map view's tiles, self-hostable.
+        SettingDescriptor::new(
+            "maps.tile_url",
+            "The raster tile URL map views draw on, with {z}, {x} and {y} (B15-T2). The default is OpenStreetMap's public tiles, meant for light use; point it at your own tile server for more.",
+            || json!({"type": "string", "minLength": 1, "maxLength": 500, "pattern": "^https?://.*\\{z\\}.*"}),
+            &[SettingScope::Deployment, SettingScope::User],
+            false,
+            || json!("https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
+        ),
+        SettingDescriptor::new(
+            "maps.attribution",
+            "The credit map views show for their tiles, as the tile provider requires (B15-T2).",
+            || json!({"type": "string", "maxLength": 300}),
+            &[SettingScope::Deployment, SettingScope::User],
+            false,
+            || json!("© OpenStreetMap contributors"),
+        ),
         // D4-T2: speed to lead and stale-lead rebalancing.
         SettingDescriptor::new(
             "sales.first_touch_minutes",

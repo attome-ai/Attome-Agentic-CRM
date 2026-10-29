@@ -5,6 +5,7 @@ import { ChartDraft, EMPTY_CHART_DRAFT, buildChartMetadata, chartDraftFromMetada
  * what `validate_view_kind_metadata` in `attome-api/src/view_admin.rs`
  * requires: kanban → `state_field` (+ optional `wip_limits`),
  * calendar/timeline → `start_field` + `end_field` (+ optional `color_field`),
+ * map → `location_field` (+ optional `label_field`, `color_field`, B15-T2),
  * chart → `chart_view_metadata` (see `chart-metadata.ts`). */
 export interface ViewKindDraft {
   stateField: string;
@@ -13,16 +14,20 @@ export interface ViewKindDraft {
   startField: string;
   endField:   string;
   colorField: string;
+  /** B15-T2: the map's geolocation and label fields. */
+  locationField: string;
+  labelField: string;
   chart:      ChartDraft;
 }
 
 export const EMPTY_VIEW_KIND_DRAFT: ViewKindDraft = {
   stateField: '', wipLimits: '', startField: '', endField: '', colorField: '',
+  locationField: '', labelField: '',
   chart: EMPTY_CHART_DRAFT,
 };
 
 /** The editor's kind picker. */
-export const EDITABLE_VIEW_KINDS: readonly ViewKind[] = ['list', 'kanban', 'calendar', 'timeline', 'chart'];
+export const EDITABLE_VIEW_KINDS: readonly ViewKind[] = ['list', 'kanban', 'calendar', 'timeline', 'chart', 'map'];
 
 export type ViewKindMetadataResult =
   | { ok: true; metadata: Record<string, unknown> }
@@ -49,6 +54,10 @@ export function draftFromMetadata(kind: ViewKind, metadata: Record<string, unkno
     draft.startField = str(meta['start_field']);
     draft.endField   = str(meta['end_field']);
     draft.colorField = str(meta['color_field']);
+  } else if (kind === 'map') {
+    draft.locationField = str(meta['location_field']);
+    draft.labelField    = str(meta['label_field']);
+    draft.colorField    = str(meta['color_field']);
   } else if (kind === 'chart') {
     draft.chart = chartDraftFromMetadata(meta);
   }
@@ -96,6 +105,14 @@ export function buildViewMetadata(
       const endField = draft.endField.trim();
       if (!startField || !endField) return { ok: false, errorKey: 'queryAdmin.viewKind.datesRequired' };
       const metadata: Record<string, unknown> = { start_field: startField, end_field: endField };
+      if (draft.colorField.trim()) metadata['color_field'] = draft.colorField.trim();
+      return { ok: true, metadata };
+    }
+    case 'map': {
+      const locationField = draft.locationField.trim();
+      if (!locationField) return { ok: false, errorKey: 'queryAdmin.viewKind.locationRequired' };
+      const metadata: Record<string, unknown> = { location_field: locationField };
+      if (draft.labelField.trim()) metadata['label_field'] = draft.labelField.trim();
       if (draft.colorField.trim()) metadata['color_field'] = draft.colorField.trim();
       return { ok: true, metadata };
     }
