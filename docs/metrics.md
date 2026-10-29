@@ -75,3 +75,18 @@ Children are rounded to cents, and the last one takes the remainder, so they alw
 total. Each child names its parent (`parent_target_ref`). Spreading again updates the same targets
 rather than adding new ones. A second spread of the same metric and period while one runs gets
 `409`. It needs `attome_metric.set_target`, and it writes a `Configuration` audit event.
+
+## Who sees what
+
+- A metric whose `visible_role_keys` names roles (a list of role names) is listed, and its values
+  read, only by people holding one of those roles, and by administrators; to anyone else it does
+  not exist. Its totals are company-wide values, so name the roles that may see them.
+- A breakdown by a lookup (an owner, an account) shows a member only to people who may read that
+  record. A member value that cannot be read as record ids, or a metric whose entity is unknown,
+  is shown to administrators only.
+- Entering a value by hand (`actual` on `/compute`) needs `attome_metric.enter_value`.
+- Certifying needs `attome_metric.certify`: `POST /api/v1/metrics/{id}/certify` with
+  `{certified: true}` or `false` is the only way to set `certified` and `certified_at`, which the
+  record API refuses; a new metric starts uncertified. A value computed under a new definition
+  version withdraws the certification.
+

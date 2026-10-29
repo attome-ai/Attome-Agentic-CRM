@@ -62,6 +62,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Metric governance (P9-T11): role-limited metrics (`visible_role_keys`) show only to their roles;
+  a lookup breakdown hides members whose record the viewer cannot read; hand-entered values need
+  `attome_metric.enter_value`; certifying goes through `POST /api/v1/metrics/{id}/certify` under
+  `attome_metric.certify`, and a new definition version withdraws it. `certified` and
+  `certified_at` can no longer be set through the record API.
 - Search by meaning (N16-T1): for the entities named in `search.semantic_entities` (none by
   default), records' indexed text is embedded with the local model and a full search adds the
   nearest records to its word matches, fused in one ranking.

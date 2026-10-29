@@ -50,9 +50,21 @@ impl EngineModel for MetricModel {
         ]
     }
 
-    // `engine_managed_fields` is left at the trait's default (`&[]`, R-03) —
-    // no bespoke route of this crate transitions a field generic entity CRUD
-    // must not also be allowed to set directly.
+    /// P9-T11: a metric is certified only through
+    /// `POST /api/v1/metrics/{id}/certify`, under `attome_metric.certify`.
+    fn engine_managed_fields(&self) -> &'static [(&'static str, &'static str)] {
+        &[
+            ("dashboard_metric_definition", "certified"),
+            ("dashboard_metric_definition", "certified_at"),
+        ]
+    }
+
+    /// A new metric is born uncertified.
+    fn engine_managed_initial_values(
+        &self,
+    ) -> &'static [(&'static str, &'static str, &'static str)] {
+        &[("dashboard_metric_definition", "certified", "false")]
+    }
 
     fn routes(&self) -> Router<EngineState> {
         crate::metric::routes()

@@ -13,6 +13,10 @@ pub mod auth;
 pub mod backfill;
 /// P9-T3: a metric built from an entity, an aggregate, a date and filters.
 pub mod builder;
+/// P9-T11: certifying a metric, under its own privilege.
+pub mod certify;
+/// P9-T11: who sees which metric and which breakdown members.
+pub mod governance;
 pub mod lineage;
 pub mod lineage_graph;
 pub mod metric;

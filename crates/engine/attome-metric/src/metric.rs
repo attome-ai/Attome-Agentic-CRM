@@ -1391,6 +1391,13 @@ pub async fn compute_and_record(
         false,
     )
     .await?;
+    crate::governance::uncertify_if_new_version(
+        db,
+        metric_id,
+        last.as_ref().map(|(v, _)| *v),
+        definition_version,
+    )
+    .await?;
     // P11-T1: a worse status than the last one notifies the owner, once.
     if status != SnapshotStatus::Failed {
         crate::alerts::after_snapshot(state, metric_id).await;
@@ -1425,6 +1432,13 @@ pub(crate) async fn record_backfill(
     );
     let targets = fetch_targets(db, metric.id, period_start).await?;
     let status = evaluate_status(actual, &metric.direction, pick_target(&targets, None));
+    crate::governance::uncertify_if_new_version(
+        db,
+        metric.id,
+        last.as_ref().map(|(v, _)| *v),
+        definition_version,
+    )
+    .await?;
     insert_snapshot(
         db,
         metric.id,
@@ -1635,14 +1649,20 @@ struct MetricDefinitionSummary {
 )]
 async fn list_metrics(
     State(state): State<EngineState>,
-    _ctx: Authorized<Privilege<MetricRead>>,
+    ctx: Authorized<Privilege<MetricRead>>,
     Query(q): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<MetricDefinitionSummary>>, AppError> {
     let window = q.window();
+    // P9-T11: a metric limited to roles lists only for their holders.
+    let roles = crate::governance::role_names(&state.base.db, ctx.user_id).await?;
 
-    let total: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM dashboard_metric_definition WHERE (is_active IS NULL OR is_active = true)",
-    )
+    let total: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM dashboard_metric_definition d \
+         WHERE (d.is_active IS NULL OR d.is_active = true) AND {}",
+        crate::governance::visible_clause(1, 2)
+    ))
+    .bind(ctx.is_admin)
+    .bind(&roles)
     .fetch_one(&state.base.db)
     .await
     .map_err(AppError::internal)?;
@@ -1658,14 +1678,18 @@ async fn list_metrics(
         String,
         Option<String>,
         Option<f64>,
-    )> = sqlx::query_as(
-        "SELECT id, name, key, source_kind, query_ref, direction, period, unit, \
-                weight::double precision \
-         FROM dashboard_metric_definition WHERE (is_active IS NULL OR is_active = true) \
-         ORDER BY name LIMIT $1 OFFSET $2",
-    )
+    )> = sqlx::query_as(&format!(
+        "SELECT d.id, d.name, d.key, d.source_kind, d.query_ref, d.direction, d.period, d.unit, \
+                d.weight::double precision \
+         FROM dashboard_metric_definition d \
+         WHERE (d.is_active IS NULL OR d.is_active = true) AND {} \
+         ORDER BY d.name LIMIT $1 OFFSET $2",
+        crate::governance::visible_clause(3, 4)
+    ))
     .bind(window.page_size)
     .bind(window.offset)
+    .bind(ctx.is_admin)
+    .bind(&roles)
     .fetch_all(&state.base.db)
     .await
     .map_err(AppError::internal)?;
@@ -1742,11 +1766,13 @@ pub struct SnapshotListQuery {
 )]
 async fn list_snapshots(
     State(state): State<EngineState>,
-    _ctx: Authorized<Privilege<MetricRead>>,
+    ctx: Authorized<Privilege<MetricRead>>,
     Path(metric_id): Path<Uuid>,
     Query(q): Query<SnapshotListQuery>,
 ) -> Result<Json<PaginatedResponse<SnapshotRow>>, AppError> {
     fetch_metric(&state.base.db, metric_id).await?;
+    // P9-T11: a role-limited metric is not found by others.
+    crate::governance::require_visible(&state.base.db, &ctx, metric_id).await?;
 
     let window = OnePageQuery {
         page: q.page,
@@ -1780,6 +1806,11 @@ async fn list_snapshots(
     .fetch_all(&state.base.db)
     .await
     .map_err(AppError::internal)?;
+    // P9-T11: a breakdown member naming a record the caller cannot read is
+    // left out (and not counted).
+    let (items, hidden) =
+        crate::governance::visible_members(&state, &ctx, metric_id, items).await?;
+    let total = total.saturating_sub(i64::try_from(hidden).unwrap_or(i64::MAX));
 
     Ok(Json(PaginatedResponse::new(
         items,
@@ -1841,6 +1872,10 @@ async fn compute_metric(
     Path(metric_id): Path<Uuid>,
     Json(body): Json<ComputeMetricBody>,
 ) -> Result<Json<ComputeMetricResponse>, AppError> {
+    // P9-T11: entering a value by hand is its own privilege.
+    if body.actual.is_some() {
+        attome_security::SecurityContextExt::require_key(&*ctx, crate::governance::ENTER_VALUE)?;
+    }
     // R-12: no leading `fetch_metric` here anymore — `compute_and_record`
     // fetches the metric itself and resolves `period_start` from it when
     // `None`, so this handler no longer makes a second, redundant lookup of
@@ -2035,6 +2070,10 @@ pub fn routes() -> Router<EngineState> {
             post(crate::backfill::post_backfill),
         )
         .route(
+            "/api/v1/metrics/{id}/certify",
+            post(crate::certify::post_certify),
+        )
+        .route(
             "/api/v1/metrics/{id}/lineage",
             get(crate::lineage::metric_lineage),
         )
@@ -2051,6 +2090,7 @@ pub fn routes() -> Router<EngineState> {
     compute_metric,
     compute_tree,
     crate::backfill::post_backfill,
+    crate::certify::post_certify,
     build_metric,
     crate::targets::post_spread,
     crate::lineage::metric_lineage,
