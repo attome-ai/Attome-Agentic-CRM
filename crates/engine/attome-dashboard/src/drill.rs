@@ -482,8 +482,8 @@ async fn widget_records(
             timezone: wc.tz.name().to_owned(),
             timezone_source: wc.timezone_source,
             applied_filters,
-            bucket_key: inputs.bucket_key,
-            series_key: inputs.series_key,
+            bucket_key: inputs.bucket_key.clone(),
+            series_key: inputs.series_key.clone(),
             parity: parity_of(parity.snapshot_value, records.total, parity.counts_records),
             records,
             metric_parity: Some(parity),
@@ -857,7 +857,7 @@ async fn period_ids(
     )?);
     let mut ids = std::collections::BTreeSet::new();
     let mut after = None;
-    let mut total = 0;
+    let mut total;
     loop {
         let page = attome_search::run_structured_records(
             state,
@@ -1773,7 +1773,7 @@ pub async fn explain_widget(
                 attome_security::RecordAction::Read,
             )
             .await?;
-            let measures = plan
+            let measures: Vec<ExplainedMeasure> = plan
                 .data
                 .measures
                 .iter()
