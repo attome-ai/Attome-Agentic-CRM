@@ -255,6 +255,13 @@ export const xrmAr = {
     },
   },
   // U2 (D-600) — تبويب الأنشطة، انظر en.catalog.ts
+  // P9-T14: the metric definition form's sections and certification.
+  metricForm: {
+    sections: { details: 'التفاصيل', builder: 'مصدر الحساب', governance: 'الحوكمة' },
+    certified: 'معتمد', certifiedAt: 'منذ {at}', notCertified: 'غير معتمد',
+    certify: 'اعتماد', withdraw: 'سحب الاعتماد',
+    certifyFailed: 'تعذر تغيير الاعتماد.',
+  },
   formRenderer: {
     loading: 'جارٍ تحميل النموذج…', required: 'مطلوب',
     save: 'حفظ', saving: 'جارٍ الحفظ…', saved: 'تم الحفظ',

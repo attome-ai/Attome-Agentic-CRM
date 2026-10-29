@@ -3,3 +3,23 @@
  * entity form is three files). The shared form chrome comes from
  * styles/xrm-form.css, listed ahead of this file in the component's styleUrls.
  */
+
+/* P9-T14: the certification line under the governance fields. */
+.xmd-certification {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-block-start: 0.75rem;
+}
+.xmd-muted { color: var(--color-text-secondary); margin-inline-start: 0.25rem; }
+.xmd-certify {
+  margin-inline-start: auto;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-alt);
+  cursor: pointer;
+}
+.xmd-certify:disabled { cursor: progress; opacity: 0.6; }
+.xmd-error { color: var(--color-danger, var(--color-accent)); }

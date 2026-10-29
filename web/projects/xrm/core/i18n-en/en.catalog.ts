@@ -278,6 +278,13 @@ export const xrmEn = {
     },
   },
   // Basic-units U2 (D-600) — the Activities record tab (<xrm-activities-panel>).
+  // P9-T14: the metric definition form's sections and certification.
+  metricForm: {
+    sections: { details: 'Details', builder: 'Built from', governance: 'Governance' },
+    certified: 'Certified', certifiedAt: 'since {at}', notCertified: 'Not certified',
+    certify: 'Certify', withdraw: 'Withdraw certification',
+    certifyFailed: 'The certification could not be changed.',
+  },
   formRenderer: {
     loading: 'Loading the form…', required: 'Required',
     save: 'Save', saving: 'Saving…', saved: 'Saved',

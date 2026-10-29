@@ -1,14 +1,62 @@
 <xrm-base-form [form]="this" [formGroup]="form()" idPrefix="dashboard-metric-definition">
   <ng-template xrmTab="details">
-    <section class="xf-section">
+    <section class="xf-section" data-testid="section-details">
       <div class="xf-section-header">
         <div class="xf-section-icon"><i class="las la-list-alt"></i></div>
-        <div class="xf-section-meta"><h2 class="xf-section-title">Details</h2></div>
+        <div class="xf-section-meta"><h2 class="xf-section-title">{{ 'metricForm.sections.details' | translate }}</h2></div>
       </div>
       <div class="xf-section-body">
         <div class="xf-grid-2">
           @for (field of fieldsIn(['name', 'key', 'description', 'source_kind', 'query_ref', 'formula', 'unit', 'direction', 'period', 'owner_ref', 'parent_ref', 'weight']); track field.id) {
             <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="xf-section" data-testid="section-builder">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-sliders-h"></i></div>
+        <div class="xf-section-meta"><h2 class="xf-section-title">{{ 'metricForm.sections.builder' | translate }}</h2></div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of fieldsIn(['entity_logicalname', 'aggregate', 'measure_attribute', 'date_attribute', 'filter_expression', 'dimension_attributes', 'calendar_kind', 'week_start']); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="xf-section" data-testid="section-governance">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-shield-alt"></i></div>
+        <div class="xf-section-meta"><h2 class="xf-section-title">{{ 'metricForm.sections.governance' | translate }}</h2></div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of fieldsIn(['steward_ref', 'review_due', 'glossary_term_ref', 'visible_role_keys']); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+        <div class="xmd-certification" data-testid="certification">
+          <i class="las" [class.la-certificate]="certified()" [class.la-check-circle]="!certified()" aria-hidden="true"></i>
+          <span>
+            @if (certified()) {
+              {{ 'metricForm.certified' | translate }}
+              @if (certifiedAt(); as at) { <span class="xmd-muted">{{ 'metricForm.certifiedAt' | translate: { at: at } }}</span> }
+            } @else {
+              {{ 'metricForm.notCertified' | translate }}
+            }
+          </span>
+          @if (canCertify()) {
+            <button type="button" class="xmd-certify" data-testid="certify-button" [disabled]="certifying()"
+                    (click)="setCertified(!certified())">
+              {{ (certified() ? 'metricForm.withdraw' : 'metricForm.certify') | translate }}
+            </button>
+          }
+          @if (certifyFailed()) {
+            <span class="xmd-error" role="alert">{{ 'metricForm.certifyFailed' | translate }}</span>
           }
         </div>
       </div>
