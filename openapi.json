@@ -95694,6 +95694,103 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/maps/tiles/{z}/{x}/{y}": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "A map tile",
+        "description": "One raster tile of the map views, fetched from the configured tile server (`maps.tile_url`). Signed-in callers only; the browser keeps it for a day.",
+        "operationId": "map_tile",
+        "parameters": [
+          {
+            "name": "z",
+            "in": "path",
+            "description": "Zoom, 0 to 22",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "x",
+            "in": "path",
+            "description": "Tile column at that zoom",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "y",
+            "in": "path",
+            "description": "Tile row at that zoom",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The tile image",
+            "content": {
+              "image/png": {}
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No such tile at that zoom",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The tile server is not configured or did not answer with an image",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/marketing/address-check": {
       "post": {
         "tags": [

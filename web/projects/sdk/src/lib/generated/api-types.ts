@@ -20035,6 +20035,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/maps/tiles/{z}/{x}/{y}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A map tile
+         * @description One raster tile of the map views, fetched from the configured tile server (`maps.tile_url`). Signed-in callers only; the browser keeps it for a day.
+         */
+        get: operations["map_tile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/marketing/address-check": {
         parameters: {
             query?: never;
@@ -124330,6 +124350,60 @@ export interface operations {
             };
             /** @description No records, or more than 200 */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    map_tile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Zoom, 0 to 22 */
+                z: number;
+                /** @description Tile column at that zoom */
+                x: number;
+                /** @description Tile row at that zoom */
+                y: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tile image */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": unknown;
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such tile at that zoom */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The tile server is not configured or did not answer with an image */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
