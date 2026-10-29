@@ -84,7 +84,18 @@ async fn set_status(f: &Fixture, session: Option<Uuid>, record: Uuid, version: i
     written.expect("update");
 }
 
+/// Turns the captured audit events into `audit_header` rows, as the chainer
+/// process does in production: `audit.chainer_enabled` defaults to true, so a
+/// write lands in `audit_ingest` and undo, which reads the headers, sees it
+/// only after a chain run.
+async fn chain(f: &Fixture) {
+    attome_audit::chainer::run_once(f.db(), None, 10_000, None)
+        .await
+        .expect("chainer run");
+}
+
 async fn undo(f: &Fixture, session: Uuid) -> Uuid {
+    chain(f).await;
     let ctx = owner_ctx(f).await;
     let run = attome_ai::undo::start_undo(&f.state, &ctx, &[session])
         .await
@@ -220,6 +231,7 @@ async fn undo_job_resumes_after_partial_run() {
     set_status(&f, Some(session), first, 0, "closed").await;
     set_status(&f, Some(session), second, 0, "closed").await;
 
+    chain(&f).await;
     let ctx = owner_ctx(&f).await;
     let run = attome_ai::undo::start_undo(&f.state, &ctx, &[session])
         .await
@@ -275,6 +287,7 @@ async fn rollback_since_revokes_and_undoes_newest_first() {
         .expect("sessions");
     assert_eq!(sessions, vec![third, second], "newest first, none before");
 
+    chain(&f).await;
     let ctx = owner_ctx(&f).await;
     let run = attome_ai::undo::start_rollback_since(&f.state, &ctx, agent, since)
         .await

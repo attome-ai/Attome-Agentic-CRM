@@ -66,27 +66,36 @@ const ERROR_SHAPE_EXEMPT: &[(&str, &str)] = &[
     ("track_click", "404"),
 ];
 
-/// Operations whose 200 answer is a bare JSON array.
+/// Operations whose 200 answer is a bare JSON array. Each is bounded by
+/// design: a fixed catalogue, one caller's or one group's rows over a capped
+/// period, a report that is only meaningful whole, or the echo of a write.
 const BARE_ARRAY_EXEMPT: &[&str] = &[
+    "add_custodians",
     "assign_entities",
     "candidates_for_record",
     "deactivate_sidebar_item",
     "describe_query",
     "get_ancestors",
+    "get_group_trial_balance",
     "get_related_pages",
     "get_sidebar",
     "get_space_templates",
+    "get_workforce_my_schedule",
     "identity_links",
     "item_actions",
     "list_active_offerings",
     "list_available_apps",
     "list_available_views",
+    "list_calendar_sightings",
     "list_conditions",
     "list_exceptions",
     "list_holidays",
     "list_labels",
     "list_offerings",
+    "list_oidc_presets",
+    "list_packs",
     "list_permissions",
+    "list_role_templates",
     "list_spaces",
     "list_templates",
     "list_webcrawl_target_pages",
@@ -95,10 +104,13 @@ const BARE_ARRAY_EXEMPT: &[&str] = &[
     "mfa_coverage_summary",
     "oidc_providers",
     "portal_list_sessions",
+    "put_workforce_my_preferences",
     "set_related_pages",
     "set_space_templates",
     "stats",
     "trace",
+    "workforce_adherence_live",
+    "workforce_my_adherence",
 ];
 
 fn openapi() -> serde_json::Value {

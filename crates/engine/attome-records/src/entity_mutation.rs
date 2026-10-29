@@ -1931,8 +1931,32 @@ pub(crate) fn apply_engine_managed_initial_values(
     entity_name: &str,
     obj: &serde_json::Map<String, Value>,
 ) -> Result<Option<serde_json::Map<String, Value>>, AppError> {
+    if !state
+        .engine_managed_fields
+        .iter()
+        .any(|(entity, _)| entity == entity_name)
+    {
+        return Ok(None);
+    }
+    // A managed field the entity's metadata does not carry yet is skipped: a
+    // platform changeset that adds it (0056's `certified`) can apply after
+    // one that creates the entity's records (0048's metrics), and a fresh
+    // boot must not refuse those records as carrying an unknown field.
+    let registry = state.entities.load();
+    let managed: std::collections::HashSet<(String, String)> = match registry.get(entity_name) {
+        Some(meta) => state
+            .engine_managed_fields
+            .iter()
+            .filter(|(entity, field)| {
+                entity != entity_name || meta.attrs.iter().any(|a| &a.logicalname == field)
+            })
+            .cloned()
+            .collect(),
+        None => state.engine_managed_fields.as_ref().clone(),
+    };
+    drop(registry);
     engine_managed_initial_body(
-        &state.engine_managed_fields,
+        &managed,
         &state.engine_managed_initial_values,
         entity_name,
         obj,

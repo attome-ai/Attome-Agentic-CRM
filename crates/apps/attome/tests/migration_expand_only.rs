@@ -15,10 +15,16 @@ const BASELINE: u32 = 88;
 /// reviewed and recorded in `crates/apps/attome/contract/README.md`. A
 /// committed migration never changes (boot checks its checksum), so it
 /// cannot move to the contract set; a new one never belongs here.
-const REVIEWED: &[(&str, &str)] = &[(
-    "0173_marketing_deliverability_reshape.sql",
-    "drops only tables still in 0084's early shape, which no release's code reads or writes",
-)];
+const REVIEWED: &[(&str, &str)] = &[
+    (
+        "0173_marketing_deliverability_reshape.sql",
+        "drops only tables still in 0084's early shape, which no release's code reads or writes",
+    ),
+    (
+        "0320_change_event_daily_partitions.sql",
+        "swaps entity_change_event for its day-partitioned copy: every row is copied (the late ones under the lock) before the old table is dropped and the copy renamed",
+    ),
+];
 
 /// One destructive statement: its 1-based line and what it does.
 #[derive(Debug, PartialEq, Eq)]

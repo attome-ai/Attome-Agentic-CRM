@@ -19,12 +19,18 @@ Migrations 0001 to 0088 were read when the rule was introduced. None of them dro
 table or column or changes a column's type; 0079 replaces a CHECK constraint on
 `approval_request.status` (allowed: it widens the accepted values).
 
-One migration above the baseline removes structure and was reviewed instead of moved, because it
-was already committed when the rule caught it (a committed migration never changes: boot checks
-its checksum). It is listed in `REVIEWED` in `tests/migration_expand_only.rs`:
+Two migrations above the baseline remove structure and were reviewed instead of moved, because
+each was already committed when the rule caught it (a committed migration never changes: boot
+checks its checksum). They are listed in `REVIEWED` in `tests/migration_expand_only.rs`:
 
 - `0173_marketing_deliverability_reshape.sql` drops `marketing_deliverability_daily`,
   `marketing_dmarc_record` and `marketing_dmarc_report` only while they still have 0084's early
   shape, which no release's code reads or writes (the code already wrote 0164/0165's later
   columns), and recreates them in that later shape. No data is lost: the rollup is recomputed
   daily and no DMARC row could have been stored in the early shape.
+- `0320_change_event_daily_partitions.sql` replaces `entity_change_event` with a copy partitioned
+  by day on `created_at` (Y7-T3). It copies every row, then takes the old table's lock, adds the
+  rows committed since the copy's snapshot, and only then drops the old table and renames the copy
+  and its indexes to the old names. No row is lost. It also drops `change_consumer_applied`'s
+  foreign key to the event, which a partitioned table's `(id, created_at)` key cannot carry; the
+  prune job deletes a consumer's applied rows itself.

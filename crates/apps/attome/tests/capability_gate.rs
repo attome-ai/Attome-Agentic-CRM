@@ -121,6 +121,11 @@ const GATED_HANDLERS: &[(&str, &str, &str)] = &[
         "Returns 202 for a data-profile job the batch worker has to run; with no worker the caller polls a profile that never starts.",
     ),
     (
+        "enqueue_file_profile",
+        "BatchJobs",
+        "Returns 202 for a staged import's profile job (L6-T6) the batch worker has to run; with no worker it never starts.",
+    ),
+    (
         "rollback_run",
         "BatchJobs",
         "Enqueues the rollback of a migration run as a batch job and reports it accepted; with no worker the run stays half-applied.",

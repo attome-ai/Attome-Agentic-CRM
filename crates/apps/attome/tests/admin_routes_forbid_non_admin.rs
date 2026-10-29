@@ -405,7 +405,9 @@ fn probe(auth: &str, method: &str, path: &str) -> Request<Body> {
 /// the domain's owner or steward (`require_domain_editor`/`readable_policy`,
 /// lists filtered to the caller's domains), a quality issue admits its owner
 /// (`require_issue_editor`), and an agent rollback admits the session's owner
-/// (`require_session`). A non-admin with no such role gets 404, 422 or an
+/// (`require_session`). The heavy-operations list (AA10-T7) filters to the
+/// operations the caller started; only an administrator sees everyone's and
+/// the live index builds. A non-admin with no such role gets 404, 422 or an
 /// empty list here, never another person's data.
 const NON_ADMIN_ROUTES_UNDER_ADMIN_PREFIX: &[(&str, &str)] = &[
     ("GET", "/api/v1/admin/security/whoami"),
@@ -428,6 +430,7 @@ const NON_ADMIN_ROUTES_UNDER_ADMIN_PREFIX: &[(&str, &str)] = &[
     ("POST", "/api/v1/admin/governance/policies/{id}/exceptions"),
     ("GET", "/api/v1/admin/governance/certifications"),
     ("POST", "/api/v1/admin/governance/certifications"),
+    ("GET", "/api/v1/admin/operations"),
 ];
 
 // ── The test ────────────────────────────────────────────────────────────────
