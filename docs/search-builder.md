@@ -41,6 +41,17 @@ to them, or a search backfill).
 | `GET`/`POST /api/v1/admin/search/stopwords`, `DELETE .../{word}` | Words left out of queries. |
 | `GET`/`POST /api/v1/admin/search/pins`, `DELETE .../{id}` | A record placed at a position for a query. A pin shows only to people who may read its record. |
 
+## Searching by meaning
+
+The setting `search.semantic_entities` names entities whose records a full search also finds by
+meaning; it is empty, and the feature off, by default. With an embedding model configured and
+semantic search switched on, each of their records' indexed text (title, subtitle and indexed
+fields) is embedded in the background, and a full search adds the records nearest the query to
+the exact, prefix and word matches, ranked together. A changed record is embedded again. The
+nearest 400 are taken before what the person may see is applied, so someone who sees little may
+get fewer such matches; word matches are unaffected. Without a model, or when the query cannot be
+embedded within two seconds, search works as before.
+
 ## Counts and what people cannot see
 
 Totals and facet counts are counted over the records the person may read, never over the whole

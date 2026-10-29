@@ -62,6 +62,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Search by meaning (N16-T1): for the entities named in `search.semantic_entities` (none by
+  default), records' indexed text is embedded with the local model and a full search adds the
+  nearest records to its word matches, fused in one ranking.
 - Nightly directory sync (Q4-T2): with `auth.ldap` set, the `ldap_sync` job links the directory's
   people to their accounts, applies their groups' roles, and disables accounts whose entry is
   gone. A listing that is empty, or would disable more than half the linked accounts, disables

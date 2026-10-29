@@ -672,7 +672,14 @@ pub async fn execute_search_with(
         .and_then(|v| v.as_str().map(str::to_owned))
         .unwrap_or_default();
     let phone = crate::corpus::phone_query_key(text_for_pipeline, &default_country);
-    let owned_legs = legs_for(&route, &normalized, &stemmed, &synonyms, phone.as_deref());
+    let mut owned_legs = legs_for(&route, &normalized, &stemmed, &synonyms, phone.as_deref());
+    // N16-T1: a full search of entities set up for it also finds records by
+    // meaning. The query is embedded here, before any transaction opens.
+    if matches!(route, Route::Hybrid)
+        && let Some(leg) = crate::record_vectors::query_leg(state, text_for_pipeline).await
+    {
+        owned_legs.push(Box::new(leg));
+    }
     let leg_refs: Vec<&dyn SqlLeg> = owned_legs.iter().map(|l| l.as_ref()).collect();
 
     // Which of the two equivalent visibility shapes to use (TODO-053). A

@@ -589,6 +589,18 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!([]),
         ),
+        // N16-T1: records found by meaning, for the entities named here.
+        SettingDescriptor::new(
+            "search.semantic_entities",
+            "Entities whose records global search also finds by meaning (N16-T1): their index \
+         rows are embedded with the deployment's local embedding model and a full search adds \
+         the records nearest the query. Empty by default: off. Needs an embedding model and \
+         semantic search switched on.",
+            || json!({"type": "array", "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"}, "maxItems": 100}),
+            &[SettingScope::Deployment],
+            false,
+            || json!([]),
+        ),
         // A25-T3: personal ranking, off until a deployment sets weights.
         SettingDescriptor::new(
             "search.personal_weights",

@@ -1091,6 +1091,12 @@ pub fn install_ranking(
     let _ = RANKING.set(Ranking { embedder, reranker });
 }
 
+/// N16-T1: the embedder installed for retrieval, which global search's
+/// dense leg embeds the query with (the model that wrote the vectors).
+pub fn ranking_embedder() -> Option<&'static attome_inference::EmbeddingClient> {
+    RANKING.get().and_then(|r| r.embedder.as_ref())
+}
+
 /// Passages the reranker scores, from the top of the fused list.
 pub const RERANK_TOP: usize = 50;
 

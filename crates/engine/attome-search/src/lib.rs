@@ -56,6 +56,8 @@ pub mod project;
 /// A25-T8: zero-result and refinement rates from the impression log.
 pub mod quality;
 pub mod ranking;
+/// N16-T1: records found by meaning.
+pub mod record_vectors;
 pub mod router;
 pub mod routes;
 pub mod saved_search;

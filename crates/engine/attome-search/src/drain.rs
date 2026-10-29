@@ -208,7 +208,9 @@ pub async fn upsert_row(
              owner_id = EXCLUDED.owner_id, \
              source_modifiedon = EXCLUDED.source_modifiedon, \
              indexed_at = NOW(), \
-             content_hash = EXCLUDED.content_hash \
+             content_hash = EXCLUDED.content_hash, \
+             embedding = NULL, \
+             embedding_model = NULL \
          WHERE search_index.content_hash IS DISTINCT FROM EXCLUDED.content_hash",
     )
     .bind(CORPUS_RECORD)

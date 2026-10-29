@@ -252,7 +252,11 @@ fn reranker(state: &EngineState) -> Option<attome_inference::RerankClient> {
 /// A failed pass is logged and ends this tick's passes. The chunks it did not
 /// embed keep an empty vector and stay retrievable lexically, and a later tick
 /// retries them.
-async fn run_embedding_passes(db: &PgPool, client: &attome_inference::EmbeddingClient) {
+async fn run_embedding_passes(
+    db: &PgPool,
+    client: &attome_inference::EmbeddingClient,
+    semantic_entities: &[String],
+) {
     use crate::embedding_writer::{EMBED_BATCH, embed_pending_chunks};
     for _ in 0..EMBED_BATCHES_PER_TICK {
         match embed_pending_chunks(db, client, EMBED_BATCH).await {
@@ -272,6 +276,27 @@ async fn run_embedding_passes(db: &PgPool, client: &attome_inference::EmbeddingC
                 tracing::warn!(
                     error = %e,
                     "knowledge embedding pass failed; chunks stay lexical-only until a later tick"
+                );
+                break;
+            }
+        }
+    }
+    // N16-T1: the index rows of the entities set up for semantic search.
+    for _ in 0..EMBED_BATCHES_PER_TICK {
+        match crate::record_vectors::embed_pending_records(
+            db,
+            client,
+            semantic_entities,
+            crate::embedding_writer::EMBED_BATCH,
+        )
+        .await
+        {
+            Ok(stats) if stats.selected < crate::embedding_writer::EMBED_BATCH as u64 => break,
+            Ok(_) => {}
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    "record embedding pass failed; records stay lexical-only until a later tick"
                 );
                 break;
             }
@@ -395,7 +420,12 @@ pub async fn run_drain_loop(state: EngineState, shutdown: impl std::future::Futu
                         &state.base.config.inference.ai,
                         attome_config::AiSurface::SemanticSearch,
                     ) {
-                        run_embedding_passes(&state.base.db, client).await;
+                        run_embedding_passes(
+                            &state.base.db,
+                            client,
+                            &crate::record_vectors::configured_entities(&state),
+                        )
+                        .await;
                     }
                 }
             }
