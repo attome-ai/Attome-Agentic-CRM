@@ -550,8 +550,8 @@ export abstract class EngineFormBase implements OnInit {
       this.policyLocked.delete(name);
       const ctrl = fg.get(name);
       // A formula or rollup stays disabled whatever the rules say (U9, D-604; A10-T1).
-      const computed = ['formula', 'rollup'].includes(this.schemaField(name)?.field_type ?? '');
-      if (ctrl && !computed) ctrl.enable({ emitEvent: false });
+      const isComputed = ['formula', 'rollup'].includes(this.schemaField(name)?.field_type ?? '');
+      if (ctrl && !isComputed) ctrl.enable({ emitEvent: false });
     }
     if (reset) this.syncRecordValue(fg);
   }
