@@ -63,6 +63,8 @@ pub mod autonomy;
 pub mod behaviour;
 /// AH5-T5: an agent's baseline, recent hours and last automatic stop.
 pub mod behaviour_routes;
+/// N18-T1: one bot runtime for web chat, WhatsApp and SMS.
+pub mod bot;
 /// M101 slice 2 — the token budget, actually applied. `attome_inference::budget`
 /// shipped with zero call sites; this is the one that gives it some.
 pub mod budget_guard;

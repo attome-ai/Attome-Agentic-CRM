@@ -15,6 +15,8 @@ pub mod auth;
 pub mod backup;
 /// D20-T2: public booking links.
 pub mod booking;
+/// N18-T1: WhatsApp and SMS conversations answered by the channel's bot.
+pub mod bot_channels;
 pub mod boot;
 /// The other subcommands: `worker`, `migrate`, `healthcheck`,
 /// `audit-chainer`, `verify-audit-chain`, `preflight`, `changeset-replay`.

@@ -196,6 +196,31 @@ async fn inbound(
     )
     .await?;
 
+    // N18-T1: the SMS system's bot answers a known person.
+    if let Some((entity, id)) = &sender
+        && !is_stop(&message.body)
+        && let Err(error) = crate::bot_channels::enqueue(
+            &state,
+            &system,
+            crate::bot_channels::BotMessage {
+                system_id: system.id,
+                channel: "sms".into(),
+                party_entity: entity.clone(),
+                party_id: *id,
+                from: message.from.clone(),
+                text: message.body.clone(),
+                message_id: message
+                    .provider_message_id
+                    .clone()
+                    .unwrap_or_else(|| Uuid::now_v7().to_string()),
+                received_at: Utc::now(),
+            },
+        )
+        .await
+    {
+        tracing::warn!(system = %system.id, %error, "sms: the bot was not asked");
+    }
+
     if is_stop(&message.body) {
         match &sender {
             Some((entity, id)) => {

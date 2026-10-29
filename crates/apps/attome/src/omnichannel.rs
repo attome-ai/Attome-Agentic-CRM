@@ -506,19 +506,8 @@ async fn finalize_handoff_work_request(
 /// eventually fires; a false positive costs nothing worse than an earlier
 /// handoff than strictly necessary.
 fn looks_like_explicit_ask(message: &str) -> bool {
-    let lower = message.to_lowercase();
-    const PHRASES: &[&str] = &[
-        "human",
-        "real person",
-        "speak to someone",
-        "speak with someone",
-        "talk to someone",
-        "talk to a person",
-        "representative",
-        "agent please",
-        "customer service",
-    ];
-    PHRASES.iter().any(|p| lower.contains(p))
+    // N18-T1: one phrase list for every channel, English and Arabic.
+    attome_ai::bot::explicit_ask(message)
 }
 
 /// Calls the real `bot.handoff` action (M54, D-447) — the one and only

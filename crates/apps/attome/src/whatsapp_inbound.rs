@@ -292,10 +292,35 @@ async fn record_inbound(
     )
     .await?;
     if entity != "integration_system" {
-        if let Err(error) = route(state, &ctx, principal, system, (&entity, record)).await {
+        let stop = attome_integration::sms::is_stop(&text);
+        // N18-T1: the system's bot answers a known person; otherwise (no
+        // bot, handed off, a stop) the conversation is routed to people.
+        let answered = !stop
+            && crate::bot_channels::enqueue(
+                state,
+                system,
+                crate::bot_channels::BotMessage {
+                    system_id: system.id,
+                    channel: "whatsapp".into(),
+                    party_entity: entity.clone(),
+                    party_id: record,
+                    from: phone.clone(),
+                    text: text.clone(),
+                    message_id: message.id.clone(),
+                    received_at: message.at.unwrap_or_else(Utc::now),
+                },
+            )
+            .await
+            .unwrap_or_else(|error| {
+                tracing::warn!(system = %system.id, %error, "whatsapp: the bot was not asked");
+                false
+            });
+        if !answered
+            && let Err(error) = route(state, &ctx, principal, system, (&entity, record)).await
+        {
             tracing::warn!(system = %system.id, %error, "whatsapp: the conversation was not routed");
         }
-        if attome_integration::sms::is_stop(&text) {
+        if stop {
             let withdrawn = opt_out(state, (&entity, record), message).await?;
             tracing::info!(%record, entity = %entity, withdrawn, "whatsapp: opted out");
         }

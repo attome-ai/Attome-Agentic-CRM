@@ -53,6 +53,10 @@ pub enum Surface {
     WebChat,
     Mcp,
     Workflow,
+    /// N18-T1: a WhatsApp conversation with a channel's bot.
+    WhatsApp,
+    /// N18-T1: a text conversation with a channel's bot.
+    Sms,
 }
 
 impl Surface {
@@ -62,14 +66,23 @@ impl Surface {
             Self::WebChat => "webchat",
             Self::Mcp => "mcp",
             Self::Workflow => "workflow",
+            Self::WhatsApp => "whatsapp",
+            Self::Sms => "sms",
         }
     }
 
     /// The inverse of [`Surface::as_str`]; `None` for anything else.
     pub fn parse(s: &str) -> Option<Self> {
-        [Self::Internal, Self::WebChat, Self::Mcp, Self::Workflow]
-            .into_iter()
-            .find(|v| v.as_str() == s)
+        [
+            Self::Internal,
+            Self::WebChat,
+            Self::Mcp,
+            Self::Workflow,
+            Self::WhatsApp,
+            Self::Sms,
+        ]
+        .into_iter()
+        .find(|v| v.as_str() == s)
     }
 }
 

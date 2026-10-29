@@ -43,6 +43,8 @@ pub mod warehouse_export;
 /// P13-T2: load scripts for Snowflake and BigQuery over the export.
 pub mod warehouse_load;
 pub mod webhook;
+/// N18-T1: WhatsApp text sent through a WhatsApp system.
+pub mod whatsapp_send;
 
 /// D-351 — this crate's advisory-lock namespace (registry:
 /// `crates/server/tests/advisory_lock_namespaces.rs`). Used by `admin.rs`'s

@@ -3443,6 +3443,10 @@ pub const WORKFORCE_INTRADAY: attome_jobs::JobType =
 pub const AI_HANDBACK: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_service::handoff::HANDBACK_JOB, 1);
 
+/// N18-T1: a channel's bot answers one WhatsApp or SMS message.
+pub const BOT_REPLY: attome_jobs::JobType =
+    attome_jobs::JobType::new(crate::bot_channels::BOT_REPLY_JOB, 1);
+
 /// AI8-T3: yesterday's per-agent rollup, and a backfill of a range.
 pub const AGENT_STATS_ROLLUP: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_ai::agent_stats::NIGHTLY_JOB, 1);
@@ -4300,6 +4304,25 @@ pub fn register_job_types() {
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 tracing::info!(handoff = %handback.handoff_id, ?outcome, "hand-back run");
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            BOT_REPLY,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let modules = state.modules.load();
+                if !modules.has(attome_modules::MODULE_AI)
+                    || !modules.has(attome_modules::MODULE_OMNICHANNEL)
+                {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                drop(modules);
+                let message: crate::bot_channels::BotMessage = job.payload()?;
+                crate::bot_channels::run(&state, &message)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {

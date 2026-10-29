@@ -335,6 +335,36 @@ A ticket can move between an agent and people with a reason attached, so neither
   routing stays with J10; hand-offs only add the hand-off, the hand-back and their record. Each agent
   hand-off counts in the agent's hand-off rate (Agent performance).
 
+## Bots on web chat, WhatsApp and SMS
+
+One bot runtime (`attome_ai::bot`, N18-T1) answers on every conversation channel. A bot is an
+agent definition: the web-chat widget's is `webchat.agent_definition_id`; a WhatsApp or SMS
+system's is its config's `bot` object:
+
+```json
+{ "bot": { "agent_definition_id": "<agent definition id>", "session_token_cap": 20000 } }
+```
+
+(`"enabled": false` turns it off). Every channel gets the same session: the definition's policy
+with an explicit knowledge scope, knowledge search and `bot.handoff` only, `Reversible` at most,
+and the lower of the policy's and the channel's token limit. A definition still in testing never
+answers the public.
+
+- **Web chat** works as before (`webchat.enabled`); the widget's session now starts through the
+  same runtime.
+- **WhatsApp and SMS.** With a bot, a message from a known person (a contact, lead or account
+  matched by number) is answered by a `bot_reply` job, in that person's own session (one per
+  system and record), and the answer is sent on the channel and written on their timeline. A
+  reply is cut to what the channel carries (4,096 characters on WhatsApp, 670 on SMS). WhatsApp
+  sends free-form text only within 24 hours of the person's last message, through the system's
+  `phone_number_id` and its `access_token` secret.
+- **Hand-off.** A person asking for a person (in English or Arabic) is handed off before any
+  model call; otherwise the turn decides (step limit, refusal, nothing found). The conversation
+  is routed to the system's `queue_id` as it is without a bot, the person is told in English and
+  Arabic, and the bot stays silent on that thread. When the assistant cannot answer (switched
+  off, no model, a fault) the message is routed to people as well.
+- A stop word is never sent to the bot; a number no record holds is not answered by it.
+
 ## Agent performance
 
 `/ai/agents/performance` (administrators; `GET /api/v1/admin/ai/agents/performance?from&to`) shows how

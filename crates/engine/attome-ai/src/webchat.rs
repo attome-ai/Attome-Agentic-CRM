@@ -52,11 +52,11 @@ use attome_types::AppError;
 use uuid::Uuid;
 
 use crate::actions::bot_handoff::{BOT_HANDOFF, HandoffReason};
-use crate::agent::{ResolvedStart, SessionConstraints};
+use crate::agent::ResolvedStart;
 use crate::chat_view::Grounding;
 use crate::conversation::TerminalState;
 use crate::descriptor::RiskTier;
-use crate::session::{AgentSession, PolicySnapshot, SessionStart};
+use crate::session::{AgentSession, PolicySnapshot};
 
 use std::sync::Arc;
 
@@ -163,58 +163,22 @@ pub async fn start_session_with(
     config: &WebchatSection,
     integration_system_id: Uuid,
 ) -> Result<AgentSession, AppError> {
-    let definition = match (config.enabled, config.agent_definition_id) {
+    let agent_definition_id = match (config.enabled, config.agent_definition_id) {
         (true, Some(id)) => id,
         _ => return Err(AppError::CapabilityUnavailable("webchat")),
     };
-    let resolved = crate::agent::resolve_start(
+    // N18-T1: the widget's bot starts like every channel's.
+    crate::bot::start_session(
         state,
         principal,
-        definition,
-        SessionConstraints {
-            risk_ceiling: RiskTier::Reversible,
-            allowed_action_ids: None,
+        crate::bot::Channel::WebChat,
+        &crate::bot::BotConfig {
+            agent_definition_id,
+            session_token_cap: config.session_token_cap,
         },
+        integration_system_id,
     )
-    .await?;
-    // AH6: a definition still in testing never answers the public.
-    if resolved.trial {
-        return Err(AppError::Validation(
-            "the web chat agent is in testing; set it active to serve the public widget".into(),
-        ));
-    }
-    let governance = clamp(resolved, config.session_token_cap)?;
-    let session = crate::session::start(
-        &state.base.db,
-        &attome_audit::audit_service(state),
-        SessionStart {
-            owner_user_id: principal.user_id,
-            risk_ceiling: governance.risk_ceiling,
-            allowed_action_ids: Some(governance.allowed_action_ids),
-            surface: SURFACE,
-            agent_definition_ref: Some(definition),
-            integration_system_id: Some(integration_system_id),
-            tainted: false,
-            policy: governance.policy,
-        },
-    )
-    .await?;
-    // The session's one conversation ledger, created with it, so every later
-    // message finds exactly one and no two first messages can race to
-    // create two. Read back only by this session (`Access::Session`, I-20):
-    // its owner is the shared principal, which authorizes nothing here.
-    crate::conversation::create(
-        &state.base.db,
-        crate::conversation::NewConversation {
-            agent_session_id: session.id,
-            owner_user_id: principal.user_id,
-            agent_definition_ref: Some(definition),
-            surface: crate::conversation::Surface::WebChat,
-            title: None,
-        },
-    )
-    .await?;
-    Ok(session)
+    .await
 }
 
 /// A widget session's conversation: the one created with it, found by the
@@ -422,6 +386,7 @@ pub fn reply_for(terminal: TerminalState, grounding: Grounding, declined: bool) 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::agent::SessionConstraints;
 
     fn resolved(
         allowed: Option<Vec<&str>>,

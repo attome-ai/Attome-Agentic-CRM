@@ -68,6 +68,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Bots on WhatsApp and SMS (N18-T1). A WhatsApp or SMS system whose config names a `bot` (an
+  agent definition) answers known people's messages with that agent, through the same runtime as
+  the web-chat widget (`attome_ai::bot`): one session per person, replies sent on the channel and
+  written on the timeline, and a hand-off (asked for in English or Arabic, or decided by the turn)
+  routes the conversation to the system's queue and silences the bot on that thread. Migration
+  0336 adds `bot_thread` and the `whatsapp` and `sms` conversation surfaces. See `docs/agents.md`.
 - Money amounts carry their currency (A19-T1). Each `currency` field gets a companion text field
   `<field>_currency` holding an ISO 4217 code, filled with the deployment's base currency
   (`core.base_currency`, `USD` by default) when a write names none, and the amount is rounded to
