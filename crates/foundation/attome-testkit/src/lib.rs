@@ -67,6 +67,19 @@ pub const DEFAULT_MAX_CONNECTIONS: u32 = 5;
 /// Words that mark a database this crate must never touch.
 const FORBIDDEN_NAME_PARTS: [&str; 3] = ["dev", "prod", "live"];
 
+/// How old a throwaway database with no session on it must be before a new
+/// test process drops it. Nothing drops a process's database when it exits,
+/// and under cargo-nextest every test is its own process: thousands of
+/// leftover copies filled the CI runner's disk. The age covers the moment
+/// between another process creating its database and first connecting.
+const STALE_AFTER_SECS: u64 = 5 * 60;
+
+/// Set (as the CI test shards do, each on its own server) to drop stale
+/// throwaway databases. Off by default: on a shared server, a `cargo test`
+/// binary holds no session between its tests, and another process must not
+/// drop its database then.
+pub const DROP_STALE_ENV: &str = "ATTOME_TEST_DROP_STALE_DBS";
+
 /// This test process's throwaway database URL, or `None` when no test
 /// database is configured. Panics when one is required ([`REQUIRE_DB_ENV`])
 /// but missing or unusable; the outcome is decided once per process.
@@ -224,6 +237,38 @@ fn template_name() -> String {
     format!("attome_tmpl_{hash:016x}")
 }
 
+/// Drops the `attome_t_` databases older than [`STALE_AFTER_SECS`] (their
+/// UUIDv7 names carry when they were made) that no session is connected to.
+/// The drop is not forced, so a database a session joined in the meantime is
+/// refused and kept; a refusal is not an error.
+async fn drop_stale_databases(conn: &mut PgConnection) -> Result<(), String> {
+    let idle: Vec<String> = sqlx::query_scalar(
+        "SELECT d.datname FROM pg_database d \
+          WHERE d.datname LIKE 'attome\\_t\\_%' \
+            AND NOT EXISTS (SELECT 1 FROM pg_stat_activity a WHERE a.datname = d.datname)",
+    )
+    .fetch_all(&mut *conn)
+    .await
+    .map_err(|error| format!("list stale test databases: {error}"))?;
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|age| age.as_secs())
+        .unwrap_or(0);
+    for name in idle {
+        let made = name
+            .strip_prefix("attome_t_")
+            .and_then(|id| Uuid::parse_str(id).ok())
+            .and_then(|id| id.get_timestamp())
+            .map(|stamp| stamp.to_unix().0);
+        if made.is_some_and(|made| now.saturating_sub(made) >= STALE_AFTER_SECS) {
+            let _ = sqlx::query(&format!("DROP DATABASE IF EXISTS \"{name}\""))
+                .execute(&mut *conn)
+                .await;
+        }
+    }
+    Ok(())
+}
+
 /// Creates `name` on the server. With `migrate_url`, the database is a copy
 /// of the migrated template (built once per migration set and server, under
 /// a server-wide advisory lock), which is much faster than migrating every
@@ -237,6 +282,9 @@ fn create_database(admin_url: &str, name: &str, migrate_url: Option<&str>) -> Re
         let mut conn = PgConnection::connect(admin_url)
             .await
             .map_err(|error| format!("connect DATABASE_URL: {error}"))?;
+        if std::env::var_os(DROP_STALE_ENV).is_some() {
+            drop_stale_databases(&mut conn).await?;
+        }
         if migrate_url.is_none() {
             sqlx::query(&format!("CREATE DATABASE \"{name}\""))
                 .execute(&mut conn)
