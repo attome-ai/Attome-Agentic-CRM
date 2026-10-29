@@ -200,7 +200,7 @@ mod money_currency {
         let mut body: Map<String, Value> = serde_json::from_value(json!({
             "total": 10.12345, "total_currency": "KWD",
             "fee": 99.5, "fee_currency": "JPY",
-            "net": 3.14159, "net_currency": "SAR",
+            "net": 7.45678, "net_currency": "SAR",
         }))
         .expect("body");
         let codes: [CodedAmount; 3] = [
@@ -216,7 +216,7 @@ mod money_currency {
         assert!(round_amounts(&mut body, &codes, &decimals).is_empty());
         assert_eq!(body["total"], json!(10.123));
         assert_eq!(body["fee"], json!(100));
-        assert_eq!(body["net"], json!(3.14));
+        assert_eq!(body["net"], json!(7.46));
     }
 
     #[test]

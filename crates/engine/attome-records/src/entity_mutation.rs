@@ -2185,7 +2185,7 @@ pub async fn create_one_as(
     // A19-T1: each money amount with its currency, rounded to it
     // (after the field-write check: the engine fills the currency itself).
     let priced;
-    let obj = match crate::money::apply(&mut **tx, state, entity_name, None, attrs, obj).await? {
+    let obj = match crate::money::apply(tx, state, entity_name, None, attrs, obj).await? {
         Some(map) => {
             priced = map;
             &priced
@@ -3292,8 +3292,7 @@ pub async fn update_one_as(
     // A19-T1: each money amount with its currency, rounded to it
     // (after the field-write check: the engine fills the currency itself).
     let priced;
-    let obj = match crate::money::apply(&mut **tx, state, entity_name, Some(record_id), attrs, obj)
-        .await?
+    let obj = match crate::money::apply(tx, state, entity_name, Some(record_id), attrs, obj).await?
     {
         Some(map) => {
             priced = map;

@@ -159,7 +159,7 @@ pub(crate) async fn polymorphic_on_delete(
                     .fetch_all(&mut **tx)
                     .await
                     .map_err(AppError::internal)?;
-                    record_cascade_batch(&mut **tx, entity, *parent, &dep_entity, &id_attr, &taken)
+                    record_cascade_batch(tx, entity, *parent, &dep_entity, &id_attr, &taken)
                         .await?;
                     total += taken.len();
                 }
