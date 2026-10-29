@@ -2389,6 +2389,8 @@ pub async fn create_one_as(
         &change_payload(attrs, None, Some(&row)),
     )
     .await?;
+    // A10-T3: exact rollups count the new record in this transaction.
+    crate::rollup_exact::apply(tx, entity_name, None, Some(&row)).await?;
     // M7-T1: the stage the record starts in, as its first move.
     if let Some(stage) = &stage_start.stage {
         crate::stage_move::record_start(tx, entity_name, record_id, stage, stamp.created_by)
@@ -3519,6 +3521,9 @@ pub async fn update_one_as(
         &payload,
     )
     .await?;
+    // A10-T3: exact rollups move the record's amount if its parent or
+    // amount changed.
+    crate::rollup_exact::apply(tx, entity_name, old_row.as_ref(), Some(&new_row)).await?;
 
     let approval = match pending {
         Some(redirect) => {
@@ -4384,6 +4389,8 @@ pub async fn delete_one_as(
         expected_row_version,
     )
     .await?;
+    // A10-T3: exact rollups stop counting the deleted record.
+    crate::rollup_exact::apply_activity(tx, target_entity_name, record_id, false).await?;
     record_deletion(tx, target_entity_name, record_id, modified_by, origin).await?;
     Ok(MutationResult {
         record_id,
@@ -4535,6 +4542,8 @@ pub async fn restore_one(
         &active_flag_payload(true),
     )
     .await?;
+    // A10-T3: exact rollups count the restored record again.
+    crate::rollup_exact::apply_activity(tx, entity_name, record_id, true).await?;
 
     let cascade_summary =
         reactivate_dependents_on_restore(tx, dependents, record_id, user_id).await?;

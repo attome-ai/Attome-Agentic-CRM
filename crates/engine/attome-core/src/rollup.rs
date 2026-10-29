@@ -160,6 +160,23 @@ pub fn parse_options(options: Option<&Value>) -> Result<RollupOptions, AppError>
             window.days
         )));
     }
+    // A10-T3: exact mode adds and takes back each record's amount in its own
+    // write, which only a count or a sum over one lookup can do; a filter
+    // or a window would need the record's old and new match too.
+    if opts.mode == RollupMode::Exact {
+        if !matches!(opts.function, RollupFunction::Count | RollupFunction::Sum) {
+            return Err(AppError::Validation(format!(
+                "a {} rollup cannot be exact; use fast mode",
+                opts.function.as_str()
+            )));
+        }
+        if opts.path.len() != 1 || opts.filter.is_some() || opts.window.is_some() {
+            return Err(AppError::Validation(
+                "an exact rollup follows one lookup, with no filter or window; use fast mode"
+                    .into(),
+            ));
+        }
+    }
     if opts.order_by.is_some()
         && !matches!(opts.function, RollupFunction::First | RollupFunction::Last)
     {
@@ -724,6 +741,44 @@ mod tests {
         .unwrap();
         let (sql, _) = recompute_sql("account", "latest", &last, &[]).unwrap();
         assert!(sql.contains("ORDER BY t1.\"close_date\" DESC"), "{sql}");
+    }
+
+    #[test]
+    fn rollup_exact_mode_is_count_or_sum_over_one_lookup() {
+        check(json!({
+            "function": "sum",
+            "path": [{ "entity": "opportunity", "via": "account_ref" }],
+            "attribute": "amount",
+            "mode": "exact",
+            "result_type": "currency",
+        }))
+        .expect("an exact sum");
+        let m = message(check(json!({
+            "function": "max",
+            "path": [{ "entity": "opportunity", "via": "account_ref" }],
+            "attribute": "amount",
+            "mode": "exact",
+            "result_type": "currency",
+        })));
+        assert!(m.contains("cannot be exact"), "{m}");
+        let m = message(check(json!({
+            "function": "count",
+            "path": [{ "entity": "opportunity", "via": "account_ref" }],
+            "window": { "days": 30, "date_attribute": "close_date" },
+            "mode": "exact",
+            "result_type": "number",
+        })));
+        assert!(m.contains("no filter or window"), "{m}");
+        let m = message(check(json!({
+            "function": "count",
+            "path": [
+                { "entity": "opportunity", "via": "account_ref" },
+                { "entity": "opportunity_line", "via": "opportunity_ref" },
+            ],
+            "mode": "exact",
+            "result_type": "number",
+        })));
+        assert!(m.contains("follows one lookup"), "{m}");
     }
 
     #[test]

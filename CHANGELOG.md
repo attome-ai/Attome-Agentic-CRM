@@ -62,6 +62,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Rollup exact mode (A10-T3): an `exact` count or sum over one lookup is kept right inside the
+  related record's own write. Create, update (a new amount or a new parent), soft delete and
+  restore take back what the record counted and add what it counts now, on the parent's row, so
+  concurrent writes to one parent add up. min, max, average, first, last, distinct counts and
+  rollups with a filter, a window or more than one lookup are refused in exact mode at save, so use
+  fast mode for those. A hard delete or a bulk SQL update is put right by the nightly verify
+  (A10-T4).
 - Rollup fast mode (A10-T2): a `fast` rollup is recomputed a few seconds after a related record
   changes. The `rollup_fast` job (every 5 seconds) reads the change feed, follows each changed
   record up the rollup's path, by its lookup now and before the change, so a record moved to
