@@ -395,6 +395,29 @@ impl std::fmt::Debug for IdentityLinkInfo {
     }
 }
 
+/// Q8-T4: one of the caller's own sessions in `GET /api/v1/auth/sessions`.
+/// Never a token, secret, token id or address.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct SessionItem {
+    /// The session's id, for ending it.
+    pub id: Uuid,
+    /// The browser family, such as `chrome/windows`.
+    pub device_label: Option<String>,
+    pub user_agent: Option<String>,
+    /// How the session signed in, such as `password+totp` or `oidc:okta`.
+    pub sign_in_method: Option<String>,
+    /// The ISO country it signed in from, when `auth.geoip_database` is set.
+    pub sign_in_country: Option<String>,
+    /// `web`, `mobile` or `agent`.
+    pub client_kind: String,
+    /// When the session signed in.
+    pub created_at: DateTime<Utc>,
+    /// The last request made with it, recorded once a minute.
+    pub last_activity_at: Option<DateTime<Utc>>,
+    /// The session this request was made with.
+    pub is_current: bool,
+}
+
 /// Q1-T10: what sign-out answers. `redirect` is set when the session came
 /// from an OIDC provider with an end-session endpoint: the browser goes
 /// there so the provider ends its session too, and comes back to the app.

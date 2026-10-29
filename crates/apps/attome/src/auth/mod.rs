@@ -192,6 +192,17 @@ pub fn protected_routes(auditor: attome_audit::security::SecurityAuditor) -> Rou
         // not a start/callback route; grouped here since it's protected like
         // session_info, not bypass-listed like the OIDC login routes.
         .route("/api/v1/auth/identity-links", get(session::identity_links))
+        // Q8-T4: the caller's own sessions. `end-others` is a static
+        // segment, so it never matches the `{id}` route.
+        .route("/api/v1/auth/sessions", get(session::list_sessions))
+        .route(
+            "/api/v1/auth/sessions/end-others",
+            post(session::end_other_sessions),
+        )
+        .route(
+            "/api/v1/auth/sessions/{id}",
+            axum::routing::delete(session::end_session),
+        )
         // P-federation-linking-policy §4.3(a) — start routes only; their
         // callbacks live in public_routes() (see the comment there for why).
         .route(

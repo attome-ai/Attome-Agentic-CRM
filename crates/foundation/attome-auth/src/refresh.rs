@@ -314,9 +314,11 @@ async fn issue_inner(
     sqlx::query(
         "INSERT INTO refresh_token
              (user_ref, public_id, secret_hash, family_id, family_started_at, expires_at,
-              auth_time, amr, oidc_provider, oidc_sid)
+              auth_time, amr, oidc_provider, oidc_sid, user_agent, device_label, sign_in_method,
+              sign_in_country)
          VALUES ($1, $2, $3, $4, NOW(), NOW() + make_interval(secs => LEAST($5, $6)::float8),
-                 CASE WHEN $7 THEN NOW() WHEN $8 > NOW() THEN NOW() ELSE $8 END, $9, $10, $11)",
+                 CASE WHEN $7 THEN NOW() WHEN $8 > NOW() THEN NOW() ELSE $8 END, $9, $10, $11,
+                 $12, $13, $14, $15)",
     )
     .bind(user_id)
     .bind(public_id)
@@ -329,6 +331,11 @@ async fn issue_inner(
     .bind(context.amr())
     .bind(context.oidc_provider())
     .bind(context.oidc_sid())
+    // Q8-T4: shown in the person's own session list.
+    .bind(context.device().and_then(|d| d.user_agent.as_deref()))
+    .bind(context.device().and_then(|d| d.device_label.as_deref()))
+    .bind(context.device().and_then(|d| d.sign_in_method.as_deref()))
+    .bind(context.device().and_then(|d| d.sign_in_country.as_deref()))
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -574,14 +581,17 @@ pub async fn redeem_session_outcome_with(
         "INSERT INTO refresh_token
              (user_ref, public_id, secret_hash, family_id, family_started_at,
               auth_time, amr, elevated_until, expires_at,
-              idle_secs, absolute_secs, last_activity_at, oidc_provider, oidc_sid)
+              idle_secs, absolute_secs, last_activity_at, oidc_provider, oidc_sid,
+              user_agent, device_label, sign_in_method, client_kind, sign_in_country)
          SELECT $1, $2, $3, $4, $5, $6, $7, $8,
                 LEAST(NOW() + make_interval(secs => $9::float8),
                       $5 + make_interval(secs => $10::float8)),
                 -- A rotation is not activity: the family keeps its last real use.
                 o.idle_secs, o.absolute_secs, COALESCE(o.last_activity_at, o.created_at),
                 -- Q1-T10: the family stays tied to its provider session.
-                o.oidc_provider, o.oidc_sid
+                o.oidc_provider, o.oidc_sid,
+                -- Q8-T4: the session list keeps showing the same browser.
+                o.user_agent, o.device_label, o.sign_in_method, o.client_kind, o.sign_in_country
            FROM refresh_token o
           WHERE o.id = $11 AND $5 + make_interval(secs => $10::float8) > NOW()
          RETURNING id",
@@ -809,6 +819,176 @@ pub async fn revoke_session_with(
         user_id,
         oidc_provider,
     }))
+}
+
+/// Q8-T4: one of a person's live sessions (a refresh family), as their own
+/// session list shows it. Carries no secret, hash or token id, and no address.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SessionFamily {
+    pub family_id: Uuid,
+    pub device_label: Option<String>,
+    pub user_agent: Option<String>,
+    pub sign_in_method: Option<String>,
+    /// The ISO country the sign-in came from, when known.
+    pub sign_in_country: Option<String>,
+    /// `web`, `mobile` or `agent`.
+    pub client_kind: String,
+    /// When the family started (its sign-in).
+    pub created_at: DateTime<Utc>,
+    /// The last request the person made with it, flushed once a minute.
+    pub last_activity_at: Option<DateTime<Utc>>,
+}
+
+/// A family's live row: unused, unrevoked, unexpired. A family has at most
+/// one, so the row stands for the family.
+const LIVE_FAMILY_ROW: &str =
+    "user_ref = $1 AND revoked_at IS NULL AND used_at IS NULL AND expires_at > NOW()";
+
+/// Q8-T4: `user_id`'s live sessions, most recently active first, one page.
+pub async fn list_families(
+    db: &DbPool,
+    user_id: Uuid,
+    window: attome_types::PageWindow,
+) -> Result<attome_types::PaginatedResponse<SessionFamily>, AppError> {
+    type Row = (
+        Uuid,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        String,
+        DateTime<Utc>,
+        Option<DateTime<Utc>>,
+    );
+    let total: i64 = sqlx::query_scalar(&format!(
+        "SELECT count(*) FROM refresh_token WHERE {LIVE_FAMILY_ROW}"
+    ))
+    .bind(user_id)
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)?;
+    let rows: Vec<Row> = sqlx::query_as(&format!(
+        "SELECT family_id, device_label, user_agent, sign_in_method, sign_in_country,
+                client_kind, family_started_at, last_activity_at
+           FROM refresh_token
+          WHERE {LIVE_FAMILY_ROW}
+          ORDER BY COALESCE(last_activity_at, family_started_at) DESC, family_id DESC
+          LIMIT $2 OFFSET $3"
+    ))
+    .bind(user_id)
+    .bind(window.page_size)
+    .bind(window.offset)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let items = rows
+        .into_iter()
+        .map(
+            |(
+                family_id,
+                device_label,
+                user_agent,
+                sign_in_method,
+                sign_in_country,
+                client_kind,
+                created_at,
+                last_activity_at,
+            )| SessionFamily {
+                family_id,
+                device_label,
+                user_agent,
+                sign_in_method,
+                sign_in_country,
+                client_kind,
+                created_at,
+                last_activity_at,
+            },
+        )
+        .collect();
+    Ok(attome_types::PaginatedResponse::new(
+        items,
+        total,
+        window.page,
+        window.page_size,
+    ))
+}
+
+/// Q8-T4: ends `user_id`'s session `family_id` and the browsers remembered
+/// in it, running `hook` before the commit. `false` (nothing written) when
+/// it is not a live session of theirs. The family's access token, already
+/// minted, lapses at its own short expiry: it can no longer be refreshed.
+pub async fn end_family(
+    db: &DbPool,
+    user_id: Uuid,
+    family_id: Uuid,
+    hook: &dyn attome_db::BeforeCommit<Uuid>,
+) -> Result<bool, AppError> {
+    let mut tx = attome_db::tx::begin(db).await?;
+    let ended = sqlx::query(
+        "UPDATE refresh_token SET revoked_at = NOW()
+          WHERE user_ref = $1 AND family_id = $2 AND revoked_at IS NULL",
+    )
+    .bind(user_id)
+    .bind(family_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?
+    .rows_affected();
+    if ended == 0 {
+        tx.rollback().await.map_err(AppError::internal)?;
+        return Ok(false);
+    }
+    end_remembered_in(&mut tx, user_id, &[family_id]).await?;
+    hook.before_commit(&mut tx, &user_id).await?;
+    tx.commit().await.map_err(AppError::internal)?;
+    Ok(true)
+}
+
+/// Q8-T4: ends every session of `user_id` but `keep` (the caller's own) and
+/// the browsers remembered in them, running `hook` before the commit when
+/// any ended. Returns how many sessions ended.
+pub async fn end_other_families(
+    db: &DbPool,
+    user_id: Uuid,
+    keep: Uuid,
+    hook: &dyn attome_db::BeforeCommit<Uuid>,
+) -> Result<u64, AppError> {
+    let mut tx = attome_db::tx::begin(db).await?;
+    let mut ended: Vec<Uuid> = sqlx::query_scalar(
+        "UPDATE refresh_token SET revoked_at = NOW()
+          WHERE user_ref = $1 AND family_id <> $2 AND revoked_at IS NULL
+         RETURNING family_id",
+    )
+    .bind(user_id)
+    .bind(keep)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    ended.sort_unstable();
+    ended.dedup();
+    if ended.is_empty() {
+        tx.rollback().await.map_err(AppError::internal)?;
+        return Ok(0);
+    }
+    end_remembered_in(&mut tx, user_id, &ended).await?;
+    hook.before_commit(&mut tx, &user_id).await?;
+    tx.commit().await.map_err(AppError::internal)?;
+    Ok(ended.len() as u64)
+}
+
+/// Revokes the browsers `user_id` had remembered during `families`.
+async fn end_remembered_in(
+    tx: &mut attome_db::Tx<'_>,
+    user_id: Uuid,
+    families: &[Uuid],
+) -> Result<(), AppError> {
+    sqlx::query(crate::remembered_device::REVOKE_IN_FAMILIES_SQL)
+        .bind(user_id)
+        .bind(families)
+        .execute(&mut **tx)
+        .await
+        .map_err(AppError::internal)?;
+    Ok(())
 }
 
 /// Q1-T10: whose sessions a provider's back-channel logout ends.

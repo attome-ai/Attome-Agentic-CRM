@@ -35,7 +35,7 @@ use super::dto::{
     MfaPendingConfirmResponse, MfaPendingEnrollBody, MfaVerifyBody, RegisterRequest,
     ResetConfirmBody, ResetRequestBody, VerifyEmailConfirmBody,
 };
-use super::session::issue_session_cookies_for;
+use super::session::{issue_session_cookies_for, issue_session_for};
 use attome_auth::auth_context::AuthContext;
 use attome_types::ErrorResponse;
 
@@ -848,14 +848,14 @@ pub(super) async fn mfa_verify(
     };
     // A pending login token comes only from a verified password, and this
     // request verified the TOTP code.
-    let mut cookies = issue_session_cookies_for(
+    let issued = issue_session_for(
         &state,
         user_id,
         &AuthContext::password_and_totp(),
         Some((&auditor, "password+totp")),
     )
-    .await?
-    .to_vec();
+    .await?;
+    let mut cookies = issued.cookies.to_vec();
     // Q5-T4: remember this browser when asked and the policy allows it.
     if body.remember {
         let requirement = attome_security::mfa_policy::requirement_for(
@@ -869,13 +869,15 @@ pub(super) async fn mfa_verify(
             let label = headers
                 .get(axum::http::header::USER_AGENT)
                 .and_then(|v| v.to_str().ok());
-            let bearer = attome_auth::remembered_device::remember(
+            // Q8-T4: ending this session from the session list forgets it.
+            let bearer = attome_auth::remembered_device::remember_in_family(
                 &state.db,
                 &state.pepper_ring(),
                 user_id,
                 epoch,
                 requirement.remember_device_days,
                 label,
+                Some(issued.family_id),
             )
             .await?;
             // Q5-T11: a remembered browser is a credential; its creation is

@@ -54,6 +54,20 @@ pub async fn remember(
     days: i32,
     label: Option<&str>,
 ) -> Result<String, AppError> {
+    remember_in_family(db, ring, user_id, epoch, days, label, None).await
+}
+
+/// [`remember`], recording the session family it was remembered in (Q8-T4),
+/// so ending that session from the person's session list forgets it too.
+pub async fn remember_in_family(
+    db: &DbPool,
+    ring: &PepperRing,
+    user_id: Uuid,
+    epoch: i32,
+    days: i32,
+    label: Option<&str>,
+    family_id: Option<Uuid>,
+) -> Result<String, AppError> {
     if days <= 0 {
         return Err(AppError::Validation(
             "this policy does not remember devices".into(),
@@ -62,8 +76,9 @@ pub async fn remember(
     let id = Uuid::now_v7();
     let secret = Alphanumeric.sample_string(&mut rand::thread_rng(), 48);
     let inserted = sqlx::query(
-        "INSERT INTO remembered_device (id, user_ref, token_hash, auth_epoch, label, expires_at) \
-         VALUES ($1, $2, $3, $4, $5, now() + make_interval(days => $6))",
+        "INSERT INTO remembered_device \
+             (id, user_ref, token_hash, auth_epoch, label, expires_at, family_ref) \
+         VALUES ($1, $2, $3, $4, $5, now() + make_interval(days => $6), $7)",
     )
     .bind(id)
     .bind(user_id)
@@ -71,6 +86,7 @@ pub async fn remember(
     .bind(epoch)
     .bind(label.map(|l| l.chars().take(200).collect::<String>()))
     .bind(days)
+    .bind(family_id)
     .execute(db)
     .await
     .map_err(AppError::internal)?
@@ -129,6 +145,11 @@ pub async fn is_remembered(
 /// The SQL that forgets every remembered device of a person (`$1`).
 pub(crate) const REVOKE_ALL_SQL: &str = "UPDATE remembered_device SET revoked_at = now() \
      WHERE user_ref = $1 AND revoked_at IS NULL";
+
+/// Q8-T4: the SQL that forgets the devices a person (`$1`) remembered during
+/// the session families `$2`.
+pub(crate) const REVOKE_IN_FAMILIES_SQL: &str = "UPDATE remembered_device SET revoked_at = now() \
+     WHERE user_ref = $1 AND family_ref = ANY($2) AND revoked_at IS NULL";
 
 #[cfg(test)]
 mod tests {

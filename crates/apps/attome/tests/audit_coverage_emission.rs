@@ -4249,6 +4249,48 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 &cookies,
             )
         }
+        "DELETE /api/v1/auth/sessions/{id}" => {
+            // Q8-T4: end the person's other sign-in from the session list.
+            let (_, email) = seed_user(&fx.base, "end-session").await;
+            let _other = login_cookies(fx, &email).await;
+            let cookies = login_cookies(fx, &email).await;
+            let sessions = call(
+                fx,
+                with_cookies(
+                    request("GET", "/api/v1/auth/sessions", None, None),
+                    &cookies,
+                ),
+            )
+            .await;
+            let other_id = sessions["items"]
+                .as_array()
+                .expect("session list")
+                .iter()
+                .find(|s| s["is_current"] == false)
+                .expect("the other session")["id"]
+                .as_str()
+                .expect("id")
+                .to_owned();
+            with_cookies(
+                request(
+                    "DELETE",
+                    &format!("/api/v1/auth/sessions/{other_id}"),
+                    None,
+                    None,
+                ),
+                &cookies,
+            )
+        }
+        "POST /api/v1/auth/sessions/end-others" => {
+            // Q8-T4: an event is written only when another session ended.
+            let (_, email) = seed_user(&fx.base, "end-others").await;
+            let _other = login_cookies(fx, &email).await;
+            let cookies = login_cookies(fx, &email).await;
+            with_cookies(
+                request("POST", "/api/v1/auth/sessions/end-others", None, None),
+                &cookies,
+            )
+        }
         "POST /api/v1/auth/refresh" => {
             // Rotation writes nothing; presenting the rotated-away refresh
             // token again is reuse, which revokes the family.

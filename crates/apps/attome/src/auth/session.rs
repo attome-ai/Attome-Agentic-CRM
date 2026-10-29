@@ -7,14 +7,15 @@ use attome_audit::security::{
     x_audit,
 };
 use attome_audit::{AuditCategory, AuditOperation, AuditOutcome};
-use attome_auth::auth_context::AuthContext;
-use attome_auth::{SessionClaims, accounts, cookie, refresh, revocation};
+use attome_auth::auth_context::{AuthContext, SessionDevice};
+use attome_auth::{SessionClaims, SessionId, accounts, cookie, refresh, revocation};
 use attome_core::jobs::EngineJob;
 use attome_server::AppState;
-use attome_types::AppError;
+use attome_server::authz::{Authorized, SelfService};
+use attome_types::{AppError, OnePageQuery, PaginatedResponse};
 use axum::{
     Json,
-    extract::{Extension, State},
+    extract::{Extension, Path, Query, State},
     http::{HeaderMap, StatusCode, header},
     response::{AppendHeaders, IntoResponse, Response},
 };
@@ -22,7 +23,7 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use super::REFRESH_COOKIE_PATH;
-use super::dto::{AuthResponse, IdentityLinkInfo, LogoutResponse, SessionInfo};
+use super::dto::{AuthResponse, IdentityLinkInfo, LogoutResponse, SessionInfo, SessionItem};
 use attome_types::ErrorResponse;
 
 // ── Session issuance (shared by register/login/google) ───────────────────────
@@ -108,6 +109,25 @@ pub(super) async fn issue_session_cookies_for(
     context: &AuthContext,
     login: Option<(&SecurityAuditor, &str)>,
 ) -> Result<[(header::HeaderName, String); 2], AppError> {
+    issue_session_for(state, user_id, context, login)
+        .await
+        .map(|issued| issued.cookies)
+}
+
+/// A new session's cookies and the refresh family they belong to.
+pub(super) struct IssuedCookies {
+    pub(super) cookies: [(header::HeaderName, String); 2],
+    pub(super) family_id: Uuid,
+}
+
+/// [`issue_session_cookies_for`], also answering the new family's id (Q8-T4:
+/// a browser remembered at sign-in is tied to it).
+pub(super) async fn issue_session_for(
+    state: &AppState,
+    user_id: Uuid,
+    context: &AuthContext,
+    login: Option<(&SecurityAuditor, &str)>,
+) -> Result<IssuedCookies, AppError> {
     // Q9-T1: the held roles' network, hours and country rules, before any
     // session or catch-up work.
     enforce_sign_in_rules(state, user_id, login).await?;
@@ -145,10 +165,18 @@ pub(super) async fn issue_session_cookies_for(
     // BAU-13c: the access token is minted inside the family's transaction,
     // so a failed mint leaves no orphan refresh row.
     let secrets = state.secrets.load();
+    // Q8-T4: the browser and method, for the person's own session list.
+    let (device, country) = sign_in_place();
+    let context = context.clone().with_device(SessionDevice {
+        user_agent: attome_server::middleware::request_meta::current().user_agent,
+        device_label: Some(device),
+        sign_in_method: login.map(|(_, method)| method.to_owned()),
+        sign_in_country: country,
+    });
     let issued = refresh::issue_session_with_limit(
         &state.db,
         user_id,
-        context,
+        &context,
         lifetimes,
         &state.pepper_ring(),
         &refresh::AccessTokenSpec {
@@ -209,10 +237,13 @@ pub(super) async fn issue_session_cookies_for(
         "/",
     );
 
-    Ok([
-        (header::SET_COOKIE, session_cookie),
-        (header::SET_COOKIE, refresh_cookie),
-    ])
+    Ok(IssuedCookies {
+        cookies: [
+            (header::SET_COOKIE, session_cookie),
+            (header::SET_COOKIE, refresh_cookie),
+        ],
+        family_id: issued.family_id,
+    })
 }
 
 /// Both refresh-family lifetimes from config (D-504): the idle window each
@@ -588,12 +619,158 @@ pub(super) async fn identity_links(
     Ok(Json(out))
 }
 
+/// My sessions
+///
+/// Q8-T4: the caller's own live sessions (one per sign-in), most recently
+/// active first, so they can end the ones they do not recognise. `is_current`
+/// marks the session this request was made with. No token, secret or
+/// address is ever part of an item.
+#[utoipa::path(
+    get,
+    path = "/api/v1/auth/sessions",
+    operation_id = "list_my_sessions",
+    tag = "auth",
+    params(OnePageQuery),
+    responses(
+        (status = 200, description = "The caller's live sessions", body = PaginatedResponse<SessionItem>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn list_sessions(
+    State(state): State<AppState>,
+    Extension(claims): Extension<SessionClaims>,
+    current: Option<Extension<SessionId>>,
+    // Self-scoped: the list is keyed on `claims.sub` only.
+    _ctx: Authorized<SelfService>,
+    Query(query): Query<OnePageQuery>,
+) -> Result<Json<PaginatedResponse<SessionItem>>, AppError> {
+    let current = current.map(|Extension(sid)| sid.0);
+    let page = refresh::list_families(&state.db, claims.sub, query.window()).await?;
+    Ok(Json(PaginatedResponse::new(
+        page.items
+            .into_iter()
+            .map(|family| SessionItem {
+                is_current: Some(family.family_id) == current,
+                id: family.family_id,
+                device_label: family.device_label,
+                user_agent: family.user_agent,
+                sign_in_method: family.sign_in_method,
+                sign_in_country: family.sign_in_country,
+                client_kind: family.client_kind,
+                created_at: family.created_at,
+                last_activity_at: family.last_activity_at,
+            })
+            .collect(),
+        page.total,
+        page.page,
+        page.page_size,
+    )))
+}
+
+/// End one of my sessions
+///
+/// Q8-T4: ends one of the caller's own sessions and forgets the browser if it
+/// was remembered in it. It can no longer be refreshed; its access token
+/// lapses at its own short expiry. Another person's session, or one already
+/// ended, answers 404.
+#[utoipa::path(
+    delete,
+    path = "/api/v1/auth/sessions/{id}",
+    operation_id = "end_my_session",
+    tag = "auth",
+    params(("id" = Uuid, Path, description = "Session id from the list")),
+    extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Credential, AuditOperation::SessionRevoked)])))),
+    responses(
+        (status = 204, description = "Ended"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such live session of the caller's", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn end_session(
+    State(state): State<AppState>,
+    Extension(auditor): Extension<SecurityAuditor>,
+    Extension(claims): Extension<SessionClaims>,
+    // Self-scoped: only a family of `claims.sub` can match.
+    _ctx: Authorized<SelfService>,
+    Path(family_id): Path<Uuid>,
+) -> Result<StatusCode, AppError> {
+    // The family and its event commit together (D-062).
+    let hook = account_event_hook(
+        auditor.service(),
+        MandatoryCategory::Credential,
+        AuditOperation::SessionRevoked,
+        "user_account",
+        "session ended by its user",
+    );
+    if !refresh::end_family(&state.db, claims.sub, family_id, &hook).await? {
+        return Err(AppError::NotFound);
+    }
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// End my other sessions
+///
+/// Q8-T4: ends every session of the caller except the one this request was
+/// made with, and forgets the browsers remembered in them. Needs a signed-in
+/// browser session: an API key has no session of its own to keep.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/sessions/end-others",
+    operation_id = "end_my_other_sessions",
+    tag = "auth",
+    extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Credential, AuditOperation::SessionRevoked)])))),
+    responses(
+        (status = 204, description = "Every other session ended"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "Not made with a browser session", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn end_other_sessions(
+    State(state): State<AppState>,
+    Extension(auditor): Extension<SecurityAuditor>,
+    Extension(claims): Extension<SessionClaims>,
+    current: Option<Extension<SessionId>>,
+    // Self-scoped: only families of `claims.sub` are touched.
+    _ctx: Authorized<SelfService>,
+) -> Result<StatusCode, AppError> {
+    let Some(Extension(current)) = current else {
+        return Err(AppError::Validation(
+            "ending the other sessions needs a signed-in browser session".into(),
+        ));
+    };
+    let hook = account_event_hook(
+        auditor.service(),
+        MandatoryCategory::Credential,
+        AuditOperation::SessionRevoked,
+        "user_account",
+        "other sessions ended by their user",
+    );
+    refresh::end_other_families(&state.db, claims.sub, current.0, &hook).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI document. Separate per file
 /// because `#[utoipa::path]` generates a `__path_*` type with the handler's
 /// own visibility, and these handlers are module-private — the crate's
 /// `openapi()` merges every fragment back into one document.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(logout, refresh_session, session_info, identity_links))]
+#[openapi(paths(
+    logout,
+    refresh_session,
+    session_info,
+    identity_links,
+    list_sessions,
+    end_session,
+    end_other_sessions
+))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

@@ -70,6 +70,28 @@ pub struct AuthContext {
     /// Q1-T10: the OIDC provider key and its session id, for a sign-in
     /// through one.
     oidc: Option<(String, Option<String>)>,
+    /// Q8-T4: the browser the sign-in came from, shown in the person's own
+    /// session list.
+    device: Option<SessionDevice>,
+}
+
+/// Q8-T4: what a family records about the browser and the way it signed in,
+/// for the person's own session list. Never an address.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct SessionDevice {
+    /// The `User-Agent` header, cut to [`SessionDevice::USER_AGENT_MAX`] characters.
+    pub user_agent: Option<String>,
+    /// The browser family, such as `chrome/windows`.
+    pub device_label: Option<String>,
+    /// How the person signed in, such as `password+totp` or `oidc:okta`.
+    pub sign_in_method: Option<String>,
+    /// The ISO country the sign-in came from, with `auth.geoip_database`.
+    pub sign_in_country: Option<String>,
+}
+
+impl SessionDevice {
+    /// The longest `User-Agent` kept.
+    pub const USER_AGENT_MAX: usize = 512;
 }
 
 impl AuthContext {
@@ -79,6 +101,7 @@ impl AuthContext {
             auth_time: AuthTime::AtIssue,
             amr: vec![AuthMethod::Password],
             oidc: None,
+            device: None,
         }
     }
 
@@ -88,6 +111,7 @@ impl AuthContext {
             auth_time: AuthTime::AtIssue,
             amr: vec![AuthMethod::Password, AuthMethod::Totp],
             oidc: None,
+            device: None,
         }
     }
 
@@ -105,6 +129,7 @@ impl AuthContext {
             auth_time: AuthTime::AtIssue,
             amr: vec![AuthMethod::Password, AuthMethod::RecoveryCode],
             oidc: None,
+            device: None,
         }
     }
 
@@ -116,6 +141,7 @@ impl AuthContext {
             auth_time: asserted_auth_time.map_or(AuthTime::Unknown, AuthTime::Asserted),
             amr: vec![AuthMethod::Federated],
             oidc: None,
+            device: None,
         }
     }
 
@@ -135,6 +161,21 @@ impl AuthContext {
     pub fn with_oidc_session(mut self, provider: &str, sid: Option<String>) -> Self {
         self.oidc = Some((provider.to_owned(), sid));
         self
+    }
+
+    /// Q8-T4: records the browser and sign-in method for the session list.
+    pub fn with_device(mut self, device: SessionDevice) -> Self {
+        self.device = Some(SessionDevice {
+            user_agent: device
+                .user_agent
+                .map(|ua| ua.chars().take(SessionDevice::USER_AGENT_MAX).collect()),
+            ..device
+        });
+        self
+    }
+
+    pub fn device(&self) -> Option<&SessionDevice> {
+        self.device.as_ref()
     }
 
     pub fn oidc_provider(&self) -> Option<&str> {

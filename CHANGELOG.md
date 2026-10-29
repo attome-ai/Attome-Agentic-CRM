@@ -59,6 +59,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Your own sessions (Q8-T4): `GET /api/v1/auth/sessions` lists where you are signed in (browser,
+  sign-in method, country when `auth.geoip_database` is set, start and last activity, and which
+  one is this browser); `DELETE /api/v1/auth/sessions/{id}` ends one and
+  `POST /api/v1/auth/sessions/end-others` ends every other, forgetting a browser remembered in an
+  ended session. A new sign-in now records its browser, method and country on the session
+  (migration 0328), and a refresh keeps them.
 - Customisations a release affects (Y11-T12): when a platform or app release retires, deletes or
   renames an entity or field this system customised, the release report gets a
   `customisation_affected` item naming the properties and, for a rename, the new name, and
