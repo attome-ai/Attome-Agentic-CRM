@@ -15,6 +15,7 @@
 ## Reference
 
 - [Architecture](architecture.md)
+- [Metadata layers](metadata-layers.md): the platform, app and customer layers, upgrade conflicts, resets, reserved names, locks and retiring `is_customized`.
 - [The access model](access-model.md): privileges, levels per operation, child units, permission sets, sharing rules, masked fields, conflict rules and explaining access.
 - [Secrets in the configuration](secrets.md): placeholders, environment variables, secret files, AWS Secrets Manager or Azure Key Vault read once at start, key rings and the rotation runbook.
 - [Built-in edge](edge.md): TLS from files or ACME, HTTP/3, what the edge refuses before authentication and the route-policy extensions.

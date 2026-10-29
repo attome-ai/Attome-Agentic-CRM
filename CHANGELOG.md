@@ -59,6 +59,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Metadata layers guide (Y11-T16): `docs/metadata-layers.md` explains the platform, app and customer
+  layers and how the ledger's four owner names map onto them, upgrade conflicts and their
+  resolution, resets, app order and clashes, reserved names (`attome_`, `xrm_`), locks, the agent
+  limit, and the steps that retire `is_customized`.
 - Search finds a name from its spelling in the other script (A25-T12): `Abdullah`, `Abdallah` and
   `Abd Allah` find `عبدالله`. Titles are indexed with transliteration keys (four letters or more, so
   short names do not over-match); records indexed earlier gain them when next indexed. The builder
