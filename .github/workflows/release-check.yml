@@ -22,7 +22,9 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_MIN_STACK: "33554432"
+  # Test threads get the 64 MiB stack serve.rs gives boot: tests that drive
+  # attome::boot::init overflowed 32 MiB in an unoptimized build.
+  RUST_MIN_STACK: "67108864"
   # No debug info in CI: the line tables Cargo.toml keeps for local backtraces
   # made the test binaries outgrow the Linux runner's disk and the Windows
   # job's time limit. Panic messages still name the failing test.
