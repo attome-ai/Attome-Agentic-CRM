@@ -74,6 +74,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `admin/security/sessions` screen, and a warning a minute before the roles' idle limit
   (`idle_secs`, now in `GET /api/v1/auth/session`) with "Stay signed in". The notification and
   work-offer pollers send `x-attome-background: 1`, so they no longer keep a session alive.
+- Refresh bound to the browser (Q8-T8): a refresh from another browser family than the session
+  signed in from, or (outside the mobile app) another country, is refused with `401
+  reauth_required` and does not rotate, so a stolen refresh cookie needs a new sign-in with MFA.
+  `auth.refresh_device_binding` (default true) turns it off behind a NAT pool.
 - Customisations a release affects (Y11-T12): when a platform or app release retires, deletes or
   renames an entity or field this system customised, the release report gets a
   `customisation_affected` item naming the properties and, for a rename, the new name, and

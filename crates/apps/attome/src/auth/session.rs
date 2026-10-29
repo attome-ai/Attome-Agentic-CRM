@@ -445,6 +445,20 @@ pub(super) async fn refresh_session(
     let secure = state.config.auth.secure_cookies;
     let token = cookie::extract_refresh(&headers, secure).ok_or(AppError::Unauthorized)?;
     let refresh_ttl = state.config.refresh_token_expiry_secs();
+    // Q8-T8: a refresh from somewhere sharply different from where the
+    // session signed in is not rotated; the token stays as it was, so the
+    // browser that signed in keeps working, and this caller must sign in.
+    if state.config.auth.refresh_device_binding
+        && let Some(place) = refresh::family_place(&state.db, &token, &state.pepper_ring()).await?
+    {
+        let (device, country) = sign_in_place();
+        if refresh::place_changed(&place, &device, country.as_deref()) {
+            return Err(AppError::ReauthRequired {
+                operation: "refresh",
+                acceptable_factors: Vec::new(),
+            });
+        }
+    }
     // D-510 rule 2: rotation copies the family's authentication context
     // unchanged, and the new session token's `sid` names the family the
     // replacement belongs to.

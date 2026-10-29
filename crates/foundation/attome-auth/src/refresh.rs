@@ -1230,6 +1230,70 @@ pub async fn end_families_started_before_in_tx(
     Ok(ended)
 }
 
+/// Q8-T8: where a session signed in from, as its family recorded it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FamilyPlace {
+    /// The browser family, such as `chrome/windows`.
+    pub device_label: Option<String>,
+    pub sign_in_country: Option<String>,
+    /// `web`, `mobile` or `agent`.
+    pub client_kind: String,
+}
+
+/// Q8-T8: the recorded place of the family a presented refresh token
+/// belongs to, read before it is redeemed. `Some` only for an unused, live
+/// token whose secret verifies, so the answer never reveals whether a
+/// `public_id` exists (the secret is verified against a dummy hash on a
+/// miss, as the redeem does) and an already-used token still reaches the
+/// redeem's reuse detection, which revokes its family.
+pub async fn family_place(
+    db: &DbPool,
+    presented: &str,
+    ring: &PepperRing,
+) -> Result<Option<FamilyPlace>, AppError> {
+    let Some((public_id, secret)) = presented.split_once('.') else {
+        return Ok(None);
+    };
+    let Ok(public_id) = public_id.parse::<Uuid>() else {
+        return Ok(None);
+    };
+    let row: Option<(String, Option<String>, Option<String>, String)> = sqlx::query_as(
+        "SELECT secret_hash, device_label, sign_in_country, client_kind FROM refresh_token
+          WHERE public_id = $1 AND revoked_at IS NULL AND used_at IS NULL
+            AND expires_at > NOW()",
+    )
+    .bind(public_id)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some((secret_hash, device_label, sign_in_country, client_kind)) = row else {
+        let _ = verify_api_key_secret(ring, secret, dummy_hmac_hash()).await?;
+        return Ok(None);
+    };
+    if verify_api_key_secret(ring, secret, &secret_hash).await? == VerifyOutcome::Fail {
+        return Ok(None);
+    }
+    Ok(Some(FamilyPlace {
+        device_label,
+        sign_in_country,
+        client_kind,
+    }))
+}
+
+/// Q8-T8: whether a refresh from `device` in `country` differs sharply from
+/// where the family signed in: another browser family, or (outside the
+/// mobile app, whose people travel) another country. Unknown values on
+/// either side never count as a difference.
+pub fn place_changed(place: &FamilyPlace, device: &str, country: Option<&str>) -> bool {
+    let other_browser = place
+        .device_label
+        .as_deref()
+        .is_some_and(|signed_in| signed_in != device);
+    let other_country = place.client_kind != "mobile"
+        && matches!((place.sign_in_country.as_deref(), country), (Some(a), Some(b)) if a != b);
+    other_browser || other_country
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1313,5 +1377,39 @@ mod tests {
                 .await
                 .is_ok()
         );
+    }
+
+    fn place(device: Option<&str>, country: Option<&str>, kind: &str) -> FamilyPlace {
+        FamilyPlace {
+            device_label: device.map(str::to_owned),
+            sign_in_country: country.map(str::to_owned),
+            client_kind: kind.to_owned(),
+        }
+    }
+
+    #[test]
+    fn another_browser_family_is_a_change() {
+        let p = place(Some("chrome/windows"), None, "web");
+        assert!(place_changed(&p, "firefox/macos", None));
+        assert!(!place_changed(&p, "chrome/windows", None));
+    }
+
+    #[test]
+    fn another_country_is_a_change_except_on_mobile() {
+        let web = place(Some("chrome/windows"), Some("EG"), "web");
+        assert!(place_changed(&web, "chrome/windows", Some("FR")));
+        let mobile = place(Some("chrome/windows"), Some("EG"), "mobile");
+        assert!(!place_changed(&mobile, "chrome/windows", Some("FR")));
+    }
+
+    #[test]
+    fn unknown_values_are_never_a_change() {
+        assert!(!place_changed(
+            &place(None, None, "web"),
+            "firefox/macos",
+            Some("FR")
+        ));
+        let p = place(Some("chrome/windows"), Some("EG"), "web");
+        assert!(!place_changed(&p, "chrome/windows", None));
     }
 }

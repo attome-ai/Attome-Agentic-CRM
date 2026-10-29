@@ -6,6 +6,9 @@
 //! others keeps the current session and stops the other one refreshing, and
 //! another person's session cannot be ended (404, untouched).
 //!
+//! Q8-T8: a refresh from another browser family is refused with
+//! `reauth_required` and does not rotate; a browser update rotates as before.
+//!
 //! Requires a live Postgres (`DATABASE_URL`, a throwaway database — attome-testkit
 //! clones it per binary) and Redis (`TEST_REDIS_HOST`/`TEST_REDIS_PORT`).
 //! Skips cleanly when `DATABASE_URL` is unset. Run manually:
@@ -425,4 +428,55 @@ async fn cannot_end_another_users_session() {
     .await;
     assert_eq!(res.status(), StatusCode::NO_CONTENT);
     assert_eq!(refresh_status(&app, &mine).await, StatusCode::UNAUTHORIZED);
+}
+
+/// Q8-T8: a refresh with `cookie` sent from `user_agent`.
+async fn refresh_from(
+    app: &axum::Router,
+    signed: &Signed,
+    user_agent: &str,
+) -> axum::response::Response {
+    let req = Request::builder()
+        .method("POST")
+        .uri("/api/v1/auth/refresh")
+        .header("origin", ALLOWED_ORIGIN)
+        .header(header::USER_AGENT, user_agent)
+        .header(header::CONTENT_TYPE, "application/json")
+        .header(
+            header::COOKIE,
+            format!("{REFRESH_COOKIE}={}", signed.refresh),
+        )
+        .body(Body::from("{}"))
+        .unwrap();
+    app.clone().oneshot(req).await.expect("refresh request")
+}
+
+#[tokio::test]
+async fn refresh_from_new_browser_requires_reauth() {
+    let (app, state) = skip_if_no_db!(test_app().await);
+    let signed = sign_in(&app, &seed_user(&state).await).await;
+    let firefox =
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 14.0; rv:121.0) Gecko/20100101 Firefox/121.0";
+    let res = refresh_from(&app, &signed, firefox).await;
+    assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(json_of(res).await["code"], "reauth_required");
+    // Not rotated: the token still refreshes from the browser that signed in.
+    assert_eq!(
+        refresh_from(&app, &signed, BROWSER).await.status(),
+        StatusCode::OK
+    );
+}
+
+#[tokio::test]
+async fn refresh_from_same_browser_rotates() {
+    let (app, state) = skip_if_no_db!(test_app().await);
+    let signed = sign_in(&app, &seed_user(&state).await).await;
+    // A browser update changes the version, not the family.
+    let updated = BROWSER.replace("Chrome/120.0", "Chrome/131.0");
+    let res = refresh_from(&app, &signed, &updated).await;
+    assert_eq!(res.status(), StatusCode::OK);
+    assert!(
+        cookie_value(&res, REFRESH_COOKIE).is_some(),
+        "the refresh cookie rotated"
+    );
 }

@@ -550,6 +550,11 @@
           "minimum": 0,
           "type": "integer"
         },
+        "refresh_device_binding": {
+          "default": true,
+          "description": "Q8-T8: a refresh from another browser family, or (outside the mobile\napp) another country, than the session signed in from is refused with\n`reauth_required` instead of rotating, so a stolen refresh cookie\nneeds a new sign-in with MFA. Turn it off behind a NAT pool whose\nexit addresses change country.",
+          "type": "boolean"
+        },
         "refresh_token_expiry_days": {
           "default": 30,
           "description": "Idle lifetime of one `base_refresh_token` row, in days: how long a\nrefresh token stays valid without being rotated.",

@@ -205,6 +205,13 @@ pub struct AuthSection {
     /// restart to update it.
     #[serde(default)]
     pub geoip_database: Option<String>,
+    /// Q8-T8: a refresh from another browser family, or (outside the mobile
+    /// app) another country, than the session signed in from is refused with
+    /// `reauth_required` instead of rotating, so a stolen refresh cookie
+    /// needs a new sign-in with MFA. Turn it off behind a NAT pool whose
+    /// exit addresses change country.
+    #[serde(default = "default_true")]
+    pub refresh_device_binding: bool,
 }
 
 /// `auth.kdf` — see [`AuthSection::kdf`]. Every default is the value the
@@ -317,6 +324,7 @@ impl std::fmt::Debug for AuthSection {
             .field("registration_mode", &self.registration_mode)
             .field("kdf", &self.kdf)
             .field("geoip_database", &self.geoip_database)
+            .field("refresh_device_binding", &self.refresh_device_binding)
             .finish()
     }
 }
