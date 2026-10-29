@@ -72875,6 +72875,119 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/attome-dashboard/{id}/widgets/{widget_id}/compare": {
+      "post": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Compare two periods of a widget",
+        "description": "The records of a widget's scope that entered, left or changed value between two periods of its date\nfield, as the caller may see them: entered and left by id (paged), and for the records in both, the\nnewest change of the measured field from the field history. Writes nothing. Anyone who may read the\ndashboard.",
+        "operationId": "widget_compare",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The dashboard",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "widget_id",
+            "in": "path",
+            "description": "The widget",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WidgetCompareInputs"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The entered, left and changed records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WidgetCompareResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such dashboard, nothing is published, or the widget is not in the executed definition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The widget is not an exactly drillable chart grouped by a date, a period is empty, or a period holds more records than a comparison lists (too_large)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "P7-T8: lists the records that entered, left or changed between two periods over the caller's record scope and writes nothing.",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "dashboard",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/attome-dashboard/{id}/widgets/{widget_id}/data": {
       "post": {
         "tags": [
@@ -72977,6 +73090,119 @@
         ],
         "x-audit-exempt": {
           "note": "Dashboard 10/10 Phase 2.3: executes a widget definition over the caller's record scope and writes nothing.",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "dashboard",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/attome-dashboard/{id}/widgets/{widget_id}/drill-down": {
+      "post": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Drill one level down a chart",
+        "description": "The next level of a chart's buckets under the buckets clicked so far (`path`), grouped by the widget's\nnext `drill_levels` entry, over the widget's own scope with each clicked bucket added as a filter, and\na breadcrumb back. Writes nothing. Anyone who may read the dashboard.",
+        "operationId": "widget_drill_down",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The dashboard",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "widget_id",
+            "in": "path",
+            "description": "The widget",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WidgetDrillDownInputs"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The next level's buckets and the breadcrumb",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WidgetDrillDownResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such dashboard, nothing is published, or the widget is not in the executed definition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The widget has no drill levels or is not a structured chart, the path is past the last level, or a key does not apply",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "P7-T5: aggregates the widget's data one level down over the caller's record scope and writes nothing.",
           "reason": "read_only",
           "via": null
         },
@@ -102307,6 +102533,112 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/metrics/{id}/backfill": {
+      "post": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Queues the computation of the metric's past periods in `[from, to)`. Each value is recorded as a\nbackfilled snapshot; a period that already has a snapshot is left alone. Only builder and\nformula metrics can be backfilled. Needs update rights on metric definitions. Audited.",
+        "operationId": "post_backfill",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The metric",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackfillMetricBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackfillMetricQueued"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such metric",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A range over ten years, empty or entirely in the current period, or a metric that cannot be backfilled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "execute"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "dashboard",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/metrics/{id}/builder": {
@@ -141536,6 +141868,91 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/{entity}/{id}/rollups/{attribute}/explain": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "description": "Why a rollup field has its value (A10-T5): its definition, the stored value, how many related records it counts, and the first 100 of them the caller may read, with their amounts. Related records the caller may not read are counted but not listed. Needs read access to the record and the field.",
+        "operationId": "explain_rollup",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The record",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "attribute",
+            "in": "path",
+            "description": "The rollup field",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The explanation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RollupExplanation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record or rollup field, or the caller cannot read it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "{entity}.read",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/{entity}/{id}/shares": {
       "get": {
         "tags": [
@@ -152626,6 +153043,56 @@
           }
         }
       },
+      "BackfillMetricBody": {
+        "type": "object",
+        "description": "The range to backfill.",
+        "required": [
+          "from",
+          "to"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "The first day; the period containing it is the first filled."
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "description": "The day after the last; periods starting from it are not filled. The\ncurrent period and later are always left to the schedule."
+          }
+        },
+        "additionalProperties": false
+      },
+      "BackfillMetricQueued": {
+        "type": "object",
+        "description": "The backfill that was queued.",
+        "required": [
+          "metric_id",
+          "from",
+          "to",
+          "queued"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "metric_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "queued": {
+            "type": "boolean",
+            "description": "`false` when a backfill of this metric was already queued."
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "description": "`to`, moved back to the start of the current period when later."
+          }
+        }
+      },
       "Backlog": {
         "type": "object",
         "required": [
@@ -157774,6 +158241,36 @@
           }
         }
       },
+      "ChangedRecord": {
+        "type": "object",
+        "description": "P7-T8: a record in both periods whose measured value changed between\nthem, from its field history.",
+        "required": [
+          "record_id",
+          "changed_at"
+        ],
+        "properties": {
+          "changed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "new_value": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "old_value": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "ChangesRequest": {
         "type": "object",
         "required": [
@@ -160013,6 +160510,25 @@
             "format": "uuid"
           }
         }
+      },
+      "ComparePeriod": {
+        "type": "object",
+        "description": "P7-T8: one period, `from <= t < to`.",
+        "required": [
+          "from",
+          "to"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
       },
       "CompareResponse": {
         "type": "object",
@@ -163888,6 +164404,25 @@
           },
           "reason": {
             "type": "string"
+          }
+        }
+      },
+      "CurrencyFact": {
+        "type": "object",
+        "description": "P7-T7: a money measure's currency.",
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "converted_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -168840,6 +169375,54 @@
           }
         }
       },
+      "DrillCrumb": {
+        "type": "object",
+        "description": "One step of the way down.",
+        "required": [
+          "attribute",
+          "key"
+        ],
+        "properties": {
+          "attribute": {
+            "type": "string"
+          },
+          "key": {
+            "$ref": "#/components/schemas/BucketKey"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "DrillDownBucket": {
+        "type": "object",
+        "description": "One bucket of the next level.",
+        "required": [
+          "key"
+        ],
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/BucketKey"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "value": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "The widget's first measure for the bucket."
+          }
+        }
+      },
       "DrillRun": {
         "type": "object",
         "description": "One recorded drill, without its evidence.",
@@ -168987,6 +169570,14 @@
             "format": "uuid"
           }
         }
+      },
+      "DrillThroughKind": {
+        "type": "string",
+        "description": "P7-T6: where a widget's click goes.",
+        "enum": [
+          "dashboard",
+          "route"
+        ]
       },
       "Drillability": {
         "type": "string",
@@ -181539,6 +182130,22 @@
           }
         },
         "additionalProperties": false
+      },
+      "MeasureBasis": {
+        "type": "object",
+        "description": "P7-T7: the date field and grain a number is bucketed by.",
+        "required": [
+          "attribute",
+          "grain"
+        ],
+        "properties": {
+          "attribute": {
+            "type": "string"
+          },
+          "grain": {
+            "$ref": "#/components/schemas/DateBucket"
+          }
+        }
       },
       "MeasureFn": {
         "type": "string",
@@ -207817,7 +208424,8 @@
                 "period_start",
                 "computed_at",
                 "status",
-                "definition_version"
+                "definition_version",
+                "is_backfill"
               ],
               "properties": {
                 "actual": {
@@ -207873,6 +208481,10 @@
                 "id": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "is_backfill": {
+                  "type": "boolean",
+                  "description": "P9-T10: computed later for a past period by the backfill job."
                 },
                 "metric_ref": {
                   "type": "string",
@@ -217487,6 +218099,38 @@
           }
         }
       },
+      "RecordTrail": {
+        "type": "object",
+        "description": "P7-T9: where a listed record came from: its timeline, the last change\nto a field the widget filters on, and the agent session when an agent\nmade that change.",
+        "required": [
+          "record_id",
+          "timeline_url"
+        ],
+        "properties": {
+          "agent_run_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The agent session (`audit_header.agent_session_id`) whose run made\nthat change; absent when a person or the system made it."
+          },
+          "last_change_audit_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timeline_url": {
+            "type": "string"
+          }
+        }
+      },
       "RecordTypeChange": {
         "type": "object",
         "description": "What a type change does, or did.",
@@ -219586,6 +220230,43 @@
           }
         }
       },
+      "ResolvedDrillThrough": {
+        "type": "object",
+        "description": "P7-T6: a click's destination, resolved for the bucket clicked. The target\napplies its own access checks when it opens.",
+        "required": [
+          "target_kind",
+          "parameters"
+        ],
+        "properties": {
+          "parameters": {
+            "type": "object",
+            "description": "Each mapped parameter with the clicked value; a parameter whose\nattribute the click does not set is left out."
+          },
+          "route": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "target_dashboard_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "target_kind": {
+            "$ref": "#/components/schemas/DrillThroughKind"
+          },
+          "target_page_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "RestoreCounts": {
         "type": "object",
         "description": "What a restore did.",
@@ -220881,6 +221562,114 @@
             ],
             "format": "int64",
             "description": "The highest applied SQL migration (as `/version`); `null` when the\nmigration table cannot be read."
+          }
+        }
+      },
+      "RollupContributor": {
+        "type": "object",
+        "description": "One related record a rollup counts.",
+        "required": [
+          "id",
+          "value"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "value": {
+            "type": "object",
+            "description": "The aggregated field's value; null for a count, or when the caller\nmay not read the field."
+          }
+        }
+      },
+      "RollupExplanation": {
+        "type": "object",
+        "description": "Why a rollup has its value.",
+        "required": [
+          "entity",
+          "record_id",
+          "attribute",
+          "function",
+          "mode",
+          "path",
+          "value",
+          "counted",
+          "hidden",
+          "records",
+          "truncated"
+        ],
+        "properties": {
+          "attribute": {
+            "type": "string"
+          },
+          "counted": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Related records counted now, readable or not."
+          },
+          "entity": {
+            "type": "string"
+          },
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The related records' field aggregated; absent for a count."
+          },
+          "filter": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "function": {
+            "type": "string",
+            "description": "`count`, `distinct_count`, `sum`, `min`, `max`, `avg`, `first` or `last`."
+          },
+          "hidden": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Of those, the ones the caller may not read."
+          },
+          "mode": {
+            "type": "string",
+            "description": "`fast` or `exact`."
+          },
+          "path": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Each step as `entity.lookup`, from this record outwards."
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RollupContributor"
+            },
+            "description": "The first readable ones, by id."
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "More readable records than listed."
+          },
+          "value": {
+            "type": "object",
+            "description": "The stored value."
+          },
+          "window_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
           }
         }
       },
@@ -227807,7 +228596,8 @@
           "period_start",
           "computed_at",
           "status",
-          "definition_version"
+          "definition_version",
+          "is_backfill"
         ],
         "properties": {
           "actual": {
@@ -227863,6 +228653,10 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "is_backfill": {
+            "type": "boolean",
+            "description": "P9-T10: computed later for a past period by the backfill job."
           },
           "metric_ref": {
             "type": "string",
@@ -237236,6 +238030,135 @@
           }
         }
       },
+      "WidgetCompareInputs": {
+        "type": "object",
+        "description": "P7-T8: what a viewer sends to the compare route.",
+        "required": [
+          "period_a",
+          "period_b"
+        ],
+        "properties": {
+          "after_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Keyset cursor over the entered and left lists (the last id of the\nprevious page)."
+          },
+          "cross_filters": {
+            "type": "object",
+            "additionalProperties": {},
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "page_size": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "1-200, default 50."
+          },
+          "parameters": {
+            "type": "object",
+            "additionalProperties": {},
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "period_a": {
+            "$ref": "#/components/schemas/ComparePeriod"
+          },
+          "period_b": {
+            "$ref": "#/components/schemas/ComparePeriod"
+          },
+          "preview": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "WidgetCompareResponse": {
+        "type": "object",
+        "description": "P7-T8: the records that entered, left or changed between two periods.",
+        "required": [
+          "widget_id",
+          "date_attribute",
+          "in_a",
+          "in_b",
+          "entered",
+          "left",
+          "entered_total",
+          "left_total",
+          "changed"
+        ],
+        "properties": {
+          "changed": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChangedRecord"
+            },
+            "description": "In both, with the newest change to the measured field between the\nstart of A and the end of B (at most one page)."
+          },
+          "date_attribute": {
+            "type": "string",
+            "description": "The date field each period filters on."
+          },
+          "entered": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "In period B and not in A, by id."
+          },
+          "entered_total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "in_a": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "in_b": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "left": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "In period A and not in B, by id."
+          },
+          "left_total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "measured_attribute": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The field whose changes are listed; absent for a count."
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Pass back as `after_id` for the next page of entered and left."
+          },
+          "widget_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "WidgetDataResponse": {
         "type": "object",
         "required": [
@@ -237373,6 +238296,94 @@
           }
         }
       },
+      "WidgetDrillDownInputs": {
+        "type": "object",
+        "description": "What a viewer sends to the drill-down route: the data route's values\nplus the buckets clicked so far, one per level.",
+        "properties": {
+          "cross_filters": {
+            "type": "object",
+            "additionalProperties": {},
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "parameters": {
+            "type": "object",
+            "additionalProperties": {},
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "path": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BucketKey"
+            },
+            "description": "The bucket keys clicked so far, exactly as earlier answers gave them;\nempty for the first level below the chart."
+          },
+          "preview": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "WidgetDrillDownResponse": {
+        "type": "object",
+        "description": "The next level of a chart's buckets under the ones clicked.",
+        "required": [
+          "widget_id",
+          "level_index",
+          "attribute",
+          "additive",
+          "buckets",
+          "breadcrumb",
+          "timezone"
+        ],
+        "properties": {
+          "additive": {
+            "type": "boolean",
+            "description": "Whether the buckets add up to the bucket above (a count or a sum);\nan average, a distinct count, a minimum, a maximum or a median does\nnot."
+          },
+          "attribute": {
+            "type": "string"
+          },
+          "breadcrumb": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DrillCrumb"
+            },
+            "description": "The levels above, each with the bucket clicked."
+          },
+          "buckets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DrillDownBucket"
+            }
+          },
+          "grain": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DateBucket"
+              }
+            ]
+          },
+          "level_index": {
+            "type": "integer",
+            "description": "Which of the widget's `drill_levels` this is.",
+            "minimum": 0
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "widget_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "WidgetError": {
         "type": "object",
         "required": [
@@ -237406,15 +238417,44 @@
           "as_of",
           "timezone",
           "timezone_source",
-          "filters"
+          "filters",
+          "definition_en",
+          "definition_ar"
         ],
         "properties": {
           "as_of": {
             "type": "string",
             "format": "date-time"
           },
+          "computed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "P7-T7: when a metric's number was computed (a KPI's latest point)."
+          },
+          "currency": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CurrencyFact",
+                "description": "P7-T7: the currency of a money measure and when it was converted.\nAlways absent today: amounts carry no currency code yet (A19-T1)."
+              }
+            ]
+          },
           "data_class": {
             "$ref": "#/components/schemas/DataClass"
+          },
+          "definition_ar": {
+            "type": "string",
+            "description": "P7-T7: the same in Arabic."
+          },
+          "definition_en": {
+            "type": "string",
+            "description": "P7-T7: what the number is, in plain English."
           },
           "definition_fingerprint": {
             "type": "string"
@@ -237431,6 +238471,14 @@
               "$ref": "#/components/schemas/ExplainedFilter"
             }
           },
+          "glossary_term_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "P7-T7: the glossary term defining the measure. Always absent today:\na glossary term links to an entity, not to a metric or an attribute."
+          },
           "kpi": {
             "oneOf": [
               {
@@ -237438,6 +238486,24 @@
               },
               {
                 "$ref": "#/components/schemas/KpiExplanation"
+              }
+            ]
+          },
+          "lineage_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "P7-T7: a governed metric's lineage route."
+          },
+          "measure_basis": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MeasureBasis",
+                "description": "P7-T7: the date field and grain the number is bucketed by."
               }
             ]
           },
@@ -237597,7 +238663,8 @@
           "applied_filters",
           "records",
           "some_records_hidden",
-          "parity"
+          "parity",
+          "trails"
         ],
         "properties": {
           "applied_filters": {
@@ -237623,6 +238690,17 @@
           },
           "definition_source": {
             "$ref": "#/components/schemas/DefinitionSource"
+          },
+          "drill_through": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ResolvedDrillThrough",
+                "description": "P7-T6: where a click on this bucket goes, with the parameter values\nthe click sets; absent when the widget has no `drill_through`."
+              }
+            ]
           },
           "drillability": {
             "$ref": "#/components/schemas/Drillability"
@@ -237671,6 +238749,13 @@
           },
           "timezone_source": {
             "$ref": "#/components/schemas/TimezoneSource"
+          },
+          "trails": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecordTrail"
+            },
+            "description": "P7-T9: each listed record's trail, in the rows' order."
           },
           "widget_id": {
             "type": "string",
@@ -238087,6 +239172,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -238139,6 +239225,5 @@
       }
     }
   },
-  "x-api-version": "2026-10",
-  "x-version-adapters": []
+  "x-api-version": "2026-10"
 }

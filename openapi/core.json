@@ -79720,6 +79720,91 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/{entity}/{id}/rollups/{attribute}/explain": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "description": "Why a rollup field has its value (A10-T5): its definition, the stored value, how many related records it counts, and the first 100 of them the caller may read, with their amounts. Related records the caller may not read are counted but not listed. Needs read access to the record and the field.",
+        "operationId": "explain_rollup",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The record",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "attribute",
+            "in": "path",
+            "description": "The rollup field",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The explanation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RollupExplanation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record or rollup field, or the caller cannot read it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "{entity}.read",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/{entity}/{id}/shares": {
       "get": {
         "tags": [
@@ -121301,6 +121386,114 @@
             ],
             "format": "int64",
             "description": "The highest applied SQL migration (as `/version`); `null` when the\nmigration table cannot be read."
+          }
+        }
+      },
+      "RollupContributor": {
+        "type": "object",
+        "description": "One related record a rollup counts.",
+        "required": [
+          "id",
+          "value"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "value": {
+            "type": "object",
+            "description": "The aggregated field's value; null for a count, or when the caller\nmay not read the field."
+          }
+        }
+      },
+      "RollupExplanation": {
+        "type": "object",
+        "description": "Why a rollup has its value.",
+        "required": [
+          "entity",
+          "record_id",
+          "attribute",
+          "function",
+          "mode",
+          "path",
+          "value",
+          "counted",
+          "hidden",
+          "records",
+          "truncated"
+        ],
+        "properties": {
+          "attribute": {
+            "type": "string"
+          },
+          "counted": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Related records counted now, readable or not."
+          },
+          "entity": {
+            "type": "string"
+          },
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The related records' field aggregated; absent for a count."
+          },
+          "filter": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "function": {
+            "type": "string",
+            "description": "`count`, `distinct_count`, `sum`, `min`, `max`, `avg`, `first` or `last`."
+          },
+          "hidden": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Of those, the ones the caller may not read."
+          },
+          "mode": {
+            "type": "string",
+            "description": "`fast` or `exact`."
+          },
+          "path": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Each step as `entity.lookup`, from this record outwards."
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RollupContributor"
+            },
+            "description": "The first readable ones, by id."
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "More readable records than listed."
+          },
+          "value": {
+            "type": "object",
+            "description": "The stored value."
+          },
+          "window_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
           }
         }
       },

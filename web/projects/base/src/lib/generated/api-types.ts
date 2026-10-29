@@ -14533,6 +14533,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/attome-dashboard/{id}/widgets/{widget_id}/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Compare two periods of a widget
+         * @description The records of a widget's scope that entered, left or changed value between two periods of its date
+         *     field, as the caller may see them: entered and left by id (paged), and for the records in both, the
+         *     newest change of the measured field from the field history. Writes nothing. Anyone who may read the
+         *     dashboard.
+         */
+        post: operations["widget_compare"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/attome-dashboard/{id}/widgets/{widget_id}/data": {
         parameters: {
             query?: never;
@@ -14548,6 +14571,28 @@ export interface paths {
          *     nothing. Anyone who may read the dashboard.
          */
         post: operations["widget_data"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/widgets/{widget_id}/drill-down": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Drill one level down a chart
+         * @description The next level of a chart's buckets under the buckets clicked so far (`path`), grouped by the widget's
+         *     next `drill_levels` entry, over the widget's own scope with each clicked bucket added as a filter, and
+         *     a breadcrumb back. Writes nothing. Anyone who may read the dashboard.
+         */
+        post: operations["widget_drill_down"];
         delete?: never;
         options?: never;
         head?: never;
@@ -21550,6 +21595,27 @@ export interface paths {
         get: operations["list_metrics"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/metrics/{id}/backfill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queues the computation of the metric's past periods in `[from, to)`. Each value is recorded as a
+         *     backfilled snapshot; a period that already has a snapshot is left alone. Only builder and
+         *     formula metrics can be backfilled. Needs update rights on metric definitions. Audited.
+         */
+        post: operations["post_backfill"];
         delete?: never;
         options?: never;
         head?: never;
@@ -29919,6 +29985,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/{entity}/{id}/rollups/{attribute}/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Why a rollup field has its value (A10-T5): its definition, the stored value, how many related records it counts, and the first 100 of them the caller may read, with their amounts. Related records the caller may not read are counted but not listed. Needs read access to the record and the field. */
+        get: operations["explain_rollup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/{id}/shares": {
         parameters: {
             query?: never;
@@ -33225,6 +33308,34 @@ export interface components {
             /** @description The signed logout token. */
             logout_token: string;
         };
+        /** @description The range to backfill. */
+        BackfillMetricBody: {
+            /**
+             * Format: date
+             * @description The first day; the period containing it is the first filled.
+             */
+            from: string;
+            /**
+             * Format: date
+             * @description The day after the last; periods starting from it are not filled. The
+             *     current period and later are always left to the schedule.
+             */
+            to: string;
+        };
+        /** @description The backfill that was queued. */
+        BackfillMetricQueued: {
+            /** Format: date */
+            from: string;
+            /** Format: uuid */
+            metric_id: string;
+            /** @description `false` when a backfill of this metric was already queued. */
+            queued: boolean;
+            /**
+             * Format: date
+             * @description `to`, moved back to the start of the current period when later.
+             */
+            to: string;
+        };
         Backlog: {
             action_type: string;
             /** Format: date-time */
@@ -35187,6 +35298,18 @@ export interface components {
             /** @description The value approval writes. */
             to: unknown;
         };
+        /**
+         * @description P7-T8: a record in both periods whose measured value changed between
+         *     them, from its field history.
+         */
+        ChangedRecord: {
+            /** Format: date-time */
+            changed_at: string;
+            new_value?: string | null;
+            old_value?: string | null;
+            /** Format: uuid */
+            record_id: string;
+        };
         ChangesRequest: {
             /** @description The `next_cursor` of the previous call; absent to start from now. */
             cursor?: string | null;
@@ -36018,6 +36141,13 @@ export interface components {
         CompareMetricColumn: {
             /** Format: uuid */
             metric_ref: string;
+        };
+        /** @description P7-T8: one period, `from <= t < to`. */
+        ComparePeriod: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
         };
         CompareResponse: {
             metrics: components["schemas"]["CompareMetricColumn"][];
@@ -37553,6 +37683,12 @@ export interface components {
         CreditNoteRequest: {
             lines: components["schemas"]["CreditLine"][];
             reason: string;
+        };
+        /** @description P7-T7: a money measure's currency. */
+        CurrencyFact: {
+            code: string;
+            /** Format: date-time */
+            converted_at?: string | null;
         };
         /** @description A statement's section in one currency. */
         CurrencyStatement: {
@@ -39508,6 +39644,22 @@ export interface components {
             applied?: null | components["schemas"]["AppliedRef"];
             drift?: null | components["schemas"]["DriftDiff"];
         };
+        /** @description One step of the way down. */
+        DrillCrumb: {
+            attribute: string;
+            key: components["schemas"]["BucketKey"];
+            label?: string | null;
+        };
+        /** @description One bucket of the next level. */
+        DrillDownBucket: {
+            key: components["schemas"]["BucketKey"];
+            label?: string | null;
+            /**
+             * Format: double
+             * @description The widget's first measure for the bucket.
+             */
+            value?: number | null;
+        };
         /** @description One recorded drill, without its evidence. */
         DrillRun: {
             /** Format: date-time */
@@ -39566,6 +39718,11 @@ export interface components {
             /** Format: uuid */
             updated_by?: string | null;
         };
+        /**
+         * @description P7-T6: where a widget's click goes.
+         * @enum {string}
+         */
+        DrillThroughKind: "dashboard" | "route";
         /** @enum {string} */
         Drillability: "exact" | "explain_only" | "none";
         /** @description One interval that would fall short. */
@@ -44588,6 +44745,11 @@ export interface components {
             /** @description Required unless `aggregation` is `count`. */
             field?: string | null;
             label?: string | null;
+        };
+        /** @description P7-T7: the date field and grain a number is bucketed by. */
+        MeasureBasis: {
+            attribute: string;
+            grain: components["schemas"]["DateBucket"];
         };
         /** @enum {string} */
         MeasureFn: "count" | "count_distinct" | "sum" | "avg" | "min" | "max" | "median";
@@ -54551,6 +54713,8 @@ export interface components {
                 evaluated_by?: string | null;
                 /** Format: uuid */
                 id: string;
+                /** @description P9-T10: computed later for a past period by the backfill job. */
+                is_backfill: boolean;
                 /** Format: uuid */
                 metric_ref: string;
                 /** Format: date */
@@ -58292,6 +58456,24 @@ export interface components {
             /** Format: uuid */
             record_id: string;
         };
+        /**
+         * @description P7-T9: where a listed record came from: its timeline, the last change
+         *     to a field the widget filters on, and the agent session when an agent
+         *     made that change.
+         */
+        RecordTrail: {
+            /**
+             * Format: uuid
+             * @description The agent session (`audit_header.agent_session_id`) whose run made
+             *     that change; absent when a person or the system made it.
+             */
+            agent_run_id?: string | null;
+            /** Format: uuid */
+            last_change_audit_id?: string | null;
+            /** Format: uuid */
+            record_id: string;
+            timeline_url: string;
+        };
         /** @description What a type change does, or did. */
         RecordTypeChange: {
             /** @description False for a preview. */
@@ -59132,6 +59314,23 @@ export interface components {
             identifier_type: string;
             identifier_value: string;
         };
+        /**
+         * @description P7-T6: a click's destination, resolved for the bucket clicked. The target
+         *     applies its own access checks when it opens.
+         */
+        ResolvedDrillThrough: {
+            /**
+             * @description Each mapped parameter with the clicked value; a parameter whose
+             *     attribute the click does not set is left out.
+             */
+            parameters: Record<string, never>;
+            route?: string | null;
+            /** Format: uuid */
+            target_dashboard_id?: string | null;
+            target_kind: components["schemas"]["DrillThroughKind"];
+            /** Format: uuid */
+            target_page_id?: string | null;
+        };
         /** @description What a restore did. */
         RestoreCounts: {
             /**
@@ -59694,6 +59893,50 @@ export interface components {
              *     migration table cannot be read.
              */
             schema_version?: number | null;
+        };
+        /** @description One related record a rollup counts. */
+        RollupContributor: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * @description The aggregated field's value; null for a count, or when the caller
+             *     may not read the field.
+             */
+            value: Record<string, never>;
+        };
+        /** @description Why a rollup has its value. */
+        RollupExplanation: {
+            attribute: string;
+            /**
+             * Format: int64
+             * @description Related records counted now, readable or not.
+             */
+            counted: number;
+            entity: string;
+            /** @description The related records' field aggregated; absent for a count. */
+            field?: string | null;
+            filter?: string | null;
+            /** @description `count`, `distinct_count`, `sum`, `min`, `max`, `avg`, `first` or `last`. */
+            function: string;
+            /**
+             * Format: int64
+             * @description Of those, the ones the caller may not read.
+             */
+            hidden: number;
+            /** @description `fast` or `exact`. */
+            mode: string;
+            /** @description Each step as `entity.lookup`, from this record outwards. */
+            path: string[];
+            /** Format: uuid */
+            record_id: string;
+            /** @description The first readable ones, by id. */
+            records: components["schemas"]["RollupContributor"][];
+            /** @description More readable records than listed. */
+            truncated: boolean;
+            /** @description The stored value. */
+            value: Record<string, never>;
+            /** Format: int32 */
+            window_days?: number | null;
         };
         RotateCredentialBody: {
             credential_value: string;
@@ -62346,6 +62589,8 @@ export interface components {
             evaluated_by?: string | null;
             /** Format: uuid */
             id: string;
+            /** @description P9-T10: computed later for a past period by the backfill job. */
+            is_backfill: boolean;
             /** Format: uuid */
             metric_ref: string;
             /** Format: date */
@@ -65891,6 +66136,60 @@ export interface components {
             heading_path: string[];
             title: string;
         };
+        /** @description P7-T8: what a viewer sends to the compare route. */
+        WidgetCompareInputs: {
+            /**
+             * Format: uuid
+             * @description Keyset cursor over the entered and left lists (the last id of the
+             *     previous page).
+             */
+            after_id?: string | null;
+            cross_filters?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Format: int64
+             * @description 1-200, default 50.
+             */
+            page_size?: number | null;
+            parameters?: {
+                [key: string]: unknown;
+            };
+            period_a: components["schemas"]["ComparePeriod"];
+            period_b: components["schemas"]["ComparePeriod"];
+            preview?: boolean;
+        };
+        /** @description P7-T8: the records that entered, left or changed between two periods. */
+        WidgetCompareResponse: {
+            /**
+             * @description In both, with the newest change to the measured field between the
+             *     start of A and the end of B (at most one page).
+             */
+            changed: components["schemas"]["ChangedRecord"][];
+            /** @description The date field each period filters on. */
+            date_attribute: string;
+            /** @description In period B and not in A, by id. */
+            entered: string[];
+            /** Format: int64 */
+            entered_total: number;
+            /** Format: int64 */
+            in_a: number;
+            /** Format: int64 */
+            in_b: number;
+            /** @description In period A and not in B, by id. */
+            left: string[];
+            /** Format: int64 */
+            left_total: number;
+            /** @description The field whose changes are listed; absent for a count. */
+            measured_attribute?: string | null;
+            /**
+             * Format: uuid
+             * @description Pass back as `after_id` for the next page of entered and left.
+             */
+            next_cursor?: string | null;
+            /** Format: uuid */
+            widget_id: string;
+        };
         WidgetDataResponse: {
             /** @description Every filter the number was computed with, and where each came from. */
             applied_filters: components["schemas"]["AppliedFilter"][];
@@ -65948,6 +66247,43 @@ export interface components {
              */
             type_id: string;
         };
+        /**
+         * @description What a viewer sends to the drill-down route: the data route's values
+         *     plus the buckets clicked so far, one per level.
+         */
+        WidgetDrillDownInputs: {
+            cross_filters?: {
+                [key: string]: unknown;
+            };
+            parameters?: {
+                [key: string]: unknown;
+            };
+            /**
+             * @description The bucket keys clicked so far, exactly as earlier answers gave them;
+             *     empty for the first level below the chart.
+             */
+            path?: components["schemas"]["BucketKey"][];
+            preview?: boolean;
+        };
+        /** @description The next level of a chart's buckets under the ones clicked. */
+        WidgetDrillDownResponse: {
+            /**
+             * @description Whether the buckets add up to the bucket above (a count or a sum);
+             *     an average, a distinct count, a minimum, a maximum or a median does
+             *     not.
+             */
+            additive: boolean;
+            attribute: string;
+            /** @description The levels above, each with the bucket clicked. */
+            breadcrumb: components["schemas"]["DrillCrumb"][];
+            buckets: components["schemas"]["DrillDownBucket"][];
+            grain?: null | components["schemas"]["DateBucket"];
+            /** @description Which of the widget's `drill_levels` this is. */
+            level_index: number;
+            timezone: string;
+            /** Format: uuid */
+            widget_id: string;
+        };
         WidgetError: {
             code: string;
             message: string;
@@ -65957,12 +66293,31 @@ export interface components {
         WidgetExplanation: {
             /** Format: date-time */
             as_of: string;
+            /**
+             * Format: date-time
+             * @description P7-T7: when a metric's number was computed (a KPI's latest point).
+             */
+            computed_at?: string | null;
+            currency?: null | components["schemas"]["CurrencyFact"];
             data_class: components["schemas"]["DataClass"];
+            /** @description P7-T7: the same in Arabic. */
+            definition_ar: string;
+            /** @description P7-T7: what the number is, in plain English. */
+            definition_en: string;
             definition_fingerprint: string;
             definition_source: components["schemas"]["DefinitionSource"];
             drillability: components["schemas"]["Drillability"];
             filters: components["schemas"]["ExplainedFilter"][];
+            /**
+             * Format: uuid
+             * @description P7-T7: the glossary term defining the measure. Always absent today:
+             *     a glossary term links to an entity, not to a metric or an attribute.
+             */
+            glossary_term_id?: string | null;
             kpi?: null | components["schemas"]["KpiExplanation"];
+            /** @description P7-T7: a governed metric's lineage route. */
+            lineage_url?: string | null;
+            measure_basis?: null | components["schemas"]["MeasureBasis"];
             publication_fingerprint?: string | null;
             /** Format: int64 */
             published_version_number?: number | null;
@@ -66036,6 +66391,7 @@ export interface components {
             /** @description Equal to the data route's fingerprint for the same inputs. */
             definition_fingerprint: string;
             definition_source: components["schemas"]["DefinitionSource"];
+            drill_through?: null | components["schemas"]["ResolvedDrillThrough"];
             drillability: components["schemas"]["Drillability"];
             metric_parity?: null | components["schemas"]["MetricParity"];
             /**
@@ -66056,6 +66412,8 @@ export interface components {
             some_records_hidden: boolean;
             timezone: string;
             timezone_source: components["schemas"]["TimezoneSource"];
+            /** @description P7-T9: each listed record's trail, in the rows' order. */
+            trails: components["schemas"]["RecordTrail"][];
             /** Format: uuid */
             widget_id: string;
         };
@@ -110405,6 +110763,71 @@ export interface operations {
             };
         };
     };
+    widget_compare: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The dashboard */
+                id: string;
+                /** @description The widget */
+                widget_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WidgetCompareInputs"];
+            };
+        };
+        responses: {
+            /** @description The entered, left and changed records */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WidgetCompareResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard, nothing is published, or the widget is not in the executed definition */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The widget is not an exactly drillable chart grouped by a date, a period is empty, or a period holds more records than a comparison lists (too_large) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     widget_data: {
         parameters: {
             query?: never;
@@ -110460,6 +110883,71 @@ export interface operations {
                 };
             };
             /** @description An unknown parameter, a malformed value, or a widget whose definition cannot execute */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    widget_drill_down: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The dashboard */
+                id: string;
+                /** @description The widget */
+                widget_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WidgetDrillDownInputs"];
+            };
+        };
+        responses: {
+            /** @description The next level's buckets and the breadcrumb */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WidgetDrillDownResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard, nothing is published, or the widget is not in the executed definition */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The widget has no drill levels or is not a structured chart, the path is past the last level, or a key does not apply */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -128291,6 +128779,69 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_backfill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The metric */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BackfillMetricBody"];
+            };
+        };
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackfillMetricQueued"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such metric */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A range over ten years, empty or entirely in the current period, or a metric that cannot be backfilled */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -151802,6 +152353,51 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    explain_rollup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+                /** @description The record */
+                id: string;
+                /** @description The rollup field */
+                attribute: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The explanation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RollupExplanation"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record or rollup field, or the caller cannot read it */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
