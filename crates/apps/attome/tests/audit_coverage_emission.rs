@@ -562,6 +562,15 @@ async fn fixture() -> Option<Fx> {
         .await
         .expect("build EngineSystem");
     system.state().modules.store(full_license());
+    // P9: the metric governance fields (dimensions, targets' parents and
+    // spreads) arrive with a platform changeset at boot; apply it as boot
+    // does, since this harness's database is migrations only.
+    attome_api::changeset::boot::apply_platform_definition(
+        system.state(),
+        "attome-metric-governance",
+    )
+    .await
+    .expect("apply the metric governance changeset");
 
     let xrm = system.state().clone();
     let base_state = xrm.base.clone();
@@ -8217,7 +8226,7 @@ fn mandatory_mappings() -> Vec<(String, String, String)> {
 fn every_mapped_security_route_writes_its_event() {
     std::thread::Builder::new()
         .name("every_mapped_security_route_writes_its_event".into())
-        .stack_size(16 * 1024 * 1024)
+        .stack_size(64 * 1024 * 1024)
         .spawn(|| {
             tokio::runtime::Builder::new_current_thread()
                 .enable_all()
@@ -8231,6 +8240,11 @@ fn every_mapped_security_route_writes_its_event() {
 }
 
 async fn every_mapped_security_route_writes_its_event_body() {
+    // A failing route's server-side error, in the test output.
+    let _ = tracing_subscriber::fmt()
+        .with_test_writer()
+        .with_max_level(tracing::Level::ERROR)
+        .try_init();
     let fx = skip_if_no_db!(fixture().await);
     let mappings = mandatory_mappings();
     assert!(
@@ -8476,6 +8490,17 @@ async fn a_role_grant_is_audited_with_entity_audit_config_off() {
         before + 1,
         "the mandatory Access+Grant event must be written regardless of audit_config"
     );
+    // Every fixture in this binary shares one migrated database: a global
+    // "audit nothing" row left behind would silence the record audit later
+    // tests read (the impersonation flow's attributed write).
+    sqlx::query(
+        "DELETE FROM audit_config WHERE organization_ref IS NULL \
+         AND (entity_name = 'user_account_mm_role' OR entity_name IS NULL) \
+         AND is_audited = false",
+    )
+    .execute(&fx.base.db)
+    .await
+    .expect("restore audit capture");
     let _ = fx.admin_id;
 }
 
@@ -9210,7 +9235,7 @@ async fn queue_offer(fx: &Fx) -> Uuid {
 fn impersonation_view_reads_act_needs_consent_and_names_both() {
     std::thread::Builder::new()
         .name("impersonation_view_reads_act_needs_consent_and_names_both".into())
-        .stack_size(16 * 1024 * 1024)
+        .stack_size(64 * 1024 * 1024)
         .spawn(|| {
             tokio::runtime::Builder::new_current_thread()
                 .enable_all()
@@ -9350,6 +9375,26 @@ async fn impersonation_flow() {
     .fetch_one(&fx.base.db)
     .await
     .expect("count attributed audit rows");
-    assert!(attributed >= 1, "the write's audit row names both people");
+    if attributed < 1 {
+        let written: Vec<(i16, Option<String>, Option<Uuid>)> = sqlx::query_as(
+            "SELECT initiator, agent_action_id, agent_session_id FROM audit_header \
+             WHERE record_id = $1",
+        )
+        .bind(fx.record_id)
+        .fetch_all(&fx.base.db)
+        .await
+        .unwrap_or_default();
+        let ingested: Vec<serde_json::Value> = sqlx::query_scalar(
+            "SELECT payload->'attribution' FROM audit_ingest WHERE payload->>'record_id' = $1::text",
+        )
+        .bind(fx.record_id)
+        .fetch_all(&fx.base.db)
+        .await
+        .unwrap_or_default();
+        panic!(
+            "the write's audit row names both people (want {marker}, session {acting}); \
+             headers {written:?}, ingest {ingested:?}"
+        );
+    }
     admin(&fx, "DELETE", &format!("{S}/impersonation/{acting}"), None).await;
 }

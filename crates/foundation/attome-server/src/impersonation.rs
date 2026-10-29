@@ -21,7 +21,7 @@
 //! administrator, so a session can be ended while it is in use.
 
 use std::future::Future;
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, PoisonError, RwLock};
 
 use attome_types::AppError;
 use axum::http::Method;
@@ -93,15 +93,17 @@ pub trait ImpersonationStore: Send + Sync + 'static {
     ) -> BoxFuture<'a, Result<(), AppError>>;
 }
 
-static STORE: OnceLock<Arc<dyn ImpersonationStore>> = OnceLock::new();
+static STORE: RwLock<Option<Arc<dyn ImpersonationStore>>> = RwLock::new(None);
 
-/// Installs the store, once at boot. Without one the header is refused.
+/// Installs the store at boot. Without one the header is refused. A later
+/// install replaces it: a process boots once, but a test binary builds one
+/// app per test, each on its own database pool.
 pub fn install(store: Arc<dyn ImpersonationStore>) {
-    let _ = STORE.set(store);
+    *STORE.write().unwrap_or_else(PoisonError::into_inner) = Some(store);
 }
 
-pub(crate) fn store() -> Option<&'static Arc<dyn ImpersonationStore>> {
-    STORE.get()
+pub(crate) fn store() -> Option<Arc<dyn ImpersonationStore>> {
+    STORE.read().unwrap_or_else(PoisonError::into_inner).clone()
 }
 
 tokio::task_local! {

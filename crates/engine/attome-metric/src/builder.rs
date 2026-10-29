@@ -419,7 +419,8 @@ pub async fn upsert_builder_query(
     // The metric's current query, when the builder made it.
     let existing: Option<Uuid> = match metric.query_ref.as_deref().map(Uuid::parse_str) {
         Some(Ok(query_id)) => sqlx::query_scalar::<_, Uuid>(
-            "SELECT id FROM sql_query WHERE id = $1 AND name = $2 AND is_active = true",
+            // A stored query's name is its natural key, `record_no`.
+            "SELECT id FROM sql_query WHERE id = $1 AND record_no = $2 AND is_active = true",
         )
         .bind(query_id)
         .bind(&name)

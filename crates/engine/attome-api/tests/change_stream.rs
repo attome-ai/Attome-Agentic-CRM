@@ -623,7 +623,12 @@ fn erasure_and_schema_events_delivered() {
             .await;
             assert_eq!(status, StatusCode::OK, "{page}");
             events = page["events"].as_array().unwrap().clone();
-            if events.iter().any(|e| e["operation"] == "schema") {
+            // The registry catches up with the new field asynchronously, so
+            // wait until the schema event is shown with it, not just listed.
+            if events.iter().any(|e| {
+                e["operation"] == "schema"
+                    && e["changed_attributes"] == serde_json::json!(["notes"])
+            }) {
                 break;
             }
             tokio::time::sleep(std::time::Duration::from_millis(200)).await;
