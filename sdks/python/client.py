@@ -84,7 +84,7 @@ class AttomeClient:
 
     def create(self, entity: str, fields: Dict[str, Any]) -> Any:
         return self.entities.create_record(
-            entity, request_body=fields, _headers=self._write_headers()
+            entity, body=fields, _headers=self._write_headers()
         )
 
     def update(
@@ -96,7 +96,7 @@ class AttomeClient:
             entity,
             record_id,
             if_match=f'"{row_version}"',
-            request_body=fields,
+            body=fields,
             _headers=self._write_headers(),
         )
 
