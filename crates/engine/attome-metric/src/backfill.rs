@@ -23,9 +23,9 @@
 //!
 //! Any other query metric's stored SQL measures the current period only and
 //! cannot be moved to a past one, and a manual metric has nothing to compute:
-//! both are refused (422). Periods are on the default calendar, as the
-//! scheduled sweep's ([`crate::metric::period_start_for`]); the current
-//! period and later are left to the sweep.
+//! both are refused (422). Periods are on the metric's own calendar
+//! ([`crate::metric::metric_calendar`], P9-T16), as the scheduled sweep's;
+//! the current period and later are left to the sweep.
 
 use attome_core::EngineState;
 use attome_server::authz::{Authorized, Privilege};
@@ -92,6 +92,7 @@ pub struct BackfillRun {
 /// the first day of the next one when more remain. Pure.
 pub fn periods(
     period: &str,
+    calendar: PeriodCalendar,
     from: NaiveDate,
     to: NaiveDate,
     limit: usize,
@@ -99,7 +100,7 @@ pub fn periods(
     let bounds = |day: NaiveDate| {
         crate::metric::period_bounds(
             period,
-            PeriodCalendar::default(),
+            calendar,
             day.and_time(chrono::NaiveTime::MIN).and_utc(),
         )
     };
@@ -146,11 +147,6 @@ async fn source(state: &EngineState, metric: &MetricDefinitionRow) -> Result<Sou
     }
 }
 
-/// The first day of the metric's current period: backfill stops before it.
-fn current_period_start(metric: &MetricDefinitionRow) -> Result<NaiveDate, AppError> {
-    crate::metric::period_start_for(&metric.period, Utc::now())
-}
-
 /// One backfill run: the periods in `[from, to)` (stopping before the
 /// current period), at most [`PERIODS_PER_RUN`] of them. The job handler
 /// queues the next run from [`BackfillRun::next`].
@@ -163,8 +159,9 @@ pub async fn backfill(
     let db = &state.base.db;
     let metric = crate::metric::fetch_metric(db, metric_id).await?;
     let source = source(state, &metric).await?;
-    let to = to.min(current_period_start(&metric)?);
-    let (todo, next) = periods(&metric.period, from, to, PERIODS_PER_RUN)?;
+    let to = to.min(crate::metric::current_period_start(db, &metric, Utc::now()).await?);
+    let calendar = crate::metric::metric_calendar(db, metric_id).await?;
+    let (todo, next) = periods(&metric.period, calendar, from, to, PERIODS_PER_RUN)?;
     let principal = match &source {
         Source::Builder(_) => Some(
             crate::principal::resolve(state, crate::principal::Trigger::from_evaluated_by(None))
@@ -303,7 +300,9 @@ pub(crate) async fn post_backfill(
     }
     let metric = crate::metric::fetch_metric(&state.base.db, metric_id).await?;
     source(&state, &metric).await?;
-    let to = body.to.min(current_period_start(&metric)?);
+    let to = body
+        .to
+        .min(crate::metric::current_period_start(&state.base.db, &metric, Utc::now()).await?);
     if body.from >= to {
         return Err(AppError::Validation(
             "the range has no period before the current one".into(),
@@ -359,7 +358,14 @@ mod tests {
 
     #[test]
     fn periods_walk_months_from_the_one_containing_from() {
-        let (got, next) = periods("month", d(2026, 1, 15), d(2026, 4, 1), 12).unwrap();
+        let (got, next) = periods(
+            "month",
+            PeriodCalendar::default(),
+            d(2026, 1, 15),
+            d(2026, 4, 1),
+            12,
+        )
+        .unwrap();
         assert_eq!(
             got,
             vec![
@@ -373,18 +379,39 @@ mod tests {
 
     #[test]
     fn periods_stop_at_the_limit_and_say_where_to_resume() {
-        let (got, next) = periods("month", d(2024, 1, 1), d(2026, 1, 1), 12).unwrap();
+        let (got, next) = periods(
+            "month",
+            PeriodCalendar::default(),
+            d(2024, 1, 1),
+            d(2026, 1, 1),
+            12,
+        )
+        .unwrap();
         assert_eq!(got.len(), 12);
         assert_eq!(got[11], (d(2024, 12, 1), d(2025, 1, 1)));
         assert_eq!(next, Some(d(2025, 1, 1)));
-        let (rest, next) = periods("month", d(2025, 1, 1), d(2026, 1, 1), 12).unwrap();
+        let (rest, next) = periods(
+            "month",
+            PeriodCalendar::default(),
+            d(2025, 1, 1),
+            d(2026, 1, 1),
+            12,
+        )
+        .unwrap();
         assert_eq!(rest.len(), 12);
         assert_eq!(next, None);
     }
 
     #[test]
     fn periods_of_quarters_and_an_empty_range() {
-        let (got, _) = periods("quarter", d(2025, 5, 10), d(2025, 10, 1), 12).unwrap();
+        let (got, _) = periods(
+            "quarter",
+            PeriodCalendar::default(),
+            d(2025, 5, 10),
+            d(2025, 10, 1),
+            12,
+        )
+        .unwrap();
         assert_eq!(
             got,
             vec![
@@ -392,7 +419,14 @@ mod tests {
                 (d(2025, 7, 1), d(2025, 10, 1))
             ]
         );
-        let (none, next) = periods("month", d(2025, 5, 1), d(2025, 5, 1), 12).unwrap();
+        let (none, next) = periods(
+            "month",
+            PeriodCalendar::default(),
+            d(2025, 5, 1),
+            d(2025, 5, 1),
+            12,
+        )
+        .unwrap();
         assert!(none.is_empty());
         assert_eq!(next, None);
     }

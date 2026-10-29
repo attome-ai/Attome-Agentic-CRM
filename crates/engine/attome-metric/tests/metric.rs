@@ -1337,3 +1337,36 @@ async fn dimension_members_sum_to_total() {
     .unwrap();
     assert_eq!(latest.id, total.id);
 }
+
+/// P9-T16: a Hijri monthly metric's snapshot lands on the first day of the
+/// current Umm al-Qura month, not the Gregorian one.
+#[tokio::test]
+async fn hijri_metric_snapshot_lands_on_hijri_month_start() {
+    let state = skip_if_no_db!(test_state(None).await);
+    let db = state.base.db.clone();
+    seed_once(&db).await;
+    sqlx::query(
+        "ALTER TABLE dashboard_metric_definition ADD COLUMN IF NOT EXISTS calendar_kind text",
+    )
+    .execute(&db)
+    .await
+    .expect("the governance calendar field");
+    let metric = insert_manual_metric(&db, "higher_is_better").await;
+    sqlx::query("UPDATE dashboard_metric_definition SET calendar_kind = 'hijri' WHERE id = $1")
+        .bind(metric)
+        .execute(&db)
+        .await
+        .expect("make the metric Hijri");
+
+    let outcome =
+        attome_metric::metric::compute_and_record(&state, metric, None, Some(7.0), false, None)
+            .await
+            .expect("record a manual value");
+
+    let today = chrono::Utc::now().date_naive();
+    let hijri = attome_calendar::hijri::to_hijri(today).expect("today in Umm al-Qura");
+    let (month_start, _) =
+        attome_calendar::hijri::month_bounds(hijri.year, hijri.month).expect("its month");
+    assert_eq!(outcome.snapshot.period_start, month_start);
+    assert_eq!(outcome.snapshot.actual, Some(7.0));
+}

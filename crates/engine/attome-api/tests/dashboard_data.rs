@@ -3668,3 +3668,107 @@ async fn scorecard_flags_stale_snapshot() {
     assert_eq!(items[1]["freshness"]["is_stale"], false, "{body}");
     assert_eq!(items[1]["freshness"]["failed"], true, "{body}");
 }
+
+/// P9-T16: a manual value needs `attome_metric.enter_value` as well as the
+/// metric update privilege; without it nothing is recorded.
+#[tokio::test]
+async fn manual_value_without_privilege_is_403() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let db = system.state().base.db.clone();
+    let metric = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO dashboard_metric_definition (id, name, key, source_kind, direction, period, is_active) \
+         VALUES ($1, 'Hand count', $2, 'manual', 'higher_is_better', 'month', true)",
+    )
+    .bind(metric)
+    .bind(format!("hand_{}", metric.simple()))
+    .execute(&db)
+    .await
+    .expect("insert manual metric");
+    let (user_id, cookie) = seed_user(&system, false).await;
+    let role_id = create_role(&db).await;
+    grant_privileges(
+        &db,
+        role_id,
+        "dashboard_metric_definition",
+        &["read", "update"],
+    )
+    .await;
+    assign_role_to_user(&db, user_id, role_id).await;
+    let app = full_app(system);
+
+    let res = app
+        .oneshot(req(
+            "POST",
+            &format!("/api/v1/metrics/{metric}/compute"),
+            Some(&cookie),
+            Some(&json!({ "actual": 5 })),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+    let rows: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM metric_snapshot WHERE metric_ref = $1")
+            .bind(metric)
+            .fetch_one(&db)
+            .await
+            .unwrap();
+    assert_eq!(rows, 0, "a refused value leaves no snapshot");
+}
+
+/// P9-T16: computing a KPI tree computes a formula parent after its inputs,
+/// so it reads their values for the same period.
+#[tokio::test]
+async fn formula_parent_reads_children_from_same_run() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let db = system.state().base.db.clone();
+    let (_, admin_cookie) = seed_user(&system, true).await;
+    let suffix = Uuid::now_v7().simple().to_string();
+    let (won, lost) = (format!("won_{suffix}"), format!("lost_{suffix}"));
+    for (key, actual) in [(&won, 30.0), (&lost, 10.0)] {
+        let id = Uuid::now_v7();
+        sqlx::query(
+            "INSERT INTO dashboard_metric_definition (id, name, key, source_kind, direction, period, is_active) \
+             VALUES ($1, $2, $2, 'manual', 'higher_is_better', 'month', true)",
+        )
+        .bind(id)
+        .bind(key)
+        .execute(&db)
+        .await
+        .expect("insert input metric");
+        sqlx::query(
+            "INSERT INTO metric_snapshot (id, metric_ref, period_start, actual, source_version, status) \
+             VALUES ($1, $2, date_trunc('month', now())::date, $3, 'manual', 'on_track')",
+        )
+        .bind(Uuid::now_v7())
+        .bind(id)
+        .bind(actual)
+        .execute(&db)
+        .await
+        .expect("this month's input value");
+    }
+    let parent = insert_metric(&db, &format!("{won} / ({won} + {lost})")).await;
+    let app = full_app(system);
+
+    let res = app
+        .oneshot(req(
+            "POST",
+            &format!("/api/v1/metrics/{parent}/compute-tree"),
+            Some(&admin_cookie),
+            None,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let actual: Option<f64> = sqlx::query_scalar(
+        "SELECT actual FROM metric_snapshot \
+          WHERE metric_ref = $1 AND dimension_attribute IS NULL \
+            AND period_start = date_trunc('month', now())::date \
+          ORDER BY computed_at DESC LIMIT 1",
+    )
+    .bind(parent)
+    .fetch_one(&db)
+    .await
+    .expect("the parent's value");
+    assert_eq!(actual, Some(0.75));
+}

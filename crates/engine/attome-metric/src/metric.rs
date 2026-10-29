@@ -428,6 +428,46 @@ pub fn period_bounds(
     Ok(bounds)
 }
 
+/// P9-T16: the calendar a metric's periods follow: `calendar_kind` `hijri`
+/// for Umm al-Qura months and years (anything else is Gregorian) and its
+/// `week_start`. Read through `to_jsonb`, so a deployment without the
+/// governance fields, or a metric without them, uses the default.
+pub async fn metric_calendar(db: &DbPool, metric_id: Uuid) -> Result<PeriodCalendar, AppError> {
+    let row: Option<(Option<String>, Option<String>)> = sqlx::query_as(
+        "SELECT to_jsonb(d)->>'calendar_kind', to_jsonb(d)->>'week_start' \
+           FROM dashboard_metric_definition d WHERE d.id = $1",
+    )
+    .bind(metric_id)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    let (kind, week_start) = row.unwrap_or_default();
+    let default = PeriodCalendar::default();
+    Ok(PeriodCalendar {
+        kind: if kind.as_deref().map(str::trim) == Some("hijri") {
+            CalendarKind::Hijri
+        } else {
+            CalendarKind::Gregorian
+        },
+        week_start: week_start
+            .as_deref()
+            .and_then(|w| PeriodCalendar::week_start_from(w).ok())
+            .unwrap_or(default.week_start),
+        fiscal_start_month: default.fiscal_start_month,
+    })
+}
+
+/// P9-T16: the first day of the metric's period containing `now`, on the
+/// metric's own calendar.
+pub async fn current_period_start(
+    db: &DbPool,
+    metric: &MetricDefinitionRow,
+    now: DateTime<Utc>,
+) -> Result<NaiveDate, AppError> {
+    let calendar = metric_calendar(db, metric.id).await?;
+    period_bounds(&metric.period, calendar, now).map(|(start, _)| start)
+}
+
 /// The first day of the period containing `now` on the default calendar:
 /// Gregorian, weeks from Monday (ISO 8601), calendar quarters and years.
 // `pub` (D-480) — `attome_dashboard::scenario::evaluate` reuses this to resolve
@@ -1231,7 +1271,7 @@ pub async fn compute_and_record(
     let metric = fetch_metric(db, metric_id).await?;
     let period_start = match period_start {
         Some(p) => p,
-        None => period_start_for(&metric.period, Utc::now())?,
+        None => current_period_start(db, &metric, Utc::now()).await?,
     };
 
     if !force
@@ -1510,7 +1550,7 @@ pub async fn run_scheduled_snapshot_sweep(state: &EngineState) -> Result<u32, Ap
     let now = Utc::now();
     let mut computed = 0u32;
     for metric in metrics {
-        let period_start = match period_start_for(&metric.period, now) {
+        let period_start = match current_period_start(&state.base.db, &metric, now).await {
             Ok(p) => p,
             Err(e) => {
                 tracing::warn!(metric_id = %metric.id, error = %e, "metric snapshot sweep: bad period, skipping");
