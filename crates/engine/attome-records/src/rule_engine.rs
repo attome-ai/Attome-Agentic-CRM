@@ -437,7 +437,26 @@ pub async fn get_or_compile_formula(
     attrs: &[AttrInfo],
     rule: &RuleDef,
 ) -> Result<Arc<Compiled>, AppError> {
-    let key = formula_cache_key(rule, attrs);
+    // A9-T2: lookup paths compile against the registry; with the metadata
+    // cache off it is empty, so the database is read once for the compile.
+    let through_lookup = attome_core::formula::reads_through_lookup(&rule.expression);
+    let loaded = std::sync::Arc::clone(&state.entities.load());
+    let mut key = formula_cache_key(rule, attrs);
+    if through_lookup {
+        // The entities the paths reach are part of what the program was
+        // compiled against: a changed field type there is a new key.
+        use std::hash::{Hash, Hasher};
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        for path in attome_core::formula::formula_paths(&rule.expression, attrs, &loaded) {
+            for entity in &path.entities {
+                entity.hash(&mut hasher);
+                if let Some(meta) = loaded.get(entity) {
+                    entity_types_fingerprint(&meta.attrs).hash(&mut hasher);
+                }
+            }
+        }
+        key = format!("{key}:{:016x}", hasher.finish());
+    }
     if let Some(hit) = state.rule_compiled.get(&key).await {
         return Ok(hit);
     }
@@ -446,11 +465,7 @@ pub async fn get_or_compile_formula(
         .iter()
         .find(|a| a.logicalname == field)
         .and_then(|a| a.options.as_ref());
-    // A9-T2: lookup paths compile against the registry; with the metadata
-    // cache off it is empty, so the database is read once for the compile.
-    let through_lookup = attome_core::formula::reads_through_lookup(&rule.expression);
     let built;
-    let loaded = std::sync::Arc::clone(&state.entities.load());
     let registry: Option<&attome_core::EntityMetaRegistry> = if !through_lookup {
         None
     } else if loaded.get(&rule.entity_logicalname).is_some() {
