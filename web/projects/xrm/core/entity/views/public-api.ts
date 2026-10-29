@@ -14,6 +14,8 @@ export { CalendarViewComponent } from './calendar/calendar-view.component';
 export { TimelineViewComponent } from './timeline/timeline-view.component';
 // B15-T2 — the map view; MapLibre loads on first use, in its own chunk.
 export { MapViewComponent, pointOf } from './map/map-view.component';
+// A13-T3 — a list as a split view: records beside the selected one.
+export { SPLIT_PAGE_SIZE, SplitViewComponent, displayValue, nextIndex } from './split-view/split-view.component';
 // I3-T2 — the map both the map view and the dispatch board draw on.
 export { MAP_LIBRARY_LOADER, PointsMapComponent } from './map/points-map.component';
 export type { MapLibraryLoader, MapPoint, PointTone } from './map/points-map.component';

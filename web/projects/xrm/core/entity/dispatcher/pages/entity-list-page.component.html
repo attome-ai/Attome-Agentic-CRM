@@ -1,3 +1,13 @@
+<ng-template #splitToggle>
+  <button type="button" class="view-kind-option view-split-toggle" data-testid="split-toggle"
+    [class.active]="split()" [attr.aria-pressed]="split()"
+    [attr.aria-label]="'entityViews.split.toggle' | translate"
+    [attr.title]="'entityViews.split.toggle' | translate"
+    (click)="split.set(!split())">
+    <i class="las la-columns" aria-hidden="true"></i>
+  </button>
+</ng-template>
+
 <ng-template #kindSwitcher>
   @if (availableKinds().length > 1) {
   <div class="view-kind-switcher" role="radiogroup" [attr.aria-label]="'entityViews.switcher.label' | translate">
@@ -25,6 +35,17 @@
 } @else {
   @switch (activeKind()) {
     @case ('list') {
+    @if (split()) {
+    <div class="view-page">
+      <div class="view-page-toolbar">
+        <div class="view-page-toolbar-start">
+          <ng-container [ngTemplateOutlet]="kindSwitcher" />
+          <ng-container [ngTemplateOutlet]="splitToggle" />
+        </div>
+      </div>
+      <xrm-split-view [entityName]="name()" [viewId]="selectedView()?.id ?? null" (openRecord)="onEditId($event)" />
+    </div>
+    } @else {
     <attome-metadata-list
       [entityName]="name()"
       [allowCreate]="true"
@@ -34,8 +55,10 @@
     >
       <div xrmListToolbarStart class="view-kind-slot">
         <ng-container [ngTemplateOutlet]="kindSwitcher" />
+        <ng-container [ngTemplateOutlet]="splitToggle" />
       </div>
     </attome-metadata-list>
+    }
     }
     @default {
     <div class="view-page">

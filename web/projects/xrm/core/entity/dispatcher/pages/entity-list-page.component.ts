@@ -10,7 +10,7 @@ import { TranslatePipe } from '@attome/base';
 import type { EntityRecord } from '@attome/xrm';
 import { EntityListComponent, entityFormRoute } from '@attome/xrm/core/entity';
 import {
-  CalendarViewComponent, KanbanBoardComponent, MapViewComponent, TimelineViewComponent,
+  CalendarViewComponent, KanbanBoardComponent, MapViewComponent, SplitViewComponent, TimelineViewComponent,
 } from '@attome/xrm/core/entity/views';
 import { AvailableView, ViewAdminService, ViewKind } from '@attome/xrm/core/query/data';
 
@@ -62,7 +62,7 @@ export const CHART_VIEW_LOADER = new InjectionToken<ChartViewLoader>('CHART_VIEW
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports:    [
     EntityListComponent, KanbanBoardComponent, CalendarViewComponent, TimelineViewComponent, MapViewComponent,
-    NgComponentOutlet, NgTemplateOutlet, TranslatePipe,
+    SplitViewComponent, NgComponentOutlet, NgTemplateOutlet, TranslatePipe,
   ],
   templateUrl: './entity-list-page.component.html',
   styleUrl:    './entity-list-page.component.css',
@@ -73,6 +73,8 @@ export class EntityListPageComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly name = input('');
+  /** A13-T3: a list view shown as a split view (records beside the selected one). */
+  readonly split = signal(false);
 
   /** `null` while the entity's views are loading. */
   readonly views     = signal<AvailableView[] | null>(null);

@@ -2204,6 +2204,14 @@ export const xrmAr = {
   },
   // Recovered from the unimported i18n/ar.json — see en.catalog.ts.
   entityViews: {
+    split: {
+      toggle: 'عرض مقسوم',
+      loading: 'جارٍ تحميل السجلات…',
+      empty: 'لا توجد سجلات في هذا العرض.',
+      list: 'السجلات',
+      record: 'السجل المحدد',
+      open: 'فتح',
+    },
     kanban: {
       loading: 'جارٍ تحميل اللوحة…',
       empty: 'لا توجد سجلات في هذا العمود.',

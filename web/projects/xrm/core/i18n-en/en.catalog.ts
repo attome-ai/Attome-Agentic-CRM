@@ -2275,6 +2275,14 @@ export const xrmEn = {
   // the live catalog, which never had them, so every label rendered as its own
   // raw key in both languages.
   entityViews: {
+    split: {
+      toggle: 'Split view',
+      loading: 'Loading records…',
+      empty: 'No records in this view.',
+      list: 'Records',
+      record: 'Selected record',
+      open: 'Open',
+    },
     kanban: {
       loading: 'Loading board…',
       empty: 'No records in this column.',
