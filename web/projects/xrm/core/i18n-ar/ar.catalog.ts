@@ -1916,6 +1916,7 @@ export const xrmAr = {
       snapshotValue: 'القيمة المسجلة لهذه الفترة {value}؛ وهذه هي السجلات التي تشملها الآن.',
       snapshotMatches: 'القيمة المسجلة، {value}، تطابق السجلات الآن.',
       snapshotDiffers: 'القيمة المسجلة {value}، والسجلات الآن {total}. تغيّرت السجلات منذ تسجيلها.',
+      someHidden: 'يحسب الرقم أيضًا سجلات لا يمكنك فتحها، لذلك هذه القائمة أقصر.',
     },
     explain: {
       title: 'كيف تم الحساب', inspect: 'فحص', calculation: 'الحساب', filters: 'عوامل التصفية',

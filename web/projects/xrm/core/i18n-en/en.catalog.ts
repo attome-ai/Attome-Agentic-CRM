@@ -1961,6 +1961,7 @@ export const xrmEn = {
       snapshotValue: 'The recorded value for this period is {value}; these are the records it covers now.',
       snapshotMatches: 'The recorded value, {value}, matches the records now.',
       snapshotDiffers: 'The recorded value is {value}; the records now come to {total}. Records changed since it was recorded.',
+      someHidden: 'The number also counts records you cannot open, so this list is shorter.',
     },
     explain: {
       title: 'How this was calculated', inspect: 'Inspect', calculation: 'Calculation', filters: 'Filters',

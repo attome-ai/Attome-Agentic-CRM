@@ -30,6 +30,9 @@
           }
         </p>
       }
+      @if (res.some_records_hidden) {
+        <p class="xwr-meta" data-hidden>{{ 'dashboard.records.someHidden' | translate }}</p>
+      }
       <p class="xwr-meta">{{ 'dashboard.viewer.asOf' | translate: { time: asOf() } }} · {{ res.timezone }}</p>
       @if (res.applied_filters.length > 0) {
         <ul class="xwr-filters" [attr.aria-label]="'dashboard.explain.filters' | translate">

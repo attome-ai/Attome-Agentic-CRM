@@ -71,6 +71,18 @@ describe('WidgetRecordsDrawerComponent', () => {
     expect(text).toContain('parameter');
   });
 
+  it('says when the number counts records the viewer cannot open (P7-T3), and never how many', () => {
+    const hidden = { ...page([{ id: 'r1' }]), some_records_hidden: true } as WidgetRecordsResponse;
+    const { fixture } = setup([hidden]);
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-hidden]')).not.toBeNull();
+  });
+
+  it('says nothing about hidden records when the viewer reads them all', () => {
+    const { fixture } = setup([{ ...page([{ id: 'r1' }]), some_records_hidden: false } as WidgetRecordsResponse]);
+    expect((fixture.nativeElement as HTMLElement).querySelector('[data-hidden]')).toBeNull();
+  });
+
   it('pages with the keyset cursor and appends rows', () => {
     const { fixture, widgetRecords } = setup([page([{ id: 'r1' }], 'r1'), page([{ id: 'r2' }])]);
     fixture.componentInstance.loadMore();
