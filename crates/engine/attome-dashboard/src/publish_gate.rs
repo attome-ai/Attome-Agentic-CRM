@@ -160,6 +160,29 @@ fn check_aggregate_only(
     }
 }
 
+/// P7-T5: `config.drill_levels` must parse, and only a structured chart
+/// drills by dimension. Blocks a malformed list (the drill-down route would
+/// refuse every click); warns when the widget cannot use it.
+fn check_drill_levels(
+    gate: &mut PublishGate,
+    config: &serde_json::Map<String, Value>,
+    class: DataClass,
+    page: Option<&str>,
+    widget: Option<&str>,
+) {
+    match crate::drill::drill_levels(config) {
+        Err(error) => gate.block("invalid_drill_levels", error.to_string(), page, widget),
+        Ok(levels) if !levels.is_empty() && class != DataClass::Structured => gate.warn(
+            "drill_levels_unused",
+            "drill_levels is set on a widget that is not a chart over one entity's data; it has no effect"
+                .to_owned(),
+            page,
+            widget,
+        ),
+        Ok(_) => {}
+    }
+}
+
 /// The gate for `dashboard_id`'s working copy. Performs no authorization.
 pub async fn do_publish_gate(
     state: &EngineState,
@@ -314,6 +337,7 @@ async fn check_widget(
         gate.block("invalid_data_definition", error, page_id, widget_id);
     }
     check_aggregate_only(gate, &config, classify(widget).0, page_id, widget_id);
+    check_drill_levels(gate, &config, classify(widget).0, page_id, widget_id);
 
     match classify(widget).0 {
         DataClass::Structured => {

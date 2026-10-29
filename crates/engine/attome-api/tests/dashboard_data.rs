@@ -2944,3 +2944,121 @@ async fn structured_drill_parity_is_equal_on_static_data() {
     assert_eq!(body["parity"]["reason"], "not_comparable", "{body}");
     assert_eq!(body["parity"]["matches"], false);
 }
+
+// ── P7-T5: drill by dimension ───────────────────────────────────────────────
+
+/// A sum by year drills to quarters: the quarter values under a year add up
+/// to the year's value, and the breadcrumb names the year clicked.
+#[tokio::test]
+async fn drill_down_year_to_quarter_sums_match() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let (admin_id, admin_cookie) = seed_user(&system, true).await;
+    let db = system.state().base.db.clone();
+    let (deals, _) = provision_deals(&system).await;
+    for (amount, day) in [
+        (10.0, "2025-02-10T10:00:00Z"),
+        (20.0, "2025-05-10T10:00:00Z"),
+        (30.0, "2025-05-20T10:00:00Z"),
+        (40.0, "2025-11-03T10:00:00Z"),
+        (99.0, "2024-07-01T10:00:00Z"),
+    ] {
+        insert_deal(&db, &deals, Some("won"), amount, day, None, Some(true)).await;
+    }
+    let chart = build_data_dashboard(
+        &db,
+        admin_id,
+        &json!({
+            "data": {
+                "source": deals,
+                "measures": [{ "aggregation": "sum", "field": "amount" }],
+                "group": { "field": "closed_on", "bucket": "year" }
+            },
+            "drill_levels": [
+                { "attribute": "closed_on", "grain": "year" },
+                { "attribute": "closed_on", "grain": "quarter" },
+            ],
+        }),
+    )
+    .await;
+    let app = full_app(system);
+    publish(&app, &admin_cookie, chart.dashboard_id, &db).await;
+
+    let (status, years) = widget_route(&app, &admin_cookie, &chart, "drill-down", json!({})).await;
+    assert_eq!(status, StatusCode::OK, "{years}");
+    assert_eq!(years["level_index"], 0);
+    assert_eq!(years["additive"], true);
+    let year_2025 = years["buckets"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|b| b["value"] == 100.0)
+        .expect("2025 sums to 100")
+        .clone();
+
+    let (status, quarters) = widget_route(
+        &app,
+        &admin_cookie,
+        &chart,
+        "drill-down",
+        json!({ "path": [year_2025["key"]] }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{quarters}");
+    assert_eq!(quarters["level_index"], 1);
+    assert_eq!(quarters["grain"], "quarter");
+    let values: Vec<f64> = quarters["buckets"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|b| b["value"].as_f64().unwrap())
+        .collect();
+    assert_eq!(values.len(), 3, "{quarters}");
+    assert_eq!(values.iter().sum::<f64>(), 100.0, "{quarters}");
+    assert_eq!(quarters["breadcrumb"][0]["attribute"], "closed_on");
+    assert_eq!(quarters["breadcrumb"][0]["key"], year_2025["key"]);
+}
+
+/// Past the last level, the route refuses.
+#[tokio::test]
+async fn drill_down_past_last_level_is_422() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let (admin_id, admin_cookie) = seed_user(&system, true).await;
+    let db = system.state().base.db.clone();
+    let (deals, _) = provision_deals(&system).await;
+    insert_deal(
+        &db,
+        &deals,
+        Some("won"),
+        5.0,
+        "2025-02-10T10:00:00Z",
+        None,
+        Some(true),
+    )
+    .await;
+    let chart = build_data_dashboard(
+        &db,
+        admin_id,
+        &json!({
+            "data": {
+                "source": deals,
+                "measures": [{ "aggregation": "count" }],
+                "group": { "field": "status" }
+            },
+            "drill_levels": [{ "attribute": "status" }],
+        }),
+    )
+    .await;
+    let app = full_app(system);
+    publish(&app, &admin_cookie, chart.dashboard_id, &db).await;
+
+    let won = json!({ "kind": "value", "value": "won" });
+    let (status, body) = widget_route(
+        &app,
+        &admin_cookie,
+        &chart,
+        "drill-down",
+        json!({ "path": [won] }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+}

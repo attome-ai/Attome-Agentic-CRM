@@ -62,6 +62,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Drill by dimension (P7-T5): a chart widget's `drill_levels`, an ordered list of `{attribute, grain}`
+  (grain `year`, `quarter`, `month`, `week`, `day`, `hijri_month` or `hijri_year` for a date field),
+  lets a click open the next level: `POST /api/v1/attome-dashboard/{id}/widgets/{widget_id}/drill-down`
+  with `path` (the bucket keys clicked so far) returns the next level's buckets over the widget's own
+  scope, a breadcrumb back, and `additive` (true for a count or sum, whose child values add up to
+  the parent). Past the last level is a 422. Publishing blocks a malformed list.
 - Master data guide (L1-T12): `docs/master-data.md` covers master entities and hub styles,
   contributions and survivorship by source system, provenance, the steward routes, cross-references
   and point-in-time reads, distribution to subscribed systems, reference code mappings, the steward

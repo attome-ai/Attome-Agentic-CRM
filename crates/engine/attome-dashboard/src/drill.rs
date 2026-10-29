@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 use attome_core::EngineState;
 use attome_core::chart_view_metadata::ChartViewMetadata;
 use attome_core::chart_view_metadata::DateBucket;
-use attome_core::data_definition::{MeasureFn, Presentation};
+use attome_core::data_definition::{Grouping, MeasureFn, Presentation};
 use attome_search::{BucketKey, DrillTarget, RecordColumn, StructuredRecords};
 use attome_security::SecurityContextExt;
 use attome_server::authz::{Authorized, Privilege};
@@ -342,6 +342,204 @@ async fn widget_records(
         metric_parity: None,
         some_records_hidden: false,
         parity,
+    }))
+}
+
+/// P7-T5: the widget config key listing a chart's drill levels.
+pub const DRILL_LEVELS: &str = "drill_levels";
+
+/// P7-T5: one level a chart drills down to: a field, and for a date field
+/// the grain its buckets have.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DrillLevel {
+    pub attribute: String,
+    /// `year`, `quarter`, `month`, `week`, `day`, `hijri_month` or
+    /// `hijri_year` for a date field; absent for any other field.
+    #[serde(default)]
+    pub grain: Option<DateBucket>,
+}
+
+/// P7-T5: the widget's `drill_levels`, in order; none when it has none. A
+/// malformed list (an unknown grain, a missing attribute) is the caller's
+/// error. Pure.
+pub fn drill_levels(config: &serde_json::Map<String, Value>) -> Result<Vec<DrillLevel>, AppError> {
+    match config.get(DRILL_LEVELS) {
+        None | Some(Value::Null) => Ok(Vec::new()),
+        Some(raw) => serde_json::from_value(raw.clone()).map_err(|e| {
+            AppError::Validation(format!(
+                "drill_levels must be a list of {{attribute, grain}} with grain one of year, \
+                 quarter, month, week, day, hijri_month or hijri_year: {e}"
+            ))
+        }),
+    }
+}
+
+/// P7-T5: a clicked bucket's label for the breadcrumb: the value itself, or
+/// a time bucket's start. Pure.
+fn crumb_label(key: &BucketKey) -> Option<String> {
+    match key {
+        BucketKey::Value { value } => Some(value.clone()),
+        BucketKey::Range { start, .. } => Some(start.to_rfc3339()),
+        BucketKey::Null | BucketKey::Total | BucketKey::Other => None,
+    }
+}
+
+/// What a viewer sends to the drill-down route: the data route's values
+/// plus the buckets clicked so far, one per level.
+#[derive(Debug, Clone, Default, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct WidgetDrillDownInputs {
+    #[serde(default)]
+    pub parameters: BTreeMap<String, Value>,
+    #[serde(default)]
+    pub cross_filters: BTreeMap<String, Value>,
+    #[serde(default)]
+    pub preview: bool,
+    /// The bucket keys clicked so far, exactly as earlier answers gave them;
+    /// empty for the first level below the chart.
+    #[serde(default)]
+    pub path: Vec<BucketKey>,
+}
+
+/// One bucket of the next level.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct DrillDownBucket {
+    pub key: BucketKey,
+    pub label: Option<String>,
+    /// The widget's first measure for the bucket.
+    pub value: Option<f64>,
+}
+
+/// One step of the way down.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct DrillCrumb {
+    pub attribute: String,
+    pub key: BucketKey,
+    pub label: Option<String>,
+}
+
+/// The next level of a chart's buckets under the ones clicked.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct WidgetDrillDownResponse {
+    pub widget_id: Uuid,
+    /// Which of the widget's `drill_levels` this is.
+    pub level_index: usize,
+    pub attribute: String,
+    pub grain: Option<DateBucket>,
+    /// Whether the buckets add up to the bucket above (a count or a sum);
+    /// an average, a distinct count, a minimum, a maximum or a median does
+    /// not.
+    pub additive: bool,
+    pub buckets: Vec<DrillDownBucket>,
+    /// The levels above, each with the bucket clicked.
+    pub breadcrumb: Vec<DrillCrumb>,
+    pub timezone: String,
+}
+
+/// Drill one level down a chart
+///
+/// The next level of a chart's buckets under the buckets clicked so far (`path`), grouped by the widget's
+/// next `drill_levels` entry, over the widget's own scope with each clicked bucket added as a filter, and
+/// a breadcrumb back. Writes nothing. Anyone who may read the dashboard.
+#[utoipa::path(
+    post,
+    path = "/api/v1/attome-dashboard/{id}/widgets/{widget_id}/drill-down",
+    tag = "dashboard",
+    extensions(("x-audit-exempt" = json!({"reason": "read_only", "via": null, "note": "P7-T5: aggregates the widget's data one level down over the caller's record scope and writes nothing."}))),
+    params(("id" = Uuid, Path, description = "The dashboard"), ("widget_id" = Uuid, Path, description = "The widget")),
+    request_body = WidgetDrillDownInputs,
+    responses(
+        (status = 200, description = "The next level's buckets and the breadcrumb", body = WidgetDrillDownResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such dashboard, nothing is published, or the widget is not in the executed definition", body = ErrorResponse),
+        (status = 422, description = "The widget has no drill levels or is not a structured chart, the path is past the last level, or a key does not apply", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn widget_drill_down(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<DashboardRead>>,
+    Path((dashboard_id, widget_id)): Path<(Uuid, Uuid)>,
+    Json(inputs): Json<WidgetDrillDownInputs>,
+) -> Result<Json<WidgetDrillDownResponse>, AppError> {
+    let definition = load_definition(&state, &ctx, dashboard_id, inputs.preview).await?;
+    let (page, widget) = find_widget(&definition.snapshot, widget_id).ok_or(AppError::NotFound)?;
+    let wc = resolve_widget_context(
+        &state,
+        &ctx,
+        &definition,
+        page,
+        widget,
+        &inputs.parameters,
+        &inputs.cross_filters,
+    )
+    .await?;
+    if wc.data_class != DataClass::Structured {
+        return Err(AppError::Validation(
+            "only a chart over one entity's data drills down by dimension".into(),
+        ));
+    }
+    let levels = drill_levels(&wc.config)?;
+    if levels.is_empty() {
+        return Err(AppError::Validation(
+            "this widget has no drill_levels".into(),
+        ));
+    }
+    let Some(level) = levels.get(inputs.path.len()) else {
+        return Err(AppError::Validation(format!(
+            "this widget drills {} levels; there is no level below the last",
+            levels.len()
+        )));
+    };
+    let plan = structured_plan(&state, &wc)?;
+    let mut extra = plan.extra_filters();
+    let mut breadcrumb = Vec::with_capacity(inputs.path.len());
+    for (above, key) in levels.iter().zip(&inputs.path) {
+        extra.extend(attome_search::key_filters(&above.attribute, key)?);
+        breadcrumb.push(DrillCrumb {
+            attribute: above.attribute.clone(),
+            key: key.clone(),
+            label: crumb_label(key),
+        });
+    }
+    let mut data = plan.data.clone();
+    data.group = Some(Grouping {
+        field: level.attribute.clone(),
+        bucket: level.grain,
+    });
+    data.series = None;
+    {
+        let registry = state.entities.load();
+        let meta = registry.get(&data.source).ok_or(AppError::NotFound)?;
+        data.validate_against(meta)
+            .map_err(|errors| AppError::Validation(errors.join("; ")))?;
+    }
+    let aggregate =
+        attome_search::run_structured_aggregate(&state, &ctx, &data, &extra, wc.tz).await?;
+    let additive = data
+        .measures
+        .first()
+        .is_some_and(|m| matches!(m.aggregation, MeasureFn::Count | MeasureFn::Sum));
+    Ok(Json(WidgetDrillDownResponse {
+        widget_id: wc.widget_id,
+        level_index: inputs.path.len(),
+        attribute: level.attribute.clone(),
+        grain: level.grain,
+        additive,
+        buckets: aggregate
+            .buckets
+            .into_iter()
+            .chain(aggregate.other)
+            .map(|b| DrillDownBucket {
+                value: b.values.first().copied().flatten(),
+                key: b.key,
+                label: b.label,
+            })
+            .collect(),
+        breadcrumb,
+        timezone: wc.tz.name().to_owned(),
     }))
 }
 
@@ -1110,10 +1308,14 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/attome-dashboard/{id}/widgets/{widget_id}/explain",
             post(widget_explain),
         )
+        .route(
+            "/api/v1/attome-dashboard/{id}/widgets/{widget_id}/drill-down",
+            post(widget_drill_down),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(widget_records, widget_explain))]
+#[openapi(paths(widget_records, widget_explain, widget_drill_down))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
@@ -1123,6 +1325,38 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 #[cfg(test)]
 mod query_drill_tests {
     use super::*;
+
+    #[test]
+    fn drill_levels_read_from_the_widget_config() {
+        let config = |v: Value| v.as_object().cloned().unwrap();
+        assert!(
+            drill_levels(&config(serde_json::json!({})))
+                .unwrap()
+                .is_empty()
+        );
+        let levels = drill_levels(&config(serde_json::json!({ "drill_levels": [
+            { "attribute": "close_date", "grain": "year" },
+            { "attribute": "close_date", "grain": "quarter" },
+            { "attribute": "owner_ref" },
+        ] })))
+        .unwrap();
+        assert_eq!(levels.len(), 3);
+        assert_eq!(levels[1].grain, Some(DateBucket::Quarter));
+        assert_eq!(levels[2].grain, None);
+        assert!(
+            drill_levels(&config(serde_json::json!({ "drill_levels": [
+            { "attribute": "close_date", "grain": "fortnight" },
+        ] })))
+            .is_err()
+        );
+        assert_eq!(
+            crumb_label(&BucketKey::Value {
+                value: "won".into()
+            }),
+            Some("won".into())
+        );
+        assert_eq!(crumb_label(&BucketKey::Null), None);
+    }
 
     #[test]
     fn parity_names_why_the_total_differs() {
