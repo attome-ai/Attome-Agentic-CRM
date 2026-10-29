@@ -61,9 +61,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ### Added
 - A `map` view kind (B15-T2, migration 0332): `view_metadata.location_field` names a geolocation field
   (`label_field` and `color_field` optional); the list page draws the view's records on a map with
-  nearby records clustered, and lists them underneath. Tiles come from the `maps.tile_url` setting
-  (OpenStreetMap's public tiles by default, or your own tile server) with `maps.attribution`. The map
-  library (MapLibre GL JS, BSD-3-Clause) loads only when a map is shown.
+  nearby records clustered, and lists them underneath. The server fetches the tiles for signed-in
+  people (`GET /api/v1/maps/tiles/{z}/{x}/{y}`) from the deployment-wide `maps.tile_url` setting
+  (OpenStreetMap's public tiles by default, or your own tile server), so the browser talks only to the
+  deployment and the page's Content-Security-Policy is unchanged; `maps.attribution` is the credit
+  shown. The map library (MapLibre GL JS, BSD-3-Clause) is served from the deployment and loads only
+  when a map is shown.
 - An optional standby region (AB2-T9): `ops.standby_region` (`region_code`, `patroni_api_url`,
   `scope`) names a Patroni standby cluster in another region (`deploy/ha/patroni-standby.yml.example`,
   `deploy/ha/README-standby.md`). Boot refuses it unless its region is in `residency.allowed_regions`.

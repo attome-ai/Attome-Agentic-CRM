@@ -159,6 +159,8 @@ pub mod lineage_admin;
 /// for `openapi_fragment` (mounted by `openapi.rs`) and `routes` (mounted by
 /// `system.rs`); handlers stay module-private.
 pub mod live;
+/// B15-T2: map tiles through the server, for the page's CSP.
+pub mod map_tiles;
 /// L1-T5: data steward routes over master entities' golden records.
 pub mod master_admin;
 /// M05 Phase 1 (D-426) — `/api/v1/admin/entities/{entity_id}/labels` CRUD.

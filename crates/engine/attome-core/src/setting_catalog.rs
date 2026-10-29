@@ -1019,9 +1019,9 @@ fn commission_settings() -> Vec<SettingDescriptor> {
         // B15-T2: the map view's tiles, self-hostable.
         SettingDescriptor::new(
             "maps.tile_url",
-            "The raster tile URL map views draw on, with {z}, {x} and {y} (B15-T2). The default is OpenStreetMap's public tiles, meant for light use; point it at your own tile server for more.",
+            "The raster tile URL map views draw on, with {z}, {x} and {y} (B15-T2); the server fetches the tiles (GET /api/v1/maps/tiles/{z}/{x}/{y}), so browsers only talk to the deployment. The default is OpenStreetMap's public tiles, meant for light use; point it at your own tile server for more.",
             || json!({"type": "string", "minLength": 1, "maxLength": 500, "pattern": "^https?://.*\\{z\\}.*"}),
-            &[SettingScope::Deployment, SettingScope::User],
+            &[SettingScope::Deployment],
             false,
             || json!("https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
         ),

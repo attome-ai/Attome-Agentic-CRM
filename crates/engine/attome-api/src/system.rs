@@ -248,6 +248,13 @@ impl EngineSystem {
                 )),
             )
             .merge(
+                // B15-T2 — `/api/v1/maps/tiles/{z}/{x}/{y}` (SelfService).
+                crate::map_tiles::routes().layer(middleware::from_fn_with_state(
+                    self.state.clone(),
+                    attome_security::strict_authz::strict_authz,
+                )),
+            )
+            .merge(
                 // M95/D-430 — `/api/v1/admin/features` (Admin) +
                 // `/api/v1/features` (SelfService) share one bundle/layer,
                 // same shape as the settings bundle immediately above (its

@@ -175,6 +175,9 @@ const BASELINE: &[&str] = &[
     "live",
     // L1-T5: data steward routes beside duplicates_admin and quality_admin,
     // whose master-data work they finish; they move out together.
+    // B15-T2: map tiles fetched for the page's CSP; a core route (the
+    // integration module, which owns outbound adapters, can be switched off).
+    "map_tiles",
     "master_admin",
     // C4-T1: belongs in attome-notification; kept here until that crate
     // takes a record-access (attome-security) dependency.

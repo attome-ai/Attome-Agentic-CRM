@@ -65,6 +65,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         (crate::changeset::apply_routes::openapi_fragment(), "core"),
         (crate::admin::openapi(), "core"),
         (crate::settings_admin::openapi_fragment(), "core"),
+        (crate::map_tiles::openapi_fragment(), "core"),
         (crate::features_admin::openapi_fragment(), "core"),
         (crate::schema::openapi_fragment(), "core"),
         (crate::catalog_admin::openapi_fragment(), "core"),
