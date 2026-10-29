@@ -412,6 +412,20 @@ pub async fn run_send_email_job(
     // append-only). `None` outside the compose/reply path.
     let delivery_id = msg.delivery_id;
     let communication_id = msg.communication_id;
+    // AB9-T6: a job delivered again after its row settled (a worker killed
+    // after the send was recorded, before the queue saw the job finish) must
+    // not send a second copy. Only a `queued` row is still owed a send.
+    if let Some(id) = delivery_id
+        && let Some(row) = attome_email::delivery::get_by_id(db, id).await?
+        && row.status != "queued"
+    {
+        tracing::info!(
+            delivery_id = %id,
+            status = %row.status,
+            "email: the delivery is already settled; this run sends nothing"
+        );
+        return Ok(());
+    }
     let to = msg.to.clone();
     let result = attome_email::send(&config.email, db, msg).await;
     let final_attempt = match &result {
