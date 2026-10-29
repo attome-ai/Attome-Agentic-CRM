@@ -247,17 +247,7 @@ pub fn validate(
         parent = child;
     }
     let last = parent;
-    let field = |name: &str| -> Result<&AttrInfo, AppError> {
-        last.attrs
-            .iter()
-            .find(|a| a.logicalname == name && !a.is_read_gated())
-            .ok_or_else(|| {
-                AppError::Validation(format!(
-                    "'{}' has no readable field '{name}'",
-                    last.logicalname
-                ))
-            })
-    };
+    let field = |name: &str| readable_field(last, name);
 
     let storage = match (&opts.attribute, opts.function) {
         (None, RollupFunction::Count) => None,
@@ -315,6 +305,20 @@ pub fn validate(
         check_filter(filter, &last.attrs)?;
     }
     Ok(opts)
+}
+
+/// The field `name` of `entity`, when it exists and is not read-gated.
+fn readable_field<'a>(entity: &'a crate::EntityMeta, name: &str) -> Result<&'a AttrInfo, AppError> {
+    entity
+        .attrs
+        .iter()
+        .find(|a| a.logicalname == name && !a.is_read_gated())
+        .ok_or_else(|| {
+            AppError::Validation(format!(
+                "'{}' has no readable field '{name}'",
+                entity.logicalname
+            ))
+        })
 }
 
 /// The filter compiles to a condition on `attrs` (stored fields only:
