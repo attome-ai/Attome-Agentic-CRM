@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of } from 'rxjs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ATTOME_CONFIG, ApiService, LangService } from '@attome/base';
 import { AccessService } from '@attome/xrm/core/access/data';
 import { EntityService, RecordTabPanelsComponent, XrmBaseFormComponent } from '@attome/xrm/core/entity';
@@ -39,97 +39,73 @@ const ARABIC: Record<string, string> = {
   'metricForm.certify': 'اعتماد',
 };
 
-describe('DashboardMetricDefinitionFormComponent (P9-T14)', () => {
-  let privileged: boolean;
-
-  beforeEach(() => {
-    privileged = false;
-    TestBed.configureTestingModule({
-      imports: [DashboardMetricDefinitionFormComponent],
-      providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } },
-        {
-          provide: EntityService,
-          useValue: {
-            getSchema: () => of(SCHEMA),
-            get: () => of({ id: 'm1', row_version: 1, data: { name: 'Win rate', certified: false } }),
-          },
+/** Configures the form with the real services (other parts of the form use
+ * them); only the privilege answer is chosen, and in Arabic or English. */
+function setUp(privileged: boolean, arabic: boolean): void {
+  TestBed.configureTestingModule({
+    imports: [DashboardMetricDefinitionFormComponent],
+    providers: [
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } },
+      {
+        provide: EntityService,
+        useValue: {
+          getSchema: () => of(SCHEMA),
+          get: () => of({ id: 'm1', row_version: 1, data: { name: 'Win rate', certified: false } }),
         },
-        { provide: AccessService, useValue: { hasPrivilege: (key: string) => privileged && key === CERTIFY_PRIVILEGE } },
-        {
-          provide: Router,
-          useValue: { navigate: vi.fn(), url: '/', parseUrl: () => ({ queryParamMap: { get: () => null } }) },
+      },
+      {
+        provide: Router,
+        useValue: { navigate: vi.fn(), url: '/', parseUrl: () => ({ queryParamMap: { get: () => null } }) },
+      },
+      {
+        provide: LangService,
+        useValue: {
+          translate: (key: string) => (arabic ? ARABIC[key] ?? key : key),
+          current: signal(arabic ? 'ar' : 'en'),
+          isRtl: () => arabic,
         },
-        {
-          provide: LangService,
-          useValue: {
-            translate: (key: string) => ARABIC[key] ?? key,
-            current: signal('ar'),
-            isRtl: () => true,
-          },
-        },
-      ],
-    });
-    TestBed.overrideComponent(XrmBaseFormComponent, {
-      remove: { imports: [RecordTabPanelsComponent] },
-      add: { imports: [RecordTabPanelsStubComponent] },
-    });
+      },
+    ],
   });
+  TestBed.overrideComponent(XrmBaseFormComponent, {
+    remove: { imports: [RecordTabPanelsComponent] },
+    add: { imports: [RecordTabPanelsStubComponent] },
+  });
+  vi.spyOn(TestBed.inject(AccessService), 'hasPrivilege')
+    .mockImplementation((key: string) => privileged && key === CERTIFY_PRIVILEGE);
+}
 
-  function create() {
-    const fixture = TestBed.createComponent(DashboardMetricDefinitionFormComponent);
-    fixture.componentRef.setInput('name', 'dashboard_metric_definition');
-    fixture.componentRef.setInput('id', 'm1');
-    fixture.detectChanges();
-    return { fixture, el: fixture.nativeElement as HTMLElement };
-  }
+function create() {
+  const fixture = TestBed.createComponent(DashboardMetricDefinitionFormComponent);
+  fixture.componentRef.setInput('name', 'dashboard_metric_definition');
+  fixture.componentRef.setInput('id', 'm1');
+  fixture.detectChanges();
+  return { fixture, el: fixture.nativeElement as HTMLElement };
+}
 
+describe('DashboardMetricDefinitionFormComponent (P9-T14)', () => {
   it('shows its sections with Arabic titles', () => {
+    setUp(false, true);
     const { el } = create();
     const titles = Array.from(el.querySelectorAll('.xf-section-title')).map(h => h.textContent?.trim());
     expect(titles).toEqual(['التفاصيل', 'مصدر الحساب', 'الحوكمة']);
     expect(el.querySelector('[data-testid="certification"]')?.textContent).toContain('غير معتمد');
   });
 
-  it('offers certification only to a holder of the certify privilege', () => {
-    let { el } = create();
+  it('hides certification from a caller without the certify privilege', () => {
+    setUp(false, false);
+    const { el } = create();
     expect(el.querySelector('[data-testid="certify-button"]')).toBeNull();
+  });
 
-    TestBed.resetTestingModule();
-    privileged = true;
-    TestBed.configureTestingModule({
-      imports: [DashboardMetricDefinitionFormComponent],
-      providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } },
-        {
-          provide: EntityService,
-          useValue: {
-            getSchema: () => of(SCHEMA),
-            get: () => of({ id: 'm1', row_version: 1, data: { name: 'Win rate', certified: false } }),
-          },
-        },
-        { provide: AccessService, useValue: { hasPrivilege: (key: string) => privileged && key === CERTIFY_PRIVILEGE } },
-        {
-          provide: Router,
-          useValue: { navigate: vi.fn(), url: '/', parseUrl: () => ({ queryParamMap: { get: () => null } }) },
-        },
-        { provide: LangService, useValue: { translate: (key: string) => key, current: signal('en'), isRtl: () => false } },
-      ],
-    });
-    TestBed.overrideComponent(XrmBaseFormComponent, {
-      remove: { imports: [RecordTabPanelsComponent] },
-      add: { imports: [RecordTabPanelsStubComponent] },
-    });
-    // The real ApiService serves the form's other parts; only the certify
-    // call is answered here.
+  it('offers certification to a holder of the certify privilege', () => {
+    setUp(true, false);
     const post = vi.spyOn(TestBed.inject(ApiService), 'post').mockReturnValue(
       of({ metric_id: 'm1', certified: true, certified_at: '2026-10-29T00:00:00Z' }) as never,
     );
-    ({ el } = create());
+    const { el } = create();
     const button = el.querySelector<HTMLButtonElement>('[data-testid="certify-button"]');
     expect(button).not.toBeNull();
     button?.click();
