@@ -294,9 +294,26 @@ fn ops_for(shape: Shape) -> &'static [&'static str] {
     }
 }
 
+/// A13-T5: whether `value` is a dynamic date value (`@today`,
+/// `@this_month`, `@last_n_days(n)`), which a query expands when it runs.
+fn is_dynamic_date(value: &str) -> bool {
+    matches!(value, "@today" | "@this_month")
+        || value
+            .strip_prefix("@last_n_days(")
+            .and_then(|rest| rest.strip_suffix(')'))
+            .is_some_and(|n| {
+                n.trim()
+                    .parse::<u32>()
+                    .is_ok_and(|n| (1..=3660).contains(&n))
+            })
+}
+
 /// Whether `value` is a valid single value of a field shaped `shape`.
 fn scalar_ok(shape: Shape, attr: &AttrInfo, value: &str) -> Result<(), String> {
     match shape {
+        Shape::Date if is_dynamic_date(value) => Ok(()),
+        // A13-T5: the caller, their teams or units, expanded when it runs.
+        Shape::Id if matches!(value, "@me" | "@my_team" | "@my_unit") => Ok(()),
         Shape::Number => value
             .trim()
             .parse::<f64>()

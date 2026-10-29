@@ -75,6 +75,8 @@ pub mod meeting;
 pub mod memory;
 pub mod model_edit;
 pub mod nl_query;
+/// A13-T5: a view from plain language.
+pub mod nl_view;
 pub mod oidc_assist;
 /// AB2-T12: the cluster's status and a switchover proposal.
 pub mod ops_cluster;
@@ -199,6 +201,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(table::change_plan_descriptor());
     all.push(bin::descriptor());
     all.push(nl_query::descriptor());
+    all.push(nl_view::descriptor());
     all.extend(workflow::descriptors());
     all.extend(memory::descriptors());
     all.extend(model_edit::descriptors());
@@ -302,6 +305,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(table::TableChangePlanTool));
     all.push(Box::new(bin::RecordDeleted));
     all.push(Box::new(nl_query::QueryPlan));
+    all.push(Box::new(nl_view::ViewPlan));
     all.extend(workflow::executors());
     all.extend(memory::executors());
     all.extend(model_edit::executors());

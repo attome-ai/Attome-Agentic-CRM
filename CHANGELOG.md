@@ -62,6 +62,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- A view from a sentence (A13-T5): the agent action `view.plan` turns "deals closing this month over
+  50k" into a personal view to confirm: its name, columns (related fields included) and filters,
+  checked like `query.plan`'s. It saves nothing; it returns the description and the
+  `POST /api/v1/views` body. `query.plan` now also accepts the dynamic values (`@today`,
+  `@this_month`, `@last_n_days(n)` on dates; `@me`, `@my_team`, `@my_unit` on lookups).
 - Related columns in lists and views (A13-T1): `select` in `POST /api/v1/query/execute`, and a
   view's columns, may name a field of a related record through one or two lookups
   (`account_ref.industry`, `account_ref.owner_ref.name`). The value is read for the page with
