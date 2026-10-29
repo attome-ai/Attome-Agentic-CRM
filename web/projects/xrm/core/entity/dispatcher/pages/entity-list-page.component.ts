@@ -61,7 +61,7 @@ export const CHART_VIEW_LOADER = new InjectionToken<ChartViewLoader>('CHART_VIEW
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports:    [
-    EntityListComponent, KanbanBoardComponent, CalendarViewComponent, TimelineViewComponent,
+    EntityListComponent, KanbanBoardComponent, CalendarViewComponent, TimelineViewComponent, MapViewComponent,
     NgComponentOutlet, NgTemplateOutlet, TranslatePipe,
   ],
   templateUrl: './entity-list-page.component.html',

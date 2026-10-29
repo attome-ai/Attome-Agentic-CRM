@@ -112,7 +112,8 @@ public final class AttomeClient {
 
     public void delete(String entity, UUID id) throws ApiException {
         call(true, () -> {
-            entities.deleteRecord(entity, id);
+            // The optional If-Match, reason and delete mode are left out.
+            entities.deleteRecord(entity, id, null, null, null);
             return null;
         });
     }
