@@ -62,6 +62,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Rollup explain (A10-T5): `GET /api/v1/{entity}/{id}/rollups/{attribute}/explain` returns the
+  rollup's definition (function, mode, path, field, filter, window), the stored value, how many
+  related records it counts, and the first 100 the caller may read with their amounts. Records the
+  caller may not read are counted as `hidden` but never listed. It needs read access to the record
+  and the field.
 - Rollup backfill and nightly heal (A10-T4): saving a rollup field queues `rollup_backfill`, which
   fills every existing parent 1,000 at a time, each run queueing the next. The nightly `rollup_heal`
   recomputes about 1% of each rollup's parents, plus the parents of a windowed rollup whose

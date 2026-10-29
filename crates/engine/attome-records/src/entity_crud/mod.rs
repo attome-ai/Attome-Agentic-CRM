@@ -39,6 +39,8 @@ pub mod recycle_bin;
 mod related;
 mod resolve;
 mod response;
+/// A10-T5: why a rollup has its value.
+mod rollup_explain;
 mod row_version;
 pub(crate) mod row_version_cache;
 /// B16-T5: `GET /api/v1/scan/find`, a scanned value to the readable records
@@ -181,6 +183,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(feed::openapi_fragment());
     doc.merge(record_shares::openapi_fragment());
     doc.merge(access_explain::openapi_fragment());
+    doc.merge(rollup_explain::openapi_fragment());
     doc.merge(history::openapi_fragment());
     doc.merge(favourites::openapi_fragment());
     doc.merge(clone::openapi_fragment());
@@ -362,6 +365,10 @@ pub fn routes() -> Router<EngineState> {
         .route(
             "/api/v1/{entity}/{id}/access/explain",
             get(access_explain::explain_access),
+        )
+        .route(
+            "/api/v1/{entity}/{id}/rollups/{attribute}/explain",
+            get(rollup_explain::explain_rollup),
         )
         .route(
             "/api/v1/{entity}/{id}/shares/{share_id}",

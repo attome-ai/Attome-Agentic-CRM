@@ -491,6 +491,79 @@ pub fn recompute_sql(
     Ok((sql, binds))
 }
 
+/// A10-T5: the related records one parent's rollup counts, as
+/// `FROM ... WHERE ...` with `$1` the parent's id and text binds from `$2`
+/// on; the last step's alias is returned so a caller can select from it and
+/// add the reader's record rules. Live related records only, with the
+/// filter and the window applied, exactly as [`recompute_sql`] counts them.
+pub fn contributors_sql(
+    opts: &RollupOptions,
+    last_attrs: &[AttrInfo],
+) -> Result<(String, String, Vec<Option<String>>), AppError> {
+    let n = opts.path.len();
+    if n == 0 {
+        return Err(AppError::Validation("a rollup's path is empty".into()));
+    }
+    let alias = |i: usize| format!("t{}", i + 1);
+    let live = |a: &str| format!("({a}.is_active IS NULL OR {a}.is_active = true)");
+    let mut from = format!("FROM {} t1", quote_ident(&opts.path[0].entity));
+    let mut conditions = vec![
+        format!("t1.{} = $1", quote_ident(&opts.path[0].via)),
+        live("t1"),
+    ];
+    for (i, step) in opts.path.iter().enumerate().skip(1) {
+        let a = alias(i);
+        from.push_str(&format!(
+            " JOIN {} {a} ON {a}.{} = {}.id",
+            quote_ident(&step.entity),
+            quote_ident(&step.via),
+            alias(i - 1)
+        ));
+        conditions.push(live(&a));
+    }
+    let last = alias(n - 1);
+    let mut binds: Vec<Option<String>> = Vec::new();
+    if let Some(filter) = opts.filter.as_deref().filter(|f| !f.trim().is_empty()) {
+        let expr = attome_rules::parse(filter).map_err(|e| {
+            AppError::Validation(format!("the rollup's filter does not parse: {e}"))
+        })?;
+        let by_name: HashMap<String, AttrInfo> = last_attrs
+            .iter()
+            .filter(|a| !a.is_formula())
+            .map(|a| (a.logicalname.clone(), a.clone()))
+            .collect();
+        let (sql, params) = crate::rules_sql::to_sql_text_binds(&expr, &by_name, &last, 2)
+            .map_err(|e| {
+                AppError::Validation(format!(
+                    "the rollup's filter must run in the database: {}",
+                    e.reason
+                ))
+            })?;
+        conditions.push(sql);
+        binds.extend(params.into_iter().map(|p| match p {
+            SqlParam::Number(n) => Some(n.to_string()),
+            SqlParam::Text(t) => Some(t),
+            SqlParam::Bool(b) => Some(b.to_string()),
+            SqlParam::Date(d) => Some(d.to_rfc3339()),
+            SqlParam::Uuid(u) => Some(u.to_string()),
+            SqlParam::Null => None,
+        }));
+    }
+    if let Some(window) = &opts.window {
+        binds.push(Some(window.days.to_string()));
+        conditions.push(format!(
+            "{last}.{} >= now() - make_interval(days => ${}::int)",
+            quote_ident(&window.date_attribute),
+            1 + binds.len()
+        ));
+    }
+    Ok((
+        format!("{from} WHERE {}", conditions.join(" AND ")),
+        last,
+        binds,
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -779,6 +852,24 @@ mod tests {
             "result_type": "number",
         })));
         assert!(m.contains("follows one lookup"), "{m}");
+    }
+
+    #[test]
+    fn rollup_explain_contributors_follow_the_path() {
+        let opts = check(json!({
+            "function": "count",
+            "path": [
+                { "entity": "opportunity", "via": "account_ref" },
+                { "entity": "opportunity_line", "via": "opportunity_ref" },
+            ],
+            "result_type": "number",
+        }))
+        .unwrap();
+        let (sql, last, binds) = contributors_sql(&opts, &[]).unwrap();
+        assert_eq!(last, "t2");
+        assert!(sql.starts_with("FROM \"opportunity\" t1 JOIN \"opportunity_line\" t2 ON t2.\"opportunity_ref\" = t1.id"), "{sql}");
+        assert!(sql.contains("WHERE t1.\"account_ref\" = $1"), "{sql}");
+        assert!(binds.is_empty());
     }
 
     #[test]
