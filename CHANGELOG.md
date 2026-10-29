@@ -9,8 +9,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 
 ### Breaking
 - `dashboard_metric_definition.certified` and `certified_at` can no longer be set through the record
-  API (P9-T11): `POST`/`PATCH /api/v1/dashboard_metric_definition` naming them is a 422, and a new
-  metric starts uncertified. Certify with `POST /api/v1/metrics/{id}/certify`, which needs
+  API (P9-T11): a create may only send `certified: false`, an update naming either is a 422, and a
+  new metric starts uncertified. Certify with `POST /api/v1/metrics/{id}/certify`, which needs
   `attome_metric.certify`.
 
 ### Fixed
