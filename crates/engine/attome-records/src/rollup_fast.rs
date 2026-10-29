@@ -82,7 +82,7 @@ fn before_ref(before: Option<&Value>, via: &str) -> Option<Uuid> {
 
 /// The records of `table` that `ids` point at through `via` (deleted rows
 /// included: a deleted child still names its parent).
-async fn parents_of(
+pub(crate) async fn parents_of(
     state: &EngineState,
     table: &str,
     via: &str,

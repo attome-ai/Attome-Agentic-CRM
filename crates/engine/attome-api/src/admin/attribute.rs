@@ -292,6 +292,16 @@ pub(crate) struct UpdateAttributeBody {
 /// `FieldType::NAMES`) — this used to be a second hand-copied list.
 use provision::valid_field_type;
 
+/// A10-T4: a new or changed rollup is filled for every existing parent by
+/// the backfill job, a batch at a time. A failure to queue it is logged;
+/// the nightly heal then fills the parents over time.
+async fn enqueue_rollup_backfill(state: &EngineState, entity: &str, field: &str) {
+    let job = attome_records::rollup_heal::backfill_job(entity, field, None);
+    if let Err(error) = attome_jobs::enqueue_on_pool(&state.base.db, job).await {
+        tracing::warn!(%error, entity, field, "rollup backfill not queued");
+    }
+}
+
 /// B-R6 (D-604): a formula's value is computed, so it is never `required`
 /// and has no `max_length`; A10-T1: nor a rollup's. Checked up front
 /// (reconcile re-checks) so an `Expensive` contract change is never queued
@@ -1106,6 +1116,9 @@ async fn do_create_attribute_one(
         .await?;
     }
 
+    if field_type == FieldType::Rollup.as_str() {
+        enqueue_rollup_backfill(state, &entity_logicalname, &logicalname).await;
+    }
     notify_metadata_change(&state.base.redis).await;
     pin_write_best_effort(state, user_id, "create attribute").await;
 
@@ -1779,6 +1792,9 @@ pub(crate) async fn do_update_attribute_recorded(
         .await?;
     }
 
+    if new_ft_str == FieldType::Rollup.as_str() {
+        enqueue_rollup_backfill(state, &entity_logicalname, &field_logicalname).await;
+    }
     notify_metadata_change(&state.base.redis).await;
     pin_write_best_effort(state, user_id, "update attribute").await;
 

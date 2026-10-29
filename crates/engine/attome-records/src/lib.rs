@@ -90,6 +90,8 @@ pub mod related_columns;
 pub mod rollup_exact;
 /// A10-T2: rollups recomputed from the change feed.
 pub mod rollup_fast;
+/// A10-T4: rollup backfill and the nightly verify-and-heal.
+pub mod rollup_heal;
 pub mod rule_engine;
 pub mod rw_pin;
 pub mod stage_move;

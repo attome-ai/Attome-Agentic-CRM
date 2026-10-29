@@ -3184,6 +3184,7 @@ const DEDUP_KEY_LEAD_ASSIGNMENT: &str = "lead-assignment";
 /// cache (a registered job type).
 const DEDUP_KEY_AGGREGATE_CACHE_MARKS: &str = "aggregate-cache-marks";
 const DEDUP_KEY_ROLLUP_FAST: &str = "rollup-fast";
+const DEDUP_KEY_ROLLUP_HEAL: &str = "rollup-heal";
 const DEDUP_KEY_LEAD_FIRST_TOUCH: &str = "lead-first-touch";
 const DEDUP_KEY_LEAD_REBALANCE: &str = "lead-rebalance";
 /// E14-T8: closed web sessions summarised onto timelines (a registered job type).
@@ -3558,6 +3559,14 @@ pub const AGGREGATE_CACHE_MARKS: attome_jobs::JobType =
 /// A10-T2: fast rollups recomputed from the change feed.
 pub const ROLLUP_FAST: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_records::rollup_fast::JOB, 1);
+
+/// A10-T4: a rollup filled for its parents, a batch per run.
+pub const ROLLUP_BACKFILL: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_records::rollup_heal::BACKFILL_JOB, 1);
+
+/// A10-T4: rollups verified and healed nightly.
+pub const ROLLUP_HEAL: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_records::rollup_heal::HEAL_JOB, 1);
 
 /// D4-T2: new leads given their first-touch timer.
 pub const LEAD_FIRST_TOUCH: attome_jobs::JobType =
@@ -4773,6 +4782,44 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            ROLLUP_BACKFILL,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: attome_records::rollup_heal::BackfillPayload =
+                    serde_json::from_value(job.payload)
+                        .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if let Some(next) = attome_records::rollup_heal::backfill_step(&state, &payload)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?
+                {
+                    let job = attome_records::rollup_heal::backfill_job(
+                        &next.entity,
+                        &next.field,
+                        next.after,
+                    );
+                    attome_jobs::enqueue_on_pool(&state.base.db, job)
+                        .await
+                        .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            ROLLUP_HEAL,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let healed = attome_records::rollup_heal::heal(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if healed > 0 {
+                    tracing::warn!(healed, "rollup values healed");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             ROLLUP_FAST,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let read = attome_records::rollup_fast::tick(&state)
@@ -5847,6 +5894,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
             DEDUP_KEY_AGGREGATE_CACHE_MARKS
         }
         EngineJob::Registered(job) if job.name == ROLLUP_FAST.name => DEDUP_KEY_ROLLUP_FAST,
+        EngineJob::Registered(job) if job.name == ROLLUP_HEAL.name => DEDUP_KEY_ROLLUP_HEAL,
         EngineJob::Registered(job) if job.name == LEAD_FIRST_TOUCH.name => {
             DEDUP_KEY_LEAD_FIRST_TOUCH
         }
@@ -7153,6 +7201,21 @@ pub fn spawn_rollup_fast_scheduler(db: DbPool, interval: std::time::Duration) {
             "rollup fast mode",
         ),
         Err(error) => tracing::error!(%error, "rollup fast mode: not scheduled"),
+    }
+}
+
+/// A10-T4: nightly, rollups verified and healed.
+pub fn spawn_rollup_heal_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(ROLLUP_HEAL.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_ROLLUP_HEAL,
+            "rollup heal",
+        ),
+        Err(error) => tracing::error!(%error, "rollup heal: not scheduled"),
     }
 }
 

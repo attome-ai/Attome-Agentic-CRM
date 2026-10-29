@@ -230,6 +230,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     );
     // A10-T2: fast rollups recomputed from the change feed, every 5 seconds.
     crate::jobs::spawn_rollup_fast_scheduler(db.clone(), std::time::Duration::from_secs(5));
+    // A10-T4: rollups verified and healed, nightly.
+    crate::jobs::spawn_rollup_heal_scheduler(db.clone(), std::time::Duration::from_secs(86_400));
     // D4-T1: new leads assigned by the rule set, every 30 seconds.
     crate::jobs::spawn_lead_assignment_scheduler(db.clone(), std::time::Duration::from_secs(30));
     // D4-T2: first-touch timers for new leads every minute; stale leads rebalanced daily.

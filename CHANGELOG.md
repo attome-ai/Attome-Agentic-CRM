@@ -62,6 +62,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Rollup backfill and nightly heal (A10-T4): saving a rollup field queues `rollup_backfill`, which
+  fills every existing parent 1,000 at a time, each run queueing the next. The nightly `rollup_heal`
+  recomputes about 1% of each rollup's parents, plus the parents of a windowed rollup whose
+  related records left the window since the day before. It fixes and logs every value that
+  drifted, such as after a hard delete or a bulk SQL update.
 - Rollup exact mode (A10-T3): an `exact` count or sum over one lookup is kept right inside the
   related record's own write. Create, update (a new amount or a new parent), soft delete and
   restore take back what the record counted and add what it counts now, on the parent's row, so
