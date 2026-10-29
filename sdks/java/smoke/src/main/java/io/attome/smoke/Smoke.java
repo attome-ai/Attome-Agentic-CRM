@@ -28,7 +28,7 @@ public final class Smoke {
 
         client.delete("account", id);
 
-        ExecResponse answer = client.queries().execute(new ExecuteQueryRequest().entity("account"));
+        ExecResponse answer = client.queries().execute(new ExecuteQueryRequest().entity("account"), null);
         check(answer.getData() != null, "query returned no data");
 
         AttomeClient anonymous = new AttomeClient(baseUrl, null, null, 0);
