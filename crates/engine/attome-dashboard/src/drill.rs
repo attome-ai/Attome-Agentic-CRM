@@ -13,7 +13,7 @@ use attome_core::chart_view_metadata::DateBucket;
 use attome_core::data_definition::{Grouping, MeasureFn, Presentation};
 use attome_search::{BucketKey, DrillTarget, RecordColumn, StructuredRecords};
 use attome_security::SecurityContextExt;
-use attome_server::authz::{Authorized, Privilege};
+use attome_server::authz::{Authorized, Privilege, PrivilegeKey};
 use attome_server::security::{AccessLevel, SecurityContext};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
@@ -1699,7 +1699,23 @@ async fn widget_explain(
     Path((dashboard_id, widget_id)): Path<(Uuid, Uuid)>,
     Json(inputs): Json<WidgetInputs>,
 ) -> Result<Json<WidgetExplanation>, AppError> {
-    let definition = load_definition(&state, &ctx, dashboard_id, inputs.preview).await?;
+    explain_widget(&state, &ctx, dashboard_id, widget_id, &inputs)
+        .await
+        .map(Json)
+}
+
+/// P7-T10: a widget's explanation for `ctx`, as the explain route answers
+/// it, for a caller other than the route (an agent action). Checks the
+/// dashboard read privilege itself, as the route's extractor does.
+pub async fn explain_widget(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    dashboard_id: Uuid,
+    widget_id: Uuid,
+    inputs: &WidgetInputs,
+) -> Result<WidgetExplanation, AppError> {
+    ctx.require_key(DashboardRead::KEY)?;
+    let definition = load_definition(state, ctx, dashboard_id, inputs.preview).await?;
     let (page, widget) = find_widget(&definition.snapshot, widget_id).ok_or(AppError::NotFound)?;
     let wc = resolve_widget_context(
         &state,
@@ -1867,7 +1883,7 @@ async fn widget_explain(
         DataClass::None => {}
     }
     explanation.definition_fingerprint = definition_fingerprint(&definition, &wc, &applied);
-    Ok(Json(explanation))
+    Ok(explanation)
 }
 
 async fn explain_metric(

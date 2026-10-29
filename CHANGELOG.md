@@ -62,6 +62,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Explaining a dashboard number (P7-T10): the read-only agent action `dashboard.explain_number`
+  restates a widget's explanation in plain words, in the person's language, citing each filter and
+  its origin. It reads the explanation as the caller, with the dashboard read privilege.
 - Record trails in drills (P7-T9): the records route's answer gains `trails`, one per listed record
   in the rows' order: its `timeline_url`, the `last_change_audit_id` of the newest change to a field
   the widget filters on (any field when it filters on none), and `agent_run_id`, the agent session,

@@ -118,6 +118,9 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   run it. The model never writes SQL. `query.run` runs a query in the text form (`SELECT … FROM …
   WHERE … GROUP BY … ORDER BY … LIMIT n`) as the caller and returns at most 50 rows, or the groups;
   a query estimated over 5,000 rows returns its plan instead, to be narrowed.
+- Dashboards (P7-T10): `dashboard.explain_number` explains a widget's number in words from its
+  explanation, read as the caller: what is measured, over which records, each filter and where it
+  comes from, the grouping and when it was computed. It changes nothing.
 - Views (A13-T5): `view.plan` turns a sentence ("deals closing this month over 50k") into a
   personal view to save: its name, columns and filters, which may use `@me`, `@my_team`, `@my_unit`,
   `@today`, `@this_month` or `@last_n_days(n)`. It saves nothing. It returns the description and the

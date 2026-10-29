@@ -19,6 +19,7 @@ attome-cache.workspace        = true
 attome-commission.workspace   = true
 attome-compliance.workspace   = true
 attome-content.workspace      = true
+attome-dashboard.workspace    = true
 attome-config.workspace       = true
 attome-core.workspace         = true
 attome-db.workspace           = true

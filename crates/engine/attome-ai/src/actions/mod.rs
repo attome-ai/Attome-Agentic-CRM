@@ -63,6 +63,8 @@ pub mod knowledge;
 pub mod knowledge_answer;
 /// Y11-T8: an agent's proposal for an upgrade conflict.
 pub mod layer_conflict_propose;
+/// P7-T10: a dashboard number explained in words.
+pub mod dashboard_explain;
 /// AI1-T1: the lead qualifier's consent-checked contact steps.
 pub mod lead_qualifier;
 /// L5-T8: lineage.downstream, lineage.upstream, lineage.impact.
@@ -154,6 +156,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(business::descriptors());
     all.push(query_run::descriptor());
     all.push(layer_conflict_propose::descriptor());
+    all.push(dashboard_explain::descriptor());
     all.extend(search_ask::descriptors());
     all.extend(catalog::descriptors());
     all.extend(timeline::descriptors());
@@ -258,6 +261,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(business::executors());
     all.push(Box::new(query_run::QueryRun));
     all.push(Box::new(layer_conflict_propose::ProposeConflictResolution));
+    all.push(Box::new(dashboard_explain::DashboardExplain));
     all.extend(search_ask::executors());
     all.extend(catalog::executors());
     all.extend(timeline::executors());

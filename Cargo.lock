@@ -638,6 +638,7 @@ dependencies = [
  "attome-config",
  "attome-content",
  "attome-core",
+ "attome-dashboard",
  "attome-db",
  "attome-document",
  "attome-field",
