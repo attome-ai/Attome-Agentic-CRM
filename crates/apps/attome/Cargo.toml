@@ -145,6 +145,10 @@ windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_Network
 name = "keycloak_oidc"
 required-features = ["keycloak-tests"]
 
+[[test]]
+name = "keycloak_saml_broker"
+required-features = ["keycloak-tests"]
+
 [dev-dependencies]
 attome-approval.workspace = true
 attome-fleet.workspace    = true

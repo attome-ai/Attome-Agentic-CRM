@@ -87,5 +87,78 @@
         "profile"
       ]
     }
+  ],
+  "identityProviders": [
+    {
+      "alias": "saml-idp",
+      "displayName": "SAML IdP (test)",
+      "providerId": "saml",
+      "enabled": true,
+      "trustEmail": true,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "authenticateByDefault": false,
+      "linkOnly": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "entityId": "attome-test-broker",
+        "idpEntityId": "http://localhost:8090/realms/saml-idp",
+        "singleSignOnServiceUrl": "http://localhost:8090/realms/saml-idp/protocol/saml",
+        "nameIDPolicyFormat": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
+        "principalType": "SUBJECT",
+        "postBindingAuthnRequest": "false",
+        "postBindingResponse": "false",
+        "postBindingLogout": "false",
+        "wantAuthnRequestsSigned": "false",
+        "wantAssertionsSigned": "false",
+        "wantAssertionsEncrypted": "false",
+        "validateSignature": "false",
+        "forceAuthn": "false",
+        "syncMode": "IMPORT"
+      }
+    }
+  ],
+  "identityProviderMappers": [
+    {
+      "name": "email",
+      "identityProviderAlias": "saml-idp",
+      "identityProviderMapper": "saml-user-attribute-idp-mapper",
+      "config": {
+        "syncMode": "INHERIT",
+        "attribute.name": "email",
+        "user.attribute": "email"
+      }
+    },
+    {
+      "name": "firstName",
+      "identityProviderAlias": "saml-idp",
+      "identityProviderMapper": "saml-user-attribute-idp-mapper",
+      "config": {
+        "syncMode": "INHERIT",
+        "attribute.name": "firstName",
+        "user.attribute": "firstName"
+      }
+    },
+    {
+      "name": "lastName",
+      "identityProviderAlias": "saml-idp",
+      "identityProviderMapper": "saml-user-attribute-idp-mapper",
+      "config": {
+        "syncMode": "INHERIT",
+        "attribute.name": "lastName",
+        "user.attribute": "lastName"
+      }
+    },
+    {
+      "name": "sales-group",
+      "identityProviderAlias": "saml-idp",
+      "identityProviderMapper": "saml-advanced-group-idp-mapper",
+      "config": {
+        "syncMode": "FORCE",
+        "attributes": "[{\"key\":\"groups\",\"value\":\"sales\"}]",
+        "are.attribute.values.regex": "false",
+        "group": "/sales"
+      }
+    }
   ]
 }

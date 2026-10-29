@@ -1,0 +1,101 @@
+{
+  "realm": "saml-idp",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "groups": [
+    {
+      "name": "sales"
+    }
+  ],
+  "users": [
+    {
+      "username": "saml.user",
+      "email": "saml.user@example.test",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Saml",
+      "lastName": "User",
+      "groups": [
+        "/sales"
+      ],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "saml-user-Passw0rd!",
+          "temporary": false
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "attome-test-broker",
+      "name": "attome-test realm (SAML broker)",
+      "enabled": true,
+      "protocol": "saml",
+      "frontchannelLogout": false,
+      "redirectUris": [
+        "http://localhost:8090/realms/attome-test/broker/saml-idp/endpoint*"
+      ],
+      "attributes": {
+        "saml.authnstatement": "true",
+        "saml.force.post.binding": "false",
+        "saml.server.signature": "false",
+        "saml.assertion.signature": "false",
+        "saml.client.signature": "false",
+        "saml.encrypt": "false",
+        "saml_force_name_id_format": "true",
+        "saml_name_id_format": "email",
+        "saml_assertion_consumer_url_redirect": "http://localhost:8090/realms/attome-test/broker/saml-idp/endpoint"
+      },
+      "protocolMappers": [
+        {
+          "name": "email",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "email",
+            "attribute.name": "email",
+            "attribute.nameformat": "Basic"
+          }
+        },
+        {
+          "name": "firstName",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "firstName",
+            "attribute.name": "firstName",
+            "attribute.nameformat": "Basic"
+          }
+        },
+        {
+          "name": "lastName",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "lastName",
+            "attribute.name": "lastName",
+            "attribute.nameformat": "Basic"
+          }
+        },
+        {
+          "name": "groups",
+          "protocol": "saml",
+          "protocolMapper": "saml-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "attribute.name": "groups",
+            "attribute.nameformat": "Basic",
+            "single": "false",
+            "full.path": "false"
+          }
+        }
+      ]
+    }
+  ]
+}
