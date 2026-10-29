@@ -514,6 +514,7 @@ async fn read_record_for(
     path = "/api/v1/{entity}",
     tag = "entity",
     params(("entity" = String, Path, description = "The entity's logical name"), super::response::SelectParam),
+    request_body(content = Object, description = "The record's field values by logical name; the fields depend on the deployment's metadata (`GET /api/v1/schema/{entity}`)"),
     responses(
         (status = 201, description = "Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag`", body = EntityRecordResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -1396,7 +1397,9 @@ pub(crate) async fn sync_file_field_documents(
     params(
         ("entity" = String, Path, description = "The entity's logical name"),
         ("id" = Uuid, Path, description = "The record"),
+        ("If-Match" = String, Header, description = "The record's row_version as read, quoted (`\"7\"`); missing or malformed is 422 (D-711)"),
     ),
+    request_body(content = Object, description = "The fields to change by logical name; the fields depend on the deployment's metadata (`GET /api/v1/schema/{entity}`)"),
     responses(
         (status = 200, description = "Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag`. With `If-Match-Merge: attributes` over a stale version whose changes touched none of the attributes sent, the update is applied at the current version and `merged_over` lists the attributes others changed (`merged_hidden` counts those the caller cannot read)", body = EntityRecordResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
