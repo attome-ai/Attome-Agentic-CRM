@@ -27,7 +27,7 @@ import { BulkJobRunner, isBulkTerminal } from './bulk-job-runner.service';
  * `user_account`, revocation side effects a plain field write would
  * bypass.
  */
-const NOT_BULK_EDITABLE: ReadonlySet<string> = new Set(['file', 'image', 'formula']);
+const NOT_BULK_EDITABLE: ReadonlySet<string> = new Set(['file', 'image', 'formula', 'rollup']);
 
 export function bulkEditableFields(fields: readonly FieldSchema[]): FieldSchema[] {
   return fields

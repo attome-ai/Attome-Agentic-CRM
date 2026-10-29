@@ -217,7 +217,7 @@ fn attribute_of(state: &EngineState, entity: &str, attribute: &str) -> Result<()
     let known = state.entities.load().get(entity).is_some_and(|m| {
         m.attrs
             .iter()
-            .any(|a| a.logicalname == attribute && !a.is_formula())
+            .any(|a| a.logicalname == attribute && !a.is_computed())
     });
     if known {
         Ok(())

@@ -124,7 +124,7 @@ pub fn descriptor() -> ActionDescriptor {
 /// The JSON Schema of one field's value.
 pub(crate) fn field_schema(attr: &AttrInfo, target: Option<&str>) -> Option<Value> {
     let mut schema = match attr.field_type() {
-        FieldType::Formula => return None,
+        FieldType::Formula | FieldType::Rollup => return None,
         FieldType::Text | FieldType::RichText | FieldType::Icon | FieldType::Color => {
             let mut s = json!({ "type": "string" });
             if let Some(max) = attr.max_length.filter(|m| *m > 0) {

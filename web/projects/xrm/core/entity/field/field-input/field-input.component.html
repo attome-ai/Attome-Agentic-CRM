@@ -315,6 +315,16 @@
       </div>
     }
 
+    @case ('rollup') {
+      <!-- A10-T1: computed from related records — shown, never edited,
+           never sent (the control is disabled). -->
+      <div class="formula-field">
+        <output [id]="field().name" class="xf-input formula-value"
+                [attr.aria-describedby]="field().name + '-rollup-hint'">{{ formulaDisplay() }}</output>
+        <p class="file-hint" [id]="field().name + '-rollup-hint'">{{ rollupHint() }}</p>
+      </div>
+    }
+
     @case ('rich_text') {
       <!-- U9 (D-605): sanitized server-side on every write; the editor
            renders the stored value through Angular's sanitizer. -->

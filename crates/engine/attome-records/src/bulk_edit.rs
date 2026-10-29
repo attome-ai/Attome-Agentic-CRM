@@ -534,7 +534,7 @@ pub async fn plan_bulk_edit(
             .iter()
             .find(|a| a.logicalname == op.attribute)
             .filter(|a| !attome_core::ALL_SYSTEM_COLS.contains(&a.logicalname.as_str()))
-            .filter(|a| !a.is_formula())
+            .filter(|a| !a.is_computed())
             .ok_or_else(|| {
                 AppError::Validation(format!(
                     "{}: not an attribute that can be edited in bulk",

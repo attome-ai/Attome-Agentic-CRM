@@ -140,7 +140,7 @@ pub fn copy_body(
             Some("numbered automatically")
         } else if matches!(attr.storage_type(), FieldType::File | FieldType::Image) {
             Some("a file is not copied")
-        } else if attr.field_type() == FieldType::Formula {
+        } else if attr.is_computed() {
             Some("computed")
         } else if attr.is_write_restricted || engine_owned(name) {
             Some("set by the system")

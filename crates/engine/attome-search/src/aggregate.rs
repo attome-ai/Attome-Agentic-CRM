@@ -96,7 +96,7 @@ fn data_type_of_attr(attr: &attome_core::AttrInfo) -> &'static str {
 fn data_type_of_storage(ft: &attome_core::FieldType) -> &'static str {
     use attome_core::FieldType;
     match ft {
-        FieldType::Number | FieldType::Currency => "number",
+        FieldType::Number | FieldType::Currency | FieldType::Rollup => "number",
         FieldType::Date | FieldType::DateTime => "date",
         FieldType::Bool => "bool",
         FieldType::Choice => "choice",

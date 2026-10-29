@@ -50,7 +50,7 @@ pub(crate) fn self_editable(attr: &AttrInfo) -> bool {
     !NEVER_SELF_EDITABLE.contains(&attr.logicalname.as_str())
         && attr.field_type() != FieldType::Lookup
         && !attr.is_file_backed()
-        && !attr.is_formula()
+        && !attr.is_computed()
         && !attr.requires_field_write_grant()
 }
 

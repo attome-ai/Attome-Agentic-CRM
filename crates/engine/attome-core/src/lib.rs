@@ -163,6 +163,7 @@ pub mod relationship_registry;
 pub mod release_report;
 pub mod rule_registry;
 /// Z11-T10: the SQL-safe part of a rule expression as a bound predicate.
+pub mod rollup;
 pub mod rules_sql;
 pub mod run_payload;
 /// A25-T7: the seam search asks in words through (`attome-ai` implements it).

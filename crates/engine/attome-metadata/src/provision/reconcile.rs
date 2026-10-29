@@ -960,6 +960,7 @@ pub(super) async fn reconcile_attribute_with_lookup_ref(
     validate_attribute_state(key, &desired)?;
     // Y2-T11: `Some` for a formula the database computes.
     let generated = validate_formula_field(db, key, &desired, current.as_ref()).await?;
+    validate_rollup_field(db, key, &desired, current.as_ref()).await?;
     // A17-T1: a lookup from the entity to itself flagged as its hierarchy
     // keeps a stored tree path.
     let hierarchy = field_type == "lookup"
@@ -1323,6 +1324,57 @@ async fn validate_formula_field(
         attome_core::formula::compile_formula(&attrs, desired.options.as_ref()).map_err(named)?;
     }
     attome_core::formula::generated_sql(&attrs, desired.options.as_ref()).map_err(named)
+}
+
+/// A10-T1: a rollup field is computed, so it is never required and has no
+/// max_length; its definition names entities and fields that exist now
+/// (`attome_core::rollup::validate`, against a registry read from the
+/// database, since a bundle may have created them a moment ago); and its
+/// result type, which is its column's type, cannot change once it exists.
+async fn validate_rollup_field(
+    db: &DbPool,
+    key: AttributeKey<'_>,
+    desired: &AttributeState,
+    current: Option<&AttributeRow>,
+) -> Result<(), AppError> {
+    let AttributeKey {
+        entity_logicalname,
+        logicalname,
+        field_type,
+        physical_type,
+        ..
+    } = key;
+    if field_type != attome_core::FieldType::Rollup.as_str() {
+        return Ok(());
+    }
+    let named =
+        |msg: String| AppError::Validation(format!("{entity_logicalname}.{logicalname}: {msg}"));
+    if desired.required {
+        return Err(named(
+            "a rollup field cannot be required (its value is computed)".into(),
+        ));
+    }
+    if desired.max_length.is_some() {
+        return Err(named("max_length does not apply to a rollup field".into()));
+    }
+    if let Some(row) = current
+        && row.field_type_int == attome_core::FieldType::Rollup.to_int()
+    {
+        let current_physical = physical_field_type(field_type, row.options.as_ref());
+        if current_physical != physical_type {
+            return Err(named(format!(
+                "changing a rollup's result_type from {current_physical} to {physical_type} is \
+                 not supported; create a new field"
+            )));
+        }
+    }
+    let registry = attome_core::build_registry(db).await?;
+    attome_core::rollup::validate(entity_logicalname, desired.options.as_ref(), &registry)
+        .map(|_| ())
+        .map_err(|e| match e {
+            AppError::Validation(msg) => named(msg),
+            other => other,
+        })
 }
 
 /// The entity's live attributes other than `except`, as the minimal

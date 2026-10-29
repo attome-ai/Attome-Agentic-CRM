@@ -126,7 +126,7 @@ pub async fn rebuild(
     let mut out = Rebuilt::default();
     let mut patch = Map::new();
     let mut chosen: Vec<(String, Uuid, &'static str)> = Vec::new();
-    for attr in attrs.iter().filter(|a| !a.is_formula()) {
+    for attr in attrs.iter().filter(|a| !a.is_computed()) {
         let name = &attr.logicalname;
         if pinned.contains(name) {
             out.pinned += 1;

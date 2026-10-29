@@ -29,12 +29,15 @@ pub enum FieldType {
     Time,
     Geolocation,
     Json,
+    /// A10-T1: computed from related records (`crate::rollup`), stored in a
+    /// column of its `options.result_type`.
+    Rollup,
 }
 
 /// Every variant, in declaration order. The one list callers iterate — the
 /// bundle vocabulary ([`FieldType::NAMES`]), the admin/reconcile validator,
 /// and the round-trip tests below all derive from it.
-pub const ALL_FIELD_TYPES: [FieldType; 17] = [
+pub const ALL_FIELD_TYPES: [FieldType; 18] = [
     FieldType::Text,
     FieldType::Number,
     FieldType::Currency,
@@ -52,6 +55,7 @@ pub const ALL_FIELD_TYPES: [FieldType; 17] = [
     FieldType::Time,
     FieldType::Geolocation,
     FieldType::Json,
+    FieldType::Rollup,
 ];
 
 /// The storage types a `formula` field (B-R6, D-604) may declare as its
@@ -82,6 +86,7 @@ impl FieldType {
         "time",
         "geolocation",
         "json",
+        "rollup",
     ];
 
     /// Whether `name` is one of [`Self::NAMES`] — the one field-type
@@ -110,6 +115,7 @@ impl FieldType {
             Self::Time => "time",
             Self::Geolocation => "geolocation",
             Self::Json => "json",
+            Self::Rollup => "rollup",
         }
     }
 
@@ -155,6 +161,7 @@ impl FieldType {
             20 => Self::Time,
             21 => Self::Geolocation,
             22 => Self::Json,
+            23 => Self::Rollup,
             _ => Self::Text,
         })
     }
@@ -182,6 +189,7 @@ impl FieldType {
             Self::Time => 20,
             Self::Geolocation => 21,
             Self::Json => 22,
+            Self::Rollup => 23,
         }
     }
 
@@ -206,6 +214,14 @@ impl FieldType {
                 .filter(|t| FORMULA_RESULT_TYPES.contains(t))
                 .and_then(|t| Self::try_from(t).ok())
                 .unwrap_or(Self::Text),
+            // A10-T1: a rollup's column is its result type (a number when
+            // absent or unknown).
+            Self::Rollup => options
+                .and_then(|o| o.get("result_type"))
+                .and_then(Value::as_str)
+                .filter(|t| crate::rollup::ROLLUP_RESULT_TYPES.contains(t))
+                .and_then(|t| Self::try_from(t).ok())
+                .unwrap_or(Self::Number),
             Self::RichText => Self::Text,
             Self::Image => Self::File,
             other => other.clone(),
@@ -220,7 +236,7 @@ impl FieldType {
     /// own presentation.
     pub fn presentation(&self, options: Option<&Value>) -> FieldType {
         match self {
-            Self::Formula => self.storage(options),
+            Self::Formula | Self::Rollup => self.storage(options),
             other => other.clone(),
         }
     }
@@ -250,6 +266,7 @@ impl FieldType {
             // A caller provisioning a column resolves `storage(options)`
             // first; these arms answer for the options-less default.
             Self::Formula => "TEXT",
+            Self::Rollup => "NUMERIC",
             Self::RichText => "TEXT",
             Self::Image if multi => "JSONB",
             Self::Image => "TEXT",
@@ -263,7 +280,7 @@ impl FieldType {
     /// no cast to reach a `TEXT` column.
     pub fn sql_cast(&self, multi: bool) -> &'static str {
         match self {
-            Self::Number => "::numeric",
+            Self::Number | Self::Rollup => "::numeric",
             Self::Currency => "::numeric",
             Self::Date => "::date",
             Self::DateTime => "::timestamptz",
@@ -319,6 +336,7 @@ impl TryFrom<&str> for FieldType {
             "time" => Ok(Self::Time),
             "geolocation" => Ok(Self::Geolocation),
             "json" => Ok(Self::Json),
+            "rollup" => Ok(Self::Rollup),
             other => Err(format!("unknown field type: {other}")),
         }
     }
@@ -328,7 +346,7 @@ impl TryFrom<&str> for FieldType {
 mod tests {
     use super::*;
 
-    const ALL: [FieldType; 17] = ALL_FIELD_TYPES;
+    const ALL: [FieldType; 18] = ALL_FIELD_TYPES;
 
     #[test]
     fn names_match_every_variant_in_order() {

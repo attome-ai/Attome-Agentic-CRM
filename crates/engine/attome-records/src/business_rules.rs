@@ -206,9 +206,9 @@ async fn compile_set_value(
         .ok_or_else(|| format!("'{field}' can no longer be set by a rule"))?;
     if attrs
         .iter()
-        .any(|a| a.logicalname == field && a.is_formula())
+        .any(|a| a.logicalname == field && a.is_computed())
     {
-        return Err(format!("'{field}' is a formula field"));
+        return Err(format!("'{field}' is a formula or rollup field"));
     }
     // A11-T2: with the related records the expression reads declared.
     let schema = match state {

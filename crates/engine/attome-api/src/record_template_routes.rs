@@ -49,7 +49,12 @@ pub const MAX_APPLY: usize = 1_000;
 const MAX_CHILDREN: usize = 20;
 
 /// Field types a template never sets: they hold files or are computed.
-const UNSETTABLE: [FieldType; 3] = [FieldType::File, FieldType::Image, FieldType::Formula];
+const UNSETTABLE: [FieldType; 4] = [
+    FieldType::File,
+    FieldType::Image,
+    FieldType::Formula,
+    FieldType::Rollup,
+];
 
 /// Columns every record has, which a saved template leaves out.
 const SYSTEM_FIELDS: [&str; 10] = [

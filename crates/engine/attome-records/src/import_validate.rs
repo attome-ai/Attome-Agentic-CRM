@@ -360,7 +360,7 @@ pub fn convert_cell(
         FieldType::Date | FieldType::DateTime | FieldType::Time => {
             Value::String(attome_field::western_digits(&text))
         }
-        FieldType::File | FieldType::Image | FieldType::Formula => {
+        FieldType::File | FieldType::Image | FieldType::Formula | FieldType::Rollup => {
             return Err(RowError::new(name, "not_importable"));
         }
         // A2-T3: a json cell is JSON text; a point is `lat,lng` (normalised below).

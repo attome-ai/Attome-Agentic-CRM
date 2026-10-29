@@ -293,25 +293,30 @@ pub(crate) struct UpdateAttributeBody {
 use provision::valid_field_type;
 
 /// B-R6 (D-604): a formula's value is computed, so it is never `required`
-/// and has no `max_length`. Checked up front (reconcile re-checks) so an
-/// `Expensive` contract change is never queued for one.
+/// and has no `max_length`; A10-T1: nor a rollup's. Checked up front
+/// (reconcile re-checks) so an `Expensive` contract change is never queued
+/// for one.
 fn check_formula_contract(
     field_type: &str,
     is_required: bool,
     max_length: Option<i32>,
 ) -> Result<(), AppError> {
-    if field_type != FieldType::Formula.as_str() {
+    let kind = if field_type == FieldType::Formula.as_str() {
+        "formula"
+    } else if field_type == FieldType::Rollup.as_str() {
+        "rollup"
+    } else {
         return Ok(());
-    }
+    };
     if is_required {
-        return Err(AppError::Validation(
-            "a formula field cannot be required (its value is computed)".into(),
-        ));
+        return Err(AppError::Validation(format!(
+            "a {kind} field cannot be required (its value is computed)"
+        )));
     }
     if max_length.is_some() {
-        return Err(AppError::Validation(
-            "max_length does not apply to a formula field".into(),
-        ));
+        return Err(AppError::Validation(format!(
+            "max_length does not apply to a {kind} field"
+        )));
     }
     Ok(())
 }
@@ -761,6 +766,12 @@ async fn do_create_attribute_one(
     if field_type == FieldType::Formula.as_str() && body.options.is_none() {
         return Err(AppError::Validation(
             "a formula field requires options {\"expression\": ..., \"result_type\": ...}".into(),
+        ));
+    }
+    if field_type == FieldType::Rollup.as_str() && body.options.is_none() {
+        return Err(AppError::Validation(
+            "a rollup field requires options {\"function\": ..., \"path\": [...], \"result_type\": ...}"
+                .into(),
         ));
     }
     check_formula_contract(&field_type, body.is_required, body.max_length)?;

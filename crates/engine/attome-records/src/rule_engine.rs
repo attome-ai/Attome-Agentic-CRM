@@ -95,7 +95,7 @@ fn rules_value_of_type(ft: &attome_core::FieldType, v: Option<&Value>) -> RulesV
         return RulesValue::Null;
     };
     match ft {
-        FieldType::Number | FieldType::Currency => v
+        FieldType::Number | FieldType::Currency | FieldType::Rollup => v
             .as_f64()
             .map(RulesValue::Number)
             .unwrap_or(RulesValue::Null),
@@ -299,6 +299,11 @@ pub fn check_target_field_type(
     if attr.is_formula() {
         return Err(AppError::Validation(format!(
             "target_field '{target_field}' is a formula field — its value comes from its own expression"
+        )));
+    }
+    if attr.is_rollup() {
+        return Err(AppError::Validation(format!(
+            "target_field '{target_field}' is a rollup field — its value comes from related records"
         )));
     }
     let Some(target_ty) = rules_type_of(attr) else {

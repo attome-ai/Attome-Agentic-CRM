@@ -229,7 +229,7 @@ pub fn ranked_attributes(
     readable: impl Fn(&attome_core::AttrInfo) -> bool,
     ranks: &Map<String, Value>,
 ) -> Result<Vec<String>, AppError> {
-    let stored = |a: &&attome_core::AttrInfo| !a.is_formula() && readable(a);
+    let stored = |a: &&attome_core::AttrInfo| !a.is_computed() && readable(a);
     if ranks.contains_key("*") {
         return Ok(attrs
             .iter()

@@ -10,7 +10,9 @@ export type FieldType =
   // A2-T1: a time of day (TIME), `HH:MM[:SS]`.
   | 'time'
   // A2-T3: a point `{lat, lng}` and a JSON document (both JSONB).
-  | 'geolocation' | 'json';
+  | 'geolocation' | 'json'
+  // A10-T1: computed from related records (read-only, never sent back).
+  | 'rollup';
 
 // Mirrors attome_core::formula::FormulaOptions (B-R6, D-604). The value
 // is computed by the server on every write; the form shows it read-only.

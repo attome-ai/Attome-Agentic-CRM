@@ -283,7 +283,9 @@ pub fn generated_sql(
 /// `Currency` is a plain NUMERIC amount and evaluates as a number.
 pub fn rules_type(ft: &FieldType) -> Option<Type> {
     match ft {
-        FieldType::Number | FieldType::Currency => Some(Type::Number),
+        // A rollup reaches here as its storage type; its own arm is the
+        // options-less default.
+        FieldType::Number | FieldType::Currency | FieldType::Rollup => Some(Type::Number),
         FieldType::Date | FieldType::DateTime => Some(Type::Date),
         FieldType::Bool => Some(Type::Bool),
         FieldType::Choice => Some(Type::Choice),

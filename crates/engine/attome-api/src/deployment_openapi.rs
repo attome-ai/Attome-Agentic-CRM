@@ -58,7 +58,8 @@ pub(crate) fn attribute_schema(attr: &AttrInfo) -> Value {
         .as_ref()
         .is_some_and(|o| storage.is_multi_valued(o));
     let scalar = match storage {
-        FieldType::Number | FieldType::Currency => json!({ "type": "number" }),
+        // A rollup's storage is its result type; the arm is for completeness.
+        FieldType::Number | FieldType::Currency | FieldType::Rollup => json!({ "type": "number" }),
         FieldType::Bool => json!({ "type": "boolean" }),
         FieldType::Date => json!({ "type": "string", "format": "date" }),
         FieldType::DateTime => json!({ "type": "string", "format": "date-time" }),
@@ -99,7 +100,7 @@ pub(crate) fn attribute_schema(attr: &AttrInfo) -> Value {
     } else {
         scalar
     };
-    if attr.is_formula()
+    if attr.is_computed()
         && let Some(object) = schema.as_object_mut()
     {
         object.insert("readOnly".into(), Value::Bool(true));
@@ -129,7 +130,7 @@ fn entity_schemas(attrs: &[AttrInfo]) -> (Value, Value) {
     for attr in attrs {
         let schema = attribute_schema(attr);
         record.insert(attr.logicalname.clone(), schema.clone());
-        if !attr.is_formula() {
+        if !attr.is_computed() {
             input.insert(attr.logicalname.clone(), schema);
             if attr.is_required {
                 required.push(Value::String(attr.logicalname.clone()));

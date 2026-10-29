@@ -24,7 +24,7 @@ const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 // amended by D-788).
 // ---------------------------------------------------------------------------
 // Field types (xrm_foundation::FieldType::as_str).
-export const FIELD_TYPES = ['text', 'number', 'date', 'bool', 'choice', 'lookup', 'file', 'icon', 'color', 'currency', 'formula', 'rich_text', 'image', 'date_time', 'time', 'geolocation', 'json'];
+export const FIELD_TYPES = ['text', 'number', 'date', 'bool', 'choice', 'lookup', 'file', 'icon', 'color', 'currency', 'formula', 'rich_text', 'image', 'date_time', 'time', 'geolocation', 'json', 'rollup'];
 // Types a change_field_type may target: the column is converted in place by a
 // declarative conversion, so the target must be a scalar a cast can produce.
 export const CONVERTIBLE_TARGET_TYPES = ['text', 'number', 'currency', 'date', 'date_time', 'bool', 'choice', 'rich_text'];

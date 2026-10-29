@@ -486,7 +486,8 @@ export abstract class EngineFormBase implements OnInit {
       // written value is refused (422). A disabled control keeps its loaded
       // value for display but is left out of `FormGroup.value`, so it is
       // never sent.
-      if (f.field_type === 'formula') {
+      // A10-T1: likewise a rollup, computed from related records.
+      if (f.field_type === 'formula' || f.field_type === 'rollup') {
         controls[f.name] = [{ value: def, disabled: true }];
         continue;
       }
@@ -548,8 +549,9 @@ export abstract class EngineFormBase implements OnInit {
       if (locks.has(name)) continue;
       this.policyLocked.delete(name);
       const ctrl = fg.get(name);
-      // A formula stays disabled whatever the rules say (U9, D-604).
-      if (ctrl && this.schemaField(name)?.field_type !== 'formula') ctrl.enable({ emitEvent: false });
+      // A formula or rollup stays disabled whatever the rules say (U9, D-604; A10-T1).
+      const computed = ['formula', 'rollup'].includes(this.schemaField(name)?.field_type ?? '');
+      if (ctrl && !computed) ctrl.enable({ emitEvent: false });
     }
     if (reset) this.syncRecordValue(fg);
   }

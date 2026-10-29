@@ -281,6 +281,18 @@ impl AttrInfo {
         self.field_type() == crate::FieldType::Formula
     }
 
+    /// A10-T1: `true` for a `rollup` field: computed from related records,
+    /// never written by a client.
+    pub fn is_rollup(&self) -> bool {
+        self.field_type() == crate::FieldType::Rollup
+    }
+
+    /// A formula or a rollup: a value the platform computes, which a client,
+    /// a copy, a merge or an import never writes.
+    pub fn is_computed(&self) -> bool {
+        self.is_formula() || self.is_rollup()
+    }
+
     /// Y2-T11: a formula the database computes (`"generated": true`): the
     /// entity engine neither computes nor writes it.
     pub fn is_generated_formula(&self) -> bool {

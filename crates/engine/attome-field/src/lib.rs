@@ -342,6 +342,14 @@ pub fn validate(
                 "is a formula field; its value is computed and cannot be written".into(),
             ));
         }
+        // A10-T1: likewise a rollup, computed from related records.
+        FieldType::Rollup => {
+            return Err(AppError::Validation(
+                "is a rollup field; its value is computed from related records and cannot be \
+                 written"
+                    .into(),
+            ));
+        }
         // B-R7 (D-605): any string; the entity engine sanitizes it against
         // the rich-text allow-list before it is stored.
         FieldType::RichText => {
@@ -717,6 +725,11 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
         // is saved (`attome_core::formula::compile_formula`).
         FieldType::Formula => {
             attome_core::formula::parse_options(Some(options))?;
+        }
+        // A10-T1: the shape only; reconcile checks the entities it names
+        // (`attome_core::rollup::validate`).
+        FieldType::Rollup => {
+            attome_core::rollup::parse_options(Some(options))?;
         }
         FieldType::Date | FieldType::DateTime => {
             let opts = serde_json::from_value::<DateOptions>(options.clone())

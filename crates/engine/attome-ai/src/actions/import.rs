@@ -282,7 +282,7 @@ impl Action for ProposeMapping {
             let headers: Vec<String> = columns.iter().map(|(n, _)| n.clone()).collect();
             let writable: Vec<AttrInfo> = attrs
                 .iter()
-                .filter(|a| a.field_type() != attome_core::FieldType::Formula)
+                .filter(|a| !a.is_computed())
                 .cloned()
                 .collect();
 

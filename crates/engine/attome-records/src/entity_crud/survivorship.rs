@@ -296,7 +296,7 @@ pub(crate) fn apply_picks(
     for (field, source) in picks {
         let known = attrs
             .iter()
-            .any(|a| &a.logicalname == field && !a.is_formula());
+            .any(|a| &a.logicalname == field && !a.is_computed());
         if !known {
             return Err(AppError::Validation(format!(
                 "picks: '{field}' is not a field this merge can set"
@@ -381,7 +381,7 @@ pub(crate) fn compute_fill(
     // A formula field (B-R6, D-604) is recomputed by the fill's own
     // `update_one`, never copied — and `validate_body` refuses a written
     // formula value, so copying one would fail the whole merge.
-    for attr in attrs.iter().filter(|a| !a.is_formula()) {
+    for attr in attrs.iter().filter(|a| !a.is_computed()) {
         let canonical_val = canonical.get(&attr.logicalname);
         let duplicate_val = duplicate.get(&attr.logicalname);
         let canonical_present = canonical_val.is_some_and(|v| !v.is_null());

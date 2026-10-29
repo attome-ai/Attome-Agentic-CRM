@@ -224,7 +224,7 @@ impl Translator<'_> {
             return refuse(format!("{name} holds several values"));
         }
         let ty = match storage {
-            FieldType::Number | FieldType::Currency => Ty::Number,
+            FieldType::Number | FieldType::Currency | FieldType::Rollup => Ty::Number,
             FieldType::Bool => Ty::Bool,
             FieldType::Date | FieldType::DateTime => Ty::Date,
             FieldType::Lookup => Ty::Uuid,

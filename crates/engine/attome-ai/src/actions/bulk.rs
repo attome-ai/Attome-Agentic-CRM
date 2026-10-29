@@ -209,7 +209,7 @@ pub fn check(
     }
     for field in values.keys() {
         let known = meta.attrs.iter().find(|a| &a.logicalname == field);
-        let computed = known.is_some_and(|a| a.field_type() == attome_core::FieldType::Formula);
+        let computed = known.is_some_and(|a| a.is_computed());
         if attome_core::ALL_SYSTEM_COLS.contains(&field.as_str())
             || known.is_none()
             || computed

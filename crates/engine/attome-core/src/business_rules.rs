@@ -218,7 +218,7 @@ impl ConditionFieldKind {
         }
         Some(match attr.storage_type() {
             FieldType::Text | FieldType::Icon | FieldType::Color | FieldType::Formula => Self::Text,
-            FieldType::Number | FieldType::Currency => Self::Number,
+            FieldType::Number | FieldType::Currency | FieldType::Rollup => Self::Number,
             FieldType::Date | FieldType::DateTime => Self::Date,
             FieldType::Bool => Self::Bool,
             FieldType::Choice => {
@@ -2071,11 +2071,11 @@ fn check_set_value(
             "a set_value policy needs a mode ('always' or 'default')",
         ));
     }
-    if attr.is_formula() {
+    if attr.is_computed() {
         issues.push(RuleIssue::new(
             format!("{path}.field"),
             "set_value_formula",
-            format!("'{field}' is a formula field and is always computed"),
+            format!("'{field}' is a formula or rollup field and is always computed"),
         ));
         return;
     }

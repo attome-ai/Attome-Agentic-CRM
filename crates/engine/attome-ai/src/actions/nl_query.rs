@@ -230,6 +230,9 @@ fn shape_of(attr: &AttrInfo) -> Option<Shape> {
         FieldType::Geolocation | FieldType::Json => Shape::Presence,
         // A formula is computed on read, not a stored column.
         FieldType::Formula => return None,
+        // A10-T1: a rollup reads as its result type.
+        FieldType::Rollup if attr.storage_type().is_temporal() => Shape::Date,
+        FieldType::Rollup => Shape::Number,
     })
 }
 

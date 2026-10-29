@@ -157,7 +157,7 @@ export class FieldInputComponent implements OnInit, OnDestroy {
   /** B2-T3: fields whose past values the history popover can put back. */
   readonly hasHistory = computed(() =>
     !!this.recordId() && !!this.entityName()
-    && !['file', 'image', 'formula'].includes(this.field().field_type));
+    && !['file', 'image', 'formula', 'rollup'].includes(this.field().field_type));
 
   /** Puts a past value back into the control; saving the form writes it. */
   restoreValue(value: unknown): void {
@@ -256,7 +256,7 @@ export class FieldInputComponent implements OnInit, OnDestroy {
   readonly policyHidden = computed(() => this.lock()?.effect === 'hidden');
   /** `disabled`: render read-only with a lock naming the rule. A formula is read-only anyway. */
   readonly policyDisabled = computed(() =>
-    this.lock()?.effect === 'disabled' && this.field().field_type !== 'formula');
+    this.lock()?.effect === 'disabled' && !['formula', 'rollup'].includes(this.field().field_type));
   /** Field-attached `error` policies firing on the current values (live, never blocking). */
   readonly ruleMessages = computed(() => this.policy?.ruleErrors(this.field().name) ?? []);
   /** The last save's refusal naming this field. */
@@ -541,9 +541,21 @@ export class FieldInputComponent implements OnInit, OnDestroy {
 
   // ── Formula methods (U9, D-604) ───────────────────────────────────────────
   private get formulaOpts(): FormulaOptions | null {
-    return this.field().field_type === 'formula'
+    // A10-T1: a rollup's options carry a result_type too, which is all the
+    // display below reads.
+    return this.field().field_type === 'formula' || this.field().field_type === 'rollup'
       ? (this.field().options as FormulaOptions | null)
       : null;
+  }
+
+  /** A10-T1: what a rollup computes and over which related records. */
+  rollupHint(): string {
+    const o = this.field().options as { function?: string; path?: { entity?: string }[] } | null;
+    const path = o?.path ?? [];
+    return this.lang.translate('fieldInput.rollupHint', {
+      function: o?.function ?? '',
+      entity: path[path.length - 1]?.entity ?? '',
+    });
   }
 
   formulaExpression(): string { return this.formulaOpts?.expression ?? ''; }
@@ -742,7 +754,7 @@ export class FieldInputComponent implements OnInit, OnDestroy {
       this.currencyCtrlValue.set(value ?? null);
       this.currencyCtrlValueSub = this.ctrl.valueChanges.subscribe(v => this.currencyCtrlValue.set(v));
     }
-    if (this.field().field_type === 'formula') {
+    if (this.field().field_type === 'formula' || this.field().field_type === 'rollup') {
       this.formulaCtrlValue.set(value ?? null);
       this.formulaCtrlValueSub = this.ctrl.valueChanges.subscribe(v => this.formulaCtrlValue.set(v));
     }

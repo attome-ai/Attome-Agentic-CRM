@@ -59,6 +59,15 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Rollup fields, definition (A10-T1): a new `rollup` field type (code 23) holds a value computed
+  from related records. Its options name the function (`count`, `distinct_count`, `sum`, `min`,
+  `max`, `avg`, `first`, `last`), the path to the related records (one to three steps, each an
+  entity and its lookup back), the field aggregated, an optional condition that runs in the
+  database, an optional window of the last N days on a date field, `order_by` for first and last,
+  the mode (`fast` or `exact`) and the `result_type`, which must be the one the function gives.
+  Saving checks all of it against the entities as they are, and the column takes the result type.
+  A rollup is never written by a client, a copy, a merge, an import or a rule, and forms show it
+  read-only. Computing the values comes with A10-T2 and A10-T3; until then the column stays empty.
 - Formula editor (A9-T4): a formula field's card in the entity editor has "Edit formula", which
   opens the expression editor with the field's mode (worked out when saved, or when read). A
   formula worked out when read completes field paths through lookups (`account_ref.region_ref.code`,

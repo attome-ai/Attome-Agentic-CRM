@@ -1184,7 +1184,7 @@ pub async fn undo_merge(
     // The survivor's own fields as they were before the merge.
     let restore_cols: Vec<String> = attrs
         .iter()
-        .filter(|a| !a.is_formula())
+        .filter(|a| !a.is_computed())
         .map(|a| a.logicalname.clone())
         .filter(|name| survivor_before.get(name).is_some())
         .collect();
