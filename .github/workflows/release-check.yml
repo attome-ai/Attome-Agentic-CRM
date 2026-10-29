@@ -23,6 +23,11 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RUST_MIN_STACK: "33554432"
+  # No debug info in CI: the line tables Cargo.toml keeps for local backtraces
+  # made the test binaries outgrow the Linux runner's disk and the Windows
+  # job's time limit. Panic messages still name the failing test.
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
 
 jobs:
   linux:
@@ -141,7 +146,8 @@ jobs:
   windows:
     name: release check (windows)
     runs-on: windows-latest
-    timeout-minutes: 180
+    # GitHub's ceiling for a hosted job; the Windows gate ran past 3 hours.
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v5
       - uses: actions-rust-lang/setup-rust-toolchain@v1
