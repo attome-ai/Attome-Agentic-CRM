@@ -1,18 +1,46 @@
 import {
-  ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked,
+  ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, signal, untracked,
 } from '@angular/core';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, ApiService, LangService, LiveChannel, LiveRecords, TranslatePipe } from '@attome/base';
 import { QueryService } from '@attome/xrm/core/query/data';
 import { Observable, catchError, forkJoin, map, of } from 'rxjs';
 
 import { EntityService } from '@attome/xrm/core/entity';
+
+import { MapPoint, PointsMapComponent } from '../map/points-map.component';
 
 /** The day the board shows, in hours from midnight UTC. */
 export const DAY_FROM_HOUR = 6;
 export const DAY_TO_HOUR = 20;
 
 /** A technician row: the technician profile and the user it names. */
-export interface BoardTechnician { profileId: string; userId: string; name: string; }
+export interface BoardTechnician {
+  profileId: string;
+  userId: string;
+  name: string;
+  /** I3-T2: where the technician starts the day (`base_latitude`/`base_longitude`). */
+  baseLat?: number | null;
+  baseLng?: number | null;
+  /** I3-T2: the technician's last check-in today, only when they consented
+   * to share their location with it (`activity.location_consent`). */
+  lastLat?: number | null;
+  lastLng?: number | null;
+}
+
+/** I3-T2: each user's latest consented check-in among `activities` (newest
+ * first): an activity counts only when `location_consent` is true and both
+ * coordinates are present. Pure. */
+export function lastKnownLocations(activities: Record<string, unknown>[]): Map<string, { lat: number; lng: number }> {
+  const out = new Map<string, { lat: number; lng: number }>();
+  for (const a of activities) {
+    const owner = a['owner_id'];
+    if (typeof owner !== 'string' || out.has(owner) || a['location_consent'] !== true) continue;
+    const lat = coordinate(a['check_in_latitude']);
+    const lng = coordinate(a['check_in_longitude']);
+    if (lat != null && lng != null) out.set(owner, { lat, lng });
+  }
+  return out;
+}
 
 /** A job on the board. */
 export interface BoardJob {
@@ -22,6 +50,37 @@ export interface BoardJob {
   end: string | null;
   assignedTo: string | null;
   rowVersion: number;
+  /** I3-T2: the job site (`site_latitude`/`site_longitude`). */
+  lat?: number | null;
+  lng?: number | null;
+}
+
+/** A coordinate a record field holds, or `null`. Pure. */
+export function coordinate(value: unknown): number | null {
+  const n = typeof value === 'number' ? value : typeof value === 'string' && value.trim() ? Number(value) : NaN;
+  return Number.isFinite(n) ? n : null;
+}
+
+/** I3-T2: the board's map points: each job at its site (waiting jobs in the
+ * warning tone) and each technician at their base. Pure. */
+export function boardPoints(
+  jobs: BoardJob[], technicians: BoardTechnician[], baseLabel: (name: string) => string,
+  lastLabel: (name: string) => string = baseLabel,
+): MapPoint[] {
+  const points: MapPoint[] = [];
+  for (const j of jobs) {
+    if (j.lat == null || j.lng == null || Math.abs(j.lat) > 90 || Math.abs(j.lng) > 180) continue;
+    points.push({ id: j.id, label: j.title, lat: j.lat, lng: j.lng, tone: j.assignedTo ? 'primary' : 'warning' });
+  }
+  for (const t of technicians) {
+    if (t.baseLat == null || t.baseLng == null || Math.abs(t.baseLat) > 90 || Math.abs(t.baseLng) > 180) continue;
+    points.push({ id: `technician:${t.profileId}`, label: baseLabel(t.name), lat: t.baseLat, lng: t.baseLng, tone: 'success' });
+  }
+  for (const t of technicians) {
+    if (t.lastLat == null || t.lastLng == null || Math.abs(t.lastLat) > 90 || Math.abs(t.lastLng) > 180) continue;
+    points.push({ id: `technician-now:${t.profileId}`, label: lastLabel(t.name), lat: t.lastLat, lng: t.lastLng, tone: 'primary' });
+  }
+  return points;
 }
 
 /** A proposed visit from the day plan (I2-T2's `Ghost`). */
@@ -71,7 +130,7 @@ interface CandidateList { work_order_id: string; rules: string[]; candidates: { 
   selector: 'xrm-resource-board',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe],
+  imports: [PointsMapComponent, TranslatePipe],
   template: `
     <section class="rb" [attr.dir]="lang.isRtl() ? 'rtl' : 'ltr'" data-testid="resource-board">
       <header class="rb-head">
@@ -126,6 +185,12 @@ interface CandidateList { work_order_id: string; rules: string[]; candidates: { 
           </ul>
         </aside>
       </div>
+      @if (mapPoints().length > 0) {
+        <div class="rb-map" data-testid="rb-map">
+          <h3>{{ 'resourceBoard.map' | translate }}</h3>
+          <xrm-points-map [points]="mapPoints()" label="resourceBoard.map" />
+        </div>
+      }
     </section>
   `,
   styles: [`
@@ -150,6 +215,7 @@ interface CandidateList { work_order_id: string; rules: string[]; candidates: { 
     .rb-unassigned li[draggable] { padding: .375rem; border: 1px solid var(--color-border, #ccc); border-radius: 4px; cursor: grab; }
     .rb-message { color: var(--color-danger, #c53030); margin: 0; }
     .rb-muted { color: var(--color-text-secondary, #666); }
+    .rb-map h3 { margin: 0 0 .5rem; font-size: .875rem; }
   `],
 })
 export class ResourceBoardComponent {
@@ -172,11 +238,31 @@ export class ResourceBoardComponent {
 
   readonly date = computed(() => this.day() ?? new Date().toISOString().slice(0, 10));
   readonly unassigned = computed(() => this.jobs().filter(j => !j.assignedTo));
+  /** I3-T2: jobs and technicians on the map. */
+  readonly mapPoints = computed(() =>
+    boardPoints(this.jobs(), this.technicians(),
+      name => this.lang.translate('resourceBoard.base', { name }),
+      name => this.lang.translate('resourceBoard.lastSeen', { name })));
+  private readonly live = inject(LiveChannel);
+  private reloadTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     effect(() => {
       const date = this.date();
       untracked(() => this.load(date));
+    });
+    // I3-T2: a work order or technician changed anywhere: the board reloads
+    // (once a second at most), so the map and the rows follow live.
+    const unwatchOrders = this.live.watch('work_order');
+    const unwatchTechs = this.live.watch('technician_profile');
+    const unwatchActivities = this.live.watch('activity');
+    const sub = this.live.records.subscribe(frame => this.onLive(frame));
+    inject(DestroyRef).onDestroy(() => {
+      unwatchOrders();
+      unwatchTechs();
+      unwatchActivities();
+      sub.unsubscribe();
+      if (this.reloadTimer) clearTimeout(this.reloadTimer);
     });
   }
 
@@ -271,6 +357,17 @@ export class ResourceBoardComponent {
     });
   }
 
+  /** I3-T2: one reload a second at most while changes arrive. */
+  onLive(frame: LiveRecords): void {
+    const relevant = 'overflow' in frame
+      || frame.changes.some(c => c.entity === 'work_order' || c.entity === 'technician_profile' || c.entity === 'activity');
+    if (!relevant || this.reloadTimer) return;
+    this.reloadTimer = setTimeout(() => {
+      this.reloadTimer = null;
+      this.load(this.date());
+    }, 1000);
+  }
+
   private load(date: string): void {
     const from = `${date}T00:00:00Z`;
     const next = new Date(Date.parse(from) + 24 * 3600 * 1000).toISOString();
@@ -280,11 +377,23 @@ export class ResourceBoardComponent {
         entity: 'work_order', page: 1, page_size: 200,
         filters: [{ field: 'scheduled_start', op: 'gte', value: from }, { field: 'scheduled_start', op: 'lt', value: next }],
       }),
+      // Today's check-ins: a technician who consented shows where they last
+      // checked in. Optional: a deployment without activities still loads.
+      checkins: this.query.execute({
+        entity: 'activity', page: 1, page_size: 200, order_by: 'modified_at', order_dir: 'desc',
+        filters: [{ field: 'modified_at', op: 'gte', value: from }, { field: 'modified_at', op: 'lt', value: next }],
+      }).pipe(catchError(() => of(null))),
     }).pipe(catchError((e: ApiError) => { this.message.set(this.lang.errorText(e)); return of(null); })).subscribe(res => {
       if (!res) return;
+      const lastKnown = lastKnownLocations(res.checkins?.data.records ?? []);
       this.technicians.set(res.techs.data.records
         .filter(r => r['user_ref'])
-        .map(r => ({ profileId: String(r['id']), userId: String(r['user_ref']), name: String(r['name'] ?? r['user_ref']) })));
+        .map(r => ({
+          profileId: String(r['id']), userId: String(r['user_ref']), name: String(r['name'] ?? r['user_ref']),
+          baseLat: coordinate(r['base_latitude']), baseLng: coordinate(r['base_longitude']),
+          lastLat: lastKnown.get(String(r['user_ref']))?.lat ?? null,
+          lastLng: lastKnown.get(String(r['user_ref']))?.lng ?? null,
+        })));
       this.jobs.set(res.jobs.data.records.map(r => ({
         id: String(r['id']),
         title: String(r['title'] ?? r['work_order_number'] ?? r['id']),
@@ -292,6 +401,8 @@ export class ResourceBoardComponent {
         end: (r['scheduled_end'] as string | null) ?? null,
         assignedTo: (r['assigned_to'] as string | null) ?? null,
         rowVersion: Number(r['row_version'] ?? 0),
+        lat: coordinate(r['site_latitude']),
+        lng: coordinate(r['site_longitude']),
       })));
     });
   }

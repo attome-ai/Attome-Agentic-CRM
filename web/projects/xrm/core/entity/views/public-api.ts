@@ -14,8 +14,13 @@ export { CalendarViewComponent } from './calendar/calendar-view.component';
 export { TimelineViewComponent } from './timeline/timeline-view.component';
 // B15-T2 — the map view; MapLibre loads on first use, in its own chunk.
 export { MapViewComponent, pointOf } from './map/map-view.component';
+// I3-T2 — the map both the map view and the dispatch board draw on.
+export { MAP_LIBRARY_LOADER, PointsMapComponent } from './map/points-map.component';
+export type { MapLibraryLoader, MapPoint, PointTone } from './map/points-map.component';
 // I3-T1 — the timeline's resource mode: the dispatch board.
-export { DAY_FROM_HOUR, DAY_TO_HOUR, ResourceBoardComponent, axisHours, barGeometry } from './timeline/resource-board.component';
+export {
+  DAY_FROM_HOUR, DAY_TO_HOUR, ResourceBoardComponent, axisHours, barGeometry, boardPoints, coordinate, lastKnownLocations,
+} from './timeline/resource-board.component';
 export type { BoardGhost, BoardJob, BoardTechnician } from './timeline/resource-board.component';
 // V4-T1 — the project booking board, the timeline's resource mode for projects.
 export {

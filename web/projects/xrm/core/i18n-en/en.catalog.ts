@@ -3093,6 +3093,9 @@ export const xrmEn = {
   },
   resourceBoard: {
     title: 'Dispatch board',
+    map: 'Jobs and technicians on the map',
+    base: '{name} (base)',
+    lastSeen: '{name} (last check-in)',
     propose: 'Propose the day',
     grid: 'Technicians and their jobs through the day',
     technician: 'Technician',

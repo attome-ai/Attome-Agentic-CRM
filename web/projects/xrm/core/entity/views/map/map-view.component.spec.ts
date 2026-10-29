@@ -72,8 +72,11 @@ describe('MapViewComponent (B15-T2)', () => {
     });
     const fixture = TestBed.createComponent(MapViewComponent);
     fixture.componentRef.setInput('entityName', 'account');
-    fixture.detectChanges();
-    await new Promise(resolve => setTimeout(resolve));
+    // The view loads, then the map draws (its library and settings are awaited).
+    for (let i = 0; i < 3; i++) {
+      fixture.detectChanges();
+      await new Promise(resolve => setTimeout(resolve));
+    }
     fixture.detectChanges();
     return { fixture, maps, execute };
   }

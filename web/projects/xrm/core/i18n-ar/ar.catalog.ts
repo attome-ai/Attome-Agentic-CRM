@@ -3014,6 +3014,9 @@ export const xrmAr = {
     language: 'اللغة',
   },
   resourceBoard: {
+    map: 'المهام والفنيون على الخريطة',
+    base: '{name} (نقطة الانطلاق)',
+    lastSeen: '{name} (آخر تسجيل حضور)',
     title: 'لوحة التوزيع',
     propose: 'اقترح خطة اليوم',
     grid: 'الفنيون ومهامهم خلال اليوم',
