@@ -1938,6 +1938,9 @@ export const xrmAr = {
       },
     },
     explain: {
+      definition: 'ما هذا الرقم', basis: 'مجمَّع حسب {attribute} ({grain}).',
+      currency: 'العملة: {code}.', computedAt: 'حُسب {time}.', glossary: 'مدخل المسرد',
+      lineageBelow: 'مصدر المؤشر موضّح أدناه.',
       title: 'كيف تم الحساب', inspect: 'فحص', calculation: 'الحساب', filters: 'عوامل التصفية',
       scope: 'النطاق', accessLevel: 'السجلات التي يسمح بها وصولك ({level}).', liveRows: 'السجلات غير النشطة لا تُحتسب أبداً.',
       target: 'الهدف: {target}', rowsAreResult: 'هذه الصفوف هي النتيجة؛ لا يوجد تجميع للتعمق فيه.',

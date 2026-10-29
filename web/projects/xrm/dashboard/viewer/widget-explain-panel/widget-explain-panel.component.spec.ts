@@ -81,4 +81,15 @@ describe('WidgetExplainPanelComponent', () => {
     expect(text).toContain('Won deals');
     expect(text).not.toContain('Scope');
   });
+
+  it('shows the bilingual definition and when a metric was computed (P7-T12)', () => {
+    const text = render(explanation({
+      definition_en: 'Total Amount of Deals where Status is won',
+      definition_ar: 'مجموع Amount في Deals حيث Status يساوي won',
+      computed_at: '2026-09-17T09:00:00Z',
+      measure_basis: { attribute: 'closed_on', grain: 'month' },
+    } as unknown as Partial<WidgetExplanation>));
+    expect(text).toContain('Total Amount of Deals where Status is won');
+    expect(text).toContain('closed_on');
+  });
 });

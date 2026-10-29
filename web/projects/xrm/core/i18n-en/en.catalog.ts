@@ -1984,6 +1984,9 @@ export const xrmEn = {
     },
     explain: {
       title: 'How this was calculated', inspect: 'Inspect', calculation: 'Calculation', filters: 'Filters',
+      definition: 'What this number is', basis: 'Bucketed by {attribute} ({grain}).',
+      currency: 'Currency: {code}.', computedAt: 'Computed {time}.', glossary: 'Glossary entry',
+      lineageBelow: 'Where the metric comes from is shown below.',
       scope: 'Scope', accessLevel: 'Records your {level} access allows.', liveRows: 'Inactive records never count.',
       target: 'Target: {target}', rowsAreResult: 'These rows are the result; there is no aggregate to drill.',
       freshness: 'Freshness',

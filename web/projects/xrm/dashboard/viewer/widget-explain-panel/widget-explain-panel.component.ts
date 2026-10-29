@@ -1,9 +1,32 @@
 import {
   AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnInit, inject, input, output, signal, viewChild,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { NgTemplateOutlet } from '@angular/common';
 import { ApiError, LangService, TranslatePipe } from '@attome/base';
+import { entityFormRoute } from '@attome/xrm/core/entity';
 import { DashboardService, MetricLineageNode, WidgetExplanation } from '@attome/xrm/dashboard/data';
+
+/** P7-T7's explanation facts, as the panel reads them. */
+interface ExplainFacts {
+  definition_en?: string;
+  definition_ar?: string;
+  measure_basis?: { attribute: string; grain: string } | null;
+  computed_at?: string | null;
+  currency?: { code: string } | null;
+  glossary_term_id?: string | null;
+  lineage_url?: string | null;
+}
+
+/** P7-T12: what the panel shows of them. */
+export interface ExplainWords {
+  definition: string | null;
+  basis: { attribute: string; grain: string } | null;
+  computedAt: string | null;
+  currency: string | null;
+  glossaryTermId: string | null;
+  lineageUrl: string | null;
+}
 
 /**
  * Dashboard 10/10 Phase 3.2 — "How was this calculated?".
@@ -20,7 +43,7 @@ import { DashboardService, MetricLineageNode, WidgetExplanation } from '@attome/
   selector:   'xrm-widget-explain-panel',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports:    [TranslatePipe, NgTemplateOutlet],
+  imports:    [RouterLink, TranslatePipe, NgTemplateOutlet],
   styleUrls:  ['../widget-records-drawer/widget-records-drawer.component.css', './widget-explain-panel.component.css'],
   templateUrl: './widget-explain-panel.component.html',
   host: { '(document:keydown.escape)': 'closed.emit()' },
@@ -75,6 +98,27 @@ export class WidgetExplainPanelComponent implements OnInit, AfterViewInit {
     if (value === null || value === undefined) return '';
     if (Array.isArray(value)) return value.map(v => String(v)).join(', ');
     return typeof value === 'string' ? value : JSON.stringify(value);
+  }
+
+  /** P7-T12: the explanation's words and computation facts (P7-T7), in
+   * the reader's language. Read loosely so the panel does not wait on those
+   * fields' generated types. */
+  words(): ExplainWords | null {
+    const e = this.explanation() as unknown as ExplainFacts | null;
+    if (!e) return null;
+    const definition = (this.lang.isRtl() ? e.definition_ar : e.definition_en) || e.definition_en || null;
+    return {
+      definition,
+      basis: e.measure_basis ?? null,
+      computedAt: e.computed_at ? this.time(e.computed_at) : null,
+      currency: e.currency?.code ?? null,
+      glossaryTermId: e.glossary_term_id ?? null,
+      lineageUrl: e.lineage_url ?? null,
+    };
+  }
+
+  glossaryRoute(): string[] {
+    return entityFormRoute('glossary_term');
   }
 
   lineageChildren(node: MetricLineageNode): MetricLineageNode[] {

@@ -15,6 +15,21 @@
   } @else if (error()) {
     <div class="xf-error-banner" role="alert"><i class="las la-exclamation-circle"></i> {{ error() }}</div>
   } @else if (explanation(); as e) {
+    @if (words(); as w) {
+      @if (w.definition) {
+        <section class="xwe-section" data-testid="definition">
+          <h3>{{ 'dashboard.explain.definition' | translate }}</h3>
+          <p dir="auto">{{ w.definition }}</p>
+          @if (w.basis; as b) { <p>{{ 'dashboard.explain.basis' | translate: { attribute: b.attribute, grain: b.grain } }}</p> }
+          @if (w.currency) { <p>{{ 'dashboard.explain.currency' | translate: { code: w.currency } }}</p> }
+          @if (w.computedAt) { <p data-testid="computed-at">{{ 'dashboard.explain.computedAt' | translate: { time: w.computedAt } }}</p> }
+          @if (w.glossaryTermId) {
+            <p><a [routerLink]="glossaryRoute()" [queryParams]="{ id: w.glossaryTermId }">{{ 'dashboard.explain.glossary' | translate }}</a></p>
+          }
+          @if (w.lineageUrl) { <p>{{ 'dashboard.explain.lineageBelow' | translate }}</p> }
+        </section>
+      }
+    }
     @if (e.structured; as s) {
       <section class="xwe-section">
         <h3>{{ 'dashboard.explain.calculation' | translate }}</h3>
