@@ -25,7 +25,7 @@
 )]
 
 use attome_db::DbPool;
-use attome_search::legs::stage1::{ExactKeyLeg, FuzzyLeg, LexicalLeg, PrefixLeg};
+use attome_search::legs::stage1::{ExactKeyLeg, FuzzyLeg, LexicalLeg, PrefixLeg, TranslitKeyLeg};
 use attome_search::{SqlLeg, normalize_ar, push_leg};
 use attome_security::visibility::PolymorphicVisibility;
 use attome_server::security::{AccessLevel, SecurityContext};
@@ -387,4 +387,44 @@ async fn the_fused_phase_returns_nothing_to_a_caller_with_no_privilege() {
         "a caller holding no read privilege must get nothing from the fused \
          statement, not merely from each leg in isolation"
     );
+}
+
+/// A25-T12: a name typed in the other script finds the record. The row is
+/// indexed as the corpus indexes a title (`translit_keys`), and the query is
+/// looked up as search looks it up (`translit_query_key`): `Abdullah` finds
+/// `عبدالله الأحمد`, and a different name does not.
+#[tokio::test]
+async fn transliterated_name_found() {
+    let db = skip_if_no_db!(test_db().await);
+    let entity = format!("test_translit_{}", Uuid::now_v7().simple());
+    let record_id = Uuid::now_v7();
+    let title = "عبدالله الأحمد";
+    let keys: Vec<String> = attome_search::corpus::translit_keys(title)
+        .iter()
+        .map(|k| normalize_ar(k))
+        .collect();
+    sqlx::query(
+        "INSERT INTO search_index             (corpus, entity_logicalname, record_id, title, title_norm,              body_display, body_indexed, exact_keys, tsv)          VALUES ('record', $1, $2, $3, $4, '', '', $5, to_tsvector('attome_search', $4))",
+    )
+    .bind(&entity)
+    .bind(record_id)
+    .bind(title)
+    .bind(normalize_ar(title))
+    .bind(&keys)
+    .execute(&db)
+    .await
+    .expect("seed a search index row");
+
+    let c = ctx(true, Vec::new());
+    let vis = PolymorphicVisibility::new(&c, &HashMap::new(), &HashSet::new(), None);
+    let leg_for = |query: &str| TranslitKeyLeg {
+        key: attome_search::corpus::translit_query_key(&normalize_ar(query))
+            .unwrap_or_else(|| panic!("{query} has a transliteration key")),
+    };
+    for query in ["Abdullah", "abdallah", "Abd Allah"] {
+        let found = run_leg(&db, &leg_for(query), &vis, &entity).await;
+        assert_eq!(found, vec![record_id], "{query}");
+    }
+    let found = run_leg(&db, &leg_for("Khalid"), &vis, &entity).await;
+    assert!(found.is_empty(), "another name finds nothing: {found:?}");
 }

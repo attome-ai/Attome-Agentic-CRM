@@ -86,6 +86,37 @@ impl SqlLeg for PhoneKeyLeg {
     }
 }
 
+/// R1, transliteration (A25-T12): a name typed in the other script
+/// (`Abdullah` for `عبدالله`) finds the record through the transliteration
+/// keys indexed with its title (`crate::corpus::translit_keys`). Scored just
+/// under an exact key: a spelling match, not an identity.
+pub struct TranslitKeyLeg {
+    pub key: String,
+}
+
+impl std::fmt::Debug for TranslitKeyLeg {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TranslitKeyLeg").finish_non_exhaustive()
+    }
+}
+
+impl SqlLeg for TranslitKeyLeg {
+    fn id(&self) -> &'static str {
+        "R1.translit"
+    }
+    fn phase(&self) -> LegPhase {
+        LegPhase::Immediate
+    }
+    fn push_candidates(&self, qb: &mut QueryBuilder<'_, Postgres>) {
+        qb.push(
+            "SELECT t.record_id, t.entity_logicalname, 0.9::real AS score \
+             FROM search_index t WHERE t.exact_keys @> ARRAY[",
+        );
+        qb.push_bind(crate::normalize_ar(&self.key));
+        qb.push("]::text[]");
+    }
+}
+
 /// R2 — prefix / typeahead.
 ///
 /// `LIKE norm || '%'` against the `text_pattern_ops` btree. The query is bound

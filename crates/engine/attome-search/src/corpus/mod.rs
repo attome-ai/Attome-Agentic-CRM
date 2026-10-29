@@ -183,6 +183,62 @@ pub fn exact_keys_for(attr_name: &str, value: &str, default_country: &str) -> Ve
     key.filter(|k| !k.is_empty()).into_iter().collect()
 }
 
+/// A25-T12: the prefix of a transliteration key among a row's exact keys.
+pub const TRANSLIT_PREFIX: &str = "tr:";
+/// A25-T12: the shortest transliteration skeleton kept. Shorter ones
+/// (`Ali` is `al`) would match too many unrelated names.
+pub const MIN_TRANSLIT_KEY: usize = 4;
+/// A25-T12: the most title words transliterated.
+const MAX_TRANSLIT_WORDS: usize = 8;
+
+fn translit_of(text: &str) -> Option<String> {
+    let key = attome_core::match_normalize::translit_key(text);
+    (key.chars().count() >= MIN_TRANSLIT_KEY).then(|| format!("{TRANSLIT_PREFIX}{key}"))
+}
+
+/// A25-T12: the keys that let a title be found from its spelling in the
+/// other script (`Abdullah` finds `عبدالله`, `يوسف` finds `Yousef`): the
+/// transliteration skeleton (`attome_core::match_normalize::translit_key`)
+/// of each word, of each pair of adjacent words (`Abd Allah` is one name)
+/// and of the whole title when it is short. Skeletons under
+/// [`MIN_TRANSLIT_KEY`] letters are left out. Pure.
+pub fn translit_keys(title: &str) -> Vec<String> {
+    let words: Vec<&str> = title
+        .split_whitespace()
+        .filter(|w| w.chars().any(char::is_alphabetic))
+        .take(MAX_TRANSLIT_WORDS)
+        .collect();
+    let mut keys: Vec<String> = Vec::new();
+    let mut push = |key: Option<String>| {
+        if let Some(key) = key
+            && !keys.contains(&key)
+        {
+            keys.push(key);
+        }
+    };
+    for word in &words {
+        push(translit_of(word));
+    }
+    for pair in words.windows(2) {
+        push(translit_of(&pair.join(" ")));
+    }
+    if (3..=4).contains(&words.len()) {
+        push(translit_of(&words.join(" ")));
+    }
+    keys
+}
+
+/// A25-T12: the transliteration key a query is looked up by: the skeleton
+/// of the whole query (one name, possibly written as two words), when it is
+/// letters only and long enough. Pure.
+pub fn translit_query_key(query: &str) -> Option<String> {
+    let q = query.trim();
+    if q.is_empty() || q.split_whitespace().count() > 2 || q.chars().any(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    translit_of(q)
+}
+
 /// A25-T2: a query's phone form, when it is a phone number written with
 /// digits only (spaces, dashes, brackets and a leading `+` allowed), to look
 /// up beside the query itself. Pure.
@@ -377,6 +433,8 @@ pub async fn project_record_in(
             keys.extend(exact_keys_for(&attr.logicalname, &value, default_country));
         }
     }
+    // A25-T12: the title found from its spelling in the other script.
+    keys.extend(translit_keys(&title));
     keys.dedup();
 
     Ok(Some((
@@ -414,6 +472,23 @@ mod tests {
     /// so its value never reaches a `tsvector`. Matchability *is* the
     /// disclosure: someone who can confirm a salary by typing it and seeing
     /// which record comes back has read the field, whatever the read path says.
+    #[test]
+    fn translit_keys_meet_across_scripts() {
+        let arabic = translit_keys("عبدالله الأحمد");
+        let query = translit_query_key("Abdullah").expect("a long enough key");
+        assert!(arabic.contains(&query), "{arabic:?} lacks {query}");
+        // Written as two words, the name still meets.
+        assert_eq!(translit_query_key("Abd Allah"), Some(query.clone()));
+        assert!(translit_keys("Abd Allah Saleh").contains(&query));
+        assert!(translit_keys("محمد").contains(&translit_query_key("Mohammed").unwrap()));
+        // Short skeletons, digits and long queries are not looked up.
+        assert_eq!(translit_query_key("Ali"), None);
+        assert_eq!(translit_query_key("INV 2041"), None);
+        assert_eq!(translit_query_key("one two three"), None);
+        assert!(translit_keys("Al").is_empty());
+        assert!(arabic.iter().all(|k| k.starts_with(TRANSLIT_PREFIX)));
+    }
+
     #[test]
     fn sensitive_attributes_are_never_projected() {
         let attrs = vec![

@@ -59,6 +59,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Search finds a name from its spelling in the other script (A25-T12): `Abdullah`, `Abdallah` and
+  `Abd Allah` find `عبدالله`. Titles are indexed with transliteration keys (four letters or more, so
+  short names do not over-match); records indexed earlier gain them when next indexed. The builder
+  page `docs/search-builder.md` covers searchable attributes, synonyms, stop words, pins and counts.
 - A `map` view kind (B15-T2, migration 0332): `view_metadata.location_field` names a geolocation field
   (`label_field` and `color_field` optional); the list page draws the view's records on a map with
   nearby records clustered, and lists them underneath. The server fetches the tiles for signed-in

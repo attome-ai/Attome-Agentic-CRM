@@ -43,7 +43,9 @@ use uuid::Uuid;
 use crate::access_cache::AccessMapCache;
 use crate::knowledge::{DEFAULT_KNOWLEDGE_LIMIT, KnowledgeCitation, MAX_KNOWLEDGE_LIMIT};
 use crate::legs::fuse::{build_phase_with_shape, interpret_counts};
-use crate::legs::stage1::{ExactKeyLeg, FuzzyLeg, LexicalLeg, PhoneKeyLeg, PrefixLeg};
+use crate::legs::stage1::{
+    ExactKeyLeg, FuzzyLeg, LexicalLeg, PhoneKeyLeg, PrefixLeg, TranslitKeyLeg,
+};
 use crate::legs::{LegPhase, SqlLeg};
 use crate::router::{Audience, Route};
 use crate::telemetry::GapTopic;
@@ -97,6 +99,13 @@ fn legs_for(
         legs.push(Box::new(PhoneKeyLeg {
             phone_key: phone.to_owned(),
         }));
+    }
+    // A25-T12: a name typed in the other script finds its record.
+    if !matches!(route, Route::Exact | Route::Phrase)
+        && legs.iter().any(|l| l.id() == "R1.exact")
+        && let Some(key) = crate::corpus::translit_query_key(normalized)
+    {
+        legs.push(Box::new(TranslitKeyLeg { key }));
     }
     legs
 }
