@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ATTOME_CONFIG, ApiService, LangService } from '@attome/base';
 import { QueryService, ViewAdminService } from '@attome/xrm/core/query/data';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -56,10 +56,7 @@ describe('MapViewComponent (B15-T2)', () => {
       metadata: {},
       data: { columns: [{ name: 'name', is_visible: true }], records, total, page: 1, page_size: 500, total_pages: 1 },
     }));
-    const get = vi.fn(() => of({ items: [
-      { key: 'maps.tile_url', value: 'https://tiles.example/{z}/{x}/{y}.png' },
-      { key: 'maps.attribution', value: 'Example tiles' },
-    ] }));
+    const get = vi.fn(() => of({ items: [{ key: 'maps.attribution', value: 'Example tiles' }] }));
     TestBed.configureTestingModule({
       imports: [MapViewComponent],
       providers: [
@@ -68,6 +65,7 @@ describe('MapViewComponent (B15-T2)', () => {
         ]) } },
         { provide: QueryService, useValue: { execute } },
         { provide: ApiService, useValue: { get } },
+        { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://api.test' } },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },
         { provide: MAP_LIBRARY_LOADER, useValue: () => Promise.resolve(library) },
       ],
@@ -80,7 +78,7 @@ describe('MapViewComponent (B15-T2)', () => {
     return { fixture, maps, execute };
   }
 
-  it('places the records with a location, clustered, on the configured tiles', async () => {
+  it('places the records with a location, clustered, on tiles from the server', async () => {
     const { fixture, maps, execute } = await create([
       { id: 'a', name: 'Riyadh office', location: { lat: 24.71, lng: 46.67 } },
       { id: 'b', name: 'Jeddah office', location: '21.49,39.19' },
@@ -90,7 +88,8 @@ describe('MapViewComponent (B15-T2)', () => {
     expect(maps.length).toBe(1);
     const map = maps[0];
     const style = map.options['style'] as { sources: { tiles: { tiles: string[]; attribution: string } } };
-    expect(style.sources.tiles.tiles).toEqual(['https://tiles.example/{z}/{x}/{y}.png']);
+    // The browser asks the deployment, never the tile server (the page's CSP).
+    expect(style.sources.tiles.tiles).toEqual(['http://api.test/api/v1/maps/tiles/{z}/{x}/{y}']);
     expect(style.sources.tiles.attribution).toBe('Example tiles');
     const records = map.sources['records'] as { cluster: boolean; data: { features: unknown[] } };
     expect(records.cluster).toBe(true);

@@ -193,6 +193,16 @@
                 "glob": "maplibre-gl.css",
                 "input": "node_modules/maplibre-gl/dist",
                 "output": "maplibre"
+              },
+              {
+                "glob": "maplibre-gl.mjs",
+                "input": "node_modules/maplibre-gl/dist",
+                "output": "maplibre"
+              },
+              {
+                "glob": "maplibre-gl-worker.mjs",
+                "input": "node_modules/maplibre-gl/dist",
+                "output": "maplibre"
               }
             ],
             "styles": [

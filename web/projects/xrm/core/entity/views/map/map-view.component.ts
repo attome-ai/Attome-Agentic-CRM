@@ -3,21 +3,31 @@ import {
   signal, untracked, viewChild,
 } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ATTOME_CONFIG, ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
 import { AvailableView, MapViewMetadata, QueryService, ViewAdminService } from '@attome/xrm/core/query/data';
 import type * as MapLibre from 'maplibre-gl';
 
 /** The most records one map reads. */
 export const MAP_MAX_POINTS = 500;
-/** B15-T2: the defaults of the `maps.tile_url` and `maps.attribution` settings. */
-const DEFAULT_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+/** B15-T2: the default of the `maps.attribution` setting. */
 const DEFAULT_ATTRIBUTION = '© OpenStreetMap contributors';
+/** Where the app serves MapLibre (`angular.json` assets): its module, its
+ * worker beside it and its stylesheet, all from the deployment, which the
+ * page's CSP requires (`script-src 'self'`; the worker is found next to the
+ * module). Not bundled: at about a megabyte it would be the largest chunk. */
+const MAPLIBRE_ASSETS = 'maplibre/';
 
-/** Loads MapLibre — its own lazy chunk, fetched the first time a map is shown. */
+/** Loads MapLibre the first time a map is shown. */
 export type MapLibraryLoader = () => Promise<typeof MapLibre>;
 export const MAP_LIBRARY_LOADER = new InjectionToken<MapLibraryLoader>('MAP_LIBRARY_LOADER', {
   providedIn: 'root',
-  factory: () => () => import('maplibre-gl'),
+  factory: () => {
+    const document = inject(DOCUMENT);
+    return () => {
+      const url = new URL(`${MAPLIBRE_ASSETS}maplibre-gl.mjs`, document.baseURI).href;
+      return import(/* @vite-ignore */ url) as Promise<typeof MapLibre>;
+    };
+  },
 });
 
 /** A point the map can place. */
@@ -41,9 +51,10 @@ export function pointOf(value: unknown): { lat: number; lng: number } | null {
 
 /**
  * `kind = map` (B15-T2): each record of the view's bound query at its
- * geolocation field, over raster tiles from the `maps.tile_url` setting
- * (OpenStreetMap's by default, or the customer's own tile server), with
- * nearby records clustered. The records come from the same
+ * geolocation field, over raster tiles the server fetches from the tile
+ * server the `maps.tile_url` setting names (`GET /api/v1/maps/tiles/...`,
+ * so the browser talks only to the deployment), with nearby records
+ * clustered. The records come from the same
  * `POST /api/v1/query/execute` feed a list uses, so record security is the
  * feed's. The records are also listed under the map, for keyboards and
  * screen readers, and open on click there or on the map.
@@ -91,6 +102,7 @@ export class MapViewComponent {
   readonly recordClick = output<string>();
 
   private readonly api = inject(ApiService);
+  private readonly config = inject(ATTOME_CONFIG);
   private readonly querySvc = inject(QueryService);
   private readonly viewSvc = inject(ViewAdminService);
   private readonly lang = inject(LangService);
@@ -183,20 +195,17 @@ export class MapViewComponent {
     });
   }
 
-  /** The tile settings, as the caller resolves them; the defaults on failure. */
+  /** The tiles: the server's tile route, and the credit the
+   * `maps.attribution` setting gives (its default on failure). */
   private async tiles(): Promise<{ url: string; attribution: string }> {
+    const url = `${this.config.apiUrl}/api/v1/maps/tiles/{z}/{x}/{y}`;
     try {
       const settings = await new Promise<{ items: { key: string; value: unknown }[] }>((resolve, reject) =>
         this.api.get<{ items: { key: string; value: unknown }[] }>('/api/v1/settings/me').subscribe({ next: resolve, error: reject }));
-      const value = (key: string) => settings.items.find(i => i.key === key)?.value;
-      const url = value('maps.tile_url');
-      const attribution = value('maps.attribution');
-      return {
-        url: typeof url === 'string' && url ? url : DEFAULT_TILES,
-        attribution: typeof attribution === 'string' ? attribution : DEFAULT_ATTRIBUTION,
-      };
+      const attribution = settings.items.find(i => i.key === 'maps.attribution')?.value;
+      return { url, attribution: typeof attribution === 'string' ? attribution : DEFAULT_ATTRIBUTION };
     } catch {
-      return { url: DEFAULT_TILES, attribution: DEFAULT_ATTRIBUTION };
+      return { url, attribution: DEFAULT_ATTRIBUTION };
     }
   }
 
@@ -205,7 +214,7 @@ export class MapViewComponent {
     if (this.document.querySelector('link[data-maplibre]')) return;
     const link = this.document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'maplibre/maplibre-gl.css';
+    link.href = `${MAPLIBRE_ASSETS}maplibre-gl.css`;
     link.setAttribute('data-maplibre', '');
     this.document.head.appendChild(link);
   }
@@ -242,6 +251,9 @@ export class MapViewComponent {
       center: [0, 20],
       zoom: 1,
       attributionControl: { compact: true },
+      // The tile route needs the session cookie, also when the API is
+      // another origin (local development).
+      transformRequest: url => ({ url, credentials: 'include' }),
     });
     this.map = map;
     map.on('load', () => {
