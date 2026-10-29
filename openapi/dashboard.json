@@ -8450,7 +8450,8 @@
           "timezone",
           "timezone_source",
           "applied_filters",
-          "records"
+          "records",
+          "some_records_hidden"
         ],
         "properties": {
           "applied_filters": {
@@ -8510,6 +8511,10 @@
                 "$ref": "#/components/schemas/BucketKey"
               }
             ]
+          },
+          "some_records_hidden": {
+            "type": "boolean",
+            "description": "P7-T3: for a KPI widget, whether the caller's read scope on the\nmetric's entity is narrower than the whole entity the metric was\ncomputed over, so the number counts records this list leaves out.\nOnly the flag: how many are hidden is never counted or returned."
           },
           "timezone": {
             "type": "string"

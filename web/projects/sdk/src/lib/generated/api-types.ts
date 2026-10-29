@@ -66002,6 +66002,13 @@ export interface components {
             published_version_number?: number | null;
             records: components["schemas"]["StructuredRecords"];
             series_key?: null | components["schemas"]["BucketKey"];
+            /**
+             * @description P7-T3: for a KPI widget, whether the caller's read scope on the
+             *     metric's entity is narrower than the whole entity the metric was
+             *     computed over, so the number counts records this list leaves out.
+             *     Only the flag: how many are hidden is never counted or returned.
+             */
+            some_records_hidden: boolean;
             timezone: string;
             timezone_source: components["schemas"]["TimezoneSource"];
             /** Format: uuid */
