@@ -22,6 +22,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use attome_config::{LdapGroupRole, LdapSection};
+use ldap3::adapters::{Adapter, EntriesOnly, PagedResults};
 use ldap3::{Ldap, LdapConnAsync, LdapConnSettings, Scope, SearchEntry, ldap_escape};
 use rustls::pki_types::CertificateDer;
 use rustls::pki_types::pem::PemObject;
@@ -124,6 +125,76 @@ impl Directory {
         let found = self.find(username).await?;
         self.bind_as(&found.dn, password).await?;
         Ok(found)
+    }
+
+    /// Q4-T2: everyone `auth.ldap.user_filter` finds under `base_dn` (its
+    /// `{username}` read as any value, [`list_filter`]), with their email
+    /// address and groups, read in pages of [`LIST_PAGE_SIZE`]. All or
+    /// nothing: a search the directory cuts short, or more than
+    /// [`MAX_LISTED`] people, is an error, never a shorter list, because a
+    /// sync reads who is missing as who has left.
+    pub async fn list_people(&self) -> Result<Vec<DirectoryUser>, LdapError> {
+        let mut ldap = self.connect().await?;
+        let bound = ldap
+            .with_timeout(self.timeout())
+            .simple_bind(&self.settings.bind_dn, self.settings.bind_password.expose())
+            .await
+            .map_err(|e| unavailable("service bind", e))?;
+        if bound.rc != 0 {
+            let _ = ldap.unbind().await;
+            return Err(LdapError::Unavailable(format!(
+                "the directory refused the service account (result {})",
+                bound.rc
+            )));
+        }
+        let filter = list_filter(&self.settings.user_filter);
+        let attributes = vec![
+            self.settings.email_attribute.clone(),
+            self.settings.group_attribute.clone(),
+        ];
+        let adapters: Vec<Box<dyn Adapter<_, _>>> = vec![
+            Box::new(EntriesOnly::new()),
+            Box::new(PagedResults::new(LIST_PAGE_SIZE)),
+        ];
+        let mut search = ldap
+            .with_timeout(self.timeout())
+            .streaming_search_with(
+                adapters,
+                &self.settings.base_dn,
+                Scope::Subtree,
+                &filter,
+                attributes,
+            )
+            .await
+            .map_err(|e| unavailable("list", e))?;
+        let mut people = Vec::new();
+        loop {
+            let entry = match search.next().await {
+                Ok(Some(entry)) => SearchEntry::construct(entry),
+                Ok(None) => break,
+                Err(e) => {
+                    let _ = ldap.unbind().await;
+                    return Err(unavailable("list", e));
+                }
+            };
+            if people.len() == MAX_LISTED {
+                let _ = ldap.unbind().await;
+                return Err(LdapError::Unavailable(format!(
+                    "the directory lists more than {MAX_LISTED} people; narrow auth.ldap.base_dn or user_filter"
+                )));
+            }
+            people.push(DirectoryUser {
+                email: values(&entry, &self.settings.email_attribute)
+                    .into_iter()
+                    .next(),
+                groups: values(&entry, &self.settings.group_attribute),
+                dn: entry.dn,
+            });
+        }
+        let finished = search.finish().await;
+        let _ = ldap.unbind().await;
+        finished.success().map_err(|e| unavailable("list", e))?;
+        Ok(people)
     }
 
     /// The service account's search for the one entry `username` names.
@@ -235,6 +306,18 @@ fn values(entry: &SearchEntry, attribute: &str) -> Vec<String> {
         .collect()
 }
 
+/// Q4-T2: people read per page when listing the directory.
+pub const LIST_PAGE_SIZE: i32 = 500;
+
+/// Q4-T2: the most people one listing reads.
+pub const MAX_LISTED: usize = 100_000;
+
+/// Q4-T2: `template` matching every person: its `{username}` read as any
+/// value (`*`, a presence match, RFC 4515 §3). Pure.
+pub fn list_filter(template: &str) -> String {
+    template.replace("{username}", "*")
+}
+
 /// `template` with `{username}` replaced by `username`, escaped so it can
 /// only ever be a value (RFC 4515 §3). Pure.
 pub fn user_filter(template: &str, username: &str) -> String {
@@ -313,6 +396,17 @@ mod tests {
             "timeout_secs": 1,
         }))
         .expect("an ldap section")
+    }
+
+    #[test]
+    fn the_list_filter_matches_everyone_the_sign_in_filter_could() {
+        assert_eq!(
+            list_filter(
+                "(&(objectClass=user)(|(sAMAccountName={username})(userPrincipalName={username})))"
+            ),
+            "(&(objectClass=user)(|(sAMAccountName=*)(userPrincipalName=*)))"
+        );
+        assert_eq!(list_filter("(uid={username})"), "(uid=*)");
     }
 
     #[test]

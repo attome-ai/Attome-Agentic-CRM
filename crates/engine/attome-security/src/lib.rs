@@ -20,6 +20,8 @@ pub mod grant_expiry;
 /// Q12-T3: a delegated administrator cannot grant more than they hold.
 pub mod grants;
 pub mod impersonation;
+/// Q4-T2: the nightly directory sync.
+pub mod ldap_sync;
 pub mod mfa;
 pub mod mfa_policy;
 pub mod model;

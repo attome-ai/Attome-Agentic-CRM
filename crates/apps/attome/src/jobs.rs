@@ -3185,6 +3185,8 @@ const DEDUP_KEY_LEAD_ASSIGNMENT: &str = "lead-assignment";
 const DEDUP_KEY_AGGREGATE_CACHE_MARKS: &str = "aggregate-cache-marks";
 const DEDUP_KEY_ROLLUP_FAST: &str = "rollup-fast";
 const DEDUP_KEY_ROLLUP_HEAL: &str = "rollup-heal";
+/// Q4-T2: the nightly directory sync (a registered job type).
+const DEDUP_KEY_LDAP_SYNC: &str = "ldap-sync";
 const DEDUP_KEY_LEAD_FIRST_TOUCH: &str = "lead-first-touch";
 const DEDUP_KEY_LEAD_REBALANCE: &str = "lead-rebalance";
 /// E14-T8: closed web sessions summarised onto timelines (a registered job type).
@@ -3567,6 +3569,10 @@ pub const ROLLUP_BACKFILL: attome_jobs::JobType =
 /// P9-T10: a metric's past periods, twelve per run.
 pub const METRIC_BACKFILL: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_metric::backfill::BACKFILL_JOB, 1);
+
+/// Q4-T2: users and their groups' roles synced from the directory, nightly.
+pub const LDAP_SYNC: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_security::ldap_sync::LDAP_SYNC_JOB, 1);
 
 /// A10-T4: rollups verified and healed nightly.
 pub const ROLLUP_HEAL: attome_jobs::JobType =
@@ -4840,6 +4846,21 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            LDAP_SYNC,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                // Off unless auth.ldap is configured.
+                let Some(settings) = state.base.config.auth.ldap.clone() else {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                };
+                attome_security::ldap_sync::run(&state, &settings)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             ROLLUP_HEAL,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let healed = attome_records::rollup_heal::heal(&state)
@@ -5929,6 +5950,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         }
         EngineJob::Registered(job) if job.name == ROLLUP_FAST.name => DEDUP_KEY_ROLLUP_FAST,
         EngineJob::Registered(job) if job.name == ROLLUP_HEAL.name => DEDUP_KEY_ROLLUP_HEAL,
+        EngineJob::Registered(job) if job.name == LDAP_SYNC.name => DEDUP_KEY_LDAP_SYNC,
         EngineJob::Registered(job) if job.name == LEAD_FIRST_TOUCH.name => {
             DEDUP_KEY_LEAD_FIRST_TOUCH
         }
@@ -7235,6 +7257,22 @@ pub fn spawn_rollup_fast_scheduler(db: DbPool, interval: std::time::Duration) {
             "rollup fast mode",
         ),
         Err(error) => tracing::error!(%error, "rollup fast mode: not scheduled"),
+    }
+}
+
+/// Q4-T2: nightly, users and roles synced from the directory (a no-op
+/// without `auth.ldap`).
+pub fn spawn_ldap_sync_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(LDAP_SYNC.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_LDAP_SYNC,
+            "ldap sync",
+        ),
+        Err(error) => tracing::error!(%error, "ldap sync: not scheduled"),
     }
 }
 

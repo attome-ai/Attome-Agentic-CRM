@@ -200,6 +200,13 @@ nothing. A role may set its own mode instead, stricter or not.
   a role an administrator gave is never touched, and a role carrying system administration is
   never given by a group. A directory password counts as a password: SSO-only rules refuse it and
   a role that requires a second factor asks for one.
+  Every night the `ldap_sync` job lists everyone `user_filter` finds (its `{username}` read as any
+  value, paged, all or nothing), links each person with an email address to their account as a
+  sign-in would (creating it only with `create_users`), applies their groups' roles, and disables
+  the active directory-linked accounts the directory no longer lists, as an administrator's
+  disable does. An empty listing disables no one, and neither does one that would disable more
+  than half the linked accounts (beyond five); the sync logs an error instead. Break-glass and
+  reserved accounts are never disabled, and a disabled account is never re-enabled by the sync.
 - **Passkeys.** A person adds passkeys on Settings > Security after a fresh step-up
   (`passkey_manage`); a passkey is then a second factor like an authenticator app
   (`POST /api/v1/auth/mfa/passkey/start` and `/verify` with the pending sign-in token), and a

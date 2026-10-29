@@ -392,6 +392,18 @@ pub async fn link_oidc_identity(
     link_external_identity(db, provider_key, sub, email, mode).await
 }
 
+/// Q4-T2: [`link_oidc_identity`] for the directory sync, which has no
+/// licence handle (the licence argument is unused, D-778).
+pub async fn link_directory_identity(
+    db: &DbPool,
+    provider_key: &str,
+    sub: &str,
+    email: &str,
+    mode: &LinkMode,
+) -> Result<Uuid, AppError> {
+    link_external_identity(db, provider_key, sub, email, mode).await
+}
+
 /// Q1-T8: what a provider does the first time it sees a person.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LinkMode {

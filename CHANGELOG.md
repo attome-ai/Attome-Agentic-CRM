@@ -62,6 +62,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Nightly directory sync (Q4-T2): with `auth.ldap` set, the `ldap_sync` job links the directory's
+  people to their accounts, applies their groups' roles, and disables accounts whose entry is
+  gone. A listing that is empty, or would disable more than half the linked accounts, disables
+  no one.
 - Metric backfill (P9-T10): `POST /api/v1/metrics/{id}/backfill` with `{from, to}` queues a job
   that computes a builder or formula metric's past periods, twelve per run, as snapshots marked
   `is_backfill` (migration 0334). A period that already has a snapshot is skipped.
