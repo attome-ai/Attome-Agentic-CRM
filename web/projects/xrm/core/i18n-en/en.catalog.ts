@@ -4902,6 +4902,19 @@ export const xrmEn = {
     saved: 'Saved as the draft template {name} with {values} values. Publish it to offer it on New.',
   },
   // Z11-T14: the rule-language expression editor.
+  formulaEditor: {
+    title: 'Formula of {field}',
+    edit: 'Edit formula',
+    mode: 'When it is worked out',
+    stored: 'When the record is saved',
+    readTime: 'When the record is read',
+    storedHint: 'Reads only this record\'s own fields, and is kept with the record.',
+    readTimeHint: 'Worked out each time the record is read, so it can follow up to {hops} lookups (account_ref.owner_ref.region).',
+    resultType: 'Gives a {type} value.',
+    expression: 'Formula',
+    save: 'Save formula',
+    cancel: 'Cancel',
+  },
   expressions: {
     label: 'Expression',
     suggestions: 'Fields and functions',

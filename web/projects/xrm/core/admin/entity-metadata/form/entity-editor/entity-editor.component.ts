@@ -12,6 +12,7 @@ import {
   DataProfileService, fillRates,
 } from '@attome/xrm/core/admin/data';
 import { OwnerLayerBadgeComponent } from '@attome/xrm/core/generic/components';
+import { FormulaEditorComponent } from '@attome/xrm/core/admin/formula-editor';
 import {
   FieldChangeDialogComponent, type FieldChangeMode,
 } from '../../field-changes/field-change-dialog/field-change-dialog.component';
@@ -150,6 +151,7 @@ const SYSTEM_FIELDS: SystemField[] = [
   imports:    [
     OwnerLayerBadgeComponent, FormsModule, RouterLink, TranslatePipe,
     FieldChangeDialogComponent, RecoveryArchiveComponent, BinSettingsComponent, FillRateBadgeComponent,
+    FormulaEditorComponent,
   ],
   styleUrls:  ['../../../../../styles/admin-page.css', './entity-editor.component.css'],
   templateUrl: './entity-editor.component.html',
@@ -228,6 +230,15 @@ export class EntityEditorComponent implements OnInit {
   // now resolved through the i18n pipeline (`fieldTypes.*` catalog keys) so
   // this admin-only label is Arabic-first like the rest of the product.
   typeLabel(ft: XrmFieldType): string { return this.lang.translate(`fieldTypes.${ft}`); }
+
+  /** A9-T4: the formula field whose editor is open, by id. */
+  readonly editingFormula = signal<string | null>(null);
+
+  /** A9-T4: a formula was saved; close its editor and reload the fields. */
+  onFormulaSaved(): void {
+    this.editingFormula.set(null);
+    this.onFieldChangeClosed(true);
+  }
 
   /** U9 (D-604) — a formula field's expression, shown on its card. */
   formulaExpression(options: unknown): string {

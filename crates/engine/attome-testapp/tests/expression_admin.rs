@@ -1,6 +1,7 @@
 //! Z11-T12: `/api/v1/admin/expressions` over HTTP. Validate reports an
 //! error with the exact span it points at, explains a sample record's value
-//! with its evaluation trace, and the spec lists the V2 functions.
+//! with its evaluation trace, and the spec lists the V2 functions. A9-T4: a
+//! path through a lookup compiles and previews its related value.
 
 #![recursion_limit = "512"]
 #![allow(
@@ -16,6 +17,11 @@ use uuid::Uuid;
 
 /// A fresh entity with a text `title` and a number `amount`.
 async fn entity(app: &TestApp) -> String {
+    entity_with_id(app).await.0
+}
+
+/// [`entity`], with the entity's id.
+async fn entity_with_id(app: &TestApp) -> (String, String) {
     let entity = format!("expr_{}", &Uuid::now_v7().simple().to_string()[..12]);
     let (status, created) = app
         .request(
@@ -38,7 +44,7 @@ async fn entity(app: &TestApp) -> String {
     }
     let registry = attome_core::build_registry(app.db()).await.unwrap();
     app.state.entities.swap(registry);
-    entity
+    (entity, entity_id)
 }
 
 // feature: Z11
@@ -150,6 +156,74 @@ fn validate_explains_sample_value() {
             )
             .await;
         assert_eq!(status, StatusCode::NOT_FOUND);
+    });
+}
+
+// feature: A9
+#[test]
+fn validate_reads_through_a_lookup() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let (parent, parent_id) = entity_with_id(&app).await;
+        let (child, child_id) = entity_with_id(&app).await;
+        let (status, field) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/admin/entities/{child_id}/fields"),
+                Some(json!({ "logicalname": "parent_ref", "name": "parent_ref",
+                             "field_type": "lookup", "lookup_entity_ref": parent_id })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::CREATED, "{field}");
+        let registry = attome_core::build_registry(app.db()).await.unwrap();
+        app.state.entities.swap(registry);
+
+        let (status, region) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/{parent}"),
+                Some(json!({ "title": "North", "amount": 1 })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::CREATED, "{region}");
+        let (status, record) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/{child}"),
+                Some(json!({ "title": "Order", "amount": 5, "parent_ref": region["id"] })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::CREATED, "{record}");
+
+        // The path compiles, and the sample's value is the related record's.
+        let (status, body) = app
+            .request(
+                Method::POST,
+                "/api/v1/admin/expressions/validate",
+                Some(json!({
+                    "expression": "parent_ref.title",
+                    "entity": child,
+                    "sample_record_id": record["id"],
+                })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["ok"], true, "{body}");
+        assert_eq!(body["result_type"], "text", "{body}");
+        assert_eq!(body["value"], "North", "{body}");
+
+        // A field the related entity does not have is still an error.
+        let (status, body) = app
+            .request(
+                Method::POST,
+                "/api/v1/admin/expressions/validate",
+                Some(json!({ "expression": "parent_ref.missing", "entity": child })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["ok"], false, "{body}");
     });
 }
 

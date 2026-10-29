@@ -4814,6 +4814,19 @@ export const xrmAr = {
     saved: 'حُفظ كقالب مسودة باسم {name} يضم {values} قيم. انشره ليظهر عند الإنشاء.',
   },
   // Z11-T14: محرر تعابير القواعد.
+  formulaEditor: {
+    title: 'معادلة {field}',
+    edit: 'تعديل المعادلة',
+    mode: 'متى تُحسب',
+    stored: 'عند حفظ السجل',
+    readTime: 'عند قراءة السجل',
+    storedHint: 'تقرأ حقول هذا السجل فقط، وتُحفظ معه.',
+    readTimeHint: 'تُحسب في كل مرة يُقرأ فيها السجل، لذا يمكنها تتبّع حتى {hops} من حقول الربط (account_ref.owner_ref.region).',
+    resultType: 'تعطي قيمة من نوع {type}.',
+    expression: 'المعادلة',
+    save: 'حفظ المعادلة',
+    cancel: 'إلغاء',
+  },
   expressions: {
     label: 'التعبير',
     suggestions: 'الحقول والدوال',

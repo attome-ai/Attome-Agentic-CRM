@@ -59,6 +59,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Formula editor (A9-T4): a formula field's card in the entity editor has "Edit formula", which
+  opens the expression editor with the field's mode (worked out when saved, or when read). A
+  formula worked out when read completes field paths through lookups (`account_ref.region_ref.code`,
+  up to five), and the in-browser check knows them. The preview on a sample record now follows
+  lookups too: `POST /api/v1/admin/expressions/validate` declares the paths an expression reads and
+  reads the sample's related values the way a formula's are read.
 - Metadata layers guide (Y11-T16): `docs/metadata-layers.md` explains the platform, app and customer
   layers and how the ledger's four owner names map onto them, upgrade conflicts and their
   resolution, resets, app order and clashes, reserved names (`attome_`, `xrm_`), locks, the agent

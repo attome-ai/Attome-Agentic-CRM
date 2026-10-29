@@ -64,6 +64,61 @@ export function rulesSchemaOf(schema: EntitySchema): RulesSchema {
   return { fields };
 }
 
+/**
+ * A9-T4: the identifier being typed at `caret` and the lookups before it:
+ * in `parent_ref.owner_ref.na|`, `segments` is `['parent_ref', 'owner_ref']`
+ * and `word` is `na`.
+ */
+export function pathAt(text: string, caret: number): { start: number; segments: string[]; word: string } {
+  const { start, word } = wordAt(text, caret);
+  let from = start;
+  while (from > 0 && /[A-Za-z0-9_.]/.test(text[from - 1])) from--;
+  const before = text.slice(from, start);
+  const segments = before.endsWith('.') ? before.slice(0, -1).split('.') : [];
+  return { start, segments: segments.every(s => /^[A-Za-z_][A-Za-z0-9_]*$/.test(s)) ? segments : [], word };
+}
+
+/**
+ * A9-T4: the dotted field chains an expression reads (`parent_ref.title`),
+ * outside string literals and not followed by `(` (a method call). Pure.
+ */
+export function dottedPaths(text: string): string[][] {
+  const code = text.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, m => ' '.repeat(m.length));
+  const out = new Map<string, string[]>();
+  for (const m of code.matchAll(/(?<![A-Za-z0-9_.])[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)+(?![A-Za-z0-9_]|\s*\()/g)) {
+    out.set(m[0], m[0].split('.'));
+  }
+  return [...out.values()];
+}
+
+/** A9-T4: the entity a lookup field of `schema` points at, or `null`. */
+export function lookupTarget(schema: EntitySchema, field: string): string | null {
+  const f = schema.fields?.find(x => x.name === field);
+  if (!f || f.field_type !== 'lookup') return null;
+  return (f.options as { target_entity_name?: string | null } | null)?.target_entity_name ?? null;
+}
+
+/**
+ * A9-T4: `base` with the resolved paths declared as the server declares them
+ * for a formula: one lookup as that lookup's related fields, more as paths.
+ */
+export function withPaths(base: RulesSchema, paths: { segments: string[]; type: string }[]): RulesSchema {
+  const related: Record<string, Record<string, string>> = { ...(base.related ?? {}) };
+  const declared: Record<string, string> = { ...(base.paths ?? {}) };
+  for (const { segments, type } of paths) {
+    if (segments.length === 2) {
+      related[segments[0]] = { ...(related[segments[0]] ?? {}), [segments[1]]: type };
+    } else {
+      declared[segments.join('.')] = type;
+    }
+  }
+  return {
+    ...base,
+    ...(Object.keys(related).length ? { related } : {}),
+    ...(Object.keys(declared).length ? { paths: declared } : {}),
+  };
+}
+
 /** The catalog key for an evaluator error code (`rules.field.unknown`). */
 export function errorKey(code: string): string {
   return `expressions.errors.${code.replace(/\./g, '_')}`;

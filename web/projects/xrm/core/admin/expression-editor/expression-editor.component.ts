@@ -5,7 +5,9 @@ import { firstValueFrom } from 'rxjs';
 import { ApiService, LangService, RulesEvaluatorService, TranslatePipe } from '@attome/base';
 import type { RulesAnswer, RulesDiagnostic, RulesSchema } from '@attome/base';
 import type { EntitySchema } from '@attome/xrm';
-import { errorKey, indexOfByte, replaceWord, rulesSchemaOf, wordAt } from './expression-text';
+import {
+  dottedPaths, errorKey, indexOfByte, lookupTarget, pathAt, replaceWord, rulesSchemaOf, withPaths, wordAt,
+} from './expression-text';
 
 /** One built-in function, as `GET /api/v1/admin/expressions/spec` lists it. */
 interface FunctionSpec {
@@ -44,6 +46,11 @@ interface Suggestion {
  * and previews the value on a sample record through
  * `POST /api/v1/admin/expressions/validate`, which also says whether the
  * expression runs in the database. The code itself is always left-to-right.
+ *
+ * A9-T4: with `lookupHops` above 0 (a formula read when its record is read),
+ * a field path through lookups (`parent_ref.owner_ref.region`) completes
+ * field by field, each lookup's target schema read once, and the in-browser
+ * check declares the paths the text uses, as the server does.
  */
 @Component({
   selector: 'xrm-expression-editor',
@@ -70,6 +77,8 @@ export class ExpressionEditorComponent {
   readonly preview = input(true);
   /** The accessible name of the code input. */
   readonly label = input('');
+  /** A9-T4: how many lookups a field path may follow; 0 reads only the record's own fields. */
+  readonly lookupHops = input(0);
 
   /** The suggestion list's id, unique per editor, for `aria-controls`. */
   protected readonly listId = `xee-list-${nextId++}`;
@@ -108,15 +117,18 @@ export class ExpressionEditorComponent {
   });
 
   private timer: ReturnType<typeof setTimeout> | undefined;
+  /** A9-T4: entity schemas by logical name, each read once. */
+  private readonly schemas = new Map<string, Promise<EntitySchema | null>>();
 
   constructor() {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.timer));
     effect(() => {
       const entity = this.entity();
       this.schema.set(null);
-      this.api.get<EntitySchema>(`/api/v1/schema/${encodeURIComponent(entity)}`).subscribe({
-        next: s => { this.schema.set(rulesSchemaOf(s)); this.scheduleValidate(); },
-        error: () => this.schema.set({ fields: {} }),
+      void this.schemaOf(entity).then(s => {
+        if (entity !== this.entity()) return;
+        this.schema.set(s ? rulesSchemaOf(s) : { fields: {} });
+        if (s) this.scheduleValidate();
       });
     });
     effect(() => {
@@ -162,7 +174,52 @@ export class ExpressionEditorComponent {
     this.scheduleValidate();
   }
 
+  /** An entity's schema, read once; `null` when it cannot be read. */
+  private schemaOf(entity: string): Promise<EntitySchema | null> {
+    let cached = this.schemas.get(entity);
+    if (!cached) {
+      cached = firstValueFrom(this.api.get<EntitySchema>(`/api/v1/schema/${encodeURIComponent(entity)}`))
+        .catch(() => null);
+      this.schemas.set(entity, cached);
+    }
+    return cached;
+  }
+
+  /** A9-T4: the schema at the end of `lookups` from the editor's entity, or `null`. */
+  private async schemaAt(lookups: string[]): Promise<EntitySchema | null> {
+    if (lookups.length > this.lookupHops()) return null;
+    let schema = await this.schemaOf(this.entity());
+    for (const lookup of lookups) {
+      const target = schema ? lookupTarget(schema, lookup) : null;
+      schema = target ? await this.schemaOf(target) : null;
+    }
+    return schema;
+  }
+
+  /** A9-T4: the fields of the entity a typed path reaches. */
+  private async suggestPath(segments: string[], word: string, text: string, caret: number): Promise<void> {
+    const schema = await this.schemaAt(segments);
+    if (this.value() !== text || this.caret() !== caret) return;
+    const lower = word.toLowerCase();
+    const types = schema ? rulesSchemaOf(schema).fields ?? {} : {};
+    this.suggestions.set(Object.entries(types)
+      .filter(([name]) => name.toLowerCase().startsWith(lower) && name !== word)
+      .map(([name, ty]) => {
+        const target = schema && ty === 'lookup' ? lookupTarget(schema, name) : null;
+        return { insert: name, label: name, detail: target ? `${ty} → ${target}` : ty };
+      })
+      .slice(0, 8));
+    this.active.set(0);
+  }
+
   private suggest(): void {
+    if (this.lookupHops() > 0) {
+      const path = pathAt(this.value(), this.caret());
+      if (path.segments.length > 0) {
+        void this.suggestPath(path.segments, path.word, this.value(), this.caret());
+        return;
+      }
+    }
     const { word } = wordAt(this.value(), this.caret());
     if (!word) { this.suggestions.set([]); return; }
     const lower = word.toLowerCase();
@@ -191,11 +248,25 @@ export class ExpressionEditorComponent {
     const src = this.value();
     if (!schema || !src.trim()) { this.answer.set(null); return; }
     try {
-      this.answer.set(await this.rules.validate(src, schema, this.version()));
+      const declared = this.lookupHops() > 0 ? withPaths(schema, await this.resolvePaths(src)) : schema;
+      if (src !== this.value()) return;
+      this.answer.set(await this.rules.validate(src, declared, this.version()));
     } catch {
       // The browser module did not load: the preview and the server still check.
       this.answer.set(null);
     }
+  }
+
+  /** A9-T4: the type of each field path `src` reads that resolves; one
+   * that does not is left out, so the check names it. */
+  private async resolvePaths(src: string): Promise<{ segments: string[]; type: string }[]> {
+    const out: { segments: string[]; type: string }[] = [];
+    for (const segments of dottedPaths(src)) {
+      const schema = await this.schemaAt(segments.slice(0, -1));
+      const type = schema ? rulesSchemaOf(schema).fields?.[segments[segments.length - 1]] : undefined;
+      if (type) out.push({ segments, type });
+    }
+    return out;
   }
 
   protected async runPreview(): Promise<void> {

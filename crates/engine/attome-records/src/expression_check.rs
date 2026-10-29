@@ -2,6 +2,10 @@
 //! agent: its result type, or each error with the byte span it points at;
 //! whether it runs in the database (`attome_core::rules_sql`) and, for a
 //! sample record the caller can read, its value with the evaluation trace.
+//! A9-T4: an expression that reads through lookups (`account_ref.region`,
+//! up to [`attome_core::formula::MAX_FORMULA_HOPS`] of them, as a `read_time`
+//! formula may) is checked with those paths declared, and the sample's
+//! related values are read the way a formula's are when its record is read.
 //! Writes nothing. `POST /api/v1/admin/expressions/validate` and the
 //! `expression.validate` agent tool both call [`check_expression`].
 
@@ -75,7 +79,17 @@ pub async fn check_expression(
     sample_record_id: Option<Uuid>,
 ) -> Result<ExpressionCheck, AppError> {
     let (_, entity_name, attrs, _) = crate::entity_crud::resolve_entity(state, entity).await?;
-    let schema = schema_for_entity(&attrs);
+    let mut schema = schema_for_entity(&attrs);
+    // A9-T4: the lookup paths the expression reads, as a formula resolves them.
+    let mut paths = None;
+    if attome_core::formula::reads_through_lookup(expression) {
+        let registry = crate::formula_paths::registry_for(state, &entity_name).await?;
+        let refs = attome_core::formula::formula_paths(expression, &attrs, &registry);
+        if !refs.is_empty() {
+            schema = attome_core::business_rules::with_related_schema(schema, &refs);
+            paths = Some((registry, refs));
+        }
+    }
     let mut out = ExpressionCheck {
         ok: false,
         result_type: None,
@@ -117,7 +131,11 @@ pub async fn check_expression(
         let record = crate::entity_crud::read_record(state, ctx, &entity_name, record_id).await?;
         let empty = serde_json::Map::new();
         let data = record.data().as_object().unwrap_or(&empty);
-        let rules_ctx = context_for_record(Utc::now(), &attrs, data);
+        let mut rules_ctx = context_for_record(Utc::now(), &attrs, data);
+        if let Some((registry, refs)) = &paths {
+            rules_ctx =
+                crate::formula_paths::with_paths(state, registry, data, refs, rules_ctx, 0).await?;
+        }
         match compiled.eval_traced(&rules_ctx) {
             Ok((value, trace)) => {
                 out.value = Some(json_from_rules_value(&value));

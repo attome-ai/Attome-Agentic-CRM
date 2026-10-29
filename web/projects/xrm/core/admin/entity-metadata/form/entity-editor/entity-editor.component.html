@@ -107,6 +107,16 @@
               }
               @if (a.field_type === 'formula') {
                 <p data-testid="formula-expression">{{ typeLabel('formula') }}: <code>{{ formulaExpression(a.options) }}</code></p>
+                @if (editingFormula() === a.id) {
+                  <xrm-formula-editor [entityId]="entity()!.id" [entity]="entity()!.logicalname" [fieldId]="a.id"
+                                      [fieldName]="a.name" [options]="a.options"
+                                      (saved)="onFormulaSaved()" (cancelled)="editingFormula.set(null)" />
+                } @else {
+                  <button type="button" class="btn-sm btn-ghost" data-testid="formula-edit"
+                          (click)="editingFormula.set(a.id)">
+                    {{ 'formulaEditor.edit' | translate }}
+                  </button>
+                }
               }
             </div>
 

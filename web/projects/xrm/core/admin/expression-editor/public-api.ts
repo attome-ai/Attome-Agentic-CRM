@@ -2,4 +2,6 @@
 // rule screens and the governance screens share it without pulling in each
 // other (D-314).
 export { ExpressionEditorComponent } from './expression-editor.component';
-export { errorKey, indexOfByte, rulesSchemaOf, wordAt } from './expression-text';
+export {
+  dottedPaths, errorKey, indexOfByte, lookupTarget, pathAt, rulesSchemaOf, withPaths, wordAt,
+} from './expression-text';
