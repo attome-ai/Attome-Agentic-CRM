@@ -3362,3 +3362,113 @@ async fn records_carry_trail_with_agent_run() {
     );
     assert!(trail(by_person)["agent_run_id"].is_null(), "{body}");
 }
+
+/// P9-T11: certifying needs `attome_metric.certify` on top of the metric
+/// update privilege, and the record API cannot set `certified`.
+#[tokio::test]
+async fn certify_without_privilege_is_403() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let state = system.state().clone();
+    let db = state.base.db.clone();
+    let metric_id = insert_metric(&db, "a / b").await;
+    let (user_id, cookie) = seed_user(&system, false).await;
+    let role_id = create_role(&db).await;
+    grant_privileges(
+        &db,
+        role_id,
+        "dashboard_metric_definition",
+        &["read", "update"],
+    )
+    .await;
+    assign_role_to_user(&db, user_id, role_id).await;
+    let app = full_app(system);
+    let certify = format!("/api/v1/metrics/{metric_id}/certify");
+    let body = json!({ "certified": true });
+
+    let res = app
+        .clone()
+        .oneshot(req("POST", &certify, Some(&cookie), Some(&body)))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::FORBIDDEN);
+
+    grant_privileges(&db, role_id, "attome_metric", &["certify"]).await;
+    state
+        .base
+        .security
+        .invalidate_sync(user_id)
+        .await
+        .expect("drop the cached context");
+    let res = app
+        .clone()
+        .oneshot(req("POST", &certify, Some(&cookie), Some(&body)))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let certified = body_json(res).await;
+    assert_eq!(certified["certified"], true, "{certified}");
+    assert!(certified["certified_at"].is_string(), "{certified}");
+}
+
+/// P9-T11: a metric limited to a role is not found by others, and lists for
+/// a holder of the role.
+#[tokio::test]
+async fn a_role_limited_metric_shows_only_to_its_role() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let state = system.state().clone();
+    let db = state.base.db.clone();
+    let metric_id = insert_metric(&db, "a / b").await;
+    let (user_id, cookie) = seed_user(&system, false).await;
+    let role_id = create_role(&db).await;
+    grant_privileges(&db, role_id, "dashboard_metric_definition", &["read"]).await;
+    assign_role_to_user(&db, user_id, role_id).await;
+    let finance = format!("finance-{}", metric_id.simple());
+    sqlx::query("UPDATE dashboard_metric_definition SET visible_role_keys = $2 WHERE id = $1")
+        .bind(metric_id)
+        .bind(&finance)
+        .execute(&db)
+        .await
+        .expect("limit the metric to a role");
+    let app = full_app(system);
+    let snapshots = format!("/api/v1/metrics/{metric_id}/snapshots");
+    let listed = move |cookie: String, app: axum::Router| async move {
+        let res = app
+            .oneshot(req(
+                "GET",
+                "/api/v1/metrics?page_size=200",
+                Some(&cookie),
+                None,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let body = body_json(res).await;
+        body["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|m| m["id"] == json!(metric_id))
+    };
+
+    let res = app
+        .clone()
+        .oneshot(req("GET", &snapshots, Some(&cookie), None))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::NOT_FOUND);
+    assert!(!listed(cookie.clone(), app.clone()).await);
+
+    sqlx::query("UPDATE role SET name = $2 WHERE id = $1")
+        .bind(role_id)
+        .bind(&finance)
+        .execute(&db)
+        .await
+        .expect("name the role");
+    let res = app
+        .clone()
+        .oneshot(req("GET", &snapshots, Some(&cookie), None))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    assert!(listed(cookie, app).await);
+}
