@@ -1277,6 +1277,18 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/report').then(m => m.MetricListComponent),
           },
           {
+            // P9-T15: one scorecard (`?id=`) and the metric catalogue, ahead
+            // of the entity wildcard like 'metric/scorecard' above.
+            path: 'metric/scorecards/view',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/dashboard').then(m => m.MetricScorecardComponent),
+          },
+          {
+            path: 'metric/catalogue',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/dashboard').then(m => m.MetricCatalogueComponent),
+          },
+          {
             // B19-T2: where the service worker sends files another app shared.
             path: 'share',
             canActivate: [authGuard],

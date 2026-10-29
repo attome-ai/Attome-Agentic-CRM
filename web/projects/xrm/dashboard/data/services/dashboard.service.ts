@@ -387,6 +387,34 @@ export class DashboardService {
     );
   }
 
+  /** P9-T15: `GET /api/v1/metrics/scorecards/{id}` — a scorecard's metrics
+   * with their newest stored values, targets and freshness. */
+  getScorecard(id: string): Observable<ScorecardRead> {
+    return this.api.get<ScorecardRead>(`/api/v1/metrics/scorecards/${encodeURIComponent(id)}`);
+  }
+
+  /** P9-T15: `GET /api/v1/metrics` — the metric catalogue, one page. */
+  listMetrics(page = 1, pageSize = 200): Observable<MetricCataloguePage> {
+    return this.api.get<MetricCataloguePage>(`/api/v1/metrics?page=${page}&page_size=${pageSize}`);
+  }
+
+  /** P9-T15: `POST /api/v1/metrics/{id}/targets/spread`. */
+  spreadTarget(id: string, body: SpreadTargetBody): Observable<SpreadTargetResult> {
+    return this.api.post<SpreadTargetResult>(`/api/v1/metrics/${encodeURIComponent(id)}/targets/spread`, body);
+  }
+
+  /** P9-T15: `POST /api/v1/metrics/{id}/backfill`. */
+  backfillMetric(id: string, body: { from: string; to: string }): Observable<unknown> {
+    return this.api.post<unknown>(`/api/v1/metrics/${encodeURIComponent(id)}/backfill`, body);
+  }
+
+  /** P9-T15: `GET /api/v1/metrics/{id}/comments` — one period's when given. */
+  listComments(id: string, periodStart?: string | null): Observable<MetricCommentPage> {
+    const period = periodStart ? `&period_start=${encodeURIComponent(periodStart)}` : '';
+    return this.api.get<MetricCommentPage>(
+      `/api/v1/metrics/${encodeURIComponent(id)}/comments?page=1&page_size=5${period}`);
+  }
+
   /** `POST .../widgets/{widgetId}/explain` (Phase 3.2) — how the number is
    * calculated: measures, filters with their origins, timezone, scope,
    * freshness; for a governed KPI its metric, target and lineage. */
@@ -454,3 +482,75 @@ export class DashboardService {
     );
   }
 }
+
+/** P9-T15: a scorecard as `GET /api/v1/metrics/scorecards/{id}` answers it. */
+export interface ScorecardItem {
+  metric_id: string;
+  name: string;
+  key: string;
+  period: string;
+  unit: string | null;
+  sort_order: number | null;
+  period_start: string | null;
+  actual: number | null;
+  status: string | null;
+  target: number | null;
+  freshness: { computed_at: string | null; is_stale: boolean; failed: boolean };
+}
+
+export interface ScorecardRead {
+  id: string;
+  name: string | null;
+  description: string | null;
+  items: ScorecardItem[];
+}
+
+/** P9-T15: one metric of the catalogue (`GET /api/v1/metrics`). */
+export interface MetricCatalogueItem {
+  id: string;
+  name: string;
+  key: string;
+  source_kind: string;
+  period: string;
+  unit: string | null;
+  certified: boolean | null;
+  steward_ref: string | null;
+  review_due: string | null;
+  definition_version: number | null;
+  used_in: number;
+}
+
+export interface MetricCataloguePage {
+  items: MetricCatalogueItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+/** P9-T15: a target spread's request and answer. */
+export interface SpreadTargetBody {
+  period_start: string;
+  total: number;
+  method: 'share' | 'last_year';
+  dimension_attribute: string;
+  shares?: Record<string, number>;
+}
+
+export interface SpreadTargetResult {
+  parent_target_id: string;
+  children: { dimension_value: string; target_value: number }[];
+  sum_of_children: number;
+}
+
+export interface MetricCommentRow {
+  id: string;
+  body: string | null;
+  period_start: string | null;
+  created_at: string;
+}
+
+export interface MetricCommentPage {
+  items: MetricCommentRow[];
+  total: number;
+}
+

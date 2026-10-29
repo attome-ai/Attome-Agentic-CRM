@@ -262,6 +262,26 @@ export const xrmAr = {
     certify: 'اعتماد', withdraw: 'سحب الاعتماد',
     certifyFailed: 'تعذر تغيير الاعتماد.',
   },
+  // P9-T15: the scorecard view, metric catalogue and target spread.
+  metricViews: {
+    loading: 'جارٍ التحميل…',
+    status: { on_track: 'على المسار', at_risk: 'معرّض للخطر', off_track: 'خارج المسار', failed: 'فشل' },
+    scorecard: {
+      title: 'بطاقة الأداء', notFound: 'تعذر فتح بطاقة الأداء هذه.', empty: 'لا مؤشرات على هذه البطاقة بعد.',
+      value: 'القيمة', target: 'المستهدف', stale: 'قديمة', failed: 'فشل الحساب', spread: 'توزيع المستهدف',
+    },
+    catalogue: {
+      title: 'دليل المؤشرات', search: 'ابحث في المؤشرات', failed: 'تعذر تحميل المؤشرات.',
+      empty: 'لا مؤشر مطابق.', certified: 'معتمد', period: 'الفترة', version: 'الإصدار',
+      steward: 'المسؤول', assigned: 'محدد', reviewDue: 'موعد المراجعة', usedIn: 'بطاقات الأداء',
+    },
+    spread: {
+      title: 'توزيع المستهدف', period: 'الفترة التي تبدأ في {period}', total: 'المستهدف الإجمالي',
+      dimension: 'حقل البُعد', method: 'الطريقة', byShare: 'حسب الحصة', byLastYear: 'حسب العام الماضي',
+      member: 'العضو', percent: 'الحصة (%)', preview: 'المستهدف', remove: 'إزالة', addMember: 'إضافة عضو',
+      sum: 'مجموع الحصص {sum}%', cancel: 'إلغاء', save: 'توزيع', failed: 'تعذر توزيع المستهدف.',
+    },
+  },
   formRenderer: {
     loading: 'جارٍ تحميل النموذج…', required: 'مطلوب',
     save: 'حفظ', saving: 'جارٍ الحفظ…', saved: 'تم الحفظ',

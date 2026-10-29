@@ -1,0 +1,61 @@
+<div class="xts" role="dialog" aria-modal="true" aria-labelledby="xts-title" dir="auto">
+  <h3 id="xts-title">{{ 'metricViews.spread.title' | translate }}</h3>
+  <p class="xts-muted">{{ 'metricViews.spread.period' | translate: { period: periodStart() } }}</p>
+
+  <label class="xts-field">
+    <span>{{ 'metricViews.spread.total' | translate }}</span>
+    <input type="number" step="any" [ngModel]="total()" (ngModelChange)="total.set($event)" data-testid="spread-total" />
+  </label>
+  <label class="xts-field">
+    <span>{{ 'metricViews.spread.dimension' | translate }}</span>
+    <input type="text" [ngModel]="dimension()" (ngModelChange)="dimension.set($event)" data-testid="spread-dimension" />
+  </label>
+  <fieldset class="xts-method">
+    <legend>{{ 'metricViews.spread.method' | translate }}</legend>
+    <label><input type="radio" name="xts-method" value="share" [checked]="method() === 'share'" (change)="method.set('share')" />
+      {{ 'metricViews.spread.byShare' | translate }}</label>
+    <label><input type="radio" name="xts-method" value="last_year" [checked]="method() === 'last_year'" (change)="method.set('last_year')" />
+      {{ 'metricViews.spread.byLastYear' | translate }}</label>
+  </fieldset>
+
+  @if (method() === 'share') {
+    <table class="xts-shares">
+      <thead>
+        <tr>
+          <th scope="col">{{ 'metricViews.spread.member' | translate }}</th>
+          <th scope="col">{{ 'metricViews.spread.percent' | translate }}</th>
+          <th scope="col">{{ 'metricViews.spread.preview' | translate }}</th>
+          <th scope="col"><span class="xts-sr-only">{{ 'metricViews.spread.remove' | translate }}</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track $index; let i = $index) {
+          <tr>
+            <td><input type="text" [ngModel]="row.member" (ngModelChange)="setRow(i, { member: $event })"
+                       [attr.aria-label]="'metricViews.spread.member' | translate" /></td>
+            <td><input type="number" step="any" min="0" [ngModel]="row.percent" (ngModelChange)="setRow(i, { percent: $event })"
+                       [attr.aria-label]="'metricViews.spread.percent' | translate" /></td>
+            <td class="xts-num">{{ preview()[i]?.value ?? '—' }}</td>
+            <td><button type="button" class="xts-link" (click)="removeRow(i)"
+                        [attr.aria-label]="'metricViews.spread.remove' | translate"><i class="las la-times" aria-hidden="true"></i></button></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    <div class="xts-row">
+      <button type="button" class="xts-link" (click)="addRow()">{{ 'metricViews.spread.addMember' | translate }}</button>
+      <span [class.xts-bad]="shares() === null" data-testid="spread-sum">
+        {{ 'metricViews.spread.sum' | translate: { sum: percentSum() } }}
+      </span>
+    </div>
+  }
+
+  @if (error(); as e) { <p class="xts-bad" role="alert">{{ e | translate }}</p> }
+
+  <div class="xts-actions">
+    <button type="button" (click)="cancel()">{{ 'metricViews.spread.cancel' | translate }}</button>
+    <button type="button" class="xts-primary" [disabled]="!canSave()" (click)="save()" data-testid="spread-save">
+      {{ 'metricViews.spread.save' | translate }}
+    </button>
+  </div>
+</div>

@@ -18,6 +18,8 @@ export type {
   StructuredBucket, BucketKey, KpiMetric, KpiPoint, RenderKind, MeasureFn, DateBucket,
   WidgetRecordsInputs, WidgetRecordsResponse, WidgetExplanation, MetricLineageNode, GateIssue,
   WidgetDrillDownInputs, WidgetDrillDownResponse, WidgetCompareInputs, WidgetCompareResponse,
+  ScorecardItem, ScorecardRead, MetricCatalogueItem, MetricCataloguePage, SpreadTargetBody,
+  SpreadTargetResult, MetricCommentRow, MetricCommentPage,
 } from './services/dashboard.service';
 
 // M26 (Dashboard) gap-fill — cross-filtering (widget A's click sets a

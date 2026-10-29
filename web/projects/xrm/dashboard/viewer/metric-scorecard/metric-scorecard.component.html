@@ -1,0 +1,48 @@
+<section class="xms" dir="auto">
+  @if (loading()) {
+    <p class="xms-muted">{{ 'metricViews.loading' | translate }}</p>
+  } @else if (failed() || !scorecard()) {
+    <p class="xms-bad" role="alert">{{ 'metricViews.scorecard.notFound' | translate }}</p>
+  } @else if (scorecard(); as card) {
+    <header class="xms-head">
+      <h1>{{ card.name || ('metricViews.scorecard.title' | translate) }}</h1>
+      @if (card.description) { <p class="xms-muted">{{ card.description }}</p> }
+    </header>
+    @if (card.items.length === 0) {
+      <p class="xms-muted">{{ 'metricViews.scorecard.empty' | translate }}</p>
+    }
+    <ul class="xms-rows">
+      @for (item of card.items; track item.metric_id) {
+        <li class="xms-row" [attr.data-band]="band(item.status)" data-testid="scorecard-row">
+          <div class="xms-name">
+            <strong>{{ item.name }}</strong>
+            @if (badge(item); as b) {
+              <span class="xms-badge" [class.xms-badge-bad]="b === 'failed'" [attr.data-testid]="'badge-' + b">
+                {{ ('metricViews.scorecard.' + b) | translate }}
+              </span>
+            }
+          </div>
+          <div class="xms-figures">
+            <span>{{ 'metricViews.scorecard.value' | translate }}:
+              <b>{{ item.actual ?? '—' }}</b> {{ item.unit ?? '' }}</span>
+            <span>{{ 'metricViews.scorecard.target' | translate }}: {{ item.target ?? '—' }}</span>
+            <span class="xms-status">{{ item.status ? (('metricViews.status.' + item.status) | translate) : '—' }}</span>
+            @if (item.period_start) { <span class="xms-muted">{{ item.period_start }}</span> }
+          </div>
+          @if (comments()[item.metric_id]; as comment) {
+            <p class="xms-comment">{{ comment }}</p>
+          }
+          @if (item.period_start) {
+            <button type="button" class="xms-link" (click)="spreading.set(item)">
+              {{ 'metricViews.scorecard.spread' | translate }}
+            </button>
+          }
+          @if (spreading()?.metric_id === item.metric_id && item.period_start) {
+            <attome-target-spread-dialog [metricId]="item.metric_id" [periodStart]="item.period_start"
+                                         (closed)="spreadClosed($event)" />
+          }
+        </li>
+      }
+    </ul>
+  }
+</section>

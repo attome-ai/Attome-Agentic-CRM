@@ -285,6 +285,26 @@ export const xrmEn = {
     certify: 'Certify', withdraw: 'Withdraw certification',
     certifyFailed: 'The certification could not be changed.',
   },
+  // P9-T15: the scorecard view, metric catalogue and target spread.
+  metricViews: {
+    loading: 'Loading…',
+    status: { on_track: 'On track', at_risk: 'At risk', off_track: 'Off track', failed: 'Failed' },
+    scorecard: {
+      title: 'Scorecard', notFound: 'This scorecard could not be opened.', empty: 'No metrics on this scorecard yet.',
+      value: 'Value', target: 'Target', stale: 'Stale', failed: 'Failed to compute', spread: 'Spread the target',
+    },
+    catalogue: {
+      title: 'Metric catalogue', search: 'Search metrics', failed: 'The metrics could not be loaded.',
+      empty: 'No metric matches.', certified: 'Certified', period: 'Period', version: 'Version',
+      steward: 'Steward', assigned: 'Assigned', reviewDue: 'Review due', usedIn: 'Scorecards',
+    },
+    spread: {
+      title: 'Spread the target', period: 'Period starting {period}', total: 'Total target',
+      dimension: 'Dimension field', method: 'Method', byShare: 'By share', byLastYear: 'By last year',
+      member: 'Member', percent: 'Share (%)', preview: 'Target', remove: 'Remove', addMember: 'Add a member',
+      sum: 'Shares add up to {sum}%', cancel: 'Cancel', save: 'Spread', failed: 'The target could not be spread.',
+    },
+  },
   formRenderer: {
     loading: 'Loading the form…', required: 'Required',
     save: 'Save', saving: 'Saving…', saved: 'Saved',

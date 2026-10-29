@@ -1,0 +1,19 @@
+.xmc { padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+.xmc-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.xmc-head h1 { margin: 0; font-size: 1.25rem; }
+.xmc-search { min-inline-size: 14rem; padding: 0.375rem 0.625rem; border: 1px solid var(--color-border); border-radius: 6px; }
+.xmc-muted { color: var(--color-text-secondary); }
+.xmc-bad { color: var(--color-danger); }
+.xmc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.xmc-item { padding: 0.75rem 1rem; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-bg); }
+.xmc-title { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.xmc-badge { font-size: 0.75rem; padding: 0.125rem 0.5rem; border-radius: 999px; border: 1px solid var(--color-success); }
+.xmc-facts { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; margin: 0.5rem 0 0; }
+.xmc-facts div { display: flex; gap: 0.25rem; }
+.xmc-facts dt { color: var(--color-text-secondary); }
+.xmc-facts dd { margin: 0; }
+
+@media (max-width: 600px) {
+  .xmc { padding: 0.5rem; }
+  .xmc-search { min-inline-size: 0; inline-size: 100%; }
+}

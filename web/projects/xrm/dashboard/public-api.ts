@@ -35,6 +35,11 @@ export type { ChartBucket } from './viewer/dashboard-widget-view/dashboard-widge
 // by id or by tag(s) inside any unrelated record's form.
 export { DashboardEmbedComponent } from './viewer/dashboard-embed/dashboard-embed.component';
 
+// P9-T15: the scorecard view, metric catalogue and target spread dialog.
+export { MetricScorecardComponent } from './viewer/metric-scorecard/metric-scorecard.component';
+export { MetricCatalogueComponent } from './viewer/metric-catalogue/metric-catalogue.component';
+export { TargetSpreadDialogComponent } from './viewer/target-spread-dialog/target-spread-dialog.component';
+
 // M26 (Dashboard) gap-fill — the template gallery (moved from
 // `@attome/xrm/report`, R-10 step 1: new-module UI belongs in the module
 // that owns it, not the legacy report entry point).
