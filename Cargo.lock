@@ -690,6 +690,7 @@ dependencies = [
  "arrow-array",
  "arrow-schema",
  "attome-ai",
+ "attome-api",
  "attome-approval",
  "attome-audit",
  "attome-auth",
