@@ -678,6 +678,314 @@ async fn widget_drill_down(
     }))
 }
 
+/// P7-T8: the most records one period of a comparison may hold.
+pub const COMPARE_CAP: i64 = 5_000;
+
+/// P7-T8: one period, `from <= t < to`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ComparePeriod {
+    pub from: DateTime<Utc>,
+    pub to: DateTime<Utc>,
+}
+
+/// P7-T8: what a viewer sends to the compare route.
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct WidgetCompareInputs {
+    #[serde(default)]
+    pub parameters: BTreeMap<String, Value>,
+    #[serde(default)]
+    pub cross_filters: BTreeMap<String, Value>,
+    #[serde(default)]
+    pub preview: bool,
+    pub period_a: ComparePeriod,
+    pub period_b: ComparePeriod,
+    /// Keyset cursor over the entered and left lists (the last id of the
+    /// previous page).
+    #[serde(default)]
+    pub after_id: Option<Uuid>,
+    /// 1-200, default 50.
+    #[serde(default)]
+    pub page_size: Option<i64>,
+}
+
+/// P7-T8: a record in both periods whose measured value changed between
+/// them, from its field history.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct ChangedRecord {
+    pub record_id: Uuid,
+    pub old_value: Option<String>,
+    pub new_value: Option<String>,
+    pub changed_at: DateTime<Utc>,
+}
+
+/// P7-T8: the records that entered, left or changed between two periods.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct WidgetCompareResponse {
+    pub widget_id: Uuid,
+    /// The date field each period filters on.
+    pub date_attribute: String,
+    /// The field whose changes are listed; absent for a count.
+    pub measured_attribute: Option<String>,
+    pub in_a: i64,
+    pub in_b: i64,
+    /// In period B and not in A, by id.
+    pub entered: Vec<Uuid>,
+    /// In period A and not in B, by id.
+    pub left: Vec<Uuid>,
+    pub entered_total: i64,
+    pub left_total: i64,
+    /// In both, with the newest change to the measured field between the
+    /// start of A and the end of B (at most one page).
+    pub changed: Vec<ChangedRecord>,
+    /// Pass back as `after_id` for the next page of entered and left.
+    pub next_cursor: Option<Uuid>,
+}
+
+/// P7-T8: `ids` after `after`, one page, and the cursor for the next. Pure.
+pub fn page_ids(ids: &[Uuid], after: Option<Uuid>, size: usize) -> (Vec<Uuid>, Option<Uuid>) {
+    let start = after.map_or(0, |a| ids.partition_point(|id| *id <= a));
+    let page: Vec<Uuid> = ids.iter().skip(start).take(size).copied().collect();
+    let more = start + page.len() < ids.len();
+    let next = if more { page.last().copied() } else { None };
+    (page, next)
+}
+
+/// The ids of every record the widget's scope holds with `date_attribute`
+/// in `period`, refused above [`COMPARE_CAP`].
+#[allow(
+    clippy::too_many_arguments,
+    reason = "each is an independent input the one caller already holds"
+)]
+async fn period_ids(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    data: &attome_core::data_definition::DataDefinition,
+    extra: &[attome_core::Filter],
+    tz: chrono_tz::Tz,
+    date_attribute: &str,
+    period: ComparePeriod,
+    label: &str,
+) -> Result<(std::collections::BTreeSet<Uuid>, i64), AppError> {
+    let mut filters = extra.to_vec();
+    filters.extend(attome_search::key_filters(
+        date_attribute,
+        &BucketKey::Range {
+            start: period.from,
+            end: period.to,
+        },
+    )?);
+    let mut ids = std::collections::BTreeSet::new();
+    let mut after = None;
+    let mut total = 0;
+    loop {
+        let page = attome_search::run_structured_records(
+            state,
+            ctx,
+            data,
+            &filters,
+            tz,
+            &DrillTarget {
+                bucket_key: None,
+                series_key: None,
+            },
+            after,
+            attome_types::MAX_PAGE_SIZE,
+        )
+        .await?;
+        total = page.total;
+        if total > COMPARE_CAP {
+            return Err(AppError::FieldValidation(vec![attome_types::FieldError {
+                field: label.to_owned(),
+                code: "too_large".to_owned(),
+                message: format!(
+                    "{label} holds {total} records; a comparison lists at most {COMPARE_CAP}. \
+                     Narrow the period or the dashboard's filters"
+                ),
+            }]));
+        }
+        ids.extend(
+            page.rows
+                .iter()
+                .filter_map(|r| r.get("id").and_then(Value::as_str))
+                .filter_map(|s| Uuid::parse_str(s).ok()),
+        );
+        match page.next_cursor {
+            Some(next) => after = Some(next),
+            None => break,
+        }
+    }
+    Ok((ids, total))
+}
+
+/// Compare two periods of a widget
+///
+/// The records of a widget's scope that entered, left or changed value between two periods of its date
+/// field, as the caller may see them: entered and left by id (paged), and for the records in both, the
+/// newest change of the measured field from the field history. Writes nothing. Anyone who may read the
+/// dashboard.
+#[utoipa::path(
+    post,
+    path = "/api/v1/attome-dashboard/{id}/widgets/{widget_id}/compare",
+    tag = "dashboard",
+    extensions(("x-audit-exempt" = json!({"reason": "read_only", "via": null, "note": "P7-T8: lists the records that entered, left or changed between two periods over the caller's record scope and writes nothing."}))),
+    params(("id" = Uuid, Path, description = "The dashboard"), ("widget_id" = Uuid, Path, description = "The widget")),
+    request_body = WidgetCompareInputs,
+    responses(
+        (status = 200, description = "The entered, left and changed records", body = WidgetCompareResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such dashboard, nothing is published, or the widget is not in the executed definition", body = ErrorResponse),
+        (status = 422, description = "The widget is not an exactly drillable chart grouped by a date, a period is empty, or a period holds more records than a comparison lists (too_large)", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn widget_compare(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<DashboardRead>>,
+    Path((dashboard_id, widget_id)): Path<(Uuid, Uuid)>,
+    Json(inputs): Json<WidgetCompareInputs>,
+) -> Result<Json<WidgetCompareResponse>, AppError> {
+    for period in [inputs.period_a, inputs.period_b] {
+        if period.from >= period.to {
+            return Err(AppError::Validation(
+                "a period's from must be before its to".into(),
+            ));
+        }
+    }
+    let definition = load_definition(&state, &ctx, dashboard_id, inputs.preview).await?;
+    let (page, widget) = find_widget(&definition.snapshot, widget_id).ok_or(AppError::NotFound)?;
+    let wc = resolve_widget_context(
+        &state,
+        &ctx,
+        &definition,
+        page,
+        widget,
+        &inputs.parameters,
+        &inputs.cross_filters,
+    )
+    .await?;
+    if wc.data_class != DataClass::Structured || wc.drillability != Drillability::Exact {
+        return Err(AppError::Validation(
+            "only an exactly drillable chart over one entity compares periods".into(),
+        ));
+    }
+    let plan = structured_plan(&state, &wc)?;
+    let date_attribute = plan
+        .data
+        .group
+        .as_ref()
+        .filter(|g| g.bucket.is_some())
+        .map(|g| g.field.clone())
+        .ok_or_else(|| {
+            AppError::Validation("comparing periods needs a chart grouped by a date".into())
+        })?;
+    let extra = plan.extra_filters();
+    let (a, in_a) = period_ids(
+        &state,
+        &ctx,
+        &plan.data,
+        &extra,
+        wc.tz,
+        &date_attribute,
+        inputs.period_a,
+        "period_a",
+    )
+    .await?;
+    let (b, in_b) = period_ids(
+        &state,
+        &ctx,
+        &plan.data,
+        &extra,
+        wc.tz,
+        &date_attribute,
+        inputs.period_b,
+        "period_b",
+    )
+    .await?;
+    let entered_all: Vec<Uuid> = b.difference(&a).copied().collect();
+    let left_all: Vec<Uuid> = a.difference(&b).copied().collect();
+    let size = usize::try_from(
+        inputs
+            .page_size
+            .unwrap_or(attome_types::DEFAULT_PAGE_SIZE)
+            .clamp(1, attome_types::MAX_PAGE_SIZE),
+    )
+    .unwrap_or(50);
+    let (entered, next_entered) = page_ids(&entered_all, inputs.after_id, size);
+    let (left, next_left) = page_ids(&left_all, inputs.after_id, size);
+
+    // The records in both periods whose measured field changed in between,
+    // when the caller may read that field.
+    let measured_attribute = plan.data.measures.first().and_then(|m| m.field.clone());
+    let mut changed = Vec::new();
+    if let Some(field) = &measured_attribute {
+        let readable = {
+            let registry = state.entities.load();
+            registry.get(&plan.data.source).is_some_and(|meta| {
+                meta.attrs.iter().any(|attr| {
+                    &attr.logicalname == field
+                        && attome_security::field_gate::readable(
+                            &ctx,
+                            &meta.logicalname,
+                            attr,
+                            meta.primary_name_attribute.as_deref(),
+                            attome_security::field_gate::Surface::Interactive,
+                        )
+                })
+            })
+        };
+        let both: Vec<Uuid> = a.intersection(&b).copied().collect();
+        if readable && !both.is_empty() {
+            let rows: Vec<(Uuid, Option<String>, Option<String>, DateTime<Utc>)> = sqlx::query_as(
+                "SELECT DISTINCT ON (h.record_id) h.record_id, d.old_value, d.new_value, h.changed_on \
+                 FROM audit_header h JOIN audit_detail d ON d.audit_ref = h.id \
+                 WHERE h.entity_name = $1 AND h.record_id = ANY($2) AND d.field_name = $3 \
+                   AND h.changed_on >= $4 AND h.changed_on < $5 \
+                 ORDER BY h.record_id, h.changed_on DESC \
+                 LIMIT $6",
+            )
+            .bind(&plan.data.source)
+            .bind(&both)
+            .bind(field)
+            .bind(inputs.period_a.from.min(inputs.period_b.from))
+            .bind(inputs.period_a.to.max(inputs.period_b.to))
+            .bind(i64::try_from(size).unwrap_or(50))
+            .fetch_all(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+            changed = rows
+                .into_iter()
+                .map(
+                    |(record_id, old_value, new_value, changed_at)| ChangedRecord {
+                        record_id,
+                        old_value,
+                        new_value,
+                        changed_at,
+                    },
+                )
+                .collect();
+        }
+    }
+    Ok(Json(WidgetCompareResponse {
+        widget_id: wc.widget_id,
+        date_attribute,
+        measured_attribute,
+        in_a,
+        in_b,
+        entered_total: i64::try_from(entered_all.len()).unwrap_or(i64::MAX),
+        left_total: i64::try_from(left_all.len()).unwrap_or(i64::MAX),
+        entered,
+        left,
+        changed,
+        next_cursor: match (next_entered, next_left) {
+            (Some(x), Some(y)) => Some(x.max(y)),
+            (x, y) => x.or(y),
+        },
+    }))
+}
+
 /// P7-T4: the first measure of the bucket a drill names (the whole number
 /// when it names none; the Other bucket for `Other`). Pure.
 pub fn bucket_value(
@@ -1641,10 +1949,14 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/attome-dashboard/{id}/widgets/{widget_id}/drill-down",
             post(widget_drill_down),
         )
+        .route(
+            "/api/v1/attome-dashboard/{id}/widgets/{widget_id}/compare",
+            post(widget_compare),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(widget_records, widget_explain, widget_drill_down))]
+#[openapi(paths(widget_records, widget_explain, widget_drill_down, widget_compare))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
@@ -1654,6 +1966,19 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 #[cfg(test)]
 mod query_drill_tests {
     use super::*;
+
+    #[test]
+    fn compare_pages_ids_by_keyset() {
+        let ids: Vec<Uuid> = (0..5).map(|_| Uuid::now_v7()).collect();
+        let (first, next) = page_ids(&ids, None, 2);
+        assert_eq!(first, ids[..2]);
+        assert_eq!(next, Some(ids[1]));
+        let (second, next) = page_ids(&ids, next, 2);
+        assert_eq!(second, ids[2..4]);
+        let (last, next) = page_ids(&ids, next, 2);
+        assert_eq!(last, ids[4..]);
+        assert_eq!(next, None);
+    }
 
     #[test]
     fn plain_definition_reads_in_english_and_arabic() {

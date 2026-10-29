@@ -3165,5 +3165,106 @@ async fn explain_has_bilingual_definition_and_origins() {
     assert_eq!(body["measure_basis"]["grain"], "month", "{body}");
     let filters = body["filters"].as_array().unwrap();
     assert!(!filters.is_empty(), "{body}");
-    assert!(filters.iter().all(|f| f["origin"]["kind"].is_string()), "{body}");
+    assert!(
+        filters.iter().all(|f| f["origin"]["kind"].is_string()),
+        "{body}"
+    );
+}
+
+// ── P7-T8: comparing two periods ────────────────────────────────────────────
+
+/// One deal stays in Q1, one moves from Q1 to Q2 and one is new in Q2: Q2
+/// against Q1 lists the two Q2 deals as entered and the Q1 deal as left.
+#[tokio::test]
+async fn compare_lists_entered_and_left_records() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let (admin_id, admin_cookie) = seed_user(&system, true).await;
+    let db = system.state().base.db.clone();
+    let (deals, _) = provision_deals(&system).await;
+    let stays = insert_deal(
+        &db,
+        &deals,
+        Some("won"),
+        1.0,
+        "2025-02-01T10:00:00Z",
+        None,
+        Some(true),
+    )
+    .await;
+    let moved = insert_deal(
+        &db,
+        &deals,
+        Some("won"),
+        2.0,
+        "2025-03-01T10:00:00Z",
+        None,
+        Some(true),
+    )
+    .await;
+    sqlx::query(&format!(
+        "UPDATE \"{deals}\" SET closed_on = '2025-05-01T10:00:00Z' WHERE id = $1"
+    ))
+    .bind(moved)
+    .execute(&db)
+    .await
+    .unwrap();
+    let new = insert_deal(
+        &db,
+        &deals,
+        Some("won"),
+        3.0,
+        "2025-06-01T10:00:00Z",
+        None,
+        Some(true),
+    )
+    .await;
+    let chart = build_data_dashboard(
+        &db,
+        admin_id,
+        &json!({ "data": {
+            "source": deals,
+            "measures": [{ "aggregation": "sum", "field": "amount" }],
+            "group": { "field": "closed_on", "bucket": "quarter" }
+        }}),
+    )
+    .await;
+    let app = full_app(system);
+    publish(&app, &admin_cookie, chart.dashboard_id, &db).await;
+
+    let (status, body) = widget_route(
+        &app,
+        &admin_cookie,
+        &chart,
+        "compare",
+        json!({
+            "period_a": { "from": "2025-01-01T00:00:00Z", "to": "2025-04-01T00:00:00Z" },
+            "period_b": { "from": "2025-04-01T00:00:00Z", "to": "2025-07-01T00:00:00Z" },
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["date_attribute"], "closed_on");
+    assert_eq!(body["in_a"], 1, "{body}");
+    assert_eq!(body["in_b"], 2, "{body}");
+    let ids = |key: &str| -> Vec<Value> { body[key].as_array().unwrap().clone() };
+    let entered = ids("entered");
+    assert!(
+        entered.contains(&json!(moved)) && entered.contains(&json!(new)),
+        "{body}"
+    );
+    assert_eq!(ids("left"), vec![json!(stays)], "{body}");
+
+    // A period that ends before it starts is the caller's error.
+    let (status, _) = widget_route(
+        &app,
+        &admin_cookie,
+        &chart,
+        "compare",
+        json!({
+            "period_a": { "from": "2025-04-01T00:00:00Z", "to": "2025-01-01T00:00:00Z" },
+            "period_b": { "from": "2025-04-01T00:00:00Z", "to": "2025-07-01T00:00:00Z" },
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
 }

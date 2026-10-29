@@ -62,6 +62,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   characters other than line breaks and tabs.
 
 ### Added
+- Comparing periods (P7-T8): `POST /api/v1/attome-dashboard/{id}/widgets/{widget_id}/compare` with
+  `period_a` and `period_b` (`{from, to}`) lists, for a chart grouped by a date, the records that
+  entered (in B and not in A) and left (in A and not in B), paged by id, and, for records in both,
+  the newest change of the measured field from the field history. Only records the caller may see
+  count. Above 5,000 records in a period the answer is a 422 `too_large`.
 - Explanations in words (P7-T7): a widget's explanation now carries `definition_en` and
   `definition_ar` ("Total Amount of Deals where Status is won, by Owner" and its Arabic), the
   `measure_basis` (the date field and grain a chart is bucketed by), and, for a governed metric,
