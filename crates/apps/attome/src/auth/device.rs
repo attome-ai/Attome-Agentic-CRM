@@ -190,6 +190,7 @@ pub(super) struct DeviceAuthorization {
 #[utoipa::path(
     post,
     path = "/api/v1/oauth/device_authorization",
+    operation_id = "oauth_device_authorization",
     tag = "auth",
     request_body(content = DeviceAuthorizationForm, content_type = "application/x-www-form-urlencoded"),
     extensions(("x-audit-exempt" = json!(x_audit_exempt(
@@ -291,6 +292,7 @@ pub(super) struct PendingDeviceGrant {
 #[utoipa::path(
     get,
     path = "/api/v1/oauth/device",
+    operation_id = "oauth_device_pending",
     tag = "auth",
     params(UserCodeQuery),
     responses(
@@ -341,6 +343,7 @@ pub(super) struct DeviceDecision {
 #[utoipa::path(
     post,
     path = "/api/v1/oauth/device/approve",
+    operation_id = "oauth_device_approve",
     tag = "auth",
     request_body = DeviceDecision,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Credential, AuditOperation::Create)])))),
@@ -459,6 +462,7 @@ struct GrantRow {
 #[utoipa::path(
     post,
     path = "/api/v1/oauth/device/token",
+    operation_id = "oauth_device_token",
     tag = "auth",
     request_body(content = DeviceTokenForm, content_type = "application/x-www-form-urlencoded"),
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Security, AuditOperation::Login)])))),
