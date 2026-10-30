@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:90b0152a62e755feea3dadbe4524334aaf1895f0e4ecf108a2df792e59011569",
+  "checksum": "sha256:a84c436dcb589e9dc9f4a432ebf9a9c2991283b45cfe4a18cc4e544948e5585e",
   "closed_at": "2026-10-25T00:00:00Z",
   "description": "Fulfilment documents (F6-T8): the packing slip and delivery note of a fulfilment order, English and Arabic side by side with a row per fulfilment line, rendered by the document route.",
   "format": "attome-changeset/v1",
@@ -9,6 +9,28 @@
   "name": "fulfilment-documents",
   "opened_at": "2026-10-25T00:00:00Z",
   "operations": [
+    {
+      "args": {
+        "changed": [
+          "business_key"
+        ],
+        "definition": {
+          "business_key": [
+            "name"
+          ],
+          "display_name": "Document Template",
+          "is_append_only": false,
+          "logicalname": "docgen_template",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "docgen_template"
+      }
+    },
     {
       "args": {
         "key_fields": [
@@ -26,7 +48,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 1,
+      "seq": 2,
       "target": {
         "entity": "docgen_template",
         "key": {
@@ -51,7 +73,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 2,
+      "seq": 3,
       "target": {
         "entity": "docgen_template",
         "key": {

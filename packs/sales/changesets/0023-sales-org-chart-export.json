@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:649cf1d00bf52f1612e6771138ecf9e23d4cf2b3dbf58a748b27257415585b99",
+  "checksum": "sha256:cd6d9fca2768552dca1ca0c91d11227f3cfc668a42434a5f02a7a4b45141caa3",
   "closed_at": "2026-10-20T00:00:00Z",
   "description": "D23-T9: the built-in Account org chart document template an account's org chart exports through (a PDF of the account's people, in English and Arabic).",
   "format": "attome-changeset/v1",
@@ -9,6 +9,28 @@
   "name": "sales-org-chart-export",
   "opened_at": "2026-10-20T00:00:00Z",
   "operations": [
+    {
+      "args": {
+        "changed": [
+          "business_key"
+        ],
+        "definition": {
+          "business_key": [
+            "name"
+          ],
+          "display_name": "Document Template",
+          "is_append_only": false,
+          "logicalname": "docgen_template",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "docgen_template"
+      }
+    },
     {
       "args": {
         "key_fields": [
@@ -26,7 +48,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 1,
+      "seq": 2,
       "target": {
         "entity": "docgen_template",
         "key": {
