@@ -77,3 +77,10 @@ days). Accounts below the root show their top parent; the group totals are on th
 
 When a branch moves, the `rollup_fast` job recomputes both the old and the new root from the
 moved account's change, so both groups' totals take in the whole branch within seconds.
+
+## Money in several currencies
+
+A sum, average, minimum or maximum over a money field that converts to the base currency (its `fx`
+option, so each record keeps `<field>_base`) reads the base amounts: each record is converted at its
+own rate date and the rollup is in the base currency, whatever currencies the records are in
+(A19-T4). A money field without the option rolls up its amounts as they are stored.

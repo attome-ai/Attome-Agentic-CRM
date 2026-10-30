@@ -385,6 +385,20 @@ fn check_filter(filter: &str, attrs: &[AttrInfo]) -> Result<(), AppError> {
 /// `last_attrs` are the last step's entity's attributes, which the filter
 /// is translated against. Identifiers come from validated metadata and are
 /// quoted; every value is bound.
+/// A19-T4: the column a rollup reads for `attribute`: a money field that
+/// converts to the base currency (it has `<attribute>_base`) is summed,
+/// averaged or compared by its base amounts, each converted at its own
+/// record's rate date, so a rollup over mixed currencies is in the base
+/// currency. Any other field, and a count, reads the field itself. Pure.
+pub fn amount_source(function: RollupFunction, attribute: &str, attrs: &[AttrInfo]) -> String {
+    let base = crate::fx::base_field(attribute);
+    let converts = matches!(
+        function,
+        RollupFunction::Sum | RollupFunction::Avg | RollupFunction::Min | RollupFunction::Max
+    ) && attrs.iter().any(|a| a.logicalname == base);
+    if converts { base } else { attribute.to_owned() }
+}
+
 pub fn recompute_sql(
     parent_table: &str,
     column: &str,
@@ -450,10 +464,10 @@ pub fn recompute_sql(
         ));
     }
     let last = alias(n - 1);
-    let attr = opts
-        .attribute
-        .as_deref()
-        .map(|name| format!("{last}.{}", quote_ident(name)));
+    let attr = opts.attribute.as_deref().map(|name| {
+        let source = amount_source(opts.function, name, last_attrs);
+        format!("{last}.{}", quote_ident(&source))
+    });
     let agg = match (opts.function, attr) {
         (RollupFunction::Count, _) => format!("COUNT({last}.id)"),
         (RollupFunction::DistinctCount, Some(a)) => format!("COUNT(DISTINCT {a})"),
@@ -769,6 +783,32 @@ mod tests {
             "result_type": "number",
         })));
         assert!(m.contains("only to the first and last"), "{m}");
+    }
+
+    /// A19-T4: a converted money field rolls up by its base amounts.
+    #[test]
+    fn rollup_currency_sums_base_amounts() {
+        let attrs = vec![
+            attr("amount", FieldType::Currency, None),
+            attr("amount_base", FieldType::Number, None),
+            attr("quantity", FieldType::Number, None),
+        ];
+        assert_eq!(
+            amount_source(RollupFunction::Sum, "amount", &attrs),
+            "amount_base"
+        );
+        assert_eq!(
+            amount_source(RollupFunction::Max, "amount", &attrs),
+            "amount_base"
+        );
+        assert_eq!(
+            amount_source(RollupFunction::DistinctCount, "amount", &attrs),
+            "amount"
+        );
+        assert_eq!(
+            amount_source(RollupFunction::Sum, "quantity", &attrs),
+            "quantity"
+        );
     }
 
     #[test]

@@ -34,11 +34,22 @@ fn contribution(row: &Value, opts: &RollupOptions) -> Option<(Uuid, String)> {
         .and_then(|s| Uuid::parse_str(s).ok())?;
     let amount = match opts.function {
         RollupFunction::Count => "1".to_owned(),
-        RollupFunction::Sum => match row.get(opts.attribute.as_deref()?)? {
-            Value::Number(n) => n.to_string(),
-            Value::String(s) if s.trim().parse::<f64>().is_ok() => s.trim().to_owned(),
-            _ => return None,
-        },
+        RollupFunction::Sum => {
+            // A19-T4: a converted money field adds its base amount (each
+            // record's own rate), as the full recompute does.
+            let attribute = opts.attribute.as_deref()?;
+            let base = attome_core::fx::base_field(attribute);
+            let value = if row.get(&base).is_some() {
+                row.get(&base)?
+            } else {
+                row.get(attribute)?
+            };
+            match value {
+                Value::Number(n) => n.to_string(),
+                Value::String(s) if s.trim().parse::<f64>().is_ok() => s.trim().to_owned(),
+                _ => return None,
+            }
+        }
         _ => return None,
     };
     Some((parent, amount))
@@ -164,6 +175,27 @@ mod tests {
             mode: RollupMode::Exact,
             result_type: "number".into(),
         }
+    }
+
+    /// A19-T4: a record with a base amount contributes it, not its own.
+    #[test]
+    fn rollup_currency_exact_adds_the_base_amount() {
+        let parent = Uuid::now_v7();
+        let row = serde_json::json!({
+            "is_active": true, "account_ref": parent.to_string(),
+            "amount": 100, "amount_currency": "USD", "amount_base": 375,
+        });
+        assert_eq!(
+            contribution(&row, &opts(RollupFunction::Sum)),
+            Some((parent, "375".to_owned()))
+        );
+        let plain = serde_json::json!({
+            "is_active": true, "account_ref": parent.to_string(), "amount": 100,
+        });
+        assert_eq!(
+            contribution(&plain, &opts(RollupFunction::Sum)),
+            Some((parent, "100".to_owned()))
+        );
     }
 
     #[test]
