@@ -713,7 +713,7 @@ pub async fn fx_revaluation(
                 "{open} is not a field of {entity}"
             )));
         }
-        Some(open) if open_values.is_empty() => {
+        Some(_) if open_values.is_empty() => {
             return Err(AppError::Validation(
                 "open_values names the values of open_field that mean open".into(),
             ));
