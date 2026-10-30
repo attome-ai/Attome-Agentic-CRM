@@ -86634,7 +86634,7 @@
           "entity"
         ],
         "summary": "Run several record operations",
-        "description": "Up to 25 creates, updates and deletes in order, each on its own; a later one may use an earlier one's result through ${ref.field}. One result per operation.",
+        "description": "Up to 25 creates, updates and deletes in order, each on its own; a later one may use an earlier one's result through ${ref.field}. With all_or_none, they run in one transaction and the first failure rolls them all back. One result per operation.",
         "operationId": "composite",
         "requestBody": {
           "content": {
@@ -86668,7 +86668,7 @@
             }
           },
           "422": {
-            "description": "The request's own shape is wrong (count, refs, all_or_none)",
+            "description": "The request's own shape is wrong (count or refs)",
             "content": {
               "application/json": {
                 "schema": {
@@ -90745,6 +90745,456 @@
         "x-privilege": "public",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/exchange-rates": {
+      "get": {
+        "tags": [
+          "money"
+        ],
+        "summary": "Stored exchange rates",
+        "description": "Stored exchange rates, newest day first, optionally for one currency pair. Any signed-in person.",
+        "operationId": "list_rates",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "path",
+            "description": "Only rates from this currency.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "to",
+            "in": "path",
+            "description": "Only rates to this currency.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of rates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ExchangeRateRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A currency is not an ISO 4217 code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "money"
+        ],
+        "summary": "Enter an exchange rate",
+        "description": "Stores one rate for a day, replacing a rate for the same pair, day and source. Source `manual` unless named. Needs the Deployment administration area.",
+        "operationId": "create_rate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExchangeRateInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The rate as stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExchangeRateRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the Deployment administration area",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A code, the rate or the source is not valid, or a currency is unknown",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/exchange-rates/import": {
+      "post": {
+        "tags": [
+          "money"
+        ],
+        "summary": "Import exchange rates",
+        "description": "Stores up to 1,000 rates from one source in one transaction, replacing rates for the same pair, day and source: what a connector or a scheduled flow calls with a central bank's published rates. Needs the Deployment administration area.",
+        "operationId": "import_rates",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExchangeRateImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Every rate was stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExchangeRateImported"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the Deployment administration area",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The batch is empty or too large, or a rate is not valid; nothing was stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/exchange-rates/rate": {
+      "get": {
+        "tags": [
+          "money"
+        ],
+        "summary": "The rate that applies on a day",
+        "description": "The rate from one currency to another on a day: the newest stored rate on or before it, the deployment's preferred source first on a tie of days, the opposite direction inverted when only that is stored. Any signed-in person.",
+        "operationId": "rate_on",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "path",
+            "description": "The currency converted from.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "path",
+            "description": "The currency converted to.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "on",
+            "in": "path",
+            "description": "The day; today (UTC) when left out.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The rate that applies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppliedRateResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No rate on or before the day",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A currency is not an ISO 4217 code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/exchange-rates/{id}": {
+      "delete": {
+        "tags": [
+          "money"
+        ],
+        "summary": "Delete an exchange rate",
+        "description": "Removes one stored rate. Needs the Deployment administration area.",
+        "operationId": "delete_rate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The rate",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the Deployment administration area",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such rate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "hard_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "high"
       }
     },
     "/api/v1/features": {
@@ -150770,6 +151220,43 @@
           }
         }
       },
+      "AppliedRateResponse": {
+        "type": "object",
+        "description": "The applied rate's answer.",
+        "required": [
+          "from_currency",
+          "to_currency",
+          "rate",
+          "rate_date",
+          "source",
+          "inverted"
+        ],
+        "properties": {
+          "from_currency": {
+            "type": "string"
+          },
+          "inverted": {
+            "type": "boolean",
+            "description": "The stored rate was the opposite direction, inverted."
+          },
+          "rate": {
+            "type": "string",
+            "description": "The rate used, as a decimal string.",
+            "example": "3.7500000000"
+          },
+          "rate_date": {
+            "type": "string",
+            "format": "date",
+            "description": "The day of the stored rate (on or before the day asked for)."
+          },
+          "source": {
+            "type": "string"
+          },
+          "to_currency": {
+            "type": "string"
+          }
+        }
+      },
       "AppliedRef": {
         "type": "object",
         "description": "The newest `succeeded` plan the drift was computed against.",
@@ -161279,7 +161766,7 @@
         "properties": {
           "all_or_none": {
             "type": "boolean",
-            "description": "Every operation commits or none does. Not available yet (S1-T8)."
+            "description": "Every operation commits or none does (S1-T8): they run in one\ntransaction, and the first that fails rolls them all back."
           },
           "operations": {
             "type": "array",
@@ -161317,6 +161804,10 @@
           },
           "ref": {
             "type": "string"
+          },
+          "rolled_back": {
+            "type": "boolean",
+            "description": "S1-T8: true when an `all_or_none` request failed, so this operation\nwas rolled back (or, after the failing one, never ran)."
           },
           "status": {
             "type": "integer",
@@ -172475,6 +172966,139 @@
           "target_ref": {
             "type": "string",
             "description": "What the exception covers (an entity, an `entity.attribute`, a\nrecord id, ...)."
+          }
+        }
+      },
+      "ExchangeRateImport": {
+        "type": "object",
+        "description": "A batch of rates from one source.",
+        "required": [
+          "source",
+          "rates"
+        ],
+        "properties": {
+          "rates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExchangeRateImportItem"
+            }
+          },
+          "source": {
+            "type": "string",
+            "description": "The source every rate in the batch comes from, such as `sama` or\n`cbuae`."
+          }
+        }
+      },
+      "ExchangeRateImportItem": {
+        "type": "object",
+        "required": [
+          "from_currency",
+          "to_currency",
+          "rate",
+          "rate_date"
+        ],
+        "properties": {
+          "from_currency": {
+            "type": "string"
+          },
+          "rate": {
+            "type": "string",
+            "example": "0.2666"
+          },
+          "rate_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "to_currency": {
+            "type": "string"
+          }
+        }
+      },
+      "ExchangeRateImported": {
+        "type": "object",
+        "description": "How many rates an import stored.",
+        "required": [
+          "stored"
+        ],
+        "properties": {
+          "stored": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "ExchangeRateInput": {
+        "type": "object",
+        "description": "One rate to store.",
+        "required": [
+          "from_currency",
+          "to_currency",
+          "rate",
+          "rate_date"
+        ],
+        "properties": {
+          "from_currency": {
+            "type": "string"
+          },
+          "rate": {
+            "type": "string",
+            "description": "A decimal number or string, above zero; kept to 10 places.",
+            "example": "3.75"
+          },
+          "rate_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "source": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Where the rate comes from; `manual` when left out."
+          },
+          "to_currency": {
+            "type": "string"
+          }
+        }
+      },
+      "ExchangeRateRow": {
+        "type": "object",
+        "description": "A stored rate.",
+        "required": [
+          "id",
+          "from_currency",
+          "to_currency",
+          "rate",
+          "rate_date",
+          "source",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "from_currency": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rate": {
+            "type": "string",
+            "description": "One unit of `from_currency` in `to_currency`, as a decimal string.",
+            "example": "3.7500000000"
+          },
+          "rate_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "source": {
+            "type": "string"
+          },
+          "to_currency": {
+            "type": "string"
           }
         }
       },
@@ -197569,6 +198193,81 @@
                 "webportal_user_id": {
                   "type": "string",
                   "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_ExchangeRateRow": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A stored rate.",
+              "required": [
+                "id",
+                "from_currency",
+                "to_currency",
+                "rate",
+                "rate_date",
+                "source",
+                "created_at"
+              ],
+              "properties": {
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "from_currency": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "rate": {
+                  "type": "string",
+                  "description": "One unit of `from_currency` in `to_currency`, as a decimal string.",
+                  "example": "3.7500000000"
+                },
+                "rate_date": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "to_currency": {
+                  "type": "string"
                 }
               }
             }

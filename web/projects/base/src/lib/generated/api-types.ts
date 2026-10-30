@@ -17820,7 +17820,7 @@ export interface paths {
         put?: never;
         /**
          * Run several record operations
-         * @description Up to 25 creates, updates and deletes in order, each on its own; a later one may use an earlier one's result through ${ref.field}. One result per operation.
+         * @description Up to 25 creates, updates and deletes in order, each on its own; a later one may use an earlier one's result through ${ref.field}. With all_or_none, they run in one transaction and the first failure rolls them all back. One result per operation.
          */
         post: operations["composite"];
         delete?: never;
@@ -18906,6 +18906,90 @@ export interface paths {
          */
         post: operations["post_esign_signer_action"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exchange-rates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stored exchange rates
+         * @description Stored exchange rates, newest day first, optionally for one currency pair. Any signed-in person.
+         */
+        get: operations["list_rates"];
+        put?: never;
+        /**
+         * Enter an exchange rate
+         * @description Stores one rate for a day, replacing a rate for the same pair, day and source. Source `manual` unless named. Needs the Deployment administration area.
+         */
+        post: operations["create_rate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exchange-rates/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import exchange rates
+         * @description Stores up to 1,000 rates from one source in one transaction, replacing rates for the same pair, day and source: what a connector or a scheduled flow calls with a central bank's published rates. Needs the Deployment administration area.
+         */
+        post: operations["import_rates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exchange-rates/rate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The rate that applies on a day
+         * @description The rate from one currency to another on a day: the newest stored rate on or before it, the deployment's preferred source first on a tie of days, the opposite direction inverted when only that is stored. Any signed-in person.
+         */
+        get: operations["rate_on"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exchange-rates/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete an exchange rate
+         * @description Removes one stored rate. Needs the Deployment administration area.
+         */
+        delete: operations["delete_rate"];
         options?: never;
         head?: never;
         patch?: never;
@@ -32331,6 +32415,24 @@ export interface components {
             rules_changed: number;
             seasons_changed: number;
         };
+        /** @description The applied rate's answer. */
+        AppliedRateResponse: {
+            from_currency: string;
+            /** @description The stored rate was the opposite direction, inverted. */
+            inverted: boolean;
+            /**
+             * @description The rate used, as a decimal string.
+             * @example 3.7500000000
+             */
+            rate: string;
+            /**
+             * Format: date
+             * @description The day of the stored rate (on or before the day asked for).
+             */
+            rate_date: string;
+            source: string;
+            to_currency: string;
+        };
         /** @description The newest `succeeded` plan the drift was computed against. */
         AppliedRef: {
             bundle_hash: string;
@@ -36417,7 +36519,10 @@ export interface components {
             ref: string;
         };
         CompositeRequest: {
-            /** @description Every operation commits or none does. Not available yet (S1-T8). */
+            /**
+             * @description Every operation commits or none does (S1-T8): they run in one
+             *     transaction, and the first that fails rolls them all back.
+             */
             all_or_none?: boolean;
             operations: components["schemas"]["CompositeOp"][];
         };
@@ -36430,6 +36535,11 @@ export interface components {
             /** @description The error body, as a single request would have answered. */
             error?: unknown;
             ref: string;
+            /**
+             * @description S1-T8: true when an `all_or_none` request failed, so this operation
+             *     was rolled back (or, after the failing one, never ran).
+             */
+            rolled_back?: boolean;
             /**
              * Format: int32
              * @description The HTTP status the operation would have had on its own.
@@ -40907,6 +41017,58 @@ export interface components {
              *     record id, ...).
              */
             target_ref: string;
+        };
+        /** @description A batch of rates from one source. */
+        ExchangeRateImport: {
+            rates: components["schemas"]["ExchangeRateImportItem"][];
+            /**
+             * @description The source every rate in the batch comes from, such as `sama` or
+             *     `cbuae`.
+             */
+            source: string;
+        };
+        ExchangeRateImportItem: {
+            from_currency: string;
+            /** @example 0.2666 */
+            rate: string;
+            /** Format: date */
+            rate_date: string;
+            to_currency: string;
+        };
+        /** @description How many rates an import stored. */
+        ExchangeRateImported: {
+            stored: number;
+        };
+        /** @description One rate to store. */
+        ExchangeRateInput: {
+            from_currency: string;
+            /**
+             * @description A decimal number or string, above zero; kept to 10 places.
+             * @example 3.75
+             */
+            rate: string;
+            /** Format: date */
+            rate_date: string;
+            /** @description Where the rate comes from; `manual` when left out. */
+            source?: string | null;
+            to_currency: string;
+        };
+        /** @description A stored rate. */
+        ExchangeRateRow: {
+            /** Format: date-time */
+            created_at: string;
+            from_currency: string;
+            /** Format: uuid */
+            id: string;
+            /**
+             * @description One unit of `from_currency` in `to_currency`, as a decimal string.
+             * @example 3.7500000000
+             */
+            rate: string;
+            /** Format: date */
+            rate_date: string;
+            source: string;
+            to_currency: string;
         };
         ExecData: {
             columns: components["schemas"]["ColumnDef"][];
@@ -50593,6 +50755,36 @@ export interface components {
                 status: string;
                 /** Format: uuid */
                 webportal_user_id: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_ExchangeRateRow: {
+            items: {
+                /** Format: date-time */
+                created_at: string;
+                from_currency: string;
+                /** Format: uuid */
+                id: string;
+                /**
+                 * @description One unit of `from_currency` in `to_currency`, as a decimal string.
+                 * @example 3.7500000000
+                 */
+                rate: string;
+                /** Format: date */
+                rate_date: string;
+                source: string;
+                to_currency: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -119409,7 +119601,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description The request's own shape is wrong (count, refs, all_or_none) */
+            /** @description The request's own shape is wrong (count or refs) */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -121947,6 +122139,264 @@ export interface operations {
             };
             /** @description A wrong code, or no typed name */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_rates: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Only rates from this currency. */
+                from: string | null;
+                /** @description Only rates to this currency. */
+                to: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of rates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ExchangeRateRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A currency is not an ISO 4217 code */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_rate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExchangeRateInput"];
+            };
+        };
+        responses: {
+            /** @description The rate as stored */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeRateRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the Deployment administration area */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A code, the rate or the source is not valid, or a currency is unknown */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    import_rates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExchangeRateImport"];
+            };
+        };
+        responses: {
+            /** @description Every rate was stored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeRateImported"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the Deployment administration area */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The batch is empty or too large, or a rate is not valid; nothing was stored */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    rate_on: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The currency converted from. */
+                from: string;
+                /** @description The currency converted to. */
+                to: string;
+                /** @description The day; today (UTC) when left out. */
+                on: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The rate that applies */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppliedRateResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No rate on or before the day */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A currency is not an ISO 4217 code */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_rate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The rate */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the Deployment administration area */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such rate */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
