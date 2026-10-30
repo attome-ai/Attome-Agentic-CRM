@@ -95,3 +95,9 @@ between this deployment and the copy, record by record by hash, lists each field
 values are unchanged, and fails when a faked or cleared field still holds a source value (a shuffled
 value may land on a record that held the same one, and a kept field is kept on purpose, so neither
 counts).
+
+`POST /api/v1/admin/sandboxes` with `{"name": "copy_a", "mode": "sample", "percent": 10}` asks for the
+same copy from the API (the Deployment administration area; audited): it answers 202 with the
+request, and a background job makes the copy with the deployment's own database credentials.
+`GET /api/v1/admin/sandboxes` lists the requests and `.../{id}` reads one, with its status
+(`queued`, `running`, `done`, `failed`) and what the copy did.

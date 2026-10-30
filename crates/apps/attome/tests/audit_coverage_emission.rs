@@ -5277,6 +5277,13 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"shares": []})),
             )
         }
+        // ── T5-T1: a sandbox copy asked for (queued; the job does not run) ──
+        "POST /api/v1/admin/sandboxes" => request(
+            "POST",
+            "/api/v1/admin/sandboxes",
+            t,
+            Some(json!({ "name": format!("sbx_{}", &Uuid::now_v7().simple().to_string()[20..]) })),
+        ),
         // ── A1-T10: time-travel settings (off: no history table to create) ──
         "PUT /api/v1/admin/time-travel/{entity}" => with_if_match(
             request(

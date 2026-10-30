@@ -257,6 +257,8 @@ pub mod reminder_access;
 pub mod rule_admin;
 /// A11-T4: business-rule test cases, run at publish.
 pub mod rule_test_cases;
+/// T5-T1: the copy API for sandbox copies.
+pub mod sandboxes;
 pub mod schedules_admin;
 /// M45 Phase 2 (D-472) — schema-building, field-security-on-authoring, the
 /// compiled-rule cache, and rule evaluation shared by `rule_admin` (CRUD/

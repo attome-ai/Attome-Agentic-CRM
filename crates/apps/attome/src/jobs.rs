@@ -3761,6 +3761,48 @@ pub const HEAVY_OP_UNDO_RETENTION: attome_jobs::JobType =
 pub fn register_job_types() {
     static ONCE: std::sync::Once = std::sync::Once::new();
     ONCE.call_once(|| {
+        // T5-T1: a sandbox copy asked for through the API.
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            attome_api::sandboxes::SANDBOX_COPY,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: attome_api::sandboxes::SandboxCopyPayload = job.payload()?;
+                let Some(request) = attome_api::sandboxes::start(&state, payload.request_id)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?
+                else {
+                    return Ok(());
+                };
+                let args = crate::scratch::ScratchArgs {
+                    name: request.database_name.clone(),
+                    from: None,
+                    mode: crate::scratch::ScratchMode::parse(&request.mode)
+                        .unwrap_or(crate::scratch::ScratchMode::Full),
+                    percent: request
+                        .sample_percent
+                        .and_then(|p| u8::try_from(p).ok())
+                        .unwrap_or(crate::scratch::DEFAULT_SAMPLE_PERCENT),
+                };
+                let (done, detail) = match crate::scratch::create(&state.base.config, &args).await {
+                    Ok(report) => (
+                        true,
+                        format!(
+                            "{} labelled field(s) masked, {} left as is, {} entities sampled",
+                            report.masked.len(),
+                            report.unmasked_required.len(),
+                            report.sampled.len()
+                        ),
+                    ),
+                    Err(error) => (false, error),
+                };
+                tracing::info!(request = %payload.request_id, done, "sandbox copy finished");
+                attome_api::sandboxes::finish(&state, payload.request_id, done, &detail)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
         // AD6-T2: a published version's documentation.
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             attome_ai::builder::docs::PUBLISH_DOCS,
