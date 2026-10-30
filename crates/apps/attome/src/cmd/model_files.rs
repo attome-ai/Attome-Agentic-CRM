@@ -6,7 +6,9 @@
 //! file under the directory and saves each as a draft; it never publishes.
 //! The server is `--url` (or `ATTOME_URL`, default `http://127.0.0.1:7865`)
 //! and the caller authenticates with an administrator API key, `--api-key`
-//! (or `ATTOME_API_KEY`) in the `<public>:<secret>` form.
+//! (or `ATTOME_API_KEY`) in the `<public>:<secret>` form, or, with
+//! `--target <name>` (T4-T1), as the person signed in to that target with
+//! `attome login`.
 
 #![allow(
     clippy::print_stdout,
@@ -25,16 +27,18 @@ pub enum ModelCommand {
     Export {
         url: String,
         api_key: Option<String>,
+        target: Option<String>,
         out: PathBuf,
     },
     Import {
         url: String,
         api_key: Option<String>,
+        target: Option<String>,
         dir: PathBuf,
     },
 }
 
-const USAGE: &str = "usage: attome model export --out <dir> [--url <url>] [--api-key <key>]\n       attome model import --dir <dir> [--url <url>] [--api-key <key>]";
+const USAGE: &str = "usage: attome model export --out <dir> [--target <name> | --url <url> [--api-key <key>]]\n       attome model import --dir <dir> [--target <name> | --url <url> [--api-key <key>]]";
 
 /// Parses the arguments after `attome model`.
 pub fn parse(args: &[String]) -> Result<ModelCommand, String> {
@@ -42,6 +46,7 @@ pub fn parse(args: &[String]) -> Result<ModelCommand, String> {
     let mut url = std::env::var("ATTOME_URL").unwrap_or_else(|_| DEFAULT_URL.to_owned());
     let mut api_key = std::env::var("ATTOME_API_KEY").ok();
     let mut dir: Option<PathBuf> = None;
+    let mut target: Option<String> = None;
     let mut iter = rest.iter();
     while let Some(flag) = iter.next() {
         let mut value = || {
@@ -52,6 +57,7 @@ pub fn parse(args: &[String]) -> Result<ModelCommand, String> {
         match (verb.as_str(), flag.as_str()) {
             (_, "--url") => url = value()?,
             (_, "--api-key") => api_key = Some(value()?),
+            (_, "--target") => target = Some(value()?),
             ("export", "--out") | ("import", "--dir") => dir = Some(PathBuf::from(value()?)),
             _ => return Err(format!("unknown flag `{flag}`\n{USAGE}")),
         }
@@ -61,11 +67,13 @@ pub fn parse(args: &[String]) -> Result<ModelCommand, String> {
         "export" => Ok(ModelCommand::Export {
             url,
             api_key,
+            target,
             out: dir.ok_or_else(|| format!("--out is required\n{USAGE}"))?,
         }),
         "import" => Ok(ModelCommand::Import {
             url,
             api_key,
+            target,
             dir: dir.ok_or_else(|| format!("--dir is required\n{USAGE}"))?,
         }),
         _ => Err(USAGE.to_owned()),
@@ -81,8 +89,24 @@ pub fn run(args: &[String]) -> Result<(), String> {
         .map_err(|error| format!("start the runtime: {error}"))?;
     runtime.block_on(async {
         match command {
-            ModelCommand::Export { url, api_key, out } => export(&url, api_key, &out).await,
-            ModelCommand::Import { url, api_key, dir } => import(&url, api_key, &dir).await,
+            ModelCommand::Export {
+                url,
+                api_key,
+                target,
+                out,
+            } => {
+                let (url, auth) = credentials(url, api_key, target).await?;
+                export(&url, auth, &out).await
+            }
+            ModelCommand::Import {
+                url,
+                api_key,
+                target,
+                dir,
+            } => {
+                let (url, auth) = credentials(url, api_key, target).await?;
+                import(&url, auth, &dir).await
+            }
         }
     })
 }
@@ -95,9 +119,28 @@ fn client(url: &str) -> Result<attome_outbound::http::Outbound, String> {
         .map_err(|error| format!("build the HTTP client: {error}"))
 }
 
-fn authorised(request: reqwest::RequestBuilder, api_key: Option<&str>) -> reqwest::RequestBuilder {
-    match api_key {
-        Some(key) => request.header("authorization", format!("ApiKey {key}")),
+/// The `Authorization` header value a command sends, if any.
+type Auth = Option<String>;
+
+/// The server and credential: a signed-in target's URL and bearer token
+/// (T4-T1), else `url` and the API key.
+async fn credentials(
+    url: String,
+    api_key: Option<String>,
+    target: Option<String>,
+) -> Result<(String, Auth), String> {
+    match target {
+        Some(target) => {
+            let (url, token) = crate::cmd::login::target_bearer(Some(&target)).await?;
+            Ok((url, Some(format!("Bearer {token}"))))
+        }
+        None => Ok((url, api_key.map(|key| format!("ApiKey {key}")))),
+    }
+}
+
+fn authorised(request: reqwest::RequestBuilder, auth: Option<&str>) -> reqwest::RequestBuilder {
+    match auth {
+        Some(value) => request.header("authorization", value),
         None => request,
     }
 }
@@ -125,10 +168,10 @@ fn safe_relative(path: &str) -> Option<PathBuf> {
         .then(|| candidate.to_path_buf())
 }
 
-async fn export(url: &str, api_key: Option<String>, out: &Path) -> Result<(), String> {
+async fn export(url: &str, auth: Auth, out: &Path) -> Result<(), String> {
     let response = authorised(
         client(url)?.get(format!("{url}/api/v1/admin/model/export")),
-        api_key.as_deref(),
+        auth.as_deref(),
     )
     .send()
     .await
@@ -184,7 +227,7 @@ fn read_tree(dir: &Path) -> Result<Vec<(String, String)>, String> {
     Ok(found)
 }
 
-async fn import(url: &str, api_key: Option<String>, dir: &Path) -> Result<(), String> {
+async fn import(url: &str, auth: Auth, dir: &Path) -> Result<(), String> {
     let files: Vec<Value> = read_tree(dir)?
         .into_iter()
         .map(|(path, text)| json!({ "path": path, "text": text }))
@@ -194,7 +237,7 @@ async fn import(url: &str, api_key: Option<String>, dir: &Path) -> Result<(), St
         client(url)?
             .post(format!("{url}/api/v1/admin/model/import"))
             .json(&json!({ "files": files })),
-        api_key.as_deref(),
+        auth.as_deref(),
     )
     .send()
     .await
@@ -230,8 +273,14 @@ mod tests {
             ModelCommand::Export {
                 url: "http://host:1".into(),
                 api_key: Some("p:s".into()),
+                target: None,
                 out: PathBuf::from("meta"),
             }
+        );
+        let by_target = parse(&args(&["export", "--out", "meta", "--target", "prod"]))
+            .expect("export by target parses");
+        assert!(
+            matches!(by_target, ModelCommand::Export { ref target, .. } if target.as_deref() == Some("prod"))
         );
         let import =
             parse(&args(&["import", "--dir", "meta", "--url", "http://h"])).expect("import parses");

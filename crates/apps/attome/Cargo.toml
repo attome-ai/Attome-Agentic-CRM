@@ -148,7 +148,7 @@ libc.workspace = true
 base64.workspace = true
 windows-service.workspace = true
 # Y5-T3: the service's Job Object memory limit.
-windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_Networking_WinSock", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }
+windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_Networking_WinSock", "Win32_Security", "Win32_Security_Credentials", "Win32_System_JobObjects", "Win32_System_Threading"] }
 
 [[test]]
 name = "keycloak_oidc"

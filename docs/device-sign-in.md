@@ -40,6 +40,24 @@ redeems the refresh token at the same endpoint (`grant_type=refresh_token&client
 refresh_token=...`) for the next pair; each refresh token works once, and presenting a spent one
 again ends the session, as for a browser.
 
+## The CLI
+
+```
+attome login --target prod --url https://crm.example.com
+attome targets
+attome model export --out meta --target prod
+attome logout --target prod
+```
+
+`attome login` runs the flow above as `attome-cli`: it prints the code and the page, polls, and
+keeps the session under `attome:<target>` in Windows Credential Manager on Windows, and elsewhere in
+a file only the user can read (`credentials/<target>.json` in the config directory). The target's
+URL goes in `targets.json` in the user's config directory (`%APPDATA%ttome`,
+`~/Library/Application Support/attome`, or `$XDG_CONFIG_HOME/attome`; `ATTOME_CONFIG_DIR` overrides
+it), and the first target signed in becomes the default. A command given `--target` uses that
+session and refreshes it when the access token is about to expire; a session that has ended is
+forgotten and the command asks to sign in again.
+
 ## What the session is
 
 An ordinary session of the person: their roles and record access, their role's sign-in rules and

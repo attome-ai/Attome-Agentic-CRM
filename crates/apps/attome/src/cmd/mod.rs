@@ -12,6 +12,8 @@ pub mod cluster_ssh;
 pub mod drill;
 pub mod healthcheck;
 pub mod init;
+/// T4-T1: `attome login`, `logout` and `targets` (the device grant).
+pub mod login;
 pub mod migrate;
 pub mod model_files;
 pub mod preflight;
