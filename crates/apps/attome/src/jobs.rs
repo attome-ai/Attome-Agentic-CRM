@@ -3170,6 +3170,10 @@ const DEDUP_KEY_COMPLIANCE_EXPIRY: &str = "compliance-expiry";
 const DEDUP_KEY_PARTNER_INTAKE: &str = "partner-registration-intake";
 /// F9-T3: approved deal registrations past their protection (a registered job type).
 const DEDUP_KEY_PARTNER_LAPSE: &str = "partner-registration-lapse";
+/// F9-T7: MDF requests over their fund, and claims without an approved request or proof, refused. (a registered job type).
+const DEDUP_KEY_PARTNER_MDF: &str = "partner-mdf-check";
+/// F9-T7: partner certifications within 30 days of expiry warned once per date. (a registered job type).
+const DEDUP_KEY_PARTNER_CERT_EXPIRY: &str = "partner-certification-expiry";
 /// I5-T2: maintenance plan timers and meter checks (a registered job type).
 const DEDUP_KEY_MAINTENANCE: &str = "maintenance-generation";
 /// I7-T1: device readings and device rules (a registered job type).
@@ -3538,6 +3542,14 @@ pub const PARTNER_REGISTRATION_INTAKE: attome_jobs::JobType =
 /// F9-T3: approved deal registrations past their protection lapsed.
 pub const PARTNER_REGISTRATION_LAPSE: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_partner::registration::LAPSE_JOB, 1);
+
+/// F9-T7: MDF requests over their fund, and claims without an approved request or proof, refused.
+pub const PARTNER_MDF_CHECK: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_partner::mdf::CHECK_JOB, 1);
+
+/// F9-T7: partner certifications within 30 days of expiry warned once per date.
+pub const PARTNER_CERTIFICATION_EXPIRY: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_partner::certification::EXPIRY_JOB, 1);
 
 /// I5-T2: one maintenance timer kept per date plan, and work orders made for
 /// meter plans whose reading passed the threshold.
@@ -4701,6 +4713,40 @@ pub fn register_job_types() {
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 if lapsed > 0 {
                     tracing::info!(lapsed, "deal registrations lapsed");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            PARTNER_MDF_CHECK,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_PARTNER) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let done = attome_partner::mdf::check_tick(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if done > 0 {
+                    tracing::info!(done, "mdf requests and claims checked");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            PARTNER_CERTIFICATION_EXPIRY,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_PARTNER) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let done = attome_partner::certification::expiry_tick(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if done > 0 {
+                    tracing::info!(done, "partner certifications warned of expiry");
                 }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
@@ -6126,6 +6172,10 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == PARTNER_REGISTRATION_LAPSE.name => {
             DEDUP_KEY_PARTNER_LAPSE
         }
+        EngineJob::Registered(job) if job.name == PARTNER_MDF_CHECK.name => DEDUP_KEY_PARTNER_MDF,
+        EngineJob::Registered(job) if job.name == PARTNER_CERTIFICATION_EXPIRY.name => {
+            DEDUP_KEY_PARTNER_CERT_EXPIRY
+        }
         EngineJob::Registered(job) if job.name == RFQ_OPEN.name => DEDUP_KEY_RFQ_OPEN,
         EngineJob::Registered(job) if job.name == CHANGE_SIGNOFF.name => DEDUP_KEY_CHANGE_SIGNOFF,
         EngineJob::Registered(job) if job.name == SURVEY_SEND.name => DEDUP_KEY_SURVEY_SEND,
@@ -7298,6 +7348,36 @@ pub fn spawn_partner_lapse_scheduler(db: DbPool, interval: std::time::Duration) 
             "deal registration lapse",
         ),
         Err(error) => tracing::error!(%error, "deal registration lapse: not scheduled"),
+    }
+}
+
+/// F9-T7: every minute, new MDF requests and claims checked.
+pub fn spawn_partner_mdf_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(PARTNER_MDF_CHECK.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_PARTNER_MDF,
+            "mdf check",
+        ),
+        Err(error) => tracing::error!(%error, "mdf check: not scheduled"),
+    }
+}
+
+/// F9-T7: daily, partner certifications near expiry warned once.
+pub fn spawn_partner_certification_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(PARTNER_CERTIFICATION_EXPIRY.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_PARTNER_CERT_EXPIRY,
+            "partner certification expiry",
+        ),
+        Err(error) => tracing::error!(%error, "partner certification expiry: not scheduled"),
     }
 }
 

@@ -213,6 +213,12 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     // F9-T3: deal registrations checked every minute, lapsed daily.
     crate::jobs::spawn_partner_intake_scheduler(db.clone(), std::time::Duration::from_secs(60));
     crate::jobs::spawn_partner_lapse_scheduler(db.clone(), std::time::Duration::from_secs(86_400));
+    // F9-T7: MDF requests and claims checked every minute; certifications warned daily.
+    crate::jobs::spawn_partner_mdf_scheduler(db.clone(), std::time::Duration::from_secs(60));
+    crate::jobs::spawn_partner_certification_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(86_400),
+    );
     // I5-T2: maintenance plan timers and meter checks, daily.
     crate::jobs::spawn_maintenance_scheduler(db.clone(), std::time::Duration::from_secs(86_400));
     // I7-T1: device readings and device rules, every minute.

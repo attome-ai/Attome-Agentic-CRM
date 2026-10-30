@@ -4,9 +4,14 @@
 //! crate holds the engine code that acts on them as later tasks add it. Gated on the `partner`
 //! module.
 
+/// F9-T7: certifications warn before they expire.
+pub mod certification;
+/// F9-T7: market development fund requests and claims.
+pub mod mdf;
 pub mod model;
 /// F9-T3: deal registration conflicts, decisions and lapse.
 pub mod registration;
+mod support;
 
 pub use model::PartnerModel;
 
@@ -17,5 +22,7 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 37;
 /// This crate's slice of the workspace OpenAPI document, merged in by
 /// `attome::openapi::document()`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    <registration::RegistrationApiDoc as utoipa::OpenApi>::openapi()
+    let mut doc = <registration::RegistrationApiDoc as utoipa::OpenApi>::openapi();
+    doc.merge(<mdf::MdfApiDoc as utoipa::OpenApi>::openapi());
+    doc
 }

@@ -40,3 +40,28 @@ Partners reach their deals through the portal: give the partner portal role read
 opportunity stops naming the partner unless the deal was won.
 
 Every decision and lapse is written to the audit log as a business event.
+
+## Market development funds
+
+A partner asks for part of its fund (`mdf_fund`) as an `mdf_request`, and claims its spend against
+an approved request as an `mdf_claim` with a proof file. Give the partner portal role access to
+`mdf_fund`, `mdf_request` and `mdf_claim` scoped to the partner's own account, so no partner sees
+another's amounts.
+
+**Check.** Every minute the server refuses, with the reason, a submitted request asking for more
+than is left of its fund — the fund's amount less the approved requests and the submitted ones made
+before it, so pending requests are served first come, first served — and a claim whose request is
+not approved or that has no proof file. The partner manager is told of each.
+
+**Decision.** `POST /api/v1/partner/mdf/requests/{id}/decision` and
+`POST /api/v1/partner/mdf/claims/{id}/decision`, with `{"decision": "approve"}` or
+`{"decision": "reject", "reason": "..."}`, by a person with update access (API keys and S2S clients
+are refused). A request is approved under the fund's lock only while it still fits. An approved
+claim writes the event `partner.mdf_claim_approved` once, in the same transaction, for payment to
+take up; nothing is posted to a ledger here.
+
+## Certifications
+
+Daily, a partner certification that expires within 30 days is warned once for that expiry date
+(`warned_on`), telling the partner's partner manager. A certification renewed to a later date is
+warned again 30 days before the new one.

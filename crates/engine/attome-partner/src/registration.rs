@@ -48,6 +48,8 @@ use serde_json::{Map, Value, json};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
+use crate::support::{installed, lock, notify, partner_manager, person_only, require};
+
 /// The registered intake job (every minute).
 pub const INTAKE_JOB: &str = "partner_registration_intake";
 /// The registered lapse job (daily).
@@ -261,27 +263,8 @@ pub fn summary(conflicts: &[Conflict]) -> Option<String> {
     })
 }
 
-async fn installed(db: &attome_db::DbPool) -> Result<bool, AppError> {
-    sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM information_schema.columns \
-          WHERE table_schema = current_schema() AND table_name = 'deal_registration' \
-            AND column_name = 'checked_at')",
-    )
-    .fetch_one(db)
-    .await
-    .map_err(AppError::internal)
-}
-
 async fn tell_manager(state: &EngineState, registration: &Registration, conflicts: &[Conflict]) {
-    let Some(partner) = registration.partner_account else {
-        return;
-    };
-    let manager: Result<Option<Option<Uuid>>, sqlx::Error> =
-        sqlx::query_scalar("SELECT partner_manager_ref FROM account WHERE id = $1")
-            .bind(partner)
-            .fetch_optional(&state.base.db)
-            .await;
-    let Ok(Some(Some(manager))) = manager else {
+    let Some(manager) = partner_manager(state, registration.partner_account).await else {
         return;
     };
     let customer = registration
@@ -293,38 +276,21 @@ async fn tell_manager(state: &EngineState, registration: &Registration, conflict
     } else {
         format!("A partner registered a deal for {customer}, with conflicts")
     };
-    let req = attome_notification::dispatch::DispatchRequest {
-        template_key: None,
-        locale: "en".to_string(),
-        recipient_user_ref: Some(manager),
-        is_global: false,
-        organization_ref: None,
-        channels: None,
-        subject: Some(subject),
-        body_html: None,
-        body_text: Some(summary(conflicts).unwrap_or_else(|| "No conflicts found.".to_owned())),
-        route: Some(format!("/xrm/entity/{ENTITY}/{}", registration.id)),
-        variables: std::collections::HashMap::new(),
-        priority: "normal".to_string(),
-        escalate_after_minutes: None,
-        escalate_channels: None,
-    };
-    if let Err(error) = attome_notification::dispatch::create_dispatch(
-        &state.base.db,
-        &state.base.config.notification,
-        req,
+    notify(
+        state,
+        manager,
+        subject,
+        summary(conflicts).unwrap_or_else(|| "No conflicts found.".to_owned()),
+        format!("/xrm/entity/{ENTITY}/{}", registration.id),
     )
-    .await
-    {
-        tracing::warn!(registration = %registration.id, %error, "deal registration: manager not told");
-    }
+    .await;
 }
 
 /// The intake job: checks new registrations for conflicts. Answers how many
 /// were checked.
 pub async fn intake_tick(state: &EngineState) -> Result<u64, AppError> {
     let db = &state.base.db;
-    if !installed(db).await? {
+    if !installed(db, ENTITY, "checked_at").await? {
         return Ok(0);
     }
     let rows: Vec<Value> = sqlx::query_scalar(
@@ -370,7 +336,7 @@ pub async fn intake_tick(state: &EngineState) -> Result<u64, AppError> {
 /// `lapsed`. Answers how many lapsed.
 pub async fn lapse_tick(state: &EngineState) -> Result<u64, AppError> {
     let db = &state.base.db;
-    if !installed(db).await? {
+    if !installed(db, ENTITY, "checked_at").await? {
         return Ok(0);
     }
     let mut lapsed = 0;
@@ -466,34 +432,6 @@ pub struct Conflicts {
     pub conflicts: Vec<Conflict>,
 }
 
-async fn require(
-    state: &EngineState,
-    ctx: &SecurityContext,
-    entity: &str,
-    id: Uuid,
-    action: RecordAction,
-) -> Result<(), AppError> {
-    let (entity_id, _, _, _) = attome_records::entity_crud::resolve_entity(state, entity).await?;
-    attome_records::entity_crud::require_record_access(state, ctx, entity_id, entity, id, action)
-        .await
-}
-
-async fn lock(tx: &mut attome_db::Tx<'_>, key: String) -> Result<(), AppError> {
-    let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
-        .bind(crate::ADVISORY_LOCK_NAMESPACE)
-        .bind(key)
-        .fetch_one(&mut **tx)
-        .await
-        .map_err(AppError::internal)?;
-    if locked {
-        Ok(())
-    } else {
-        Err(AppError::Conflict(
-            "another decision for this customer is in progress; retry",
-        ))
-    }
-}
-
 /// Days of protection the partner's tier gives.
 async fn protection_days(
     tx: &mut attome_db::Tx<'_>,
@@ -523,10 +461,8 @@ pub async fn decide(
     id: Uuid,
     body: DecisionBody,
 ) -> Result<Decided, AppError> {
-    // A person decides: never an API key, an S2S client or an agent on one.
-    if ctx.service_principal {
-        return Err(AppError::Forbidden);
-    }
+    // A person decides: never an API key, an S2S client or an agent.
+    person_only(ctx)?;
     require(state, ctx, ENTITY, id, RecordAction::Update).await?;
     let registration = read(&state.base.db, id).await?.ok_or(AppError::NotFound)?;
     if !matches!(registration.status.as_str(), "submitted" | "conflict") {

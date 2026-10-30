@@ -262,3 +262,143 @@ fn approval_names_the_partner_and_protection_lapses() {
         assert!(row(&app, "opportunity", opportunity).await["partner_account_ref"].is_null());
     });
 }
+
+async fn mdf_decide(app: &TestApp, kind: &str, id: Uuid, body: Value) -> (StatusCode, Value) {
+    app.request(
+        Method::POST,
+        &format!("/api/v1/partner/mdf/{kind}/{id}/decision"),
+        Some(body),
+    )
+    .await
+}
+
+async fn change_events(app: &TestApp, id: Uuid, name: &str) -> i64 {
+    sqlx::query_scalar(
+        "SELECT COUNT(*) FROM entity_change_event WHERE record_id = $1 AND event_name = $2",
+    )
+    .bind(id)
+    .bind(name)
+    .fetch_one(app.db())
+    .await
+    .unwrap()
+}
+
+// feature: F9
+#[test]
+fn mdf_requests_respect_the_fund_and_an_approved_claim_emits_once() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        install_partner(&app).await;
+        let w = world(&app).await;
+        let fund = create(
+            &app,
+            "mdf_fund",
+            json!({ "partner_account_ref": w.partner_a, "fiscal_year": "2027", "amount": 1000 }),
+        )
+        .await;
+        let request = |amount: i64| {
+            let app = &app;
+            async move {
+                create(
+                    app,
+                    "mdf_request",
+                    json!({ "fund_ref": fund, "activity": "Webinar", "amount": amount, "status": "submitted" }),
+                )
+                .await
+            }
+        };
+
+        // 600 fits; 500 more does not, and the check refuses it.
+        let first = request(600).await;
+        let over = request(500).await;
+        attome_partner::mdf::check_tick(&app.state).await.unwrap();
+        assert_eq!(row(&app, "mdf_request", first).await["status"], "submitted");
+        let refused = row(&app, "mdf_request", over).await;
+        assert_eq!(refused["status"], "rejected", "{refused}");
+        let (status, body) =
+            mdf_decide(&app, "requests", first, json!({ "decision": "approve" })).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+
+        // request_over_remaining_fund_is_422: decided before the check runs.
+        let late = request(500).await;
+        let (status, _) =
+            mdf_decide(&app, "requests", late, json!({ "decision": "approve" })).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+
+        // claim_needs_approved_request: against the refused request.
+        let stray = create(
+            &app,
+            "mdf_claim",
+            json!({ "request_ref": over, "amount": 100 }),
+        )
+        .await;
+        let (status, _) = mdf_decide(&app, "claims", stray, json!({ "decision": "approve" })).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+
+        // A claim on the approved request needs its proof, then emits once.
+        let claim = create(
+            &app,
+            "mdf_claim",
+            json!({ "request_ref": first, "amount": 400 }),
+        )
+        .await;
+        let (status, _) = mdf_decide(&app, "claims", claim, json!({ "decision": "approve" })).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "no proof yet");
+        sqlx::query("UPDATE mdf_claim SET proof_file = 'mdf/proof.pdf' WHERE id = $1")
+            .bind(claim)
+            .execute(app.db())
+            .await
+            .unwrap();
+        let (status, body) =
+            mdf_decide(&app, "claims", claim, json!({ "decision": "approve" })).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let (status, _) = mdf_decide(&app, "claims", claim, json!({ "decision": "approve" })).await;
+        assert_eq!(status, StatusCode::CONFLICT);
+        assert_eq!(
+            change_events(&app, claim, attome_partner::mdf::CLAIM_APPROVED).await,
+            1
+        );
+    });
+}
+
+// feature: F9
+#[test]
+fn warns_once_30_days_before_expiry() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        install_partner(&app).await;
+        let w = world(&app).await;
+        let soon = (chrono::Utc::now() + chrono::Duration::days(10)).to_rfc3339();
+        let later = (chrono::Utc::now() + chrono::Duration::days(60)).to_rfc3339();
+        let expiring = create(
+            &app,
+            "partner_certification",
+            json!({ "partner_account_ref": w.partner_a, "name": "Cloud Expert", "expires_on": soon }),
+        )
+        .await;
+        let fresh = create(
+            &app,
+            "partner_certification",
+            json!({ "partner_account_ref": w.partner_a, "name": "Data Expert", "expires_on": later }),
+        )
+        .await;
+        attome_partner::certification::expiry_tick(&app.state)
+            .await
+            .unwrap();
+        let warned = row(&app, "partner_certification", expiring).await["warned_on"].clone();
+        assert!(!warned.is_null());
+        assert!(row(&app, "partner_certification", fresh).await["warned_on"].is_null());
+        // Once: a second run leaves it as it was.
+        attome_partner::certification::expiry_tick(&app.state)
+            .await
+            .unwrap();
+        assert_eq!(
+            row(&app, "partner_certification", expiring).await["warned_on"],
+            warned
+        );
+    });
+}
