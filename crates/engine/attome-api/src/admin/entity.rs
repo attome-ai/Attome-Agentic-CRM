@@ -903,6 +903,10 @@ pub(super) async fn update_entity(
             .unwrap_or_default(),
     };
 
+    let storage_mode = provision::storage::storage_mode_of(&state.base.db_migrator, &old_logical)
+        .await?
+        .as_str()
+        .to_owned();
     Ok(Json(EntityMeta {
         id: entity_id,
         logicalname: old_logical,
@@ -916,10 +920,7 @@ pub(super) async fn update_entity(
         business_key,
         is_reference_data,
         extends_entity_id: inheritance::extends_of(&state.base.db_migrator, entity_id).await?,
-        storage_mode: provision::storage::storage_mode_of(&state.base.db_migrator, &old_logical)
-            .await?
-            .as_str()
-            .to_owned(),
+        storage_mode,
         business_key_index_sync,
     }))
 }
