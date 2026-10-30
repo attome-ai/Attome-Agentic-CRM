@@ -33,7 +33,6 @@ use attome_server::security::SecurityContext;
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
 use axum::{Json, Router, extract::State, routing::post};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use sqlx::{Postgres, QueryBuilder};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -171,7 +170,7 @@ async fn record_source_text(
         {
             return Err(AppError::NotFound);
         }
-        let registry = state.entities.load_full();
+        let registry = arc_swap::Guard::into_inner(state.entities.load());
         let attachment = document_attachment(db, &registry, id)
             .await?
             .ok_or(AppError::NotFound)?;

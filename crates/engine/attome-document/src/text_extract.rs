@@ -321,6 +321,7 @@ pub fn xlsx_text(bytes: &[u8]) -> Option<String> {
 /// attachment names, a line each, then its body (an HTML-only body read as
 /// text). `None` when it does not parse. Pure.
 pub fn email_text(bytes: &[u8]) -> Option<String> {
+    use mail_parser::MimeHeaders;
     let message = mail_parser::MessageParser::default().parse(bytes)?;
     let people = |list: Option<&mail_parser::Address>| -> String {
         list.map(|a| {
