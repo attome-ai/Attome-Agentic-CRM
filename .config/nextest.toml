@@ -4,3 +4,22 @@
 [profile.default]
 test-threads = 6
 slow-timeout = { period = "60s", terminate-after = 3 }
+
+# Tests that run the migrations or a full boot on their own database
+# (rather than copying attome-testkit's template) race on the cluster-wide
+# roles migration 0009 creates ("tuple concurrently updated") when two run at
+# once, so they run one at a time, alongside everything else.
+[test-groups]
+own-migrations = { max-threads = 1 }
+
+[[profile.default.overrides]]
+filter = '''
+binary(changeset_platform_boot) | binary(concurrent_boot) | binary(fresh_bootstrap)
+| binary(solo_memory_boot) | binary(changeset_replay) | binary(provision)
+| binary(cross_deployment_isolation) | binary(migration_lock_timeout)
+| binary(migration_migrator_lock)
+| (package(attome) & kind(lib) & test(/^(boot|cmd::changeset_replay)::/))
+| (package(attome-api) & kind(lib) & test(/^calendar_admin::/))
+| (package(attome-db) & kind(lib) & test(/^migrate::/))
+'''
+test-group = 'own-migrations'
