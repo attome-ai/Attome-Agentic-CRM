@@ -53,6 +53,8 @@ attome-events.workspace = true
 attome-grc.workspace = true
 attome-model.workspace = true
 attome-notification.workspace = true
+# D1-T3: linking a verified portal sign-up to its contact.
+attome-portal.workspace = true
 attome-jobs.workspace = true
 attome-ledger.workspace = true
 attome-marketing.workspace = true

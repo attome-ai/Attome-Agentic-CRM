@@ -2545,6 +2545,7 @@ dependencies = [
  "attome-modules",
  "attome-notification",
  "attome-ops",
+ "attome-portal",
  "attome-records",
  "attome-sales",
  "attome-search",

@@ -247,3 +247,9 @@ Region presets (X12): the country, tax-rate and identity-document reference enti
 Arabia (`0001`) and the UAE and Egypt (`0002`): currency, VAT rates, ID and registration-number
 patterns with their check-digit rule, mobile and address formats, and a business-week calendar with
 the fixed-date public holidays. Hijri holidays follow the moon sighting and are added per year.
+
+## crm: portal contacts
+
+`0010` links a portal user to the contact it is (`webportal_user.contact_ref`), set when a portal
+sign-up's email is verified: the one live contact with that address, or else a new contact with
+`portal_review = pending` for staff to confirm or merge.

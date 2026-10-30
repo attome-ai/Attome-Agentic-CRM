@@ -332,6 +332,36 @@ async fn signup_verify(
         .outcome(AuditOutcome::Succeeded),
     )
     .await?;
+    // D1-T3: the verified address links the account to its contact.
+    let (email, name): (String, String) =
+        sqlx::query_as("SELECT lower(email), name FROM webportal_user WHERE id = $1")
+            .bind(user_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+    let link = crate::contact_link::link_verified(&state, &mut tx, &portal, user_id, &email, &name)
+        .await?;
+    if let crate::contact_link::ContactLink::Linked(contact)
+    | crate::contact_link::ContactLink::Created(contact) = &link
+    {
+        write(
+            &state,
+            &mut tx,
+            event(
+                MandatoryCategory::Credential,
+                AuditOperation::Update,
+                Some(user_id),
+            )
+            .named(match &link {
+                crate::contact_link::ContactLink::Linked(_) => {
+                    format!("portal account linked to contact {contact} by its verified email")
+                }
+                _ => format!("portal account given new contact {contact}, pending review"),
+            })
+            .outcome(AuditOutcome::Succeeded),
+        )
+        .await?;
+    }
     tx.commit().await.map_err(sqlx_err)?;
     Ok(StatusCode::NO_CONTENT)
 }

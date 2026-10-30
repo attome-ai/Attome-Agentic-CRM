@@ -30,6 +30,8 @@ pub mod account;
 pub mod admin;
 pub mod auth;
 pub mod cache;
+/// D1-T3: a verified sign-up linked to its contact.
+pub mod contact_link;
 pub mod context;
 pub mod email;
 pub mod guard;

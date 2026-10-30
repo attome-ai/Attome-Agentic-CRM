@@ -1,0 +1,107 @@
+{
+  "author": "packs",
+  "checksum": "sha256:b1c1f90ff90f348e303607179aa000cf96dd74e070547d4b00aac10f6ca6114f",
+  "closed_at": "2026-10-30T00:00:00Z",
+  "description": "D1-T3: a portal user names the contact it is, linked only by its verified email address; a contact a portal sign-up created waits for staff review (portal_review = pending).",
+  "format": "attome-changeset/v1",
+  "id": "01a18d7e-13b2-7c64-ab61-17eefcfdd6db",
+  "layer": "product",
+  "name": "crm-portal-contacts",
+  "opened_at": "2026-10-30T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Contact",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "contact_ref",
+          "lookup_entity": "contact",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "webportal_user",
+        "field": "contact_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Portal Review",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "portal_review",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "pending",
+              "confirmed"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "contact",
+        "field": "portal_review"
+      }
+    },
+    {
+      "args": {
+        "display_name": "جهة الاتصال"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "locale": "ar",
+        "object_key": "webportal_user.contact_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مراجعة البوابة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.portal_review",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "crm",
+  "seq": 10,
+  "title": "Pack: portal users linked to their contacts after verification"
+}

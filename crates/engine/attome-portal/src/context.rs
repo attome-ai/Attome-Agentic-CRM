@@ -615,7 +615,7 @@ pub async fn access_plan(
 
 /// The portal's live owning team and that team's organisation, or `None`
 /// when the portal has none or it is deleted (G-15: never a fallback owner).
-async fn owning_team(
+pub(crate) async fn owning_team(
     conn: &mut PgConnection,
     portal: &PortalDetail,
 ) -> Result<Option<(Uuid, Uuid)>, AppError> {

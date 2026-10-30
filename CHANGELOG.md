@@ -14,6 +14,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Portal sign-ups and contacts (D1-T3): with the crm pack (changeset 0010: `webportal_user.contact_ref`, `contact.portal_review`), a verified portal sign-up is linked to the one live contact with its email address, in the verification's own transaction and audited; with none or several, a new contact pending review is created, owned by the portal's owning team. A name never matches on its own.
 - Customer flags from the CLI and for agents (T6-T4): `attome flags list|get|set|off-now` (`admin.deployment`; changes need `--yes`), and the `flags.list` and `flags.set` agent tools with the same permission, `flags.set` waiting for a person's approval and writing through the flags API itself.
 - CLI output and safety (T4-T5): `--json` on `login`, `logout`, `targets`, `model` and `data` prints a versioned object (`schema_version` 1); `model import` and `data import` need `--yes`, and on a target signed in with `attome login --production` also `--confirm-target <name>`; `attome completions powershell|bash|zsh`.
 - `attome data query|export|import` (T4-T4): query records (`--where`, `--fields`, `--format table|csv|json`, JSON with `schema_version`), download an export, or upload a CSV or XLSX for import, as the signed-in person (`--target`) or with an API key.
