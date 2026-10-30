@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
-import { ApiError, ApiService, LangService, Page, TranslatePipe } from '@attome/base';
+import { ApiError, ApiService, LangService, TranslatePipe, type Page } from '@attome/base';
 import type { PageDoc } from '@attome/xrm/core/page-runtime';
 
 import { PortalSiteService } from './portal-site.service';
@@ -21,7 +21,8 @@ export interface PortalField {
   options: { choices?: string[] } | null;
 }
 
-interface PortalEntityView {
+/** The portal's description of an entity for the signed-in user. */
+export interface PortalEntityView {
   entity: string;
   can_create: boolean;
   fields: PortalField[];
