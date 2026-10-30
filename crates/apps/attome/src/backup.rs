@@ -61,7 +61,10 @@ pub fn drill_database_name(at: DateTime<Utc>) -> String {
     format!("attome_drill_{}", at.format("%Y%m%d%H%M%S"))
 }
 
-fn connect_options(config: &AppConfig, dbname: &str) -> sqlx::postgres::PgConnectOptions {
+pub(crate) fn connect_options(
+    config: &AppConfig,
+    dbname: &str,
+) -> sqlx::postgres::PgConnectOptions {
     let db = &config.database;
     let mut options = sqlx::postgres::PgConnectOptions::new()
         .host(&db.host)
@@ -90,40 +93,8 @@ async fn drill_into(config: &AppConfig, archive: &Path, temp: &str) -> Result<St
         sqlx::PgConnection::connect_with(&connect_options(config, &config.database.dbname))
             .await
             .map_err(|e| format!("cannot connect: {e}"))?;
-    // The name is generated (letters, digits, underscores), never input.
-    admin
-        .execute(format!("CREATE DATABASE \"{temp}\"").as_str())
-        .await
-        .map_err(|e| format!("cannot create {temp}: {e}"))?;
     let outcome = async {
-        let program = pg_restore_program(config);
-        let mut command = tokio::process::Command::new(&program);
-        command
-            .args([
-                "--no-owner".to_owned(),
-                "--exit-on-error".to_owned(),
-                format!("--host={}", config.database.host),
-                format!("--port={}", config.database.port),
-                format!("--username={}", config.database.user),
-                format!("--dbname={temp}"),
-                archive.display().to_string(),
-            ])
-            .kill_on_drop(true);
-        if let Some(password) = config.database.password.as_ref().map(|p| p.expose()) {
-            command.env("PGPASSWORD", password);
-        }
-        let output = tokio::time::timeout(BACKUP_TIMEOUT, command.output())
-            .await
-            .map_err(|_| "pg_restore did not finish within two hours".to_owned())?
-            .map_err(|e| format!("cannot run {program}: {e}"))?;
-        if !output.status.success() {
-            let reason = String::from_utf8_lossy(&output.stderr);
-            return Err(format!(
-                "pg_restore failed ({}): {}",
-                output.status,
-                reason.lines().last().unwrap_or_default()
-            ));
-        }
+        restore_into(config, &mut admin, archive, temp).await?;
         let mut copy = sqlx::PgConnection::connect_with(&connect_options(config, temp))
             .await
             .map_err(|e| format!("cannot open the restored copy: {e}"))?;
@@ -149,6 +120,51 @@ async fn drill_into(config: &AppConfig, archive: &Path, temp: &str) -> Result<St
         tracing::warn!(%error, database = %temp, "restore drill: the throwaway database was not dropped");
     }
     outcome
+}
+
+/// Creates the database `name` (letters, digits and underscores, checked by
+/// the caller; never request input) over `admin` and restores `archive`
+/// into it with `pg_restore`. T5-T1's sandbox copies use it too.
+pub(crate) async fn restore_into(
+    config: &AppConfig,
+    admin: &mut sqlx::PgConnection,
+    archive: &Path,
+    name: &str,
+) -> Result<(), String> {
+    use sqlx::Executor;
+    admin
+        .execute(format!("CREATE DATABASE \"{name}\"").as_str())
+        .await
+        .map_err(|e| format!("cannot create {name}: {e}"))?;
+    let program = pg_restore_program(config);
+    let mut command = tokio::process::Command::new(&program);
+    command
+        .args([
+            "--no-owner".to_owned(),
+            "--exit-on-error".to_owned(),
+            format!("--host={}", config.database.host),
+            format!("--port={}", config.database.port),
+            format!("--username={}", config.database.user),
+            format!("--dbname={name}"),
+            archive.display().to_string(),
+        ])
+        .kill_on_drop(true);
+    if let Some(password) = config.database.password.as_ref().map(|p| p.expose()) {
+        command.env("PGPASSWORD", password);
+    }
+    let output = tokio::time::timeout(BACKUP_TIMEOUT, command.output())
+        .await
+        .map_err(|_| "pg_restore did not finish within two hours".to_owned())?
+        .map_err(|e| format!("cannot run {program}: {e}"))?;
+    if !output.status.success() {
+        let reason = String::from_utf8_lossy(&output.stderr);
+        return Err(format!(
+            "pg_restore failed ({}): {}",
+            output.status,
+            reason.lines().last().unwrap_or_default()
+        ));
+    }
+    Ok(())
 }
 
 /// U6-T3: restores the newest backup into a throwaway database, checks it,
@@ -698,7 +714,7 @@ pub fn latest_archive(names: &[String]) -> Option<&String> {
 }
 
 /// Which archive `target` names: `latest`, a path, or a file in `backup.dir`.
-async fn archive_for(config: &AppConfig, target: &str) -> Result<PathBuf, String> {
+pub(crate) async fn archive_for(config: &AppConfig, target: &str) -> Result<PathBuf, String> {
     let dir = backup_dir(config);
     if target == "latest" {
         let mut entries = tokio::fs::read_dir(&dir)

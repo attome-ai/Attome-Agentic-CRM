@@ -168,6 +168,9 @@ fn main() -> ExitCode {
         ["preflight", ..] => attome::cmd::preflight::run(),
         ["doctor", ..] => attome::cmd::preflight::run_doctor(),
         ["backup", "now"] => attome::backup::run_now(),
+        ["scratch", rest @ ..] => {
+            attome::scratch::run(rest.iter().map(|arg| (*arg).to_owned()).collect())
+        }
         ["backup", "drill"] => attome::backup::run_drill_now(),
         ["restore", rest @ ..] => {
             attome::backup::run_restore(rest.iter().map(|arg| (*arg).to_owned()).collect())

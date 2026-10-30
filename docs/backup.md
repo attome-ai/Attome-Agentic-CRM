@@ -68,3 +68,15 @@ A deployment with several servers does not run the built-in backup (each node wo
 same database). Use pgBackRest (full weekly, differential daily, WAL archiving, point-in-time
 recovery) or the backups of the managed database host, and the object store's own versioning or
 replication for files.
+
+## Sandbox copies
+
+`attome scratch create --name <database> [--from latest|<archive>]` makes a masked copy of this
+deployment's database on the same PostgreSQL server (T5-T1): it restores a backup (a fresh one when
+`--from` is left out) into the new database, then, before anything boots on it, clears every value
+of a field labelled sensitive or with a confirmed Personal, Financial, Health or Secret label (a
+required column keeps its value and is listed), removes API keys, refresh and portal tokens,
+connector OAuth tokens, SCIM tokens and pending reset, invitation and verification links, and marks
+the database as a sandbox. A sandbox refuses to boot with email on unless `email.test_mode_catch_all`
+is set, so it never mails a real person. Only full copies are made so far; `--mode metadata` and
+`--mode sample` are refused.

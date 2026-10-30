@@ -129,6 +129,17 @@ pub async fn apply_schema_migrations(
     tracing::info!("schema ensured");
     attome_db::run_migrations(&migration_db, &MIGRATOR).await?;
     tracing::info!("migrations applied");
+    // T5-T1: a sandbox copy boots only when it cannot mail a real person.
+    let is_sandbox: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM sandbox_copy)")
+        .fetch_one(&migration_db)
+        .await?;
+    if let Some(reason) = crate::scratch::sandbox_email_refusal(
+        is_sandbox,
+        config.email.enabled,
+        attome_email::catch_all(&config.email).is_some(),
+    ) {
+        return Err(reason.into());
+    }
     // The tables a migration created belong to the bootstrap role until
     // handed to the migrator, which owns the schema (0009).
     let reassigned = attome_db::assign_schema_ownership(&migration_db).await?;
