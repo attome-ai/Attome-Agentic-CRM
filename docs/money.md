@@ -94,3 +94,14 @@ that day as described above. Once the stored value of the `lock_at_stage` attrib
 values, later writes keep the stored rate, and a changed amount is converted with it. A malformed
 `fx` option is refused when the attribute is saved. Amounts stored before conversion was turned on
 are converted on their next write.
+
+## Revaluation
+
+`GET /api/v1/reports/fx-revaluation?entity=invoice&attribute=total&as_of=2026-10-31&open_field=status&open_values=issued,overdue`
+revalues the open amounts of one money field that converts to the base currency (its `fx` option)
+(A19-T6). Per currency other than the base it gives the records, their amount, the base amount
+booked for them, the rate on `as_of` (today when absent), the amount at that rate and the
+difference, a gain when positive; `total_gain_loss` adds the lines that have a rate, and
+`missing_rates` names the currencies with none on or before the day. Without `open_field` every
+live record counts. The totals cover every record, so the report needs read access to every record
+of the entity.

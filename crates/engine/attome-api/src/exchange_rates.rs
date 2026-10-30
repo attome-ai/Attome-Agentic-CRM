@@ -14,6 +14,14 @@
 //!
 //! Writes need the Deployment administration area and are audited as
 //! configuration changes in their own transaction.
+//!
+//! - A19-T6: `GET /api/v1/reports/fx-revaluation` revalues the open amounts
+//!   of one money field that converts to the base currency (its `fx`
+//!   option): per currency, the base amount booked (`<field>_base`) against
+//!   the amount at the rate on `as_of`, and the gain or loss. "Open" is the
+//!   caller's to say (`open_field` with `open_values`); without it every live
+//!   record counts. The totals cover every record, so the report needs read
+//!   access to every record of the entity (Global).
 
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_audit::{AuditCategory, AuditOperation};
@@ -501,28 +509,323 @@ pub async fn delete_rate(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// `GET /api/v1/reports/fx-revaluation` parameters.
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct RevaluationQuery {
+    /// The entity's logical name.
+    pub entity: String,
+    /// A money field with the `fx` option (it has `<field>_base`).
+    pub attribute: String,
+    /// The day whose rate revalues the amounts; today when absent.
+    pub as_of: Option<NaiveDate>,
+    /// A field whose value says a record is open (`status`, say).
+    pub open_field: Option<String>,
+    /// The comma-separated values of `open_field` that mean open.
+    pub open_values: Option<String>,
+}
+
+/// One currency's revaluation.
+#[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
+pub struct RevaluationLine {
+    pub currency: String,
+    /// Open records in this currency.
+    pub records: i64,
+    /// Their amounts, in this currency.
+    #[schema(value_type = String)]
+    pub amount: Decimal,
+    /// The base amount booked for them.
+    #[schema(value_type = String)]
+    pub booked_base: Decimal,
+    /// The rate on `as_of`, from this currency to the base; `null` when none
+    /// is stored on or before it.
+    #[schema(value_type = Option<String>)]
+    pub rate: Option<Decimal>,
+    pub rate_date: Option<NaiveDate>,
+    /// The amounts at that rate, in the base currency.
+    #[schema(value_type = Option<String>)]
+    pub revalued_base: Option<Decimal>,
+    /// `revalued_base - booked_base`: a gain when positive.
+    #[schema(value_type = Option<String>)]
+    pub gain_loss: Option<Decimal>,
+}
+
+/// The revaluation of one money field.
+#[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
+pub struct Revaluation {
+    pub entity: String,
+    pub attribute: String,
+    pub base_currency: String,
+    pub as_of: NaiveDate,
+    /// Currencies other than the base, alphabetically.
+    pub lines: Vec<RevaluationLine>,
+    /// The sum of every line's gain or loss that has a rate.
+    #[schema(value_type = String)]
+    pub total_gain_loss: Decimal,
+    /// Currencies with no rate on or before `as_of`, left out of the total.
+    pub missing_rates: Vec<String>,
+}
+
+/// One currency's line from its sums and rate, revalued to `decimals`.
+/// Pure.
+pub fn revaluation_line(
+    currency: String,
+    records: i64,
+    amount: Decimal,
+    booked_base: Decimal,
+    rate: Option<(Decimal, NaiveDate)>,
+    decimals: u32,
+) -> RevaluationLine {
+    let revalued = rate.map(|(rate, _)| fx::convert(amount, rate, decimals));
+    RevaluationLine {
+        currency,
+        records,
+        amount,
+        booked_base,
+        rate: rate.map(|(rate, _)| rate),
+        rate_date: rate.map(|(_, day)| day),
+        revalued_base: revalued,
+        gain_loss: revalued.map(|r| r - booked_base),
+    }
+}
+
+/// Foreign-currency revaluation
+///
+/// For one money field converted to the base currency, the open amounts per currency: the base
+/// amount booked against the amount at the rate on `as_of`, and the gain or loss. Needs read access
+/// to every record of the entity.
+#[utoipa::path(
+    get,
+    path = "/api/v1/reports/fx-revaluation",
+    tag = "money",
+    params(RevaluationQuery),
+    responses(
+        (status = 200, description = "The revaluation per currency", body = Revaluation),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller cannot read every record of the entity", body = ErrorResponse),
+        (status = 404, description = "No such entity", body = ErrorResponse),
+        (status = 422, description = "Not a money field with the fx option, or an unknown open field", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub async fn fx_revaluation(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Query(query): Query<RevaluationQuery>,
+) -> Result<Json<Revaluation>, AppError> {
+    use attome_security::SecurityContextExt;
+    let entity = query.entity.trim().to_owned();
+    let (entity_id, names): (Uuid, Vec<String>) = {
+        let registry = state.entities.load();
+        let meta = registry.get(&entity).ok_or(AppError::NotFound)?;
+        (
+            meta.entity_id,
+            meta.attrs.iter().map(|a| a.logicalname.clone()).collect(),
+        )
+    };
+    ctx.require(&entity, "read")?;
+    if !ctx.is_admin {
+        let level = attome_security::resolve_entity_access_level(
+            &state.base.db,
+            ctx.user_id,
+            entity_id,
+            &entity,
+            attome_security::RecordAction::Read,
+        )
+        .await?;
+        if level != attome_server::security::AccessLevel::Global {
+            return Err(AppError::Forbidden);
+        }
+    }
+    let field = query.attribute.trim().to_owned();
+    let currency_field = format!("{field}_currency");
+    let base_field = fx::base_field(&field);
+    let has = |name: &str| names.iter().any(|n| n == name);
+    if !(has(&field) && has(&currency_field) && has(&base_field)) {
+        return Err(AppError::Validation(format!(
+            "{field} is not a money field with the fx option on {entity}"
+        )));
+    }
+    let open_values: Vec<String> = query
+        .open_values
+        .as_deref()
+        .map(|v| {
+            v.split(',')
+                .map(|x| x.trim().to_owned())
+                .filter(|x| !x.is_empty())
+                .collect()
+        })
+        .unwrap_or_default();
+    let open_field = match query.open_field.as_deref().map(str::trim) {
+        Some(open) if !has(open) => {
+            return Err(AppError::Validation(format!(
+                "{open} is not a field of {entity}"
+            )));
+        }
+        Some(open) if open_values.is_empty() => {
+            return Err(AppError::Validation(
+                "open_values names the values of open_field that mean open".into(),
+            ));
+        }
+        other => other.map(str::to_owned),
+    };
+    let base = attome_records::money::base_currency(&state);
+    let as_of = query
+        .as_of
+        .unwrap_or_else(|| chrono::Utc::now().date_naive());
+    type SumRow = (String, i64, Option<String>, Option<String>);
+    let pool = state.base.read_pool(ctx.user_id).await;
+    let rows: Vec<SumRow> = match open_field.as_deref() {
+        Some(open) => {
+            let sql = format!(
+                "SELECT {cur}::text, COUNT(*), SUM({amt})::text, SUM({bas})::text FROM {t} \
+                  WHERE is_active = true AND {amt} IS NOT NULL AND {bas} IS NOT NULL \
+                    AND {cur} IS NOT NULL AND {cur}::text <> $1 AND {o}::text = ANY($2) \
+                  GROUP BY 1 ORDER BY 1",
+                cur = attome_core::quote_ident(&currency_field),
+                amt = attome_core::quote_ident(&field),
+                bas = attome_core::quote_ident(&base_field),
+                t = attome_core::quote_ident(&entity),
+                o = attome_core::quote_ident(open),
+            );
+            sqlx::query_as(&sql)
+                .bind(&base)
+                .bind(&open_values)
+                .fetch_all(pool)
+                .await
+        }
+        None => {
+            let sql = format!(
+                "SELECT {cur}::text, COUNT(*), SUM({amt})::text, SUM({bas})::text FROM {t} \
+                  WHERE is_active = true AND {amt} IS NOT NULL AND {bas} IS NOT NULL \
+                    AND {cur} IS NOT NULL AND {cur}::text <> $1 \
+                  GROUP BY 1 ORDER BY 1",
+                cur = attome_core::quote_ident(&currency_field),
+                amt = attome_core::quote_ident(&field),
+                bas = attome_core::quote_ident(&base_field),
+                t = attome_core::quote_ident(&entity),
+            );
+            sqlx::query_as(&sql).bind(&base).fetch_all(pool).await
+        }
+    }
+    .map_err(AppError::internal)?;
+    let decimals: i16 = sqlx::query_scalar("SELECT decimals FROM currency WHERE code = $1")
+        .bind(&base)
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(AppError::internal)?
+        .unwrap_or(2);
+    let decimals = u32::try_from(decimals).unwrap_or(2);
+    let preferred = preferred_source(&state);
+    let parse =
+        |v: Option<String>| -> Decimal { v.and_then(|v| v.parse().ok()).unwrap_or_default() };
+    let mut lines = Vec::new();
+    let mut missing_rates = Vec::new();
+    for (currency, records, amount, booked) in rows {
+        let rate = fx::rate_on(
+            &state.base.db,
+            &currency,
+            &base,
+            as_of,
+            preferred.as_deref(),
+        )
+        .await
+        .map_err(attome_db::classify)?
+        .map(|r| (r.rate, r.rate_date));
+        if rate.is_none() {
+            missing_rates.push(currency.clone());
+        }
+        lines.push(revaluation_line(
+            currency,
+            records,
+            parse(amount),
+            parse(booked),
+            rate,
+            decimals,
+        ));
+    }
+    let total_gain_loss = lines.iter().filter_map(|l| l.gain_loss).sum();
+    Ok(Json(Revaluation {
+        entity,
+        attribute: field,
+        base_currency: base,
+        as_of,
+        lines,
+        total_gain_loss,
+        missing_rates,
+    }))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/exchange-rates", get(list_rates).post(create_rate))
         .route("/api/v1/exchange-rates/rate", get(rate_on))
         .route("/api/v1/exchange-rates/import", post(import_rates))
         .route("/api/v1/exchange-rates/{id}", delete(delete_rate))
+        .route("/api/v1/reports/fx-revaluation", get(fx_revaluation))
 }
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(rate_on, list_rates, create_rate, import_rates, delete_rate),
+    paths(
+        rate_on,
+        list_rates,
+        create_rate,
+        import_rates,
+        delete_rate,
+        fx_revaluation
+    ),
     components(schemas(
         ExchangeRateRow,
         ExchangeRateInput,
         ExchangeRateImport,
         ExchangeRateImportItem,
         ExchangeRateImported,
-        AppliedRateResponse
+        AppliedRateResponse,
+        Revaluation,
+        RevaluationLine
     ))
 )]
 struct ApiDocFragment;
 
 pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+#[cfg(test)]
+mod revaluation_tests {
+    use super::*;
+    use std::str::FromStr;
+
+    fn d(v: &str) -> Decimal {
+        Decimal::from_str(v).unwrap_or_default()
+    }
+
+    /// A19-T6: the gain or loss is the amount at today's rate less the base
+    /// booked; no rate leaves the line without one.
+    #[test]
+    fn revaluation_line_reports_gain_and_loss() {
+        let day = NaiveDate::from_ymd_opt(2026, 10, 30).unwrap_or_default();
+        let line = revaluation_line(
+            "USD".into(),
+            2,
+            d("1000"),
+            d("3750.00"),
+            Some((d("3.76"), day)),
+            2,
+        );
+        assert_eq!(line.revalued_base, Some(d("3760.00")));
+        assert_eq!(line.gain_loss, Some(d("10.00")));
+        let loss = revaluation_line(
+            "EUR".into(),
+            1,
+            d("100"),
+            d("420.00"),
+            Some((d("4.1"), day)),
+            2,
+        );
+        assert_eq!(loss.gain_loss, Some(d("-10.00")));
+        let none = revaluation_line("GBP".into(), 1, d("5"), d("24"), None, 2);
+        assert_eq!((none.rate, none.gain_loss), (None, None));
+    }
 }
