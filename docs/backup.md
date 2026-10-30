@@ -96,6 +96,10 @@ values are unchanged, and fails when a faked or cleared field still holds a sour
 value may land on a record that held the same one, and a kept field is kept on purpose, so neither
 counts).
 
+`attome scratch delete --name <database>` (Z15-T16) drops a copy when you are done with it. It drops
+only a database that carries the copy's `sandbox_copy` mark, never this deployment's own, and ends
+any session still open on it.
+
 `POST /api/v1/admin/sandboxes` with `{"name": "copy_a", "mode": "sample", "percent": 10}` asks for the
 same copy from the API (the Deployment administration area; audited): it answers 202 with the
 request, and a background job makes the copy with the deployment's own database credentials.

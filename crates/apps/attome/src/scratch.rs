@@ -639,11 +639,33 @@ pub async fn run(args: Vec<String>) -> std::process::ExitCode {
         }
     };
     let Some((command, rest)) = args.split_first() else {
-        eprintln!("usage: attome scratch create --name <database> [--from latest|<archive>]");
+        eprintln!(
+            "usage: attome scratch create --name <database> [--from latest|<archive>]\n       \
+             attome scratch verify --name <copy>\n       attome scratch delete --name <copy>"
+        );
         return std::process::ExitCode::FAILURE;
     };
     if command == "verify" {
         return run_verify(&config, rest).await;
+    }
+    if command == "delete" {
+        let name = match delete_args(rest, &config.database.dbname) {
+            Ok(name) => name,
+            Err(error) => {
+                eprintln!("attome scratch delete: {error}");
+                return std::process::ExitCode::FAILURE;
+            }
+        };
+        return match delete(&config, &name).await {
+            Ok(()) => {
+                println!("sandbox copy {name} deleted");
+                std::process::ExitCode::SUCCESS
+            }
+            Err(error) => {
+                eprintln!("attome scratch delete: {error}");
+                std::process::ExitCode::FAILURE
+            }
+        };
     }
     if command != "create" {
         eprintln!("attome scratch: unknown command {command}");
@@ -681,6 +703,63 @@ pub async fn run(args: Vec<String>) -> std::process::ExitCode {
             std::process::ExitCode::FAILURE
         }
     }
+}
+
+/// Z15-T16: the copy `attome scratch delete` names: `--name <copy>`, a
+/// valid copy name that is not the source database. Pure.
+pub fn delete_args(args: &[String], source: &str) -> Result<String, String> {
+    match args {
+        [flag, name] if flag == "--name" && valid_name(name, source) => Ok(name.clone()),
+        [flag, _] if flag == "--name" => Err(
+            "the copy's name is 3 to 63 lowercase letters, digits or underscores and is not this \
+             deployment's database"
+                .into(),
+        ),
+        _ => Err("usage: attome scratch delete --name <copy>".into()),
+    }
+}
+
+/// Z15-T16: drops the sandbox copy `name`, and only a copy: the database
+/// must carry the `sandbox_copy` mark `create` writes, so the deployment's
+/// own database, or any other, is never dropped. Sessions still open on
+/// the copy are ended.
+pub async fn delete(config: &AppConfig, name: &str) -> Result<(), String> {
+    use sqlx::Connection;
+    if !valid_name(name, &config.database.dbname) {
+        return Err(format!("{name} is not a sandbox copy name"));
+    }
+    let mut copy = sqlx::PgConnection::connect_with(&crate::backup::connect_options(config, name))
+        .await
+        .map_err(|e| format!("cannot open {name}: {e}"))?;
+    sqlx::query("SELECT set_config('search_path', $1, false)")
+        .bind(&config.database.schema)
+        .execute(&mut copy)
+        .await
+        .map_err(|e| format!("cannot set the schema of {name}: {e}"))?;
+    let marked: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM sandbox_copy)")
+        .fetch_one(&mut copy)
+        .await
+        .map_err(|e| format!("{name} is not a sandbox copy: {e}"))?;
+    let _ = copy.close().await;
+    if !marked {
+        return Err(format!("{name} is not a sandbox copy"));
+    }
+    let mut admin = sqlx::PgConnection::connect_with(&crate::backup::connect_options(
+        config,
+        &config.database.dbname,
+    ))
+    .await
+    .map_err(|e| format!("cannot connect: {e}"))?;
+    let drop = format!(
+        "DROP DATABASE {} WITH (FORCE)",
+        attome_core::quote_ident(name)
+    );
+    sqlx::query(&drop)
+        .execute(&mut admin)
+        .await
+        .map_err(|e| format!("cannot drop {name}: {e}"))?;
+    let _ = admin.close().await;
+    Ok(())
 }
 
 /// `attome scratch verify --name <copy>`: fails when a sampled value is
@@ -799,6 +878,18 @@ mod tests {
             effective_rule("personal", None, false, false),
             crate::masking::MaskRule::Keep
         );
+    }
+
+    #[test]
+    fn delete_names_one_copy_never_the_source() {
+        let words = |list: &[&str]| list.iter().map(|w| (*w).to_owned()).collect::<Vec<_>>();
+        assert_eq!(
+            delete_args(&words(&["--name", "copy_one"]), "attome"),
+            Ok("copy_one".to_owned())
+        );
+        assert!(delete_args(&words(&["--name", "attome"]), "attome").is_err());
+        assert!(delete_args(&words(&["--name", "Bad-Name"]), "attome").is_err());
+        assert!(delete_args(&words(&["copy_one"]), "attome").is_err());
     }
 
     #[test]
