@@ -110,6 +110,12 @@ pub struct AccessPlan {
     /// For every readable or writable lookup field, the scope its values must
     /// pass. A lookup field missing from this map matches nothing.
     pub lookup_scopes: BTreeMap<String, LookupScope>,
+    /// A8-T4: for every writable polymorphic id field, the entities it may
+    /// point at for this principal (those the polymorphic options allow and
+    /// the role reads) and the principal's read scope on each. A target
+    /// entity missing here is refused, so a portal write names only a record
+    /// it could read through the portal.
+    pub polymorphic_scopes: BTreeMap<String, BTreeMap<String, Vec<PlanCondition>>>,
     /// The inbound request's client address and browser, written into every
     /// audit row this plan produces (G-7). Set by the router per request.
     pub request_context: AuditRequestContext,
@@ -608,22 +614,49 @@ fn upload_field_check(plan: &AccessPlan, attrs: &[AttrInfo], field: &str) -> Res
     }
 }
 
-/// `SELECT 1` for one live, in-scope record: the scope half of an upload
-/// check. Call [`upload_field_check`] first.
+/// `SELECT 1` for one live record of `entity` inside `conditions`: the scope
+/// half of an upload check (call [`upload_field_check`] first) and of a
+/// portal polymorphic write (A8-T4).
 fn in_scope_sql(
-    plan: &AccessPlan,
+    entity: &str,
+    conditions: &[PlanCondition],
     attrs: &[AttrInfo],
     id: Uuid,
 ) -> Result<(String, Binds), AppError> {
     let mut binds = Binds::default();
     let id_param = binds.push(id.to_string());
-    let scope = scope_clause(&plan.entity, &plan.conditions, attrs, "t", &mut binds)?;
+    let scope = scope_clause(entity, conditions, attrs, "t", &mut binds)?;
     let sql = format!(
-        "SELECT 1 FROM {table} t \
-         WHERE t.id = ${id_param}::uuid AND t.is_active IS NOT FALSE AND {scope}",
-        table = quote_ident(&plan.entity),
+        "SELECT 1 FROM {table} t          WHERE t.id = ${id_param}::uuid AND t.is_active IS NOT FALSE AND {scope}",
+        table = quote_ident(entity),
     );
     Ok((sql, binds))
+}
+
+/// A8-T4: whether record `id` of `entity` is live and passes `conditions`,
+/// a principal's read scope on that entity. No conditions matches nothing.
+pub(crate) async fn record_in_scope(
+    state: &EngineState,
+    entity: &str,
+    conditions: &[PlanCondition],
+    id: Uuid,
+) -> Result<bool, AppError> {
+    let attrs = {
+        let registry = state.entities.load();
+        match registry.get(entity) {
+            Some(meta) => meta.attrs.clone(),
+            None => return Ok(false),
+        }
+    };
+    let (sql, binds) = in_scope_sql(entity, conditions, &attrs, id)?;
+    let mut q = sqlx::query_scalar::<_, i32>(&sql);
+    for b in binds.0 {
+        q = q.bind(b);
+    }
+    Ok(q.fetch_optional(&state.base.db)
+        .await
+        .map_err(AppError::internal)?
+        .is_some())
 }
 
 /// The gate for a portal upload to `field` of record `id` (D-774): the field
@@ -640,7 +673,7 @@ pub async fn plan_upload_target(
 ) -> Result<(), AppError> {
     let (_, attrs) = attrs_for(state, plan).await?;
     upload_field_check(plan, &attrs, field)?;
-    let (sql, binds) = in_scope_sql(plan, &attrs, id)?;
+    let (sql, binds) = in_scope_sql(&plan.entity, &plan.conditions, &attrs, id)?;
     let mut q = sqlx::query_scalar::<_, i32>(&sql);
     for b in binds.0 {
         q = q.bind(b);
@@ -1304,6 +1337,7 @@ mod t37_property {
             owner_org_ref: Uuid::from_u128(0x37fc),
             portal_user_field,
             lookup_scopes,
+            polymorphic_scopes: BTreeMap::new(),
             request_context: Default::default(),
             role_id: Some(Uuid::from_u128(0x37fb)),
         }
@@ -1680,8 +1714,13 @@ mod t37_property {
     /// fields, and its scope statement stays inside the plan.
     fn uploadable(w: &World) -> BTreeSet<String> {
         let plan = &w.plan;
-        let (sql, binds) =
-            in_scope_sql(plan, &w.case_attrs, Uuid::from_u128(8)).expect("the scope compiles");
+        let (sql, binds) = in_scope_sql(
+            &plan.entity,
+            &plan.conditions,
+            &w.case_attrs,
+            Uuid::from_u128(8),
+        )
+        .expect("the scope compiles");
         assert_contained(&sql, binds.0.len());
         let mut out = BTreeSet::new();
         for f in CASE_FIELDS {

@@ -91,7 +91,15 @@ struct GrantTemplate {
     portal_user_field: Option<String>,
     /// Readable or writable lookup field → its target's scope template.
     lookups: Vec<(String, LookupTemplate)>,
+    /// A8-T4: writable polymorphic id field → each entity it may point at
+    /// that the role reads, with the role's read grant there.
+    #[serde(default)]
+    polymorphic: Vec<(String, Vec<PolymorphicTarget>)>,
 }
+
+/// A8-T4: one entity a polymorphic field may point at for a role: the
+/// entity, the role's read grant on it and that grant's raw conditions.
+type PolymorphicTarget = (String, Uuid, Vec<RawCondition>);
 
 /// A role's grant on one entity with nothing user-specific applied: what the
 /// G-9 cache holds. `grant` is `None` when the role has no grant there.
@@ -272,6 +280,51 @@ async fn build_template(
         lookups.push((attr.logicalname.clone(), scope));
     }
 
+    // A8-T4: a writable polymorphic id field may point at a record of each
+    // entity its options allow that the role reads, inside the role's read
+    // scope there. Any other target is refused at write.
+    let polymorphic_fields: Vec<(String, attome_records::polymorphic::PolymorphicOptions)> = attrs
+        .iter()
+        .filter(|a| writable.contains(&a.logicalname))
+        .filter_map(|a| {
+            attome_records::polymorphic::options_of(a).map(|o| (a.logicalname.clone(), o))
+        })
+        .collect();
+    let mut polymorphic = Vec::new();
+    if !polymorphic_fields.is_empty() {
+        let read_grants: Vec<(Uuid, String, Option<String>)> = sqlx::query_as(
+            "SELECT g.id, g.entity_logicalname, b.logicalname \
+               FROM webportal_grant g \
+               JOIN webportal_role r ON r.id = g.role_id AND r.webportal_id = $2 \
+               LEFT JOIN entity_info e ON e.logicalname = g.entity_logicalname \
+               LEFT JOIN entity_info b ON b.id = e.extends_entity_id \
+              WHERE g.role_id = $1 AND g.can_read \
+              ORDER BY g.entity_logicalname",
+        )
+        .bind(role_id)
+        .bind(portal_id)
+        .fetch_all(&mut *conn)
+        .await
+        .map_err(AppError::internal)?;
+        for (field, options) in polymorphic_fields {
+            let mut targets = Vec::new();
+            for (target_grant, target, base) in &read_grants {
+                if registry.get(target).is_none()
+                    || !crate::roles::lookup_target_allowed(target)
+                    || !attome_records::polymorphic::allowed(&options, target, base.as_deref())
+                {
+                    continue;
+                }
+                targets.push((
+                    target.clone(),
+                    *target_grant,
+                    load_raw_conditions(conn, *target_grant).await?,
+                ));
+            }
+            polymorphic.push((field, targets));
+        }
+    }
+
     Ok(template(Some(GrantTemplate {
         grant_id,
         can_read,
@@ -284,6 +337,7 @@ async fn build_template(
         filterable,
         portal_user_field,
         lookups,
+        polymorphic,
     })))
 }
 
@@ -297,10 +351,15 @@ fn value_refs(grant: &GrantTemplate) -> BTreeSet<&str> {
         } => Some(conditions.iter()),
         _ => None,
     });
+    let polymorphic_conditions = grant
+        .polymorphic
+        .iter()
+        .flat_map(|(_, targets)| targets.iter().flat_map(|(_, _, raw)| raw.iter()));
     grant
         .conditions
         .iter()
         .chain(lookup_conditions.flatten())
+        .chain(polymorphic_conditions)
         .filter_map(|c| c.value_ref.as_deref())
         .collect()
 }
@@ -494,6 +553,23 @@ pub async fn access_plan(
         };
         lookup_scopes.insert(field.clone(), scope);
     }
+    let mut polymorphic_scopes = BTreeMap::new();
+    for (field, targets) in &grant.polymorphic {
+        let by_entity: BTreeMap<String, Vec<PlanCondition>> = targets
+            .iter()
+            .map(|(target, target_grant, raw)| {
+                let conditions = render_conditions(
+                    raw,
+                    &user,
+                    (*target_grant, template.role_id),
+                    target,
+                    registry.get(target).map_or(&[], |m| m.attrs.as_slice()),
+                );
+                (target.clone(), conditions)
+            })
+            .collect();
+        polymorphic_scopes.insert(field.clone(), by_entity);
+    }
 
     // Creating needs a live staff team to own the record (G-15). A team that
     // is gone refuses creation; it never falls back to another owner. Read
@@ -529,6 +605,7 @@ pub async fn access_plan(
         owner_org_ref,
         portal_user_field: grant.portal_user_field.clone(),
         lookup_scopes,
+        polymorphic_scopes,
         request_context: Default::default(),
         // D-789 ruling 6: portal-role business rules apply to this plan's
         // writes (D-579: one role per portal user).
@@ -616,6 +693,7 @@ pub fn self_plan(
         owner_org_ref,
         portal_user_field: None,
         lookup_scopes: BTreeMap::new(),
+        polymorphic_scopes: BTreeMap::new(),
         request_context: Default::default(),
         // D-789 ruling 6: the own-profile write runs the same business
         // rules, scoped by the principal's role when it holds one.

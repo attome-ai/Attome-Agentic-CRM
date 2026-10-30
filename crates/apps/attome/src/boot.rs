@@ -1269,6 +1269,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-records-polymorphic-children",
         // P2-T2: the privilege to write and run SQL reports.
         "attome-report-sql-authoring",
+        // A8-T4: a document's record is a polymorphic lookup too.
+        "attome-document-polymorphic",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

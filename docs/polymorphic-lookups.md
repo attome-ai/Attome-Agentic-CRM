@@ -38,6 +38,14 @@ AND party_id.city = Riyadh`.
 A note, a note's reply, an activity, a communication, a follow, a tag on a record and a reminder
 point at their record through a polymorphic lookup (A8-T4, platform changeset 0080): `record_id`
 with `entity_name` as its pair, any entity as a target. Every write that sets them checks that the
-record exists, is live and can be read by the writer, and both are set together. Documents keep
-their own rule (a document's visibility is its record's, and portal users upload them), and the
+record exists, is live and can be read by the writer, and both are set together. A document's
+record (`attome_document`'s `record_id` and `entity_name`) is one too (platform changeset 0082). The
 pairs in infrastructure tables (approvals, timeline pins, AI references) are not metadata fields.
+
+## Portal writes
+
+A portal user (a web portal principal, not staff) may set a polymorphic pair only to a record of an
+entity its portal role reads, among those the field's options allow, and only to a record inside
+that role's read scope on the entity: the same conditions that decide what the portal user sees
+there. Any other record, entity or field is refused as if the record did not exist. So a customer
+uploading a document to their own case names the case, and no other record they can't open.

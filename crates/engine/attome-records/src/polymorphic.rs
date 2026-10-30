@@ -187,8 +187,22 @@ pub(crate) async fn check_writes(
                 .await
                 .map_err(|_| refused())?;
             }
-            // A portal user names no staff record.
-            Principal::Portal(_) => return Err(AppError::Forbidden),
+            // A8-T4: a portal user names only a record of an entity its
+            // role reads through this field, inside its own read scope there.
+            Principal::Portal(plan) => {
+                let Some(conditions) = plan
+                    .polymorphic_scopes
+                    .get(&attr.logicalname)
+                    .and_then(|targets| targets.get(&entity_name))
+                else {
+                    return Err(refused());
+                };
+                if !crate::access_plan::record_in_scope(state, &entity_name, conditions, record)
+                    .await?
+                {
+                    return Err(refused());
+                }
+            }
         }
     }
     Ok(())

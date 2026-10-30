@@ -1251,6 +1251,7 @@ async fn portal_plan(system: &TestSystem, entity: &str, fields: &[&str], role: U
         owner_org_ref: org.unwrap_or_else(Uuid::now_v7),
         portal_user_field: None,
         lookup_scopes: BTreeMap::new(),
+        polymorphic_scopes: BTreeMap::new(),
         request_context: Default::default(),
         role_id: Some(role),
     }
@@ -1352,6 +1353,95 @@ fn portal_writes_are_enforced() {
         plan_create(state, &plan_a, json!({ "portal_tag": "p" }))
             .await
             .expect("no locked field written");
+    })
+}
+
+/// A8-T4: a portal write names, in a polymorphic pair, only a record of an
+/// entity its role reads through that field, inside the role's read scope
+/// there; a staff record outside it, an entity it has no scope on, and a
+/// plan with no polymorphic scopes are all refused.
+#[test]
+fn portal_polymorphic_writes_stay_in_the_portal_scope() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_, admin) = seed_admin(&system).await;
+        let app = system.app.clone();
+        let parent = unique("br_poly_parent");
+        provision(&app, &admin, &parent, &[("portal_tag", "text", false)]).await;
+        let child = unique("br_poly_child");
+        let (child_id, _) = provision(
+            &app,
+            &admin,
+            &child,
+            &[
+                ("portal_tag", "text", false),
+                ("entity_name", "text", false),
+            ],
+        )
+        .await;
+        let (status, body) = call(
+            &app,
+            "POST",
+            &format!("/api/v1/admin/entities/{child_id}/fields"),
+            &admin,
+            Some(json!({
+                "logicalname": "record_id", "name": "record_id", "field_type": "text",
+                "options": { "polymorphic": { "pair": "entity_name", "any": true } },
+            })),
+            None,
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{body}");
+
+        let mut ids = Vec::new();
+        for tag in ["p", "q"] {
+            let (status, body) =
+                create_record(&app, &admin, &parent, json!({ "portal_tag": tag })).await;
+            assert_eq!(status, StatusCode::CREATED, "{body}");
+            ids.push(id_of(&body).to_string());
+        }
+        let (in_scope, out_of_scope) = (&ids[0], &ids[1]);
+
+        let state = system.state();
+        let role = portal_role(&system).await;
+        let mut plan = portal_plan(
+            &system,
+            &child,
+            &["portal_tag", "entity_name", "record_id"],
+            role,
+        )
+        .await;
+        let write = |record: &str, entity: &str| json!({ "portal_tag": "p", "entity_name": entity, "record_id": record });
+        assert!(
+            plan_create(state, &plan, write(in_scope, &parent))
+                .await
+                .is_err(),
+            "no polymorphic scope: refused"
+        );
+        let scope = vec![PlanCondition::Match(GrantCondition {
+            field_logicalname: "portal_tag".to_owned(),
+            operator: ConditionOperator::Eq,
+            value: json!("p"),
+        })];
+        plan.polymorphic_scopes.insert(
+            "record_id".to_owned(),
+            BTreeMap::from([(parent.clone(), scope)]),
+        );
+        plan_create(state, &plan, write(in_scope, &parent))
+            .await
+            .expect("a record inside the portal's read scope");
+        assert!(
+            plan_create(state, &plan, write(out_of_scope, &parent))
+                .await
+                .is_err(),
+            "a record outside the portal's read scope"
+        );
+        assert!(
+            plan_create(state, &plan, write(in_scope, &child))
+                .await
+                .is_err(),
+            "an entity the field has no portal scope on"
+        );
     })
 }
 
