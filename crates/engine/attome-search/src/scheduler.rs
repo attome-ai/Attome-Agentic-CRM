@@ -426,6 +426,8 @@ pub async fn run_drain_loop(state: EngineState, shutdown: impl std::future::Futu
                             &crate::record_vectors::configured_entities(&state),
                         )
                         .await;
+                        // A25-T6: image files, with the image-text model.
+                        crate::image_vectors::run_passes(&state).await;
                     }
                 }
             }

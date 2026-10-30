@@ -16,7 +16,7 @@ time):
 | `max_age_days` | Leave out records not changed for this many days (default: none). |
 | `boost` | How much the entity's results weigh against others (default 1). |
 | `attributes` | Each attribute's `mode` and `weight` (0 to 10): `key` (matched exactly in its normalised form, as well as being text), `text` (full text) or `off` (not searched). |
-| `document_embedding`, `image_embedding` | Meaning search over the files attached to the entity's records, and over images; off by default. With `document_embedding` on, the passages of attached files are embedded and `POST /api/v1/search/similar` can return them. Image search is not built yet: `image_embedding` is stored and does nothing, and an image sent to `/search/similar` answers 503 `feature_unavailable`. |
+| `document_embedding`, `image_embedding` | Meaning search over the files attached to the entity's records, and over images; off by default. With `document_embedding` on, the passages of attached files are embedded and `POST /api/v1/search/similar` can return them. With `image_embedding` on and an image-text model configured, the image files of documents attached to the entity's records are embedded for image search (below). |
 
 Without a setting, a phone, email, identity number, code or reference attribute is a `key` and
 every other searchable attribute is `text`. A phone is kept in its international form, so `0501234567`
@@ -68,6 +68,25 @@ may read: records' long fields and, for entities with `document_embedding` on, t
 each with its record, its source and its page. It needs the embedding model and semantic search,
 like searching by meaning; without them it answers 503 `feature_unavailable`. Timeline items
 (notes, communications) are not among its results.
+
+### Images
+
+Image search uses an image-text model that puts images and short texts in one space: SigLIP 2
+(Apache-2.0, multilingual, Arabic included; V2-D1429), served inside the deployment by an
+OpenAI-compatible server that takes a `modality`, such as Infinity, and named in
+`inference.image_embedding`:
+
+```json
+"image_embedding": { "base_url": "http://127.0.0.1:7997/v1", "model": "google/siglip2-base-patch16-224" }
+```
+
+For entities with `image_embedding` on, the search indexer embeds each PNG, JPEG, WebP or GIF of at
+most 5 MB that is a document attached to one of their records (migration 0346); a file on a field
+labelled sensitive is never sent to the model. `/search/similar` then finds images with an `image`
+(base64 or a `data:` URL), with `images: true` and a `text` describing them ("a cracked pump
+housing"), or with `images: true` and a document's `record`. Each result names the document
+(`source_id`, its name as `text`) under the record it is attached to, and only images whose record
+the person may read are returned. Without the model an image search answers 503.
 
 ## Counts and what people cannot see
 

@@ -2031,6 +2031,10 @@
           "$ref": "#/$defs/InferenceEndpoint",
           "description": "Generation (chat/completions)."
         },
+        "image_embedding": {
+          "$ref": "#/$defs/InferenceEndpoint",
+          "description": "Image search (A25-T6, V2-D1429: SigLIP 2): an image-text embedding\nmodel behind an OpenAI-compatible `/embeddings` endpoint that takes a\n`modality` of `image` or `text`, such as Infinity serving\n`google/siglip2-base-patch16-224`. Images are customer data, so it must\nbe inside the deployment. Empty `base_url` means image search is off."
+        },
         "knowledge_article_data_source": {
           "default": null,
           "description": "The Data Source (UUID, as text) new drafts are filed under.\n\nRequired only when the target article entity is the Knowledge Base item,\nwhose `data_source_ref` lookup is required. A draft is filed by\nconfiguration rather than by the model, because \"which container does\nthis belong in\" is a governance decision an operator makes once, not a\nmodel makes per draft. Left unset, a draft against the KB item fails\nwith a validation error naming this key rather than writing an orphan.",

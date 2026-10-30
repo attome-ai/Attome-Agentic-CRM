@@ -45,6 +45,8 @@ pub mod explain;
 pub mod fallback;
 pub mod glossary;
 pub mod graph;
+/// A25-T6: image search with an image-text model.
+pub mod image_vectors;
 pub mod knowledge;
 pub mod knowledge_coverage;
 pub mod knowledge_eval;

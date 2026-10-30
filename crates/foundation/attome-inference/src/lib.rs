@@ -50,6 +50,8 @@ pub mod embed;
 pub mod fallback;
 pub mod generate;
 pub mod gpu_queue;
+/// A25-T6: image-text embeddings for image search.
+pub mod image_embed;
 pub mod models;
 pub mod ocr;
 pub mod rerank;
@@ -65,6 +67,7 @@ pub use generate::{
     CHAT_COMPLETIONS_PATH, ChatMessage, FinishReason, GenerationClient, GenerationRequest,
     GenerationResult, Role, ToolCall, ToolChoice, ToolDefinition,
 };
+pub use image_embed::{ImageEmbeddingClient, Modality};
 pub use models::{MODELS_PATH, ModelListAuth, ModelListing, list_models, parse_model_listing};
 pub use ocr::{OcrClient, OcrText};
 pub use rerank::RerankClient;

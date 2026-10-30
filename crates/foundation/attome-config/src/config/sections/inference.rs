@@ -134,6 +134,7 @@ impl std::fmt::Debug for InferenceSection {
             .field("speech", &self.speech)
             .field("ocr", &self.ocr)
             .field("rerank", &self.rerank)
+            .field("image_embedding", &self.image_embedding)
             .field("embedding_query_prefix", &self.embedding_query_prefix)
             .field("embedding_document_prefix", &self.embedding_document_prefix)
             .field("allow_external_provider", &self.allow_external_provider)
@@ -189,6 +190,14 @@ pub struct InferenceSection {
     /// passages keep their fused order.
     #[serde(default)]
     pub rerank: InferenceEndpoint,
+
+    /// Image search (A25-T6, V2-D1429: SigLIP 2): an image-text embedding
+    /// model behind an OpenAI-compatible `/embeddings` endpoint that takes a
+    /// `modality` of `image` or `text`, such as Infinity serving
+    /// `google/siglip2-base-patch16-224`. Images are customer data, so it must
+    /// be inside the deployment. Empty `base_url` means image search is off.
+    #[serde(default)]
+    pub image_embedding: InferenceEndpoint,
 
     /// Prefix prepended to every **query** text before it is embedded,
     /// overriding the model-family heuristic (BIN-D6/BIN-G5).
@@ -397,6 +406,7 @@ impl Default for InferenceSection {
             speech: InferenceEndpoint::default(),
             ocr: InferenceEndpoint::default(),
             rerank: InferenceEndpoint::default(),
+            image_embedding: InferenceEndpoint::default(),
             embedding_query_prefix: None,
             embedding_document_prefix: None,
             allow_external_provider: false,

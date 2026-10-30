@@ -131,6 +131,7 @@ pub const SECRETS: &[SecretSpec] = &[
     ),
     value("inference.embedding.api_key", &["AI embeddings"]),
     value("inference.generation.api_key", &["AI generation"]),
+    value("inference.image_embedding.api_key", &["image search"]),
     value("inference.ocr.api_key", &["document text recognition"]),
     ring(
         "inference.provider_credential_key",

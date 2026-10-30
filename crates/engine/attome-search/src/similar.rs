@@ -22,9 +22,13 @@
 //!
 //! ## Images
 //!
-//! Image similarity needs an image-text embedding model, and no deployment
-//! configures one: an `image` answers 503 `feature_unavailable`, whatever the
-//! entity's `image_embedding` setting says.
+//! With an image-text model configured (`inference.image_embedding`, SigLIP 2,
+//! V2-D1429), an `image`, a document named as `record`, or a `text` with
+//! `images: true` finds the nearest images: image files of documents attached
+//! to records of entities whose search setting `image_embedding` is on
+//! (`crate::image_vectors`). Each result is the document, under the record it
+//! is attached to, read through the same visibility as passages. Without the
+//! model an image search answers 503 `feature_unavailable`.
 
 use attome_core::EngineState;
 use attome_inference::EmbedKind;
@@ -71,10 +75,14 @@ pub struct SimilarRequest {
     /// Passages like this description (at most 4,000 characters).
     #[serde(default)]
     pub text: Option<String>,
-    /// Passages like this image (base64). No image-text model is supported
-    /// yet, so this answers 503 `feature_unavailable`.
+    /// Images like this one: a PNG, JPEG, WebP or GIF of at most 5 MB, as
+    /// base64 or a `data:` URL. 503 without an image-text model.
     #[serde(default)]
     pub image: Option<String>,
+    /// Find images instead of passages: the images a `text` describes, or
+    /// those like a document's image named as `record`. Implied by `image`.
+    #[serde(default)]
+    pub images: Option<bool>,
     /// Passages to return, 1 to 50; 10 when absent.
     #[serde(default)]
     pub limit: Option<i64>,
@@ -102,9 +110,35 @@ pub struct SimilarPassage {
 /// What a request asks to compare against. Pure.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SimilarSource {
-    Record { entity: String, id: Uuid },
+    Record {
+        entity: String,
+        id: Uuid,
+    },
     Text(String),
-    Image,
+    /// The image's bytes as a `data:` URL.
+    Image(String),
+}
+
+/// The largest base64 image accepted (5 MB of bytes).
+const MAX_IMAGE_BASE64: usize = attome_inference::image_embed::MAX_IMAGE_BYTES / 3 * 4 + 4;
+
+/// The `data:` URL the model takes for a request's base64 image (bare, or
+/// a `data:` URL already), or why it is refused. Pure.
+pub fn image_source(given: &str) -> Result<String, AppError> {
+    use base64::Engine as _;
+    let encoded = given
+        .trim()
+        .split_once(";base64,")
+        .map_or(given.trim(), |(_, data)| data);
+    if encoded.len() > MAX_IMAGE_BASE64 {
+        return Err(AppError::Validation("image is limited to 5 MB".into()));
+    }
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(encoded)
+        .map_err(|_| AppError::Validation("image is not base64".into()))?;
+    attome_inference::image_embed::image_input(&bytes).ok_or_else(|| {
+        AppError::Validation("image must be a PNG, JPEG, WebP or GIF of at most 5 MB".into())
+    })
 }
 
 /// The source a request names, or why it is refused. Pure.
@@ -122,8 +156,8 @@ pub fn parse_source(req: &SimilarRequest) -> Result<SimilarSource, AppError> {
             "give exactly one of record, text or image".into(),
         ));
     }
-    if req.image.is_some() {
-        return Ok(SimilarSource::Image);
+    if let Some(image) = &req.image {
+        return image_source(image).map(SimilarSource::Image);
     }
     if let Some(record) = &req.record {
         return Ok(SimilarSource::Record {
@@ -345,14 +379,14 @@ pub async fn find_similar(
 ) -> Result<Vec<SimilarPassage>, AppError> {
     let source = parse_source(req)?;
     let limit = limit_of(req);
-    if source == SimilarSource::Image {
-        return Err(AppError::FeatureUnavailable);
-    }
     if !attome_core::ai_runtime_switch::allows(
         &state.base.config.inference.ai,
         attome_config::AiSurface::SemanticSearch,
     ) {
         return Err(AppError::FeatureUnavailable);
+    }
+    if matches!(source, SimilarSource::Image(_)) || req.images == Some(true) {
+        return find_images(state, ctx, source, limit).await;
     }
     let client = crate::knowledge::ranking_embedder().ok_or(AppError::FeatureUnavailable)?;
     let (text, exclude) = match &source {
@@ -361,7 +395,7 @@ pub async fn find_similar(
             Some((entity.as_str(), *id)),
         ),
         SimilarSource::Text(text) => (text.clone(), None),
-        SimilarSource::Image => return Err(AppError::FeatureUnavailable),
+        SimilarSource::Image(_) => return Err(AppError::FeatureUnavailable),
     };
     let embedded = tokio::time::timeout(
         EMBED_TIMEOUT,
@@ -384,12 +418,75 @@ pub async fn find_similar(
     neighbours(state, ctx, &literal, client.model_id(), exclude, limit).await
 }
 
-/// Find passages like a record, file or description
+/// The images nearest `source` (an image, a document's image, or a
+/// description) that `ctx` may see, as passages naming the document.
+async fn find_images(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    source: SimilarSource,
+    limit: i64,
+) -> Result<Vec<SimilarPassage>, AppError> {
+    use attome_inference::image_embed::Modality;
+    let client = crate::image_vectors::image_embedder(state).ok_or(AppError::FeatureUnavailable)?;
+    let (input, modality, exclude) = match source {
+        SimilarSource::Image(url) => (url, Modality::Image, None),
+        SimilarSource::Text(text) => (text, Modality::Text, None),
+        SimilarSource::Record { entity, id } if entity == DOCUMENT_ENTITY => (
+            crate::image_vectors::document_image(state, ctx, id).await?,
+            Modality::Image,
+            Some(id),
+        ),
+        SimilarSource::Record { .. } => {
+            return Err(AppError::Validation(
+                "images are compared with an image, a document's image or a description".into(),
+            ));
+        }
+    };
+    let embedded = tokio::time::timeout(EMBED_TIMEOUT, client.embed(&[input], modality)).await;
+    let vector = match embedded {
+        Ok(Ok(mut vectors)) if !vectors.is_empty() => vectors.swap_remove(0),
+        Ok(Ok(_)) => return Err(AppError::CapabilityUnavailable("image_embedding")),
+        Ok(Err(error)) => {
+            tracing::warn!(%error, "search similar: the image source could not be embedded");
+            return Err(AppError::CapabilityUnavailable("image_embedding"));
+        }
+        Err(_) => {
+            tracing::warn!("search similar: embedding the image source timed out");
+            return Err(AppError::CapabilityUnavailable("image_embedding"));
+        }
+    };
+    let images = crate::image_vectors::nearest_images(
+        state,
+        ctx,
+        client.model_id(),
+        &vector,
+        exclude,
+        limit,
+    )
+    .await?;
+    Ok(images
+        .into_iter()
+        .map(|image| SimilarPassage {
+            entity_logicalname: image.entity_logicalname,
+            record_id: image.record_id,
+            source_entity: DOCUMENT_ENTITY.to_owned(),
+            source_id: image.document_id,
+            page: None,
+            heading_path: Vec::new(),
+            text: cut(&image.name, MAX_PASSAGE_CHARS),
+            score: image.score,
+        })
+        .collect())
+}
+
+/// Find passages or images like a record, file, description or image
 ///
 /// Embeds the record's text, the document's file text or the description and returns the nearest
 /// record passages the caller may read: records' long fields and, for entities whose search setting
 /// turns document embeddings on, the text of the files attached to them, with the page of a PDF.
-/// An image answers 503 until an image-text model is supported.
+/// With an image-text model configured, an `image`, or `images: true` with a description or a
+/// document, returns the nearest images instead (documents attached to records of entities whose
+/// search setting turns image embeddings on), each named by its document.
 #[utoipa::path(
     post,
     path = "/api/v1/search/similar",
@@ -406,7 +503,7 @@ pub async fn find_similar(
         (status = 403, description = "Search is not licensed", body = ErrorResponse),
         (status = 404, description = "The record or document does not exist or is not readable", body = ErrorResponse),
         (status = 422, description = "Not exactly one source, or a source with no text", body = ErrorResponse),
-        (status = 503, description = "No embedding model, semantic search switched off, or an image was given", body = ErrorResponse),
+        (status = 503, description = "No embedding model (or no image-text model for an image search), or semantic search switched off", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
@@ -442,7 +539,8 @@ mod tests {
                 id: Uuid::nil(),
             }),
             text: text.map(str::to_owned),
-            image: image.then(|| "aGVsbG8=".to_owned()),
+            image: image.then(|| "R0lGODlh".to_owned()),
+            images: None,
             limit: None,
         }
     }
@@ -464,13 +562,18 @@ mod tests {
         ));
     }
 
-    /// No image-text model is supported, so an image is never embedded.
+    /// An image is read as base64 or a `data:` URL, and must be an image.
     #[test]
-    fn image_embedding_off_by_default() {
+    fn an_image_source_is_checked() {
         assert_eq!(
             parse_source(&request(false, None, true)).ok(),
-            Some(SimilarSource::Image)
+            Some(SimilarSource::Image(
+                "data:image/gif;base64,R0lGODlh".into()
+            ))
         );
+        assert!(image_source("data:image/gif;base64,R0lGODlh").is_ok());
+        assert!(image_source("aGVsbG8=").is_err(), "not an image");
+        assert!(image_source("%%%").is_err(), "not base64");
         let mut req = request(false, Some("x"), false);
         req.limit = Some(500);
         assert_eq!(limit_of(&req), MAX_LIMIT);

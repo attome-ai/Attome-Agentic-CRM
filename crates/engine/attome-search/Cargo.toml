@@ -25,8 +25,11 @@ attome-notification.workspace = true
 attome-records.workspace      = true
 attome-security.workspace     = true
 attome-server.workspace       = true
+# A25-T6: reading image files for image search.
+attome-storage.workspace      = true
 attome-types.workspace        = true
 axum.workspace                = true
+base64.workspace              = true
 chrono.workspace              = true
 chrono-tz.workspace           = true
 fred.workspace                = true
