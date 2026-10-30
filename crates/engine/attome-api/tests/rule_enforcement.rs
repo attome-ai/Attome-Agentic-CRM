@@ -770,3 +770,157 @@ fn default_rule_fills_only_the_gap_the_caller_left() {
         );
     })
 }
+
+/// One request as `cookie`, its status and JSON body.
+async fn send(
+    app: &axum::Router,
+    cookie: &str,
+    method: &str,
+    uri: &str,
+    if_match: Option<i64>,
+    body: Value,
+) -> (StatusCode, Value) {
+    let mut req = Request::builder()
+        .method(method)
+        .uri(uri)
+        .header("cookie", cookie)
+        .header("content-type", "application/json");
+    if let Some(version) = if_match {
+        req = req.header("if-match", format!("\"{version}\""));
+    }
+    let res = app
+        .clone()
+        .oneshot(req.body(Body::from(body.to_string())).unwrap())
+        .await
+        .expect("request");
+    let status = res.status();
+    (status, body_json(res).await)
+}
+
+/// An entity with `code` and `amount`, and a rule refusing a non-positive
+/// amount; its name, its id and the rule's id.
+async fn entity_with_positive_rule(app: &axum::Router, cookie: &str) -> (String, String, String) {
+    let logicalname = format!("rule_path_{}", Uuid::now_v7().simple());
+    let entity_id = provision_entity_with_fields(
+        app,
+        cookie,
+        &logicalname,
+        &[("code", "text"), ("amount", "number")],
+    )
+    .await;
+    let rule = create_rule(
+        app,
+        cookie,
+        serde_json::json!({
+            "entity_logicalname": logicalname,
+            "name": "amount_must_be_positive",
+            "condition": { "expression": "not (amount > 0)" },
+            "policies": [
+                { "type": "error", "message": "amount must be positive", "severity": "error" }
+            ],
+        }),
+    )
+    .await;
+    let rule_id = rule["id"].as_str().expect("rule id").to_owned();
+    (logicalname, entity_id, rule_id)
+}
+
+/// S1-T16: a create inside `POST /api/v1/composite` is refused for a rule
+/// violation exactly as a plain create is.
+#[test]
+fn composite_create_runs_business_rules() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let cookie = seed_admin(&system).await;
+        let app = full_app(system);
+        let (entity, _, rule_id) = entity_with_positive_rule(&app, &cookie).await;
+
+        let (status, plain) = send(
+            &app,
+            &cookie,
+            "POST",
+            &format!("/api/v1/{entity}"),
+            None,
+            serde_json::json!({ "code": "A1", "amount": -5 }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{plain}");
+
+        let (status, out) = send(
+            &app,
+            &cookie,
+            "POST",
+            "/api/v1/composite",
+            None,
+            serde_json::json!({ "operations": [{
+                "ref": "a", "method": "create", "entity": entity,
+                "body": { "code": "A1", "amount": -5 },
+            }] }),
+        )
+        .await;
+        assert!(status.is_success(), "{status} {out}");
+        let result = &out["results"][0];
+        assert_eq!(result["status"], 422, "{out}");
+        assert_eq!(result["error"]["error"], plain["error"], "{out}");
+        assert_eq!(result["error"]["rule_id"], rule_id, "{out}");
+    })
+}
+
+/// S1-T16: `PATCH /api/v1/{entity}/key/{keyspec}` is refused for a rule
+/// violation exactly as a plain PATCH is.
+#[test]
+fn patch_by_key_runs_business_rules() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let cookie = seed_admin(&system).await;
+        let app = full_app(system);
+        let (entity, entity_id, rule_id) = entity_with_positive_rule(&app, &cookie).await;
+        let (status, body) = send(
+            &app,
+            &cookie,
+            "PATCH",
+            &format!("/api/v1/admin/entities/{entity_id}"),
+            None,
+            serde_json::json!({ "business_key": ["code"] }),
+        )
+        .await;
+        assert!(status.is_success(), "{status} {body}");
+
+        let (status, record) = send(
+            &app,
+            &cookie,
+            "POST",
+            &format!("/api/v1/{entity}"),
+            None,
+            serde_json::json!({ "code": "K1", "amount": 5 }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{record}");
+        let id = record["id"].as_str().expect("id").to_owned();
+        let version = record["row_version"].as_i64().expect("row_version");
+
+        let (status, plain) = send(
+            &app,
+            &cookie,
+            "PATCH",
+            &format!("/api/v1/{entity}/{id}"),
+            Some(version),
+            serde_json::json!({ "amount": -1 }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{plain}");
+
+        let (status, by_key) = send(
+            &app,
+            &cookie,
+            "PATCH",
+            &format!("/api/v1/{entity}/key/code=K1"),
+            Some(version),
+            serde_json::json!({ "amount": -1 }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{by_key}");
+        assert_eq!(by_key["error"], plain["error"]);
+        assert_eq!(by_key["rule_id"], rule_id);
+    })
+}
