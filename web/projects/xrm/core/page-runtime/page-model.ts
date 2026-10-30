@@ -5,6 +5,8 @@ export interface PageDoc {
   id?: string;
   name?: string;
   page_type: 'app_home' | 'workspace' | 'custom' | 'record' | 'portal';
+  /** D1-T2: this record page is its entity's record page. */
+  default?: boolean;
   entity?: string;
   title_en?: string;
   title_ar?: string;
@@ -16,10 +18,23 @@ export type PageNodeType =
   | 'container' | 'tabs' | 'text' | 'list' | 'form' | 'chart' | 'kanban' | 'map' | 'timeline'
   | 'metric' | 'button' | 'custom';
 
-/** A binding is one of a view, a stored query, or a record. */
+/** D1-T2: a condition an entity binding's rows meet. */
+export interface PageCondition {
+  field: string;
+  op: 'eq' | 'in';
+  value: string | number | boolean | string[];
+}
+
+/** A binding is one of a view, a stored query, an entity, or a record. */
 export interface PageBinding {
   view?: string;
   query?: string;
+  /** D1-T2: an entity's records, by logical name. */
+  entity?: string;
+  /** D1-T2: a lookup field of the listed rows that must name the page's record. */
+  related_by?: string;
+  /** D1-T2: conditions on an entity binding's rows. */
+  where?: PageCondition[];
   /** `current` (the page's record), or the lookup attribute of it to follow. */
   record?: string;
 }

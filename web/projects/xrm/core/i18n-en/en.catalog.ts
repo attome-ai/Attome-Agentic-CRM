@@ -1027,7 +1027,7 @@ export const xrmEn = {
   },
   // G15-T1 — a customer's 360 view.
   customer360: {
-    title: 'Customer 360', summarise: 'AI summary', summarising: 'Summarising…', loading: 'Loading…',
+    title: 'Customer 360', openPage: 'Open the 360 page', summarise: 'AI summary', summarising: 'Summarising…', loading: 'Loading…',
     none: 'Nothing here.',
     sections: {
       deals: 'Open deals', tasks: 'Open tasks', invoices: 'Unpaid invoices', entitlements: 'Active entitlements',

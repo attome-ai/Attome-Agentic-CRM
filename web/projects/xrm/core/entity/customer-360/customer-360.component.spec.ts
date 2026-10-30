@@ -16,7 +16,12 @@ describe('Customer360Component (G15-T1)', () => {
       if (body.entity === 'entitlement') return throwError(() => ({ kind: 'not_found', status: 404 }));
       return of({ data: { records: [{ id: 'd1', name: 'Renewal 2027' }], total: 7 } });
     });
-    const get = vi.fn((_: string, __?: unknown) => of({ items: [{ kind: 'note', occurred_at: '2027-03-01T08:00:00Z', summary: 'Called the customer' }] }));
+    const get = vi.fn((path: string, __?: unknown) => {
+      if (path.endsWith('/record-page')) {
+        return entity === 'account' ? of({ id: 'p360', name: 'account-360' }) : throwError(() => ({ kind: 'not_found', status: 404 }));
+      }
+      return of({ items: [{ kind: 'note', occurred_at: '2027-03-01T08:00:00Z', summary: 'Called the customer' }] });
+    });
     TestBed.configureTestingModule({
       imports: [Customer360Component],
       providers: [
@@ -74,6 +79,16 @@ describe('Customer360Component (G15-T1)', () => {
       args: { entity: 'account', record_id: 'acc1' },
     });
     expect((fixture.nativeElement as HTMLElement).querySelector('[data-summary]')?.textContent).toContain('ملخص العميل');
+  });
+
+  it('links to the entity record page when it has one (D1-T2)', () => {
+    const { fixture, get } = create();
+    expect(get).toHaveBeenCalledWith('/api/v1/model/entities/account/record-page');
+    const link = (fixture.nativeElement as HTMLElement).querySelector('[data-record-page]');
+    expect(link?.getAttribute('href')).toContain('/xrm/pages/p360');
+    expect(link?.getAttribute('href')).toContain('record=acc1');
+    const contact = create('contact');
+    expect((contact.fixture.nativeElement as HTMLElement).querySelector('[data-record-page]')).toBeNull();
   });
 
   it('gives a contact its own sections', () => {

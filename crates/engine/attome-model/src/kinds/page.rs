@@ -13,9 +13,15 @@
 //!       "binding": { "record": "current" } } ] } }
 //! ```
 //!
-//! A binding is one of a view, a stored query (by id) or a record: the
-//! page's own record (`current`, record pages only) or the record a lookup
-//! attribute of it points to. An event names when it fires and what it does:
+//! A binding is one of a view, a stored query (by id), an entity (by
+//! logical name, its records as the default list shows them) or a record:
+//! the page's own record (`current`, record pages only) or the record a
+//! lookup attribute of it points to. On a record page a view or entity
+//! binding may add `related_by`, a lookup field of the listed entity that
+//! must name the page's record, and an entity binding `where`, up to ten
+//! `{ field, op: eq | in, value }` conditions (D1-T2), so a page lists an
+//! account's contacts or its open opportunities. A record page with
+//! `"default": true` is its entity's record page. An event names when it fires and what it does:
 //! start a flow, run an action, or navigate to an app path (never a URL, so
 //! a page cannot send someone off the deployment). The entity, the lookup
 //! attributes and custom components are references, checked at save and
@@ -69,8 +75,10 @@ const MAX_DEPTH: usize = 12;
 const MAX_EVENTS: usize = 10;
 const MAX_TEXT_CHARS: usize = 500;
 
-const KEYS: [&str; 9] = [
+const KEYS: [&str; 10] = [
     "page_type",
+    // D1-T2: this record page is its entity's record page.
+    "default",
     "entity",
     "title_en",
     "title_ar",
@@ -90,7 +98,22 @@ const NODE_KEYS: [&str; 7] = [
     "children",
     "component",
 ];
-const BINDING_KEYS: [&str; 3] = ["view", "query", "record"];
+const BINDING_KEYS: [&str; 6] = ["view", "query", "record", "entity", "related_by", "where"];
+/// The keys of a binding that name where its rows come from.
+const SOURCE_KEYS: [&str; 4] = ["view", "query", "record", "entity"];
+/// D1-T2: the most conditions an entity binding's `where` holds.
+const MAX_WHERE: usize = 10;
+
+/// A logical name (an entity's or a field's): lowercase letters, digits and
+/// `_`, starting with a letter, at most 64 characters.
+fn is_logical_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 64
+        && name.starts_with(|c: char| c.is_ascii_lowercase())
+        && name
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
+}
 const EVENT_KEYS: [&str; 3] = ["on", "do", "target"];
 
 /// The page kind.
@@ -163,12 +186,56 @@ fn check_binding(binding: &Value, path: &str, walk: &mut Walk<'_>) {
         return;
     };
     unknown_keys(binding, &BINDING_KEYS, path, "a binding", walk);
-    if binding.len() != 1 {
+    let sources = SOURCE_KEYS
+        .iter()
+        .filter(|key| binding.contains_key(**key))
+        .count();
+    if sources != 1 {
         walk.issues.push(Issue::new(
             path,
             "one_source",
-            "a binding is exactly one of view, query or record",
+            "a binding is exactly one of view, query, entity or record",
         ));
+    }
+    if let Some(entity) = binding.get("entity")
+        && !entity.as_str().is_some_and(is_logical_name)
+    {
+        walk.issues.push(Issue::new(
+            format!("{path}/entity"),
+            "invalid",
+            "an entity binding names the entity by logical name",
+        ));
+    }
+    if let Some(related) = binding.get("related_by") {
+        if !related.as_str().is_some_and(is_logical_name) {
+            walk.issues.push(Issue::new(
+                format!("{path}/related_by"),
+                "invalid",
+                "related_by names a lookup field by logical name",
+            ));
+        }
+        if walk.page_type != "record" {
+            walk.issues.push(Issue::new(
+                format!("{path}/related_by"),
+                "no_record",
+                "only a record page has a record to relate to",
+            ));
+        }
+        if !binding.contains_key("view") && !binding.contains_key("entity") {
+            walk.issues.push(Issue::new(
+                format!("{path}/related_by"),
+                "invalid",
+                "related_by narrows a view or entity binding",
+            ));
+        }
+    }
+    if let Some(conditions) = binding.get("where") {
+        check_where(
+            conditions,
+            &format!("{path}/where"),
+            binding.contains_key("entity"),
+            walk,
+        );
     }
     for key in ["view", "query"] {
         if binding.contains_key(key) && uuid_at(binding.get(key)).is_none() {
@@ -193,6 +260,52 @@ fn check_binding(binding: &Value, path: &str, walk: &mut Walk<'_>) {
                 "invalid",
                 "record is `current` or a lookup attribute of the page's record, by id",
             )),
+        }
+    }
+}
+
+fn check_where(conditions: &Value, path: &str, on_entity: bool, walk: &mut Walk<'_>) {
+    if !on_entity {
+        walk.issues.push(Issue::new(
+            path,
+            "invalid",
+            "where narrows an entity binding",
+        ));
+    }
+    let Some(conditions) = conditions.as_array() else {
+        walk.issues
+            .push(Issue::new(path, "invalid", "where is a list of conditions"));
+        return;
+    };
+    if conditions.len() > MAX_WHERE {
+        walk.issues.push(Issue::new(
+            path,
+            "too_many",
+            format!("where holds at most {MAX_WHERE} conditions"),
+        ));
+    }
+    for (index, condition) in conditions.iter().enumerate() {
+        let at = format!("{path}/{index}");
+        let field = condition.get("field").and_then(Value::as_str);
+        let op = condition.get("op").and_then(Value::as_str);
+        let value = condition.get("value");
+        let value_ok = match op {
+            Some("eq") => value.is_some_and(|v| v.is_string() || v.is_number() || v.is_boolean()),
+            Some("in") => value.and_then(Value::as_array).is_some_and(|items| {
+                !items.is_empty() && items.len() <= 50 && items.iter().all(Value::is_string)
+            }),
+            _ => false,
+        };
+        let keys_ok = condition.as_object().is_some_and(|c| {
+            c.keys()
+                .all(|k| ["field", "op", "value"].contains(&k.as_str()))
+        });
+        if !keys_ok || !field.is_some_and(is_logical_name) || !value_ok {
+            walk.issues.push(Issue::new(
+                at,
+                "invalid",
+                "a condition is { field, op: eq | in, value }, an in value a list of text",
+            ));
         }
     }
 }
@@ -378,6 +491,7 @@ impl Kind for PageKind {
             "additionalProperties": false,
             "properties": {
                 "page_type": { "enum": PAGE_TYPES },
+                "default": { "type": "boolean" },
                 "entity": { "type": "string", "format": "uuid" },
                 "title_en": { "type": "string", "maxLength": MAX_TEXT_CHARS },
                 "title_ar": { "type": "string", "maxLength": MAX_TEXT_CHARS },
@@ -455,6 +569,20 @@ impl Kind for PageKind {
                 "/entity",
                 "invalid",
                 "only a record page names an entity",
+            )),
+        }
+        match object.get("default") {
+            None | Some(Value::Bool(false)) => {}
+            Some(Value::Bool(true)) if page_type == "record" => {}
+            Some(Value::Bool(true)) => walk.issues.push(Issue::new(
+                "/default",
+                "invalid",
+                "only a record page is an entity's default page",
+            )),
+            Some(_) => walk.issues.push(Issue::new(
+                "/default",
+                "invalid",
+                "default is true or false",
             )),
         }
         if object
@@ -661,6 +789,39 @@ mod tests {
         let mut bad_view = page();
         bad_view["root"]["children"][0]["binding"]["view"] = json!("my view");
         assert!(codes(&bad_view).contains(&"invalid"));
+    }
+
+    /// D1-T2: an entity binding narrowed to the page's record and by
+    /// conditions, and the default record page.
+    #[test]
+    fn page_kind_takes_related_lists() {
+        let mut related = page();
+        related["default"] = json!(true);
+        related["root"]["children"][0]["binding"] = json!({
+            "entity": "opportunity",
+            "related_by": "account_ref",
+            "where": [{ "field": "stage", "op": "in", "value": ["proposal", "negotiation"] }]
+        });
+        assert_eq!(codes(&related), Vec::<&str>::new());
+
+        let mut bad = related.clone();
+        bad["root"]["children"][0]["binding"]["where"] =
+            json!([{ "field": "stage", "op": "like", "value": "x" }]);
+        assert!(codes(&bad).contains(&"invalid"));
+        let mut bad = related.clone();
+        bad["root"]["children"][0]["binding"]["entity"] = json!("Opportunity; drop");
+        assert!(codes(&bad).contains(&"invalid"));
+        let mut on_query = page();
+        on_query["root"]["children"][0]["binding"] =
+            json!({ "query": VIEW, "related_by": "account_ref" });
+        assert!(codes(&on_query).contains(&"invalid"));
+
+        let mut home = related.clone();
+        home["page_type"] = json!("app_home");
+        home.as_object_mut().unwrap().remove("entity");
+        let home_codes = codes(&home);
+        assert!(home_codes.contains(&"no_record"), "{home_codes:?}");
+        assert!(home_codes.contains(&"invalid"), "only a record page is a default");
     }
 
     #[test]

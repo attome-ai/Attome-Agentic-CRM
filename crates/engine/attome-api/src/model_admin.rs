@@ -1233,6 +1233,57 @@ async fn default_form_plan(
     }))
 }
 
+/// The page an entity's records open on (D1-T2).
+#[derive(Serialize, ToSchema)]
+pub(crate) struct RecordPageRef {
+    /// The published page's id, for `GET /api/v1/cooked/page`.
+    id: Uuid,
+    name: String,
+}
+
+/// An entity's record page
+///
+/// The published record page marked `"default": true` for an entity
+/// (D1-T2): the customer's own first, then an installed app's, by name.
+/// 404 when the entity has none, and its records open on their form. Any
+/// signed-in person may ask; the page's components read data under their
+/// own rights.
+#[utoipa::path(
+    get,
+    path = "/api/v1/model/entities/{entity}/record-page",
+    tag = "model",
+    params(("entity" = String, Path, description = "The entity's logical name")),
+    responses(
+        (status = 200, description = "The entity's record page", body = RecordPageRef),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 404, description = "No such entity, or it has no record page", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn record_page(
+    State(state): State<EngineState>,
+    _ctx: Authorized<SelfService>,
+    Path(entity): Path<String>,
+) -> Result<Json<RecordPageRef>, AppError> {
+    let entity_id: Uuid = sqlx::query_scalar(
+        "SELECT id FROM entity_info WHERE logicalname = $1 AND is_active IS NOT FALSE",
+    )
+    .bind(&entity)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::NotFound)?;
+    let found: Option<(Uuid, String)> = sqlx::query_as(
+        "SELECT o.id, o.name FROM metadata_object o            JOIN LATERAL (                SELECT doc FROM metadata_object_version                 WHERE object_id = o.id AND state = 'published'                 ORDER BY version_no DESC LIMIT 1            ) v ON true           WHERE o.kind = 'page' AND o.is_active             AND v.doc->>'page_type' = 'record' AND v.doc->>'entity' = $1             AND v.doc->'default' = 'true'::jsonb           ORDER BY (o.app = 'customer') DESC, o.app, o.name           LIMIT 1",
+    )
+    .bind(entity_id.to_string())
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let (id, name) = found.ok_or(AppError::NotFound)?;
+    Ok(Json(RecordPageRef { id, name }))
+}
+
 /// One object of a blueprint and what applying it would do (N12-T3).
 #[derive(Serialize, ToSchema)]
 pub(crate) struct BlueprintItem {
@@ -2821,6 +2872,10 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/model/entities/{entity}/default-form",
             get(default_form_plan),
         )
+        .route(
+            "/api/v1/model/entities/{entity}/record-page",
+            get(record_page),
+        )
         .route("/api/v1/model/tours", get(tours))
         .route("/api/v1/model/reply-suggestions", get(reply_suggestions))
         .route(
@@ -2861,6 +2916,7 @@ pub fn routes() -> Router<EngineState> {
         layers::list_app_layers,
         flow_template::instantiate,
         pack_objects::list_pack_objects,
+        record_page,
         export_files,
         import_files,
         blueprint_plan,
@@ -2903,6 +2959,7 @@ pub fn routes() -> Router<EngineState> {
         flow_template::InstantiateRequest,
         flow_template::InstantiateResponse,
         pack_objects::PackObjectRow,
+        RecordPageRef,
         ModelFile,
         ModelFiles,
         MenuView,

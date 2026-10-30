@@ -1,0 +1,229 @@
+{
+  "app": "crm",
+  "doc": {
+    "default": true,
+    "description_en": "An account with its contacts, open opportunities, cases, invoices and timeline.",
+    "entity": "@entity:account",
+    "page_type": "record",
+    "root": {
+      "children": [
+        {
+          "children": [
+            {
+              "binding": {
+                "entity": "opportunity",
+                "related_by": "account_ref",
+                "where": [
+                  {
+                    "field": "stage",
+                    "op": "in",
+                    "value": [
+                      "prospecting",
+                      "qualification",
+                      "proposal",
+                      "negotiation"
+                    ]
+                  }
+                ]
+              },
+              "id": "open_deals",
+              "props": {
+                "title_ar": "الفرص المفتوحة",
+                "title_en": "Open opportunities"
+              },
+              "type": "metric"
+            },
+            {
+              "binding": {
+                "entity": "invoice",
+                "related_by": "account_ref",
+                "where": [
+                  {
+                    "field": "payment_status",
+                    "op": "in",
+                    "value": [
+                      "open",
+                      "partly_paid",
+                      "overdue"
+                    ]
+                  }
+                ]
+              },
+              "id": "open_invoices",
+              "props": {
+                "title_ar": "الفواتير غير المدفوعة",
+                "title_en": "Unpaid invoices"
+              },
+              "type": "metric"
+            },
+            {
+              "binding": {
+                "entity": "service_ticket",
+                "related_by": "customer_ref"
+              },
+              "id": "cases_count",
+              "props": {
+                "title_ar": "الحالات",
+                "title_en": "Cases"
+              },
+              "type": "metric"
+            },
+            {
+              "binding": {
+                "entity": "contact",
+                "related_by": "account_ref"
+              },
+              "id": "contacts_count",
+              "props": {
+                "title_ar": "جهات الاتصال",
+                "title_en": "Contacts"
+              },
+              "type": "metric"
+            }
+          ],
+          "id": "kpis",
+          "type": "container"
+        },
+        {
+          "binding": {
+            "record": "current"
+          },
+          "id": "summary",
+          "props": {
+            "fields": [
+              "name",
+              "account_type",
+              "industry",
+              "phone",
+              "annual_revenue",
+              "website"
+            ],
+            "title_ar": "الملخص",
+            "title_en": "Summary"
+          },
+          "type": "form"
+        },
+        {
+          "children": [
+            {
+              "binding": {
+                "entity": "contact",
+                "related_by": "account_ref"
+              },
+              "events": [
+                {
+                  "do": "navigate",
+                  "on": "select",
+                  "target": "/xrm/entity/contact/form?id={id}"
+                }
+              ],
+              "id": "contacts",
+              "props": {
+                "title_ar": "جهات الاتصال",
+                "title_en": "Contacts"
+              },
+              "type": "list"
+            },
+            {
+              "binding": {
+                "entity": "opportunity",
+                "related_by": "account_ref",
+                "where": [
+                  {
+                    "field": "stage",
+                    "op": "in",
+                    "value": [
+                      "prospecting",
+                      "qualification",
+                      "proposal",
+                      "negotiation"
+                    ]
+                  }
+                ]
+              },
+              "events": [
+                {
+                  "do": "navigate",
+                  "on": "select",
+                  "target": "/xrm/entity/opportunity/form?id={id}"
+                }
+              ],
+              "id": "opportunities",
+              "props": {
+                "title_ar": "الفرص المفتوحة",
+                "title_en": "Open opportunities"
+              },
+              "type": "list"
+            },
+            {
+              "binding": {
+                "entity": "service_ticket",
+                "related_by": "customer_ref"
+              },
+              "events": [
+                {
+                  "do": "navigate",
+                  "on": "select",
+                  "target": "/xrm/entity/service_ticket/form?id={id}"
+                }
+              ],
+              "id": "cases",
+              "props": {
+                "title_ar": "الحالات",
+                "title_en": "Cases"
+              },
+              "type": "list"
+            },
+            {
+              "binding": {
+                "entity": "invoice",
+                "related_by": "account_ref"
+              },
+              "events": [
+                {
+                  "do": "navigate",
+                  "on": "select",
+                  "target": "/xrm/entity/invoice/form?id={id}"
+                }
+              ],
+              "id": "invoices",
+              "props": {
+                "title_ar": "الفواتير",
+                "title_en": "Invoices"
+              },
+              "type": "list"
+            },
+            {
+              "binding": {
+                "entity": "activity",
+                "related_by": "record_id",
+                "where": [
+                  {
+                    "field": "entity_name",
+                    "op": "eq",
+                    "value": "account"
+                  }
+                ]
+              },
+              "id": "timeline",
+              "props": {
+                "title_ar": "السجل الزمني",
+                "title_en": "Timeline"
+              },
+              "type": "timeline"
+            }
+          ],
+          "id": "related",
+          "type": "tabs"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "نظرة شاملة على الحساب",
+    "title_en": "Account 360"
+  },
+  "kind": "page",
+  "name": "account-360",
+  "schema_version": 1
+}

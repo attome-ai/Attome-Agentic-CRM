@@ -18,6 +18,17 @@ export interface PageRows {
 /** The most rows a page component reads at once. */
 export const PAGE_ROWS = 50;
 
+/** D1-T2: the query filters a binding adds. Pure. */
+export function bindingFilters(binding: PageBinding, recordId: string | null): { field: string; op: string; value?: string }[] {
+  const filters: { field: string; op: string; value?: string }[] = [];
+  if (binding.related_by && recordId) filters.push({ field: binding.related_by, op: 'eq', value: recordId });
+  for (const c of binding.where ?? []) {
+    // The query API takes an `in` list as the array itself.
+    filters.push({ field: c.field, op: c.op, value: c.value as unknown as string });
+  }
+  return filters;
+}
+
 /**
  * T2-T2: what a page reads and does, under the signed-in person's own
  * rights: the published page (its cooked artefact), the rows a view or a
@@ -48,11 +59,20 @@ export class PageDataService {
     );
   }
 
-  /** The rows of a view or stored query binding. */
-  rows(binding: PageBinding): Observable<PageRows> {
-    const params = binding.view ? { view_id: binding.view } : binding.query ? { query_id: binding.query } : null;
+  /**
+   * The rows of a view, stored query or entity binding. On a record page
+   * `related_by` keeps the rows whose lookup names `recordId`; with no
+   * record yet such a binding shows nothing rather than every row.
+   */
+  rows(binding: PageBinding, recordId: string | null = null): Observable<PageRows> {
+    const params = binding.view ? { view_id: binding.view }
+      : binding.query ? { query_id: binding.query }
+      : binding.entity ? { entity: binding.entity }
+      : null;
     if (!params) return of({ records: [], total: 0 });
-    return this.query.execute({ ...params, page: 1, page_size: PAGE_ROWS, include_total: true }).pipe(
+    if (binding.related_by && !recordId) return of({ records: [], total: 0 });
+    const filters = bindingFilters(binding, recordId);
+    return this.query.execute({ ...params, page: 1, page_size: PAGE_ROWS, include_total: true, filters }).pipe(
       map(res => ({ records: res.data.records, total: res.data.total })),
     );
   }

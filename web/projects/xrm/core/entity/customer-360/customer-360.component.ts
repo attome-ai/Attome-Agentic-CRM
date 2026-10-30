@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ApiError, ApiService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 import type { QueryExecResponse } from '@attome/xrm/core/query/data';
@@ -116,6 +116,10 @@ export const SECTION_ROWS = 5;
     <section class="c360">
       <header class="c360-head">
         <h3>{{ 'customer360.title' | translate }}</h3>
+        @if (recordPage(); as pageId) {
+          <a class="c360-page" data-record-page [routerLink]="['/xrm/pages', pageId]"
+             [queryParams]="{ entity: entity(), record: recordId() }">{{ 'customer360.openPage' | translate }}</a>
+        }
         <button type="button" (click)="summarise()" [disabled]="summarising()">
           {{ (summarising() ? 'customer360.summarising' : 'customer360.summarise') | translate }}
         </button>
@@ -184,7 +188,21 @@ export class Customer360Component {
   readonly summary = signal<string | null>(null);
   readonly summarising = signal(false);
   readonly error = signal<string | null>(null);
+  /** D1-T2: the entity's record page, when it has one. */
+  readonly recordPage = signal<string | null>(null);
   private timelineLoaded = false;
+
+  constructor() {
+    effect(() => {
+      const entity = this.entity();
+      untracked(() => {
+        this.recordPage.set(null);
+        // No record page (a 404) leaves the link out.
+        this.api.get<{ id: string }>(`/api/v1/model/entities/${encodeURIComponent(entity)}/record-page`)
+          .subscribe({ next: ref => this.recordPage.set(ref.id), error: () => this.recordPage.set(null) });
+      });
+    });
+  }
 
   sections(): Customer360Section[] {
     return sectionsFor(this.entity(), this.recordId());

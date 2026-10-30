@@ -145,10 +145,12 @@ export class PageNodeComponent {
   protected readonly rows = signal<PageRows | null>(null);
   protected readonly error = signal<string | null>(null);
   protected readonly busy = signal(false);
+  /** D1-T2: an entity binding whose entity is not installed, or not the caller's to read. */
+  protected readonly unavailable = signal(false);
 
   protected readonly visible = computed(() => {
     try {
-      return isVisible(this.node(), this.ctx.visibility());
+      return !this.unavailable() && isVisible(this.node(), this.ctx.visibility());
     } catch {
       return false;
     }
@@ -161,6 +163,8 @@ export class PageNodeComponent {
   });
   protected readonly selectable = computed(() => (this.node().events ?? []).some(e => e.on === 'select'));
   protected readonly metric = computed(() => {
+    // D1-T2: an entity binding counts its records.
+    if (this.node().binding?.entity) return (this.rows()?.total ?? 0).toLocaleString(this.lang.intlLocale());
     const first = seriesOf(this.rows()?.records ?? [])[0];
     if (first) return first.value.toLocaleString(this.lang.intlLocale());
     return String(this.rows()?.total ?? 0);
@@ -182,8 +186,10 @@ export class PageNodeComponent {
     effect(() => {
       const node = this.node();
       const visible = this.visible();
+      // D1-T2: a binding related to the page's record reloads with it.
+      const recordId = node.binding?.related_by ? this.ctx.recordId() : null;
       untracked(() => {
-        if (visible && ROW_TYPES.has(node.type) && node.binding) this.load(node);
+        if (visible && ROW_TYPES.has(node.type) && node.binding) this.load(node, recordId);
         if (visible) for (const e of node.events ?? []) if (e.on === 'load') this.run(e, this.ctx.recordId());
       });
     });
@@ -228,12 +234,16 @@ export class PageNodeComponent {
     });
   }
 
-  private load(node: PageNode): void {
+  private load(node: PageNode, recordId: string | null): void {
     this.rows.set(null);
     this.error.set(null);
-    const sub = this.data.rows(node.binding!).subscribe({
+    const sub = this.data.rows(node.binding!, recordId).subscribe({
       next: rows => this.rows.set(rows),
-      error: (e: ApiError) => this.error.set(this.lang.errorText(e)),
+      error: (e: ApiError) => {
+        // Not installed here, or not the caller's to read: the component hides.
+        if (node.binding?.entity && e.status >= 400 && e.status < 500) this.unavailable.set(true);
+        else this.error.set(this.lang.errorText(e));
+      },
     });
     this.destroyRef.onDestroy(() => sub.unsubscribe());
   }

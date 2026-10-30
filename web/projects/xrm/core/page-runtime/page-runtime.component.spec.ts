@@ -5,7 +5,7 @@ import { EntityService } from '@attome/xrm/core/entity';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { PageDataService } from './page-data.service';
+import { PageDataService, bindingFilters } from './page-data.service';
 import { PageDoc, fillTarget, isVisible } from './page-model';
 import { PageRuntimeComponent } from './page-runtime.component';
 
@@ -121,6 +121,29 @@ describe('PageRuntimeComponent (T2-T2)', () => {
     expect(navigateByUrl).toHaveBeenCalledWith('/xrm/entity/deal/form?id=r1');
     (node(root, 'renew') as HTMLButtonElement).click();
     expect(data['startFlow']).toHaveBeenCalledWith(FLOW, 'account', 'a1');
+  });
+
+  it('lists records related to the page record and hides an entity not installed (D1-T2)', () => {
+    data['rows'].mockImplementation((b: { entity?: string }) => (b.entity === 'invoice'
+      ? throwError(() => ({ status: 404, kind: 'not_found' }))
+      : of({ records: [{ id: 'c1', full_name: 'Sara', amount: 5 }], total: 3 })));
+    const contacts = { entity: 'contact', related_by: 'account_ref' };
+    const fixture = render(page([
+      { id: 'contacts', type: 'list', binding: contacts },
+      { id: 'count', type: 'metric', binding: contacts },
+      { id: 'invoices', type: 'list', binding: { entity: 'invoice', related_by: 'account_ref' } },
+    ]));
+    const root: HTMLElement = fixture.nativeElement;
+    expect(data['rows']).toHaveBeenCalledWith(contacts, 'a1');
+    expect(node(root, 'contacts')?.textContent).toContain('Sara');
+    expect(node(root, 'count')?.querySelector('[data-metric]')?.textContent).toContain('3');
+    expect(node(root, 'invoices')).toBeNull();
+  });
+
+  it('turns a binding into query filters', () => {
+    expect(bindingFilters({ entity: 'opportunity', related_by: 'account_ref', where: [{ field: 'stage', op: 'in', value: ['proposal'] }] }, 'a1'))
+      .toEqual([{ field: 'account_ref', op: 'eq', value: 'a1' }, { field: 'stage', op: 'in', value: ['proposal'] }]);
+    expect(bindingFilters({ view: 'v1' }, 'a1')).toEqual([]);
   });
 
   it('loads a published page by id and says when there is none', () => {
