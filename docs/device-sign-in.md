@@ -52,7 +52,7 @@ attome logout --target prod
 `attome login` runs the flow above as `attome-cli`: it prints the code and the page, polls, and
 keeps the session under `attome:<target>` in Windows Credential Manager on Windows, and elsewhere in
 a file only the user can read (`credentials/<target>.json` in the config directory). The target's
-URL goes in `targets.json` in the user's config directory (`%APPDATA%ttome`,
+URL goes in `targets.json` in the user's config directory (`%APPDATA%\attome`,
 `~/Library/Application Support/attome`, or `$XDG_CONFIG_HOME/attome`; `ATTOME_CONFIG_DIR` overrides
 it), and the first target signed in becomes the default. A command given `--target` uses that
 session and refreshes it when the access token is about to expire; a session that has ended is
