@@ -85,3 +85,9 @@ connector OAuth tokens, SCIM tokens and pending reset, invitation and verificati
 the database as a sandbox. A sandbox refuses to boot with email on unless `email.test_mode_catch_all`
 is set, so it never mails a real person. Only full copies are made so far; `--mode metadata` and
 `--mode sample` are refused.
+
+`attome scratch verify --name <database>` (L10-T2) compares up to 200 records of every labelled field
+between this deployment and the copy, record by record by hash, lists each field with how many
+values are unchanged, and fails when a faked or cleared field still holds a source value (a shuffled
+value may land on a record that held the same one, and a kept field is kept on purpose, so neither
+counts).

@@ -146,8 +146,41 @@ const CREDENTIAL_TABLES: &[&str] = &[
 /// is nullable and whether it is text.
 type LabelledField = (String, String, String, Option<String>, bool, bool);
 
+/// The copy's labelled fields, as [`LabelledField`] rows.
+const LABELLED_FIELDS: &str = "SELECT e.logicalname::text, a.logicalname::text, \
+                CASE WHEN a.sensitivity_confirmed THEN a.sensitivity::text ELSE 'sensitive' END, \
+                a.options->>'masking', \
+                COALESCE(c.is_nullable = 'YES', false), \
+                COALESCE(c.data_type IN ('text', 'character varying', 'character'), false) \
+           FROM attribute_info a \
+           JOIN entity_info e ON e.id = a.entity_ref \
+           LEFT JOIN information_schema.columns c \
+                  ON c.table_schema = current_schema() \
+                 AND c.table_name = e.logicalname AND c.column_name = a.logicalname \
+          WHERE (a.is_sensitive OR (a.sensitivity_confirmed \
+                 AND a.sensitivity IN ('personal', 'financial', 'health', 'secret'))) \
+            AND c.column_name IS NOT NULL \
+          ORDER BY 1, 2";
+
 /// Rows faked per statement.
 const FAKE_BATCH: i64 = 1000;
+
+/// The rule a field is masked with: its label's or its override, a fake
+/// only for text (another type is cleared, or left when required). Pure.
+pub fn effective_rule(
+    label: &str,
+    override_rule: Option<&str>,
+    nullable: bool,
+    is_text: bool,
+) -> crate::masking::MaskRule {
+    use crate::masking::MaskRule;
+    let rule = crate::masking::rule_for(label, override_rule, !nullable);
+    match rule {
+        MaskRule::Fake if !is_text && nullable => MaskRule::Null,
+        MaskRule::Fake if !is_text => MaskRule::Keep,
+        other => other,
+    }
+}
 
 fn hex_key(key: &[u8]) -> String {
     key.iter().map(|b| format!("{b:02x}")).collect()
@@ -223,41 +256,18 @@ pub async fn create(config: &AppConfig, args: &ScratchArgs) -> Result<ScratchRep
         .await
         .map_err(|e| format!("cannot set the copy's schema: {e}"))?;
 
-    let labelled: Vec<LabelledField> = sqlx::query_as(
-        "SELECT e.logicalname::text, a.logicalname::text, \
-                CASE WHEN a.sensitivity_confirmed THEN a.sensitivity::text ELSE 'sensitive' END, \
-                a.options->>'masking', \
-                COALESCE(c.is_nullable = 'YES', false), \
-                COALESCE(c.data_type IN ('text', 'character varying', 'character'), false) \
-           FROM attribute_info a \
-           JOIN entity_info e ON e.id = a.entity_ref \
-           LEFT JOIN information_schema.columns c \
-                  ON c.table_schema = current_schema() \
-                 AND c.table_name = e.logicalname AND c.column_name = a.logicalname \
-          WHERE (a.is_sensitive OR (a.sensitivity_confirmed \
-                 AND a.sensitivity IN ('personal', 'financial', 'health', 'secret'))) \
-            AND c.column_name IS NOT NULL \
-          ORDER BY 1, 2",
-    )
-    .fetch_all(&mut copy)
-    .await
-    .map_err(|e| format!("cannot read the copy's labelled fields: {e}"))?;
+    let labelled: Vec<LabelledField> =
+        sqlx::query_as(LABELLED_FIELDS)
+            .fetch_all(&mut copy)
+            .await
+            .map_err(|e| format!("cannot read the copy's labelled fields: {e}"))?;
     // L10-T1: one key for this copy, never stored.
     let key: [u8; 32] = rand::random();
     let mut masked = Vec::new();
     let mut unmasked_required = Vec::new();
     for (entity, field, label, override_rule, nullable, is_text) in labelled {
         let name = format!("{entity}.{field}");
-        let mut rule = crate::masking::rule_for(&label, override_rule.as_deref(), !nullable);
-        // A fake is text; a field of another type is cleared, or left and
-        // listed when its column is required.
-        if rule == crate::masking::MaskRule::Fake && !is_text {
-            rule = if nullable {
-                crate::masking::MaskRule::Null
-            } else {
-                crate::masking::MaskRule::Keep
-            };
-        }
+        let rule = effective_rule(&label, override_rule.as_deref(), nullable, is_text);
         match rule {
             crate::masking::MaskRule::Keep => {
                 unmasked_required.push(name);
@@ -332,6 +342,109 @@ pub async fn create(config: &AppConfig, args: &ScratchArgs) -> Result<ScratchRep
     })
 }
 
+/// L10-T2: one field's verification.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FieldCheck {
+    pub field: String,
+    pub rule: crate::masking::MaskRule,
+    /// Source records compared.
+    pub sampled: usize,
+    /// Of those, records whose copy holds the source's value.
+    pub matches: usize,
+}
+
+impl FieldCheck {
+    /// Whether a match here is an unmasked value. A shuffled value can land
+    /// on a record that held the same one, and a kept field is kept on
+    /// purpose. Pure.
+    pub fn counts_as_unmasked(&self) -> bool {
+        matches!(
+            self.rule,
+            crate::masking::MaskRule::Fake | crate::masking::MaskRule::Null
+        )
+    }
+}
+
+/// Source records sampled per field.
+pub const VERIFY_SAMPLE: i64 = 200;
+
+/// L10-T2: compares a sample of each labelled field's values in the source
+/// with the copy `name`, record by record, by hash; returns each field's
+/// result. The copy must be a sandbox copy.
+pub async fn verify(config: &AppConfig, name: &str) -> Result<Vec<FieldCheck>, String> {
+    use sqlx::Connection;
+    let open = |db: String| async move {
+        let mut conn =
+            sqlx::PgConnection::connect_with(&crate::backup::connect_options(config, &db))
+                .await
+                .map_err(|e| format!("cannot open {db}: {e}"))?;
+        sqlx::query("SELECT set_config('search_path', $1, false)")
+            .bind(&config.database.schema)
+            .execute(&mut conn)
+            .await
+            .map_err(|e| format!("cannot set the schema of {db}: {e}"))?;
+        Ok::<_, String>(conn)
+    };
+    let mut source = open(config.database.dbname.clone()).await?;
+    let mut copy = open(name.to_owned()).await?;
+    let marked: bool = sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM sandbox_copy)")
+        .fetch_one(&mut copy)
+        .await
+        .map_err(|e| format!("{name} is not a sandbox copy: {e}"))?;
+    if !marked {
+        return Err(format!("{name} is not a sandbox copy"));
+    }
+    let labelled: Vec<LabelledField> =
+        sqlx::query_as(LABELLED_FIELDS)
+            .fetch_all(&mut copy)
+            .await
+            .map_err(|e| format!("cannot read the copy's labelled fields: {e}"))?;
+    let mut checks = Vec::new();
+    for (entity, field, label, override_rule, nullable, is_text) in labelled {
+        let rule = effective_rule(&label, override_rule.as_deref(), nullable, is_text);
+        let read = format!(
+            "SELECT id, md5({c}::text) FROM {t} WHERE {c} IS NOT NULL ORDER BY id LIMIT $1",
+            t = attome_core::quote_ident(&entity),
+            c = attome_core::quote_ident(&field)
+        );
+        let sample: Vec<(uuid::Uuid, String)> = sqlx::query_as(&read)
+            .bind(VERIFY_SAMPLE)
+            .fetch_all(&mut source)
+            .await
+            .map_err(|e| format!("cannot sample {entity}.{field}: {e}"))?;
+        let ids: Vec<uuid::Uuid> = sample.iter().map(|r| r.0).collect();
+        let compare = format!(
+            "SELECT id, md5({c}::text) FROM {t} WHERE id = ANY($1) AND {c} IS NOT NULL",
+            t = attome_core::quote_ident(&entity),
+            c = attome_core::quote_ident(&field)
+        );
+        let copied: Vec<(uuid::Uuid, String)> = sqlx::query_as(&compare)
+            .bind(&ids)
+            .fetch_all(&mut copy)
+            .await
+            .map_err(|e| format!("cannot read {entity}.{field} in the copy: {e}"))?;
+        checks.push(FieldCheck {
+            field: format!("{entity}.{field}"),
+            rule,
+            sampled: sample.len(),
+            matches: count_matches(&sample, &copied),
+        });
+    }
+    let _ = source.close().await;
+    let _ = copy.close().await;
+    Ok(checks)
+}
+
+/// How many of `source`'s (id, hash) pairs `copy` holds unchanged. Pure.
+pub fn count_matches(source: &[(uuid::Uuid, String)], copy: &[(uuid::Uuid, String)]) -> usize {
+    let copied: std::collections::HashMap<&uuid::Uuid, &String> =
+        copy.iter().map(|(id, hash)| (id, hash)).collect();
+    source
+        .iter()
+        .filter(|(id, hash)| copied.get(id).is_some_and(|h| *h == hash))
+        .count()
+}
+
 /// Why boot refuses a database, or `None`: a sandbox copy with email on and
 /// no catch-all address would mail real people. Pure.
 pub fn sandbox_email_refusal(
@@ -363,6 +476,9 @@ pub async fn run(args: Vec<String>) -> std::process::ExitCode {
         eprintln!("usage: attome scratch create --name <database> [--from latest|<archive>]");
         return std::process::ExitCode::FAILURE;
     };
+    if command == "verify" {
+        return run_verify(&config, rest).await;
+    }
     if command != "create" {
         eprintln!("attome scratch: unknown command {command}");
         return std::process::ExitCode::FAILURE;
@@ -377,7 +493,7 @@ pub async fn run(args: Vec<String>) -> std::process::ExitCode {
     match create(&config, &parsed).await {
         Ok(report) => {
             println!(
-                "sandbox copy {} made from {}: {} labelled field(s) cleared",
+                "sandbox copy {} made from {}: {} labelled field(s) masked",
                 report.database,
                 report.archive.display(),
                 report.masked.len()
@@ -393,6 +509,48 @@ pub async fn run(args: Vec<String>) -> std::process::ExitCode {
         }
         Err(error) => {
             eprintln!("attome scratch create: {error}");
+            std::process::ExitCode::FAILURE
+        }
+    }
+}
+
+/// `attome scratch verify --name <copy>`: fails when a sampled value is
+/// still the source's.
+#[allow(
+    clippy::print_stdout,
+    reason = "a command-line command reports to standard output"
+)]
+async fn run_verify(config: &AppConfig, args: &[String]) -> std::process::ExitCode {
+    let name = match args {
+        [flag, name] if flag == "--name" => name,
+        _ => {
+            eprintln!("usage: attome scratch verify --name <copy>");
+            return std::process::ExitCode::FAILURE;
+        }
+    };
+    match verify(config, name).await {
+        Ok(checks) => {
+            let unmasked: usize = checks
+                .iter()
+                .filter(|c| c.counts_as_unmasked())
+                .map(|c| c.matches)
+                .sum();
+            for check in &checks {
+                println!(
+                    "{}: {:?}, {} sampled, {} unchanged",
+                    check.field, check.rule, check.sampled, check.matches
+                );
+            }
+            if unmasked == 0 {
+                println!("verified: no unmasked value in {name}");
+                std::process::ExitCode::SUCCESS
+            } else {
+                eprintln!("attome scratch verify: {unmasked} unmasked value(s) in {name}");
+                std::process::ExitCode::FAILURE
+            }
+        }
+        Err(error) => {
+            eprintln!("attome scratch verify: {error}");
             std::process::ExitCode::FAILURE
         }
     }
@@ -428,6 +586,36 @@ mod tests {
         );
         assert!(parse_args(&strings(&["--name"]), "attome").is_err());
         assert!(parse_args(&strings(&["--name", "copy_a", "--x"]), "attome").is_err());
+    }
+
+    #[test]
+    fn verifier_counts_unchanged_values_only() {
+        let a = uuid::Uuid::from_u128(1);
+        let b = uuid::Uuid::from_u128(2);
+        let source = vec![(a, "h1".to_owned()), (b, "h2".to_owned())];
+        assert_eq!(count_matches(&source, &[(a, "h1".to_owned())]), 1);
+        assert_eq!(
+            count_matches(&source, &[(a, "x".to_owned()), (b, "y".to_owned())]),
+            0
+        );
+        assert_eq!(count_matches(&source, &[]), 0);
+        let check = |rule| FieldCheck {
+            field: "contact.email".into(),
+            rule,
+            sampled: 2,
+            matches: 1,
+        };
+        assert!(check(crate::masking::MaskRule::Fake).counts_as_unmasked());
+        assert!(!check(crate::masking::MaskRule::Shuffle).counts_as_unmasked());
+        assert!(!check(crate::masking::MaskRule::Keep).counts_as_unmasked());
+        assert_eq!(
+            effective_rule("personal", None, true, false),
+            crate::masking::MaskRule::Null
+        );
+        assert_eq!(
+            effective_rule("personal", None, false, false),
+            crate::masking::MaskRule::Keep
+        );
     }
 
     #[test]
