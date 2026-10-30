@@ -1292,3 +1292,161 @@ fn act_as_header_is_signed() {
         assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
     })
 }
+
+/// One admin request with a JSON body; status and body.
+async fn admin_json(
+    app: &axum::Router,
+    cookie: &str,
+    method: &str,
+    uri: &str,
+    body: serde_json::Value,
+) -> (StatusCode, serde_json::Value) {
+    let res = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(method)
+                .uri(uri)
+                .header("cookie", cookie)
+                .header("content-type", "application/json")
+                .body(Body::from(body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let status = res.status();
+    (status, body_json(res).await)
+}
+
+/// S1-T16: a write a service client makes acting as a user is refused for a
+/// business-rule violation exactly as the user's own write is.
+#[test]
+fn act_as_write_runs_business_rules() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (admin_id, admin_cookie) = seed_admin(&system).await;
+        let app = full_app(system);
+        let (client_db_id, slug, key, secret) =
+            provision_s2s_client(app.clone(), &admin_cookie, admin_id).await;
+        let detail_path = format!("/api/v1/admin/s2s/clients/{client_db_id}");
+        let res = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri(&detail_path)
+                    .header("cookie", &admin_cookie)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let row_version = body_json(res).await["row_version"].as_i64().unwrap();
+        let (status, _) = admin_json(
+            &app,
+            &admin_cookie,
+            "PATCH",
+            &detail_path,
+            serde_json::json!({ "can_act_as_user": true, "row_version": row_version }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "grant act-as");
+
+        // An entity and a rule refusing a non-positive amount.
+        let entity = format!("rule_actas_{}", Uuid::now_v7().simple());
+        let (status, created) = admin_json(
+            &app,
+            &admin_cookie,
+            "POST",
+            "/api/v1/admin/entities",
+            serde_json::json!({ "logicalname": entity, "name": "Act-as rule test" }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{created}");
+        let entity_id = created["id"].as_str().unwrap().to_owned();
+        let (status, field) = admin_json(
+            &app,
+            &admin_cookie,
+            "POST",
+            &format!("/api/v1/admin/entities/{entity_id}/fields"),
+            serde_json::json!({ "logicalname": "amount", "name": "amount", "field_type": "number" }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{field}");
+        let rule = serde_json::json!({
+            "entity_logicalname": entity,
+            "name": "amount_must_be_positive",
+            "condition": { "expression": "not (amount > 0)" },
+            "policies": [
+                { "type": "error", "message": "amount must be positive", "severity": "error" }
+            ],
+        });
+        let mut created_rule = None;
+        for _ in 0..50 {
+            let (status, out) = admin_json(
+                &app,
+                &admin_cookie,
+                "POST",
+                "/api/v1/admin/business-rules",
+                rule.clone(),
+            )
+            .await;
+            if status == StatusCode::CREATED {
+                created_rule = Some(out);
+                break;
+            }
+            // The registry catches up with a new entity asynchronously.
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        }
+        let rule_id = created_rule.expect("rule created")["id"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+
+        let (status, plain) = admin_json(
+            &app,
+            &admin_cookie,
+            "POST",
+            &format!("/api/v1/{entity}"),
+            serde_json::json!({ "amount": -5 }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{plain}");
+
+        // The same create, signed by the service client acting as the admin.
+        let path = format!("/api/v1/{entity}");
+        let body = br#"{"amount": -5}"#;
+        let timestamp = now_ms().to_string();
+        let nonce = Uuid::now_v7().to_string();
+        let act_as = admin_id.to_string();
+        let canonical = attome_s2s::crypto::canonical_message_with_act_as(
+            "POST",
+            &path,
+            &sha256_hex(body),
+            &timestamp,
+            &nonce,
+            Some(&act_as),
+        );
+        let res = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&path)
+                    .header("content-type", "application/json")
+                    .header("x-s2s-client-id", &slug)
+                    .header("x-s2s-key-id", &key)
+                    .header("x-s2s-timestamp", timestamp)
+                    .header("x-s2s-nonce", nonce)
+                    .header("x-s2s-signature", sign_hmac_hex(&secret, &canonical))
+                    .header("x-attome-act-as", &act_as)
+                    .body(Body::from(body.to_vec()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        let acting = body_json(res).await;
+        assert_eq!(acting["error"], plain["error"], "{acting}");
+        assert_eq!(acting["rule_id"], rule_id, "{acting}");
+    })
+}
