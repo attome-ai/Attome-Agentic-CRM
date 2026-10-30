@@ -19,6 +19,8 @@ use std::path::{Component, Path, PathBuf};
 
 use serde_json::{Value, json};
 
+use crate::cmd::login::{Auth, credentials};
+
 const DEFAULT_URL: &str = "http://127.0.0.1:7865";
 
 /// A parsed `attome model` command.
@@ -117,25 +119,6 @@ fn client(url: &str) -> Result<attome_outbound::http::Outbound, String> {
         attome_outbound::http::Purpose::public("cli-model-files").with_private_urls([url]);
     attome_outbound::http::client(purpose, |b| b.timeout(std::time::Duration::from_secs(120)))
         .map_err(|error| format!("build the HTTP client: {error}"))
-}
-
-/// The `Authorization` header value a command sends, if any.
-type Auth = Option<String>;
-
-/// The server and credential: a signed-in target's URL and bearer token
-/// (T4-T1), else `url` and the API key.
-async fn credentials(
-    url: String,
-    api_key: Option<String>,
-    target: Option<String>,
-) -> Result<(String, Auth), String> {
-    match target {
-        Some(target) => {
-            let (url, token) = crate::cmd::login::target_bearer(Some(&target)).await?;
-            Ok((url, Some(format!("Bearer {token}"))))
-        }
-        None => Ok((url, api_key.map(|key| format!("ApiKey {key}")))),
-    }
 }
 
 fn authorised(request: reqwest::RequestBuilder, auth: Option<&str>) -> reqwest::RequestBuilder {

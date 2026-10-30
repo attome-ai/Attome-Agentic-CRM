@@ -535,6 +535,25 @@ async fn device_login(url: &str) -> Result<Tokens, String> {
     }
 }
 
+/// The `Authorization` header value a command sends, if any.
+pub type Auth = Option<String>;
+
+/// The server and credential a command uses: a signed-in target's URL and
+/// bearer token, else `url` and the API key (`ApiKey <public>:<secret>`).
+pub async fn credentials(
+    url: String,
+    api_key: Option<String>,
+    target: Option<String>,
+) -> Result<(String, Auth), String> {
+    match target {
+        Some(target) => {
+            let (url, token) = target_bearer(Some(&target)).await?;
+            Ok((url, Some(format!("Bearer {token}"))))
+        }
+        None => Ok((url, api_key.map(|key| format!("ApiKey {key}")))),
+    }
+}
+
 /// The URL and a live access token of `target` (or the default), refreshed
 /// at the device token endpoint when it is about to expire.
 pub async fn target_bearer(target: Option<&str>) -> Result<(String, String), String> {

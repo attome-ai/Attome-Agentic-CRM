@@ -8,6 +8,8 @@ pub mod changeset_replay;
 pub mod cluster;
 /// U3-T1: `attome cluster create|expand`, a profile installed over SSH.
 pub mod cluster_ssh;
+/// T4-T4: `attome data query|export|import`.
+pub mod data;
 /// AB4-T3: drill keys, evidence verification and readiness.
 pub mod drill;
 pub mod healthcheck;

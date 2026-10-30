@@ -23,6 +23,10 @@ Usage:
                                 code); later commands take --target <name>
   attome logout --target <name> | attome targets
                                 Forget a target's session; list the targets
+  attome data query <entity> [--where f=v]... [--format table|csv|json]
+  attome data export <entity> --out <file> | import <entity> --file <csv|xlsx>
+                [--target <name> | --url <url> [--api-key <key>]]
+                                Records through the API, with your access
   attome model export --out <dir> | import --dir <dir>
                 [--target <name> | --url <url> [--api-key <key>]]
                                 Move metadata objects as one text file each;
@@ -153,6 +157,10 @@ fn main() -> ExitCode {
         [verb @ ("login" | "logout" | "targets"), rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             outcome(attome::cmd::login::run(verb, &rest).map_err(Into::into))
+        }
+        ["data", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            outcome(attome::cmd::data::run(&rest).map_err(Into::into))
         }
         ["model", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
