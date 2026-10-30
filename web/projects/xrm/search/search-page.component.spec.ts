@@ -7,6 +7,7 @@ import {
   SearchPageComponent,
   countedGroups,
   pushRecent,
+  urlAtPage,
   withEntityFilter,
 } from './search-page.component';
 import { AskingSearchResponse, SearchHit, SearchPageService } from './services/search-page.service';
@@ -39,6 +40,13 @@ function response(over: Partial<AskingSearchResponse> = {}): AskingSearchRespons
     ...over,
   } as AskingSearchResponse;
 }
+
+describe('urlAtPage', () => {
+  it('opens a file at a page, replacing any fragment', () => {
+    expect(urlAtPage('https://files.example/a.pdf?sig=1', 3)).toBe('https://files.example/a.pdf?sig=1#page=3');
+    expect(urlAtPage('https://files.example/a.pdf#page=1', 7)).toBe('https://files.example/a.pdf#page=7');
+  });
+});
 
 describe('SearchPageComponent', () => {
   let api: { search: ReturnType<typeof vi.fn>; saveSearch: ReturnType<typeof vi.fn> };

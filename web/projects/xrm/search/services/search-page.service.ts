@@ -67,6 +67,16 @@ export class SearchPageService {
     return this.api.get<AskingSearchResponse>('/api/v1/search', params);
   }
 
+  /**
+   * A25-T6: a short-lived address of a document's file, to open it at the
+   * page a search matched.
+   */
+  documentFileUrl(documentId: string): Observable<{ download_url: string }> {
+    return this.api.get<{ download_url: string }>(
+      `/api/v1/attome_document/${encodeURIComponent(documentId)}/files/file/download-url`,
+    );
+  }
+
   /** Saves the query as the caller's own saved search; `alert` emails them new results. */
   saveSearch(name: string, query: string, alert: boolean): Observable<unknown> {
     return this.api.post('/api/v1/saved_search', {

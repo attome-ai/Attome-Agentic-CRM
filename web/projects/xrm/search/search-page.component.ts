@@ -42,6 +42,14 @@ export function withEntityFilter(q: string, entity: string | null): string {
   return entity ? `${rest} entity:${entity}`.trim() : rest;
 }
 
+/** The entity whose search hits are attached files (A25-T6). */
+export const DOCUMENT_ENTITY = 'attome_document';
+
+/** A file address that opens a PDF viewer at `page`. Pure. */
+export function urlAtPage(url: string, page: number): string {
+  return `${url.split('#')[0]}#page=${page}`;
+}
+
 /** `recent` with `q` first, once, at most [`MAX_RECENT`]. Pure. */
 export function pushRecent(recent: string[], q: string): string[] {
   const trimmed = q.trim();
@@ -93,6 +101,21 @@ export class SearchPageComponent {
 
   protected formRoute(entity: string): string[] {
     return entityFormRoute(entity);
+  }
+
+  /** Whether a hit is an attached file the query matched on a known page. */
+  protected hasPage(hit: SearchHit): boolean {
+    return hit.entity_logicalname === DOCUMENT_ENTITY && !!hit.page;
+  }
+
+  /** Opens a document hit's file at the page the query matched (A25-T6). */
+  protected openAtPage(hit: SearchHit): void {
+    const page = hit.page;
+    if (!page) return;
+    this.search.documentFileUrl(hit.record_id).subscribe({
+      next: res => window.open(urlAtPage(res.download_url, page), '_blank', 'noopener'),
+      error: () => this.error.set(this.lang.translate('searchPage.openFailed')),
+    });
   }
 
   protected onQuery(event: Event): void {

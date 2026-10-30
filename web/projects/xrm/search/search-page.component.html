@@ -126,6 +126,11 @@
                   @if (h.subtitle) {
                     <span class="search-page__subtitle" dir="auto">{{ h.subtitle }}</span>
                   }
+                  @if (hasPage(h)) {
+                    <button type="button" class="search-page__page" (click)="openAtPage(h)">
+                      {{ 'searchPage.openAtPage' | translate: { page: h.page } }}
+                    </button>
+                  }
                   @if (h.explain; as x) {
                     <details class="search-page__explain">
                       <summary>{{ 'searchPage.why' | translate }}</summary>

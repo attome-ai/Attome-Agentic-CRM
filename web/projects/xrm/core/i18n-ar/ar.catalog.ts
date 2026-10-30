@@ -1823,6 +1823,7 @@ export const xrmAr = {
     legs: 'طريقة التطابق', synonyms: 'المرادفات المستخدمة', pinned: 'مثبّتة', yes: 'نعم', score: 'الدرجة',
     saveName: 'اسم هذا البحث', alertMe: 'نبّهني بالنتائج الجديدة', save: 'حفظ البحث',
     saved: 'تم حفظ البحث.', failed: 'تعذّر البحث.', saveFailed: 'تعذّر حفظ البحث.',
+    openAtPage: 'افتح عند الصفحة {page}', openFailed: 'تعذّر فتح الملف.',
   },
   leadConvert: {
     loading: 'جارٍ تحميل التحويل…', loadFailed: 'تعذّر تحميل التحويل.',

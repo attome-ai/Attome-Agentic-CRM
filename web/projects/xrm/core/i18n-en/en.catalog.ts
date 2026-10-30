@@ -1863,6 +1863,7 @@ export const xrmEn = {
     legs: 'Matched by', synonyms: 'Synonyms used', pinned: 'Pinned', yes: 'Yes', score: 'Score',
     saveName: 'Name for this search', alertMe: 'Alert me to new results', save: 'Save search',
     saved: 'Search saved.', failed: 'The search failed.', saveFailed: 'The search could not be saved.',
+    openAtPage: 'Open at page {page}', openFailed: 'The file could not be opened.',
   },
   leadConvert: {
     loading: 'Loading the conversion…', loadFailed: 'The conversion could not be loaded.',
