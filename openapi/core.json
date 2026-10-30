@@ -58026,7 +58026,7 @@
           "entity"
         ],
         "summary": "Run several record operations",
-        "description": "Up to 25 creates, updates and deletes in order, each on its own; a later one may use an earlier one's result through ${ref.field}. With all_or_none, they run in one transaction and the first failure rolls them all back. One result per operation.",
+        "description": "Up to 25 creates, updates and deletes in order, each on its own; a later one may use an earlier one's result through ${ref.field}. With all_or_none, they run in one transaction and the first failure rolls them all back. A create may carry children, created with it and pointing at it; such a request is all or none. One result per operation.",
         "operationId": "composite",
         "requestBody": {
           "content": {
@@ -58060,7 +58060,7 @@
             }
           },
           "422": {
-            "description": "The request's own shape is wrong (count or refs)",
+            "description": "The request's own shape is wrong (count, refs, or children: not on a create, not a lookup to the parent, or more than 100 operations once expanded)",
             "content": {
               "application/json": {
                 "schema": {
@@ -89748,6 +89748,13 @@
         ],
         "properties": {
           "body": {},
+          "children": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "S1-T9: records created with this one (create only), keyed\n`<child_entity>.<lookup_attribute>`, each a child record's body; the\nlookup is set to this record. The request then runs all or none."
+          },
           "entity": {
             "type": "string"
           },

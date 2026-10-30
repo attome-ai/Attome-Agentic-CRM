@@ -17820,7 +17820,7 @@ export interface paths {
         put?: never;
         /**
          * Run several record operations
-         * @description Up to 25 creates, updates and deletes in order, each on its own; a later one may use an earlier one's result through ${ref.field}. With all_or_none, they run in one transaction and the first failure rolls them all back. One result per operation.
+         * @description Up to 25 creates, updates and deletes in order, each on its own; a later one may use an earlier one's result through ${ref.field}. With all_or_none, they run in one transaction and the first failure rolls them all back. A create may carry children, created with it and pointing at it; such a request is all or none. One result per operation.
          */
         post: operations["composite"];
         delete?: never;
@@ -36503,6 +36503,12 @@ export interface components {
         /** @description One operation. */
         CompositeOp: {
             body?: unknown;
+            /**
+             * @description S1-T9: records created with this one (create only), keyed
+             *     `<child_entity>.<lookup_attribute>`, each a child record's body; the
+             *     lookup is set to this record. The request then runs all or none.
+             */
+            children?: Record<string, never> | null;
             entity: string;
             /** @description The record, for update and delete; may be a `${ref.id}` reference. */
             id?: string | null;
@@ -119601,7 +119607,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description The request's own shape is wrong (count or refs) */
+            /** @description The request's own shape is wrong (count, refs, or children: not on a create, not a lookup to the parent, or more than 100 operations once expanded) */
             422: {
                 headers: {
                     [name: string]: unknown;
