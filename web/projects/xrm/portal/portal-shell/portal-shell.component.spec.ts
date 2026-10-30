@@ -152,3 +152,32 @@ describe('PortalPageHostComponent (G12-T1)', () => {
     expect(post).toHaveBeenCalledWith('/acme/api/v1/records/case_message', { case_ref: 't1', body: 'Any news?' });
   });
 });
+
+describe('PortalPrivacyComponent (R1-T2)', () => {
+  it('lists the requests and files one with the password given again', async () => {
+    const { PortalPrivacyComponent } = await import('./portal-privacy.component');
+    const existing = { id: 'r1', request_type: 'access', status: 'pending', requested_at: '2026-10-30T10:00:00Z', due_at: '2026-11-29T10:00:00Z', fulfilled_at: null };
+    const get = vi.fn(() => of([existing]));
+    const post = vi.fn(() => of({ ...existing, id: 'r2', request_type: 'erasure' }));
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [PortalPrivacyComponent],
+      providers: [{ provide: ApiService, useValue: { get, post } }, { provide: LangService, useValue: LANG }],
+    });
+    TestBed.inject(PortalSiteService).keyword.set('acme');
+    const fixture = TestBed.createComponent(PortalPrivacyComponent);
+    fixture.detectChanges();
+    const root: HTMLElement = fixture.nativeElement;
+    expect(get).toHaveBeenCalledWith('/acme/api/v1/me/privacy-requests');
+    expect(root.querySelector('[data-request-id="r1"]')).not.toBeNull();
+
+    fixture.componentInstance.type.set('erasure');
+    fixture.componentInstance.password.set('secret');
+    fixture.detectChanges();
+    (root.querySelector('[data-request]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(post).toHaveBeenCalledWith('/acme/api/v1/me/privacy-requests', { request_type: 'erasure', password: 'secret' });
+    expect(fixture.componentInstance.password()).toBe('');
+    expect(root.querySelector('[data-request-id="r2"]')).not.toBeNull();
+  });
+});

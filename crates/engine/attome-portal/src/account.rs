@@ -28,6 +28,30 @@ impl std::fmt::Debug for PasswordChange {
     }
 }
 
+/// R1-T2: whether `password` is the portal user's current one (a person
+/// proving who they are again before a privacy request). An account with no
+/// password still pays for a hash, so the answer takes the same time.
+pub async fn password_ok(
+    conn: &mut PgConnection,
+    principal: &PortalPrincipal,
+    password: &str,
+) -> Result<bool, AppError> {
+    let stored: Option<Option<String>> = sqlx::query_scalar(
+        "SELECT password_hash FROM webportal_credential WHERE webportal_user_id = $1",
+    )
+    .bind(principal.user_id)
+    .fetch_optional(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    match stored.flatten() {
+        Some(hash) => attome_auth::verify_password_async(password, &hash).await,
+        None => {
+            attome_auth::password::verify_against_dummy_async(password).await?;
+            Ok(false)
+        }
+    }
+}
+
 /// Changes the password after checking the current one. Bumps the epoch, so
 /// every access token issued before dies, and revokes every refresh family
 /// except the caller's own.

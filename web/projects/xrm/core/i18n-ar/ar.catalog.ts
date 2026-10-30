@@ -3023,6 +3023,12 @@ export const xrmAr = {
     denied: 'تم رفض الجهاز.', notFound: 'هذا الرمز غير معروف أو مستخدم أو منتهي الصلاحية.',
   },
   portalSite: {
+    privacy: 'بياناتي', privacyType: 'ماذا تريد؟', privacySend: 'إرسال الطلب',
+    privacySent: 'تم تسجيل طلبك، وسنرد عليه ضمن المهلة.', privacyMine: 'طلباتك',
+    privacyNone: 'لا توجد طلبات بعد.', privacyDue: 'موعد الرد',
+    privacyTypes: { access: 'نسخة من بياناتي', portability: 'بياناتي في ملف قابل للنقل', rectification: 'تصحيح بياناتي',
+      restriction: 'تقييد استخدام بياناتي', objection: 'الاعتراض على استخدام بياناتي', erasure: 'حذف بياناتي' },
+    privacyStatus: { pending: 'قيد المعالجة', blocked: 'معلّق', fulfilled: 'منجز', rejected: 'مرفوض' },
     title: 'بوابة العملاء', navigation: 'صفحات البوابة', profile: 'الملف الشخصي', signOut: 'تسجيل الخروج', language: 'English',
     loading: 'جارٍ التحميل…', signIn: 'تسجيل الدخول', login: 'البريد الإلكتروني أو اسم المستخدم', password: 'كلمة المرور',
     code: 'رمز تطبيق المصادقة', badLogin: 'البريد الإلكتروني أو اسم المستخدم أو كلمة المرور غير صحيحة.',

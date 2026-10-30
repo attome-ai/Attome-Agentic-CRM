@@ -55,3 +55,10 @@ The customer-service pack ships `portal-home`, `portal-cases`, `portal-case` (wi
 shows depends on the portal role's grants on `service_ticket`, `case_message`,
 `knowledge_data_item` and `service_offering`. The portal also has its own sign-in, profile and
 consent pages.
+
+The portal's own pages are sign-in, profile, consent and **My data** (`/p/{keyword}/privacy`, R1-T2):
+the person asks for a copy of their data, a portable file, a correction, a restriction, an
+objection or erasure, giving their password again to prove it is them
+(`POST /{keyword}/api/v1/me/privacy-requests`), and follows each request's status and deadline
+(`GET` there). A request is a data subject request about their verified email address, worked by
+staff with the others under the deployment's law.

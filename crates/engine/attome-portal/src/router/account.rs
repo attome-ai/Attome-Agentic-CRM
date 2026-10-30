@@ -801,8 +801,138 @@ async fn erasure_request(
     Ok((StatusCode::ACCEPTED, Json(ErasureRequested { request_id })))
 }
 
+/// A privacy request (R1-T2).
+#[derive(Deserialize, ToSchema)]
+pub struct PrivacyRequestBody {
+    /// `access`, `erasure`, `portability`, `objection`, `restriction` or `rectification`.
+    pub request_type: String,
+    /// The current password, again: proof that the person asking is the
+    /// account's owner.
+    pub password: String,
+}
+
+impl std::fmt::Debug for PrivacyRequestBody {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PrivacyRequestBody")
+            .field("request_type", &self.request_type)
+            .finish_non_exhaustive()
+    }
+}
+
+/// The signed-in portal user's verified email address, the subject of their
+/// privacy requests.
+async fn subject_of(state: &EngineState, user_id: Uuid) -> Result<String, AppError> {
+    let email: Option<String> =
+        sqlx::query_scalar("SELECT lower(email) FROM webportal_user WHERE id = $1")
+            .bind(user_id)
+            .fetch_one(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    email.ok_or_else(|| {
+        AppError::Validation("a privacy request needs an account with an email address".into())
+    })
+}
+
+/// Ask about my personal data
+///
+/// R1-T2: a privacy (data subject) request about the signed-in person: a copy of their data,
+/// erasure, portability, objection, restriction of processing or rectification. They give their
+/// password again to prove who they are; the subject is their verified email address. Staff work
+/// it with every other data subject request, by the deadline the deployment's law sets.
+#[utoipa::path(
+    post,
+    path = "/{keyword}/api/v1/me/privacy-requests",
+    operation_id = "portal_privacy_request",
+    tag = "auth",
+    params(("keyword" = String, Path, description = "Web portal keyword")),
+    request_body = PrivacyRequestBody,
+    extensions(("x-audit" = json!(x_audit(&[(AuditCategory::BusinessEvent, AuditOperation::Create)])))),
+    responses(
+        (status = 201, description = "The request, recorded", body = attome_compliance::dsr_admin::PortalDsrRequest),
+        (status = 401, description = "No valid portal session", body = ErrorResponse),
+        (status = 404, description = "No such portal", body = ErrorResponse),
+        (status = 422, description = "The password is wrong, or an unknown request type", body = ErrorResponse),
+    ),
+)]
+async fn privacy_request(
+    State(state): State<EngineState>,
+    Path(keyword): Path<String>,
+    headers: HeaderMap,
+    Json(body): Json<PrivacyRequestBody>,
+) -> Result<
+    (
+        StatusCode,
+        Json<attome_compliance::dsr_admin::PortalDsrRequest>,
+    ),
+    AppError,
+> {
+    let portal = portal_for(&state, &keyword).await?;
+    let principal = authenticate(&state, &portal, &headers, true).await?;
+    portal_budget(&state, &portal).await?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    if !account::password_ok(&mut tx, &principal, &body.password).await? {
+        write(
+            &state,
+            &mut tx,
+            event(
+                MandatoryCategory::Credential,
+                AuditOperation::Create,
+                Some(principal.user_id),
+            )
+            .named("portal privacy request refused: wrong password")
+            .outcome(AuditOutcome::Failed),
+        )
+        .await?;
+        tx.commit().await.map_err(sqlx_err)?;
+        return Err(AppError::Validation("the password is wrong".into()));
+    }
+    tx.commit().await.map_err(sqlx_err)?;
+    let subject = subject_of(&state, principal.user_id).await?;
+    let request = attome_compliance::dsr_admin::record_portal_request(
+        &state,
+        &subject,
+        &body.request_type,
+        principal.user_id,
+    )
+    .await?;
+    Ok((StatusCode::CREATED, Json(request)))
+}
+
+/// My privacy requests
+///
+/// R1-T2: the privacy requests the signed-in person made, newest first, with their status and
+/// deadline.
+#[utoipa::path(
+    get,
+    path = "/{keyword}/api/v1/me/privacy-requests",
+    operation_id = "portal_privacy_requests",
+    tag = "auth",
+    params(("keyword" = String, Path, description = "Web portal keyword")),
+    responses(
+        (status = 200, description = "The person's requests", body = Vec<attome_compliance::dsr_admin::PortalDsrRequest>),
+        (status = 401, description = "No valid portal session", body = ErrorResponse),
+        (status = 404, description = "No such portal", body = ErrorResponse),
+    ),
+)]
+async fn privacy_requests(
+    State(state): State<EngineState>,
+    Path(keyword): Path<String>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<attome_compliance::dsr_admin::PortalDsrRequest>>, AppError> {
+    let portal = portal_for(&state, &keyword).await?;
+    let principal = authenticate(&state, &portal, &headers, false).await?;
+    let subject = subject_of(&state, principal.user_id).await?;
+    attome_compliance::dsr_admin::portal_requests(&state, &subject, principal.user_id)
+        .await
+        .map(Json)
+}
+
 pub(super) fn routes() -> Router<EngineState> {
     Router::new()
+        .route(
+            "/{keyword}/api/v1/me/privacy-requests",
+            get(privacy_requests).post(privacy_request),
+        )
         .route("/{keyword}/api/v1/auth/signup", post(signup_request))
         .route("/{keyword}/api/v1/auth/signup/verify", post(signup_verify))
         .route(
@@ -838,5 +968,7 @@ pub(super) fn routes() -> Router<EngineState> {
     end_session,
     end_other_sessions,
     erasure_request,
+    privacy_request,
+    privacy_requests,
 ))]
 pub(super) struct AccountApiDoc;

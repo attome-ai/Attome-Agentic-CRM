@@ -5,7 +5,7 @@ import { ApiError, LangService, TranslatePipe } from '@attome/base';
 import { PortalMe, PortalPageSummary, PortalSiteService } from './portal-site.service';
 
 /** The portal's own pages, shown at fixed paths before any named page. */
-export const RESERVED_PATHS = new Set(['login', 'profile', 'consent']);
+export const RESERVED_PATHS = new Set(['login', 'profile', 'consent', 'privacy']);
 
 /** The navigation entries for `pages`: every page but record pages, home first. Pure. */
 export function navigation(pages: readonly PortalPageSummary[]): PortalPageSummary[] {
@@ -40,6 +40,7 @@ export function navigation(pages: readonly PortalPageSummary[]): PortalPageSumma
               </a>
             }
             <a [routerLink]="['/p', keyword(), 'profile']" routerLinkActive="active">{{ 'portalSite.profile' | translate }}</a>
+            <a [routerLink]="['/p', keyword(), 'privacy']" routerLinkActive="active">{{ 'portalSite.privacy' | translate }}</a>
           </nav>
           <span class="ps-user" dir="auto">{{ person.name }}</span>
           <button type="button" (click)="signOut()" data-sign-out>{{ 'portalSite.signOut' | translate }}</button>

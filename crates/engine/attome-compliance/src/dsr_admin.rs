@@ -341,6 +341,67 @@ async fn insert_request(
     Ok(row)
 }
 
+/// R1-T2: a request as the person who made it through a web portal sees
+/// it, for tracking: never the subject reference or staff notes.
+#[derive(Debug, Serialize, sqlx::FromRow, ToSchema)]
+pub struct PortalDsrRequest {
+    pub id: Uuid,
+    pub request_type: String,
+    /// `pending`, `blocked`, `fulfilled` or `rejected`.
+    pub status: String,
+    pub requested_at: DateTime<Utc>,
+    /// When it must be answered by, under the deployment's law.
+    pub due_at: Option<DateTime<Utc>>,
+    pub fulfilled_at: Option<DateTime<Utc>>,
+}
+
+/// R1-T2: records a request a portal user made about themselves, `subject`
+/// being their verified email address; the caller has verified who they are
+/// (their password, again). The same table, deadline and business event as
+/// a request staff record, so staff work it the same way.
+pub async fn record_portal_request(
+    state: &EngineState,
+    subject: &str,
+    request_type: &str,
+    portal_user_id: Uuid,
+) -> Result<PortalDsrRequest, AppError> {
+    let request_type = request_type.trim().to_lowercase();
+    if !valid_request_type(&request_type) {
+        return Err(AppError::Validation(
+            "request_type must be one of: access, erasure, portability, objection, \
+             restriction, rectification"
+                .into(),
+        ));
+    }
+    let row = insert_request(state, subject, &request_type, portal_user_id).await?;
+    Ok(PortalDsrRequest {
+        id: row.id,
+        request_type: row.request_type,
+        status: row.status,
+        requested_at: row.requested_at,
+        due_at: row.due_at,
+        fulfilled_at: row.fulfilled_at,
+    })
+}
+
+/// R1-T2: the requests a portal user made about `subject`, newest first.
+pub async fn portal_requests(
+    state: &EngineState,
+    subject: &str,
+    portal_user_id: Uuid,
+) -> Result<Vec<PortalDsrRequest>, AppError> {
+    sqlx::query_as(
+        "SELECT id, request_type, status, requested_at, due_at, fulfilled_at FROM dsr_request \
+          WHERE subject_reference = $1 AND requested_by = $2 AND is_deleted = false \
+          ORDER BY requested_at DESC LIMIT 100",
+    )
+    .bind(subject)
+    .bind(portal_user_id)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)
+}
+
 /// Records an `access` request for `subject_reference` and fulfills it at
 /// once, through the same export as `POST …/fulfill-access` (masked NDJSON,
 /// checksum-verified, legal-hold aware, one `Security`/`Export` event), plus

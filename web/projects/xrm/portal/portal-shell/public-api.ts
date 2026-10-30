@@ -6,6 +6,7 @@ import type { Routes } from '@angular/router';
 import {
   PortalConsentComponent, PortalHereComponent, PortalLoginComponent, PortalPageHostComponent, PortalProfileComponent,
 } from './portal-pages.component';
+import { PortalPrivacyComponent } from './portal-privacy.component';
 import { PortalShellComponent } from './portal-shell.component';
 
 export { PortalShellComponent, navigation } from './portal-shell.component';
@@ -13,6 +14,8 @@ export {
   PortalConsentComponent, PortalHereComponent, PortalLoginComponent, PortalPageHostComponent, PortalProfileComponent, replyOf,
 } from './portal-pages.component';
 export type { ReplyTarget } from './portal-pages.component';
+export { PRIVACY_REQUEST_TYPES, PortalPrivacyComponent } from './portal-privacy.component';
+export type { PortalPrivacyRequest } from './portal-privacy.component';
 export { PORTAL_ROWS, PortalPageData, PortalSiteService, portalFilters } from './portal-site.service';
 export type { PortalConsent, PortalMe, PortalPage, PortalPageSummary } from './portal-site.service';
 
@@ -28,6 +31,7 @@ export const PORTAL_SITE_ROUTES: Routes = [
       { path: 'login', component: PortalLoginComponent },
       { path: 'profile', component: PortalProfileComponent },
       { path: 'consent', component: PortalConsentComponent },
+      { path: 'privacy', component: PortalPrivacyComponent },
       { path: ':page', component: PortalPageHostComponent },
       { path: ':page/:id', component: PortalPageHostComponent },
     ],

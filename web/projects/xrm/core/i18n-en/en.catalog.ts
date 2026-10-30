@@ -3101,6 +3101,12 @@ export const xrmEn = {
     denied: 'The device was refused.', notFound: 'This code is unknown, already used or expired.',
   },
   portalSite: {
+    privacy: 'My data', privacyType: 'What do you want?', privacySend: 'Send the request',
+    privacySent: 'Your request is recorded. We answer it by its deadline.', privacyMine: 'Your requests',
+    privacyNone: 'No requests yet.', privacyDue: 'answer due',
+    privacyTypes: { access: 'A copy of my data', portability: 'My data in a portable file', rectification: 'Correct my data',
+      restriction: 'Limit how my data is used', objection: 'Object to how my data is used', erasure: 'Erase my data' },
+    privacyStatus: { pending: 'In progress', blocked: 'On hold', fulfilled: 'Done', rejected: 'Declined' },
     title: 'Customer portal', navigation: 'Portal pages', profile: 'Profile', signOut: 'Sign out', language: 'العربية',
     loading: 'Loading…', signIn: 'Sign in', login: 'Email or username', password: 'Password', code: 'Authenticator code',
     badLogin: 'The email, username or password is not right.', reply: 'Your reply', send: 'Send', sent: 'Sent.',

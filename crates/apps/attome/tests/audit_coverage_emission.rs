@@ -4213,6 +4213,20 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 &cookies,
             )
         }
+        // R1-T2: a portal user's privacy request, their password given again.
+        "POST /{keyword}/api/v1/me/privacy-requests" => {
+            let (portal, _, email) = portal_with_active_user(fx).await;
+            let cookies = portal_login(fx, &portal.keyword, &email).await;
+            with_cookies(
+                request(
+                    "POST",
+                    &format!("/{}/api/v1/me/privacy-requests", portal.keyword),
+                    None,
+                    Some(json!({"request_type": "access", "password": PASSWORD})),
+                ),
+                &cookies,
+            )
+        }
         "POST /{keyword}/api/v1/me/erasure-request" => {
             let (portal, _, email) = portal_with_active_user(fx).await;
             let cookies = portal_login(fx, &portal.keyword, &email).await;
