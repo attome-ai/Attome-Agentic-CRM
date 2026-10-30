@@ -2,7 +2,7 @@ name: release-check
 
 # The release gate (`attome release --check`: format, clippy with warnings as
 # errors, tests and the rest) on Linux and Windows, on every push and pull
-# request. The gate's `tests` step is split out (`--skip tests`): four Linux
+# request. The gate's `tests` step is split out (`--skip tests`): eight Linux
 # shards run the workspace's tests with cargo-nextest, each against its own
 # PostgreSQL, Redis and object store, so a run takes about an hour instead of
 # the four the single job took. Windows has no database, so its database
@@ -21,9 +21,9 @@ permissions:
 # full; pushes made while one runs wait, and only the newest of them is kept
 # (GitHub replaces an older pending run in the group with a newer one).
 concurrency:
-  # v6 (2026-10-29): a new group each time the gate fixes or the CI split had
+  # v7 (2026-10-30): a new group each time the gate fixes or the CI split had
   # to start without waiting on an hours-long run of the code before them.
-  group: release-check-v6-${{ github.ref }}
+  group: release-check-v7-${{ github.ref }}
   cancel-in-progress: false
 
 env:
@@ -160,13 +160,13 @@ jobs:
           retention-days: 30
 
   tests:
-    name: tests (linux, shard ${{ matrix.shard }} of 4)
+    name: tests (linux, shard ${{ matrix.shard }} of 8)
     runs-on: ubuntu-latest
     timeout-minutes: 360
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     services:
       postgres:
         image: pgvector/pgvector:pg18
@@ -244,15 +244,16 @@ jobs:
           done
           aws --endpoint-url http://127.0.0.1:9000 s3 mb s3://attomebase
           aws --endpoint-url http://127.0.0.1:9000 s3 mb s3://attome-test
-      # One test at a time, as the gate's `--test-threads=1` ran them: the
-      # database suites share one PostgreSQL and its metadata locks. Each shard
-      # is a stable quarter of the tests by name hash.
-      - name: tests (shard ${{ matrix.shard }} of 4)
+      # Every test is its own process with its own copy of the migrated
+      # database (attome-testkit), so two run at once; creating that copy is
+      # most of a short test's time. Each shard is a stable eighth of the
+      # tests by name hash.
+      - name: tests (shard ${{ matrix.shard }} of 8)
         shell: bash
         run: |
           set -o pipefail
-          cargo nextest run --workspace --no-fail-fast --test-threads 1 \
-            --partition hash:${{ matrix.shard }}/4 2>&1 | tee tests.log
+          cargo nextest run --workspace --no-fail-fast --test-threads 2 \
+            --partition hash:${{ matrix.shard }}/8 2>&1 | tee tests.log
       - name: summarize failures
         if: failure()
         shell: bash
