@@ -14,6 +14,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Customer flags from the CLI and for agents (T6-T4): `attome flags list|get|set|off-now` (`admin.deployment`; changes need `--yes`), and the `flags.list` and `flags.set` agent tools with the same permission, `flags.set` waiting for a person's approval and writing through the flags API itself.
 - CLI output and safety (T4-T5): `--json` on `login`, `logout`, `targets`, `model` and `data` prints a versioned object (`schema_version` 1); `model import` and `data import` need `--yes`, and on a target signed in with `attome login --production` also `--confirm-target <name>`; `attome completions powershell|bash|zsh`.
 - `attome data query|export|import` (T4-T4): query records (`--where`, `--fields`, `--format table|csv|json`, JSON with `schema_version`), download an export, or upload a CSV or XLSX for import, as the signed-in person (`--target`) or with an API key.
 - Customer portal pages (G12-T1): `/p/{keyword}` in the web app signs a portal user in through the portal's API, shows the portal's pages (pages with a portal audience, read with the new `GET /{keyword}/api/v1/pages` and `/pages/{name}`) drawn by the page runtime over the portal's record API, and has profile and consent pages, in Arabic and English. The customer-service pack ships home, my cases, case (with replies, the new `case_message` entity), knowledge and services pages. See `docs/pages.md`.

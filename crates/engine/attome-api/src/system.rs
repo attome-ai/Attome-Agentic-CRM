@@ -955,6 +955,8 @@ impl EngineSystemBuilder {
         state.stock_source = self.stock_source;
         // U10-T2: the settings agent tool writes through the settings API.
         state.settings_writer = Some(Arc::new(crate::settings_admin::ApiSettingsWriter));
+        // T6-T4: the flags agent tool writes through the flags API.
+        state.flags_writer = Some(Arc::new(crate::customer_flags_admin::ApiFlagsWriter));
         // A25-T7: search's `mode=ask` reaches the model actions through this.
         state.search_asker = Some(Arc::new(attome_ai::actions::search_ask::AiSearchAsker));
         // L4-T7: the catalogue's agent tools reach it through this.

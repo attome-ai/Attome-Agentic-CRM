@@ -49,6 +49,8 @@ pub mod duplicates;
 /// Z11-T12: expression.validate and expression.spec.
 pub mod expression;
 pub mod extract_document;
+/// T6-T4: customer flags as agent tools.
+pub mod flags;
 pub mod followup;
 /// L3-T8: governance.list_overdue, governance.propose_domains, governance.draft_policy.
 pub mod governance;
@@ -202,6 +204,8 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(secrets_list::descriptor());
     all.push(settings::list_descriptor());
     all.push(settings::set_descriptor());
+    all.push(flags::list_descriptor());
+    all.push(flags::set_descriptor());
     all.push(table::health_descriptor());
     all.push(table::index_proposals_descriptor());
     all.push(table::change_plan_descriptor());
@@ -308,6 +312,8 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(secrets_list::SecretsList));
     all.push(Box::new(settings::SettingsList));
     all.push(Box::new(settings::SettingsSet));
+    all.push(Box::new(flags::FlagsList));
+    all.push(Box::new(flags::FlagsSet));
     all.push(Box::new(table::TableHealthTool));
     all.push(Box::new(table::TableIndexProposalsTool));
     all.push(Box::new(table::TableChangePlanTool));

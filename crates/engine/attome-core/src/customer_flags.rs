@@ -6,9 +6,36 @@
 //! emergency; a name with no row is off.
 
 use std::collections::HashMap;
+use std::future::Future;
+use std::pin::Pin;
 
 use attome_db::DbPool;
 use attome_types::AppError;
+use serde_json::Value;
+use uuid::Uuid;
+
+use crate::state::EngineState;
+
+/// The written flag as the admin API answers it.
+pub type FlagWriteFuture<'a> = Pin<Box<dyn Future<Output = Result<Value, AppError>> + Send + 'a>>;
+
+/// T6-T4: the seam an engine below `attome-api` changes a flag through, so
+/// the flags agent tool writes exactly as `PUT /api/v1/admin/customer-flags/{name}`
+/// does (its name check, row version, transaction and `Configuration`
+/// audit event). Implemented once, by `attome-api`; `None` on a bare state.
+pub trait FlagsWriter: Send + Sync + 'static {
+    /// Sets `name` to `value` as `actor`; `row_version` is required when the
+    /// flag exists.
+    fn set<'a>(
+        &'a self,
+        state: &'a EngineState,
+        actor: Uuid,
+        name: &'a str,
+        value: bool,
+        description: Option<String>,
+        row_version: Option<i64>,
+    ) -> FlagWriteFuture<'a>;
+}
 
 /// Whether `src` calls `flag(`, outside quotes. Pure.
 pub fn references(src: &str) -> bool {

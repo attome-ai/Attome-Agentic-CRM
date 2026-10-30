@@ -23,6 +23,8 @@ Usage:
                                 code); later commands take --target <name>
   attome logout --target <name> | attome targets
                                 Forget a target's session; list the targets
+  attome flags list|get <name>|set <name> on|off|off-now <name>
+                                Customer flags (admin.deployment; changes need --yes)
   attome completions powershell|bash|zsh
                                 Print a shell completion script
                                 (deployment commands take --json; writing ones
@@ -172,6 +174,10 @@ fn main() -> ExitCode {
                 ExitCode::from(2)
             }
         },
+        ["flags", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            outcome(attome::cmd::flags::run(&rest).map_err(Into::into))
+        }
         ["data", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             outcome(attome::cmd::data::run(&rest).map_err(Into::into))

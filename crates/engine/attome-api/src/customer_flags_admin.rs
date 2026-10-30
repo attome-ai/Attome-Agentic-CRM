@@ -127,13 +127,25 @@ async fn set_flag(
     Path(name): Path<String>,
     Json(body): Json<SetCustomerFlag>,
 ) -> Result<Json<CustomerFlag>, AppError> {
-    check_name(&name)?;
+    write_flag(&state, ctx.user_id, &name, body).await.map(Json)
+}
+
+/// The route's write: name check, row version, one transaction with its
+/// `Configuration` event. Also the flags agent tool's, through
+/// [`ApiFlagsWriter`] (T6-T4).
+async fn write_flag(
+    state: &EngineState,
+    actor: Uuid,
+    name: &str,
+    body: SetCustomerFlag,
+) -> Result<CustomerFlag, AppError> {
+    check_name(name)?;
     let mut tx = SecurityTx::begin(
-        &state,
+        state,
         SecurityEvent::new(
             MandatoryCategory::Configuration,
             AuditOperation::Update,
-            ctx.user_id,
+            actor,
             "customer_flag",
             None,
         )
@@ -143,7 +155,7 @@ async fn set_flag(
     .await?;
     let current: Option<i64> =
         sqlx::query_scalar("SELECT row_version FROM customer_flag WHERE name = $1 FOR UPDATE")
-            .bind(&name)
+            .bind(name)
             .fetch_optional(&mut *tx)
             .await
             .map_err(AppError::internal)?;
@@ -152,10 +164,10 @@ async fn set_flag(
             "INSERT INTO customer_flag (name, description, value, updated_by) \
              VALUES ($1, $2, $3, $4) RETURNING {COLUMNS}"
         ))
-        .bind(&name)
+        .bind(name)
         .bind(&body.description)
         .bind(body.value)
-        .bind(ctx.user_id)
+        .bind(actor)
         .fetch_one(&mut *tx)
         .await
         .map_err(AppError::internal)?,
@@ -170,17 +182,47 @@ async fn set_flag(
                         row_version = row_version + 1 \
                   WHERE name = $1 RETURNING {COLUMNS}"
             ))
-            .bind(&name)
+            .bind(name)
             .bind(body.value)
             .bind(&body.description)
-            .bind(ctx.user_id)
+            .bind(actor)
             .fetch_one(&mut *tx)
             .await
             .map_err(AppError::internal)?
         }
     };
     tx.commit().await?;
-    Ok(Json(flag))
+    Ok(flag)
+}
+
+/// T6-T4: the flags agent tool's write, the route's own.
+pub struct ApiFlagsWriter;
+
+impl attome_core::customer_flags::FlagsWriter for ApiFlagsWriter {
+    fn set<'a>(
+        &'a self,
+        state: &'a EngineState,
+        actor: Uuid,
+        name: &'a str,
+        value: bool,
+        description: Option<String>,
+        row_version: Option<i64>,
+    ) -> attome_core::customer_flags::FlagWriteFuture<'a> {
+        Box::pin(async move {
+            let flag = write_flag(
+                state,
+                actor,
+                name,
+                SetCustomerFlag {
+                    value,
+                    description,
+                    row_version,
+                },
+            )
+            .await?;
+            serde_json::to_value(flag).map_err(AppError::internal)
+        })
+    }
 }
 
 /// Switch a customer flag off now

@@ -12,6 +12,8 @@ pub mod cluster_ssh;
 pub mod data;
 /// AB4-T3: drill keys, evidence verification and readiness.
 pub mod drill;
+/// T6-T4: `attome flags list|get|set|off-now`.
+pub mod flags;
 pub mod healthcheck;
 pub mod init;
 /// T4-T1: `attome login`, `logout` and `targets` (the device grant).

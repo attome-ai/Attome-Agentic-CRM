@@ -245,6 +245,9 @@ pub struct EngineState {
     /// builder so the settings agent tool writes as the admin route does.
     /// `None` on a bare state (`settings_write.rs`).
     pub settings_writer: Option<Arc<dyn crate::settings_write::SettingsWriter>>,
+    /// T6-T4 — the customer flags API's write, registered by `attome-api` so
+    /// the flags agent tool writes as the admin route does.
+    pub flags_writer: Option<Arc<dyn crate::customer_flags::FlagsWriter>>,
     /// A25-T7 — asking search in words, registered by `attome-api` with
     /// `attome-ai`'s implementation. `None` on a bare state (`search_ask.rs`).
     pub search_asker: Option<Arc<dyn crate::search_ask::SearchAsker>>,
@@ -350,6 +353,7 @@ impl EngineState {
             workflow_starter: None,
             stock_source: None,
             settings_writer: None,
+            flags_writer: None,
             search_asker: None,
             catalog_tools: None,
             workflow_step_handlers: Arc::new(std::collections::HashMap::new()),
