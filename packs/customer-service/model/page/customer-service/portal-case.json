@@ -1,0 +1,56 @@
+{
+  "app": "customer-service",
+  "doc": {
+    "audience": "portal",
+    "entity": "@entity:service_ticket",
+    "page_type": "record",
+    "root": {
+      "children": [
+        {
+          "binding": {
+            "record": "current"
+          },
+          "id": "details",
+          "props": {
+            "fields": [
+              "ticket_number",
+              "title",
+              "status",
+              "priority",
+              "description"
+            ],
+            "title_ar": "الحالة",
+            "title_en": "Case"
+          },
+          "type": "form"
+        },
+        {
+          "binding": {
+            "entity": "case_message",
+            "related_by": "case_ref"
+          },
+          "id": "messages",
+          "props": {
+            "title_ar": "الرسائل",
+            "title_en": "Messages"
+          },
+          "type": "timeline"
+        }
+      ],
+      "id": "main",
+      "props": {
+        "reply": {
+          "body": "body",
+          "entity": "case_message",
+          "lookup": "case_ref"
+        }
+      },
+      "type": "container"
+    },
+    "title_ar": "الحالة",
+    "title_en": "Case"
+  },
+  "kind": "page",
+  "name": "portal-case",
+  "schema_version": 1
+}

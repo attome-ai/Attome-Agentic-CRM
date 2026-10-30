@@ -1,0 +1,29 @@
+{
+  "app": "customer-service",
+  "doc": {
+    "audience": "portal",
+    "page_type": "portal",
+    "root": {
+      "children": [
+        {
+          "binding": {
+            "entity": "service_offering"
+          },
+          "id": "offerings",
+          "props": {
+            "title_ar": "ما يمكنك طلبه",
+            "title_en": "What you can ask for"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "الخدمات",
+    "title_en": "Services"
+  },
+  "kind": "page",
+  "name": "portal-catalog",
+  "schema_version": 1
+}

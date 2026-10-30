@@ -1,0 +1,29 @@
+{
+  "app": "customer-service",
+  "doc": {
+    "audience": "portal",
+    "page_type": "portal",
+    "root": {
+      "children": [
+        {
+          "binding": {
+            "entity": "knowledge_data_item"
+          },
+          "id": "articles",
+          "props": {
+            "title_ar": "المقالات",
+            "title_en": "Articles"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "قاعدة المعرفة",
+    "title_en": "Knowledge"
+  },
+  "kind": "page",
+  "name": "portal-knowledge",
+  "schema_version": 1
+}

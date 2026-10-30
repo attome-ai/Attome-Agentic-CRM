@@ -36,3 +36,22 @@ The crm pack ships `account-360` (`packs/crm/model/page/crm/account-360.json`): 
 opportunities, unpaid invoices, cases and contacts, the account's summary, and tabs for its
 contacts, open opportunities, cases, invoices and timeline. Cases and invoices show when the
 customer-service and finance packs are installed.
+
+## Portal pages
+
+A page with `"audience": "portal"` (or `"public"`) is shown to a web portal's signed-in users at
+`/p/{keyword}/{page name}`, the page named `portal-home` at `/p/{keyword}`, and a record page at
+`/p/{keyword}/{page name}/{record id}`. The portal app reads them with
+`GET /{keyword}/api/v1/pages` and `GET /{keyword}/api/v1/pages/{name}`, and every component reads
+its data through that portal's record API under the portal user's own role plan: an `entity`
+binding with `related_by` and `eq` conditions becomes the record list's equality filters, a view or
+query binding shows nothing, and flows and actions are not offered. A navigate target names the
+portal as `-` (`/p/-/portal-case/{id}`). A record page whose root has
+`props.reply = {"entity", "lookup", "body"}` gets a reply box: the reply is a record of that entity
+whose lookup names the page's record, written through the portal's plan like any portal write.
+
+The customer-service pack ships `portal-home`, `portal-cases`, `portal-case` (with replies as
+`case_message` records, pack changeset 0004), `portal-knowledge` and `portal-catalog`. What each
+shows depends on the portal role's grants on `service_ticket`, `case_message`,
+`knowledge_data_item` and `service_offering`. The portal also has its own sign-in, profile and
+consent pages.

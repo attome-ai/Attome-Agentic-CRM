@@ -1,0 +1,217 @@
+{
+  "author": "packs",
+  "checksum": "sha256:1df3716e56fbd0f5879be12fdfcd8c43856cdfd817c747b87703e2020e1914db",
+  "closed_at": "2026-10-30T00:00:00Z",
+  "description": "G12-T1: a case's messages, the conversation a customer has with the agents on a case, readable and writable through a web portal's own role plan (a portal role granted case_message names only cases it can read).",
+  "format": "attome-changeset/v1",
+  "id": "01a18d6f-c087-7ad0-bb23-7dd6d23486f9",
+  "layer": "product",
+  "name": "customer-service-case-messages",
+  "opened_at": "2026-10-30T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Case Message",
+          "is_append_only": true,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "case_message",
+          "primary_name_attribute": "body"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "case_message"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Case",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "case_ref",
+          "lookup_entity": "service_ticket",
+          "max_length": null,
+          "on_target_delete": "cascade-deactivate",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "case_message",
+        "field": "case_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Message",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "body",
+          "lookup_entity": null,
+          "max_length": 10000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "case_message",
+        "field": "body"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "From",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "author_kind",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "customer",
+              "agent"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "case_message",
+        "field": "author_kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Portal User",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "portal_user_ref",
+          "lookup_entity": "webportal_user",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "case_message",
+        "field": "portal_user_ref"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رسالة الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "locale": "ar",
+        "object_key": "case_message",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "locale": "ar",
+        "object_key": "case_message.case_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الرسالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "locale": "ar",
+        "object_key": "case_message.body",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "من"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "locale": "ar",
+        "object_key": "case_message.author_kind",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مستخدم البوابة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "locale": "ar",
+        "object_key": "case_message.portal_user_ref",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "customer-service",
+  "seq": 4,
+  "title": "Pack: messages on a case, for the customer portal"
+}

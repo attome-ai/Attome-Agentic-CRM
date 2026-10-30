@@ -3100,6 +3100,14 @@ export const xrmEn = {
     approve: 'Approve', deny: 'Deny', approved: 'The device is signed in. You can close this page.',
     denied: 'The device was refused.', notFound: 'This code is unknown, already used or expired.',
   },
+  portalSite: {
+    title: 'Customer portal', navigation: 'Portal pages', profile: 'Profile', signOut: 'Sign out', language: 'العربية',
+    loading: 'Loading…', signIn: 'Sign in', login: 'Email or username', password: 'Password', code: 'Authenticator code',
+    badLogin: 'The email, username or password is not right.', reply: 'Your reply', send: 'Send', sent: 'Sent.',
+    save: 'Save', saved: 'Saved.', consent: 'Terms and privacy', accept: 'I accept',
+    consentAccepted: 'You have accepted the current terms.',
+    consentAsk: 'Please accept the terms (version {terms}) and the privacy notice (version {privacy}) to continue.',
+  },
   pageRuntime: {
     loading: 'Loading…',
     notFound: 'This page is not published.',

@@ -1,0 +1,36 @@
+{
+  "app": "customer-service",
+  "doc": {
+    "audience": "portal",
+    "page_type": "portal",
+    "root": {
+      "children": [
+        {
+          "binding": {
+            "entity": "service_ticket"
+          },
+          "events": [
+            {
+              "do": "navigate",
+              "on": "select",
+              "target": "/p/-/portal-case/{id}"
+            }
+          ],
+          "id": "cases",
+          "props": {
+            "title_ar": "حالاتي",
+            "title_en": "My cases"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "حالاتي",
+    "title_en": "My cases"
+  },
+  "kind": "page",
+  "name": "portal-cases",
+  "schema_version": 1
+}

@@ -140,6 +140,15 @@ export const routes: Routes = [
     loadComponent: () => import('@attome/xrm/portal/community').then(m => m.ForumComponent),
   },
   {
+    // G12-T1: a web portal for its signed-in users, `/p/:keyword/...`.
+    // Public route; the portal's own session authorizes every call. Ahead
+    // of the Content Management catch-all below.
+    path: 'p',
+    providers: [provideXrmI18n()],
+    canActivate: [layerCatalogsReady],
+    loadChildren: () => import('@attome/xrm/portal/portal-shell').then(m => m.PORTAL_SITE_ROUTES),
+  },
+  {
     // E26-T2: the contact's preference page from a signed email link.
     // Public, no session; ahead of the Content Management catch-all below.
     path: 'preferences',

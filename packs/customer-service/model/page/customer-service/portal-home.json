@@ -1,0 +1,62 @@
+{
+  "app": "customer-service",
+  "doc": {
+    "audience": "portal",
+    "page_type": "portal",
+    "root": {
+      "children": [
+        {
+          "id": "welcome",
+          "props": {
+            "text_ar": "مرحبًا. افتح حالة، وتابع حالاتك المفتوحة، واعثر على الإجابات.",
+            "text_en": "Welcome. Raise a case, follow your open cases and find answers."
+          },
+          "type": "text"
+        },
+        {
+          "binding": {
+            "entity": "service_ticket",
+            "where": [
+              {
+                "field": "status",
+                "op": "eq",
+                "value": "open"
+              }
+            ]
+          },
+          "id": "open_count",
+          "props": {
+            "title_ar": "الحالات المفتوحة",
+            "title_en": "Open cases"
+          },
+          "type": "metric"
+        },
+        {
+          "binding": {
+            "entity": "service_ticket"
+          },
+          "events": [
+            {
+              "do": "navigate",
+              "on": "select",
+              "target": "/p/-/portal-case/{id}"
+            }
+          ],
+          "id": "recent",
+          "props": {
+            "title_ar": "حالاتك",
+            "title_en": "Your cases"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "الرئيسية",
+    "title_en": "Home"
+  },
+  "kind": "page",
+  "name": "portal-home",
+  "schema_version": 1
+}
