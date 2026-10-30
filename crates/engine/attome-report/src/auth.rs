@@ -58,3 +58,13 @@ pub struct ScheduleUpdate;
 impl PrivilegeKey for ScheduleUpdate {
     const KEY: &'static str = "report_schedule.update";
 }
+
+/// P2-T2: `attome_report.author_sql` — write and test-run SQL reports
+/// (`POST /api/v1/reports/sql/run`), which run under the author's own record
+/// and field access (`crate::secured_sql`). Platform changeset 0081.
+#[derive(Debug)]
+pub struct SqlAuthor;
+
+impl PrivilegeKey for SqlAuthor {
+    const KEY: &'static str = "attome_report.author_sql";
+}

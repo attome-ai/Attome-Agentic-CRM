@@ -26,6 +26,8 @@ pub mod report_admin;
 pub mod run;
 pub mod schedule_admin;
 pub mod scheduler;
+/// P2-T1: an author's SQL under their own record and field access.
+pub mod secured_sql;
 pub mod seed;
 
 pub use model::ReportModel;
@@ -36,5 +38,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = report_admin::openapi_fragment();
     doc.merge(run::openapi_fragment());
     doc.merge(schedule_admin::openapi_fragment());
+    doc.merge(secured_sql::openapi_fragment());
     doc
 }

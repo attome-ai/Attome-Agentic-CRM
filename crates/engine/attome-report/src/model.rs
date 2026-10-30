@@ -49,6 +49,7 @@ impl EngineModel for ReportModel {
         crate::report_admin::routes()
             .merge(crate::run::routes())
             .merge(crate::schedule_admin::routes())
+            .merge(crate::secured_sql::routes())
     }
 }
 

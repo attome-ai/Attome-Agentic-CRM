@@ -470,6 +470,13 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
             "../../../../../changesets/platform/0080-attome-records-polymorphic-children.json"
         ),
     },
+    PlatformChangeset {
+        file: "0081-attome-report-sql-authoring.json",
+        name: "attome-report-sql-authoring",
+        json: include_str!(
+            "../../../../../changesets/platform/0081-attome-report-sql-authoring.json"
+        ),
+    },
 ];
 
 #[cfg(test)]

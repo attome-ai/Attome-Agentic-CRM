@@ -107,6 +107,7 @@
   "crates/engine/attome-records/src/query_spec/compile.rs": 1,
   "crates/engine/attome-records/src/query_spec/routes.rs": 1,
   "crates/engine/attome-records/src/related_columns.rs": 1,
+  "crates/engine/attome-report/src/secured_sql.rs": 3,
   "crates/engine/attome-sales/src/catalogue.rs": 2,
   "crates/engine/attome-sales/src/competitor_drafts.rs": 4,
   "crates/engine/attome-sales/src/competitor_mentions.rs": 1,
