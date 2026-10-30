@@ -13,6 +13,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   new metric starts uncertified. Certify with `POST /api/v1/metrics/{id}/certify`, which needs
   `attome_metric.certify`.
 
+### Added
+- Customer-held master keys (Q19-T2): a key wrapped by AWS KMS, Azure Key Vault, Google Cloud KMS
+  or an HSM over PKCS#11 (`hsm` build feature) is given as `NAME_KMS` and unwrapped once at start
+  when `ATTOME_KMS` is set; the node does not start when it cannot unwrap. See `docs/secrets.md`.
+
 ### Fixed
 - Undoing a deal discount now also removes the discount (D6-T11). Before, the lines came back but
   the deal kept its discount percent, so repricing applied it to them again. Migration 0333 keeps

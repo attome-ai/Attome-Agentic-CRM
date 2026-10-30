@@ -8,9 +8,11 @@ production configuration with a secret typed into the file does not start.
 
 In this order, the first that answers wins:
 
-1. **A cloud secret store**, when `ATTOME_SECRET_SOURCE` is set (below).
-2. **The environment variable** of the same name, `DATABASE_PASSWORD`.
-3. **A file** named by `DATABASE_PASSWORD_FILE`: its contents, trimmed (the Docker and Kubernetes
+1. **A key unwrapped by your key service**, when `NAME_KMS` and `ATTOME_KMS` are set (see
+   "Customer-held master keys" below).
+2. **A cloud secret store**, when `ATTOME_SECRET_SOURCE` is set (below).
+3. **The environment variable** of the same name, `DATABASE_PASSWORD`.
+4. **A file** named by `DATABASE_PASSWORD_FILE`: its contents, trimmed (the Docker and Kubernetes
    secret-file convention).
 
 A placeholder nothing answers stops the start, naming the placeholder and where it is used.
@@ -53,6 +55,41 @@ Disabled secrets are skipped.
 
 Both stores are built into the release binary (cargo features `aws-secrets` and
 `azure-keyvault`, on by default); neither adds a native dependency.
+
+## Customer-held master keys
+
+A key you keep in your own key service (AWS KMS, Azure Key Vault, Google Cloud KMS, or an HSM)
+reaches Attome wrapped, so the plain key is never written to a file or a variable. Wrap the exact
+text the placeholder would hold (a 64-hex key, say) with your key, put the ciphertext in base64 in
+`NAME_KMS` (in the environment or the secret store), and set `ATTOME_KMS`:
+
+```text
+ATTOME_KMS=aws
+AWS_REGION=me-central-1
+JWT_SECRET_KMS=AQICAHh...   # aws kms encrypt --plaintext fileb://jwt.hex, base64
+```
+
+At start, `attome serve`, `attome worker`, `attome migrate` and `attome preflight` unwrap every
+`*_KMS` value once, and `${JWT_SECRET}` answers the unwrapped key ahead of the secret store and the
+environment. The keys are held only while the configuration loads; a rotated key takes a restart.
+
+Until then the node is **sealed**: it does not start when the key service cannot be reached within
+15 seconds or refuses a value, when a value is not base64 or does not unwrap to text, when a
+`*_KMS` value is set without `ATTOME_KMS`, or when `ATTOME_KMS` is set with nothing to unwrap. The
+message names the service, the step and the placeholder, never a key. Losing the key in your key
+service means losing what it protects: keep the key's own backup or escrow in the key service.
+
+| `ATTOME_KMS` | Unwraps with | Settings |
+|---|---|---|
+| `aws` | `Decrypt` (symmetric key) | `ATTOME_KMS_REGION` or `AWS_REGION`; `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, optional `AWS_SESSION_TOKEN` (allowed `kms:Decrypt`); optional `ATTOME_KMS_KEY_ID` pins the key |
+| `azure` | `unwrapkey`, RSA-OAEP-256 | `ATTOME_KMS_KEY_URL`, `https://<vault>.vault.azure.net/keys/<name>/<version>`; `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` (allowed `unwrapKey`) |
+| `gcp` | `decrypt` (symmetric key) | `ATTOME_KMS_KEY_NAME`, `projects/<p>/locations/<l>/keyRings/<r>/cryptoKeys/<k>`; `GOOGLE_OAUTH_ACCESS_TOKEN`, or `GOOGLE_APPLICATION_CREDENTIALS` naming a service account key file (role `cloudkms.cryptoKeyDecrypter`) |
+| `hsm` | PKCS#11 `C_Decrypt`, RSA-OAEP with SHA-256 | `ATTOME_HSM_MODULE` (the vendor's PKCS#11 library, a DLL on Windows), `ATTOME_HSM_SLOT` (default the first slot with a token), `ATTOME_HSM_PIN`, `ATTOME_HSM_KEY_LABEL` (the RSA private key's label) |
+
+Google's metadata server is not used: Attome's outbound calls never reach a metadata address.
+AWS, Azure and Google are built into the release binary (cargo features `aws-secrets`,
+`azure-keyvault` and `gcp-kms`, on by default). The HSM needs a binary built with the `hsm`
+feature; it loads the vendor's library at start and adds no build-time native dependency.
 
 ## Key rings
 

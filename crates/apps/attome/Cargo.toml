@@ -92,6 +92,11 @@ attome-types.workspace          = true
 attome-webcrawl.workspace       = true
 attome-workflow.workspace       = true
 axum.workspace                  = true
+# Q19-T2: wrapped keys arrive in base64; a Google service account signs
+# its token request; the HSM is reached over PKCS#11.
+base64.workspace                = true
+jsonwebtoken                    = { workspace = true, optional = true }
+cryptoki                        = { workspace = true, optional = true }
 chrono.workspace                = true
 fred.workspace                  = true
 futures-util.workspace          = true
@@ -120,9 +125,13 @@ url.workspace                   = true
 
 [features]
 # Z1-T12: cloud secret stores read once at boot (`ATTOME_SECRET_SOURCE`).
-default = ["aws-secrets", "azure-keyvault"]
+# Q19-T2: the same AWS signing and Azure sign-in unwrap customer-held keys
+# (`ATTOME_KMS`); Google Cloud KMS and an HSM over PKCS#11 have their own.
+default = ["aws-secrets", "azure-keyvault", "gcp-kms"]
 aws-secrets = ["dep:hmac"]
 azure-keyvault = []
+gcp-kms = ["dep:jsonwebtoken"]
+hsm = ["dep:cryptoki"]
 # Tests against a live Keycloak; run by hand with `--features keycloak-tests`.
 keycloak-tests = []
 # The developer-only fleet console (V2-D472); refused in release builds.

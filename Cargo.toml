@@ -173,6 +173,8 @@ base64        = "0.23"
 bytes         = "1"
 chrono        = { version = "0.4", features = ["serde"] }
 chrono-tz     = "0.10"
+# Q19-T2: PKCS#11 for an HSM-held master key (attome's `hsm` feature only).
+cryptoki      = "0.10"
 dotenvy       = "0.15"
 ed25519-dalek = { version = "3", features = ["serde"] }
 fred          = { version = "9", features = ["subscriber-client", "enable-rustls", "i-scripts", "i-streams", "sentinel-auth"] }

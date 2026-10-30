@@ -122,12 +122,28 @@ pub async fn load() -> Result<Option<HashMap<String, String>>, String> {
 
 /// Loads the configuration with the store (when configured) asked before the
 /// environment, then drops what was read.
+///
+/// Q19-T2: keys unwrapped by the customer's key service (`crate::kms`) are
+/// asked first, then the store, then the environment.
 pub async fn load_config() -> Result<attome_config::AppConfig, Box<dyn std::error::Error>> {
     let secrets = load().await?;
-    let lookup = |key: &str| secrets.as_ref().and_then(|m| m.get(key).cloned());
+    let keys = crate::kms::load(secrets.as_ref()).await?;
+    let lookup = |key: &str| lookup_in(keys.as_ref(), secrets.as_ref(), key);
     let config = attome_config::AppConfig::from_file_with_lookup(&lookup)?;
+    drop(keys);
     drop(secrets);
     Ok(config)
+}
+
+/// Q19-T2: `key` from the unwrapped keys, else the secret store. Pure.
+fn lookup_in(
+    keys: Option<&HashMap<String, String>>,
+    secrets: Option<&HashMap<String, String>>,
+    key: &str,
+) -> Option<String> {
+    keys.and_then(|m| m.get(key))
+        .or_else(|| secrets.and_then(|m| m.get(key)))
+        .cloned()
 }
 
 /// [`load_config`] for an explicit path.
@@ -135,8 +151,10 @@ pub async fn load_config_from(
     path: String,
 ) -> Result<attome_config::AppConfig, Box<dyn std::error::Error>> {
     let secrets = load().await?;
-    let lookup = |key: &str| secrets.as_ref().and_then(|m| m.get(key).cloned());
+    let keys = crate::kms::load(secrets.as_ref()).await?;
+    let lookup = |key: &str| lookup_in(keys.as_ref(), secrets.as_ref(), key);
     let config = attome_config::AppConfig::from_path_with_lookup(path, &lookup)?;
+    drop(keys);
     drop(secrets);
     Ok(config)
 }
@@ -174,8 +192,9 @@ async fn fetch(source: &Source) -> Result<Vec<(String, String)>, String> {
     }
 }
 
+/// Q19-T2: the Signature Version 4 signer is shared with `kms`.
 #[cfg(feature = "aws-secrets")]
-mod aws {
+pub(crate) mod aws {
     use hmac::{Hmac, Mac};
     use serde_json::{Value, json};
     use sha2::{Digest, Sha256};
@@ -200,17 +219,19 @@ mod aws {
         hmac(&k_service, "aws4_request")
     }
 
-    pub(super) struct Credentials {
-        pub(super) access_key: String,
-        pub(super) secret_key: String,
-        pub(super) session_token: Option<String>,
+    pub(crate) struct Credentials {
+        pub(crate) access_key: String,
+        pub(crate) secret_key: String,
+        pub(crate) session_token: Option<String>,
     }
 
-    /// The headers of one signed `POST /` call of `target`. Pure.
-    pub(super) fn signed_headers(
+    /// The headers of one signed `POST /` call of `target` on `service`.
+    /// Pure.
+    pub(crate) fn signed_headers(
         creds: &Credentials,
         region: &str,
         host: &str,
+        service: &str,
         target: &str,
         body: &str,
         now: chrono::DateTime<chrono::Utc>,
@@ -240,13 +261,13 @@ mod aws {
             "POST\n/\n\n{canonical_headers}\n{signed}\n{}",
             hex::encode(Sha256::digest(body.as_bytes()))
         );
-        let scope = format!("{date}/{region}/{SERVICE}/aws4_request");
+        let scope = format!("{date}/{region}/{service}/aws4_request");
         let string_to_sign = format!(
             "AWS4-HMAC-SHA256\n{amz_date}\n{scope}\n{}",
             hex::encode(Sha256::digest(canonical_request.as_bytes()))
         );
         let signature = hex::encode(hmac(
-            &signing_key(&creds.secret_key, &date, region, SERVICE),
+            &signing_key(&creds.secret_key, &date, region, service),
             &string_to_sign,
         ));
         headers.push((
@@ -260,7 +281,7 @@ mod aws {
         headers
     }
 
-    fn credentials() -> Result<Credentials, String> {
+    pub(crate) fn credentials() -> Result<Credentials, String> {
         let access_key = super::env("AWS_ACCESS_KEY_ID")
             .ok_or("AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are needed")?;
         let secret_key = super::env("AWS_SECRET_ACCESS_KEY")
@@ -294,6 +315,7 @@ mod aws {
                 &creds,
                 region,
                 &host,
+                SERVICE,
                 "secretsmanager.BatchGetSecretValue",
                 &body,
                 chrono::Utc::now(),
@@ -347,13 +369,14 @@ mod aws {
     }
 }
 
+/// Q19-T2: the service-principal sign-in is shared with `kms`.
 #[cfg(feature = "azure-keyvault")]
-mod azure {
+pub(crate) mod azure {
     use serde_json::Value;
 
     const API_VERSION: &str = "7.4";
 
-    async fn token(client: &attome_outbound::http::Outbound) -> Result<String, String> {
+    pub(crate) async fn token(client: &attome_outbound::http::Outbound) -> Result<String, String> {
         let need = "AZURE_TENANT_ID, AZURE_CLIENT_ID and AZURE_CLIENT_SECRET are needed";
         let tenant = super::env("AZURE_TENANT_ID").ok_or(need)?;
         let client_id = super::env("AZURE_CLIENT_ID").ok_or(need)?;
@@ -495,6 +518,24 @@ mod tests {
         );
     }
 
+    #[test]
+    fn unwrapped_keys_resolve_ahead_of_the_store() {
+        let keys = HashMap::from([("JWT_SECRET".to_owned(), "from-kms".to_owned())]);
+        let store = HashMap::from([
+            ("JWT_SECRET".to_owned(), "from-store".to_owned()),
+            ("DB_PASSWORD".to_owned(), "pw".to_owned()),
+        ]);
+        assert_eq!(
+            lookup_in(Some(&keys), Some(&store), "JWT_SECRET").as_deref(),
+            Some("from-kms")
+        );
+        assert_eq!(
+            lookup_in(Some(&keys), Some(&store), "DB_PASSWORD").as_deref(),
+            Some("pw")
+        );
+        assert_eq!(lookup_in(None, None, "DB_PASSWORD"), None);
+    }
+
     /// The signing key from AWS's own Signature Version 4 example.
     #[cfg(feature = "aws-secrets")]
     #[test]
@@ -526,6 +567,7 @@ mod tests {
             &creds,
             "me-central-1",
             "secretsmanager.me-central-1.amazonaws.com",
+            "secretsmanager",
             "secretsmanager.BatchGetSecretValue",
             "{}",
             now,

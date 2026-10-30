@@ -39,6 +39,8 @@ pub mod http3;
 /// J2-T2: shared mailboxes routed into cases, leads and contacts.
 pub mod inbound_mail;
 pub mod jobs;
+/// Q19-T2: customer-held master keys, unwrapped once at boot.
+pub mod kms;
 /// AB7-T3: the listening socket, inherited from a supervisor or bound.
 pub mod listener;
 /// D15-T2: personal emails captured onto matching records.
