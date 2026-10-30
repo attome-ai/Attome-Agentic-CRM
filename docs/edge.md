@@ -59,6 +59,8 @@ they fit together.
 - `cache_dir` keeps the ACME account and the certificate, so a restart neither registers nor
   orders again. Keep it on persistent storage and readable only by the service account.
 - Renewal runs in the background; each order, renewal and failure is logged under `tls: ACME`.
+- Every web portal's own domain (G12-T3, [pages.md](pages.md)) is added to `domains` at boot, so a
+  portal domain added later is covered after a restart.
 - Boot refuses `acme.enabled` without `tls.enabled`, without a domain, without a contact address
   or with a directory that is not `https://`.
 

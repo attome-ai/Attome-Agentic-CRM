@@ -1059,3 +1059,97 @@ mod trusted_login {
         assert_eq!(accounts(&db, p.id).await, 1);
     }
 }
+
+async fn enabled_portal(db: &DbPool, prefix: &str) -> attome_portal::provision::PortalDetail {
+    let mut tx = db.begin().await.unwrap();
+    let p = provision::create_portal(
+        &mut tx,
+        Uuid::now_v7(),
+        NewPortal {
+            name: "Support".into(),
+            description: None,
+            keyword: uniq(prefix),
+            portal_type: PortalType::Authenticated,
+            is_enabled: true,
+            owning_team_ref: None,
+            mfa_policy: Default::default(),
+        },
+    )
+    .await
+    .unwrap();
+    tx.commit().await.unwrap();
+    p
+}
+
+/// G12-T3: a portal on its own domain — normalised, unique, routed by host
+/// only while the portal is enabled, and cleared with `None`.
+#[tokio::test]
+async fn a_portal_is_served_on_its_own_domain() {
+    use attome_portal::domain::{acme_domains, portal_for_host, set_domain};
+    let Some(db) = test_db().await else { return };
+    let first = enabled_portal(&db, "dom").await;
+    let second = enabled_portal(&db, "dom").await;
+    let host = format!("{}.Example.COM", uniq("support"));
+    let stored = host.to_lowercase();
+
+    let mut tx = db.begin().await.unwrap();
+    let set = set_domain(
+        &mut tx,
+        Uuid::now_v7(),
+        first.id,
+        Some(&format!(" {host}. ")),
+    )
+    .await
+    .unwrap();
+    tx.commit().await.unwrap();
+    assert_eq!(set.as_deref(), Some(stored.as_str()));
+
+    // The request's host, with a port and any case, opens the portal.
+    let found = portal_for_host(&db, &format!("{}:443", host.to_uppercase()))
+        .await
+        .unwrap();
+    assert_eq!(found.as_deref(), Some(first.keyword.as_str()));
+    assert!(
+        portal_for_host(&db, "nobody.example.com")
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert!(acme_domains(&db).await.contains(&stored));
+
+    // Another portal cannot take it; a non-host is refused.
+    let mut tx = db.begin().await.unwrap();
+    let taken = set_domain(&mut tx, Uuid::now_v7(), second.id, Some(&stored)).await;
+    assert!(matches!(taken, Err(AppError::Conflict(_))), "{taken:?}");
+    drop(tx);
+    let mut tx = db.begin().await.unwrap();
+    let bad = set_domain(&mut tx, Uuid::now_v7(), second.id, Some("not a host")).await;
+    assert!(matches!(bad, Err(AppError::Validation(_))), "{bad:?}");
+    drop(tx);
+
+    // A disabled portal is not served on its domain.
+    sqlx::query("UPDATE webportal SET is_enabled = FALSE WHERE id = $1")
+        .bind(first.id)
+        .execute(&db)
+        .await
+        .unwrap();
+    assert!(portal_for_host(&db, &host).await.unwrap().is_none());
+
+    // Cleared, the domain is free for the other portal.
+    let mut tx = db.begin().await.unwrap();
+    assert_eq!(
+        set_domain(&mut tx, Uuid::now_v7(), first.id, None)
+            .await
+            .unwrap(),
+        None
+    );
+    let moved = set_domain(&mut tx, Uuid::now_v7(), second.id, Some(&stored))
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+    assert_eq!(moved.as_deref(), Some(stored.as_str()));
+    assert_eq!(
+        portal_for_host(&db, &host).await.unwrap().as_deref(),
+        Some(second.keyword.as_str())
+    );
+}

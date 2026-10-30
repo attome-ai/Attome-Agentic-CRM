@@ -49,12 +49,31 @@ query binding shows nothing, and flows and actions are not offered. A navigate t
 portal as `-` (`/p/-/portal-case/{id}`). A record page whose root has
 `props.reply = {"entity", "lookup", "body"}` gets a reply box: the reply is a record of that entity
 whose lookup names the page's record, written through the portal's plan like any portal write.
+A page whose root has `props.create = {"entity", "fields": [...]}` gets a create form (AC11-T2):
+it asks for the listed fields the portal user's plan lets them write, as
+`GET /{keyword}/api/v1/metadata/{entity}` describes them (a choice as a list, a lookup as the
+records of its target the user can read), and creates the record through the portal's record API.
 
 The customer-service pack ships `portal-home`, `portal-cases`, `portal-case` (with replies as
 `case_message` records, pack changeset 0004), `portal-knowledge` and `portal-catalog`. What each
 shows depends on the portal role's grants on `service_ticket`, `case_message`,
 `knowledge_data_item` and `service_offering`. The portal also has its own sign-in, profile and
 consent pages.
+
+The partner pack ships `portal-home`, `portal-deals` (a partner registers a deal through the
+create form), `portal-deal` (its status and protection end) and `portal-resources` (published
+`partner_resource` records, pack changeset 0002), over the grants on `deal_registration` and
+`partner_resource`.
+
+### A portal on its own domain
+
+A user administrator gives a portal its own domain with
+`PUT /api/v1/admin/webportals/{id}/domain` (`{"domain": "support.example.com"}`, `null` clears it;
+one portal per domain; audited). Point the domain's DNS at the server: on that host, `/` asks
+`GET /api/v1/portal-host` and opens the portal, and every portal call is same-origin there. With
+ACME on (see [edge.md](edge.md)), the certificate covers every portal domain found at boot, so
+restart after adding one. Behind a proxy that terminates TLS, add the domain to its certificate
+instead.
 
 The portal's own pages are sign-in, profile, consent and **My data** (`/p/{keyword}/privacy`, R1-T2):
 the person asks for a copy of their data, a portable file, a correction, a restriction, an

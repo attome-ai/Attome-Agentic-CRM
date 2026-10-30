@@ -33,6 +33,8 @@ pub mod cache;
 /// D1-T3: a verified sign-up linked to its contact.
 pub mod contact_link;
 pub mod context;
+/// G12-T3: a portal on its own domain.
+pub mod domain;
 pub mod email;
 pub mod guard;
 pub mod keyword;
@@ -62,5 +64,6 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 26;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = admin::openapi_fragment();
     doc.merge(router::openapi_fragment());
+    doc.merge(<domain::DomainApiDoc as utoipa::OpenApi>::openapi());
     doc
 }

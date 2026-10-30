@@ -27,6 +27,9 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     // neither has a CSRF entry.
     "/api/v1/oauth/device_authorization",
     "/api/v1/oauth/device/token",
+    // G12-T3: which web portal the request's host serves, asked by the web
+    // app at `/` before any session; a GET answering one public keyword.
+    "/api/v1/portal-host",
     // Q20-T3: a proof-of-work challenge, asked for before any session exists;
     // signed, so it stores nothing.
     "/api/v1/auth/challenge",

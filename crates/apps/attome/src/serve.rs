@@ -545,7 +545,22 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         let client_ca = (config.s2s.mtls.enabled
             && !config.s2s.mtls.client_ca_path.trim().is_empty())
         .then_some(config.s2s.mtls.client_ca_path.as_str());
-        let listener = attome::tls::TlsListener::start_with(listener, &config.app.tls, client_ca)
+        // G12-T3: with ACME on, the certificate covers every web portal's
+        // own domain too, as found at boot.
+        let mut tls = config.app.tls.clone();
+        if tls.acme.enabled {
+            for domain in attome_portal::domain::acme_domains(&deploy_db).await {
+                if !tls
+                    .acme
+                    .domains
+                    .iter()
+                    .any(|d| d.trim().eq_ignore_ascii_case(&domain))
+                {
+                    tls.acme.domains.push(domain);
+                }
+            }
+        }
+        let listener = attome::tls::TlsListener::start_with(listener, &tls, client_ca)
             .map_err(|e| std::io::Error::other(e.to_string()))?;
         // Z5-T8: HTTP/3 on the same port over UDP, advertised on every
         // TCP response with `Alt-Svc`.

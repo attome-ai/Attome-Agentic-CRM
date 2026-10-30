@@ -3684,6 +3684,15 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"row_version": portal["row_version"], "is_enabled": false})),
             )
         }
+        "PUT /api/v1/admin/webportals/{id}/domain" => {
+            let portal = webportal(fx).await;
+            request(
+                "PUT",
+                &format!("/api/v1/admin/webportals/{}/domain", id_of(&portal)),
+                t,
+                Some(json!({"domain": format!("{}.portal.example.com", uniq("pd"))})),
+            )
+        }
         "POST /api/v1/admin/webportals/{id}/users" => {
             let portal = id_of(&webportal(fx).await);
             request(

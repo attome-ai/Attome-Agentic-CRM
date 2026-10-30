@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, Routes } from '@angular/router';
-import { map } from 'rxjs';
-import { AuthService, authGuard, layerCatalogsReady } from '@attome/base';
+import { catchError, map, of } from 'rxjs';
+import { ApiService, AuthService, authGuard, layerCatalogsReady } from '@attome/base';
 import { provideXrmI18n } from '@attome/xrm/core/i18n';
 import { RECORD_LINK_ROUTE } from './record-link.route';
 
@@ -16,11 +16,24 @@ const xrmEntryGuard: CanActivateFn = () => {
   );
 };
 
+// G12-T3: on a web portal's own domain, `/` opens that portal; anywhere
+// else (or when the lookup fails) it opens the staff app as before.
+const rootGuard: CanActivateFn = () => {
+  const api    = inject(ApiService);
+  const router = inject(Router);
+  return api.get<{ keyword: string }>('/api/v1/portal-host').pipe(
+    map(host => router.createUrlTree(['/p', host.keyword])),
+    catchError(() => of(router.createUrlTree(['/xrm']))),
+  );
+};
+
 export const routes: Routes = [
   {
+    // The guard always answers with a redirect, so nothing renders here.
     path: '',
     pathMatch: 'full',
-    redirectTo: 'xrm',
+    canActivate: [rootGuard],
+    loadComponent: () => import('@attome/xrm/portal/community').then(m => m.ForumComponent),
   },
   {
     // The guard always answers with a redirect (dashboard or login), so

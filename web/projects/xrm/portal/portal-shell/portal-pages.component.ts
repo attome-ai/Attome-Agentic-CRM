@@ -88,7 +88,7 @@ export class PortalPageHostComponent {
   readonly entityName = signal<string | null>(null);
   readonly recordId = computed(() => this.id() ?? null);
   readonly reply = computed(() => replyOf(this.doc()));
-  /** AC11-T2 / R1-T2: what the page offers to create (\`props.create\`). */
+  /** AC11-T2: what the page offers to create (`props.create`). */
   readonly create = computed(() => createOf(this.doc()));
   readonly error = signal<string | null>(null);
   readonly text = signal('');

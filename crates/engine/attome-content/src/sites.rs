@@ -68,26 +68,9 @@ pub struct SiteConfig {
     pub row_version: i64,
 }
 
-/// A host name as stored and matched: lower case, no port, no trailing
-/// dot; `None` when it is not a plain host name. Pure.
-pub fn normalise_domain(host: &str) -> Option<String> {
-    let host = host.trim().to_ascii_lowercase();
-    let host = host
-        .split(':')
-        .next()
-        .unwrap_or_default()
-        .trim_end_matches('.');
-    let valid = !host.is_empty()
-        && host.len() <= 253
-        && host.contains('.')
-        && host
-            .split('.')
-            .all(|l| !l.is_empty() && l.len() <= 63 && !l.starts_with('-') && !l.ends_with('-'))
-        && host
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '.');
-    valid.then(|| host.to_owned())
-}
+/// A host name as stored and matched (moved to `attome_types::text` for
+/// portal domains too, G12-T3).
+pub use attome_types::text::normalise_domain;
 
 /// Whether a theme value is safe inside a declaration: the characters a
 /// colour, length or font list needs, nothing that ends the declaration or

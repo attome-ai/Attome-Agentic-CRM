@@ -51,6 +51,9 @@ impl EngineModel for PortalModel {
     fn routes(&self) -> Router<EngineState> {
         // D-779: the S2S-only trusted server login rides with the staff
         // routes (staff authn/authz, licence gating), never the portal router.
-        crate::admin::routes().merge(crate::router::trusted::routes())
+        crate::admin::routes()
+            .merge(crate::router::trusted::routes())
+            // G12-T3: a portal's domain, and the portal on a request's host.
+            .merge(crate::domain::routes())
     }
 }
