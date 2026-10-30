@@ -49,6 +49,10 @@ type EntityInfoCoreRow = (
     String,
 );
 
+/// `is_master`, `hub_style`, `extends_entity_id` and `storage_mode` of one
+/// entity.
+type EntityExtras = (bool, Option<String>, Option<Uuid>, String);
+
 #[derive(sqlx::FromRow)]
 struct EntityRow {
     id: Uuid,
@@ -63,6 +67,8 @@ struct EntityRow {
     business_key: Option<Vec<String>>,
     is_reference_data: bool,
     extends_entity_id: Option<Uuid>,
+    #[sqlx(default)]
+    storage_mode: Option<String>,
 }
 
 // ── Response types ────────────────────────────────────────────────────────────
@@ -91,6 +97,9 @@ pub struct EntityMeta {
     /// A1-T4: the base entity this one extends (its fields are copies of
     /// the base's); `null`: none.
     extends_entity_id: Option<Uuid>,
+    /// A1-T6: `standard` or `high_volume` (partitioned by month; reads name
+    /// a window on `created_at`).
+    storage_mode: String,
     /// PATCH only, when the business key changed: how its unique index was
     /// brought in line — `inline`, `queued` (a background job; read its state
     /// on GET), or `failed` (the key is declared but not yet enforced; see
@@ -130,6 +139,8 @@ pub struct EntityDetail {
     master_data: attome_compliance::governance_admin::MasterData,
     /// A1-T4: the base entity this one extends; `null`: none.
     extends_entity_id: Option<Uuid>,
+    /// A1-T6: `standard` or `high_volume`.
+    storage_mode: String,
     attributes: Vec<AttributeMeta>,
 }
 
@@ -209,6 +220,7 @@ fn entity_meta_from_row(r: EntityRow) -> EntityMeta {
         business_key: r.business_key,
         is_reference_data: r.is_reference_data,
         extends_entity_id: r.extends_entity_id,
+        storage_mode: r.storage_mode.unwrap_or_else(|| "standard".to_owned()),
         business_key_index_sync: None,
     }
 }
@@ -246,6 +258,7 @@ pub(super) async fn list_entities(
         r#"SELECT e.id, e.logicalname, e.name, e.primary_name_attribute,
                   e.is_active, e.is_append_only, e.category, e.owner_layer,
                   e.business_key, e.is_reference_data, e.extends_entity_id,
+                  e.storage_mode::text AS storage_mode,
                   COUNT(a.id) FILTER (WHERE a.is_active IS NULL OR a.is_active = true) AS attribute_count
            FROM entity_info e
            LEFT JOIN attribute_info a ON a.entity_ref = e.id
@@ -492,6 +505,7 @@ pub(crate) async fn create_entity_core(
         business_key: None,
         is_reference_data: false,
         extends_entity_id: body.extends_entity_id,
+        storage_mode: storage_mode.as_str().to_owned(),
         business_key_index_sync: None,
     })
 }
@@ -539,14 +553,14 @@ pub(super) async fn get_entity(
         is_reference_data,
     ) = row.ok_or(AppError::NotFound)?;
     let logicalname = logicalname.unwrap_or_default();
-    let (is_master, hub_style, extends_entity_id): (bool, Option<String>, Option<Uuid>) =
-        sqlx::query_as(
-            "SELECT is_master, hub_style, extends_entity_id FROM entity_info WHERE id = $1",
-        )
-        .bind(entity_id)
-        .fetch_one(&state.base.db_migrator)
-        .await
-        .map_err(AppError::internal)?;
+    let (is_master, hub_style, extends_entity_id, storage_mode): EntityExtras = sqlx::query_as(
+        "SELECT is_master, hub_style, extends_entity_id, storage_mode::text \
+               FROM entity_info WHERE id = $1",
+    )
+    .bind(entity_id)
+    .fetch_one(&state.base.db_migrator)
+    .await
+    .map_err(AppError::internal)?;
     let attributes = fetch_attributes(&state.base.db_migrator, entity_id).await?;
     let (business_key_index, index_state) = provision::business_key_index_status(
         &state.base.db_migrator,
@@ -573,6 +587,7 @@ pub(super) async fn get_entity(
             hub_style,
         },
         extends_entity_id,
+        storage_mode,
         attributes,
     }))
 }
@@ -901,6 +916,10 @@ pub(super) async fn update_entity(
         business_key,
         is_reference_data,
         extends_entity_id: inheritance::extends_of(&state.base.db_migrator, entity_id).await?,
+        storage_mode: provision::storage::storage_mode_of(&state.base.db_migrator, &old_logical)
+            .await?
+            .as_str()
+            .to_owned(),
         business_key_index_sync,
     }))
 }
