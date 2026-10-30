@@ -1111,6 +1111,9 @@ mod tests {
     async fn mock_google() -> String {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
+        // Q21-T1: the identity-provider client refuses a private host unless
+        // it is listed. Run alone (cargo-nextest), no other test lists it.
+        let _ = crate::oidc::configure_identity_providers(["http://127.0.0.1"]);
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let issuer = format!("http://{}", listener.local_addr().unwrap());
         let served = issuer.clone();
