@@ -90,6 +90,16 @@
   color: var(--color-text-secondary);
 }
 
+.search-page__page {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .search-page__explain dl {
   display: grid;
   grid-template-columns: auto 1fr;
