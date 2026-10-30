@@ -1598,6 +1598,9 @@ export const xrmEn = {
     },
   },
   notes: {
+    format: 'Formatting', dropHint: 'Click to upload, drag files here or paste them into the text',
+    dropKinds: 'Images, PDF, documents, archives',
+    marks: { bold: 'Bold', italic: 'Italic', code: 'Code', list: 'List', quote: 'Quote' },
     thread: {
       reactions: 'Reactions', history: 'Edit history', noEdits: 'Not edited.',
       resolve: 'Resolve', reopen: 'Reopen', resolved: 'Resolved',

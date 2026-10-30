@@ -14,6 +14,7 @@ import { EntityService } from '../services/entity.service';
 import { FileUploadService } from '../field/file-upload.service';
 import { UploadPipeline } from '../field/upload-pipeline';
 import { TranslateTextComponent } from '../translate/translate-text.component';
+import { NoteMark, applyMark, filesOf, isPreviewable, renderNoteText } from './note-format';
 import { NoteThreadComponent } from './note-thread.component';
 
 /**
@@ -644,6 +645,71 @@ export class NotesPanelComponent implements OnInit {
     this.selectNote(noteId);
     this.errorMessage.set(`Some files were not attached — ${failures.join('; ')}`);
     this.fetchNotes();
+  }
+
+  /** B3-T2: a note's text with its marks formatted, as safe HTML. */
+  readonly formatNote = renderNoteText;
+  /** B3-T2: the marks the composer's toolbar offers. */
+  readonly marks: readonly NoteMark[] = ['bold', 'italic', 'code', 'list', 'quote'];
+  /** B3-T2: which composer a file is being dragged over. */
+  readonly dragOver = signal<'note' | 'reply' | null>(null);
+  private readonly previews = new Map<File, string>();
+
+  /** B3-T2: puts `mark` around the selection in the note or reply text. */
+  mark(el: HTMLTextAreaElement, mark: NoteMark, which: 'note' | 'reply'): void {
+    const next = applyMark(el.value, el.selectionStart, el.selectionEnd, mark);
+    if (which === 'note') this.formNoteText = next.text;
+    else this.replyText = next.text;
+    el.value = next.text;
+    el.focus();
+    el.setSelectionRange(next.start, next.end);
+    this.cdr.markForCheck();
+  }
+
+  /** The icon class of a toolbar mark. */
+  markIcon(mark: NoteMark): string {
+    return { bold: 'las la-bold', italic: 'las la-italic', code: 'las la-code', list: 'las la-list-ul', quote: 'las la-comment-dots' }[mark];
+  }
+
+  private addFiles(which: 'note' | 'reply', files: File[]): void {
+    if (!files.length) return;
+    const target = which === 'note' ? this.pendingFiles : this.replyPendingFiles;
+    target.update(list => [...list, ...files]);
+  }
+
+  /** B3-T2: files dragged onto a composer are attached to it. */
+  onDragOver(event: DragEvent, which: 'note' | 'reply'): void {
+    if (!event.dataTransfer?.types?.includes('Files')) return;
+    event.preventDefault();
+    this.dragOver.set(which);
+  }
+
+  onDrop(event: DragEvent, which: 'note' | 'reply'): void {
+    event.preventDefault();
+    this.dragOver.set(null);
+    this.addFiles(which, filesOf(event.dataTransfer));
+  }
+
+  /** B3-T2: files pasted into the text (a screenshot) are attached; text pastes as text. */
+  onPaste(event: ClipboardEvent, which: 'note' | 'reply'): void {
+    const files = filesOf(event.clipboardData);
+    if (!files.length) return;
+    event.preventDefault();
+    this.addFiles(which, files);
+  }
+
+  /** B3-T2: a thumbnail of a picked image, freed when the panel closes. */
+  previewOf(file: File): string | null {
+    if (!isPreviewable(file)) return null;
+    let url = this.previews.get(file);
+    if (!url) {
+      url = URL.createObjectURL(file);
+      if (this.previews.size === 0) {
+        this.destroyRef.onDestroy(() => this.previews.forEach(u => URL.revokeObjectURL(u)));
+      }
+      this.previews.set(file, url);
+    }
+    return url;
   }
 
   triggerReplyFileInput(): void {

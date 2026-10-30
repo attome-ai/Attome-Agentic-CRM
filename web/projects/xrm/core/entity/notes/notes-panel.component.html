@@ -114,6 +114,15 @@
                 <label class="xnp-form-label" for="note-body">
                   {{ 'notes.noteContent' | translate }} <span class="xnp-req">*</span>
                 </label>
+                <!-- B3-T2: marks, kept in the text and shown formatted. -->
+                <div class="xnp-format-bar" role="toolbar" [attr.aria-label]="'notes.format' | translate">
+                  @for (m of marks; track m) {
+                    <button type="button" class="xnp-format-btn" (click)="mark(contentInput, m, 'note')"
+                            [title]="'notes.marks.' + m | translate" [attr.aria-label]="'notes.marks.' + m | translate">
+                      <i [class]="markIcon(m)"></i>
+                    </button>
+                  }
+                </div>
                 <textarea
                   id="note-body"
                   #contentInput
@@ -121,6 +130,7 @@
                   [(ngModel)]="formNoteText" [ngModelOptions]="{ standalone: true }"
                   [placeholder]="'notes.textPlaceholder' | translate"
                   (keydown.escape)="onContentEscape($event)"
+                  (paste)="onPaste($event, 'note')"
                   rows="6"></textarea>
                 <!-- C4-T2: @ names a person, team or record. -->
                 <base-mention-picker [target]="contentInput" [search]="mentionSearch" />
@@ -145,16 +155,20 @@
                 <!-- Dropzone / Picker Button -->
                 <div
                   class="xnp-dropzone"
+                  [class.xnp-dropzone-over]="dragOver() === 'note'"
                   role="button"
                   tabindex="0"
                   (click)="triggerCreateFileInput()"
-                  (keydown.enter)="triggerCreateFileInput()">
+                  (keydown.enter)="triggerCreateFileInput()"
+                  (dragover)="onDragOver($event, 'note')"
+                  (dragleave)="dragOver.set(null)"
+                  (drop)="onDrop($event, 'note')">
                   <div class="xnp-dropzone-icon">
                     <i class="las la-cloud-upload-alt"></i>
                   </div>
                   <div class="xnp-dropzone-text">
-                    <strong>Click to upload</strong> or drag and drop files here
-                    <span class="xnp-dropzone-sub">Images, PDF, Documents, Archives</span>
+                    {{ 'notes.dropHint' | translate }}
+                    <span class="xnp-dropzone-sub">{{ 'notes.dropKinds' | translate }}</span>
                   </div>
                 </div>
 
@@ -182,7 +196,11 @@
                     <!-- New pending file uploads -->
                     @for (file of pendingFiles(); track file.name; let idx = $index) {
                       <div class="xnp-att-pill xnp-pill-new">
-                        <i [class]="getAttachmentIcon(file.name)"></i>
+                        @if (previewOf(file); as src) {
+                          <img class="xnp-att-thumb" [src]="src" alt="" />
+                        } @else {
+                          <i [class]="getAttachmentIcon(file.name)"></i>
+                        }
                         <span class="xnp-att-pill-name" [title]="file.name">{{ file.name }}</span>
                         <span class="xnp-att-pill-size">{{ formatBytes(file.size) }}</span>
                         <button
@@ -350,9 +368,7 @@
                       </div>
                     </div>
 
-                    <div class="xnp-card-body">
-                      {{ activeNote.note_text }}
-                    </div>
+                    <div class="xnp-card-body xnp-rich" [innerHTML]="formatNote(activeNote.note_text)"></div>
                     <xrm-translate-text [text]="activeNote.note_text" />
 
                     <!-- Attachments -->
@@ -454,9 +470,7 @@
                           </div>
                         </div>
                       } @else {
-                        <div class="xnp-card-body">
-                          {{ reply.note_text }}
-                        </div>
+                        <div class="xnp-card-body xnp-rich" [innerHTML]="formatNote(reply.note_text)"></div>
                         <xrm-translate-text [text]="reply.note_text" />
                       }
 
@@ -502,7 +516,11 @@
                 <div class="xnp-pending-attachments">
                   @for (file of replyPendingFiles(); track file.name; let idx = $index) {
                     <div class="xnp-pending-chip">
-                      <i [class]="getAttachmentIcon(file.name)"></i>
+                      @if (previewOf(file); as src) {
+                        <img class="xnp-att-thumb" [src]="src" alt="" />
+                      } @else {
+                        <i [class]="getAttachmentIcon(file.name)"></i>
+                      }
                       <span class="xnp-chip-name">{{ file.name }}</span>
                       <span class="xnp-chip-size">({{ formatBytes(file.size) }})</span>
                       <button type="button" class="xnp-chip-remove" (click)="removeReplyFile(idx)" [attr.aria-label]="'notes.removeAttachment' | translate">
@@ -513,7 +531,8 @@
                 </div>
               }
 
-              <div class="xnp-composer">
+              <div class="xnp-composer" [class.xnp-composer-over]="dragOver() === 'reply'"
+                   (dragover)="onDragOver($event, 'reply')" (dragleave)="dragOver.set(null)" (drop)="onDrop($event, 'reply')">
                 <input
                   #replyFileInput
                   type="file"
@@ -536,7 +555,8 @@
                   rows="1"
                   [(ngModel)]="replyText" [ngModelOptions]="{ standalone: true }"
                   [placeholder]="'notes.replyPlaceholder' | translate"
-                  (keydown)="onReplyKeydown($event)"></textarea>
+                  (keydown)="onReplyKeydown($event)"
+                  (paste)="onPaste($event, 'reply')"></textarea>
                 <base-mention-picker [target]="replyTextarea" [search]="mentionSearch" />
 
                 <button

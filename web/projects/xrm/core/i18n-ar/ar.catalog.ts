@@ -1559,6 +1559,9 @@ export const xrmAr = {
     },
   },
   notes: {
+    format: 'التنسيق', dropHint: 'انقر للرفع، أو اسحب الملفات إلى هنا أو الصقها في النص',
+    dropKinds: 'صور وملفات PDF ومستندات وأرشيفات',
+    marks: { bold: 'غامق', italic: 'مائل', code: 'رمز', list: 'قائمة', quote: 'اقتباس' },
     thread: {
       reactions: 'التفاعلات', history: 'سجل التعديلات', noEdits: 'لم يُعدَّل.',
       resolve: 'حل', reopen: 'إعادة فتح', resolved: 'محلول',

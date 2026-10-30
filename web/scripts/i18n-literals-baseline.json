@@ -47,7 +47,7 @@
   "projects/xrm/core/entity/field/image-upload/image-upload.component.html": 3,
   "projects/xrm/core/entity/field/multi-attachment/multi-attachment.component.html": 4,
   "projects/xrm/core/entity/list/entity-list.component.html": 1,
-  "projects/xrm/core/entity/notes/notes-panel.component.html": 6,
+  "projects/xrm/core/entity/notes/notes-panel.component.html": 3,
   "projects/xrm/core/entity/prediction-banner/prediction-banner.component.html": 2,
   "projects/xrm/core/entity/registration/document/form/document-form/document-form.component.html": 1,
   "projects/xrm/core/entity/registration/forms/communication-event-form/communication-event-form.component.html": 1,
