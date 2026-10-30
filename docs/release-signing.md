@@ -39,6 +39,19 @@ cosign verify-blob --insecure-ignore-tlog=true --key deploy/cosign.pub \
 
 `Verified OK` means the report is the one the release machine signed.
 
+## The release manifest
+
+Each release also ships a signed manifest (`attome-release-manifest/v1`, AB8-T1;
+`schemas/attome-release-manifest-v1.schema.json`): the versions it upgrades from, whether the
+upgrade pauses writes and for how long, the features it removes and how to check for them, the
+contract SQL it runs later, the digest of every artifact and the impact per module in English and
+Arabic. It is signed with an Ed25519 release key (a 32-byte seed, kept like `cosign.key`), and the
+binary trusts the public keys in `crates/apps/attome/src/release_keys.rs`: two slots, the current
+key and the next, so the key can rotate. The slots hold placeholders whose private halves were
+never kept; put the real public keys there before the first release that ships a manifest.
+`attome_ops::release_manifest::verify_manifest` refuses an unsigned or altered manifest and one
+signed by a key not listed.
+
 ## A lost or leaked key
 
 Make a new key pair as above, commit the new `deploy/cosign.pub`, and say in

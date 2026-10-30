@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://attome.io/schemas/attome-release-manifest-v1.schema.json",
+  "title": "attome-release-manifest/v1",
+  "description": "A signed release manifest (AB8-T1): what an upgrade to the release needs. The signature is the base64 Ed25519 signature of the manifest's canonical JSON (object keys sorted at every depth, no whitespace); key_id is the first 16 hex characters of the SHA-256 of the signing key's public half. The binary trusts the keys in attome::release_keys::RELEASE_PUBLIC_KEYS.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifest",
+    "key_id",
+    "signature"
+  ],
+  "properties": {
+    "manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "version",
+        "min_from_version",
+        "max_skip_minor",
+        "requires_pause"
+      ],
+      "properties": {
+        "schema": {
+          "const": "attome-release-manifest/v1"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "description": "The release."
+        },
+        "min_from_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "description": "The oldest version this release upgrades from."
+        },
+        "max_skip_minor": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many minor versions one upgrade may skip."
+        },
+        "requires_pause": {
+          "type": "boolean",
+          "description": "Whether the upgrade pauses writes; then pause_estimate_seconds is required."
+        },
+        "pause_estimate_seconds": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "deprecated": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "feature",
+              "removed_in",
+              "how_to_check"
+            ],
+            "properties": {
+              "feature": {
+                "type": "string"
+              },
+              "removed_in": {
+                "type": "string",
+                "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+              },
+              "how_to_check": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "contract_sql": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "file",
+              "sha256",
+              "eligible_after_days"
+            ],
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "description": "Lowercase hex SHA-256 of the file."
+              },
+              "eligible_after_days": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "sha256"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$",
+                "description": "Lowercase hex SHA-256 of the file."
+              }
+            }
+          }
+        },
+        "impact": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "module",
+              "en",
+              "ar"
+            ],
+            "properties": {
+              "module": {
+                "type": "string"
+              },
+              "en": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ar": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "key_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{16}$"
+    },
+    "signature": {
+      "type": "string",
+      "contentEncoding": "base64"
+    }
+  }
+}

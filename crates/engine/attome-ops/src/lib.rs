@@ -36,6 +36,8 @@ pub mod model;
 pub mod public_status;
 /// AB3-T1: recovery targets per profile and scenario, with their proof.
 pub mod recovery_targets;
+/// AB8-T1: the signed `attome-release-manifest/v1`.
+pub mod release_manifest;
 /// AB2-T9: promoting the standby region.
 pub mod standby;
 /// AB2-T7: the cluster's status and failover history routes.

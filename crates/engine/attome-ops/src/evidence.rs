@@ -104,8 +104,7 @@ impl Evidence {
 
     /// The bytes the signature covers. Pure.
     pub fn canonical_bytes(&self) -> Result<Vec<u8>, OpsError> {
-        let value = serde_json::to_value(self).map_err(|e| OpsError::Internal(e.to_string()))?;
-        serde_json::to_vec(&value).map_err(|e| OpsError::Internal(e.to_string()))
+        crate::release_manifest::canonical_json(self)
     }
 }
 

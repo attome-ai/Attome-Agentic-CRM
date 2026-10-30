@@ -58,6 +58,8 @@ pub mod platform_seed_lock;
 /// D9-T3: quote acceptance by guest link.
 pub mod quote_accept;
 pub mod readonly_role_seed;
+/// AB8-T1: the release manifest keys this binary trusts.
+pub mod release_keys;
 pub mod role_seed_lock;
 pub mod schedulers;
 /// T5-T1: `attome scratch create`, a masked sandbox copy.
