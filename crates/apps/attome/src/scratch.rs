@@ -16,10 +16,10 @@
 //!   email from it: with email on, `email.test_mode_catch_all` must be set
 //!   (Z8-T6).
 //!
-//! Only the `full` mode is built. `metadata` (the model without records) and
-//! `sample` (a share of each entity with its references) are refused: both
-//! need a copy that boots before it is filled, which this command does not
-//! drive. The copy API the task names is not built either: creating a
+//! `--mode sample --percent N` keeps N% of each customer-data entity's
+//! records with everything they reference ([`sample_copy`]). `metadata`
+//! (the model without records) is refused: it needs a copy that boots before
+//! it is filled, which this command does not drive. The copy API the task names is not built either: creating a
 //! database needs the server's own credentials, which the HTTP process does
 //! not hold apart from the migrator's.
 
@@ -36,6 +36,8 @@ pub struct ScratchReport {
     pub masked: Vec<String>,
     /// Labelled fields left as they were because their column is required.
     pub unmasked_required: Vec<String>,
+    /// `sample`: per sampled entity, (entity, records kept, records removed).
+    pub sampled: Vec<(String, i64, i64)>,
 }
 
 /// The modes a copy may be made in.
@@ -72,7 +74,12 @@ pub struct ScratchArgs {
     pub name: String,
     pub from: Option<String>,
     pub mode: ScratchMode,
+    /// `sample`: the share of each sampled entity's records kept, 1 to 99.
+    pub percent: u8,
 }
+
+/// The share a sample keeps when `--percent` is absent.
+pub const DEFAULT_SAMPLE_PERCENT: u8 = 10;
 
 /// Whether `name` may name a copy: lowercase letters, digits and
 /// underscores, starting with a letter, 3 to 63 characters, and not the
@@ -91,6 +98,7 @@ pub fn parse_args(args: &[String], source: &str) -> Result<ScratchArgs, String> 
     let mut name = None;
     let mut from = None;
     let mut mode = ScratchMode::Full;
+    let mut percent = DEFAULT_SAMPLE_PERCENT;
     let mut rest = args.iter();
     while let Some(arg) = rest.next() {
         let mut value = || {
@@ -106,6 +114,14 @@ pub fn parse_args(args: &[String], source: &str) -> Result<ScratchArgs, String> 
                 mode = ScratchMode::parse(&raw)
                     .ok_or_else(|| format!("--mode is full, metadata or sample, not {raw}"))?;
             }
+            "--percent" => {
+                let raw = value()?;
+                percent = raw
+                    .parse::<u8>()
+                    .ok()
+                    .filter(|p| (1..=99).contains(p))
+                    .ok_or_else(|| format!("--percent is 1 to 99, not {raw}"))?;
+            }
             other => return Err(format!("unknown argument {other}")),
         }
     }
@@ -116,13 +132,15 @@ pub fn parse_args(args: &[String], source: &str) -> Result<ScratchArgs, String> 
              starting with a letter, and not the source database"
         ));
     }
-    if mode != ScratchMode::Full {
-        return Err(format!(
-            "--mode {} is not built yet; only full copies are",
-            mode.as_str()
-        ));
+    if mode == ScratchMode::Metadata {
+        return Err("--mode metadata is not built yet; full and sample copies are".to_owned());
     }
-    Ok(ScratchArgs { name, from, mode })
+    Ok(ScratchArgs {
+        name,
+        from,
+        mode,
+        percent,
+    })
 }
 
 /// The tables whose rows are credentials issued for the source, cleared in
@@ -229,6 +247,149 @@ async fn fake_column(
     }
 }
 
+/// The most closure passes a sample makes.
+const MAX_CLOSURE_PASSES: usize = 25;
+
+/// T5-T1 `sample`: keeps `percent` of each customer-data entity's records
+/// (every entity outside the platform layer that is not reference data, and
+/// not `user_account`, chosen by a hash of the id), then every record a kept
+/// record points at through a lookup, repeated until nothing is added, and
+/// deletes the rest from the copy. Platform entities and reference data are
+/// kept whole; a timeline child (`entity_name`/`record_id`) of a removed
+/// record goes with it.
+async fn sample_copy(
+    copy: &mut sqlx::PgConnection,
+    percent: u8,
+) -> Result<Vec<(String, i64, i64)>, String> {
+    let sampled: Vec<String> = sqlx::query_scalar(
+        "SELECT e.logicalname::text FROM entity_info e \
+          WHERE (e.is_active IS NULL OR e.is_active = true) \
+            AND e.owner_layer <> 'platform' AND NOT COALESCE(e.is_reference_data, false) \
+            AND e.logicalname <> 'user_account' \
+            AND to_regclass(quote_ident(e.logicalname)) IS NOT NULL \
+          ORDER BY 1",
+    )
+    .fetch_all(&mut *copy)
+    .await
+    .map_err(|e| format!("cannot list the entities to sample: {e}"))?;
+    sqlx::query(
+        "CREATE TEMP TABLE scratch_keep (entity text NOT NULL, id uuid NOT NULL, \
+          PRIMARY KEY (entity, id))",
+    )
+    .execute(&mut *copy)
+    .await
+    .map_err(|e| format!("cannot start the sample: {e}"))?;
+    for entity in &sampled {
+        let sql = format!(
+            "INSERT INTO scratch_keep SELECT $1, id FROM {t} WHERE ((hashtext(id::text)::bigint % 100) + 100) % 100 < $2",
+            t = attome_core::quote_ident(entity)
+        );
+        sqlx::query(&sql)
+            .bind(entity)
+            .bind(i32::from(percent))
+            .execute(&mut *copy)
+            .await
+            .map_err(|e| format!("cannot sample {entity}: {e}"))?;
+    }
+    // Lookups into a sampled entity, from any entity.
+    let lookups: Vec<(String, String, String)> = sqlx::query_as(
+        "SELECT s.logicalname::text, a.logicalname::text, t.logicalname::text \
+           FROM attribute_info a \
+           JOIN entity_info s ON s.id = a.entity_ref \
+           JOIN entity_info t ON t.id = a.lookup_entity_ref \
+          WHERE a.\"type\" = 11 AND (a.is_active IS NULL OR a.is_active = true) \
+            AND t.logicalname = ANY($1) \
+            AND to_regclass(quote_ident(s.logicalname)) IS NOT NULL",
+    )
+    .bind(&sampled)
+    .fetch_all(&mut *copy)
+    .await
+    .map_err(|e| format!("cannot read the lookups: {e}"))?;
+    for _ in 0..MAX_CLOSURE_PASSES {
+        let mut added = 0;
+        for (source, field, target) in &lookups {
+            // A source kept whole keeps every target it names.
+            let source_whole = !sampled.contains(source);
+            let sql = format!(
+                "INSERT INTO scratch_keep \
+                 SELECT $1, s.{c} FROM {t} s \
+                  WHERE s.{c} IS NOT NULL \
+                    AND ($3 OR EXISTS (SELECT 1 FROM scratch_keep k \
+                                        WHERE k.entity = $2 AND k.id = s.id)) \
+                 ON CONFLICT DO NOTHING",
+                t = attome_core::quote_ident(source),
+                c = attome_core::quote_ident(field)
+            );
+            added += sqlx::query(&sql)
+                .bind(target)
+                .bind(source)
+                .bind(source_whole)
+                .execute(&mut *copy)
+                .await
+                .map_err(|e| format!("cannot follow {source}.{field}: {e}"))?
+                .rows_affected();
+        }
+        if added == 0 {
+            break;
+        }
+    }
+    let mut report = Vec::new();
+    for entity in &sampled {
+        let sql = format!(
+            "DELETE FROM {t} x WHERE NOT EXISTS \
+               (SELECT 1 FROM scratch_keep k WHERE k.entity = $1 AND k.id = x.id)",
+            t = attome_core::quote_ident(entity)
+        );
+        let removed = sqlx::query(&sql)
+            .bind(entity)
+            .execute(&mut *copy)
+            .await
+            .map_err(|e| format!("cannot trim {entity}: {e}"))?
+            .rows_affected();
+        let kept: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM scratch_keep WHERE entity = $1")
+            .bind(entity)
+            .fetch_one(&mut *copy)
+            .await
+            .map_err(|e| format!("cannot count {entity}: {e}"))?;
+        report.push((
+            entity.clone(),
+            kept,
+            i64::try_from(removed).unwrap_or(i64::MAX),
+        ));
+    }
+    // Timeline children of removed records.
+    let children: Vec<String> = sqlx::query_scalar(
+        "SELECT e.logicalname::text FROM entity_info e \
+          WHERE (e.is_active IS NULL OR e.is_active = true) \
+            AND to_regclass(quote_ident(e.logicalname)) IS NOT NULL \
+            AND EXISTS (SELECT 1 FROM attribute_info a WHERE a.entity_ref = e.id \
+                         AND a.logicalname = 'entity_name') \
+            AND EXISTS (SELECT 1 FROM attribute_info a WHERE a.entity_ref = e.id \
+                         AND a.logicalname = 'record_id')",
+    )
+    .fetch_all(&mut *copy)
+    .await
+    .map_err(|e| format!("cannot list timeline children: {e}"))?;
+    for child in &children {
+        let sql = format!(
+            "DELETE FROM {t} c WHERE c.entity_name = ANY($1) AND NOT EXISTS \
+               (SELECT 1 FROM scratch_keep k \
+                 WHERE k.entity = c.entity_name AND k.id::text = c.record_id::text)",
+            t = attome_core::quote_ident(child)
+        );
+        sqlx::query(&sql)
+            .bind(&sampled)
+            .execute(&mut *copy)
+            .await
+            .map_err(|e| format!("cannot trim {child}: {e}"))?;
+    }
+    sqlx::query("DROP TABLE scratch_keep")
+        .execute(&mut *copy)
+        .await
+        .map_err(|e| format!("cannot finish the sample: {e}"))?;
+    Ok(report)
+}
+
 /// Makes the copy `args` names.
 pub async fn create(config: &AppConfig, args: &ScratchArgs) -> Result<ScratchReport, String> {
     use sqlx::Connection;
@@ -256,6 +417,11 @@ pub async fn create(config: &AppConfig, args: &ScratchArgs) -> Result<ScratchRep
         .await
         .map_err(|e| format!("cannot set the copy's schema: {e}"))?;
 
+    let sampled = if args.mode == ScratchMode::Sample {
+        sample_copy(&mut copy, args.percent).await?
+    } else {
+        Vec::new()
+    };
     let labelled: Vec<LabelledField> =
         sqlx::query_as(LABELLED_FIELDS)
             .fetch_all(&mut copy)
@@ -339,6 +505,7 @@ pub async fn create(config: &AppConfig, args: &ScratchArgs) -> Result<ScratchRep
         archive,
         masked,
         unmasked_required,
+        sampled,
     })
 }
 
@@ -498,6 +665,9 @@ pub async fn run(args: Vec<String>) -> std::process::ExitCode {
                 report.archive.display(),
                 report.masked.len()
             );
+            for (entity, kept, removed) in &report.sampled {
+                println!("  sampled {entity}: {kept} kept, {removed} removed");
+            }
             for field in &report.unmasked_required {
                 println!("  left as is (required column): {field}");
             }
@@ -577,9 +747,22 @@ mod tests {
         assert!(parse_args(&strings(&[]), "attome").is_err());
         assert!(parse_args(&strings(&["--name", "attome"]), "attome").is_err());
         assert!(parse_args(&strings(&["--name", "Bad-Name"]), "attome").is_err());
+        let sample = parse_args(
+            &strings(&["--name", "copy_a", "--mode", "sample", "--percent", "5"]),
+            "attome",
+        )
+        .expect("a sample");
+        assert_eq!((sample.mode, sample.percent), (ScratchMode::Sample, 5));
         assert!(
             parse_args(
-                &strings(&["--name", "copy_a", "--mode", "sample"]),
+                &strings(&["--name", "copy_a", "--mode", "sample", "--percent", "0"]),
+                "attome"
+            )
+            .is_err()
+        );
+        assert!(
+            parse_args(
+                &strings(&["--name", "copy_a", "--mode", "metadata"]),
                 "attome"
             )
             .is_err()
