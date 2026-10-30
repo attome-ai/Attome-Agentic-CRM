@@ -48,7 +48,8 @@ impl EngineModel for SearchModel {
     /// backfill keep running. `graph::routes()` (M38 Phase 1) is merged in
     /// alongside the full-text search route: a traversal is retrieval, gated
     /// the same way the text route is.
-    /// `saved_search::routes()` (the "run" action) and `suggest::routes()`
+    /// `saved_search::routes()` (the "run" action), `similar::routes()`
+    /// (A25-T6) and `suggest::routes()`
     /// (M11 gap list) are retrieval too, by the same reasoning — entity
     /// registration for `saved_search` itself happens in `saved_search::
     /// seed`, called from `attome-api/src/system.rs`, not here (D-366:
@@ -58,6 +59,7 @@ impl EngineModel for SearchModel {
         crate::routes::routes()
             .merge(crate::graph::routes())
             .merge(crate::saved_search::routes())
+            .merge(crate::similar::routes())
             .merge(crate::suggest::routes())
             .merge(crate::quality::routes())
             .merge(crate::admin::routes())
@@ -70,6 +72,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = <crate::routes::ApiDocFragment as utoipa::OpenApi>::openapi();
     doc.merge(crate::graph::openapi_fragment());
     doc.merge(<crate::saved_search::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<crate::similar::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<crate::suggest::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<crate::quality::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<crate::admin::ApiDocFragment as utoipa::OpenApi>::openapi());

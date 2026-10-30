@@ -16,7 +16,7 @@ time):
 | `max_age_days` | Leave out records not changed for this many days (default: none). |
 | `boost` | How much the entity's results weigh against others (default 1). |
 | `attributes` | Each attribute's `mode` and `weight` (0 to 10): `key` (matched exactly in its normalised form, as well as being text), `text` (full text) or `off` (not searched). |
-| `document_embedding`, `image_embedding` | Meaning search over documents and images; off by default. Image search is not built yet (A25-T6): the switch is stored and does nothing. |
+| `document_embedding`, `image_embedding` | Meaning search over the files attached to the entity's records, and over images; off by default. With `document_embedding` on, the passages of attached files are embedded and `POST /api/v1/search/similar` can return them. Image search is not built yet: `image_embedding` is stored and does nothing, and an image sent to `/search/similar` answers 503 `feature_unavailable`. |
 
 Without a setting, a phone, email, identity number, code or reference attribute is a `key` and
 every other searchable attribute is `text`. A phone is kept in its international form, so `0501234567`
@@ -51,6 +51,23 @@ the exact, prefix and word matches, ranked together. A changed record is embedde
 nearest 400 are taken before what the person may see is applied, so someone who sees little may
 get fewer such matches; word matches are unaffected. Without a model, or when the query cannot be
 embedded within two seconds, search works as before.
+
+## Attached files
+
+A file attached to a record (an `attome_document`: uploaded to the Documents library or to a file
+field) is found by its text once its upload scan clears it: PDF, Word (`.docx`), Excel (`.xlsx`),
+email (`.eml`) and plain text. A PDF that stores its text as glyph ids (many Arabic PDFs) yields
+none and is found by its name only. A search result for a file names, in `page`, the PDF page the
+query matches best, so the file can open there. A file shows only to someone who can read the
+record it is attached to. A file uploaded to a field labelled sensitive (a confirmed Personal,
+Financial, Health or Secret label) or encrypted is never indexed, split into passages or embedded.
+
+`POST /api/v1/search/similar` takes one of `record` (`{entity, id}`; for a file, `attome_document`
+and its id), `text` (up to 4,000 characters) or `image`, and returns the nearest passages the person
+may read: records' long fields and, for entities with `document_embedding` on, their files' text,
+each with its record, its source and its page. It needs the embedding model and semantic search,
+like searching by meaning; without them it answers 503 `feature_unavailable`. Timeline items
+(notes, communications) are not among its results.
 
 ## Counts and what people cannot see
 

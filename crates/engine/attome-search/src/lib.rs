@@ -63,6 +63,7 @@ pub mod routes;
 pub mod saved_search;
 pub mod scheduler;
 pub mod share_plan;
+pub mod similar;
 pub mod suggest;
 pub mod telemetry;
 pub mod vector;

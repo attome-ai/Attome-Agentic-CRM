@@ -199,6 +199,7 @@ async fn run_filter(
                 score: 1.0,
                 matched_legs: vec!["ask".to_owned()],
                 explain: None,
+                page: None,
             })
         })
         .collect();

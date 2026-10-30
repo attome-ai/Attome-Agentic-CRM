@@ -35,6 +35,7 @@ futures-util.workspace    = true
 hex.workspace             = true
 image.workspace           = true
 infer.workspace           = true
+mail-parser.workspace     = true
 quick-xml.workspace       = true
 reqwest.workspace         = true
 metrics.workspace         = true

@@ -297,6 +297,79 @@ pub fn title_attribute<'a>(
 /// The document entity whose projection carries its file's text (K1-T4).
 pub const DOCUMENT_ENTITY: &str = "attome_document";
 
+/// A25-T6: separates the pages of a file's extracted text. A copy of
+/// `attome_document::text_extract::PAGE_BREAK` (this crate does not depend on
+/// the document engine); change both together.
+pub const PAGE_BREAK: char = '\u{c}';
+
+/// A25-T6: what a document is attached to, and whether its file's text may
+/// be indexed at all.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DocumentAttachment {
+    /// The record the document hangs off (`entity_name`, `record_id`); `None`
+    /// when either is missing or the id is not a UUID.
+    pub parent: Option<(String, Uuid)>,
+    /// False when the file is labelled sensitive or encrypted, on the field
+    /// it was uploaded to (`source_field`) or on the document's own `file`
+    /// field. Such a file's text is never indexed, chunked or embedded (S3).
+    pub text_allowed: bool,
+}
+
+/// A25-T6: whether a file held in `field` may have its text indexed: not when
+/// the field is read-gated (sensitive, or a confirmed Personal, Financial,
+/// Health or Secret label) or asks for encryption. A file with no labelled
+/// field is allowed. Pure.
+pub fn file_text_allowed(field: Option<&AttrInfo>) -> bool {
+    field.is_none_or(|a| {
+        !a.is_read_gated()
+            && a.options
+                .as_ref()
+                .and_then(|o| o.get("encryption"))
+                .is_none()
+    })
+}
+
+/// A25-T6: a live document's parent record and text permission; `Ok(None)`
+/// when the document is gone or inactive.
+pub async fn document_attachment(
+    db: &PgPool,
+    registry: &EntityMetaRegistry,
+    document_id: Uuid,
+) -> Result<Option<DocumentAttachment>, AppError> {
+    let row: Option<(Option<String>, Option<String>, Option<String>)> = sqlx::query_as(
+        "SELECT entity_name::text, record_id::text, source_field::text FROM attome_document \
+          WHERE id = $1 AND is_active = true",
+    )
+    .bind(document_id)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some((entity, record, source_field)) = row else {
+        return Ok(None);
+    };
+    let parent = match (
+        entity.filter(|e| !e.trim().is_empty()),
+        record.and_then(|r| Uuid::parse_str(r.trim()).ok()),
+    ) {
+        (Some(entity), Some(id)) => Some((entity, id)),
+        _ => None,
+    };
+    let field_of = |entity: &str, field: &str| {
+        registry
+            .get(entity)
+            .and_then(|m| m.attrs.iter().find(|a| a.logicalname == field).cloned())
+    };
+    let own = field_of(DOCUMENT_ENTITY, "file");
+    let source = match (&parent, source_field.filter(|f| !f.trim().is_empty())) {
+        (Some((entity, _)), Some(field)) => field_of(entity.as_str(), field.as_str()),
+        _ => None,
+    };
+    Ok(Some(DocumentAttachment {
+        parent,
+        text_allowed: file_text_allowed(own.as_ref()) && file_text_allowed(source.as_ref()),
+    }))
+}
+
 /// The extracted text of the file a document names, if any.
 async fn document_text(db: &PgPool, document_id: Uuid) -> Result<Option<String>, AppError> {
     sqlx::query_scalar(
@@ -410,14 +483,23 @@ pub async fn project_record_in(
         .join(" ");
 
     // K1-T4: a document is also found by the text of the file it names
-    // (`attome_document::text_extract`), under the document's own
-    // permissions, which are the row's.
+    // (`attome_document::text_extract`). A25-T6: only when that file is not
+    // labelled sensitive or encrypted, and a hit is shown only to a caller
+    // who can read the record the document is attached to (`routes`).
     let body = if entity_logicalname == DOCUMENT_ENTITY {
-        // Cut to the index ceiling here too: the body is also stored verbatim
-        // for snippets, and a whole book there helps no one.
-        let text = document_text(db, record_id)
+        let allowed = document_attachment(db, registry, record_id)
             .await?
-            .map(|t| crate::project::truncate_for_index(&t).to_owned());
+            .is_some_and(|d| d.text_allowed);
+        // Cut to the index ceiling here too: the body is also stored verbatim
+        // for snippets, and a whole book there helps no one. Page breaks
+        // become spaces: the index has no pages.
+        let text = if allowed {
+            document_text(db, record_id)
+                .await?
+                .map(|t| crate::project::truncate_for_index(&t).replace(PAGE_BREAK, " "))
+        } else {
+            None
+        };
         match text {
             Some(text) if body.is_empty() => text,
             Some(text) => format!("{body}\n{text}"),
@@ -487,6 +569,18 @@ mod tests {
         assert_eq!(translit_query_key("one two three"), None);
         assert!(translit_keys("Al").is_empty());
         assert!(arabic.iter().all(|k| k.starts_with(TRANSLIT_PREFIX)));
+    }
+
+    /// A25-T6: a file uploaded to a sensitive or encrypted field never has
+    /// its text indexed.
+    #[test]
+    fn attachment_text_never_comes_from_a_labelled_file() {
+        assert!(file_text_allowed(None));
+        assert!(file_text_allowed(Some(&attr("contract", 12, false))));
+        assert!(!file_text_allowed(Some(&attr("passport_scan", 12, true))));
+        let mut encrypted = attr("statement", 12, false);
+        encrypted.options = Some(serde_json::json!({"encryption": {"mode": "randomised"}}));
+        assert!(!file_text_allowed(Some(&encrypted)));
     }
 
     #[test]

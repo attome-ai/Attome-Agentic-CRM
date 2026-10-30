@@ -1298,6 +1298,7 @@ dependencies = [
  "hex",
  "image",
  "infer",
+ "mail-parser",
  "metrics",
  "object_store",
  "quick-xml",

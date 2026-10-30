@@ -297,6 +297,145 @@ pub struct SearchHit {
     /// A25-T4: how the score came about, when asked for and allowed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub explain: Option<crate::explain::ScoreParts>,
+    /// A25-T6: for a document, the page of its file (a PDF) the query best
+    /// matches, one-based, so the file opens there.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page: Option<i32>,
+}
+
+/// A25-T6: the most attached documents one search checks the parent record
+/// of. Documents past it are left out of the results rather than shown
+/// unchecked.
+pub const MAX_DOCUMENT_PARENT_CHECKS: usize = 100;
+
+/// A25-T6: which of `documents` the caller may see: those attached to a
+/// record the caller can read (entity read privilege and record-level
+/// security, as the record API decides for a document). An admin sees all.
+/// At most [`MAX_DOCUMENT_PARENT_CHECKS`] documents are checked, each parent
+/// once; a failed check hides the document.
+pub async fn readable_documents(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    documents: &[Uuid],
+) -> std::collections::HashSet<Uuid> {
+    if ctx.is_admin {
+        return documents.iter().copied().collect();
+    }
+    let ids: Vec<Uuid> = documents
+        .iter()
+        .copied()
+        .take(MAX_DOCUMENT_PARENT_CHECKS)
+        .collect();
+    let mut readable = std::collections::HashSet::new();
+    if ids.is_empty() {
+        return readable;
+    }
+    let parents: Vec<(Uuid, Option<String>, Option<String>)> = match sqlx::query_as(
+        "SELECT id, entity_name::text, record_id::text FROM attome_document \
+          WHERE id = ANY($1) AND is_active = true",
+    )
+    .bind(&ids)
+    .fetch_all(&state.base.db)
+    .await
+    {
+        Ok(rows) => rows,
+        Err(error) => {
+            tracing::warn!(%error, "search: document parents unreadable; documents left out");
+            return readable;
+        }
+    };
+    let mut decided: std::collections::HashMap<(String, Uuid), bool> =
+        std::collections::HashMap::new();
+    for (document, entity, record) in parents {
+        let (Some(entity), Some(record)) = (
+            entity.filter(|e| !e.trim().is_empty()),
+            record.and_then(|r| Uuid::parse_str(r.trim()).ok()),
+        ) else {
+            continue;
+        };
+        let key = (entity, record);
+        let visible = match decided.get(&key) {
+            Some(visible) => *visible,
+            None => {
+                let visible = attome_records::entity_crud::referenced_record_visible(
+                    state, ctx, &key.0, key.1,
+                )
+                .await
+                .unwrap_or_else(|error| {
+                    tracing::warn!(?error, "search: a document's parent check failed; hidden");
+                    false
+                });
+                decided.insert(key, visible);
+                visible
+            }
+        };
+        if visible {
+            readable.insert(document);
+        }
+    }
+    readable
+}
+
+/// A25-T6: drops the documents in `rows` whose parent record the caller
+/// cannot read; every other row is kept.
+async fn without_hidden_documents(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    rows: Vec<crate::controls::FusedRow>,
+) -> Vec<crate::controls::FusedRow> {
+    if ctx.is_admin {
+        return rows;
+    }
+    let documents: Vec<Uuid> = rows
+        .iter()
+        .filter(|r| r.1 == crate::corpus::DOCUMENT_ENTITY)
+        .map(|r| r.0)
+        .collect();
+    if documents.is_empty() {
+        return rows;
+    }
+    let readable = readable_documents(state, ctx, &documents).await;
+    rows.into_iter()
+        .filter(|r| r.1 != crate::corpus::DOCUMENT_ENTITY || readable.contains(&r.0))
+        .collect()
+}
+
+/// A25-T6: for the documents on a page, the file page each best matches
+/// `stemmed` (the query in index form) on, from their PDF passages. A
+/// failed read gives no pages, never a failed search.
+async fn document_pages(
+    state: &EngineState,
+    stemmed: &str,
+    page_rows: &[crate::controls::FusedRow],
+) -> std::collections::HashMap<Uuid, i32> {
+    let documents: Vec<Uuid> = page_rows
+        .iter()
+        .filter(|r| r.1 == crate::corpus::DOCUMENT_ENTITY)
+        .map(|r| r.0)
+        .collect();
+    let terms = stemmed.split_whitespace().collect::<Vec<_>>().join(" or ");
+    if documents.is_empty() || terms.is_empty() {
+        return std::collections::HashMap::new();
+    }
+    let rows: Result<Vec<(Uuid, i32)>, sqlx::Error> = sqlx::query_as(
+        "SELECT DISTINCT ON (c.source_id) c.source_id, c.page FROM record_chunk c \
+          WHERE c.source_entity = $1 AND c.source_id = ANY($2) AND c.page IS NOT NULL \
+            AND c.tsv @@ websearch_to_tsquery('attome_search', $3) \
+          ORDER BY c.source_id, ts_rank(c.tsv, websearch_to_tsquery('attome_search', $3)) DESC, \
+                   c.ordinal",
+    )
+    .bind(crate::corpus::DOCUMENT_ENTITY)
+    .bind(&documents)
+    .bind(&terms)
+    .fetch_all(&state.base.db)
+    .await;
+    match rows {
+        Ok(rows) => rows.into_iter().collect(),
+        Err(error) => {
+            tracing::warn!(%error, "search: document pages unavailable");
+            std::collections::HashMap::new()
+        }
+    }
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -830,6 +969,9 @@ pub async fn execute_search_with(
         visible.extend(readable.keys().cloned());
         crate::controls::place_pins(&mut fused, pins, &visible);
     }
+    // A25-T6: a document is shown only to a caller who can read the record
+    // it is attached to; after the pins, so a pin cannot bring one back.
+    let fused = without_hidden_documents(state, ctx, fused).await;
 
     let found = fused.len() as u64;
     let facets = if options.facets {
@@ -861,6 +1003,7 @@ pub async fn execute_search_with(
     // — "these ids are already trusted" — that is correct exactly until someone
     // reuses this read from a path where they are not.
     let display = fetch_display_text(state, ctx, &access_map, &default_shares, &page_rows).await;
+    let pages = document_pages(state, &stemmed, &page_rows).await;
 
     let items: Vec<SearchHit> = page_rows
         .into_iter()
@@ -888,6 +1031,11 @@ pub async fn execute_search_with(
                     parts.score = score;
                     parts
                 });
+                let page = if entity_logicalname == crate::corpus::DOCUMENT_ENTITY {
+                    pages.get(&record_id).copied()
+                } else {
+                    None
+                };
                 SearchHit {
                     entity_logicalname,
                     record_id,
@@ -896,6 +1044,7 @@ pub async fn execute_search_with(
                     score,
                     matched_legs,
                     explain,
+                    page,
                 }
             },
         )

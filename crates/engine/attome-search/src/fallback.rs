@@ -165,6 +165,7 @@ pub async fn fallback_search(
                     score: 0.0,
                     matched_legs: vec![ROUTE.to_owned()],
                     explain: None,
+                    page: None,
                 })),
                 // One table that cannot be read (a timeout, a dropped column)
                 // must not lose the others' rows; it is logged, not hidden.
@@ -173,6 +174,19 @@ pub async fn fallback_search(
                 }
             }
         }
+    }
+    // A25-T6: a document only with the record it is attached to.
+    let documents: Vec<Uuid> = items
+        .iter()
+        .filter(|hit| hit.entity_logicalname == crate::corpus::DOCUMENT_ENTITY)
+        .map(|hit| hit.record_id)
+        .collect();
+    if !documents.is_empty() {
+        let readable = crate::routes::readable_documents(state, ctx, &documents).await;
+        items.retain(|hit| {
+            hit.entity_logicalname != crate::corpus::DOCUMENT_ENTITY
+                || readable.contains(&hit.record_id)
+        });
     }
     let found = items.len() as u64;
     let has_more = found > page_size.unsigned_abs();

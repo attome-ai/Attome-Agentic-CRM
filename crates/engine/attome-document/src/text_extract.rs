@@ -24,6 +24,16 @@
 //! Every limit is explicit: files over [`MAX_FILE_BYTES`] are skipped, a ZIP
 //! member inflates to at most [`MAX_INFLATED_BYTES`], and the stored text is
 //! cut at [`MAX_TEXT_CHARS`].
+//!
+//! **Pages (A25-T6).** A PDF's text keeps its pages: they are separated by
+//! [`PAGE_BREAK`] (a form feed), so search can open a passage at its page
+//! ([`pages`]). A content stream is placed on the page whose `/Contents`
+//! names it, pages in the order their objects appear in the file. A PDF
+//! whose page objects sit inside compressed object streams has no visible
+//! page objects; there each content stream that shows text counts as a page.
+//! Other formats are one page. XLSX gives its cell strings (shared and
+//! inline); an email (`.eml`) gives its subject, people, date, attachment
+//! names and body, read with `mail-parser`.
 
 use std::io::Read;
 
@@ -39,6 +49,12 @@ pub const MAX_FILE_BYTES: u64 = 25 * 1024 * 1024;
 pub const MAX_INFLATED_BYTES: u64 = 64 * 1024 * 1024;
 /// The most text kept per file.
 pub const MAX_TEXT_CHARS: usize = 1_000_000;
+/// A25-T6: separates the pages of extracted text.
+pub const PAGE_BREAK: char = '\u{c}';
+/// The most worksheets of an XLSX read.
+const MAX_SHEETS: usize = 64;
+/// How far before a `stream` keyword its object header is looked for.
+const OBJECT_HEADER_WINDOW: usize = 4096;
 
 /// The formats text is extracted from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -46,6 +62,10 @@ pub enum TextFormat {
     Plain,
     Docx,
     Pdf,
+    /// A25-T6.
+    Xlsx,
+    /// A25-T6: an RFC 822 message (`.eml`).
+    Email,
 }
 
 impl TextFormat {
@@ -54,8 +74,16 @@ impl TextFormat {
             Self::Plain => "text",
             Self::Docx => "docx",
             Self::Pdf => "pdf",
+            Self::Xlsx => "xlsx",
+            Self::Email => "email",
         }
     }
+}
+
+/// The pages of extracted text, first page first; text without page breaks
+/// is one page. Pure.
+pub fn pages(text: &str) -> Vec<&str> {
+    text.split(PAGE_BREAK).collect()
 }
 
 /// The format of a file, from its sniffed content type first and its name
@@ -66,31 +94,56 @@ pub fn format_of(content_type: &str, filename: &str) -> Option<TextFormat> {
         .rsplit_once('.')
         .map(|(_, e)| e.to_ascii_lowercase())
         .unwrap_or_default();
+    // A message sniffs as plain text; read raw, its encoded parts are noise.
+    if extension == "eml" {
+        return Some(TextFormat::Email);
+    }
     match content_type {
         "application/pdf" => return Some(TextFormat::Pdf),
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => {
             return Some(TextFormat::Docx);
         }
         "text/plain" | "text/csv" | "text/markdown" => return Some(TextFormat::Plain),
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" => {
+            return Some(TextFormat::Xlsx);
+        }
+        "message/rfc822" => return Some(TextFormat::Email),
         _ => {}
     }
     match extension.as_str() {
         "pdf" => Some(TextFormat::Pdf),
         "docx" => Some(TextFormat::Docx),
+        "xlsx" => Some(TextFormat::Xlsx),
+        "eml" => Some(TextFormat::Email),
         "txt" | "csv" | "md" => Some(TextFormat::Plain),
         _ => None,
     }
 }
 
-/// The text of a file, or `None` when it holds none that can be read. Pure.
+/// The text of a file, or `None` when it holds none that can be read. Pages
+/// stay separated by [`PAGE_BREAK`]. Pure.
 pub fn extract(format: TextFormat, bytes: &[u8]) -> Option<String> {
     let text = match format {
         TextFormat::Plain => String::from_utf8_lossy(bytes).into_owned(),
         TextFormat::Docx => docx_text(bytes)?,
         TextFormat::Pdf => pdf_text(bytes),
+        TextFormat::Xlsx => xlsx_text(bytes)?,
+        TextFormat::Email => email_text(bytes)?,
     };
-    let text = tidy(&text);
+    let text = tidy_pages(&text);
     (!text.is_empty()).then(|| truncate_chars(&text, MAX_TEXT_CHARS))
+}
+
+/// [`tidy`] on each page, keeping empty pages inside the text (so later
+/// page numbers stay right) and dropping the empty ones at its end; empty
+/// when no page holds text.
+fn tidy_pages(text: &str) -> String {
+    let pages: Vec<String> = text.split(PAGE_BREAK).map(tidy).collect();
+    if pages.iter().all(String::is_empty) {
+        return String::new();
+    }
+    let joined = pages.join(&PAGE_BREAK.to_string());
+    joined.trim_end_matches(PAGE_BREAK).to_owned()
 }
 
 fn tidy(text: &str) -> String {
@@ -204,6 +257,113 @@ pub fn docx_text(bytes: &[u8]) -> Option<String> {
     Some(out)
 }
 
+/// The text of every `<t>` element of a SpreadsheetML part, a line per
+/// `line_tag` element. Pure.
+fn sheet_strings(xml: &[u8], line_tag: &[u8], out: &mut String) {
+    let mut reader = quick_xml::Reader::from_reader(xml);
+    let mut buf = Vec::new();
+    let mut in_text = false;
+    loop {
+        match reader.read_event_into(&mut buf) {
+            Ok(Event::Start(e)) if e.local_name().as_ref() == b"t" => in_text = true,
+            Ok(Event::End(e)) => {
+                let name = e.local_name();
+                if name.as_ref() == b"t" {
+                    in_text = false;
+                } else if name.as_ref() == line_tag {
+                    out.push('\n');
+                }
+            }
+            Ok(Event::Text(t)) if in_text => {
+                if let Ok(text) = t.decode() {
+                    out.push_str(&text);
+                }
+            }
+            Ok(Event::GeneralRef(r)) if in_text => {
+                if let Ok(Some(c)) = r.resolve_char_ref() {
+                    out.push(c);
+                } else if let Ok(name) = r.decode()
+                    && let Some(text) = quick_xml::escape::resolve_predefined_entity(&name)
+                {
+                    out.push_str(text);
+                }
+            }
+            Ok(Event::Eof) | Err(_) => break,
+            _ => {}
+        }
+        buf.clear();
+    }
+}
+
+/// A25-T6: the text of an XLSX: its shared strings, a line each, then the
+/// inline strings of its worksheets, a line per row. Numbers and formulas
+/// are left out. `None` when it is not a readable workbook. Pure.
+pub fn xlsx_text(bytes: &[u8]) -> Option<String> {
+    let shared = zip_member(bytes, "xl/sharedStrings.xml");
+    let first_sheet = zip_member(bytes, "xl/worksheets/sheet1.xml");
+    if shared.is_none() && first_sheet.is_none() {
+        return None;
+    }
+    let mut out = String::new();
+    if let Some(xml) = shared {
+        sheet_strings(&xml, b"si", &mut out);
+    }
+    let sheets = std::iter::once(first_sheet)
+        .chain((2..=MAX_SHEETS).map(|n| zip_member(bytes, &format!("xl/worksheets/sheet{n}.xml"))));
+    for sheet in sheets {
+        let Some(xml) = sheet else { break };
+        sheet_strings(&xml, b"row", &mut out);
+    }
+    Some(out)
+}
+
+/// A25-T6: the text of an email: its subject, sender, recipients, date and
+/// attachment names, a line each, then its body (an HTML-only body read as
+/// text). `None` when it does not parse. Pure.
+pub fn email_text(bytes: &[u8]) -> Option<String> {
+    let message = mail_parser::MessageParser::default().parse(bytes)?;
+    let people = |list: Option<&mail_parser::Address>| -> String {
+        list.map(|a| {
+            a.iter()
+                .map(|p| match (p.name(), p.address()) {
+                    (Some(name), Some(address)) => format!("{name} <{address}>"),
+                    (None, Some(address)) => address.to_owned(),
+                    (Some(name), None) => name.to_owned(),
+                    (None, None) => String::new(),
+                })
+                .filter(|p| !p.is_empty())
+                .collect::<Vec<_>>()
+                .join(", ")
+        })
+        .unwrap_or_default()
+    };
+    let attachments: Vec<String> = message
+        .attachments()
+        .filter_map(|part| part.attachment_name().map(str::to_owned))
+        .collect();
+    let mut lines: Vec<String> = Vec::new();
+    for (label, value) in [
+        ("Subject", message.subject().unwrap_or_default().to_owned()),
+        ("From", people(message.from())),
+        ("To", people(message.to())),
+        ("Cc", people(message.cc())),
+        (
+            "Date",
+            message.date().map(|d| d.to_rfc3339()).unwrap_or_default(),
+        ),
+        ("Attachments", attachments.join(", ")),
+    ] {
+        if !value.trim().is_empty() {
+            lines.push(format!("{label}: {value}"));
+        }
+    }
+    if let Some(body) = message.body_text(0) {
+        lines.push(String::new());
+        lines.push(body.into_owned());
+    }
+    Some(lines.join("\n"))
+}
+
 fn find(haystack: &[u8], needle: &[u8], from: usize) -> Option<usize> {
     haystack
         .get(from..)?
@@ -212,10 +372,137 @@ fn find(haystack: &[u8], needle: &[u8], from: usize) -> Option<usize> {
         .map(|p| p + from)
 }
 
+/// The decimal number that ends just before `end` in `bytes` (spaces before
+/// `end` skipped), with the index where it starts. Pure.
+fn number_before(bytes: &[u8], end: usize) -> Option<(u32, usize)> {
+    let mut i = end;
+    while i > 0 && bytes[i - 1].is_ascii_whitespace() {
+        i -= 1;
+    }
+    let digits_end = i;
+    while i > 0 && bytes[i - 1].is_ascii_digit() {
+        i -= 1;
+    }
+    if i == digits_end {
+        return None;
+    }
+    let n = std::str::from_utf8(&bytes[i..digits_end])
+        .ok()?
+        .parse()
+        .ok()?;
+    Some((n, i))
+}
+
+/// The object number of an `N G obj` header whose `obj` keyword starts at
+/// `at`. Pure.
+fn object_header_at(bytes: &[u8], at: usize) -> Option<u32> {
+    if at >= 3 && &bytes[at - 3..at] == b"end" {
+        return None;
+    }
+    let (_generation, generation_at) = number_before(bytes, at)?;
+    let (number, _) = number_before(bytes, generation_at)?;
+    Some(number)
+}
+
+/// The object a stream starting at `stream_at` belongs to: the nearest
+/// `N G obj` header before it. Pure.
+fn stream_object(bytes: &[u8], stream_at: usize) -> Option<u32> {
+    let from = stream_at.saturating_sub(OBJECT_HEADER_WINDOW);
+    let mut at = stream_at;
+    while let Some(found) = bytes[from..at].windows(3).rposition(|w| w == b"obj") {
+        let found = from + found;
+        if let Some(number) = object_header_at(bytes, found) {
+            return Some(number);
+        }
+        at = found;
+    }
+    None
+}
+
+/// The objects an indirect reference list names: `N G R` triples, as in
+/// `/Contents 12 0 R` or `/Contents [12 0 R 13 0 R]`. Pure.
+fn references(text: &[u8]) -> Vec<u32> {
+    let mut out = Vec::new();
+    let mut i = 0;
+    while let Some(r) = text[i..].iter().position(|&b| b == b'R') {
+        let at = i + r;
+        if let Some((_, generation_at)) = number_before(text, at)
+            && let Some((number, _)) = number_before(text, generation_at)
+        {
+            out.push(number);
+        }
+        i = at + 1;
+    }
+    out
+}
+
+/// The content stream objects of each page object, pages in file order.
+/// Empty when the file shows no page objects (they may sit in compressed
+/// object streams). Pure.
+fn page_contents(bytes: &[u8]) -> Vec<Vec<u32>> {
+    let mut pages = Vec::new();
+    let mut at = 0;
+    while let Some(found) = find(bytes, b"obj", at) {
+        at = found + 3;
+        if object_header_at(bytes, found).is_none() {
+            continue;
+        }
+        let end = find(bytes, b"endobj", at).unwrap_or(bytes.len());
+        let body = &bytes[at..end.min(at + OBJECT_HEADER_WINDOW)];
+        // `/Type /Page`, not `/Type /Pages`.
+        let is_page = [b"/Type /Page".as_slice(), b"/Type/Page".as_slice()]
+            .iter()
+            .any(|key| {
+                find(body, key, 0).is_some_and(|k| {
+                    body.get(k + key.len())
+                        .is_none_or(|b| !b.is_ascii_alphanumeric())
+                })
+            });
+        if !is_page {
+            continue;
+        }
+        let Some(contents) = find(body, b"/Contents", 0) else {
+            pages.push(Vec::new());
+            continue;
+        };
+        let rest = &body[contents + 9..];
+        let start = rest
+            .iter()
+            .position(|b| !b.is_ascii_whitespace())
+            .unwrap_or(0);
+        let list = if rest.get(start) == Some(&b'[') {
+            let close = rest[start..]
+                .iter()
+                .position(|&b| b == b']')
+                .map_or(rest.len(), |p| start + p);
+            &rest[start..close]
+        } else {
+            let close = rest[start..]
+                .iter()
+                .position(|&b| b == b'R')
+                .map_or(rest.len(), |p| start + p + 1);
+            &rest[start..close]
+        };
+        pages.push(references(list));
+    }
+    pages
+}
+
 /// The text of a PDF's content streams: literal strings shown between `BT`
-/// and `ET`, a line per text block. Pure.
+/// and `ET`, a line per text block, pages separated by [`PAGE_BREAK`]. Pure.
 pub fn pdf_text(bytes: &[u8]) -> String {
-    let mut out = String::new();
+    let pages = page_contents(bytes);
+    let page_of: std::collections::HashMap<u32, usize> = pages
+        .iter()
+        .enumerate()
+        .flat_map(|(page, objects)| objects.iter().map(move |o| (*o, page)))
+        .collect();
+    // With page objects, a page's text goes in its slot; a stream no page
+    // names (a form drawn on a page) joins the last page seen. Without them,
+    // each stream that shows text is a page of its own.
+    let mut by_page: Vec<String> = vec![String::new(); pages.len()];
+    let mut loose: Vec<String> = Vec::new();
+    let mut last_page = 0;
     let mut at = 0;
     while let Some(start) = find(bytes, b"stream", at) {
         // `endstream` also contains `stream`; skip it.
@@ -241,10 +528,22 @@ pub fn pdf_text(bytes: &[u8]) -> String {
         } else {
             raw.to_vec()
         };
-        content_text(&content, &mut out);
+        let mut text = String::new();
+        content_text(&content, &mut text);
+        if !text.trim().is_empty() {
+            if by_page.is_empty() {
+                loose.push(text);
+            } else {
+                if let Some(page) = stream_object(bytes, start).and_then(|o| page_of.get(&o)) {
+                    last_page = *page;
+                }
+                by_page[last_page].push_str(&text);
+            }
+        }
         at = end + 9;
     }
-    out
+    let pages = if by_page.is_empty() { loose } else { by_page };
+    pages.join(&PAGE_BREAK.to_string())
 }
 
 /// Appends the literal strings shown in one content stream. Pure.
@@ -596,6 +895,87 @@ mod tests {
             Some("Invoice (final) Totaldue")
         );
         assert_eq!(extract(TextFormat::Pdf, b"%PDF-1.4\n%%EOF"), None);
+    }
+
+    /// A25-T6: each content stream lands on the page whose `/Contents`
+    /// names it, whatever order the streams sit in the file.
+    #[test]
+    fn document_text_keeps_pdf_pages() {
+        let pdf = b"%PDF-1.4\n\
+            1 0 obj << /Type /Pages /Kids [2 0 R 3 0 R] /Count 2 >> endobj\n\
+            2 0 obj << /Type /Page /Parent 1 0 R /Contents 5 0 R >> endobj\n\
+            3 0 obj << /Type /Page /Parent 1 0 R /Contents [4 0 R] >> endobj\n\
+            4 0 obj << /Length 30 >>\nstream\nBT (Renewal terms) Tj ET\nendstream\nendobj\n\
+            5 0 obj << /Length 30 >>\nstream\nBT (Service agreement) Tj ET\nendstream\nendobj\n\
+            %%EOF";
+        let text = extract(TextFormat::Pdf, pdf).expect("text");
+        assert_eq!(pages(&text), vec!["Service agreement", "Renewal terms"]);
+        // A page with no text keeps the next page's number.
+        let gap = b"%PDF-1.4\n\
+            2 0 obj << /Type /Page /Contents 5 0 R >> endobj\n\
+            3 0 obj << /Type /Page /Contents 4 0 R >> endobj\n\
+            4 0 obj << /Length 9 >>\nstream\nBT (Two) Tj ET\nendstream\nendobj\n\
+            %%EOF";
+        assert_eq!(
+            pages(&extract(TextFormat::Pdf, gap).expect("text")),
+            vec!["", "Two"]
+        );
+        // No page objects: each stream showing text is a page.
+        let loose = b"%PDF-1.4\n\
+            1 0 obj << >>\nstream\nBT (One) Tj ET\nendstream\nendobj\n\
+            2 0 obj << >>\nstream\nq 1 0 0 1 0 0 cm Q\nendstream\nendobj\n\
+            3 0 obj << >>\nstream\nBT (Two) Tj ET\nendstream\nendobj\n";
+        assert_eq!(
+            pages(&extract(TextFormat::Pdf, loose).expect("text")),
+            vec!["One", "Two"]
+        );
+        assert_eq!(pages("one page"), vec!["one page"]);
+    }
+
+    #[test]
+    fn document_text_reads_xlsx_strings() {
+        let shared = r#"<?xml version="1.0"?><sst xmlns="x"><si><t>Customer</t></si><si><r><t>Acme </t></r><r><t>Trading</t></r></si><si><t>R&amp;D</t></si></sst>"#;
+        let workbook = zip("xl/sharedStrings.xml", shared.as_bytes(), true);
+        assert_eq!(
+            extract(TextFormat::Xlsx, &workbook).as_deref(),
+            Some("Customer\nAcme Trading\nR&D")
+        );
+        let inline = r#"<worksheet><sheetData><row><c t="inlineStr"><is><t>Due</t></is></c><c><v>42</v></c></row></sheetData></worksheet>"#;
+        let sheet = zip("xl/worksheets/sheet1.xml", inline.as_bytes(), false);
+        assert_eq!(extract(TextFormat::Xlsx, &sheet).as_deref(), Some("Due"));
+        assert_eq!(extract(TextFormat::Xlsx, b"not a zip"), None);
+        assert_eq!(
+            format_of(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "a"
+            ),
+            Some(TextFormat::Xlsx)
+        );
+    }
+
+    #[test]
+    fn document_text_reads_email() {
+        let eml = "From: Sara Ali <sara@example.com>\r\n\
+            To: ops@example.com\r\n\
+            Subject: Renewal quote\r\n\
+            Date: Thu, 29 Oct 2026 10:00:00 +0300\r\n\
+            Content-Type: text/plain; charset=utf-8\r\n\
+            \r\n\
+            Please find the revised price attached.\r\n";
+        let text = extract(TextFormat::Email, eml.as_bytes()).expect("text");
+        assert!(text.starts_with("Subject: Renewal quote\n"), "{text}");
+        assert!(text.contains("From: Sara Ali <sara@example.com>"), "{text}");
+        assert!(text.contains("To: ops@example.com"), "{text}");
+        assert!(
+            text.ends_with("Please find the revised price attached."),
+            "{text}"
+        );
+        // A message is read as one even when it sniffs as plain text.
+        assert_eq!(
+            format_of("text/plain", "Quote.EML"),
+            Some(TextFormat::Email)
+        );
+        assert_eq!(format_of("message/rfc822", "x"), Some(TextFormat::Email));
     }
 
     #[test]

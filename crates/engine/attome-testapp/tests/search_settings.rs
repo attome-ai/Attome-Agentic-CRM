@@ -354,3 +354,185 @@ fn facet_counts_exclude_hidden_records() {
         assert_eq!(all.facets.unwrap().entity.len(), 2);
     });
 }
+
+/// A reader holding Global read on `entities` (and `attome_document`).
+async fn reader_of(app: &TestApp, entities: &[&str], tag: &str) -> Uuid {
+    let (status, role) = app
+        .request(
+            Method::POST,
+            "/api/v1/admin/security/roles",
+            Some(json!({ "name": format!("attach-{tag}") })),
+        )
+        .await;
+    assert!(status.is_success(), "{status} {role}");
+    let role_id = role["id"].as_str().unwrap().to_owned();
+    for entity in entities {
+        let key = format!("{entity}.read");
+        attome_security::db::ensure_privilege(
+            app.db(),
+            &key,
+            &key,
+            "test",
+            attome_core::changeset::Layer::Project,
+        )
+        .await
+        .unwrap();
+        let (status, body) = app
+            .request(
+                Method::POST,
+                "/api/v1/admin/security/role-grants",
+                Some(json!({ "role_id": role_id, "privilege_key": key })),
+            )
+            .await;
+        assert!(status.is_success(), "{status} {body}");
+        let (status, body) = app
+            .request(
+                Method::POST,
+                "/api/v1/admin/security/role-entity-access",
+                Some(json!({ "role_id": role_id, "entity": entity, "read_access_level": 3 })),
+            )
+            .await;
+        assert!(status.is_success(), "{status} {body}");
+    }
+    let reader = seed_user(app.db(), "attachment-reader").await;
+    sqlx::query("INSERT INTO user_account_mm_role (user_ref, role_ref) VALUES ($1, $2::uuid)")
+        .bind(reader.id)
+        .bind(&role_id)
+        .execute(app.db())
+        .await
+        .unwrap();
+    reader.id
+}
+
+/// A document attached to `(entity, record)`, indexed under its name and
+/// `word`.
+async fn attached_document(
+    app: &TestApp,
+    name: &str,
+    word: &str,
+    entity: &str,
+    record: Uuid,
+) -> Uuid {
+    let (status, body) = app
+        .request(
+            Method::POST,
+            "/api/v1/attome_document",
+            Some(json!({
+                "name": name,
+                "entity_name": entity,
+                "record_id": record.to_string(),
+                "folder": "/",
+            })),
+        )
+        .await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    let id: Uuid = body["id"].as_str().unwrap().parse().unwrap();
+    let row = attome_search::project(name, None, &format!("{name} {word}"), Vec::new());
+    attome_search::upsert_row(app.db(), "attome_document", id, &row, None, None, None)
+        .await
+        .unwrap();
+    id
+}
+
+// feature: A25
+/// A25-T6: a document is found only by someone who can read the record it
+/// is attached to, and its passages belong to that record with their page.
+#[test]
+fn attachment_result_requires_parent_access() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let tag = &Uuid::now_v7().simple().to_string()[..8];
+        let (seen, seen_ids) = indexed(&app, &[&format!("Seen parent {tag}")]).await;
+        let (hidden, hidden_ids) = indexed(&app, &[&format!("Hidden parent {tag}")]).await;
+        let word = format!("attachword{tag}");
+        let on_seen =
+            attached_document(&app, &format!("Contract {tag}"), &word, &seen, seen_ids[0]).await;
+        let on_hidden = attached_document(
+            &app,
+            &format!("Payslip {tag}"),
+            &word,
+            &hidden,
+            hidden_ids[0],
+        )
+        .await;
+
+        let reader = reader_of(&app, &[&seen, "attome_document"], tag).await;
+        let reader = app.state.base.security.resolve(reader).await.unwrap();
+        let found = execute_search(&app.state, &reader, &word, 1, 20, Audience::Human)
+            .await
+            .unwrap();
+        let ids: Vec<Uuid> = found.items.iter().map(|h| h.record_id).collect();
+        assert!(ids.contains(&on_seen), "{:?}", found.items);
+        assert!(!ids.contains(&on_hidden), "{:?}", found.items);
+
+        let admin = app.state.base.security.resolve(app.admin.id).await.unwrap();
+        let all = execute_search(&app.state, &admin, &word, 1, 20, Audience::Human)
+            .await
+            .unwrap();
+        let ids: Vec<Uuid> = all.items.iter().map(|h| h.record_id).collect();
+        assert!(
+            ids.contains(&on_seen) && ids.contains(&on_hidden),
+            "{:?}",
+            all.items
+        );
+
+        // The file's passages belong to the parent record and keep their page.
+        let key = format!("test/{tag}/contract.pdf");
+        let first = "The supplier delivers the goods to the buyer's warehouse. ".repeat(5);
+        let second = format!("Late delivery costs {word} one percent a week. ").repeat(5);
+        let text = format!("{first}\u{c}{second}");
+        sqlx::query(
+            "INSERT INTO document_text (file_key, format, content_text) VALUES ($1, 'pdf', $2)",
+        )
+        .bind(&key)
+        .bind(&text)
+        .execute(app.db())
+        .await
+        .unwrap();
+        sqlx::query("UPDATE attome_document SET file = $1 WHERE id = $2")
+            .bind(&key)
+            .bind(on_seen)
+            .execute(app.db())
+            .await
+            .unwrap();
+        let registry = attome_core::build_registry(app.db()).await.unwrap();
+        attome_search::corpus::record_chunks::reindex_source(
+            app.db(),
+            &registry,
+            "attome_document",
+            on_seen,
+        )
+        .await
+        .unwrap();
+        let rows: Vec<(String, Uuid, Option<i32>, String)> = sqlx::query_as(
+            "SELECT entity_logicalname, record_id, page, text_display FROM record_chunk \
+              WHERE source_entity = 'attome_document' AND source_id = $1 ORDER BY ordinal",
+        )
+        .bind(on_seen)
+        .fetch_all(app.db())
+        .await
+        .unwrap();
+        assert!(!rows.is_empty());
+        assert!(
+            rows.iter().all(|r| r.0 == seen && r.1 == seen_ids[0]),
+            "{rows:?}"
+        );
+        assert!(
+            rows.iter().any(|r| r.2 == Some(2) && r.3.contains(&word)),
+            "{rows:?}"
+        );
+
+        // A search that matches page two says so.
+        let paged = execute_search(&app.state, &reader, &word, 1, 20, Audience::Human)
+            .await
+            .unwrap();
+        let hit = paged
+            .items
+            .iter()
+            .find(|h| h.record_id == on_seen)
+            .expect("the document is still found");
+        assert_eq!(hit.page, Some(2), "{:?}", paged.items);
+    });
+}

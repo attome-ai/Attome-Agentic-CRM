@@ -14,6 +14,14 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Attached files in search (A25-T6): Excel (`.xlsx`) and email (`.eml`) text is extracted beside
+  PDF, Word and plain text; a PDF keeps its pages, and a search hit for a document carries `page`,
+  the page the query matches best. A document shows only to someone who can read the record it is
+  attached to, and a file uploaded to a sensitive or encrypted field is never indexed. Its passages
+  belong to that record and are embedded when the entity's `document_embedding` search setting is on
+  (migration 0338: `record_chunk.page` and a vector index). New `POST /api/v1/search/similar` returns
+  the readable passages nearest a record, a file or a description; an image answers 503 until an
+  image-text model is supported. See `docs/search-builder.md`.
 - A create in `POST /api/v1/composite` may carry `children` (S1-T9), keyed
   `<child_entity>.<lookup_attribute>`: each child is created right after it, pointing at it, as
   `<ref>_c<n>`; such a request runs all or none, with at most 100 operations once expanded.
