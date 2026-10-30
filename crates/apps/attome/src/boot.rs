@@ -1237,6 +1237,9 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-service-router",
         // J8-T2: social profiles, linked to the records they belong to.
         "attome-omnichannel-social-profile",
+        // A8-T4: notes, activities and the other record-attached children
+        // point at their record through a polymorphic lookup.
+        "attome-records-polymorphic-children",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

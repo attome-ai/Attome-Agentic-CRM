@@ -463,6 +463,13 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
             "../../../../../changesets/platform/0079-attome-omnichannel-social-profile.json"
         ),
     },
+    PlatformChangeset {
+        file: "0080-attome-records-polymorphic-children.json",
+        name: "attome-records-polymorphic-children",
+        json: include_str!(
+            "../../../../../changesets/platform/0080-attome-records-polymorphic-children.json"
+        ),
+    },
 ];
 
 #[cfg(test)]

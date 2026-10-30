@@ -71,6 +71,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Changed
+- Notes, note replies, activities, communications, follows, tags and reminders point at their record through a polymorphic lookup (A8-T4, platform changeset 0080): a write naming a record that does not exist, is not live or cannot be read is refused, and `entity_name` and `record_id` are set together.
 - The web money control and list cells show an amount in its own currency with its decimals, a picker for `<field>_currency` and the base amount as a hint (A19-T5); `GET /api/v1/currencies` is new, and the static `currency-rates.json` and browser-side conversion are gone.
 - A rollup's sum, average, minimum or maximum over a money field with the `fx` option reads its base amounts, so mixed currencies roll up in the base currency at each record's rate (A19-T4).
 - An entity takes up to 1,000 fields (was 500) (A1-T3), and a new field is refused once the table has used 1,500 of PostgreSQL's 1,600 column slots, dropped columns included.

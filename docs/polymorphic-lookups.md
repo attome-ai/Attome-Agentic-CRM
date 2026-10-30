@@ -32,3 +32,12 @@ polymorphic pair `party_entity`/`party_id`) with how they take part: `organizer`
 the person when they are deleted (`on_delete: {"*": "cascade-deactivate"}`). Filtering by the
 party's own fields works through the pair, as for any polymorphic lookup: `party_entity = contact
 AND party_id.city = Riyadh`.
+
+## The platform's record-attached entities
+
+A note, a note's reply, an activity, a communication, a follow, a tag on a record and a reminder
+point at their record through a polymorphic lookup (A8-T4, platform changeset 0080): `record_id`
+with `entity_name` as its pair, any entity as a target. Every write that sets them checks that the
+record exists, is live and can be read by the writer, and both are set together. Documents keep
+their own rule (a document's visibility is its record's, and portal users upload them), and the
+pairs in infrastructure tables (approvals, timeline pins, AI references) are not metadata fields.
