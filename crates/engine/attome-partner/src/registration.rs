@@ -62,6 +62,19 @@ pub const DEFAULT_PROTECTION_DAYS: i64 = 90;
 const MAX_CONFLICTS: usize = 20;
 const ENTITY: &str = "deal_registration";
 
+/// A candidate registration: id, status, customer account, customer name,
+/// product, partner account.
+type CandidateRow = (
+    Uuid,
+    String,
+    Option<Uuid>,
+    Option<String>,
+    Option<Uuid>,
+    Option<Uuid>,
+);
+/// A lapsed registration: id, opportunity, partner account, decided by.
+type LapsedRow = (Uuid, Option<Uuid>, Option<Uuid>, Option<Uuid>);
+
 /// What a registration conflicts with.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
 #[serde(tag = "kind", rename_all = "snake_case")]
@@ -208,14 +221,7 @@ pub async fn find_conflicts(
         );
     }
     // Candidates by account or product; the name fold runs here, in Rust.
-    let others: Vec<(
-        Uuid,
-        String,
-        Option<Uuid>,
-        Option<String>,
-        Option<Uuid>,
-        Option<Uuid>,
-    )> = sqlx::query_as(
+    let others: Vec<CandidateRow> = sqlx::query_as(
         "SELECT id, status, customer_account_ref, customer_name, product_ref, partner_account_ref \
                FROM deal_registration \
               WHERE id <> $1 AND (is_active IS NULL OR is_active = true) \
@@ -342,7 +348,7 @@ pub async fn lapse_tick(state: &EngineState) -> Result<u64, AppError> {
     let mut lapsed = 0;
     loop {
         let mut tx = attome_db::tx::begin(db).await?;
-        let rows: Vec<(Uuid, Option<Uuid>, Option<Uuid>, Option<Uuid>)> = sqlx::query_as(
+        let rows: Vec<LapsedRow> = sqlx::query_as(
             "UPDATE deal_registration r SET status = 'lapsed', modified_at = now(), \
                     row_version = r.row_version + 1 \
               WHERE r.id IN (SELECT id FROM deal_registration \

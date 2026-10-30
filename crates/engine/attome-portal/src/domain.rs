@@ -27,7 +27,6 @@ use axum::{
     routing::get,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use sqlx::PgConnection;
 use utoipa::ToSchema;
 use uuid::Uuid;

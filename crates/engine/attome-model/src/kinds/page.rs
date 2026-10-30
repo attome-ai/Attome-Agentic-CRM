@@ -821,7 +821,10 @@ mod tests {
         home.as_object_mut().unwrap().remove("entity");
         let home_codes = codes(&home);
         assert!(home_codes.contains(&"no_record"), "{home_codes:?}");
-        assert!(home_codes.contains(&"invalid"), "only a record page is a default");
+        assert!(
+            home_codes.contains(&"invalid"),
+            "only a record page is a default"
+        );
     }
 
     #[test]
