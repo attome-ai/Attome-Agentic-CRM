@@ -22,6 +22,11 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     // request itself (a signed assertion or a key secret), and no cookie
     // is read, so it has no CSRF entry.
     "/api/v1/oauth/token",
+    // C7-T1 / T4-T1: the device grant's request and poll. A device has no
+    // session yet; the device code is its proof, and no cookie is read, so
+    // neither has a CSRF entry.
+    "/api/v1/oauth/device_authorization",
+    "/api/v1/oauth/device/token",
     // Q20-T3: a proof-of-work challenge, asked for before any session exists;
     // signed, so it stores nothing.
     "/api/v1/auth/challenge",

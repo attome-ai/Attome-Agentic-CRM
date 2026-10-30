@@ -27,6 +27,21 @@ fn extract_session_cookie(req: &Request, secure_cookies: bool) -> Option<String>
     attome_auth::cookie::extract_session(req.headers(), secure_cookies)
 }
 
+/// C7-T1 / T4-T1: a session JWT sent as `Authorization: Bearer <jwt>` (three
+/// dot-separated parts). An S2S OAuth access token is also a bearer JWT; the
+/// S2S layer in front has already taken a valid one, and an invalid one fails
+/// session validation here as it failed there.
+fn extract_bearer_session(req: &Request) -> Option<String> {
+    let token = req
+        .headers()
+        .get(axum::http::header::AUTHORIZATION)?
+        .to_str()
+        .ok()?
+        .strip_prefix("Bearer ")?
+        .trim();
+    (token.split('.').count() == 3).then(|| token.to_owned())
+}
+
 // ── API key auth ──────────────────────────────────────────────────────────────
 
 /// Parses `Authorization: ApiKey <pub>:<secret>` → `(public_key, secret)`.
@@ -241,7 +256,11 @@ fn check_ip_against_role_lists(
 
 /// Authenticates the request via:
 /// 1. `session_token` JWT cookie (browser/web)
-/// 2. `Authorization: ApiKey <pub>:<secret>` header (scripts/agents)
+/// 2. the same session JWT as `Authorization: Bearer <jwt>` (a device signed
+///    in through the device grant, C7-T1 / T4-T1): every check of the cookie
+///    branch, but never marked a cookie session, so it cannot step up or
+///    approve another device
+/// 3. `Authorization: ApiKey <pub>:<secret>` header (scripts/agents)
 ///
 /// Bypass paths (auth endpoints, health) skip this check entirely.
 pub async fn authn(State(state): State<AppState>, mut req: Request, next: Next) -> Response {
@@ -262,8 +281,10 @@ pub async fn authn(State(state): State<AppState>, mut req: Request, next: Next) 
     // in that case, same posture as every other fail-closed check here.
     let caller_ip = crate::middleware::client_ip::client_ip(&req, &state.config);
 
-    // ── Try JWT cookie first ──────────────────────────────────────────────────
-    if let Some(token) = extract_session_cookie(&req, state.config.auth.secure_cookies) {
+    // ── Try JWT cookie first, then the same JWT as a bearer ───────────────────
+    let cookie_token = extract_session_cookie(&req, state.config.auth.secure_cookies);
+    let from_cookie = cookie_token.is_some();
+    if let Some(token) = cookie_token.or_else(|| extract_bearer_session(&req)) {
         match validate_session_token(
             &token,
             &state.secrets.load().jwt_secret,
@@ -325,8 +346,10 @@ pub async fn authn(State(state): State<AppState>, mut req: Request, next: Next) 
                 }
                 req.extensions_mut().insert(claims);
                 // D-510 rule 7: marks a validated cookie session, the only
-                // caller that can ever step up.
-                req.extensions_mut().insert(CookieSession);
+                // caller that can ever step up. A bearer session is not one.
+                if from_cookie {
+                    req.extensions_mut().insert(CookieSession);
+                }
                 // Q8-T3: a person's request (not a poller's) keeps the
                 // session alive; buffered, flushed once a minute.
                 if !crate::session_activity::is_background(req.headers())
@@ -955,6 +978,27 @@ mod extract_tests {
         assert_eq!(
             extract_api_key(&req),
             Some(("abc123".to_owned(), "secretvalue".to_owned()))
+        );
+    }
+
+    /// C7-T1 / T4-T1: only a three-part JWT after `Bearer ` is a bearer
+    /// session; an API key or any other bearer value is not.
+    #[test]
+    fn extract_bearer_session_takes_only_a_bearer_jwt() {
+        let req = request_with_auth_header(Some("Bearer aaa.bbb.ccc"));
+        assert_eq!(extract_bearer_session(&req), Some("aaa.bbb.ccc".to_owned()));
+        for value in [
+            "Bearer abc123:secretvalue",
+            "ApiKey a.b.c",
+            "Bearer a.b",
+            "bearer a.b.c",
+        ] {
+            let req = request_with_auth_header(Some(value));
+            assert_eq!(extract_bearer_session(&req), None, "{value}");
+        }
+        assert_eq!(
+            extract_bearer_session(&request_with_auth_header(None)),
+            None
         );
     }
 

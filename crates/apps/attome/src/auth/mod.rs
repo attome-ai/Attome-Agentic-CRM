@@ -24,6 +24,8 @@ use std::sync::Arc;
 
 mod address_throttle;
 mod challenge;
+/// C7-T1 / T4-T1: the RFC 8628 device grant.
+mod device;
 mod dto;
 /// Audit plan 3.5 (D-541 rule 6): failed-login coalescing and its sweep.
 pub mod failed_login;
@@ -75,6 +77,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
         passkey::openapi_fragment(),
         jwks::openapi_fragment(),
         challenge::openapi_fragment(),
+        device::openapi_fragment(),
     ] {
         doc.merge(fragment);
     }
@@ -111,6 +114,12 @@ pub fn public_routes(
         .route("/api/v1/auth/login", post(local::login))
         .route("/api/v1/auth/logout", post(session::logout))
         .route("/api/v1/auth/refresh", post(session::refresh_session))
+        // C7-T1 / T4-T1: a device asks, then polls; it has no session yet.
+        .route(
+            "/api/v1/oauth/device_authorization",
+            post(device::device_authorization),
+        )
+        .route("/api/v1/oauth/device/token", post(device::token))
         .route("/api/v1/auth/reset-request", post(local::reset_request))
         .route("/api/v1/auth/reset-confirm", post(local::reset_confirm))
         .route(
@@ -206,6 +215,9 @@ pub fn public_routes(
 pub fn protected_routes(auditor: attome_audit::security::SecurityAuditor) -> Router<AppState> {
     Router::new()
         .route("/api/v1/auth/session", get(session::session_info))
+        // C7-T1 / T4-T1: the signed-in person sees and decides a device grant.
+        .route("/api/v1/oauth/device", get(device::pending_grant))
+        .route("/api/v1/oauth/device/approve", post(device::approve))
         // P-federation-linking-policy §4.3(a) UI support — self-scoped read,
         // not a start/callback route; grouped here since it's protected like
         // session_info, not bypass-listed like the OIDC login routes.

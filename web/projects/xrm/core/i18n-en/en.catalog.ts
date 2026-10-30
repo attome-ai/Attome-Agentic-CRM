@@ -3093,6 +3093,13 @@ export const xrmEn = {
     download: 'Download',
     cannot: 'This value cannot be drawn as that kind of code.',
   },
+  deviceApproval: {
+    title: 'Sign in a device', enterCode: 'Enter the code your device shows', continue: 'Continue',
+    asks: '{name} asks to sign in as you.', code: 'Code', expires: 'expires at',
+    warning: 'Approve only a device you are setting up now. It will act as you.',
+    approve: 'Approve', deny: 'Deny', approved: 'The device is signed in. You can close this page.',
+    denied: 'The device was refused.', notFound: 'This code is unknown, already used or expired.',
+  },
   pageRuntime: {
     loading: 'Loading…',
     notFound: 'This page is not published.',

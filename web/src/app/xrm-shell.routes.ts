@@ -582,6 +582,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/verticals/sales/orgchart').then(m => m.OrgChartComponent),
           },
           {
+            // C7-T1 / T4-T1: approve a device that shows a code (RFC 8628).
+            path: 'device',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/device-approval').then(m => m.DeviceApprovalComponent),
+          },
+          {
             // T2-T2: a published page; `?entity=&record=` for a record page.
             path: 'pages/:id',
             canActivate: [authGuard],

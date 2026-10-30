@@ -35,6 +35,10 @@ pub enum AuthMethod {
     /// (`hwk`): a phishing-resistant factor, and on its own a sign-in that
     /// needs no password.
     Passkey,
+    /// C7-T1 / T4-T1: a device the person approved from a signed-in browser
+    /// (`dev`, the RFC 8628 device grant). Never a factor of its own: a
+    /// session it creates is no stronger than the approval.
+    DeviceGrant,
 }
 
 impl AuthMethod {
@@ -48,6 +52,7 @@ impl AuthMethod {
             AuthMethod::Federated => "fed",
             AuthMethod::IdpMfa => "mfa",
             AuthMethod::Passkey => "hwk",
+            AuthMethod::DeviceGrant => "dev",
         }
     }
 }
@@ -161,6 +166,19 @@ impl AuthContext {
         Self {
             auth_time: asserted_auth_time.map_or(AuthTime::Unknown, AuthTime::Asserted),
             amr: vec![AuthMethod::Federated],
+            oidc: None,
+            device: None,
+        }
+    }
+
+    /// C7-T1 / T4-T1: a session for a device the person approved (RFC 8628).
+    /// Its authentication time is the approving session's, so it is never
+    /// fresher than the sign-in that approved it; `None` when that session
+    /// had none.
+    pub fn device_grant(approver_auth_time: Option<DateTime<Utc>>) -> Self {
+        Self {
+            auth_time: approver_auth_time.map_or(AuthTime::Unknown, AuthTime::Asserted),
+            amr: vec![AuthMethod::DeviceGrant],
             oidc: None,
             device: None,
         }

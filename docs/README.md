@@ -34,6 +34,7 @@
 - [Delta tokens](delta-tokens.md): keeping a copy of a list up to date with only what changed.
 - [Change data capture](change-data-capture.md): change-stream subscriptions, erasure and schema events, a first copy without gaps, resync and consumer health.
 - [Marketing profiles](marketing-profiles.md): profile events and traits, identity links and their conflicts, attribution of won deals, and campaign members from a list.
+- [Device sign-in](device-sign-in.md): the CLI and the mail add-ins signing a person in with the RFC 8628 device grant, approved from a signed-in browser.
 - [Pages](pages.md): component pages, their bindings to views, queries, entities and the record, and an entity's record page such as the crm pack's Account 360.
 - [SQL reports](sql-reports.md): report authors writing SQL that reads only what they can read, and how PostgreSQL keeps it so.
 - [Polymorphic lookups](polymorphic-lookups.md): fields that point at a record of several entities, their targets and per-target delete rules.

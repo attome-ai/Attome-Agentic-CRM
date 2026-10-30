@@ -128,15 +128,49 @@ pub(super) async fn issue_session_for(
     context: &AuthContext,
     login: Option<(&SecurityAuditor, &str)>,
 ) -> Result<IssuedCookies, AppError> {
+    let secure = state.config.auth.secure_cookies;
+    let refresh_ttl = state.config.refresh_token_expiry_secs();
+    let issued = issue_session_tokens(state, user_id, context, login).await?;
+    let refresh_cookie = cookie::build(
+        cookie::refresh_cookie_name(secure),
+        &issued.bearer,
+        refresh_ttl as u64,
+        secure,
+        REFRESH_COOKIE_PATH,
+    );
+    let session_cookie = cookie::build(
+        cookie::session_cookie_name(secure),
+        &issued.access_token,
+        state.config.access_token_expiry_secs(),
+        secure,
+        "/",
+    );
+
+    Ok(IssuedCookies {
+        cookies: [
+            (header::SET_COOKIE, session_cookie),
+            (header::SET_COOKIE, refresh_cookie),
+        ],
+        family_id: issued.family_id,
+    })
+}
+
+/// The session [`issue_session_for`] issues, as its two bearer values
+/// instead of cookies: for a device that signed in through the device grant
+/// (C7-T1, T4-T1), which keeps them itself. Every check and event of a
+/// browser sign-in applies.
+pub(super) async fn issue_session_tokens(
+    state: &AppState,
+    user_id: Uuid,
+    context: &AuthContext,
+    login: Option<(&SecurityAuditor, &str)>,
+) -> Result<refresh::IssuedSession, AppError> {
     // Q9-T1: the held roles' network, hours and country rules, before any
     // session or catch-up work.
     enforce_sign_in_rules(state, user_id, login).await?;
     // Retry the idempotent catch-up on every successful session issuance so
     // a transient queue failure is recovered on the user's next login.
     enqueue_notification_backfill(state, user_id, "session").await;
-    let secure = state.config.auth.secure_cookies;
-
-    let refresh_ttl = state.config.refresh_token_expiry_secs();
     let login_hook = login.map(|(auditor, method)| {
         account_event_hook(
             auditor.service(),
@@ -221,34 +255,12 @@ pub(super) async fn issue_session_for(
             tracing::warn!(%user_id, %error, "auth: the sign-in's device and country were not recorded");
         }
     }
-    let refresh_cookie = cookie::build(
-        cookie::refresh_cookie_name(secure),
-        &issued.bearer,
-        refresh_ttl as u64,
-        secure,
-        REFRESH_COOKIE_PATH,
-    );
-    let access_token = issued.access_token;
-    let session_cookie = cookie::build(
-        cookie::session_cookie_name(secure),
-        &access_token,
-        state.config.access_token_expiry_secs(),
-        secure,
-        "/",
-    );
-
-    Ok(IssuedCookies {
-        cookies: [
-            (header::SET_COOKIE, session_cookie),
-            (header::SET_COOKIE, refresh_cookie),
-        ],
-        family_id: issued.family_id,
-    })
+    Ok(issued)
 }
 
 /// Both refresh-family lifetimes from config (D-504): the idle window each
 /// token gets and the absolute cap the whole family obeys.
-fn refresh_lifetimes(state: &AppState) -> refresh::RefreshLifetimes {
+pub(super) fn refresh_lifetimes(state: &AppState) -> refresh::RefreshLifetimes {
     refresh::RefreshLifetimes {
         idle_secs: state.config.refresh_token_expiry_secs(),
         absolute_secs: state.config.refresh_absolute_lifetime_secs(),

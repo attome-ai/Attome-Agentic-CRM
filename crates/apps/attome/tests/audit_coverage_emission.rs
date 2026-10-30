@@ -966,6 +966,30 @@ async fn pending_token(fx: &Fx, user_id: Uuid, typ: attome_auth::TokenType) -> S
     .expect("mint a pending MFA token")
 }
 
+/// C7-T1 / T4-T1: a form-encoded request with no credential, as a device
+/// sends one.
+fn device_form(uri: &str, body: &str) -> Request<Body> {
+    let mut req = Request::builder()
+        .method("POST")
+        .uri(uri)
+        .header("origin", ORIGIN)
+        .header("content-type", "application/x-www-form-urlencoded")
+        .body(Body::from(body.to_owned()))
+        .expect("build request");
+    req.extensions_mut()
+        .insert(ConnectInfo(SocketAddr::from(([203, 0, 113, 9], 40_009))));
+    req
+}
+
+/// C7-T1 / T4-T1: a pending device grant for the CLI.
+async fn device_grant(fx: &Fx) -> Value {
+    call(
+        fx,
+        device_form("/api/v1/oauth/device_authorization", "client_id=attome-cli"),
+    )
+    .await
+}
+
 /// Sends a fixture request and returns its JSON body, panicking on a non-2xx.
 async fn call(fx: &Fx, req: Request<Body>) -> Value {
     let label = format!("{} {}", req.method(), req.uri());
@@ -4307,6 +4331,46 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 "/api/v1/auth/login",
                 None,
                 Some(json!({"email": email, "password": PASSWORD})),
+            )
+        }
+        // C7-T1 / T4-T1: a person approves a device, which then signs in.
+        "POST /api/v1/oauth/device/approve" => {
+            let (_, email) = seed_user(&fx.base, "device-approve").await;
+            let cookies = login_cookies(fx, &email).await;
+            let grant = device_grant(fx).await;
+            with_cookies(
+                request(
+                    "POST",
+                    "/api/v1/oauth/device/approve",
+                    None,
+                    Some(json!({"user_code": grant["user_code"], "approve": true})),
+                ),
+                &cookies,
+            )
+        }
+        "POST /api/v1/oauth/device/token" => {
+            let (_, email) = seed_user(&fx.base, "device-token").await;
+            let cookies = login_cookies(fx, &email).await;
+            let grant = device_grant(fx).await;
+            call(
+                fx,
+                with_cookies(
+                    request(
+                        "POST",
+                        "/api/v1/oauth/device/approve",
+                        None,
+                        Some(json!({"user_code": grant["user_code"], "approve": true})),
+                    ),
+                    &cookies,
+                ),
+            )
+            .await;
+            device_form(
+                "/api/v1/oauth/device/token",
+                &format!(
+                    "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&client_id=attome-cli&device_code={}",
+                    grant["device_code"].as_str().expect("a device code")
+                ),
             )
         }
         "POST /api/v1/auth/logout" => {
