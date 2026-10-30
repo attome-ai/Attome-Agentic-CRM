@@ -165,6 +165,15 @@ async fn test_system(required_actions: &[&str]) -> Option<EngineSystem> {
         .build()
         .await
         .expect("build EngineSystem");
+    // P9: role-limited metrics, breakdowns and scorecards arrive with a
+    // platform changeset at boot; apply it as boot does, since this
+    // harness's database is migrations only.
+    attome_api::changeset::boot::apply_platform_definition(
+        system.state(),
+        "attome-metric-governance",
+    )
+    .await
+    .expect("apply the metric governance changeset");
     system
         .state()
         .modules

@@ -198,6 +198,13 @@ pub async fn seed_once(state: &EngineState) {
     attome_dashboard::seed::seed_body(db)
         .await
         .expect("attome_dashboard::seed::seed_body");
+    // Z11-T16: `dashboard_variable.expression` arrives with platform
+    // changeset 0074 at boot, which this crate cannot apply (attome-api
+    // depends on it); add the column it adds on this throwaway database.
+    sqlx::query("ALTER TABLE dashboard_variable ADD COLUMN IF NOT EXISTS expression text")
+        .execute(db)
+        .await
+        .expect("dashboard_variable.expression");
     // R-07: `widget_actions::do_duplicate_widget` (and friends) now
     // go through `attome_records::entity_crud::create_record_for`, whose
     // `entity_mutation::create_one` reads auto-value rules from
