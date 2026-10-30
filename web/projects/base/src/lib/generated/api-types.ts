@@ -21633,7 +21633,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Queues the computation of the metric's past periods in `[from, to)`. Each value is recorded as a
+         * Backfill a metric's past periods
+         * @description Queues the computation of the metric's past periods in `[from, to)`. Each value is recorded as a
          *     backfilled snapshot; a period that already has a snapshot is left alone. Only builder and
          *     formula metrics can be backfilled. Needs update rights on metric definitions. Audited.
          */
@@ -21677,7 +21678,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Certifies the metric, or withdraws its certification. Needs `attome_metric.certify` as well as
+         * Certify a metric
+         * @description Certifies the metric, or withdraws its certification. Needs `attome_metric.certify` as well as
          *     update rights on metric definitions. Audited.
          */
         post: operations["certify_metric"];
@@ -30055,7 +30057,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Why a rollup field has its value (A10-T5): its definition, the stored value, how many related records it counts, and the first 100 of them the caller may read, with their amounts. Related records the caller may not read are counted but not listed. Needs read access to the record and the field. */
+        /**
+         * Explain a rollup field's value
+         * @description Why a rollup field has its value (A10-T5): its definition, the stored value, how many related records it counts, and the first 100 of them the caller may read, with their amounts. Related records the caller may not read are counted but not listed. Needs read access to the record and the field.
+         */
         get: operations["explain_rollup"];
         put?: never;
         post?: never;
@@ -41914,14 +41919,22 @@ export interface components {
             /** @description `agent` or `customer`. */
             sender: string;
         };
-        /** @description How fresh a metric's newest value is. */
+        /** @description One kind's freshness. */
         Freshness: {
+            /** @description The checks the last run failed (or skipped). */
+            failing_checks: string[];
+            kind: string;
             /** Format: date-time */
-            computed_at?: string | null;
-            /** @description The newest value failed to compute. */
-            failed: boolean;
-            /** @description No value, or the newest is older than twice the period. */
-            is_stale: boolean;
+            last_ok_run_at?: string | null;
+            /** Format: date-time */
+            last_run_at?: string | null;
+            /**
+             * Format: int64
+             * @description How old a passing run may be.
+             */
+            period_days: number;
+            /** @description `fresh`, `stale`, `failed` or `never`. */
+            status: string;
         };
         /** @description Adding a list to a campaign. */
         FromListBody: {
@@ -45190,6 +45203,15 @@ export interface components {
             used_in: number;
             /** Format: double */
             weight?: number | null;
+        };
+        /** @description How fresh a metric's newest value is. */
+        MetricFreshness: {
+            /** Format: date-time */
+            computed_at?: string | null;
+            /** @description The newest value failed to compute. */
+            failed: boolean;
+            /** @description No value, or the newest is older than twice the period. */
+            is_stale: boolean;
         };
         /** @description What a metric is made of and what a change to it reaches. */
         MetricImpact: {
@@ -61327,7 +61349,7 @@ export interface components {
             actual?: number | null;
             /** @description `hijri` when the metric's periods are Umm al-Qura months and years. */
             calendar_kind?: string | null;
-            freshness: components["schemas"]["Freshness"];
+            freshness: components["schemas"]["MetricFreshness"];
             key: string;
             /** Format: uuid */
             metric_id: string;

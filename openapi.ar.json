@@ -102618,7 +102618,8 @@
         "tags": [
           "dashboard"
         ],
-        "summary": "Queues the computation of the metric's past periods in `[from, to)`. Each value is recorded as a\nbackfilled snapshot; a period that already has a snapshot is left alone. Only builder and\nformula metrics can be backfilled. Needs update rights on metric definitions. Audited.",
+        "summary": "Backfill a metric's past periods",
+        "description": "Queues the computation of the metric's past periods in `[from, to)`. Each value is recorded as a\nbackfilled snapshot; a period that already has a snapshot is left alone. Only builder and\nformula metrics can be backfilled. Needs update rights on metric definitions. Audited.",
         "operationId": "backfill_metric",
         "parameters": [
           {
@@ -102845,7 +102846,8 @@
         "tags": [
           "dashboard"
         ],
-        "summary": "Certifies the metric, or withdraws its certification. Needs `attome_metric.certify` as well as\nupdate rights on metric definitions. Audited.",
+        "summary": "Certify a metric",
+        "description": "Certifies the metric, or withdraws its certification. Needs `attome_metric.certify` as well as\nupdate rights on metric definitions. Audited.",
         "operationId": "certify_metric",
         "parameters": [
           {
@@ -142157,6 +142159,7 @@
         "tags": [
           "entity"
         ],
+        "summary": "Explain a rollup field's value",
         "description": "Why a rollup field has its value (A10-T5): its definition, the stored value, how many related records it counts, and the first 100 of them the caller may read, with their amounts. Related records the caller may not read are counted but not listed. Needs read access to the record and the field.",
         "operationId": "explain_rollup",
         "parameters": [
@@ -174821,26 +174824,46 @@
       },
       "Freshness": {
         "type": "object",
-        "description": "How fresh a metric's newest value is.",
+        "description": "One kind's freshness.",
         "required": [
-          "is_stale",
-          "failed"
+          "kind",
+          "status",
+          "period_days",
+          "failing_checks"
         ],
         "properties": {
-          "computed_at": {
+          "failing_checks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The checks the last run failed (or skipped)."
+          },
+          "kind": {
+            "type": "string"
+          },
+          "last_ok_run_at": {
             "type": [
               "string",
               "null"
             ],
             "format": "date-time"
           },
-          "failed": {
-            "type": "boolean",
-            "description": "The newest value failed to compute."
+          "last_run_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           },
-          "is_stale": {
-            "type": "boolean",
-            "description": "No value, or the newest is older than twice the period."
+          "period_days": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How old a passing run may be."
+          },
+          "status": {
+            "type": "string",
+            "description": "`fresh`, `stale`, `failed` or `never`."
           }
         }
       },
@@ -183426,6 +183449,31 @@
               "null"
             ],
             "format": "double"
+          }
+        }
+      },
+      "MetricFreshness": {
+        "type": "object",
+        "description": "How fresh a metric's newest value is.",
+        "required": [
+          "is_stale",
+          "failed"
+        ],
+        "properties": {
+          "computed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "failed": {
+            "type": "boolean",
+            "description": "The newest value failed to compute."
+          },
+          "is_stale": {
+            "type": "boolean",
+            "description": "No value, or the newest is older than twice the period."
           }
         }
       },
@@ -225645,7 +225693,7 @@
             "description": "`hijri` when the metric's periods are Umm al-Qura months and years."
           },
           "freshness": {
-            "$ref": "#/components/schemas/Freshness"
+            "$ref": "#/components/schemas/MetricFreshness"
           },
           "key": {
             "type": "string"

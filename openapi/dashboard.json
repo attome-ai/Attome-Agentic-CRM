@@ -3366,7 +3366,8 @@
         "tags": [
           "dashboard"
         ],
-        "summary": "Queues the computation of the metric's past periods in `[from, to)`. Each value is recorded as a\nbackfilled snapshot; a period that already has a snapshot is left alone. Only builder and\nformula metrics can be backfilled. Needs update rights on metric definitions. Audited.",
+        "summary": "Backfill a metric's past periods",
+        "description": "Queues the computation of the metric's past periods in `[from, to)`. Each value is recorded as a\nbackfilled snapshot; a period that already has a snapshot is left alone. Only builder and\nformula metrics can be backfilled. Needs update rights on metric definitions. Audited.",
         "operationId": "backfill_metric",
         "parameters": [
           {
@@ -3593,7 +3594,8 @@
         "tags": [
           "dashboard"
         ],
-        "summary": "Certifies the metric, or withdraws its certification. Needs `attome_metric.certify` as well as\nupdate rights on metric definitions. Audited.",
+        "summary": "Certify a metric",
+        "description": "Certifies the metric, or withdraws its certification. Needs `attome_metric.certify` as well as\nupdate rights on metric definitions. Audited.",
         "operationId": "certify_metric",
         "parameters": [
           {
@@ -6375,31 +6377,6 @@
         ],
         "description": "Where an applied filter came from — carried to the response so the\nexplanation (Phase 3.2) and the records drill use the same list."
       },
-      "Freshness": {
-        "type": "object",
-        "description": "How fresh a metric's newest value is.",
-        "required": [
-          "is_stale",
-          "failed"
-        ],
-        "properties": {
-          "computed_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
-          },
-          "failed": {
-            "type": "boolean",
-            "description": "The newest value failed to compute."
-          },
-          "is_stale": {
-            "type": "boolean",
-            "description": "No value, or the newest is older than twice the period."
-          }
-        }
-      },
       "GateIssue": {
         "type": "object",
         "required": [
@@ -6808,6 +6785,31 @@
           },
           "label": {
             "type": "string"
+          }
+        }
+      },
+      "MetricFreshness": {
+        "type": "object",
+        "description": "How fresh a metric's newest value is.",
+        "required": [
+          "is_stale",
+          "failed"
+        ],
+        "properties": {
+          "computed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "failed": {
+            "type": "boolean",
+            "description": "The newest value failed to compute."
+          },
+          "is_stale": {
+            "type": "boolean",
+            "description": "No value, or the newest is older than twice the period."
           }
         }
       },
@@ -8254,7 +8256,7 @@
             "description": "`hijri` when the metric's periods are Umm al-Qura months and years."
           },
           "freshness": {
-            "$ref": "#/components/schemas/Freshness"
+            "$ref": "#/components/schemas/MetricFreshness"
           },
           "key": {
             "type": "string"
