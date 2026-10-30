@@ -856,13 +856,15 @@ pub(super) async fn require_live_record(
     is_append_only: bool,
     record_id: Uuid,
 ) -> Result<(), AppError> {
-    let table = quote_ident(entity_name);
     let live = attome_core::live_row_predicate("t", is_append_only)
         .map(|p| format!("AND {p}"))
         .unwrap_or_default();
     let exists: bool = sqlx::query_scalar(&attome_db::tag_dynamic(
         "entity.timeline",
-        &format!("SELECT EXISTS(SELECT 1 FROM {table} t WHERE t.id = $1 {live})"),
+        &format!(
+            "SELECT EXISTS(SELECT 1 FROM {table} t WHERE t.id = $1 {live})",
+            table = quote_ident(entity_name)
+        ),
     ))
     .bind(record_id)
     .fetch_one(&state.base.db)
@@ -1665,7 +1667,6 @@ async fn fetch_child_source(
             filter.push_str(" AND false");
         }
     }
-    let table = quote_ident(source.entity);
     let sql = format!(
         "SELECT jsonb_build_object('id', t.id, 'micros', {micros}, \
                 'record_entity', t.entity_name, 'record', t.record_id, \
@@ -1674,6 +1675,7 @@ async fn fetch_child_source(
          WHERE {placed} AND {occ} IS NOT NULL {live} {keyset} {filter}{pins} {{rls}} \
          ORDER BY {occ} DESC, t.id DESC LIMIT {lim}",
         micros = micros_sql(&occ),
+        table = quote_ident(source.entity)
     );
     let rows = run_source_query(
         state,
@@ -1803,7 +1805,6 @@ async fn fetch_web_visits(
         "t.id",
         &mut binds,
     );
-    let table = quote_ident(WEB_VISIT_ENTITY);
     let sql = format!(
         "SELECT jsonb_build_object('id', t.id, 'micros', {micros}, \
                 'record_entity', {entity}::text, 'record', t.{col}, \
@@ -1813,6 +1814,7 @@ async fn fetch_web_visits(
          ORDER BY {occ} DESC, t.id DESC LIMIT {lim}",
         micros = micros_sql(&occ),
         col = quote_ident(column),
+        table = quote_ident(WEB_VISIT_ENTITY)
     );
     let rows = run_source_query(
         state,
@@ -1895,7 +1897,6 @@ async fn fetch_linked_decisions(
         &mut binds,
     );
     let pins = pin_sql(&opts.filter, kind, "t.id", &mut binds);
-    let table = quote_ident(DECISION_ENTITY);
     let sql = format!(
         "SELECT jsonb_build_object('id', t.id, 'micros', {micros}, \
                 'actor', t.created_by, 'created_by', t.created_by, 'detail', {detail}) \
@@ -1911,6 +1912,7 @@ async fn fetch_linked_decisions(
            AND t.created_at IS NOT NULL {live} {keyset} {filter}{pins} {{rls}} \
          ORDER BY t.created_at DESC, t.id DESC LIMIT {lim}",
         micros = micros_sql("t.created_at"),
+        table = quote_ident(DECISION_ENTITY)
     );
     let rows = run_source_query(
         state,

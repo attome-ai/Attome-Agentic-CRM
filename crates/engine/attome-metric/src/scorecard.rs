@@ -133,8 +133,10 @@ pub(crate) async fn get_scorecard(
             .map(str::to_owned)
     };
     let roles = crate::governance::role_names(&state.base.db, ctx.user_id).await?;
-    let rows: Vec<ItemRow> = sqlx::query_as(&format!(
-        "SELECT d.id, d.name, d.key, d.period, to_jsonb(d)->>'calendar_kind', d.unit, \
+    // Assembled from code: visible_clause binds the caller at $2 and $3.
+    let rows: Vec<ItemRow> = sqlx::query_as(
+        &[
+            "SELECT d.id, d.name, d.key, d.period, to_jsonb(d)->>'calendar_kind', d.unit, \
                 i.sort_order::double precision, \
                 s.period_start, s.actual, s.status, s.computed_at, s.error_message, \
                 (SELECT t.target_value::double precision FROM dashboard_metric_target t \
@@ -152,10 +154,13 @@ pub(crate) async fn get_scorecard(
           WHERE i.scorecard_ref = $1 \
             AND (i.is_active IS NULL OR i.is_active = true) \
             AND (d.is_active IS NULL OR d.is_active = true) \
-            AND {} \
+            AND ",
+            &crate::governance::visible_clause(2, 3),
+            " \
           ORDER BY i.sort_order NULLS LAST, d.name",
-        crate::governance::visible_clause(2, 3)
-    ))
+        ]
+        .concat(),
+    )
     .bind(scorecard_id)
     .bind(ctx.is_admin)
     .bind(&roles)

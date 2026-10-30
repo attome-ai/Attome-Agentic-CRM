@@ -312,12 +312,16 @@ pub fn spec_sql(spec: &MetricSpec, entity: &EntityMeta, period: &str) -> Result<
             .zip(&dimensions)
             .map(|(name, column)| format!("{column}::text AS {}", quote_ident(name))),
     );
-    let mut sql = format!(
-        "SELECT {} FROM {} t WHERE {}",
-        select.join(", "),
-        quote_ident(&entity.logicalname),
-        conditions.join(" AND ")
-    );
+    // Assembled from quoted identifiers and filter_sql's bound conditions.
+    let mut sql = [
+        "SELECT ",
+        &select.join(", "),
+        " FROM ",
+        &quote_ident(&entity.logicalname),
+        " t WHERE ",
+        &conditions.join(" AND "),
+    ]
+    .concat();
     if !dimensions.is_empty() {
         sql.push_str(&format!(" GROUP BY {}", dimensions.join(", ")));
     }

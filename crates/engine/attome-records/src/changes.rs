@@ -312,10 +312,10 @@ pub async fn readable_ids(
             2,
         )
     };
-    let table = attome_core::quote_ident(entity);
     let sql = format!(
         "SELECT id FROM {table} WHERE id = ANY($1) AND (is_active IS NULL OR is_active = TRUE) {}",
-        predicate.as_ref().map_or("", |p| p.sql.as_str())
+        predicate.as_ref().map_or("", |p| p.sql.as_str()),
+        table = attome_core::quote_ident(entity)
     );
     let sql = attome_db::tag_dynamic("records.changes", &sql);
     let mut query = sqlx::query_scalar::<_, Uuid>(&sql).bind(ids);

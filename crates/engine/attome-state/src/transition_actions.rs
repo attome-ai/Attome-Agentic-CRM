@@ -76,9 +76,9 @@ async fn actor_of(
     record_id: Uuid,
     row_version: Option<i64>,
 ) -> Result<Option<Uuid>, AppError> {
-    let table = attome_core::quote_ident(entity);
     let row: Option<(Option<Uuid>, Option<Uuid>, Option<i64>)> = sqlx::query_as(&format!(
-        "SELECT modified_by, owner_ref, row_version FROM {table} WHERE id = $1"
+        "SELECT modified_by, owner_ref, row_version FROM {table} WHERE id = $1",
+        table = attome_core::quote_ident(entity)
     ))
     .bind(record_id)
     .fetch_optional(&state.base.db)

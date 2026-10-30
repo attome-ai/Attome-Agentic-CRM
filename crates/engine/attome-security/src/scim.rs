@@ -555,6 +555,12 @@ type UserRow = (
 const USER_COLUMNS: &str =
     "id, email, user_name, scim_external_id, is_active, created_at, updated_at";
 
+/// Users a token provisioned, or found by their sign-in email: `$1` the
+/// email, `$2` the external id, `$3` the token.
+const USER_SCOPE: &str = "($1::text IS NULL OR email = $1) \
+     AND ($2::text IS NULL OR (scim_external_id = $2 AND scim_token_ref = $3)) \
+     AND ($1::text IS NOT NULL OR scim_token_ref = $3)";
+
 fn user_json(row: &UserRow) -> Value {
     user_resource(
         row.0,
@@ -636,12 +642,8 @@ async fn list_users(
         Some(Filter::DisplayName(_)) => return Err(bad("users filter on userName or externalId")),
         None => (None, None),
     };
-    // Users this token provisioned, or found by their sign-in email.
-    let scope = "($1::text IS NULL OR email = $1) \
-                 AND ($2::text IS NULL OR (scim_external_id = $2 AND scim_token_ref = $3)) \
-                 AND ($1::text IS NOT NULL OR scim_token_ref = $3)";
     let rows: Vec<UserRow> = sqlx::query_as(&format!(
-        "SELECT {USER_COLUMNS} FROM user_account WHERE {scope} \
+        "SELECT {USER_COLUMNS} FROM user_account WHERE {USER_SCOPE} \
           ORDER BY created_at, id OFFSET $4 LIMIT $5"
     ))
     .bind(&by_name)
@@ -652,14 +654,15 @@ async fn list_users(
     .fetch_all(&state.base.db)
     .await
     .map_err(|e| from_app(AppError::internal(e)))?;
-    let total: i64 =
-        sqlx::query_scalar(&format!("SELECT count(*) FROM user_account WHERE {scope}"))
-            .bind(&by_name)
-            .bind(&by_external)
-            .bind(token.id)
-            .fetch_one(&state.base.db)
-            .await
-            .map_err(|e| from_app(AppError::internal(e)))?;
+    let total: i64 = sqlx::query_scalar(&format!(
+        "SELECT count(*) FROM user_account WHERE {USER_SCOPE}"
+    ))
+    .bind(&by_name)
+    .bind(&by_external)
+    .bind(token.id)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(|e| from_app(AppError::internal(e)))?;
     Ok(scim_json(list_response(
         rows.iter().map(user_json).collect(),
         total,

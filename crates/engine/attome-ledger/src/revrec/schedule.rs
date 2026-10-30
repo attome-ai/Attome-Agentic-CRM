@@ -202,13 +202,13 @@ pub async fn build_schedule_for_invoice_line(
     let pattern = if ratable { "ratable" } else { "point_in_time" };
     let obligation = match existing {
         Some(id) => id,
-        None => sqlx::query_scalar(&format!(
+        None => sqlx::query_scalar(
             "INSERT INTO performance_obligation (id, revenue_contract_ref, source_line_id, \
                  product_ref, kind, pattern, ssp_amount, allocated_amount, start_on, end_on, \
                  status, created_by, owner_ref) \
-             VALUES ($1, $2, $3, $4, 'invoice_line', '{pattern}', $5::numeric, $5::numeric, \
-                     $6, $7, 'open', $8, $8) RETURNING id"
-        ))
+             VALUES ($1, $2, $3, $4, 'invoice_line', $9, $5::numeric, $5::numeric, \
+                     $6, $7, 'open', $8, $8) RETURNING id",
+        )
         .bind(Uuid::now_v7())
         .bind(contract)
         .bind(&source_id)
@@ -217,6 +217,7 @@ pub async fn build_schedule_for_invoice_line(
         .bind(from.or(invoice_date))
         .bind(to.or(invoice_date))
         .bind(actor)
+        .bind(pattern)
         .fetch_one(&mut **tx)
         .await
         .map_err(AppError::internal)?,

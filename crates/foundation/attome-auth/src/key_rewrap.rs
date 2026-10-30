@@ -150,7 +150,13 @@ fn ident(name: &str) -> Result<String, AppError> {
             "encrypted column registry: {name:?} is not an identifier"
         )));
     }
-    Ok(format!("\"{name}\""))
+    Ok(quote_ident(name))
+}
+
+/// `name` in double quotes, each embedded quote doubled. Call it on a name
+/// [`ident`] accepted.
+fn quote_ident(name: &str) -> String {
+    format!("\"{}\"", name.replace('"', "\"\""))
 }
 
 /// One row of a batch: its key, its pair (for [`Sealing::BytesPair`]) and
@@ -163,22 +169,33 @@ async fn fetch_batch(
     after: &str,
     batch: i64,
 ) -> Result<Vec<Row>, AppError> {
-    let table = ident(col.table)?;
-    let column = ident(col.column)?;
-    let key = ident(col.key)?;
-    let pair = match col.sealing {
-        Sealing::BytesPair { first, second, .. } => Some((ident(first)?, ident(second)?)),
-        _ => None,
+    for name in [col.table, col.column, col.key] {
+        ident(name)?;
+    }
+    let sql = match col.sealing {
+        Sealing::BytesPair { first, second, .. } => {
+            ident(first)?;
+            ident(second)?;
+            format!(
+                "SELECT {key}::text, {column}, {first}::text, {second}::text FROM {table} \
+                 WHERE {column} IS NOT NULL AND {key}::text > $1 \
+                 ORDER BY {key}::text LIMIT $2",
+                key = quote_ident(col.key),
+                column = quote_ident(col.column),
+                first = quote_ident(first),
+                second = quote_ident(second),
+                table = quote_ident(col.table),
+            )
+        }
+        _ => format!(
+            "SELECT {key}::text, {column}, NULL::text, NULL::text FROM {table} \
+             WHERE {column} IS NOT NULL AND {key}::text > $1 \
+             ORDER BY {key}::text LIMIT $2",
+            key = quote_ident(col.key),
+            column = quote_ident(col.column),
+            table = quote_ident(col.table),
+        ),
     };
-    let pair_sql = pair
-        .as_ref()
-        .map(|(a, b)| format!(", {a}::text, {b}::text"))
-        .unwrap_or_else(|| ", NULL::text, NULL::text".to_owned());
-    let sql = format!(
-        "SELECT {key}::text, {column}{pair_sql} FROM {table} \
-         WHERE {column} IS NOT NULL AND {key}::text > $1 \
-         ORDER BY {key}::text LIMIT $2"
-    );
     let sql = attome_db::tag_dynamic("key_rewrap.batch", &sql);
     let rows = match col.sealing {
         Sealing::Text | Sealing::TextBoundAs { .. } => {
@@ -214,11 +231,14 @@ async fn write_row(
     old: &Stored,
     fresh: &Stored,
 ) -> Result<bool, AppError> {
+    for name in [col.table, col.column, col.key] {
+        ident(name)?;
+    }
     let sql = format!(
         "UPDATE {table} SET {column} = $1 WHERE {key}::text = $2 AND {column} = $3",
-        table = ident(col.table)?,
-        column = ident(col.column)?,
-        key = ident(col.key)?,
+        table = quote_ident(col.table),
+        column = quote_ident(col.column),
+        key = quote_ident(col.key),
     );
     let sql = attome_db::tag_dynamic("key_rewrap.write", &sql);
     let query = sqlx::query(&sql);

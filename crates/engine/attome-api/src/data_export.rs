@@ -1281,6 +1281,21 @@ async fn complete_export(
 /// (tracked via `row_counter`, incremented only inside `render`'s call
 /// site) — not `stream_masked_export_to_store`'s own line count, which
 /// would over-count by one whenever a header line is present.
+/// The export's one row query, shared by every format: each row as JSON with
+/// its statement's snapshot (L7-T5, the one the export reads in), ordered by
+/// id and bounded at [`MAX_EXPORT_ROWS`] + 1. `table` and `select_list` are
+/// quoted with `quote_ident`; `plan.where_sql` is the compiled filter and
+/// row-security predicate, every value in it bound from `plan.params`.
+fn export_rows_sql(table: &str, select_list: &str, plan: &ExportPlan) -> String {
+    format!(
+        "SELECT row_to_json(xexp)::text, pg_current_snapshot()::text \
+           FROM (SELECT {select_list} FROM {table} t {} \
+         ORDER BY t.id ASC LIMIT {}) xexp",
+        plan.where_sql,
+        MAX_EXPORT_ROWS + 1,
+    )
+}
+
 async fn run_query_and_stream(
     state: &EngineState,
     table: &str,
@@ -1292,15 +1307,7 @@ async fn run_query_and_stream(
 ) -> Result<(i64, String, Option<String>), AppError> {
     use futures_util::StreamExt;
 
-    // L7-T5: every row carries its statement's snapshot, the one the export
-    // reads in.
-    let sql = format!(
-        "SELECT row_to_json(xexp)::text, pg_current_snapshot()::text \
-           FROM (SELECT {select_list} FROM {table} t {} \
-         ORDER BY t.id ASC LIMIT {}) xexp",
-        plan.where_sql,
-        MAX_EXPORT_ROWS + 1,
-    );
+    let sql = export_rows_sql(table, select_list, plan);
     let mut q = sqlx::query_as::<_, (String, String)>(&sql);
     for p in &plan.params {
         q = q.bind(p.clone());
@@ -1377,13 +1384,7 @@ async fn export_xlsx(
         header,
         path,
     } = query;
-    let sql = format!(
-        "SELECT row_to_json(xexp)::text, pg_current_snapshot()::text \
-           FROM (SELECT {select_list} FROM {table} t {} \
-         ORDER BY t.id ASC LIMIT {}) xexp",
-        plan.where_sql,
-        MAX_EXPORT_ROWS + 1,
-    );
+    let sql = export_rows_sql(table, select_list, plan);
     let mut q = sqlx::query_as::<_, (String, String)>(&sql);
     for p in &plan.params {
         q = q.bind(p.clone());
@@ -1587,13 +1588,7 @@ async fn export_parquet(
         header,
         path: _,
     } = query;
-    let sql = format!(
-        "SELECT row_to_json(xexp)::text, pg_current_snapshot()::text \
-           FROM (SELECT {select_list} FROM {table} t {} \
-         ORDER BY t.id ASC LIMIT {}) xexp",
-        plan.where_sql,
-        MAX_EXPORT_ROWS + 1,
-    );
+    let sql = export_rows_sql(table, select_list, plan);
     let mut q = sqlx::query_as::<_, (String, String)>(&sql);
     for p in &plan.params {
         q = q.bind(p.clone());

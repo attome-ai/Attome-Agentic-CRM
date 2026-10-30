@@ -480,14 +480,22 @@ pub fn recompute_sql(
         }
     };
     let col = quote_ident(column);
-    let sql = format!(
-        "UPDATE {} p SET {col} = agg.v \
-         FROM (SELECT ids.id AS parent_id, {agg} AS v \
-               FROM unnest($1::uuid[]) AS ids(id){joins} \
-               GROUP BY ids.id) agg \
-         WHERE p.id = agg.parent_id AND p.{col} IS DISTINCT FROM agg.v",
-        quote_ident(parent_table)
-    );
+    // Assembled from quoted identifiers: `agg` and `joins` are built above
+    // from quote_ident pieces and bind placeholders only.
+    let sql = [
+        "UPDATE ",
+        &quote_ident(parent_table),
+        " p SET ",
+        &col,
+        " = agg.v FROM (SELECT ids.id AS parent_id, ",
+        &agg,
+        " AS v FROM unnest($1::uuid[]) AS ids(id)",
+        &joins,
+        " GROUP BY ids.id) agg WHERE p.id = agg.parent_id AND p.",
+        &col,
+        " IS DISTINCT FROM agg.v",
+    ]
+    .concat();
     Ok((sql, binds))
 }
 

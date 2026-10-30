@@ -315,21 +315,26 @@ async fn open_for_account(
         let has_state = meta.attrs.iter().any(|a| a.logicalname == closed.0);
         (lookup, has_state)
     };
-    let open = if has_state {
+    let sql = if has_state {
         format!(
-            "AND COALESCE({}::text, '') <> ALL($3)",
-            attome_core::quote_ident(closed.0)
+            "SELECT id FROM {table} \
+              WHERE {lookup} = $1 AND (is_active IS NULL OR is_active = true) \
+                AND COALESCE({status}::text, '') <> ALL($3) \
+              ORDER BY created_at DESC LIMIT $2",
+            table = attome_core::quote_ident(entity),
+            lookup = attome_core::quote_ident(&lookup),
+            status = attome_core::quote_ident(closed.0),
         )
     } else {
-        "AND $3::text[] IS NOT NULL".to_owned()
+        format!(
+            "SELECT id FROM {table} \
+              WHERE {lookup} = $1 AND (is_active IS NULL OR is_active = true) \
+                AND $3::text[] IS NOT NULL \
+              ORDER BY created_at DESC LIMIT $2",
+            table = attome_core::quote_ident(entity),
+            lookup = attome_core::quote_ident(&lookup),
+        )
     };
-    let sql = format!(
-        "SELECT id FROM {table} \
-          WHERE {lookup} = $1 AND (is_active IS NULL OR is_active = true) {open} \
-          ORDER BY created_at DESC LIMIT $2",
-        table = attome_core::quote_ident(entity),
-        lookup = attome_core::quote_ident(&lookup),
-    );
     let closed_values: Vec<String> = closed.1.iter().map(|s| (*s).to_owned()).collect();
     sqlx::query_scalar(&sql)
         .bind(account)
@@ -353,25 +358,34 @@ async fn activities_about(
         return Ok(Vec::new());
     }
     let (entities, records): (Vec<String>, Vec<String>) = about.iter().cloned().unzip();
-    let (filter, order) = if tasks {
-        (
+    // Open tasks soonest due, or the latest other activities: one static
+    // string each (Z2-T11: nothing interpolated).
+    macro_rules! activities {
+        ($filter:literal, $order:literal) => {
+            concat!(
+                "SELECT a.id FROM activity a \
+                   JOIN unnest($1::text[], $2::text[]) AS r(entity, record) \
+                     ON a.entity_name = r.entity AND a.record_id = r.record \
+                  WHERE a.id <> $3 AND (a.is_active IS NULL OR a.is_active = true) AND ",
+                $filter,
+                " ORDER BY ",
+                $order,
+                " LIMIT $4"
+            )
+        };
+    }
+    let sql = if tasks {
+        activities!(
             "activity_type::text = 'task' AND status::text = 'open'",
-            "due_at ASC NULLS LAST",
+            "due_at ASC NULLS LAST"
         )
     } else {
-        (
+        activities!(
             "activity_type::text <> 'task'",
-            "COALESCE(completed_at, due_at, created_at) DESC",
+            "COALESCE(completed_at, due_at, created_at) DESC"
         )
     };
-    let sql = format!(
-        "SELECT a.id FROM activity a \
-           JOIN unnest($1::text[], $2::text[]) AS r(entity, record) \
-             ON a.entity_name = r.entity AND a.record_id = r.record \
-          WHERE a.id <> $3 AND (a.is_active IS NULL OR a.is_active = true) AND {filter} \
-          ORDER BY {order} LIMIT $4"
-    );
-    sqlx::query_scalar(&sql)
+    sqlx::query_scalar(sql)
         .bind(&entities)
         .bind(&records)
         .bind(meeting)

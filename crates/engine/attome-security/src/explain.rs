@@ -234,10 +234,10 @@ pub async fn explain(
     record_id: Uuid,
     action: RecordAction,
 ) -> Result<AccessExplanation, AppError> {
-    let table = attome_core::quote_ident(entity_name);
     let record: Option<(Option<Uuid>, Option<Uuid>, Option<i16>)> = sqlx::query_as(&format!(
         "SELECT organization_ref, owner_ref, owner_type FROM {table} \
-         WHERE id = $1 AND (is_active IS NULL OR is_active = true)"
+         WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
+        table = attome_core::quote_ident(entity_name)
     ))
     .bind(record_id)
     .fetch_optional(db)

@@ -123,9 +123,6 @@ pub(crate) async fn polymorphic_on_delete(
     let mut summary = Vec::new();
     let texts: Vec<String> = ids.iter().map(Uuid::to_string).collect();
     for (dep_entity, id_attr, pair_attr, rule) in polymorphic_dependents_of(tx, entity).await? {
-        let table = quote_ident(&dep_entity);
-        let id_col = quote_ident(&id_attr);
-        let pair_col = quote_ident(&pair_attr);
         let step = format!("{path} -> {dep_entity}.{id_attr}");
         match rule {
             OnTargetDelete::Orphan => {}
@@ -133,7 +130,10 @@ pub(crate) async fn polymorphic_on_delete(
                 let blocked: bool = sqlx::query_scalar(&format!(
                     "SELECT EXISTS(SELECT 1 FROM {table} \
                       WHERE {pair_col} = $1 AND {id_col} = ANY($2) \
-                        AND (is_active IS NULL OR is_active = true))"
+                        AND (is_active IS NULL OR is_active = true))",
+                    table = quote_ident(&dep_entity),
+                    pair_col = quote_ident(&pair_attr),
+                    id_col = quote_ident(&id_attr)
                 ))
                 .bind(entity)
                 .bind(&texts)
@@ -152,7 +152,10 @@ pub(crate) async fn polymorphic_on_delete(
                                 row_version = row_version + 1 \
                           WHERE {pair_col} = $1 AND {id_col} = $2 \
                             AND (is_active IS NULL OR is_active = true) \
-                          RETURNING id"
+                          RETURNING id",
+                        table = quote_ident(&dep_entity),
+                        pair_col = quote_ident(&pair_attr),
+                        id_col = quote_ident(&id_attr)
                     ))
                     .bind(entity)
                     .bind(text)
@@ -196,7 +199,6 @@ pub(crate) async fn links_on_delete(
     .map_err(AppError::internal)?;
     let mut summary = Vec::new();
     for (name, entity_a, entity_b, join_table, cascade) in relationships {
-        let join = quote_ident(&join_table);
         // Each side the deleted records sit on, with the other side's table.
         let mut sides = Vec::new();
         if entity_a == entity {
@@ -209,10 +211,9 @@ pub(crate) async fn links_on_delete(
             match RelationshipCascade::from_db_str(&cascade) {
                 RelationshipCascade::Orphan => {}
                 RelationshipCascade::Restrict => {
-                    let other_table = quote_ident(&other_entity);
                     let blocked: bool = sqlx::query_scalar(&format!(
                         "SELECT EXISTS(SELECT 1 FROM {join} j JOIN {other_table} o ON o.id = j.{other} \
-                          WHERE j.{mine} = ANY($1) AND j.is_active = TRUE AND o.is_active = TRUE)"
+                          WHERE j.{mine} = ANY($1) AND j.is_active = TRUE AND o.is_active = TRUE)", join = quote_ident(&join_table), other_table = quote_ident(&other_entity), other = quote_ident(other), mine = quote_ident(mine)
                     ))
                     .bind(ids)
                     .fetch_one(&mut **tx)
@@ -227,7 +228,9 @@ pub(crate) async fn links_on_delete(
                 RelationshipCascade::CascadeDeactivate => {
                     let done = sqlx::query(&format!(
                         "UPDATE {join} SET is_active = false, row_version = row_version + 1 \
-                          WHERE {mine} = ANY($1) AND is_active = TRUE"
+                          WHERE {mine} = ANY($1) AND is_active = TRUE",
+                        join = quote_ident(&join_table),
+                        mine = quote_ident(mine)
                     ))
                     .bind(ids)
                     .execute(&mut **tx)
@@ -284,15 +287,15 @@ pub(crate) async fn cascade_below(
                 .extend(polymorphic_on_delete(tx, &level.entity, &level.ids, &level.path).await?);
             let dependents = dependents_of(tx, &level.entity).await?;
             for (dep_entity, dep_field, mode) in dependents {
-                let dep_table = quote_ident(&dep_entity);
-                let dep_field_ident = quote_ident(&dep_field);
                 let step = format!("{} -> {dep_entity}.{dep_field}", level.path);
                 match mode {
                     OnTargetDelete::Orphan => {}
                     OnTargetDelete::Restrict => {
                         let blocked: bool = sqlx::query_scalar(&format!(
                             "SELECT EXISTS(SELECT 1 FROM {dep_table} \
-                              WHERE {dep_field_ident} = ANY($1) AND is_active = TRUE)"
+                              WHERE {dep_field_ident} = ANY($1) AND is_active = TRUE)",
+                            dep_table = quote_ident(&dep_entity),
+                            dep_field_ident = quote_ident(&dep_field)
                         ))
                         .bind(&level.ids)
                         .fetch_one(&mut **tx)
@@ -307,9 +310,12 @@ pub(crate) async fn cascade_below(
                         let probe = i64::try_from(*budget).unwrap_or(i64::MAX);
                         let over: bool = sqlx::query_scalar(&format!(
                             "SELECT EXISTS (SELECT 1 FROM {dep_table} \
-                              WHERE {dep_field_ident} = ANY($1) AND is_active = TRUE OFFSET {probe})"
+                              WHERE {dep_field_ident} = ANY($1) AND is_active = TRUE OFFSET $2)",
+                            dep_table = quote_ident(&dep_entity),
+                            dep_field_ident = quote_ident(&dep_field)
                         ))
                         .bind(&level.ids)
+                        .bind(probe)
                         .fetch_one(&mut **tx)
                         .await
                         .map_err(AppError::internal)?;
@@ -323,7 +329,7 @@ pub(crate) async fn cascade_below(
                             "UPDATE {dep_table} SET is_active = false, modified_at = NOW(), modified_by = $2, \
                                     row_version = row_version + 1 \
                               WHERE {dep_field_ident} = ANY($1) AND is_active = TRUE \
-                              RETURNING id, {dep_field_ident}"
+                              RETURNING id, {dep_field_ident}", dep_table = quote_ident(&dep_entity), dep_field_ident = quote_ident(&dep_field)
                         ))
                         .bind(&level.ids)
                         .bind(user_id)
@@ -435,8 +441,6 @@ pub(crate) async fn restore_below(
         .map_err(AppError::internal)?;
         let mut next = Vec::new();
         for (dep_entity, dep_field) in groups {
-            let dep_table = quote_ident(&dep_entity);
-            let dep_field_ident = quote_ident(&dep_field);
             let back: Vec<(Uuid,)> = sqlx::query_as(&format!(
                 "UPDATE {dep_table} SET is_active = true, modified_at = NOW(), modified_by = $2, \
                         row_version = row_version + 1 \
@@ -445,7 +449,7 @@ pub(crate) async fn restore_below(
                         SELECT dependent_record_id FROM cascade_deactivation \
                          WHERE parent_record_id = ANY($1) AND dependent_entity = $3 AND dependent_field = $4 \
                     ) \
-                  RETURNING id"
+                  RETURNING id", dep_table = quote_ident(&dep_entity), dep_field_ident = quote_ident(&dep_field)
             ))
             .bind(&frontier)
             .bind(user_id)
@@ -534,10 +538,10 @@ async fn pointing(
     ids: &[Uuid],
     limit: i64,
 ) -> Result<(i64, Vec<Uuid>), AppError> {
-    let table = quote_ident(dep_entity);
-    let field = quote_ident(field);
     let count: i64 = sqlx::query_scalar(&format!(
-        "SELECT COUNT(*) FROM {table} WHERE {field} = ANY($1) AND is_active = TRUE"
+        "SELECT COUNT(*) FROM {table} WHERE {field} = ANY($1) AND is_active = TRUE",
+        table = quote_ident(dep_entity),
+        field = quote_ident(field)
     ))
     .bind(ids)
     .fetch_one(&mut *conn)
@@ -547,9 +551,12 @@ async fn pointing(
         return Ok((0, Vec::new()));
     }
     let found: Vec<Uuid> = sqlx::query_scalar(&format!(
-        "SELECT id FROM {table} WHERE {field} = ANY($1) AND is_active = TRUE ORDER BY id LIMIT {limit}"
+        "SELECT id FROM {table} WHERE {field} = ANY($1) AND is_active = TRUE ORDER BY id LIMIT $2",
+        table = quote_ident(dep_entity),
+        field = quote_ident(field)
     ))
     .bind(ids)
+    .bind(limit)
     .fetch_all(&mut *conn)
     .await
     .map_err(AppError::internal)?;
@@ -579,7 +586,6 @@ async fn link_groups(
     let mut groups = Vec::new();
     let mut blocked = false;
     for (name, entity_a, entity_b, join_table, cascade) in relationships {
-        let join = quote_ident(&join_table);
         let mut sides = Vec::new();
         if entity_a == entity {
             sides.push(("a_id", "b_id", entity_b.clone()));
@@ -595,10 +601,13 @@ async fn link_groups(
                 (None, RelationshipCascade::CascadeDeactivate) => "unlinked",
                 (None, RelationshipCascade::Orphan) => continue,
             };
-            let other_table = quote_ident(&other_entity);
             let count: i64 = sqlx::query_scalar(&format!(
                 "SELECT COUNT(*) FROM {join} j JOIN {other_table} o ON o.id = j.{other} \
-                  WHERE j.{mine} = ANY($1) AND j.is_active = TRUE AND o.is_active = TRUE"
+                  WHERE j.{mine} = ANY($1) AND j.is_active = TRUE AND o.is_active = TRUE",
+                join = quote_ident(&join_table),
+                other_table = quote_ident(&other_entity),
+                other = quote_ident(other),
+                mine = quote_ident(mine)
             ))
             .bind(ids)
             .fetch_one(&mut *conn)

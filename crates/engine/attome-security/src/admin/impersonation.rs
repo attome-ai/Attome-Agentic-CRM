@@ -283,7 +283,8 @@ async fn sessions_page(
     // `column` is one of two literals chosen above, never request data.
     let rows: Vec<SessionRow> = sqlx::query_as(&format!(
         "SELECT {SESSION_COLUMNS} FROM impersonation_session WHERE {column} = $1 \
-         ORDER BY started_at DESC, id DESC LIMIT $2 OFFSET $3"
+         ORDER BY started_at DESC, id DESC LIMIT $2 OFFSET $3",
+        column = attome_core::quote_ident(column)
     ))
     .bind(user_id)
     .bind(window.page_size)
@@ -292,7 +293,8 @@ async fn sessions_page(
     .await
     .map_err(AppError::internal)?;
     let total: i64 = sqlx::query_scalar(&format!(
-        "SELECT COUNT(*) FROM impersonation_session WHERE {column} = $1"
+        "SELECT COUNT(*) FROM impersonation_session WHERE {column} = $1",
+        column = attome_core::quote_ident(column)
     ))
     .bind(user_id)
     .fetch_one(&state.base.db)

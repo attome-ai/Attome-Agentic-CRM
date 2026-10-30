@@ -111,12 +111,12 @@ pub async fn pin(
     attribute: &str,
     user: Uuid,
 ) -> Result<(), AppError> {
-    let t = quote_ident(&provenance_table(entity));
     sqlx::query(&format!(
         "INSERT INTO {t} (golden_id, attribute, contribution_id, rule, chosen_at, pinned_by) \
          VALUES ($1, $2, NULL, 'pinned', now(), $3) \
          ON CONFLICT (golden_id, attribute) DO UPDATE \
-            SET pinned_by = EXCLUDED.pinned_by, chosen_at = now()"
+            SET pinned_by = EXCLUDED.pinned_by, chosen_at = now()",
+        t = quote_ident(&provenance_table(entity))
     ))
     .bind(golden)
     .bind(attribute)
@@ -134,10 +134,10 @@ pub async fn unpin(
     golden: Uuid,
     attribute: &str,
 ) -> Result<bool, AppError> {
-    let t = quote_ident(&provenance_table(entity));
     let done = sqlx::query(&format!(
         "UPDATE {t} SET pinned_by = NULL \
-          WHERE golden_id = $1 AND attribute = $2 AND pinned_by IS NOT NULL"
+          WHERE golden_id = $1 AND attribute = $2 AND pinned_by IS NOT NULL",
+        t = quote_ident(&provenance_table(entity))
     ))
     .bind(golden)
     .bind(attribute)

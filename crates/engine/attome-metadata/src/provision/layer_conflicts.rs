@@ -240,7 +240,6 @@ pub(crate) async fn apply_property_in_tx(
 ) -> Result<(), AppError> {
     let unknown =
         || AppError::Validation(format!("{property} is not a layered property of an {kind}"));
-    let column = quote_ident(property);
     let (entity_id, entity): (Uuid, String) = match kind {
         "entity" => {
             if !ENTITY_PROPERTIES.contains(&property) {
@@ -252,7 +251,8 @@ pub(crate) async fn apply_property_in_tx(
                                     jsonb_build_object($1::text, $2::jsonb))).{column}, \
                         modified_at = now() \
                   WHERE logicalname = $3 AND (is_active IS NULL OR is_active = true) \
-                 RETURNING id, logicalname"
+                 RETURNING id, logicalname",
+                column = quote_ident(property),
             ))
             .bind(property)
             .bind(value)
@@ -275,7 +275,8 @@ pub(crate) async fn apply_property_in_tx(
                    FROM entity_info e \
                   WHERE a.entity_ref = e.id AND e.logicalname = $3 AND a.logicalname = $4 \
                     AND (a.is_active IS NULL OR a.is_active = true) \
-                 RETURNING e.id, e.logicalname"
+                 RETURNING e.id, e.logicalname",
+                column = quote_ident(property),
             ))
             .bind(property)
             .bind(value)

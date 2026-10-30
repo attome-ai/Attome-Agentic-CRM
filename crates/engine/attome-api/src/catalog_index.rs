@@ -1133,6 +1133,15 @@ pub struct PersonalDataItem {
     pub readers: Vec<PersonalDataReader>,
 }
 
+/// The attributes labelled personal, financial or health of live entities
+/// `scope` may see (`$1` the entities, `$2` the hidden attributes).
+const LABELLED: &str = "FROM attribute_info a JOIN entity_info e ON e.id = a.entity_ref \
+    WHERE a.sensitivity IN ('personal', 'financial', 'health') \
+      AND (a.is_active IS NULL OR a.is_active = true) \
+      AND (e.is_active IS NULL OR e.is_active = true) \
+      AND ($1::text[] IS NULL OR e.logicalname = ANY($1)) \
+      AND NOT ((e.logicalname || '.' || a.logicalname) = ANY($2))";
+
 /// L4-T5: a page of the labelled attributes `scope` may see, by entity and
 /// attribute, each with its readers from the metadata references.
 pub async fn personal_data_map(
@@ -1143,14 +1152,8 @@ pub async fn personal_data_map(
 ) -> Result<(Vec<PersonalDataItem>, i64), AppError> {
     // The metadata tables are the migrator pool's (`schema.rs`'s convention).
     let meta = &state.base.db_migrator;
-    let labelled = "FROM attribute_info a JOIN entity_info e ON e.id = a.entity_ref \
-        WHERE a.sensitivity IN ('personal', 'financial', 'health') \
-          AND (a.is_active IS NULL OR a.is_active = true) \
-          AND (e.is_active IS NULL OR e.is_active = true) \
-          AND ($1::text[] IS NULL OR e.logicalname = ANY($1)) \
-          AND NOT ((e.logicalname || '.' || a.logicalname) = ANY($2))";
     let rows: Vec<(String, String, String)> = sqlx::query_as(&format!(
-        "SELECT e.logicalname, a.logicalname, a.sensitivity {labelled} \
+        "SELECT e.logicalname, a.logicalname, a.sensitivity {LABELLED} \
           ORDER BY e.logicalname, a.logicalname LIMIT $3 OFFSET $4"
     ))
     .bind(scope.entities.as_deref())
@@ -1160,7 +1163,7 @@ pub async fn personal_data_map(
     .fetch_all(meta)
     .await
     .map_err(AppError::internal)?;
-    let total: i64 = sqlx::query_scalar(&format!("SELECT count(*) {labelled}"))
+    let total: i64 = sqlx::query_scalar(&format!("SELECT count(*) {LABELLED}"))
         .bind(scope.entities.as_deref())
         .bind(&scope.hidden_attributes)
         .fetch_one(meta)

@@ -237,6 +237,13 @@ fn template_name() -> String {
     format!("attome_tmpl_{hash:016x}")
 }
 
+/// `name` as a quoted PostgreSQL identifier: in double quotes, with each
+/// embedded double quote doubled (attome-db's `quote_ident`; this crate does
+/// not depend on attome-db).
+fn quote_ident(name: &str) -> String {
+    format!("\"{}\"", name.replace('"', "\"\""))
+}
+
 /// Drops the `attome_t_` databases older than [`STALE_AFTER_SECS`] (their
 /// UUIDv7 names carry when they were made) that no session is connected to.
 /// The drop is not forced, so a database a session joined in the meantime is
@@ -261,9 +268,12 @@ async fn drop_stale_databases(conn: &mut PgConnection) -> Result<(), String> {
             .and_then(|id| id.get_timestamp())
             .map(|stamp| stamp.to_unix().0);
         if made.is_some_and(|made| now.saturating_sub(made) >= STALE_AFTER_SECS) {
-            let _ = sqlx::query(&format!("DROP DATABASE IF EXISTS \"{name}\""))
-                .execute(&mut *conn)
-                .await;
+            let _ = sqlx::query(&format!(
+                "DROP DATABASE IF EXISTS {db}",
+                db = quote_ident(&name)
+            ))
+            .execute(&mut *conn)
+            .await;
         }
     }
     Ok(())

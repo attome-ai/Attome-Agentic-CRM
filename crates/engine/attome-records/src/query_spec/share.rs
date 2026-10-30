@@ -129,14 +129,17 @@ fn principals(ctx: &SecurityContext) -> (Vec<Uuid>, Vec<Uuid>) {
     )
 }
 
-/// The predicate matching a share `s` to the role ids bound at `roles` and
-/// the team ids bound at `teams` (placeholders such as `$2`).
-fn share_match(roles: &str, teams: &str) -> String {
-    format!(
-        "((s.principal_type = 0 AND s.principal_id = ANY({roles}::uuid[])) \
-         OR (s.principal_type = 1 AND s.principal_id = ANY({teams}::uuid[])))"
-    )
-}
+/// The predicate matching a share `s` to the role ids bound as `$2` and the
+/// team ids bound as `$3`.
+const SHARE_MATCH_2_3: &str = "((s.principal_type = 0 AND s.principal_id = ANY($2::uuid[])) \
+     OR (s.principal_type = 1 AND s.principal_id = ANY($3::uuid[])))";
+
+/// [`SHARE_MATCH_2_3`] with the roles bound as `$1` and the teams as `$2`.
+const SHARE_MATCH_1_2: &str = "((s.principal_type = 0 AND s.principal_id = ANY($1::uuid[])) \
+     OR (s.principal_type = 1 AND s.principal_id = ANY($2::uuid[])))";
+
+/// A stored query that is not deactivated.
+const LIVE_QUERY: &str = "(q.is_active IS NULL OR q.is_active = true)";
 
 /// The most `ctx` may do with stored query `query_id` through a share of one
 /// of its roles or teams; `None` when no share reaches it.
@@ -150,8 +153,7 @@ pub async fn access_for(
         return Ok(None);
     }
     let rows: Vec<String> = sqlx::query_scalar(&format!(
-        "SELECT s.access FROM sql_query_share s WHERE s.query_id = $1 AND {}",
-        share_match("$2", "$3")
+        "SELECT s.access FROM sql_query_share s WHERE s.query_id = $1 AND {SHARE_MATCH_2_3}"
     ))
     .bind(query_id)
     .bind(&roles)
@@ -306,17 +308,21 @@ pub(crate) async fn put_query_shares(
     }
 
     for share in &body.shares {
-        let table = match share.principal_type {
-            SharePrincipal::Role => "role",
-            SharePrincipal::Team => "team",
+        let (table, exists_sql) = match share.principal_type {
+            SharePrincipal::Role => (
+                "role",
+                "SELECT EXISTS (SELECT 1 FROM role WHERE id = $1 AND is_deleted = false)",
+            ),
+            SharePrincipal::Team => (
+                "team",
+                "SELECT EXISTS (SELECT 1 FROM team WHERE id = $1 AND is_deleted = false)",
+            ),
         };
-        let exists: bool = sqlx::query_scalar(&format!(
-            "SELECT EXISTS (SELECT 1 FROM {table} WHERE id = $1 AND is_deleted = false)"
-        ))
-        .bind(share.principal_id)
-        .fetch_one(&mut *stx)
-        .await
-        .map_err(AppError::internal)?;
+        let exists: bool = sqlx::query_scalar(exists_sql)
+            .bind(share.principal_id)
+            .fetch_one(&mut *stx)
+            .await
+            .map_err(AppError::internal)?;
         if !exists {
             return Err(AppError::Validation(format!(
                 "no {table} {}",
@@ -386,13 +392,11 @@ pub(crate) async fn list_shared_queries(
 ) -> Result<Json<PaginatedResponse<SharedQuery>>, AppError> {
     let window = query.window();
     let (roles, teams) = principals(&ctx);
-    let live = "(q.is_active IS NULL OR q.is_active = true)";
-    let matched = share_match("$1", "$2");
     let rows: Vec<SharedRow> = sqlx::query_as(&format!(
         "SELECT q.id, q.record_no, q.parameters, q.query_spec IS NOT NULL AS runnable, \
                 bool_or(s.access = 'edit') AS can_edit \
            FROM sql_query_share s JOIN sql_query q ON q.id = s.query_id \
-          WHERE {live} AND {matched} \
+          WHERE {LIVE_QUERY} AND {SHARE_MATCH_1_2} \
           GROUP BY q.id, q.record_no, q.parameters, q.query_spec \
           ORDER BY q.record_no NULLS LAST, q.id \
           LIMIT $3 OFFSET $4"
@@ -407,7 +411,7 @@ pub(crate) async fn list_shared_queries(
     let total: i64 = sqlx::query_scalar(&format!(
         "SELECT COUNT(DISTINCT q.id) \
            FROM sql_query_share s JOIN sql_query q ON q.id = s.query_id \
-          WHERE {live} AND {matched}"
+          WHERE {LIVE_QUERY} AND {SHARE_MATCH_1_2}"
     ))
     .bind(&roles)
     .bind(&teams)

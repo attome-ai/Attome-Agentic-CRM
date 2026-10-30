@@ -805,11 +805,11 @@ pub(crate) async fn compare_wave(
             });
             continue;
         };
-        let quoted = attome_core::quote_ident(&table);
         let live: i64 = sqlx::query_scalar(&format!(
             "SELECT COUNT(*) FROM {quoted} t \
               WHERE t.is_active = true AND t.id IN \
-                    (SELECT record_id FROM import_row WHERE job_id = ANY($1) AND action = 'created')"
+                    (SELECT record_id FROM import_row WHERE job_id = ANY($1) AND action = 'created')",
+            quoted = attome_core::quote_ident(&table)
         ))
         .bind(&jobs)
         .fetch_one(&state.base.db)
@@ -825,7 +825,8 @@ pub(crate) async fn compare_wave(
             "SELECT s.record_id, s.mapped, to_jsonb(t) FROM import_stage s \
                JOIN {quoted} t ON t.id = s.record_id \
               WHERE s.job_id = ANY($1) AND s.status = 'applied' AND s.mapped IS NOT NULL \
-              ORDER BY s.job_id, s.row_no LIMIT $2"
+              ORDER BY s.job_id, s.row_no LIMIT $2",
+            quoted = attome_core::quote_ident(&table)
         ))
         .bind(&jobs)
         .bind(COMPARE_SAMPLE)

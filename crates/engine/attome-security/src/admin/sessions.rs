@@ -126,6 +126,17 @@ const ROLE_HOLDERS: &str = "SELECT ur.user_ref FROM user_account_mm_role ur
        JOIN role_mm_team rt ON rt.team_ref = ut.team_ref AND NOT rt.is_deleted
       WHERE rt.role_ref = $1 AND NOT ut.is_deleted";
 
+/// The live sessions of `$1` (or everyone) held by `$2`'s holders (or
+/// anyone): [`ROLE_HOLDERS`] with its role as `$2` (the test below pins it).
+const LIVE_SESSIONS: &str = "t.revoked_at IS NULL AND t.used_at IS NULL AND t.expires_at > NOW()
+           AND ($1::uuid IS NULL OR t.user_ref = $1)
+           AND ($2::uuid IS NULL OR t.user_ref IN (SELECT ur.user_ref FROM user_account_mm_role ur
+      WHERE ur.role_ref = $2 AND NOT ur.is_deleted
+     UNION
+     SELECT ut.user_ref FROM user_account_mm_team ut
+       JOIN role_mm_team rt ON rt.team_ref = ut.team_ref AND NOT rt.is_deleted
+      WHERE rt.role_ref = $2 AND NOT ut.is_deleted))";
+
 type SessionRow = (
     Uuid,
     Uuid,
@@ -147,14 +158,8 @@ async fn list(
     query: OnePageQuery,
 ) -> Result<PaginatedResponse<AdminSessionItem>, AppError> {
     let window = query.window();
-    let filter = format!(
-        "t.revoked_at IS NULL AND t.used_at IS NULL AND t.expires_at > NOW()
-           AND ($1::uuid IS NULL OR t.user_ref = $1)
-           AND ($2::uuid IS NULL OR t.user_ref IN ({}))",
-        ROLE_HOLDERS.replace("$1", "$2")
-    );
     let total: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM refresh_token t WHERE {filter}"
+        "SELECT count(*) FROM refresh_token t WHERE {LIVE_SESSIONS}"
     ))
     .bind(user)
     .bind(role)
@@ -166,7 +171,7 @@ async fn list(
                 t.sign_in_method, t.client_kind, t.family_started_at, t.last_activity_at
            FROM refresh_token t
            JOIN user_account u ON u.id = t.user_ref
-          WHERE {filter}
+          WHERE {LIVE_SESSIONS}
           ORDER BY COALESCE(t.last_activity_at, t.family_started_at) DESC, t.family_id DESC
           LIMIT $3 OFFSET $4"
     ))
@@ -589,4 +594,21 @@ struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// LIVE_SESSIONS is the filter `list` used to build at run time.
+    #[test]
+    fn live_sessions_is_role_holders_with_the_role_as_two() {
+        let built = format!(
+            "t.revoked_at IS NULL AND t.used_at IS NULL AND t.expires_at > NOW()
+           AND ($1::uuid IS NULL OR t.user_ref = $1)
+           AND ($2::uuid IS NULL OR t.user_ref IN ({}))",
+            ROLE_HOLDERS.replace("$1", "$2")
+        );
+        assert_eq!(LIVE_SESSIONS, built);
+    }
 }

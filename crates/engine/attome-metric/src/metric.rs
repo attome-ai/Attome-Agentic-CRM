@@ -940,7 +940,7 @@ async fn run_query_metric(
     query_ref: &str,
     trigger: crate::principal::Trigger,
 ) -> Result<(f64, String), AppError> {
-    let (response, version) = execute_metric_query(state, query_ref, trigger, 1).await?;
+    let (response, version) = execute_metric_query(state, query_ref, trigger, 1, 1).await?;
     let obj = response
         .pointer("/data/records/0")
         .and_then(|v| v.as_object().cloned())
@@ -966,12 +966,28 @@ async fn run_query_metric_members(
     trigger: crate::principal::Trigger,
     dimensions: &[String],
 ) -> Result<(Vec<MemberValue>, String), AppError> {
-    let page = i64::try_from(MAX_MEMBERS + 2).unwrap_or(i64::MAX);
-    let (response, version) = execute_metric_query(state, query_ref, trigger, page).await?;
-    let records = response
-        .pointer("/data/records")
-        .and_then(|v| v.as_array().cloned())
-        .unwrap_or_default();
+    // The stored-query executor serves at most MAX_PAGE_SIZE rows a page;
+    // read pages until the result ends or holds more members than allowed
+    // (the caller refuses that), never the whole of a runaway result.
+    let mut records = Vec::new();
+    let mut version = String::new();
+    for page in 1.. {
+        let (response, page_version) =
+            execute_metric_query(state, query_ref, trigger, page, attome_types::MAX_PAGE_SIZE)
+                .await?;
+        if page == 1 {
+            version = page_version;
+        }
+        let batch = response
+            .pointer("/data/records")
+            .and_then(|v| v.as_array().cloned())
+            .unwrap_or_default();
+        let last = i64::try_from(batch.len()).unwrap_or(i64::MAX) < attome_types::MAX_PAGE_SIZE;
+        records.extend(batch);
+        if last || records.len() > MAX_MEMBERS {
+            break;
+        }
+    }
     let mut rows = Vec::with_capacity(records.len());
     for record in records {
         let Some(obj) = record.as_object() else {
@@ -1010,6 +1026,7 @@ async fn execute_metric_query(
     state: &EngineState,
     query_ref: &str,
     trigger: crate::principal::Trigger,
+    page: i64,
     page_size: i64,
 ) -> Result<(serde_json::Value, String), AppError> {
     let db = &state.base.db;
@@ -1061,7 +1078,7 @@ async fn execute_metric_query(
     let request: ExecuteQueryRequest = serde_json::from_value(serde_json::json!({
         "query_id": query_id,
         "query_version_id": version_id,
-        "page": 1,
+        "page": page,
         "page_size": page_size,
         "include_total": true,
     }))
@@ -1705,17 +1722,22 @@ async fn list_metrics(
     // P9-T11: a metric limited to roles lists only for their holders.
     let roles = crate::governance::role_names(&state.base.db, ctx.user_id).await?;
 
-    let total: i64 = sqlx::query_scalar(&format!(
-        "SELECT COUNT(*) FROM dashboard_metric_definition d \
-         WHERE (d.is_active IS NULL OR d.is_active = true) AND {}",
-        crate::governance::visible_clause(1, 2)
-    ))
+    // Assembled from code: visible_clause binds the caller at $1 and $2.
+    let total: i64 = sqlx::query_scalar(
+        &[
+            "SELECT COUNT(*) FROM dashboard_metric_definition d \
+         WHERE (d.is_active IS NULL OR d.is_active = true) AND ",
+            &crate::governance::visible_clause(1, 2),
+        ]
+        .concat(),
+    )
     .bind(ctx.is_admin)
     .bind(&roles)
     .fetch_one(&state.base.db)
     .await
     .map_err(AppError::internal)?;
 
+    // Assembled from code: visible_clause binds the caller at $3 and $4.
     #[allow(clippy::type_complexity)]
     let rows: Vec<(
         Uuid,
@@ -1733,7 +1755,7 @@ async fn list_metrics(
         Option<i32>,
         Option<Uuid>,
         i64,
-    )> = sqlx::query_as(&format!(
+    )> = sqlx::query_as(&[
         "SELECT d.id, d.name, d.key, d.source_kind, d.query_ref, d.direction, d.period, d.unit, \
                 d.weight::double precision, \
                 (to_jsonb(d)->>'certified')::boolean, \
@@ -1744,10 +1766,12 @@ async fn list_metrics(
                 (SELECT COUNT(*) FROM metric_scorecard_item i \
                   WHERE i.metric_ref = d.id AND (i.is_active IS NULL OR i.is_active = true)) \
          FROM dashboard_metric_definition d \
-         WHERE (d.is_active IS NULL OR d.is_active = true) AND {} \
+         WHERE (d.is_active IS NULL OR d.is_active = true) AND ",
+        &crate::governance::visible_clause(3, 4),
+        " \
          ORDER BY d.name LIMIT $1 OFFSET $2",
-        crate::governance::visible_clause(3, 4)
-    ))
+    ]
+    .concat())
     .bind(window.page_size)
     .bind(window.offset)
     .bind(ctx.is_admin)
@@ -1829,6 +1853,13 @@ pub struct SnapshotListQuery {
     pub dimension_value: Option<String>,
 }
 
+/// A metric's snapshots, bound as `$1` the metric, `$2` a dimension
+/// attribute and `$3` one of its values: totals when both are null, the
+/// members of one dimension (and one value) on request.
+const SNAPSHOT_FILTER: &str = "metric_ref = $1 \
+     AND (($2::text IS NULL AND dimension_attribute IS NULL) OR dimension_attribute = $2) \
+     AND ($3::text IS NULL OR dimension_value = $3)";
+
 /// List a metric's snapshots
 ///
 /// Every value recorded for the metric, newest period first, superseded ones included, so a
@@ -1864,13 +1895,8 @@ async fn list_snapshots(
         page_size: q.page_size,
     }
     .window();
-    // Totals by default; members of one dimension (and one value) on request.
-    let filter = "metric_ref = $1 \
-         AND (($2::text IS NULL AND dimension_attribute IS NULL) OR dimension_attribute = $2) \
-         AND ($3::text IS NULL OR dimension_value = $3)";
-
     let total: i64 = sqlx::query_scalar(&format!(
-        "SELECT COUNT(*) FROM metric_snapshot WHERE {filter}"
+        "SELECT COUNT(*) FROM metric_snapshot WHERE {SNAPSHOT_FILTER}"
     ))
     .bind(metric_id)
     .bind(&q.dimension_attribute)
@@ -1880,7 +1906,7 @@ async fn list_snapshots(
     .map_err(AppError::internal)?;
 
     let items: Vec<SnapshotRow> = sqlx::query_as(&format!(
-        "SELECT {SNAPSHOT_COLUMNS} FROM metric_snapshot WHERE {filter} \
+        "SELECT {SNAPSHOT_COLUMNS} FROM metric_snapshot WHERE {SNAPSHOT_FILTER} \
          ORDER BY period_start DESC, computed_at DESC LIMIT $4 OFFSET $5"
     ))
     .bind(metric_id)

@@ -707,12 +707,12 @@ pub(super) async fn unlink_related(
     let other_entity_name = side.other_entity.to_owned();
     crate::entity_mutation::require_metadata_table_unlocked(&state, &ctx, &def.join_table).await?;
 
-    let join_table = quote_ident(&def.join_table);
-    let this_col = side.this_column;
-    let other_col = side.other_column;
     let sql = format!(
         "UPDATE {join_table} SET is_active = false, row_version = row_version + 1 \
-         WHERE {this_col} = $1 AND {other_col} = $2 AND is_active = true"
+         WHERE {this_col} = $1 AND {other_col} = $2 AND is_active = true",
+        join_table = quote_ident(&def.join_table),
+        this_col = quote_ident(side.this_column),
+        other_col = quote_ident(side.other_column)
     );
 
     // C-09 (M01 §7) — same orchestration as `link_related`: mutate ->

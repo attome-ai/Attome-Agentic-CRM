@@ -270,23 +270,32 @@ pub async fn rebalance(state: &EngineState) -> Result<usize, AppError> {
         return Ok(0);
     }
     let db = &state.base.db;
-    let no_activity = if has_attr(state, "activity", "regarding_entity")
+    // The stale-lead query, with or without the recent-activity filter, as
+    // one static string each (Z2-T11: nothing interpolated).
+    macro_rules! stale_leads {
+        ($no_activity:literal) => {
+            concat!(
+                "SELECT to_jsonb(l) FROM lead l \
+                  WHERE (l.is_active IS NULL OR l.is_active = true) \
+                    AND l.lead_status IN ('new', 'qualified') AND l.assignment_rule_ref IS NOT NULL \
+                    AND COALESCE(l.modified_at, l.created_at) < now() - make_interval(days => $1::int) ",
+                $no_activity,
+                " ORDER BY COALESCE(l.modified_at, l.created_at), l.id LIMIT $2"
+            )
+        };
+    }
+    let sql = if has_attr(state, "activity", "regarding_entity")
         && has_attr(state, "activity", "regarding_id")
     {
-        "AND NOT EXISTS (SELECT 1 FROM activity a WHERE a.regarding_entity = 'lead' \
+        stale_leads!(
+            "AND NOT EXISTS (SELECT 1 FROM activity a WHERE a.regarding_entity = 'lead' \
               AND a.regarding_id::text = l.id::text \
               AND a.created_at >= now() - make_interval(days => $1::int))"
+        )
     } else {
-        ""
+        stale_leads!("")
     };
-    let leads: Vec<Value> = sqlx::query_scalar(&format!(
-        "SELECT to_jsonb(l) FROM lead l \
-          WHERE (l.is_active IS NULL OR l.is_active = true) \
-            AND l.lead_status IN ('new', 'qualified') AND l.assignment_rule_ref IS NOT NULL \
-            AND COALESCE(l.modified_at, l.created_at) < now() - make_interval(days => $1::int) \
-            {no_activity} \
-          ORDER BY COALESCE(l.modified_at, l.created_at), l.id LIMIT $2"
-    ))
+    let leads: Vec<Value> = sqlx::query_scalar(sql)
     .bind(days as i32)
     .bind(REBALANCE_BATCH)
     .fetch_all(db)

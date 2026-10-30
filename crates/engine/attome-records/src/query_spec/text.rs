@@ -701,10 +701,11 @@ mod tests {
         assert!(parse("SELECT Name FROM account").is_err());
         assert!(parse("SELECT from FROM account").is_err());
         assert!(
-            parse(&format!(
-                "SELECT name FROM account WHERE {}",
-                "a = 1 AND ".repeat(60) + "a = 1"
-            ))
+            parse(
+                &("SELECT name FROM account WHERE ".to_owned()
+                    + &"a = 1 AND ".repeat(60)
+                    + "a = 1")
+            )
             .is_err()
         );
         assert!(parse(&"x".repeat(MAX_TEXT_BYTES + 1)).is_err());

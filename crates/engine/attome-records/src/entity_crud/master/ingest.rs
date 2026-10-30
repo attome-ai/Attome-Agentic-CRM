@@ -74,7 +74,6 @@ pub async fn ingest(
         }
         return Err(AppError::Validation(format!("{entity} is not master data")));
     }
-    let t = quote_ident(&contribution_table(entity));
 
     // A3: the entity's own field validation; a failing version is held.
     let held_reason = validation_failure(state, entity, payload)?;
@@ -84,7 +83,8 @@ pub async fn ingest(
          ON CONFLICT (source_system, external_id) DO UPDATE \
             SET payload = EXCLUDED.payload, status = EXCLUDED.status, \
                 held_reason = EXCLUDED.held_reason, received_at = now() \
-         RETURNING id, golden_id"
+         RETURNING id, golden_id",
+        t = quote_ident(&contribution_table(entity))
     ))
     .bind(source_system)
     .bind(external_id)
@@ -145,7 +145,6 @@ pub async fn attach(
     entity: &str,
     pending: Pending<'_>,
 ) -> Result<(Uuid, bool), AppError> {
-    let t = quote_ident(&contribution_table(entity));
     let golden = match pending.golden {
         Some(g) => g,
         None => {
@@ -187,7 +186,8 @@ pub async fn attach(
         }
     };
     sqlx::query(&format!(
-        "UPDATE {t} SET golden_id = $2, status = 'attached', held_reason = NULL WHERE id = $1"
+        "UPDATE {t} SET golden_id = $2, status = 'attached', held_reason = NULL WHERE id = $1",
+        t = quote_ident(&contribution_table(entity))
     ))
     .bind(pending.contribution)
     .bind(golden)

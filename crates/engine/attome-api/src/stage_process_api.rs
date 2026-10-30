@@ -69,16 +69,26 @@ struct ProcessRow {
 }
 
 async fn published(state: &EngineState, filter: ProcessFilter) -> Result<ProcessRow, AppError> {
-    let (clause, bind) = match filter {
-        ProcessFilter::Entity(entity_id) => ("v.doc->>'entity' = $1", entity_id.to_string()),
-        ProcessFilter::Id(id) => ("o.id::text = $1", id.to_string()),
+    // One static statement per filter (Z2-T11: nothing interpolated).
+    macro_rules! published_process {
+        ($clause:literal) => {
+            concat!(
+                "SELECT o.id, o.name, v.doc FROM metadata_object o \
+                   JOIN metadata_object_version v ON v.object_id = o.id \
+                  WHERE o.kind = 'stage_process' AND o.is_active AND v.state = 'published' AND ",
+                $clause,
+                " ORDER BY o.created_at, o.id, v.version_no DESC LIMIT 1"
+            )
+        };
+    }
+    let (sql, bind) = match filter {
+        ProcessFilter::Entity(entity_id) => (
+            published_process!("v.doc->>'entity' = $1"),
+            entity_id.to_string(),
+        ),
+        ProcessFilter::Id(id) => (published_process!("o.id::text = $1"), id.to_string()),
     };
-    sqlx::query_as::<_, ProcessRow>(&format!(
-        "SELECT o.id, o.name, v.doc FROM metadata_object o \
-           JOIN metadata_object_version v ON v.object_id = o.id \
-          WHERE o.kind = 'stage_process' AND o.is_active AND v.state = 'published' AND {clause} \
-          ORDER BY o.created_at, o.id, v.version_no DESC LIMIT 1"
-    ))
+    sqlx::query_as::<_, ProcessRow>(sql)
     .bind(bind)
     .fetch_optional(&state.base.db)
     .await

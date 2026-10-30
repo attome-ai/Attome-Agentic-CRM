@@ -89,19 +89,20 @@ pub async fn apply(
             continue;
         };
         let (take, add) = deltas(old, new, &opts);
-        for (delta, sign) in [(take, "-"), (add, "+")] {
+        for (delta, sign) in [(take, -1_i32), (add, 1_i32)] {
             let Some((parent, amount)) = delta else {
                 continue;
             };
-            let col = quote_ident(&column);
             let sql = format!(
-                "UPDATE {} SET {col} = COALESCE({col}, 0) {sign} $2::numeric WHERE id = $1",
-                quote_ident(&parent_table)
+                "UPDATE {} SET {col} = COALESCE({col}, 0) + $2::numeric * $3::int4 WHERE id = $1",
+                quote_ident(&parent_table),
+                col = quote_ident(&column)
             );
             let sql = attome_db::tag_dynamic("rollup.exact_delta", &sql);
             sqlx::query(&sql)
                 .bind(parent)
                 .bind(&amount)
+                .bind(sign)
                 .execute(&mut **tx)
                 .await
                 .map_err(AppError::internal)?;

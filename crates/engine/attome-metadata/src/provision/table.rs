@@ -281,7 +281,10 @@ async fn backfill_system_columns(
             db,
             logicalname,
             "row_version backfill ALTER",
-            &format!(r#"ALTER TABLE "{logicalname}" ADD COLUMN IF NOT EXISTS row_version BIGINT NOT NULL DEFAULT 0"#),
+            &format!(
+                r#"ALTER TABLE {t} ADD COLUMN IF NOT EXISTS row_version BIGINT NOT NULL DEFAULT 0"#,
+                t = quote_ident(logicalname)
+            ),
         )
         .await?;
     }
@@ -297,7 +300,8 @@ async fn backfill_system_columns(
             logicalname,
             "modified_at backfill ALTER",
             &format!(
-                r#"ALTER TABLE "{logicalname}" ADD COLUMN IF NOT EXISTS modified_at TIMESTAMPTZ"#
+                r#"ALTER TABLE {t} ADD COLUMN IF NOT EXISTS modified_at TIMESTAMPTZ"#,
+                t = quote_ident(logicalname)
             ),
         )
         .await?;
@@ -307,7 +311,10 @@ async fn backfill_system_columns(
             db,
             logicalname,
             "modified_by backfill ALTER",
-            &format!(r#"ALTER TABLE "{logicalname}" ADD COLUMN IF NOT EXISTS modified_by UUID"#),
+            &format!(
+                r#"ALTER TABLE {t} ADD COLUMN IF NOT EXISTS modified_by UUID"#,
+                t = quote_ident(logicalname)
+            ),
         )
         .await?;
     }
@@ -330,7 +337,8 @@ async fn backfill_system_columns(
             logicalname,
             "created_at backfill ALTER",
             &format!(
-                r#"ALTER TABLE "{logicalname}" ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ"#
+                r#"ALTER TABLE {t} ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ"#,
+                t = quote_ident(logicalname)
             ),
         )
         .await?;
@@ -351,7 +359,10 @@ async fn backfill_system_columns(
             db,
             logicalname,
             "created_at default backfill ALTER",
-            &format!(r#"ALTER TABLE "{logicalname}" ALTER COLUMN created_at SET DEFAULT NOW()"#),
+            &format!(
+                r#"ALTER TABLE {t} ALTER COLUMN created_at SET DEFAULT NOW()"#,
+                t = quote_ident(logicalname)
+            ),
         )
         .await?;
     }
@@ -361,7 +372,10 @@ async fn backfill_system_columns(
             db,
             logicalname,
             "created_by backfill ALTER",
-            &format!(r#"ALTER TABLE "{logicalname}" ADD COLUMN IF NOT EXISTS created_by UUID"#),
+            &format!(
+                r#"ALTER TABLE {t} ADD COLUMN IF NOT EXISTS created_by UUID"#,
+                t = quote_ident(logicalname)
+            ),
         )
         .await?;
     }
@@ -379,7 +393,10 @@ async fn backfill_system_columns(
             db,
             logicalname,
             "owner_ref backfill ALTER",
-            &format!(r#"ALTER TABLE "{logicalname}" ADD COLUMN IF NOT EXISTS owner_ref UUID"#),
+            &format!(
+                r#"ALTER TABLE {t} ADD COLUMN IF NOT EXISTS owner_ref UUID"#,
+                t = quote_ident(logicalname)
+            ),
         )
         .await?;
     }
@@ -389,7 +406,8 @@ async fn backfill_system_columns(
             logicalname,
             "owner_type backfill ALTER",
             &format!(
-                r#"ALTER TABLE "{logicalname}" ADD COLUMN IF NOT EXISTS owner_type SMALLINT NOT NULL DEFAULT 0"#
+                r#"ALTER TABLE {t} ADD COLUMN IF NOT EXISTS owner_type SMALLINT NOT NULL DEFAULT 0"#,
+                t = quote_ident(logicalname)
             ),
         )
         .await?;
@@ -405,7 +423,8 @@ async fn backfill_system_columns(
             logicalname,
             "organization_ref backfill ALTER",
             &format!(
-                r#"ALTER TABLE "{logicalname}" ADD COLUMN IF NOT EXISTS organization_ref UUID"#
+                r#"ALTER TABLE {t} ADD COLUMN IF NOT EXISTS organization_ref UUID"#,
+                t = quote_ident(logicalname)
             ),
         )
         .await?;
@@ -423,7 +442,10 @@ async fn backfill_system_columns(
             db,
             logicalname,
             "id-default backfill ALTER",
-            &format!(r#"ALTER TABLE "{logicalname}" ALTER COLUMN id SET DEFAULT uuidv7()"#),
+            &format!(
+                r#"ALTER TABLE {t} ALTER COLUMN id SET DEFAULT uuidv7()"#,
+                t = quote_ident(logicalname)
+            ),
         )
         .await?;
     }
@@ -450,7 +472,8 @@ async fn ensure_is_active(
             logicalname,
             "is_active backfill ALTER",
             &format!(
-                r#"ALTER TABLE "{logicalname}" ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE"#
+                r#"ALTER TABLE {t} ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE"#,
+                t = quote_ident(logicalname)
             ),
         )
         .await?;
@@ -474,7 +497,10 @@ async fn ensure_is_active(
             db,
             logicalname,
             "is_active-default backfill ALTER",
-            &format!(r#"ALTER TABLE "{logicalname}" ALTER COLUMN is_active SET DEFAULT TRUE"#),
+            &format!(
+                r#"ALTER TABLE {t} ALTER COLUMN is_active SET DEFAULT TRUE"#,
+                t = quote_ident(logicalname)
+            ),
         )
         .await?;
     }

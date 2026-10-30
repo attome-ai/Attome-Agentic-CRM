@@ -184,9 +184,9 @@ async fn score_records(db: &DbPool, meta: &EntityMeta, ids: &[Uuid]) -> Result<u
     }
     let required = required_of(meta);
     let rules = rules_of(db, &meta.logicalname).await?;
-    let table = quote_ident(&meta.logicalname);
     let rows: Vec<(Uuid, Value)> = sqlx::query_as(&format!(
-        "SELECT t.id, row_to_json(t)::jsonb FROM {table} t WHERE t.id = ANY($1)"
+        "SELECT t.id, row_to_json(t)::jsonb FROM {table} t WHERE t.id = ANY($1)",
+        table = quote_ident(&meta.logicalname)
     ))
     .bind(ids)
     .fetch_all(db)
@@ -413,9 +413,9 @@ pub async fn rescan_step(
     };
     let db = &state.base.db;
     let next = if record_scoring_on(db, entity).await? {
-        let table = quote_ident(entity);
         let ids: Vec<Uuid> = sqlx::query_scalar(&format!(
-            "SELECT id FROM {table} WHERE ($1::uuid IS NULL OR id > $1) ORDER BY id LIMIT $2"
+            "SELECT id FROM {table} WHERE ($1::uuid IS NULL OR id > $1) ORDER BY id LIMIT $2",
+            table = quote_ident(entity)
         ))
         .bind(after)
         .bind(RESCAN_BATCH)

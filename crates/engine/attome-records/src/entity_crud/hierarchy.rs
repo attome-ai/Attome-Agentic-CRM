@@ -478,8 +478,6 @@ pub(super) async fn move_preview(
     )
     .await?;
     let field = hierarchy_field(entity_id, &attrs, None)?;
-    let table = quote_ident(&entity_name);
-    let field_ident = quote_ident(&field.logicalname);
     let (moving, parent_in_subtree, height): (i64, bool, i32) =
         sqlx::query_as(&attome_db::tag_dynamic(
             "entity.hierarchy",
@@ -490,7 +488,9 @@ pub(super) async fn move_preview(
              SELECT c.id, s.depth + 1 FROM {table} c JOIN subtree s ON c.{field_ident} = s.id \
              WHERE s.depth < $2 AND (c.is_active IS NULL OR c.is_active = true) \
          ) \
-         SELECT count(*), COALESCE(bool_or(id = $3), false), COALESCE(max(depth), 0) FROM subtree"
+         SELECT count(*), COALESCE(bool_or(id = $3), false), COALESCE(max(depth), 0) FROM subtree",
+                table = quote_ident(&entity_name),
+                field_ident = quote_ident(&field.logicalname)
             ),
         ))
         .bind(record_id)
@@ -508,7 +508,7 @@ pub(super) async fn move_preview(
                  SELECT t.{field_ident}, chain.depth + 1 FROM {table} t JOIN chain ON t.id = chain.id \
                  WHERE chain.depth < $2 \
              ) \
-             SELECT COALESCE(max(depth), 0) FROM chain WHERE id IS NOT NULL"
+             SELECT COALESCE(max(depth), 0) FROM chain WHERE id IS NOT NULL", table = quote_ident(&entity_name), field_ident = quote_ident(&field.logicalname)
         )))
         .bind(parent)
         .bind(MAX_HIERARCHY_DEPTH as i32)

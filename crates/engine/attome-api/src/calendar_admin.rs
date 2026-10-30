@@ -1119,7 +1119,8 @@ async fn lock_date_row_owner(
 ) -> Result<(), AppError> {
     let sql = format!(
         "SELECT owner_layer FROM {table} \
-         WHERE id = $1 AND calendar_id = $2 AND is_active = true FOR UPDATE"
+         WHERE id = $1 AND calendar_id = $2 AND is_active = true FOR UPDATE",
+        table = attome_core::quote_ident(table)
     );
     let owner: Option<String> = sqlx::query_scalar(&sql)
         .bind(id)

@@ -66,8 +66,9 @@ pub async fn ensure_ahead(ddl: &DbPool, today: NaiveDate) -> Result<u32, AppErro
         if exists {
             continue;
         }
-        // DDL takes no bind parameters; the bounds are dates this function
-        // computed, never request data.
+        // The bounds are dates this function computed, never request data.
+        // DDL takes no bind parameters, so the attach below has PostgreSQL's
+        // format() quote them.
         let from = format!("{day} 00:00:00+00");
         let to = format!("{} 00:00:00+00", day + Duration::days(1));
         let mut tx = attome_db::tx::begin(ddl).await?;
@@ -78,7 +79,8 @@ pub async fn ensure_ahead(ddl: &DbPool, today: NaiveDate) -> Result<u32, AppErro
         // Built beside the table and attached, so rows of this day that
         // landed in the default partition move into it first.
         sqlx::query(&format!(
-            r#"CREATE TABLE "{name}" (LIKE "{TABLE}" INCLUDING DEFAULTS INCLUDING CONSTRAINTS)"#
+            r#"CREATE TABLE {} (LIKE "{TABLE}" INCLUDING DEFAULTS INCLUDING CONSTRAINTS)"#,
+            attome_db::ident::quote_ident(&name)
         ))
         .execute(&mut *tx)
         .await
@@ -86,20 +88,32 @@ pub async fn ensure_ahead(ddl: &DbPool, today: NaiveDate) -> Result<u32, AppErro
         sqlx::query(&format!(
             r#"WITH moved AS (
                    DELETE FROM "{TABLE}_default"
-                    WHERE created_at >= '{from}' AND created_at < '{to}'
+                    WHERE created_at >= $1::timestamptz AND created_at < $2::timestamptz
                 RETURNING *
                )
-               INSERT INTO "{name}" SELECT * FROM moved"#
+               INSERT INTO {} SELECT * FROM moved"#,
+            attome_db::ident::quote_ident(&name)
         ))
+        .bind(&from)
+        .bind(&to)
         .execute(&mut *tx)
         .await
         .map_err(AppError::internal)?;
-        sqlx::query(&format!(
-            r#"ALTER TABLE "{TABLE}" ATTACH PARTITION "{name}" FOR VALUES FROM ('{from}') TO ('{to}')"#
-        ))
-        .execute(&mut *tx)
+        let attach: String = sqlx::query_scalar(
+            "SELECT format('ALTER TABLE %I ATTACH PARTITION %I FOR VALUES FROM (%L) TO (%L)', \
+                    $1::text, $2::text, $3::text, $4::text)",
+        )
+        .bind(TABLE)
+        .bind(&name)
+        .bind(&from)
+        .bind(&to)
+        .fetch_one(&mut *tx)
         .await
         .map_err(AppError::internal)?;
+        sqlx::query(&attach)
+            .execute(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
         tx.commit().await.map_err(AppError::internal)?;
         created += 1;
     }
@@ -138,14 +152,15 @@ pub async fn drop_expired(
             .map_err(AppError::internal)?;
         let still_needed: bool = sqlx::query_scalar(&format!(
             r#"SELECT EXISTS (
-                   SELECT 1 FROM "{name}" e
+                   SELECT 1 FROM {} e
                     WHERE e.processed_at IS NULL
                        OR e.commit_xid > COALESCE(
                               (SELECT MIN(last_commit_xid) FROM change_consumer_cursor
                                 WHERE status = 'active'),
                               e.commit_xid
                           )
-               )"#
+               )"#,
+            attome_db::ident::quote_ident(&name)
         ))
         .fetch_one(&mut *tx)
         .await
@@ -159,10 +174,13 @@ pub async fn drop_expired(
             );
             continue;
         }
-        sqlx::query(&format!(r#"DROP TABLE "{name}""#))
-            .execute(&mut *tx)
-            .await
-            .map_err(AppError::internal)?;
+        sqlx::query(&format!(
+            "DROP TABLE {}",
+            attome_db::ident::quote_ident(&name)
+        ))
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
         tx.commit().await.map_err(AppError::internal)?;
         dropped.push(name);
     }

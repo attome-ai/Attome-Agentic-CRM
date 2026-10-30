@@ -196,13 +196,13 @@ pub async fn archive_period(
     let db = &state.base.db;
     let period = period.with_day(1).unwrap_or(period);
 
-    let table = quote_ident(entity);
     let rows: Vec<(Uuid, Value)> = sqlx::query_as(&format!(
         "SELECT t.id, to_jsonb(t) FROM {table} t \
           WHERE t.id = ANY($1) AND t.is_active = false \
             AND NOT EXISTS (SELECT 1 FROM archive_tier_record r \
                              WHERE r.entity_logicalname = $2 AND r.record_id = t.id \
-                               AND r.restored_at IS NULL)"
+                               AND r.restored_at IS NULL)",
+        table = quote_ident(entity)
     ))
     .bind(ids)
     .bind(entity)

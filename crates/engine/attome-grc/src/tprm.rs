@@ -494,12 +494,12 @@ async fn score_answered(
         if state.entities.load().get(&response_entity).is_none() {
             continue;
         }
-        let target = attome_core::quote_ident(&response_entity);
         let answers: Option<Value> = sqlx::query_scalar(&format!(
             "SELECT to_jsonb(r) FROM {target} r \
               WHERE r.regarding_entity = 'vendor_assessment' AND r.regarding_id = $1 \
                 AND r.submitted_at IS NOT NULL \
-              ORDER BY r.submitted_at DESC LIMIT 1"
+              ORDER BY r.submitted_at DESC LIMIT 1",
+            target = attome_core::quote_ident(&response_entity)
         ))
         .bind(assessment.to_string())
         .fetch_optional(db)

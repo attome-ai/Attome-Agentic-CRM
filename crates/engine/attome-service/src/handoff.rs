@@ -497,6 +497,13 @@ pub async fn return_to_agent(
 
 // ── For people (AI7-T5's routes) ──────────────────────────────────────────
 
+/// A hand-off pending for the user bound as `$1`: to them, or to a queue they
+/// are an active member of.
+const PENDING_FOR_USER: &str = "h.status = 'pending' AND ((h.to_kind = 'user' AND h.to_ref = $1) \
+     OR (h.to_kind = 'queue' AND EXISTS (SELECT 1 FROM service_work_queue_member m \
+         WHERE m.queue_ref = h.to_ref AND m.user_ref = $1 \
+           AND (m.is_active IS NULL OR m.is_active = true))))";
+
 /// The hand-offs waiting for `user`: to them, or to a queue they are an
 /// active member of; newest first.
 pub async fn pending_for(
@@ -505,12 +512,8 @@ pub async fn pending_for(
     page: &attome_types::OnePageQuery,
 ) -> Result<attome_types::PaginatedResponse<Handoff>, AppError> {
     let window = page.window();
-    let mine = "h.status = 'pending' AND ((h.to_kind = 'user' AND h.to_ref = $1) \
-         OR (h.to_kind = 'queue' AND EXISTS (SELECT 1 FROM service_work_queue_member m \
-             WHERE m.queue_ref = h.to_ref AND m.user_ref = $1 \
-               AND (m.is_active IS NULL OR m.is_active = true))))";
     let total: i64 = sqlx::query_scalar(&format!(
-        "SELECT COUNT(*) FROM service_handoff h WHERE {mine}"
+        "SELECT COUNT(*) FROM service_handoff h WHERE {PENDING_FOR_USER}"
     ))
     .bind(user)
     .fetch_one(db)
@@ -521,16 +524,22 @@ pub async fn pending_for(
         .map(|c| format!("h.{}", c.trim()))
         .collect::<Vec<_>>()
         .join(", ");
-    let rows: Vec<HandoffRow> = sqlx::query_as(&format!(
-        "SELECT {columns} FROM service_handoff h WHERE {mine} \
-          ORDER BY h.created_at DESC, h.id LIMIT $2 OFFSET $3"
-    ))
-    .bind(user)
-    .bind(window.page_size)
-    .bind(window.offset)
-    .fetch_all(db)
-    .await
-    .map_err(AppError::internal)?;
+    // Assembled from constants: `columns` is HANDOFF_COLUMNS under `h.`.
+    let sql = [
+        "SELECT ",
+        &columns,
+        " FROM service_handoff h WHERE ",
+        PENDING_FOR_USER,
+        " ORDER BY h.created_at DESC, h.id LIMIT $2 OFFSET $3",
+    ]
+    .concat();
+    let rows: Vec<HandoffRow> = sqlx::query_as(&sql)
+        .bind(user)
+        .bind(window.page_size)
+        .bind(window.offset)
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?;
     Ok(attome_types::PaginatedResponse::new(
         rows.into_iter().map(from_row).collect(),
         total,

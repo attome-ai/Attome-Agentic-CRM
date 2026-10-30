@@ -962,11 +962,9 @@ pub(crate) async fn validate_lookup_targets(
     drop(registry);
 
     for (target_logicalname, fields) in queries {
-        let target_table = quote_ident(&target_logicalname);
         let ids: Vec<Uuid> = fields.iter().map(|(_, id)| *id).collect();
         let live_ids: Vec<Uuid> = sqlx::query_scalar(&format!(
-            "SELECT id FROM {target_table} WHERE id = ANY($1) AND (is_active IS NULL OR is_active = TRUE)"
-        ))
+            "SELECT id FROM {target_table} WHERE id = ANY($1) AND (is_active IS NULL OR is_active = TRUE)", target_table = quote_ident(&target_logicalname)))
         .bind(&ids)
         .fetch_all(&state.base.db)
         .await
@@ -1040,10 +1038,10 @@ pub(crate) async fn lock_lookup_targets(
     }
 
     for (target_logicalname, fields) in queries {
-        let table = quote_ident(&target_logicalname);
         let ids: Vec<Uuid> = fields.iter().map(|(_, id)| *id).collect();
         let live_ids: Vec<Uuid> = sqlx::query_scalar(&format!(
-            "SELECT id FROM {table} WHERE id = ANY($1) AND is_active = TRUE FOR KEY SHARE"
+            "SELECT id FROM {table} WHERE id = ANY($1) AND is_active = TRUE FOR KEY SHARE",
+            table = quote_ident(&target_logicalname)
         ))
         .bind(&ids)
         .fetch_all(&mut *tx)
@@ -1274,7 +1272,6 @@ pub(crate) async fn guard_hierarchy_cycles(
     attrs: &[AttrInfo],
     obj: &serde_json::Map<String, Value>,
 ) -> Result<(), AppError> {
-    let table = quote_ident(entity_name);
     for attr in attrs
         .iter()
         .filter(|a| a.field_type_int == 11 && a.lookup_entity_ref == Some(entity_id))
@@ -1295,7 +1292,6 @@ pub(crate) async fn guard_hierarchy_cycles(
             )));
         }
 
-        let field_ident = quote_ident(&attr.logicalname);
         let (contains_record, max_depth, reached_root): (bool, i32, bool) =
             sqlx::query_as(&format!(
                 "WITH RECURSIVE chain(id, depth) AS ( \
@@ -1308,7 +1304,9 @@ pub(crate) async fn guard_hierarchy_cycles(
                  SELECT COALESCE(bool_or(id = $3), false), \
                         COALESCE(max(depth), 0), \
                         COALESCE(bool_or(id IS NULL), false) \
-                 FROM chain"
+                 FROM chain",
+                field_ident = quote_ident(&attr.logicalname),
+                table = quote_ident(entity_name)
             ))
             .bind(current)
             .bind(MAX_HIERARCHY_DEPTH as i32)
@@ -1360,8 +1358,6 @@ pub(crate) async fn guard_hierarchy_redirect_cycle(
             "{field_logicalname}: merge would make a record its own parent"
         )));
     }
-    let table = quote_ident(entity_name);
-    let field_ident = quote_ident(field_logicalname);
     let (contains_any, max_depth, reached_root): (bool, i32, bool) = sqlx::query_as(&format!(
         "WITH RECURSIVE chain(id, depth) AS ( \
             SELECT {field_ident}, 1::integer FROM {table} WHERE id = $1 \
@@ -1373,7 +1369,9 @@ pub(crate) async fn guard_hierarchy_redirect_cycle(
          SELECT COALESCE(bool_or(id = ANY($3)), false), \
                 COALESCE(max(depth), 0), \
                 COALESCE(bool_or(id IS NULL), false) \
-         FROM chain"
+         FROM chain",
+        field_ident = quote_ident(field_logicalname),
+        table = quote_ident(entity_name)
     ))
     .bind(new_parent)
     .bind(MAX_HIERARCHY_DEPTH as i32)
@@ -1853,10 +1851,10 @@ pub(crate) async fn fetch_stored_record(
     record_id: Uuid,
     attrs: &[AttrInfo],
 ) -> Result<Option<serde_json::Map<String, Value>>, AppError> {
-    let table = quote_ident(entity_name);
     let cols = attome_core::select_columns(attrs, true);
     let sql = format!(
-        "SELECT row_to_json(t) FROM (SELECT {cols} FROM {table} WHERE id = $1 AND is_active = true) t"
+        "SELECT row_to_json(t) FROM (SELECT {cols} FROM {table} WHERE id = $1 AND is_active = true) t",
+        table = quote_ident(entity_name)
     );
     let current: Option<Value> = sqlx::query_scalar(&sql)
         .bind(record_id)
@@ -2395,7 +2393,6 @@ pub async fn create_one_as(
         placeholders.push("'project'".to_owned());
     }
 
-    let table = quote_ident(entity_name);
     // Explicit RETURNING projection, not `RETURNING *` (external review,
     // 2026-07-21) â€” always the full column set (`include_sensitive = true`):
     // the caller's audit-event diff needs every field's value regardless of
@@ -2407,6 +2404,7 @@ pub async fn create_one_as(
          SELECT row_to_json(r) FROM r",
         cols = cols.join(", "),
         phs = placeholders.join(", "),
+        table = quote_ident(entity_name)
     );
     let mut q = sqlx::query_scalar::<_, Value>(&sql)
         .bind(stamp.created_by) // created_by
@@ -2829,10 +2827,10 @@ async fn enforce_state_transition(
         return Ok(None);
     }
 
-    let table = quote_ident(entity_name);
-    let field_ident = quote_ident(&model.state_field);
     let current: Option<Option<String>> = sqlx::query_scalar(&format!(
-        "SELECT {field_ident} FROM {table} WHERE id = $1 AND is_active = true"
+        "SELECT {field_ident} FROM {table} WHERE id = $1 AND is_active = true",
+        field_ident = quote_ident(&model.state_field),
+        table = quote_ident(entity_name)
     ))
     .bind(record_id)
     .fetch_optional(&mut **tx)
@@ -3533,7 +3531,6 @@ pub async fn update_one_as(
     guard_hierarchy_cycles(tx, entity_name, entity_id, record_id, attrs, obj).await?;
 
     let version_param = 3 + set_parts.len();
-    let table = quote_ident(entity_name);
     // Explicit projection, not `SELECT *`/`RETURNING *` (external review,
     // 2026-07-21) â€” always the full column set (`include_sensitive = true`),
     // same reasoning as `create_one` above: the audit diff needs every
@@ -3552,6 +3549,7 @@ pub async fn update_one_as(
          SELECT (SELECT row_to_json(old) FROM old) AS old_row, \
                 (SELECT row_to_json(updated) FROM updated) AS new_row",
         sets = set_parts.join(", "),
+        table = quote_ident(entity_name)
     );
     let mut q = sqlx::query_as::<_, (Option<Value>, Option<Value>)>(&sql)
         .bind(record_id)
@@ -3915,11 +3913,8 @@ pub(crate) async fn apply_dependents_on_delete(
         if *mode != OnTargetDelete::Restrict {
             continue;
         }
-        let dep_table = quote_ident(dep_entity);
-        let dep_field_ident = quote_ident(dep_field);
         let has_live_ref: bool = sqlx::query_scalar(&format!(
-            "SELECT EXISTS(SELECT 1 FROM {dep_table} WHERE {dep_field_ident} = $1 AND is_active = TRUE)"
-        ))
+            "SELECT EXISTS(SELECT 1 FROM {dep_table} WHERE {dep_field_ident} = $1 AND is_active = TRUE)", dep_table = quote_ident(dep_entity), dep_field_ident = quote_ident(dep_field)))
         .bind(record_id)
         .fetch_one(&mut **tx)
         .await
@@ -4124,8 +4119,6 @@ pub(crate) async fn reactivate_dependents_on_restore(
         if *mode != OnTargetDelete::CascadeDeactivate {
             continue;
         }
-        let dep_table = quote_ident(dep_entity);
-        let dep_field_ident = quote_ident(dep_field);
         let reactivated: Vec<(Uuid,)> = sqlx::query_as(&format!(
             "UPDATE {dep_table} SET is_active = true, modified_at = NOW(), modified_by = $2, row_version = row_version + 1 \
              WHERE {dep_field_ident} = $1 AND is_active = FALSE \
@@ -4133,8 +4126,7 @@ pub(crate) async fn reactivate_dependents_on_restore(
                    SELECT dependent_record_id FROM cascade_deactivation \
                     WHERE parent_record_id = $1 AND dependent_entity = $3 AND dependent_field = $4 \
                ) \
-             RETURNING id"
-        ))
+             RETURNING id", dep_table = quote_ident(dep_entity), dep_field_ident = quote_ident(dep_field)))
         .bind(record_id)
         .bind(user_id)
         .bind(dep_entity.as_str())
@@ -4215,9 +4207,6 @@ pub async fn run_cascade_deactivate_job(
     /// row fan-out still finishes in a bounded number of worker attempts.
     const BATCH_SIZE: i64 = 1_000;
 
-    let dep_table = quote_ident(dependent_entity);
-    let dep_field_ident = quote_ident(dependent_field);
-
     loop {
         let mut tx = attome_db::tx::begin(db).await?;
         let batch: Vec<(Uuid,)> = sqlx::query_as(&format!(
@@ -4228,8 +4217,7 @@ pub async fn run_cascade_deactivate_job(
                    LIMIT {BATCH_SIZE} \
                    FOR UPDATE SKIP LOCKED \
               ) \
-             RETURNING id"
-        ))
+             RETURNING id", dep_table = quote_ident(dependent_entity), dep_field_ident = quote_ident(dependent_field)))
         .bind(target_record_id)
         .bind(deactivated_by)
         .fetch_all(&mut *tx)
@@ -4671,10 +4659,10 @@ pub async fn hard_delete_one(
     let mut dependents = dependents.to_vec();
     dependents.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
     for (dep_entity, dep_field, _) in &dependents {
-        let dep_table = quote_ident(dep_entity);
-        let dep_column = quote_ident(dep_field);
         let referenced: bool = sqlx::query_scalar(&format!(
-            "SELECT EXISTS(SELECT 1 FROM {dep_table} WHERE {dep_column} = $1)"
+            "SELECT EXISTS(SELECT 1 FROM {dep_table} WHERE {dep_column} = $1)",
+            dep_table = quote_ident(dep_entity),
+            dep_column = quote_ident(dep_field)
         ))
         .bind(record_id)
         .fetch_one(&mut **tx)

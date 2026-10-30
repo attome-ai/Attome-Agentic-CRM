@@ -41,6 +41,9 @@ pub const MAX_NODES: usize = 2000;
 /// The most items one compare or cleanup list returns.
 pub const MAX_ITEMS: usize = 2000;
 
+/// The most definition links one lineage read takes: five per item.
+const MAX_LINK_ROWS: usize = MAX_ITEMS * 5;
+
 /// The edges valid at `$1` (NULL: the current graph), one row each.
 const EDGES_AT: &str = "( \
     SELECT from_kind, from_ref, from_label, to_kind, to_ref, to_entity, to_attribute, \
@@ -175,24 +178,30 @@ type EdgeRow = (
     String,
 );
 
+/// The edges into a data node: its entity, or one of its fields.
+const DATA_EDGES: &str = "e.to_kind = 'entity' AND e.to_entity = $2 \
+     AND ($3::text IS NULL OR e.to_attribute = $3 OR e.to_attribute = '')";
+
+/// The edges into a definition node, by kind and id.
+const DEFINITION_EDGES: &str =
+    "(e.to_kind = $2 AND e.to_ref = $4) OR e.to_entity = $2 || ':' || $4::text";
+
 async fn edges_into(
     conn: &mut PgConnection,
     node: &NodeRef,
     version: Option<i64>,
 ) -> Result<Vec<EdgeRow>, AppError> {
-    let sql = format!(
-        "SELECT from_kind, from_ref, from_label, to_kind, to_ref, to_entity, to_attribute, \
-                edge_kind, confidence FROM {EDGES_AT} e WHERE {} LIMIT {MAX_NODES}",
-        match node {
-            NodeRef::Data { .. } => {
-                "e.to_kind = 'entity' AND e.to_entity = $2 \
-                 AND ($3::text IS NULL OR e.to_attribute = $3 OR e.to_attribute = '')"
-            }
-            NodeRef::Definition { .. } => {
-                "(e.to_kind = $2 AND e.to_ref = $4) OR e.to_entity = $2 || ':' || $4::text"
-            }
-        }
-    );
+    let sql = match node {
+        NodeRef::Data { .. } => format!(
+            "SELECT from_kind, from_ref, from_label, to_kind, to_ref, to_entity, to_attribute, \
+                    edge_kind, confidence FROM {EDGES_AT} e WHERE {DATA_EDGES} LIMIT {MAX_NODES}"
+        ),
+        NodeRef::Definition { .. } => format!(
+            "SELECT from_kind, from_ref, from_label, to_kind, to_ref, to_entity, to_attribute, \
+                    edge_kind, confidence FROM {EDGES_AT} e WHERE {DEFINITION_EDGES} \
+              LIMIT {MAX_NODES}"
+        ),
+    };
     let (a, b, c) = match node {
         NodeRef::Data { entity, attribute } => (entity.clone(), attribute.clone(), None),
         NodeRef::Definition { kind, id } => (kind.clone(), None, Some(*id)),
@@ -413,12 +422,16 @@ pub struct Edge {
 /// The most edges one export reads.
 pub const MAX_EXPORT_EDGES: usize = 50_000;
 
+/// One more than [`MAX_EXPORT_EDGES`], so a read can tell it was cut short.
+const EXPORT_READ_LIMIT: usize = MAX_EXPORT_EDGES + 1;
+
 /// L5-T6: every edge of the current graph, up to [`MAX_EXPORT_EDGES`];
 /// `true` when there were more.
 pub async fn all_edges(conn: &mut PgConnection) -> Result<(Vec<Edge>, bool), AppError> {
     let sql = format!(
-        "SELECT from_kind, from_ref, from_label, to_kind, to_ref, to_entity, to_attribute,                 edge_kind, confidence FROM {EDGES_AT} e           ORDER BY from_kind, from_ref, to_entity, to_attribute LIMIT {}",
-        MAX_EXPORT_EDGES + 1
+        "SELECT from_kind, from_ref, from_label, to_kind, to_ref, to_entity, to_attribute, \
+                edge_kind, confidence FROM {EDGES_AT} e \
+          ORDER BY from_kind, from_ref, to_entity, to_attribute LIMIT {EXPORT_READ_LIMIT}"
     );
     let rows: Vec<EdgeRow> = sqlx::query_as(&sql)
         .bind(None::<i64>)
@@ -555,8 +568,8 @@ pub async fn cleanup(conn: &mut PgConnection) -> Result<Cleanup, AppError> {
     let links: Vec<EdgeRow> = sqlx::query_as(&format!(
         "SELECT from_kind, from_ref, from_label, to_kind, to_ref, to_entity, to_attribute, \
                 edge_kind, confidence FROM metadata_reference e \
-          WHERE e.to_kind <> 'entity' OR position(':' in e.to_entity) > 0 LIMIT {}",
-        MAX_ITEMS * 5
+          WHERE e.to_kind <> 'entity' OR position(':' in e.to_entity) > 0 \
+          LIMIT {MAX_LINK_ROWS}"
     ))
     .fetch_all(&mut *conn)
     .await

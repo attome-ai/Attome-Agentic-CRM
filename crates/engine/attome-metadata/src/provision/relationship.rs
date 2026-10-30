@@ -290,7 +290,10 @@ pub async fn drop_join_table(db: &DbPool, join_table: &str) -> Result<(), AppErr
     exec_ddl_locked(
         db,
         &[],
-        &format!(r#"DROP TABLE IF EXISTS "{join_table}""#),
+        &format!(
+            "DROP TABLE IF EXISTS {t}",
+            t = attome_core::quote_ident(join_table)
+        ),
     )
     .await
     .map_err(|e| {

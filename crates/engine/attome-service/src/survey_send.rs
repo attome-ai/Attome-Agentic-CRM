@@ -232,9 +232,9 @@ async fn send_one(state: &EngineState, sender: &Sender, record_id: Uuid) -> Resu
         return Ok(false);
     }
     drop(registry);
-    let source = attome_core::quote_ident(&sender.send_on.entity);
     let record: Option<Value> = sqlx::query_scalar(&format!(
-        "SELECT to_jsonb(t) FROM {source} t WHERE id = $1 AND (is_active IS NULL OR is_active = true)"
+        "SELECT to_jsonb(t) FROM {source} t WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
+        source = attome_core::quote_ident(&sender.send_on.entity)
     ))
     .bind(record_id)
     .fetch_optional(db)
@@ -273,13 +273,13 @@ async fn send_one(state: &EngineState, sender: &Sender, record_id: Uuid) -> Resu
         return Ok(false);
     };
     // One survey per record: a row regarding it means it was sent.
-    let target = attome_core::quote_ident(&sender.entity);
     let row: Option<Uuid> = sqlx::query_scalar(&format!(
         "INSERT INTO {target} (id, respondent_ref, respondent_email, regarding_entity, regarding_id) \
          SELECT $1, $2, $3, $4, $5 \
           WHERE NOT EXISTS (SELECT 1 FROM {target} \
                              WHERE regarding_entity = $4 AND regarding_id = $5) \
-         RETURNING id"
+         RETURNING id",
+        target = attome_core::quote_ident(&sender.entity)
     ))
     .bind(Uuid::now_v7())
     .bind(respondent)
@@ -405,14 +405,14 @@ pub async fn send_to_contact(
     let Some(email) = email.flatten().filter(|e| crate::status_page::email_ok(e)) else {
         return Ok(Err(NotSent::NoAddress));
     };
-    let target = attome_core::quote_ident(entity);
     let row: Option<Uuid> = sqlx::query_scalar(&format!(
         "INSERT INTO {target} (id, respondent_email, regarding_entity, regarding_id) \
          SELECT $1, $2, $3, $4 \
           WHERE NOT EXISTS (SELECT 1 FROM {target} \
                              WHERE regarding_entity = $3 AND regarding_id = $4 \
                                AND lower(respondent_email) = lower($2)) \
-         RETURNING id"
+         RETURNING id",
+        target = attome_core::quote_ident(entity)
     ))
     .bind(Uuid::now_v7())
     .bind(&email)
@@ -578,11 +578,21 @@ async fn store(
     let list = columns.join(", ");
     // Typed by the table itself: jsonb_populate_record casts each answer to
     // its column's type.
-    let sql = format!(
-        "UPDATE {table} SET ({list}) = (SELECT {list} FROM jsonb_populate_record(NULL::{table}, $2)), \
-             modified_at = now(), row_version = row_version + 1 \
-          WHERE id = $1 AND submitted_at IS NULL"
-    );
+    // Assembled from quoted identifiers: `list` is the quoted answer columns
+    // and a constant.
+    let sql = [
+        "UPDATE ",
+        &table,
+        " SET (",
+        &list,
+        ") = (SELECT ",
+        &list,
+        " FROM jsonb_populate_record(NULL::",
+        &table,
+        ", $2)), modified_at = now(), row_version = row_version + 1 \
+          WHERE id = $1 AND submitted_at IS NULL",
+    ]
+    .concat();
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let written = sqlx::query(&sql)
         .bind(row)
@@ -596,7 +606,8 @@ async fn store(
     }
     // D25-T7: a buyer's answers about a win-loss review show beside it.
     let regarding: Option<(Option<String>, Option<String>)> = sqlx::query_as(&format!(
-        "SELECT regarding_entity, regarding_id FROM {table} WHERE id = $1"
+        "SELECT regarding_entity, regarding_id FROM {} WHERE id = $1",
+        attome_core::quote_ident(entity)
     ))
     .bind(row)
     .fetch_optional(&mut *tx)

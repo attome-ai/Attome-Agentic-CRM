@@ -349,18 +349,23 @@ pub async fn assign_schema_ownership(pool: &PgPool) -> Result<u32, sqlx::Error> 
     )
     .fetch_all(pool)
     .await?;
-    let owner = crate::ident::quote_ident(MIGRATOR_ROLE);
     for table in &tables {
-        let table = crate::ident::quote_ident(table);
-        sqlx::query(&format!("ALTER TABLE {table} OWNER TO {owner}"))
-            .execute(pool)
-            .await?;
+        sqlx::query(&format!(
+            "ALTER TABLE {table} OWNER TO {owner}",
+            table = crate::ident::quote_ident(table),
+            owner = crate::ident::quote_ident(MIGRATOR_ROLE),
+        ))
+        .execute(pool)
+        .await?;
     }
     for view in &views {
-        let view = crate::ident::quote_ident(view);
-        sqlx::query(&format!("ALTER VIEW {view} OWNER TO {owner}"))
-            .execute(pool)
-            .await?;
+        sqlx::query(&format!(
+            "ALTER VIEW {view} OWNER TO {owner}",
+            view = crate::ident::quote_ident(view),
+            owner = crate::ident::quote_ident(MIGRATOR_ROLE),
+        ))
+        .execute(pool)
+        .await?;
     }
     let sequences: Vec<String> = sqlx::query_scalar(
         "SELECT s.relname::text FROM pg_class s \
@@ -375,10 +380,13 @@ pub async fn assign_schema_ownership(pool: &PgPool) -> Result<u32, sqlx::Error> 
     .fetch_all(pool)
     .await?;
     for sequence in &sequences {
-        let sequence = crate::ident::quote_ident(sequence);
-        sqlx::query(&format!("ALTER SEQUENCE {sequence} OWNER TO {owner}"))
-            .execute(pool)
-            .await?;
+        sqlx::query(&format!(
+            "ALTER SEQUENCE {sequence} OWNER TO {owner}",
+            sequence = crate::ident::quote_ident(sequence),
+            owner = crate::ident::quote_ident(MIGRATOR_ROLE),
+        ))
+        .execute(pool)
+        .await?;
     }
     Ok(u32::try_from(tables.len() + views.len() + sequences.len()).unwrap_or(u32::MAX))
 }

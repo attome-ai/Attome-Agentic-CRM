@@ -473,7 +473,6 @@ async fn link_candidates(
         if !edge_allowed(&label, edge_filter) {
             continue;
         }
-        let join = quote_ident(&join_table);
         let mut sides = Vec::new();
         if entity_a == entity {
             sides.push(("a_id", "b_id", entity_b.clone()));
@@ -487,7 +486,8 @@ async fn link_candidates(
             }
             let rows: Vec<(Uuid, Uuid)> = sqlx::query_as(&format!(
                 "SELECT j.{mine}, j.{other} FROM {join} j \
-                  WHERE j.{mine} = ANY($1::uuid[]) AND j.is_active = true LIMIT $2"
+                  WHERE j.{mine} = ANY($1::uuid[]) AND j.is_active = true LIMIT $2",
+                join = quote_ident(&join_table)
             ))
             .bind(ids)
             .bind(cap)
@@ -568,12 +568,12 @@ async fn outbound_lookup_candidates(
         ) {
             continue;
         }
-        let table = quote_ident(&e.from_entity);
-        let field = quote_ident(&e.field);
         let sql = format!(
             "SELECT r.id AS from_id, r.{field} AS to_id FROM {table} r \
              WHERE r.id = ANY($1::uuid[]) AND r.{field} IS NOT NULL \
-               AND (r.is_active IS NULL OR r.is_active = true) LIMIT $2"
+               AND (r.is_active IS NULL OR r.is_active = true) LIMIT $2",
+            field = quote_ident(&e.field),
+            table = quote_ident(&e.from_entity)
         );
         let rows: Vec<(Uuid, Uuid)> = sqlx::query_as(&sql)
             .bind(ids)
@@ -629,12 +629,12 @@ async fn inbound_lookup_candidates(
         ) {
             continue;
         }
-        let table = quote_ident(&e.from_entity);
-        let field = quote_ident(&e.field);
         let sql = format!(
             "SELECT r.id AS from_id, r.{field} AS to_id FROM {table} r \
              WHERE r.{field} = ANY($1::uuid[]) \
-               AND (r.is_active IS NULL OR r.is_active = true) LIMIT $2"
+               AND (r.is_active IS NULL OR r.is_active = true) LIMIT $2",
+            field = quote_ident(&e.field),
+            table = quote_ident(&e.from_entity)
         );
         let rows: Vec<(Uuid, Uuid)> = sqlx::query_as(&sql)
             .bind(ids)
@@ -779,9 +779,10 @@ async fn filter_visible(
             truncated = true;
             break;
         }
-        let table = quote_ident(entity);
-        let mut qb: QueryBuilder<Postgres> =
-            QueryBuilder::new(format!("SELECT t.id FROM {table} t, (SELECT "));
+        let mut qb: QueryBuilder<Postgres> = QueryBuilder::new(format!(
+            "SELECT t.id FROM {table} t, (SELECT ",
+            table = quote_ident(entity)
+        ));
         qb.push_bind(entity.clone());
         qb.push("::text AS name) ent WHERE t.id = ANY(");
         qb.push_bind(ids.clone());

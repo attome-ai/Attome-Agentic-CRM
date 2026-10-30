@@ -513,19 +513,24 @@ async fn resolve_lookup_batch(
         }
         Some(column) => {
             // A text column compares as is, so its index serves the lookup.
-            let compared = if column.field_type() == FieldType::Text {
-                quote_ident(&column.logicalname)
+            let sql = if column.field_type() == FieldType::Text {
+                format!(
+                    "SELECT {col}, id FROM {} WHERE is_active = TRUE AND {col} = ANY($1::text[])",
+                    quote_ident(&target.table),
+                    col = quote_ident(&column.logicalname)
+                )
             } else {
-                format!("{}::text", quote_ident(&column.logicalname))
+                format!(
+                    "SELECT {col}::text, id FROM {} WHERE is_active = TRUE AND {col}::text = ANY($1::text[])",
+                    quote_ident(&target.table),
+                    col = quote_ident(&column.logicalname)
+                )
             };
-            sqlx::query_as(&format!(
-                "SELECT {compared}, id FROM {} WHERE is_active = TRUE AND {compared} = ANY($1::text[])",
-                quote_ident(&target.table)
-            ))
-            .bind(&wanted)
-            .fetch_all(&state.base.db)
-            .await
-            .map_err(AppError::internal)?
+            sqlx::query_as(&sql)
+                .bind(&wanted)
+                .fetch_all(&state.base.db)
+                .await
+                .map_err(AppError::internal)?
         }
     };
     let mut hits: HashMap<String, Vec<Uuid>> = HashMap::new();

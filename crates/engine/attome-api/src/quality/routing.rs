@@ -25,27 +25,35 @@ pub async fn assign_open(db: &DbPool, meta: &EntityMeta) -> Result<u64, AppError
     .fetch_one(db)
     .await
     .map_err(AppError::internal)?;
-    let record_owner = if has_owner {
+    // The steward first, then the record's owner when the entity has one.
+    let sql = if has_owner {
         format!(
-            "(SELECT r.owner_ref FROM {} r WHERE r.id = i.record_id)",
-            quote_ident(entity)
+            "UPDATE quality_issue i \
+                SET owner_id = COALESCE( \
+                        (SELECT g.user_id FROM entity_info e \
+                           JOIN governance_role g ON g.domain_ref = e.domain_ref \
+                          WHERE e.logicalname = i.entity_logicalname AND g.role = 'steward' \
+                          ORDER BY g.user_id LIMIT 1), \
+                        (SELECT r.owner_ref FROM {table} r WHERE r.id = i.record_id)), \
+                    due_at = COALESCE(i.due_at, i.detected_at + make_interval(days => COALESCE( \
+                        (SELECT t.issue_sla_days FROM quality_target t \
+                          WHERE t.entity = i.entity_logicalname), $2))) \
+              WHERE i.entity_logicalname = $1 AND i.status = 'open' AND i.owner_id IS NULL",
+            table = quote_ident(entity)
         )
     } else {
-        "NULL::uuid".to_owned()
-    };
-    let assigned = sqlx::query(&format!(
         "UPDATE quality_issue i \
-            SET owner_id = COALESCE( \
-                    (SELECT g.user_id FROM entity_info e \
-                       JOIN governance_role g ON g.domain_ref = e.domain_ref \
-                      WHERE e.logicalname = i.entity_logicalname AND g.role = 'steward' \
-                      ORDER BY g.user_id LIMIT 1), \
-                    {record_owner}), \
+            SET owner_id = (SELECT g.user_id FROM entity_info e \
+                              JOIN governance_role g ON g.domain_ref = e.domain_ref \
+                             WHERE e.logicalname = i.entity_logicalname AND g.role = 'steward' \
+                             ORDER BY g.user_id LIMIT 1), \
                 due_at = COALESCE(i.due_at, i.detected_at + make_interval(days => COALESCE( \
                     (SELECT t.issue_sla_days FROM quality_target t \
                       WHERE t.entity = i.entity_logicalname), $2))) \
           WHERE i.entity_logicalname = $1 AND i.status = 'open' AND i.owner_id IS NULL"
-    ))
+            .to_owned()
+    };
+    let assigned = sqlx::query(&sql)
     .bind(entity)
     .bind(DEFAULT_SLA_DAYS)
     .execute(db)

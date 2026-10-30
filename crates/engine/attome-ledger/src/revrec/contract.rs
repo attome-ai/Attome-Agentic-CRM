@@ -122,10 +122,10 @@ pub async fn sweep(state: &EngineState) -> Result<usize, AppError> {
             {
                 continue;
             }
-            let table = attome_core::quote_ident(&e.entity_logicalname);
             let status: Option<Option<String>> = sqlx::query_scalar(&format!(
                 "SELECT status::text FROM {table} \
-                  WHERE id = $1 AND (is_active IS NULL OR is_active = true)"
+                  WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
+                table = attome_core::quote_ident(&e.entity_logicalname)
             ))
             .bind(e.record_id)
             .fetch_optional(&state.base.db)
@@ -297,17 +297,18 @@ async fn build_in(
     .map_err(AppError::internal)?;
     let contract = match existing {
         Some(id) => id,
-        None => sqlx::query_scalar(&format!(
+        None => sqlx::query_scalar(
             "INSERT INTO revenue_contract (id, source_kind, source_id, customer_account_ref, \
                  currency, total_price, status, created_by, owner_ref) \
-             VALUES ($1, '{source_kind}', $2, $3, $4, $5::numeric, 'open', $6, $6) RETURNING id"
-        ))
+             VALUES ($1, $7, $2, $3, $4, $5::numeric, 'open', $6, $6) RETURNING id",
+        )
         .bind(Uuid::now_v7())
         .bind(&source)
         .bind(account)
         .bind(&currency)
         .bind(total.to_string())
         .bind(owner)
+        .bind(source_kind)
         .fetch_one(&mut **tx)
         .await
         .map_err(AppError::internal)?,
@@ -344,15 +345,15 @@ async fn build_in(
                 .collect()
         };
         for (kind, amount) in parts {
-            let inserted = sqlx::query(&format!(
+            let inserted = sqlx::query(
                 "INSERT INTO performance_obligation (id, revenue_contract_ref, source_line_id, \
                      product_ref, kind, pattern, allocated_amount, status, created_by, owner_ref) \
-                 SELECT $1, $2, $3, $4, $5, '{pattern}', $6::numeric, 'open', $7, $7 \
+                 SELECT $1, $2, $3, $4, $5, $8, $6::numeric, 'open', $7, $7 \
                   WHERE NOT EXISTS (SELECT 1 FROM performance_obligation \
                                      WHERE revenue_contract_ref = $2 AND source_line_id = $3 \
                                        AND kind = $5 \
-                                       AND (is_active IS NULL OR is_active = true))"
-            ))
+                                       AND (is_active IS NULL OR is_active = true))",
+            )
             .bind(Uuid::now_v7())
             .bind(contract)
             .bind(line.id.to_string())
@@ -360,6 +361,7 @@ async fn build_in(
             .bind(&kind)
             .bind(amount.to_string())
             .bind(owner)
+            .bind(&pattern)
             .execute(&mut **tx)
             .await
             .map_err(AppError::internal)?

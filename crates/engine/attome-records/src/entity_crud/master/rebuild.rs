@@ -64,8 +64,6 @@ pub async fn rebuild(
         .map(|m| m.attrs.clone())
         .ok_or(AppError::NotFound)?;
     let db = &state.base.db;
-    let contributions_t = quote_ident(&contribution_table(entity));
-    let provenance_t = quote_ident(&provenance_table(entity));
 
     // One rebuild of a golden record at a time; a second waits for its own
     // retry rather than racing this one.
@@ -84,7 +82,8 @@ pub async fn rebuild(
 
     let rows: Vec<(Uuid, String, DateTime<Utc>, Value)> = sqlx::query_as(&format!(
         "SELECT id, source_system, received_at, payload FROM {contributions_t} \
-          WHERE golden_id = $1 AND status = 'attached' ORDER BY received_at, id"
+          WHERE golden_id = $1 AND status = 'attached' ORDER BY received_at, id",
+        contributions_t = quote_ident(&contribution_table(entity))
     ))
     .bind(golden)
     .fetch_all(&mut *tx)
@@ -102,7 +101,8 @@ pub async fn rebuild(
         })
         .collect();
     let pinned: HashSet<String> = sqlx::query_scalar(&format!(
-        "SELECT attribute FROM {provenance_t} WHERE golden_id = $1 AND pinned_by IS NOT NULL"
+        "SELECT attribute FROM {provenance_t} WHERE golden_id = $1 AND pinned_by IS NOT NULL",
+        provenance_t = quote_ident(&provenance_table(entity))
     ))
     .bind(golden)
     .fetch_all(&mut *tx)
@@ -174,7 +174,8 @@ pub async fn rebuild(
              ON CONFLICT (golden_id, attribute) DO UPDATE \
                 SET contribution_id = EXCLUDED.contribution_id, rule = EXCLUDED.rule, \
                     chosen_at = now() \
-              WHERE {provenance_t}.pinned_by IS NULL"
+              WHERE {provenance_t}.pinned_by IS NULL",
+            provenance_t = quote_ident(&provenance_table(entity))
         ))
         .bind(golden)
         .bind(attribute)

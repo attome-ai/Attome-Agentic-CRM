@@ -1851,16 +1851,18 @@ async fn dependency_impact(
             .filter_map(|v| v.as_str().map(str::to_owned))
             .collect()
     });
-    let (c, d) = (
-        attome_core::quote_ident(controlling),
-        attome_core::quote_ident(dependent),
+    let sql = format!(
+        "SELECT count(*) OVER (), id FROM {table} \
+         WHERE (is_active IS NULL OR is_active = true) AND {c} IS NOT NULL AND {d} IS NOT NULL \
+           AND (({c}::text = ANY($3) AND NOT EXISTS ( \
+                   SELECT 1 FROM unnest($1::text[], $2::text[]) AS p(c, d) \
+                    WHERE p.c = {c}::text AND p.d = {d}::text)) \
+                OR ($4 AND NOT ({c}::text = ANY($3)) AND NOT ({d}::text = ANY($5)))) \
+         ORDER BY id LIMIT 20",
+        table = attome_core::quote_ident(entity),
+        c = attome_core::quote_ident(controlling),
+        d = attome_core::quote_ident(dependent),
     );
-    let predicate = format!(
-        "(is_active IS NULL OR is_active = true) AND {c} IS NOT NULL AND {d} IS NOT NULL AND (            ({c}::text = ANY($3) AND NOT EXISTS (                SELECT 1 FROM unnest($1::text[], $2::text[]) AS p(c, d)                 WHERE p.c = {c}::text AND p.d = {d}::text))            OR ($4 AND NOT ({c}::text = ANY($3)) AND NOT ({d}::text = ANY($5))))"
-    );
-    let table = attome_core::quote_ident(entity);
-    let sql =
-        format!("SELECT count(*) OVER (), id FROM {table} WHERE {predicate} ORDER BY id LIMIT 20");
     let rows: Vec<(i64, Uuid)> =
         sqlx::query_as(&attome_db::tag_dynamic("model.dependency_impact", &sql))
             .bind(&pair_c)

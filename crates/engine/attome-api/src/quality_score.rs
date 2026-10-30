@@ -244,10 +244,13 @@ pub(crate) async fn score_entity(
     issue_budget: i64,
 ) -> Result<EntityOutcome, AppError> {
     let table = quote_ident(&meta.logicalname);
-    let row_count: i64 = sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {table}"))
-        .fetch_one(db)
-        .await
-        .map_err(AppError::internal)?;
+    let row_count: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM {table}",
+        table = quote_ident(&meta.logicalname)
+    ))
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)?;
 
     let mut outcome = EntityOutcome {
         scores_written: 0,

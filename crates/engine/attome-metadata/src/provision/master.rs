@@ -47,8 +47,7 @@ pub fn master_table_ddl(entity: &str) -> Result<Vec<String>, AppError> {
             "the entity name {entity:?} is too long for its master-data side tables"
         )));
     }
-    let q = attome_core::quote_ident;
-    let (entity_t, contribution_t, provenance_t) = (q(entity), q(&contribution), q(&provenance));
+    let golden_index = attribute_index_name(&contribution, "golden_id")?;
     Ok(vec![
         format!(
             "CREATE TABLE IF NOT EXISTS {contribution_t} (
@@ -62,11 +61,14 @@ pub fn master_table_ddl(entity: &str) -> Result<Vec<String>, AppError> {
                      CHECK (status IN ('attached', 'held', 'detached')),
                  held_reason text,
                  UNIQUE (source_system, external_id)
-             )"
+             )",
+            contribution_t = attome_core::quote_ident(&contribution),
+            entity_t = attome_core::quote_ident(entity),
         ),
         format!(
-            "CREATE INDEX IF NOT EXISTS {} ON {contribution_t} (golden_id)",
-            q(&attribute_index_name(&contribution, "golden_id")?)
+            "CREATE INDEX IF NOT EXISTS {index} ON {contribution_t} (golden_id)",
+            index = attome_core::quote_ident(&golden_index),
+            contribution_t = attome_core::quote_ident(&contribution),
         ),
         format!(
             "CREATE TABLE IF NOT EXISTS {provenance_t} (
@@ -77,7 +79,10 @@ pub fn master_table_ddl(entity: &str) -> Result<Vec<String>, AppError> {
                  chosen_at timestamptz NOT NULL DEFAULT now(),
                  pinned_by uuid,
                  PRIMARY KEY (golden_id, attribute)
-             )"
+             )",
+            provenance_t = attome_core::quote_ident(&provenance),
+            entity_t = attome_core::quote_ident(entity),
+            contribution_t = attome_core::quote_ident(&contribution),
         ),
     ])
 }

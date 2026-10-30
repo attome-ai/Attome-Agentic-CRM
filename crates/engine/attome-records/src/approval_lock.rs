@@ -264,9 +264,9 @@ pub async fn current_row_version(
     entity_name: &str,
     record_id: Uuid,
 ) -> Result<i64, AppError> {
-    let table = attome_core::quote_ident(entity_name);
     sqlx::query_scalar::<_, i64>(&format!(
-        "SELECT row_version FROM {table} WHERE id = $1 AND is_active = true"
+        "SELECT row_version FROM {table} WHERE id = $1 AND is_active = true",
+        table = attome_core::quote_ident(entity_name)
     ))
     .bind(record_id)
     .fetch_optional(&state.base.db)

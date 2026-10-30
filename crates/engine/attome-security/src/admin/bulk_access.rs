@@ -141,12 +141,12 @@ async fn select_ids<'c, E: sqlx::PgExecutor<'c>>(
     limit: i64,
 ) -> Result<Vec<Uuid>, sqlx::Error> {
     // `entity` is `entity_info.logicalname` as stored; quoted all the same.
-    let table = attome_core::quote_ident(entity);
     match selected {
         Selected::Ids(ids) => {
             sqlx::query_scalar(&format!(
                 "SELECT id FROM {table} WHERE is_active = true AND id = ANY($1) AND id > $2 \
-                 ORDER BY id LIMIT $3"
+                 ORDER BY id LIMIT $3",
+                table = attome_core::quote_ident(entity)
             ))
             .bind(ids)
             .bind(after)
@@ -157,7 +157,8 @@ async fn select_ids<'c, E: sqlx::PgExecutor<'c>>(
         Selected::OwnedBy(owner) => {
             sqlx::query_scalar(&format!(
                 "SELECT id FROM {table} WHERE is_active = true AND owner_ref = $1 AND id > $2 \
-                 ORDER BY id LIMIT $3"
+                 ORDER BY id LIMIT $3",
+                table = attome_core::quote_ident(entity)
             ))
             .bind(owner)
             .bind(after)
@@ -173,11 +174,11 @@ async fn count_selected(
     entity: &str,
     selected: &Selected,
 ) -> Result<i64, sqlx::Error> {
-    let table = attome_core::quote_ident(entity);
     match selected {
         Selected::Ids(ids) => {
             sqlx::query_scalar(&format!(
-                "SELECT count(*) FROM {table} WHERE is_active = true AND id = ANY($1)"
+                "SELECT count(*) FROM {table} WHERE is_active = true AND id = ANY($1)",
+                table = attome_core::quote_ident(entity)
             ))
             .bind(ids)
             .fetch_one(db)
@@ -185,7 +186,8 @@ async fn count_selected(
         }
         Selected::OwnedBy(owner) => {
             sqlx::query_scalar(&format!(
-                "SELECT count(*) FROM {table} WHERE is_active = true AND owner_ref = $1"
+                "SELECT count(*) FROM {table} WHERE is_active = true AND owner_ref = $1",
+                table = attome_core::quote_ident(entity)
             ))
             .bind(owner)
             .fetch_one(db)
@@ -350,14 +352,14 @@ impl attome_jobs::batch::BatchJob for BulkAccessBatch {
         ids: Self::Chunk,
     ) -> Result<i64, BoxError> {
         let p = &self.payload;
-        let table = attome_core::quote_ident(&p.entity);
         let changed: Vec<Uuid> = match p.operation {
             BulkOperation::Reassign => {
                 sqlx::query_scalar(&format!(
                     "UPDATE {table} \
                      SET owner_ref = $1, owner_type = $2, modified_by = $3, modified_at = NOW(), \
                          row_version = row_version + 1 \
-                     WHERE id = ANY($4) AND is_active = true RETURNING id"
+                     WHERE id = ANY($4) AND is_active = true RETURNING id",
+                    table = attome_core::quote_ident(&p.entity)
                 ))
                 .bind(p.principal_id)
                 .bind(p.principal_type)
@@ -368,7 +370,8 @@ impl attome_jobs::batch::BatchJob for BulkAccessBatch {
             }
             BulkOperation::Share => {
                 sqlx::query_scalar(&format!(
-                    "SELECT id FROM {table} WHERE id = ANY($1) AND is_active = true"
+                    "SELECT id FROM {table} WHERE id = ANY($1) AND is_active = true",
+                    table = attome_core::quote_ident(&p.entity)
                 ))
                 .bind(&ids)
                 .fetch_all(&mut **tx)
