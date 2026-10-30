@@ -192,6 +192,7 @@ async fn provision_test_entity(state: &EngineState) -> String {
             is_append_only: false,
             is_audited: false,
             category: None,
+            storage_mode: Default::default(),
         },
         ReconcilePolicy::Seed,
     )

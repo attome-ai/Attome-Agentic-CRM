@@ -402,6 +402,7 @@ impl Graph {
             is_audited: false,
             category: None,
             is_customized: false,
+            storage_mode: None,
             attributes: vec![
                 Self::attr("name", "text"),
                 Self::attr("amount", "number"),
@@ -1240,6 +1241,7 @@ fn a_stale_claim_is_resumed_from_its_cursor_without_rechecking_the_basis() {
             is_append_only: false,
             is_audited: false,
             category: None,
+            storage_mode: Default::default(),
         };
         attome_metadata::provision::reconcile_entity(
             db,

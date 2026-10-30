@@ -126,6 +126,7 @@ mod tests {
             is_audited: false,
             category: None,
             is_customized: false,
+            storage_mode: None,
             attributes: attrs,
         }
     }

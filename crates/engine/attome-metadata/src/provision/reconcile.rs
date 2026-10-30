@@ -151,6 +151,11 @@ pub struct EntityDesc {
     pub is_append_only: bool,
     pub is_audited: bool,
     pub category: Option<String>,
+    /// A1-T6: how a new entity's table is stored. Applies when the entity is
+    /// created; asking for `HighVolume` on an existing standard entity is
+    /// refused (no conversion in place), and `Standard` leaves an existing
+    /// entity's mode as it is.
+    pub storage_mode: super::storage::StorageMode,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -237,6 +242,8 @@ struct EntityState {
 #[derive(sqlx::FromRow)]
 struct EntityRow {
     id: Uuid,
+    /// A1-T6: `standard` or `high_volume`.
+    storage_mode: String,
     name: String,
     primary_name_attribute: Option<String>,
     is_append_only: bool,
@@ -330,7 +337,8 @@ fn seed_per_property(policy: ReconcilePolicy, is_live: bool) -> bool {
 /// (there can be several — the unique index is partial on `is_active`).
 async fn fetch_entity_row(db: &DbPool, logicalname: &str) -> Result<Option<EntityRow>, AppError> {
     sqlx::query_as(
-        "SELECT id, COALESCE(name, '') AS name, primary_name_attribute, \
+        "SELECT id, COALESCE(storage_mode::text, 'standard') AS storage_mode, \
+                COALESCE(name, '') AS name, primary_name_attribute, \
                 COALESCE(is_append_only, false) AS is_append_only, \
                 COALESCE(is_audited, false) AS is_audited, category, is_customized, \
                 (is_active IS NULL OR is_active = true) AS is_live, owner_layer \
@@ -406,6 +414,21 @@ pub async fn reconcile_entity_recorded(
     if let Some(row) = current.as_ref() {
         changeset::check_owner(rec, &row.owner_layer)?;
     }
+    // A1-T6: an existing entity keeps its storage; a new one takes the
+    // description's.
+    let mode = match current.as_ref() {
+        Some(row) => {
+            let stored = super::storage::StorageMode::parse(&row.storage_mode).unwrap_or_default();
+            if desc.storage_mode.is_high_volume() && stored != desc.storage_mode {
+                return Err(AppError::Validation(format!(
+                    "{logicalname} already exists as a {} entity; its storage cannot change in place",
+                    stored.as_str()
+                )));
+            }
+            stored
+        }
+        None => desc.storage_mode,
+    };
     let layer = changeset::layer_for(policy, rec)?;
     let mut desired = EntityState {
         name: desc.display_name.clone(),
@@ -473,7 +496,7 @@ pub async fn reconcile_entity_recorded(
     match decide_step(policy, status, state_differs) {
         WriteStep::Unchanged => {
             let id = current.as_ref().map(|r| r.id).ok_or(AppError::NotFound)?;
-            provision_table(db, logicalname, desc.is_append_only).await?;
+            provision_table(db, logicalname, desc.is_append_only, mode).await?;
             Ok((id, ReconcileOutcome::Unchanged))
         }
         WriteStep::SkippedCustomized => {
@@ -482,7 +505,7 @@ pub async fn reconcile_entity_recorded(
                 entity = %logicalname,
                 "provision: seed skipped a customized entity row (is_customized = true)"
             );
-            provision_table(db, logicalname, row.is_append_only).await?;
+            provision_table(db, logicalname, row.is_append_only, mode).await?;
             Ok((row.id, ReconcileOutcome::SkippedCustomized))
         }
         step @ (WriteStep::Create | WriteStep::Update) => {
@@ -502,7 +525,7 @@ pub async fn reconcile_entity_recorded(
             // never holds the global metadata-write lock across any
             // provisioning DDL — it is now lock → UPDATE/INSERT →
             // change-log → commit, nothing else.
-            provision_table(db, logicalname, desired.is_append_only).await?;
+            provision_table(db, logicalname, desired.is_append_only, mode).await?;
 
             let mut tx = attome_db::tx::begin(db).await?;
             // Global metadata-write lock BEFORE the per-entity lock, and before
@@ -562,8 +585,8 @@ pub async fn reconcile_entity_recorded(
                         "INSERT INTO entity_info \
                              (id, logicalname, name, primary_name_attribute, is_active, \
                               is_append_only, is_audited, category, is_customized, created_at, \
-                              owner_layer) \
-                         VALUES ($1, $2, $3, $4, true, $5, $6, $7, $8, NOW(), $9) \
+                              owner_layer, storage_mode) \
+                         VALUES ($1, $2, $3, $4, true, $5, $6, $7, $8, NOW(), $9, $10) \
                          ON CONFLICT (logicalname) WHERE (is_active IS NULL OR is_active = true) \
                          DO UPDATE SET logicalname = EXCLUDED.logicalname \
                          RETURNING id",
@@ -577,6 +600,7 @@ pub async fn reconcile_entity_recorded(
                     .bind(&desired.category)
                     .bind(policy.customized_marker().unwrap_or(false))
                     .bind(layer.as_str())
+                    .bind(mode.as_str())
                     .fetch_one(&mut *tx)
                     .await
                     .map_err(map_unique_violation)?

@@ -223,6 +223,7 @@ async fn reconcile_relationship_creates_the_join_table_as_the_migrator_role() {
             is_append_only: false,
             is_audited: false,
             category: None,
+            storage_mode: Default::default(),
         };
         reconcile_entity(&migrator, &desc, ReconcilePolicy::Seed)
             .await

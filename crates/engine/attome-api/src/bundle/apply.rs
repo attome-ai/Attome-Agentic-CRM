@@ -968,6 +968,11 @@ async fn run_step(
                 is_append_only: e.is_append_only,
                 is_audited: e.is_audited,
                 category: e.category.clone(),
+                storage_mode: e
+                    .storage_mode
+                    .as_deref()
+                    .and_then(attome_metadata::provision::StorageMode::parse)
+                    .unwrap_or_default(),
             };
             let db = ctx.provisioning_pool();
             let pol = policy(ctx.additive_only, e.is_customized);
@@ -1907,6 +1912,7 @@ mod tests {
             is_audited: false,
             category: None,
             is_customized: false,
+            storage_mode: None,
             attributes: attrs
                 .iter()
                 .map(|(n, t)| AttributeDef {

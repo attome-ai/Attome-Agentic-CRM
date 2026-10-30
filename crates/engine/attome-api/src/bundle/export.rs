@@ -87,6 +87,10 @@ pub(crate) struct EntityRow {
     pub(crate) is_audited: Option<bool>,
     pub(crate) category: Option<String>,
     pub(crate) is_customized: bool,
+    /// A1-T6: absent from a snapshot of a standard entity.
+    #[serde(default)]
+    #[sqlx(default)]
+    pub(crate) storage_mode: Option<String>,
 }
 
 /// `entity_info` row -> [`EntityDef`] without attributes; `None`
@@ -101,6 +105,7 @@ pub(crate) fn entity_def(r: EntityRow) -> Option<EntityDef> {
         is_audited: r.is_audited.unwrap_or(false),
         category: r.category,
         is_customized: r.is_customized,
+        storage_mode: r.storage_mode.filter(|m| m == "high_volume"),
         attributes: Vec::new(),
     })
 }
@@ -348,7 +353,7 @@ async fn export_entities(
 ) -> Result<HashMap<Uuid, String>, AppError> {
     let rows: Vec<EntityRow> = sqlx::query_as(
         "SELECT id, logicalname, name, primary_name_attribute, is_append_only, is_audited,
-                category, is_customized
+                category, is_customized, storage_mode::text AS storage_mode
          FROM entity_info
          WHERE COALESCE(is_active, true) = true",
     )

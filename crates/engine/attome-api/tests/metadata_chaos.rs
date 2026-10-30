@@ -525,6 +525,7 @@ async fn committed_write_whose_doorbell_never_fired_is_recovered_by_the_watermar
             is_append_only: false,
             is_audited: false,
             category: None,
+            storage_mode: Default::default(),
         },
         ReconcilePolicy::Admin,
     )
@@ -590,6 +591,7 @@ async fn notify_triggers_catch_up_without_redis() {
             is_append_only: false,
             is_audited: false,
             category: None,
+            storage_mode: Default::default(),
         },
         ReconcilePolicy::Admin,
     )

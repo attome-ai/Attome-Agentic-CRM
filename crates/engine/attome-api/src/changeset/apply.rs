@@ -980,6 +980,11 @@ impl Ctx<'_> {
                     is_append_only: e.is_append_only,
                     is_audited: e.is_audited,
                     category: e.category.clone(),
+                    storage_mode: e
+                        .storage_mode
+                        .as_deref()
+                        .and_then(attome_metadata::provision::StorageMode::parse)
+                        .unwrap_or_default(),
                 };
                 let pol = self.policy(e.is_customized);
                 let desired_id = derived_id(COMPONENT_ENTITY, &e.logicalname);

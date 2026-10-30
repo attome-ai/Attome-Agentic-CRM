@@ -161,6 +161,36 @@ pub async fn sync_attribute_index_on_connection(
     .await
     .map_err(AppError::internal)?;
     if partitioned {
+        // A1-T6: a high-volume entity's fields are indexed like any other's,
+        // but without CONCURRENTLY, which PostgreSQL refuses on a partitioned
+        // table: the build holds writes to the table while it runs. The audit
+        // family's own migrations index it, so it gets none here.
+        if super::storage::storage_mode_of(&mut *conn, entity_logicalname)
+            .await?
+            .is_high_volume()
+        {
+            let sql = if wanted {
+                format!(
+                    "CREATE INDEX IF NOT EXISTS {i} ON {t} ({c}) WHERE is_active = TRUE",
+                    i = attome_core::quote_ident(&index_name),
+                    t = attome_core::quote_ident(entity_logicalname),
+                    c = attome_core::quote_ident(field_logicalname)
+                )
+            } else {
+                format!(
+                    "DROP INDEX IF EXISTS {i}",
+                    i = attome_core::quote_ident(&index_name)
+                )
+            };
+            sqlx::query(&sql).execute(&mut *conn).await.map_err(|e| {
+                tracing::error!(
+                    error = %e, index = %index_name, entity = %entity_logicalname,
+                    "attribute index sync failed on a high-volume entity"
+                );
+                AppError::internal(e)
+            })?;
+            return Ok(());
+        }
         tracing::debug!(
             entity = %entity_logicalname,
             field = %field_logicalname,
@@ -756,6 +786,7 @@ pub async fn ensure_entity(
         is_append_only,
         is_audited: false,
         category: None,
+        storage_mode: Default::default(),
     };
     super::reconcile_entity(db, &desc, super::ReconcilePolicy::Seed)
         .await

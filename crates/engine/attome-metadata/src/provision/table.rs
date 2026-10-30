@@ -76,6 +76,7 @@ pub(super) async fn provision_table(
     db: &DbPool,
     logicalname: &str,
     is_append_only: bool,
+    mode: super::storage::StorageMode,
 ) -> Result<(), AppError> {
     if !valid_identifier(logicalname) {
         return Err(AppError::internal(format!(
@@ -90,7 +91,11 @@ pub(super) async fn provision_table(
     };
 
     if existing_columns(db, logicalname).await?.is_none() {
-        create_table(db, logicalname, storage_params).await?;
+        if mode.is_high_volume() {
+            create_high_volume_table(db, logicalname).await?;
+        } else {
+            create_table(db, logicalname, storage_params).await?;
+        }
     }
 
     // Re-read after a possible CREATE so every phase below (storage params,
@@ -174,6 +179,55 @@ async fn create_table(
             Err(AppError::internal(e))
         }
     }
+}
+
+/// A1-T6: the high-volume table shape: the generic columns, `created_at`
+/// required, the primary key `(id, created_at)` (a partitioned table's unique
+/// keys must include its partition key), partitioned by month on
+/// `created_at`, a BRIN index on it, and partitions from this month on.
+/// Storage parameters go on the partitions; PostgreSQL refuses them on the
+/// parent.
+async fn create_high_volume_table(db: &DbPool, logicalname: &str) -> Result<(), AppError> {
+    use super::storage::{PARTITION_COLUMN, PARTITION_MONTHS_AHEAD, PARTITION_STORAGE_PARAMS};
+    let sql = format!(
+        "CREATE TABLE IF NOT EXISTS {t} ( \
+             id UUID NOT NULL DEFAULT uuidv7(), \
+             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), \
+             created_by UUID, \
+             modified_at TIMESTAMPTZ, \
+             modified_by UUID, \
+             organization_ref UUID, \
+             is_active BOOLEAN DEFAULT TRUE, \
+             row_version BIGINT NOT NULL DEFAULT 0, \
+             owner_ref UUID, \
+             owner_type SMALLINT NOT NULL DEFAULT 0, \
+             PRIMARY KEY (id, created_at) \
+         ) PARTITION BY RANGE (created_at)",
+        t = quote_ident(logicalname)
+    );
+    match exec_ddl_locked(db, &[], &sql).await {
+        Ok(()) => {}
+        Err(e) if is_concurrent_create_race(&e) => {}
+        Err(e) => {
+            tracing::error!(error = %e, logicalname = %logicalname, "CREATE TABLE failed for a high-volume entity");
+            return Err(AppError::internal(e));
+        }
+    }
+    let brin = format!(
+        "CREATE INDEX IF NOT EXISTS {i} ON {t} USING brin (created_at)",
+        i = quote_ident(&format!("{logicalname}_created_brin")),
+        t = quote_ident(logicalname)
+    );
+    ddl(db, logicalname, "BRIN index on a high-volume entity", &brin).await?;
+    attome_core::partition_maintenance::ensure_ahead_partitions(
+        db,
+        logicalname,
+        PARTITION_COLUMN,
+        PARTITION_STORAGE_PARAMS,
+        PARTITION_MONTHS_AHEAD,
+    )
+    .await?;
+    Ok(())
 }
 
 /// Postgres 18 rejects storage parameters on a partitioned table's parent

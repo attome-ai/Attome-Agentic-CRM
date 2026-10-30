@@ -340,6 +340,36 @@ struct SqlQueryRow {
     view_metadata: Option<Value>,
 }
 
+/// A1-T6: the filter operators that bound a high-volume entity's window.
+const WINDOW_OPS: &[&str] = &["eq", "gt", "gte", "lt", "lte", "in"];
+
+/// A1-T6: whether `filters`, or the WHERE clause of the query's own SQL,
+/// name a window on the partition column. Pure.
+pub fn names_date_window(filters: &[Filter], sql: &str) -> bool {
+    let column = attome_metadata::provision::storage::PARTITION_COLUMN;
+    let in_filters = filters
+        .iter()
+        .any(|f| f.field == column && WINDOW_OPS.contains(&f.op.as_str()));
+    let lower = sql.to_ascii_lowercase();
+    let in_sql = lower
+        .find(" where ")
+        .is_some_and(|at| lower[at..].contains(column));
+    in_filters || in_sql
+}
+
+/// A1-T6: the window a high-volume entity's view shows when it names none:
+/// the last 30 days. Pure.
+pub fn default_date_window(now: chrono::DateTime<chrono::Utc>) -> Filter {
+    let days = attome_metadata::provision::storage::DEFAULT_WINDOW_DAYS;
+    Filter {
+        field: attome_metadata::provision::storage::PARTITION_COLUMN.into(),
+        op: "gte".into(),
+        value: Some(Value::String(
+            (now - chrono::Duration::days(days)).to_rfc3339(),
+        )),
+    }
+}
+
 async fn lookup(db: &DbPool, body: &ExecuteQueryRequest) -> Result<SqlQueryRow, AppError> {
     // 1. Direct: caller knows the exact query UUID
     if let Some(qid) = body.query_id {
@@ -2104,6 +2134,23 @@ pub async fn execute_stored_query_with_definition(
             {
                 f.field = current;
             }
+        }
+        // A1-T6: a high-volume entity is read through a window on
+        // `created_at`. A view (an entity's list) without one shows the last
+        // 30 days; any other query without one is refused.
+        if attome_metadata::provision::storage::storage_mode_of(&state.base.db, entity)
+            .await?
+            .is_high_volume()
+            && !names_date_window(&body.filters, &qrow.sql_query)
+        {
+            if qrow.view_id.is_none() {
+                return Err(AppError::Validation(format!(
+                    "date_window_required: {entity} is a high-volume entity; filter on {} \
+                     (gte/lte/gt/lt/eq/in) to read it",
+                    attome_metadata::provision::storage::PARTITION_COLUMN
+                )));
+            }
+            body.filters.push(default_date_window(chrono::Utc::now()));
         }
     }
 
@@ -3871,5 +3918,52 @@ mod msgpack_tests {
         let bytes = rmp_serde::to_vec_named(&packed).expect("encode");
         let back: Value = rmp_serde::from_slice(&bytes).expect("decode");
         assert_eq!(back, packed);
+    }
+}
+
+#[cfg(test)]
+mod date_window_tests {
+    use super::*;
+
+    fn filter(field: &str, op: &str) -> Filter {
+        Filter {
+            field: field.into(),
+            op: op.into(),
+            value: Some(Value::String("2026-10-01T00:00:00Z".into())),
+        }
+    }
+
+    /// A1-T6: a bound on created_at, in the filters or the query's own
+    /// WHERE clause, is a window; anything else is not.
+    #[test]
+    fn high_volume_query_requires_window() {
+        let plain = "SELECT id FROM \"event\" WHERE is_active = true";
+        assert!(!names_date_window(&[], plain));
+        assert!(!names_date_window(&[filter("status", "eq")], plain));
+        assert!(!names_date_window(
+            &[filter("created_at", "is_not_null")],
+            plain
+        ));
+        assert!(names_date_window(&[filter("created_at", "gte")], plain));
+        assert!(names_date_window(
+            &[],
+            "SELECT id FROM \"event\" WHERE created_at >= now() - interval '7 days'"
+        ));
+        // Selecting the column is not a window.
+        assert!(!names_date_window(
+            &[],
+            "SELECT id, created_at FROM \"event\" WHERE is_active = true"
+        ));
+        let now = chrono::DateTime::parse_from_rfc3339("2026-10-30T00:00:00Z")
+            .map(|d| d.with_timezone(&chrono::Utc))
+            .unwrap_or_default();
+        let window = default_date_window(now);
+        assert_eq!(window.field, "created_at");
+        assert_eq!(window.op, "gte");
+        assert_eq!(
+            window.value,
+            Some(Value::String("2026-09-30T00:00:00+00:00".into()))
+        );
+        assert!(names_date_window(&[window], plain));
     }
 }

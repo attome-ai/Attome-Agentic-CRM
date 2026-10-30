@@ -175,6 +175,9 @@ pub async fn snapshot(tx: &mut Tx<'_>, kind: ObjectKind, id: Uuid) -> Result<Val
                  'is_audited', COALESCE(e.is_audited, false), \
                  'category', e.category, 'domain_ref', e.domain_ref, 'domain', d.name, \
                  'is_customized', e.is_customized, 'owner_layer', e.owner_layer) \
+             || CASE WHEN e.storage_mode = 'high_volume' \
+                     THEN jsonb_build_object('storage_mode', 'high_volume') \
+                     ELSE '{}'::jsonb END \
              FROM entity_info e \
              LEFT JOIN data_domain d ON d.id = e.domain_ref \
              WHERE e.id = $1"

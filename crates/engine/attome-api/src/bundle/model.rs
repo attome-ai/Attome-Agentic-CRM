@@ -268,6 +268,10 @@ pub struct EntityDef {
     pub category: Option<String>,
     #[serde(default)]
     pub is_customized: bool,
+    /// A1-T6: `high_volume` for a partitioned entity; absent for a standard
+    /// one (so a standard entity's bundle reads as before).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub storage_mode: Option<String>,
     #[serde(default)]
     pub attributes: Vec<AttributeDef>,
 }

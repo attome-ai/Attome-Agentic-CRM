@@ -153,6 +153,11 @@ pub(crate) struct CreateEntityBody {
     /// renamed, retyped or deleted there) follow on this one. One base only.
     #[serde(default)]
     extends_entity_id: Option<Uuid>,
+    /// A1-T6: `standard` (the default) or `high_volume`: a table partitioned
+    /// by month on `created_at`, whose reads must name a window on it and
+    /// which takes no unique business key. Chosen here and never changed.
+    #[serde(default)]
+    storage_mode: Option<String>,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -334,6 +339,14 @@ pub(crate) async fn create_entity_core(
         .filter(|s| !s.is_empty())
         .map(str::to_owned);
 
+    // A1-T6: the table's storage, chosen now.
+    let storage_mode = match body.storage_mode.as_deref() {
+        None => provision::StorageMode::Standard,
+        Some(raw) => provision::StorageMode::parse(raw.trim()).ok_or_else(|| {
+            AppError::Validation("storage_mode must be standard or high_volume".into())
+        })?,
+    };
+
     // A1-T4: the base must be a live entity.
     if let Some(base_id) = body.extends_entity_id
         && !inheritance::base_is_live(&state.base.db_migrator, base_id).await?
@@ -391,6 +404,7 @@ pub(crate) async fn create_entity_core(
             is_append_only: body.is_append_only,
             is_audited: false,
             category: None,
+            storage_mode,
         },
         ReconcilePolicy::Admin,
         None,
@@ -710,6 +724,7 @@ pub(super) async fn update_entity(
             is_append_only: cur_append_only.unwrap_or(false),
             is_audited: cur_audited.unwrap_or(false),
             category: new_category.clone(),
+            storage_mode: Default::default(),
         },
         ReconcilePolicy::Admin,
         None,

@@ -66,6 +66,7 @@ fn entity_desc(logicalname: &str, display_name: &str) -> EntityDesc {
         is_append_only: false,
         is_audited: false,
         category: None,
+        storage_mode: Default::default(),
     }
 }
 

@@ -394,6 +394,15 @@ pub async fn declare_business_key_recorded(
             errors::BUSINESS_KEY_REQUIRED_FOR_REFERENCE_DATA.to_owned(),
         ));
     }
+    // A1-T6: a unique key on a partitioned table must include its partition
+    // key, which a business key cannot name.
+    if after.fields.is_some()
+        && super::storage::storage_mode_of(db, &entity)
+            .await?
+            .is_high_volume()
+    {
+        return Err(super::storage::unique_needs_partition_key(&entity));
+    }
     let mut changed = Vec::new();
     cs::diff(&mut changed, "business_key", &before.fields, &after.fields);
     cs::diff(

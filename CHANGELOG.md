@@ -14,6 +14,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- High-volume entities (A1-T6): `POST /api/v1/admin/entities` takes `storage_mode: "high_volume"`
+  (migration 0340, `entity_info.storage_mode`) for a table partitioned by month on `created_at`
+  with a BRIN index and twelve months of partitions ahead. Queries on it must name a window on
+  `created_at` (422 `date_window_required`; its list views default to the last 30 days), and a
+  unique business key is refused (422 `unique_needs_partition_key`). Bundles and changesets carry
+  the mode. See `docs/high-volume-entities.md`.
 - Time travel per entity (A1-T10), off by default: `GET`/`PUT /api/v1/admin/time-travel/{entity}`
   switches it on with an optional retention (migration 0339, `entity_time_travel`); every update and
   delete then keeps the version it replaces in `<entity>__history`, partitioned by month.

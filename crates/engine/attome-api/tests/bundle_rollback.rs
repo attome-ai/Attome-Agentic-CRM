@@ -366,6 +366,7 @@ fn rollback_finds_and_reapplies_the_prior_succeeded_version() {
             is_audited: false,
             category: None,
             is_customized: false,
+            storage_mode: None,
             attributes: vec![attr("a")],
         });
         v1.normalize();

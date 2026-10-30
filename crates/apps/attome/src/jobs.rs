@@ -9116,6 +9116,8 @@ async fn ensure_audit_partitions(
     }
     // A1-T10: the history tables of entities with time travel on.
     attome_records::entity_crud::time_travel::maintain(db).await?;
+    // A1-T6: the monthly partitions of high-volume entities.
+    attome_metadata::provision::storage::maintain_partitions(db).await?;
     Ok(())
 }
 

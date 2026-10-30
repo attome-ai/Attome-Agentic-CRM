@@ -66,6 +66,8 @@ mod schema_change;
 /// A1-T1: write an attribute's or entity's sensitivity label.
 pub mod sensitivity;
 pub mod stage_process;
+/// A1-T6: standard and high-volume (partitioned) entity tables.
+pub mod storage;
 mod table;
 
 #[cfg(test)]
@@ -117,6 +119,7 @@ pub use schema_change::{
     queue_contract_change_recorded, queue_schema_change_plan, queue_schema_change_plan_in_tx,
     validate_backfill_default,
 };
+pub use storage::StorageMode;
 pub use table::{
     HISTORY_SUFFIX, MAX_HISTORY_ENTITY_LEN, backfill_rls_columns, drop_table, history_table_name,
     provision_history_table,

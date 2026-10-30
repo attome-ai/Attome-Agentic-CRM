@@ -17,6 +17,7 @@
 - [Architecture](architecture.md)
 - [Rollup fields](rollups.md): values computed from related records, fast and exact modes, backfill, the nightly heal and explaining a value.
 - [Time travel](time-travel.md): keeping every earlier version of an entity's records, reading a record as it was and putting a version back.
+- [High-volume entities](high-volume-entities.md): entities partitioned by month for many records, their required date window and what they do not take.
 - [Master data](master-data.md): master entities, contributions, survivorship by source system, golden records, stewards, cross-references and distribution.
 - [Dashboard drill-down and explain](dashboard-drill.md): the records behind a number, parity, drill levels, drill-through, comparing periods and explanations in words.
 - [Metadata layers](metadata-layers.md): the platform, app and customer layers, upgrade conflicts, resets, reserved names, locks and retiring `is_customized`.
