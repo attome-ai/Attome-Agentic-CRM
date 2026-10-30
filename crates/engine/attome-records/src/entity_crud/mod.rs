@@ -46,6 +46,9 @@ pub(crate) mod row_version_cache;
 /// B16-T5: `GET /api/v1/scan/find`, a scanned value to the readable records
 /// holding it.
 pub mod scan;
+/// S1-T8: record writes staged in one transaction for an all_or_none
+/// composite request.
+pub(crate) mod staged;
 mod survivorship;
 /// L1-T3: the source-system rank survivorship strategy.
 pub use survivorship::{

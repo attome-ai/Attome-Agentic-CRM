@@ -205,6 +205,25 @@ impl std::fmt::Debug for Committed {
     }
 }
 
+/// S1-T8: one mutation [`MutationRing::stage`]d in a shared transaction,
+/// waiting for [`MutationRing::commit_many`].
+pub struct StagedMutation {
+    pub entity_name: String,
+    pub result: MutationResult,
+    pub audit_header_id: Option<Uuid>,
+    /// Invalidate a cached privilege grant from the new row (create,
+    /// update); `false` reads the live table (a soft delete).
+    pub grant_by_row: bool,
+}
+
+impl std::fmt::Debug for StagedMutation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("StagedMutation")
+            .field("entity_name", &self.entity_name)
+            .finish_non_exhaustive()
+    }
+}
+
 /// C-10 — see this module's doc comment. Cheap to build (one borrow), so a
 /// caller constructs one per request rather than holding it across requests.
 pub struct MutationRing<'a> {
@@ -250,15 +269,61 @@ impl<'a> MutationRing<'a> {
         rw_pin_label: &str,
         result: MutationResult,
     ) -> Result<Committed, AppError> {
+        let audit_header_id = self
+            .stage(
+                &mut tx,
+                ctx,
+                entity_id,
+                entity_name,
+                attrs,
+                actor,
+                operation,
+                effects,
+                audit,
+                &result,
+            )
+            .await?;
+        attome_db::tx::commit(tx).await?;
+        self.after_commit(entity_name, &result, grant_invalidation)
+            .await;
+        crate::rw_pin::pin_write_with_current_lsn(self.state, ctx.user_id, rw_pin_label).await;
+
+        Ok(Committed {
+            result,
+            audit_header_id,
+        })
+    }
+
+    /// S1-T8: the in-transaction half of [`Self::commit_mutation`]: the
+    /// creator share, the file mirror and the audit write, in `tx`, without
+    /// committing. Returns the audit header id (`None` when the audit
+    /// policy left the event out). A caller staging several mutations in one
+    /// transaction stages each one right after its write, so a later write
+    /// in the same transaction sees the earlier one's creator share, then
+    /// finishes them all with [`Self::commit_many`].
+    #[allow(clippy::too_many_arguments)]
+    pub async fn stage(
+        &self,
+        tx: &mut Transaction<'_, Postgres>,
+        ctx: &SecurityContext,
+        entity_id: Uuid,
+        entity_name: &str,
+        attrs: &[AttrInfo],
+        actor: &MutationActor,
+        operation: AuditOperation,
+        effects: MutationSideEffects,
+        audit: MutationAudit,
+        result: &MutationResult,
+    ) -> Result<Option<Uuid>, AppError> {
         if effects.grant_creator_share {
-            grant_creator_share(&mut tx, entity_id, result.record_id, actor.acting_user_id).await?;
+            grant_creator_share(tx, entity_id, result.record_id, actor.acting_user_id).await?;
         }
 
         if effects.mirror_file_fields
             && let Some(row) = result.new_row.as_ref()
         {
             sync_file_field_documents(
-                &mut tx,
+                tx,
                 self.state,
                 ctx,
                 actor.acting_user_id,
@@ -278,7 +343,7 @@ impl<'a> MutationRing<'a> {
         // `Entity` default to is `Relationship`) — so the policy resolver
         // always applies to what this function writes, per I4/plan 5.2.
         let policy =
-            attome_audit::policy_resolver::resolve_in(self.state, &mut tx, entity_name).await;
+            attome_audit::policy_resolver::resolve_in(self.state, &mut *tx, entity_name).await;
 
         // Plan 5.2: a change to `audit_config` itself is always a
         // mandatory `Configuration` event, in the same transaction, never
@@ -295,7 +360,7 @@ impl<'a> MutationRing<'a> {
             )
             .organization(actor.org_ref);
             attome_audit::security::write_security_event(
-                &mut tx,
+                tx,
                 &attome_audit::audit_service(self.state),
                 config_event,
             )
@@ -351,14 +416,52 @@ impl<'a> MutationRing<'a> {
             };
             Some(
                 attome_audit::audit_service(self.state)
-                    .write_in_tx(&mut tx, event)
+                    .write_in_tx(tx, event)
                     .await?,
             )
         } else {
             None
         };
+        Ok(audit_header_id)
+    }
 
+    /// S1-T8: commits a transaction whose mutations were each staged with
+    /// [`Self::stage`], then runs every one's post-commit step and one
+    /// rw-pin. All of them commit or, when the commit fails, none does.
+    pub async fn commit_many(
+        &self,
+        tx: Transaction<'_, Postgres>,
+        ctx: &SecurityContext,
+        staged: Vec<StagedMutation>,
+        rw_pin_label: &str,
+    ) -> Result<Vec<Committed>, AppError> {
         attome_db::tx::commit(tx).await?;
+        let mut out = Vec::with_capacity(staged.len());
+        for item in staged {
+            let invalidation = if item.grant_by_row {
+                GrantInvalidation::ByRow(item.result.new_row.as_ref())
+            } else {
+                GrantInvalidation::ByRow(None)
+            };
+            self.after_commit(&item.entity_name, &item.result, invalidation)
+                .await;
+            out.push(Committed {
+                result: item.result,
+                audit_header_id: item.audit_header_id,
+            });
+        }
+        crate::rw_pin::pin_write_with_current_lsn(self.state, ctx.user_id, rw_pin_label).await;
+        Ok(out)
+    }
+
+    /// The post-commit half of [`Self::commit_mutation`]: cache forgetting
+    /// and invalidation, all best-effort.
+    async fn after_commit(
+        &self,
+        entity_name: &str,
+        result: &MutationResult,
+        grant_invalidation: GrantInvalidation<'_>,
+    ) {
         // AA7-T8: this node stops answering a conditional read from the
         // record's old version at once; other nodes follow from the feed.
         crate::entity_crud::row_version_cache::forget(entity_name, result.record_id).await;
@@ -393,13 +496,6 @@ impl<'a> MutationRing<'a> {
             }
             GrantInvalidation::Skip => {}
         }
-
-        crate::rw_pin::pin_write_with_current_lsn(self.state, ctx.user_id, rw_pin_label).await;
-
-        Ok(Committed {
-            result,
-            audit_header_id,
-        })
     }
 
     /// The merge shape: several audit events (`merge.rs` writes two — the

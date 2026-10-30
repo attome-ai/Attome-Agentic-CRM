@@ -1134,57 +1134,8 @@ pub async fn update_record_for_outcome(
                 audit_duplicate_skip(&mut tx, state, acting_user_id, entity_name, record_id)
                     .await?;
 
-                let mut audit = MutationAudit::new();
-                // M07 Phase F: the entity event of a write parked pending
-                // approval names the request, so the timeline shows why the
-                // record is not in the state that was asked for.
-                audit.event_comment = match &approval {
-                    Some(a) => Some(match event_comment {
-                        Some(c) => format!(
-                            "{c} (approval request {} submitted for '{}' -> '{}')",
-                            a.request_id, a.from, a.requested
-                        ),
-                        None => format!(
-                            "approval request {} submitted for '{}' -> '{}'",
-                            a.request_id, a.from, a.requested
-                        ),
-                    }),
-                    None => event_comment.map(str::to_owned),
-                };
-                // M9-T2: a held change names its request too.
-                if let Some(h) = &held {
-                    let note = format!(
-                        "change to {} held for approval request {}",
-                        h.attributes.join(", "),
-                        h.request_id
-                    );
-                    audit.event_comment = Some(match audit.event_comment.take() {
-                        Some(c) => format!("{c} ({note})"),
-                        None => note,
-                    });
-                }
-                // The diff is computed from the row actually written (the
-                // pending state for a parked transition), not from the
-                // caller's body.
-                let written_obj;
-                let diff_obj = match (&approval, row.as_object()) {
-                    (Some(_), Some(written)) => {
-                        written_obj = obj
-                            .keys()
-                            .filter_map(|k| written.get(k).map(|v| (k.clone(), v.clone())))
-                            .collect::<serde_json::Map<String, Value>>();
-                        &written_obj
-                    }
-                    _ => obj,
-                };
-                audit.changed_fields = field_changes_from_obj(
-                    &mut tx,
-                    state,
-                    attrs,
-                    diff_obj,
-                    mutation.old_row.as_ref(),
-                )
-                .await;
+                let audit =
+                    update_audit(&mut tx, state, attrs, obj, &mutation, &row, event_comment).await;
 
                 // C-10: see `create_record_for`'s comment at its own ring call.
                 MutationRing::new(state)
@@ -1233,6 +1184,66 @@ pub async fn update_record_for_outcome(
         approval,
         held,
     })
+}
+
+/// The audit an update writes: the caller's comment, the approval request
+/// or held change the write names, and the diff of the row as written.
+/// Shared by [`update_record_for_outcome`] and S1-T8's staged update.
+pub(super) async fn update_audit(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    state: &EngineState,
+    attrs: &[AttrInfo],
+    obj: &serde_json::Map<String, Value>,
+    mutation: &crate::entity_mutation::MutationResult,
+    row: &Value,
+    event_comment: Option<&str>,
+) -> MutationAudit {
+    let mut audit = MutationAudit::new();
+    // M07 Phase F: the entity event of a write parked pending
+    // approval names the request, so the timeline shows why the
+    // record is not in the state that was asked for.
+    audit.event_comment = match &mutation.approval {
+        Some(a) => Some(match event_comment {
+            Some(c) => format!(
+                "{c} (approval request {} submitted for '{}' -> '{}')",
+                a.request_id, a.from, a.requested
+            ),
+            None => format!(
+                "approval request {} submitted for '{}' -> '{}'",
+                a.request_id, a.from, a.requested
+            ),
+        }),
+        None => event_comment.map(str::to_owned),
+    };
+    // M9-T2: a held change names its request too.
+    if let Some(h) = &mutation.held {
+        let note = format!(
+            "change to {} held for approval request {}",
+            h.attributes.join(", "),
+            h.request_id
+        );
+        audit.event_comment = Some(match audit.event_comment.take() {
+            Some(c) => format!("{c} ({note})"),
+            None => note,
+        });
+    }
+    // The diff is computed from the row actually written (the
+    // pending state for a parked transition), not from the
+    // caller's body.
+    let written_obj;
+    let diff_obj = match (&mutation.approval, row.as_object()) {
+        (Some(_), Some(written)) => {
+            written_obj = obj
+                .keys()
+                .filter_map(|k| written.get(k).map(|v| (k.clone(), v.clone())))
+                .collect::<serde_json::Map<String, Value>>();
+            &written_obj
+        }
+        _ => obj,
+    };
+    audit.changed_fields =
+        field_changes_from_obj(tx, state, attrs, diff_obj, mutation.old_row.as_ref()).await;
+    audit
 }
 
 /// Reconciles `attome_document` rows mirroring `entity_name`/`record_id`'s own
@@ -2219,7 +2230,7 @@ fn duplicate_bypass(
 
 /// S1-T14: the security event that says a write skipped the duplicate
 /// check, in the write's own transaction.
-async fn audit_duplicate_skip(
+pub(super) async fn audit_duplicate_skip(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     state: &EngineState,
     acting_user_id: Uuid,

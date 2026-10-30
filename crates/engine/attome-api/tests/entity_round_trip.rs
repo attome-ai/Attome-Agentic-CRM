@@ -10155,6 +10155,251 @@ fn composite_create_then_update_by_reference() {
     })
 }
 
+/// S1-T8: the entity pair and the composite request helper the
+/// `all_or_none` tests share: a parent with a title, a child pointing at it.
+async fn all_or_none_fixture(
+    app: &axum::Router,
+    admin_cookie: &str,
+    state: &attome_core::EngineState,
+    label: &str,
+) -> (String, String) {
+    let (parent, parent_id) = create_entity(app, admin_cookie, &format!("{label}p")).await;
+    create_field(
+        app,
+        admin_cookie,
+        &parent_id,
+        r#"{"logicalname":"title","name":"Title","field_type":"text"}"#,
+    )
+    .await;
+    let (child, child_id) = create_entity(app, admin_cookie, &format!("{label}c")).await;
+    create_field(
+        app,
+        admin_cookie,
+        &child_id,
+        &format!(
+            r#"{{"logicalname":"parent_ref","name":"Parent","field_type":"lookup","lookup_entity_ref":"{parent_id}"}}"#
+        ),
+    )
+    .await;
+    sync_registry(state).await;
+    (parent, child)
+}
+
+fn composite_request(cookie: &str, body: serde_json::Value) -> Request<Body> {
+    Request::builder()
+        .method("POST")
+        .uri("/api/v1/composite")
+        .header("cookie", cookie)
+        .header("content-type", "application/json")
+        .body(Body::from(body.to_string()))
+        .unwrap()
+}
+
+/// Audit rows for `entity_name`, chained or still in the ingest queue.
+async fn audit_rows_for_entity(state: &attome_core::EngineState, entity_name: &str) -> i64 {
+    sqlx::query_scalar(
+        "SELECT (SELECT COUNT(*) FROM audit_header WHERE entity_name = $1)               + (SELECT COUNT(*) FROM audit_ingest WHERE payload->>'entity_name' = $1)",
+    )
+    .bind(entity_name)
+    .fetch_one(&state.base.db)
+    .await
+    .expect("count audit rows")
+}
+
+/// Audit rows for `record_id`, chained or still in the ingest queue.
+async fn audit_rows_for(state: &attome_core::EngineState, record_id: &str) -> i64 {
+    sqlx::query_scalar(
+        "SELECT (SELECT COUNT(*) FROM audit_header WHERE record_id = $1::uuid) \
+              + (SELECT COUNT(*) FROM audit_ingest WHERE payload->>'record_id' = $1)",
+    )
+    .bind(record_id)
+    .fetch_one(&state.base.db)
+    .await
+    .expect("count audit rows")
+}
+
+/// S1-T8: in an `all_or_none` request whose third operation fails, the
+/// first two leave no rows and no audit, and every result is rolled back.
+// op: POST /api/v1/composite
+#[test]
+fn all_or_none_rolls_back_every_operation_on_failure() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+        let (parent, child) = all_or_none_fixture(&app, &admin_cookie, &state, "aonr").await;
+        // The fixture's admin calls audit the new entities themselves.
+        let audited_before = [
+            audit_rows_for_entity(&state, &parent).await,
+            audit_rows_for_entity(&state, &child).await,
+        ];
+
+        let res = app
+            .clone()
+            .oneshot(composite_request(
+                &admin_cookie,
+                serde_json::json!({"all_or_none": true, "operations": [
+                    {"ref": "p", "method": "create", "entity": parent, "body": {"title": "Acme"}},
+                    {"ref": "c", "method": "create", "entity": child, "body": {"parent_ref": "${p.id}"}},
+                    {"ref": "u", "method": "update", "entity": parent, "id": "${p.id}",
+                     "if_match": 999, "body": {"title": "stale"}},
+                    {"ref": "x", "method": "create", "entity": parent, "body": {"title": "never"}}
+                ]}),
+            ))
+            .await
+            .expect("composite");
+        assert_eq!(res.status(), StatusCode::OK);
+        let body = body_json(res).await;
+        let results = body["results"].as_array().expect("results");
+        assert!(
+            results.iter().all(|r| r["rolled_back"] == true),
+            "every result is rolled back: {body}"
+        );
+        assert_eq!(results[0]["status"], 201, "{body}");
+        assert_eq!(results[1]["status"], 201, "{body}");
+        assert_eq!(results[2]["status"], 409, "the stale version fails: {body}");
+        assert!(results[2]["error"].is_object(), "{body}");
+        assert_eq!(results[3]["status"], 424, "the last never ran: {body}");
+        assert!(results.iter().all(|r| r.get("body").is_none()), "{body}");
+
+        for (entity, before) in [&parent, &child].into_iter().zip(audited_before) {
+            let rows: i64 = sqlx::query_scalar(&format!("SELECT COUNT(*) FROM \"{entity}\""))
+                .fetch_one(&state.base.db)
+                .await
+                .expect("count rows");
+            assert_eq!(
+                rows, 0,
+                "{entity} keeps no row from the rolled-back request"
+            );
+            assert_eq!(
+                audit_rows_for_entity(&state, entity).await,
+                before,
+                "{entity} has no audit from the rolled-back request"
+            );
+        }
+    })
+}
+
+/// S1-T8: an `all_or_none` request that succeeds commits every operation
+/// (creates, an update of a record created in the same request, and a
+/// delete) and writes one audit event for each.
+// op: POST /api/v1/composite
+#[test]
+fn all_or_none_commits_all_and_audits_each() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+        let (parent, child) = all_or_none_fixture(&app, &admin_cookie, &state, "aonc").await;
+
+        // A record that exists before the request, to delete in it.
+        let res = app
+            .clone()
+            .oneshot(composite_request(
+                &admin_cookie,
+                serde_json::json!({"operations": [
+                    {"ref": "old", "method": "create", "entity": parent, "body": {"title": "Old"}}
+                ]}),
+            ))
+            .await
+            .expect("seed");
+        let body = body_json(res).await;
+        let old_id = body["results"][0]["body"]["id"]
+            .as_str()
+            .expect("old id")
+            .to_owned();
+        let audit_before_delete = audit_rows_for(&state, &old_id).await;
+
+        let res = app
+            .clone()
+            .oneshot(composite_request(
+                &admin_cookie,
+                serde_json::json!({"all_or_none": true, "operations": [
+                    {"ref": "p", "method": "create", "entity": parent, "body": {"title": "Acme"}},
+                    {"ref": "c", "method": "create", "entity": child, "body": {"parent_ref": "${p.id}"}},
+                    {"ref": "d", "method": "delete", "entity": parent, "id": old_id}
+                ]}),
+            ))
+            .await
+            .expect("composite");
+        assert_eq!(res.status(), StatusCode::OK);
+        let body = body_json(res).await;
+        let results = body["results"].as_array().expect("results");
+        assert_eq!(results[0]["status"], 201, "{body}");
+        assert_eq!(results[1]["status"], 201, "{body}");
+        assert_eq!(results[2]["status"], 204, "{body}");
+        assert!(
+            results.iter().all(|r| r.get("rolled_back").is_none()),
+            "{body}"
+        );
+        assert_eq!(
+            results[1]["body"]["data"]["parent_ref"], results[0]["body"]["id"],
+            "the child points at the parent created in the same request: {body}"
+        );
+        let parent_id = results[0]["body"]["id"].as_str().expect("parent id");
+        let child_id = results[1]["body"]["id"].as_str().expect("child id");
+        let parent_version = results[0]["body"]["row_version"]
+            .as_i64()
+            .expect("row_version");
+
+        // Committed: both new rows are live, the old one is deleted.
+        let live: i64 = sqlx::query_scalar(&format!(
+            "SELECT COUNT(*) FROM \"{parent}\" WHERE id = $1::uuid AND is_active"
+        ))
+        .bind(parent_id)
+        .fetch_one(&state.base.db)
+        .await
+        .expect("parent row");
+        assert_eq!(live, 1);
+        let old_active: bool = sqlx::query_scalar(&format!(
+            "SELECT is_active FROM \"{parent}\" WHERE id = $1::uuid"
+        ))
+        .bind(&old_id)
+        .fetch_one(&state.base.db)
+        .await
+        .expect("old row");
+        assert!(!old_active, "the delete committed");
+
+        // One audit event per operation.
+        assert_eq!(audit_rows_for(&state, parent_id).await, 1, "parent create");
+        assert_eq!(audit_rows_for(&state, child_id).await, 1, "child create");
+        assert_eq!(
+            audit_rows_for(&state, &old_id).await,
+            audit_before_delete + 1,
+            "the delete"
+        );
+
+        // An update of a record created earlier in the same request (a new
+        // row's version is 0), and of one from an earlier request.
+        let res = app
+            .clone()
+            .oneshot(composite_request(
+                &admin_cookie,
+                serde_json::json!({"all_or_none": true, "operations": [
+                    {"ref": "n", "method": "create", "entity": parent, "body": {"title": "New"}},
+                    {"ref": "u", "method": "update", "entity": parent, "id": "${n.id}",
+                     "if_match": 0, "body": {"title": "Renamed"}},
+                    {"ref": "v", "method": "update", "entity": parent, "id": parent_id,
+                     "if_match": parent_version, "body": {"title": "Also"}}
+                ]}),
+            ))
+            .await
+            .expect("composite");
+        let body = body_json(res).await;
+        assert_eq!(body["results"][1]["status"], 200, "{body}");
+        assert_eq!(
+            body["results"][1]["body"]["data"]["title"], "Renamed",
+            "{body}"
+        );
+        assert_eq!(body["results"][2]["status"], 200, "{body}");
+        let new_id = body["results"][0]["body"]["id"].as_str().expect("new id");
+        assert_eq!(audit_rows_for(&state, new_id).await, 2, "create and update");
+        assert_eq!(audit_rows_for(&state, parent_id).await, 2, "and its update");
+    })
+}
+
 /// S1-T6: a record is read and updated by its declared business key; a
 /// non-key attribute is 422; PATCH by key needs If-Match.
 // op: PATCH /api/v1/admin/entities/{entity_id}, POST /api/v1/{entity}, PATCH /api/v1/{entity}/key/{keyspec}

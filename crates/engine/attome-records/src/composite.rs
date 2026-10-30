@@ -7,8 +7,14 @@
 //! Every operation goes through the same generic create/update/delete path
 //! a single request does, after the same privilege check, so validation,
 //! row versions, rules and audit apply to each.
+//!
+//! S1-T8: with `all_or_none`, every operation runs in one short transaction
+//! (at most 5 seconds per statement) through the staged writes of
+//! `entity_crud::staged`, and they commit together with one audit event
+//! each; the first that fails rolls them all back, and every result is
+//! marked `rolled_back`.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use attome_core::EngineState;
 use attome_security::SecurityContextExt;
@@ -50,7 +56,8 @@ pub struct CompositeOp {
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CompositeRequest {
-    /// Every operation commits or none does. Not available yet (S1-T8).
+    /// Every operation commits or none does (S1-T8): they run in one
+    /// transaction, and the first that fails rolls them all back.
     #[serde(default)]
     pub all_or_none: bool,
     pub operations: Vec<CompositeOp>,
@@ -68,6 +75,10 @@ pub struct CompositeResult {
     /// The error body, as a single request would have answered.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<Value>,
+    /// S1-T8: true when an `all_or_none` request failed, so this operation
+    /// was rolled back (or, after the failing one, never ran).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub rolled_back: bool,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -236,9 +247,221 @@ fn error_parts(error: AppError) -> (u16, Value) {
     (status, json!({ "status": status }))
 }
 
+/// [`error_parts`] with the message of a client error (never of a 5xx).
+fn error_body(error: AppError) -> (u16, Value) {
+    let message = error.to_string();
+    let (status, mut detail) = error_parts(error);
+    if status < 500 {
+        detail["message"] = Value::String(message);
+    }
+    (status, detail)
+}
+
+/// The record action and privilege an operation needs.
+fn action_of(
+    method: CompositeMethod,
+) -> Result<(attome_security::RecordAction, &'static str), AppError> {
+    use attome_security::RecordAction;
+    match method {
+        CompositeMethod::Create => Ok((RecordAction::Create, "create")),
+        CompositeMethod::Update => Ok((RecordAction::Update, "update")),
+        CompositeMethod::Delete => Ok((RecordAction::Delete, "delete")),
+        CompositeMethod::Upsert => Err(AppError::Validation(
+            "upsert is not available in a composite request yet".into(),
+        )),
+    }
+}
+
+/// Every result of an `all_or_none` request that failed at operation
+/// `failed`: the ones before it with the status they would have had, the
+/// failing one with its error, the ones after it never run (424); all
+/// marked `rolled_back`.
+fn rolled_back(
+    ops: &[CompositeOp],
+    done: &[u16],
+    failed: usize,
+    error: AppError,
+) -> Vec<CompositeResult> {
+    let (status, detail) = error_body(error);
+    let failed_ref = &ops[failed].reference;
+    ops.iter()
+        .enumerate()
+        .map(|(i, op)| {
+            let not_run = || {
+                (
+                    424,
+                    Some(json!({
+                        "status": 424,
+                        "message": format!("not run: operation {failed_ref} failed"),
+                    })),
+                )
+            };
+            // An operation before the failing one ran (and was rolled back)
+            // unless the request failed before the transaction opened.
+            let (status, error) = match i.cmp(&failed) {
+                std::cmp::Ordering::Less => match done.get(i) {
+                    Some(&ran) => (ran, None),
+                    None => not_run(),
+                },
+                std::cmp::Ordering::Equal => (status, Some(detail.clone())),
+                std::cmp::Ordering::Greater => not_run(),
+            };
+            CompositeResult {
+                reference: op.reference.clone(),
+                status,
+                body: None,
+                error,
+                rolled_back: true,
+            }
+        })
+        .collect()
+}
+
+/// S1-T8: runs every operation in one transaction, committing them together
+/// or none of them.
+async fn run_all_or_none(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    ops: &[CompositeOp],
+) -> Result<Vec<CompositeResult>, AppError> {
+    use crate::entity_crud::staged;
+
+    // Privileges and the per-entity access inputs, on the pool, before the
+    // transaction opens (a held transaction never waits on a second
+    // connection).
+    let mut prepared = Vec::with_capacity(ops.len());
+    for (i, op) in ops.iter().enumerate() {
+        let step = async {
+            let (action, privilege) = action_of(op.method)?;
+            ctx.require(&op.entity, privilege)?;
+            staged::prepare(state, ctx, &op.entity, action).await
+        };
+        match step.await {
+            Ok(p) => prepared.push(p),
+            Err(error) => return Ok(rolled_back(ops, &[], i, error)),
+        }
+    }
+    let actor = crate::mutation_ring::MutationActor::fetch(state, ctx.user_id).await;
+
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    sqlx::query("SET LOCAL statement_timeout = 5000")
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    let mut results: HashMap<String, Value> = HashMap::new();
+    let mut in_request: HashSet<Uuid> = HashSet::new();
+    let mut statuses: Vec<u16> = Vec::with_capacity(ops.len());
+    let mut writes = Vec::with_capacity(ops.len());
+    for (i, (op, prepared)) in ops.iter().zip(&prepared).enumerate() {
+        let step = async {
+            let mut body = op.body.clone().unwrap_or_else(|| json!({}));
+            substitute_refs(&mut body, &results)?;
+            match op.method {
+                CompositeMethod::Create => Ok::<_, AppError>((
+                    201,
+                    staged::stage_create(&mut tx, state, ctx, &actor, prepared, body, &in_request)
+                        .await?,
+                )),
+                CompositeMethod::Update => {
+                    let id = record_id(op, &results)?;
+                    let version = op.if_match.ok_or_else(|| {
+                        AppError::Validation(
+                            "update needs if_match (the record's row_version)".into(),
+                        )
+                    })?;
+                    Ok((
+                        200,
+                        staged::stage_update(
+                            &mut tx,
+                            state,
+                            ctx,
+                            &actor,
+                            prepared,
+                            id,
+                            version,
+                            body,
+                            &in_request,
+                        )
+                        .await?,
+                    ))
+                }
+                CompositeMethod::Delete => {
+                    let id = record_id(op, &results)?;
+                    Ok((
+                        204,
+                        staged::stage_delete(
+                            &mut tx,
+                            state,
+                            ctx,
+                            &actor,
+                            prepared,
+                            id,
+                            op.if_match,
+                            &in_request,
+                        )
+                        .await?,
+                    ))
+                }
+                CompositeMethod::Upsert => Err(AppError::Validation(
+                    "upsert is not available in a composite request yet".into(),
+                )),
+            }
+        };
+        match step.await {
+            Ok((status, write)) => {
+                // A later operation reads this one's id and fields.
+                results.insert(
+                    op.reference.clone(),
+                    json!({ "id": write.record_id, "data": write.row.clone().unwrap_or(Value::Null) }),
+                );
+                if op.method == CompositeMethod::Create {
+                    in_request.insert(write.record_id);
+                }
+                statuses.push(status);
+                writes.push(write);
+            }
+            Err(error) => {
+                // Dropping the transaction rolls every staged write back.
+                drop(tx);
+                return Ok(rolled_back(ops, &statuses, i, error));
+            }
+        }
+    }
+
+    let mut answers = Vec::with_capacity(writes.len());
+    let mut staged_writes = Vec::with_capacity(writes.len());
+    for w in writes {
+        answers.push((w.record_id, w.row, w.sent));
+        staged_writes.push(w.staged);
+    }
+    crate::mutation_ring::MutationRing::new(state)
+        .commit_many(tx, ctx, staged_writes, "composite all_or_none")
+        .await?;
+
+    let mut out = Vec::with_capacity(ops.len());
+    for (((op, prepared), status), (id, row, sent)) in
+        ops.iter().zip(&prepared).zip(statuses).zip(answers)
+    {
+        let body = match row {
+            Some(row) => {
+                staged::committed_response(state, ctx, prepared, id, row, sent.as_ref()).await?
+            }
+            None => json!({ "id": id }),
+        };
+        out.push(CompositeResult {
+            reference: op.reference.clone(),
+            status,
+            body: Some(body),
+            error: None,
+            rolled_back: false,
+        });
+    }
+    Ok(out)
+}
+
 /// Run several record operations
 ///
-/// Up to 25 creates, updates and deletes in order, each on its own; a later one may use an earlier one's result through ${ref.field}. One result per operation.
+/// Up to 25 creates, updates and deletes in order, each on its own; a later one may use an earlier one's result through ${ref.field}. With all_or_none, they run in one transaction and the first failure rolls them all back. One result per operation.
 #[utoipa::path(
     post,
     path = "/api/v1/composite",
@@ -249,7 +472,7 @@ fn error_parts(error: AppError) -> (u16, Value) {
     responses(
         (status = 200, description = "One result per operation, in order", body = CompositeResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
-        (status = 422, description = "The request's own shape is wrong (count, refs, all_or_none)", body = ErrorResponse),
+        (status = 422, description = "The request's own shape is wrong (count or refs)", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
@@ -260,7 +483,8 @@ pub async fn composite(
 ) -> Result<Json<CompositeResponse>, AppError> {
     validate(&request)?;
     if request.all_or_none {
-        return Err(AppError::Validation("all_or_none not yet supported".into()));
+        let results = run_all_or_none(&state, &ctx, &request.operations).await?;
+        return Ok(Json(CompositeResponse { results }));
     }
     let mut results: HashMap<String, Value> = HashMap::new();
     let mut out = Vec::with_capacity(request.operations.len());
@@ -273,19 +497,17 @@ pub async fn composite(
                     status,
                     body: Some(body),
                     error: None,
+                    rolled_back: false,
                 });
             }
             Err(error) => {
-                let message = error.to_string();
-                let (status, mut detail) = error_parts(error);
-                if status < 500 {
-                    detail["message"] = Value::String(message);
-                }
+                let (status, detail) = error_body(error);
                 out.push(CompositeResult {
                     reference: op.reference.clone(),
                     status,
                     body: None,
                     error: Some(detail),
+                    rolled_back: false,
                 });
             }
         }
@@ -356,6 +578,28 @@ mod tests {
         let results = HashMap::new();
         let mut body = json!({"parentcustomerid": "${later.id}"});
         assert!(substitute_refs(&mut body, &results).is_err());
+    }
+
+    #[test]
+    fn rolled_back_marks_every_result() {
+        let ops = vec![op("a"), op("b"), op("c")];
+        let results = rolled_back(&ops, &[201], 1, AppError::Conflict("version_conflict"));
+        let before_tx = rolled_back(&ops, &[], 1, AppError::Forbidden);
+        assert_eq!(
+            before_tx[0].status, 424,
+            "nothing ran before the transaction"
+        );
+        assert!(results.iter().all(|r| r.rolled_back));
+        assert_eq!(results[0].status, 201);
+        assert!(results[0].error.is_none());
+        assert_eq!(results[1].status, 409);
+        assert_eq!(results[2].status, 424);
+        assert!(
+            results[2].error.as_ref().unwrap()["message"]
+                .as_str()
+                .unwrap()
+                .contains("operation b failed")
+        );
     }
 
     #[test]

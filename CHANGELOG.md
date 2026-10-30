@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- `POST /api/v1/composite` takes `all_or_none: true` (S1-T8): every operation runs in one
+  transaction and commits together with its own audit event, or the first failure rolls them all
+  back and every result carries `rolled_back: true` (the failing one its error, later ones 424).
+  An operation may update or delete a record created earlier in the same request.
 - Customer-held master keys (Q19-T2): a key wrapped by AWS KMS, Azure Key Vault, Google Cloud KMS
   or an HSM over PKCS#11 (`hsm` build feature) is given as `NAME_KMS` and unwrapped once at start
   when `ATTOME_KMS` is set; the node does not start when it cannot unwrap. See `docs/secrets.md`.
