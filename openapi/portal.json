@@ -457,6 +457,199 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/webportals/{id}/domain": {
+      "get": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "A web portal's domain",
+        "description": "G12-T3: the domain the portal is served on, if any. User administrators only.",
+        "operationId": "portal_admin_get_domain",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Web portal id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The portal's domain",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalDomain"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "put": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Serve a web portal on its own domain",
+        "description": "G12-T3: sets the domain the portal is served on (`null` clears it). Point the domain's DNS at\nthis server; with ACME on, its certificate is ordered at the next restart. User administrators\nonly. Audited.",
+        "operationId": "portal_admin_put_domain",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Web portal id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalDomain"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The domain, as stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalDomain"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another portal uses this domain",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a host name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/webportals/{id}/entities": {
       "get": {
         "tags": [
@@ -2658,6 +2851,47 @@
         "x-privilege": "admin",
         "x-rate-class": "api",
         "x-risk": "high"
+      }
+    },
+    "/api/v1/portal-host": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "The web portal on this host",
+        "description": "G12-T3: the keyword of the enabled web portal served on the request's host, so the web app\nopens it at `/`. No sign-in; 404 when no portal uses the host.",
+        "operationId": "portal_host",
+        "responses": {
+          "200": {
+            "description": "The portal on this host",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalHost"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No portal uses this host",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/s2s/webportals/{keyword}/accounts/changes": {
@@ -5166,6 +5400,164 @@
         "x-risk": "medium"
       }
     },
+    "/{keyword}/api/v1/me/privacy-requests": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "My privacy requests",
+        "description": "R1-T2: the privacy requests the signed-in person made, newest first, with their status and\ndeadline.",
+        "operationId": "portal_privacy_requests",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "Web portal keyword",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The person's requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PortalDsrRequest"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid portal session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Ask about my personal data",
+        "description": "R1-T2: a privacy (data subject) request about the signed-in person: a copy of their data,\nerasure, portability, objection, restriction of processing or rectification. They give their\npassword again to prove who they are; the subject is their verified email address. Staff work\nit with every other data subject request, by the deadline the deployment's law sets.",
+        "operationId": "portal_privacy_request",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "Web portal keyword",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrivacyRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The request, recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalDsrRequest"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid portal session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The password is wrong, or an unknown request type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/{keyword}/api/v1/me/sessions": {
       "get": {
         "tags": [
@@ -5510,6 +5902,163 @@
           },
           "404": {
             "description": "No such portal, or no access to this entity (indistinguishable from a missing one)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/{keyword}/api/v1/pages": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "List a portal's pages",
+        "description": "The published pages for portal users (audience `portal` or `public`), at most 100, the\ndeployment's own first, for the portal app's navigation. Needs a portal session and the\nportal's current consent.",
+        "operationId": "portal_pages",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "Web portal keyword",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The portal's pages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PortalPageSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid portal session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Consent to the portal's current terms is missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/{keyword}/api/v1/pages/{name}": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Get a portal page",
+        "description": "A published page for portal users, by name, with a record page's entity by logical name. Needs a\nportal session and the portal's current consent. A page for staff only is 404.",
+        "operationId": "portal_page",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "Web portal keyword",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The page's name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid portal session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Consent to the portal's current terms is missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal, or no such portal page",
             "content": {
               "application/json": {
                 "schema": {
@@ -7810,6 +8359,68 @@
           }
         }
       },
+      "PaginatedResponse_PortalPageSummary": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One page a portal may show, for its navigation.",
+              "required": [
+                "name",
+                "page_type"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "page_type": {
+                  "type": "string"
+                },
+                "title_ar": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "title_en": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_PortalRecord": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -8105,6 +8716,61 @@
           }
         }
       },
+      "PortalDomain": {
+        "type": "object",
+        "description": "A portal's own domain; `null` when it has none.",
+        "properties": {
+          "domain": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The host name, e.g. `support.example.com`; `null` clears it."
+          }
+        }
+      },
+      "PortalDsrRequest": {
+        "type": "object",
+        "description": "R1-T2: a request as the person who made it through a web portal sees\nit, for tracking: never the subject reference or staff notes.",
+        "required": [
+          "id",
+          "request_type",
+          "status",
+          "requested_at"
+        ],
+        "properties": {
+          "due_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When it must be answered by, under the deployment's law."
+          },
+          "fulfilled_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "request_type": {
+            "type": "string"
+          },
+          "requested_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "description": "`pending`, `blocked`, `fulfilled` or `rejected`."
+          }
+        }
+      },
       "PortalEntityView": {
         "type": "object",
         "description": "One entity as a portal may see it in metadata.",
@@ -8207,6 +8873,18 @@
           }
         }
       },
+      "PortalHost": {
+        "type": "object",
+        "description": "The portal served on the request's host.",
+        "required": [
+          "keyword"
+        ],
+        "properties": {
+          "keyword": {
+            "type": "string"
+          }
+        }
+      },
       "PortalMe": {
         "type": "object",
         "required": [
@@ -8258,6 +8936,35 @@
           "webportal_id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "PortalPage": {
+        "type": "object",
+        "description": "One page as the portal app renders it.",
+        "required": [
+          "id",
+          "name",
+          "doc"
+        ],
+        "properties": {
+          "doc": {
+            "type": "object",
+            "description": "The page document (the page kind's shape), with its `id` and `name`."
+          },
+          "entity_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A record page's entity, by logical name."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
           }
         }
       },
@@ -8469,6 +9176,24 @@
           "active",
           "disabled"
         ]
+      },
+      "PrivacyRequestBody": {
+        "type": "object",
+        "description": "A privacy request (R1-T2).",
+        "required": [
+          "request_type",
+          "password"
+        ],
+        "properties": {
+          "password": {
+            "type": "string",
+            "description": "The current password, again: proof that the person asking is the\naccount's owner."
+          },
+          "request_type": {
+            "type": "string",
+            "description": "`access`, `erasure`, `portability`, `objection`, `restriction` or `rectification`."
+          }
+        }
       },
       "RecoveryCodes": {
         "type": "object",

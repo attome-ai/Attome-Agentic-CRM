@@ -353,6 +353,87 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/reports/sql/run": {
+      "post": {
+        "tags": [
+          "report"
+        ],
+        "summary": "Run an SQL report",
+        "description": "Test-runs an author's SQL (P2-T1, P2-T2): one SELECT over the entities\nthe author may read, each seen as the author sees it in a list (their\nrows, their readable fields), as a role with no other access, in a\nread-only transaction that is rolled back. Returns the columns, up to\n1000 rows and, when asked, the plan. A statement error (syntax, an\nunknown or unreadable table, a type error, the 10-second limit) is a 422\nwith PostgreSQL's message. Needs `attome_report.author_sql`.",
+        "operationId": "run_sql",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SqlRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SqlRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks attome_report.author_sql",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The SQL is empty, too long or failed; PostgreSQL's message says why",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "runs the author's SELECT in a read-only transaction that is always rolled back",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "report",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/reports/{id}": {
       "patch": {
         "tags": [
@@ -1013,6 +1094,67 @@
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "SqlRun": {
+        "type": "object",
+        "description": "What a run returns.",
+        "required": [
+          "columns",
+          "rows",
+          "truncated"
+        ],
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The result's column names, in order."
+          },
+          "plan": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "`EXPLAIN (FORMAT JSON)` of the statement, when asked for."
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "One object per row, keyed by column name."
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "More rows matched than the cap returned."
+          }
+        }
+      },
+      "SqlRunRequest": {
+        "type": "object",
+        "description": "The body of `POST /api/v1/reports/sql/run`.",
+        "required": [
+          "sql"
+        ],
+        "properties": {
+          "explain": {
+            "type": "boolean",
+            "description": "Also return `EXPLAIN (FORMAT JSON)` of the statement."
+          },
+          "max_rows": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "At most this many rows, up to 1000 (the default)."
+          },
+          "sql": {
+            "type": "string",
+            "description": "One SELECT (a WITH query too). Entities are named as tables."
           }
         }
       },

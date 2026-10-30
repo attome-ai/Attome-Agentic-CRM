@@ -29210,6 +29210,85 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/model/pack-objects": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List pack model objects",
+        "description": "The model objects installed packs shipped, with what the last upgrade\ndid to each (G12-T1): the ones it could not replace because the customer\nchanged them, and the ones a newer pack no longer ships, sort first.",
+        "operationId": "list_pack_objects",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of pack objects",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PackObjectRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/model/{kind}": {
       "get": {
         "tags": [
@@ -66380,6 +66459,73 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/model/entities/{entity}/record-page": {
+      "get": {
+        "tags": [
+          "model"
+        ],
+        "summary": "An entity's record page",
+        "description": "The published record page marked `\"default\": true` for an entity\n(D1-T2): the customer's own first, then an installed app's, by name.\n404 when the entity has none, and its records open on their form. Any\nsigned-in person may ask; the page's components read data under their\nown rights.",
+        "operationId": "record_page",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The entity's record page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordPageRef"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity, or it has no record page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/model/forms/{id}/plan": {
       "get": {
         "tags": [
@@ -67269,6 +67415,281 @@
         "x-idempotent": "key",
         "x-module": "core",
         "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/oauth/device": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "A pending device grant",
+        "description": "The application a user code belongs to, so the person sees what they are\nabout to sign in before approving it. 404 for a code that is unknown,\ndecided or expired.",
+        "operationId": "pending_grant",
+        "parameters": [
+          {
+            "name": "user_code",
+            "in": "path",
+            "description": "The code the device shows, with or without its dash.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The pending grant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingDeviceGrant"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No pending grant has this code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/oauth/device/approve": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Approve or deny a device",
+        "description": "RFC 8628 §3.3: the signed-in person approves the grant a user code names,\nso the device that asked receives a session as them on its next poll, or\ndenies it. Needs a browser session: an API key or another device's\nsession is refused (403). Audited with the application's name.",
+        "operationId": "approve",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceDecision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Decided"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a browser session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No pending grant has this code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "credential",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/oauth/device/token": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Exchange a device grant or refresh token",
+        "description": "RFC 8628 §3.4: a device polls with its device code until the person has\ndecided: `authorization_pending` meanwhile, `slow_down` when it polls\nfaster than `interval`, `access_denied` or `expired_token` at the end. An\napproved grant gives an ordinary session for the person, once. A refresh\ntoken gives the next pair (RFC 6749 §6), in the same family. Audited as a\nsign-in.",
+        "operationId": "token",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceTokenForm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "A session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceTokens"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Pending, too fast, denied, expired, or a bad request (the RFC 8628 error codes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The refresh token is not live",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A sign-in rule of the person's roles refuses it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "login"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/oauth/device_authorization": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Ask for a device grant",
+        "description": "RFC 8628 §3.1: a device asks to be signed in. Returns its device code,\nthe user code the person enters at `verification_uri` in a signed-in\nbrowser, and how often to poll `POST /api/v1/oauth/device/token`. No\ncredential: the grant does nothing until a signed-in person approves it.",
+        "operationId": "device_authorization",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceAuthorizationForm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The grant's codes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceAuthorization"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "An unknown client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit-exempt": {
+          "note": "opens a pending grant that does nothing until a signed-in person approves it; the approval and the session it creates are audited",
+          "reason": "delegated",
+          "via": "POST /api/v1/oauth/device/approve"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "public",
         "x-rate-class": "api",
         "x-risk": "medium"
       }
@@ -93973,6 +94394,96 @@
           }
         }
       },
+      "DeviceAuthorization": {
+        "type": "object",
+        "description": "A device authorization response (RFC 8628 §3.2).",
+        "required": [
+          "device_code",
+          "user_code",
+          "verification_uri",
+          "verification_uri_complete",
+          "expires_in",
+          "interval"
+        ],
+        "properties": {
+          "device_code": {
+            "type": "string",
+            "description": "Kept on the device and sent when polling; never shown."
+          },
+          "expires_in": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Seconds the grant waits for its approval."
+          },
+          "interval": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Seconds to wait between polls."
+          },
+          "user_code": {
+            "type": "string",
+            "description": "Shown to the person, `XXXX-XXXX`."
+          },
+          "verification_uri": {
+            "type": "string",
+            "description": "The page the person enters the code on."
+          },
+          "verification_uri_complete": {
+            "type": "string",
+            "description": "The same page with the code filled in."
+          }
+        }
+      },
+      "DeviceAuthorizationForm": {
+        "type": "object",
+        "description": "A device authorization request (RFC 8628 §3.1), form-encoded.",
+        "required": [
+          "client_id"
+        ],
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "description": "`attome-cli`, `attome-outlook` or `attome-gmail`."
+          },
+          "scope": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Accepted and ignored: the session has the person's own access."
+          }
+        }
+      },
+      "DeviceDecision": {
+        "type": "object",
+        "description": "Approving or denying a grant.",
+        "required": [
+          "user_code",
+          "approve"
+        ],
+        "properties": {
+          "approve": {
+            "type": "boolean",
+            "description": "`true` signs the device in as the caller; `false` refuses it."
+          },
+          "user_code": {
+            "type": "string"
+          }
+        }
+      },
+      "DeviceErrorBody": {
+        "type": "object",
+        "description": "An RFC 6749 §5.2 error answer.",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "`invalid_request`, `invalid_client`, `unsupported_grant_type`,\n`invalid_grant`, `authorization_pending`, `slow_down`,\n`access_denied` or `expired_token`."
+          }
+        }
+      },
       "DeviceStatus": {
         "type": "object",
         "description": "What an app asks on resume.",
@@ -93983,6 +94494,67 @@
           "wipe": {
             "type": "boolean",
             "description": "True when an administrator asked for a wipe the app has not yet done."
+          }
+        }
+      },
+      "DeviceTokenForm": {
+        "type": "object",
+        "description": "A device token request (RFC 8628 §3.4, RFC 6749 §6), form-encoded.",
+        "required": [
+          "grant_type",
+          "client_id"
+        ],
+        "properties": {
+          "client_id": {
+            "type": "string"
+          },
+          "device_code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "With the device code grant."
+          },
+          "grant_type": {
+            "type": "string",
+            "description": "`urn:ietf:params:oauth:grant-type:device_code` or `refresh_token`."
+          },
+          "refresh_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "With the refresh token grant."
+          }
+        }
+      },
+      "DeviceTokens": {
+        "type": "object",
+        "description": "An issued session (RFC 6749 §5.1).",
+        "required": [
+          "access_token",
+          "token_type",
+          "expires_in",
+          "refresh_token"
+        ],
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "description": "For `Authorization: Bearer`."
+          },
+          "expires_in": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Seconds until the access token expires.",
+            "minimum": 0
+          },
+          "refresh_token": {
+            "type": "string",
+            "description": "Redeemed here with `grant_type=refresh_token` for the next pair; each\none works once."
+          },
+          "token_type": {
+            "type": "string",
+            "description": "Always `Bearer`."
           }
         }
       },
@@ -112453,6 +113025,81 @@
           }
         }
       },
+      "PaginatedResponse_PackObjectRow": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One model object an installed pack shipped.",
+              "required": [
+                "pack",
+                "kind",
+                "name",
+                "object_id",
+                "status",
+                "updated_at"
+              ],
+              "properties": {
+                "detail": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "object_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "pack": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`installed`, `kept_customer` (the customer changed it, so an upgrade\nleft the customer's version) or `removed_from_pack` (a newer pack no\nlonger ships it)."
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_PasskeyItem": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -118205,6 +118852,37 @@
           }
         }
       },
+      "PendingDeviceGrant": {
+        "type": "object",
+        "description": "A pending grant, as the person approving it sees it.",
+        "required": [
+          "client_id",
+          "client_name",
+          "user_code",
+          "created_at",
+          "expires_at"
+        ],
+        "properties": {
+          "client_id": {
+            "type": "string"
+          },
+          "client_name": {
+            "type": "string",
+            "description": "The application's name."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user_code": {
+            "type": "string"
+          }
+        }
+      },
       "PermissionItem": {
         "type": "object",
         "required": [
@@ -120665,6 +121343,24 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "RecordPageRef": {
+        "type": "object",
+        "description": "The page an entity's records open on (D1-T2).",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The published page's id, for `GET /api/v1/cooked/page`."
+          },
+          "name": {
+            "type": "string"
           }
         }
       },

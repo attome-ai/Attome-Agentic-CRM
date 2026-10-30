@@ -8196,6 +8196,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/model/pack-objects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List pack model objects
+         * @description The model objects installed packs shipped, with what the last upgrade
+         *     did to each (G12-T1): the ones it could not replace because the customer
+         *     changed them, and the ones a newer pack no longer ships, sort first.
+         */
+        get: operations["list_pack_objects"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/model/{kind}": {
         parameters: {
             query?: never;
@@ -12822,6 +12844,32 @@ export interface paths {
          *     Audited.
          */
         put: operations["portal_admin_put_auth_policy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/webportals/{id}/domain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A web portal's domain
+         * @description G12-T3: the domain the portal is served on, if any. User administrators only.
+         */
+        get: operations["portal_admin_get_domain"];
+        /**
+         * Serve a web portal on its own domain
+         * @description G12-T3: sets the domain the portal is served on (`null` clears it). Point the domain's DNS at
+         *     this server; with ACME on, its certificate is ordered at the next restart. User administrators
+         *     only. Audited.
+         */
+        put: operations["portal_admin_put_domain"];
         post?: never;
         delete?: never;
         options?: never;
@@ -22058,6 +22106,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/model/entities/{entity}/record-page": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An entity's record page
+         * @description The published record page marked `"default": true` for an entity
+         *     (D1-T2): the customer's own first, then an installed app's, by name.
+         *     404 when the entity has none, and its records open on their form. Any
+         *     signed-in person may ask; the page's components read data under their
+         *     own rights.
+         */
+        get: operations["record_page"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/model/forms/{id}/plan": {
         parameters: {
             query?: never;
@@ -22330,6 +22402,99 @@ export interface paths {
          * @description Marks one of the caller's notifications read.
          */
         post: operations["mark_read"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/device": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A pending device grant
+         * @description The application a user code belongs to, so the person sees what they are
+         *     about to sign in before approving it. 404 for a code that is unknown,
+         *     decided or expired.
+         */
+        get: operations["pending_grant"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/device/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve or deny a device
+         * @description RFC 8628 §3.3: the signed-in person approves the grant a user code names,
+         *     so the device that asked receives a session as them on its next poll, or
+         *     denies it. Needs a browser session: an API key or another device's
+         *     session is refused (403). Audited with the application's name.
+         */
+        post: operations["approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/device/token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exchange a device grant or refresh token
+         * @description RFC 8628 §3.4: a device polls with its device code until the person has
+         *     decided: `authorization_pending` meanwhile, `slow_down` when it polls
+         *     faster than `interval`, `access_denied` or `expired_token` at the end. An
+         *     approved grant gives an ordinary session for the person, once. A refresh
+         *     token gives the next pair (RFC 6749 §6), in the same family. Audited as a
+         *     sign-in.
+         */
+        post: operations["token"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/device_authorization": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask for a device grant
+         * @description RFC 8628 §3.1: a device asks to be signed in. Returns its device code,
+         *     the user code the person enters at `verification_uri` in a signed-in
+         *     browser, and how often to poll `POST /api/v1/oauth/device/token`. No
+         *     credential: the grant does nothing until a signed-in person approves it.
+         */
+        post: operations["device_authorization"];
         delete?: never;
         options?: never;
         head?: never;
@@ -23255,6 +23420,92 @@ export interface paths {
         patch: operations["update_ops_upgrade"];
         trace?: never;
     };
+    "/api/v1/partner/mdf/claims/{id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decide an MDF claim
+         * @description F9-T7: approve (only against an approved request, with a proof file; writes
+         *     `partner.mdf_claim_approved` once for payment) or reject (with a reason). A person with update
+         *     access decides; API keys and S2S clients are refused. Audited.
+         */
+        post: operations["partner_mdf_claim_decide"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/partner/mdf/requests/{id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decide an MDF request
+         * @description F9-T7: approve (only while it fits what is left of the fund) or reject (with a reason). A
+         *     person with update access decides; API keys and S2S clients are refused. Audited.
+         */
+        post: operations["partner_mdf_request_decide"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/partner/registrations/{id}/conflicts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A deal registration's conflicts
+         * @description F9-T3: the open opportunities and other partners' live registrations this registration
+         *     conflicts with, found now. Needs read access on the registration.
+         */
+        get: operations["partner_registration_conflicts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/partner/registrations/{id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decide a deal registration
+         * @description F9-T3: approve (link the opportunity named, or create one on the customer account, naming the
+         *     partner, with protection from the partner's tier) or reject (with a reason). A person with
+         *     update access on the registration decides; API keys and S2S clients are refused. Audited.
+         */
+        post: operations["partner_registration_decide"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/pay/{token}": {
         parameters: {
             query?: never;
@@ -23289,6 +23540,27 @@ export interface paths {
          * @description Starts the gateway checkout for the link's amount. No session; the token is the credential.
          */
         post: operations["post_checkout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal-host": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The web portal on this host
+         * @description G12-T3: the keyword of the enabled web portal served on the request's host, so the web app
+         *     opens it at `/`. No sign-in; 404 when no portal uses the host.
+         */
+        get: operations["portal_host"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -24450,6 +24722,32 @@ export interface paths {
          * @description Changes the fields given under the same rules; the next run time is computed again. Audited.
          */
         patch: operations["update_schedule"];
+        trace?: never;
+    };
+    "/api/v1/reports/sql/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run an SQL report
+         * @description Test-runs an author's SQL (P2-T1, P2-T2): one SELECT over the entities
+         *     the author may read, each seen as the author sees it in a list (their
+         *     rows, their readable fields), as a role with no other access, in a
+         *     read-only transaction that is rolled back. Returns the columns, up to
+         *     1000 rows and, when asked, the plan. A statement error (syntax, an
+         *     unknown or unreadable table, a type error, the 10-second limit) is a 422
+         *     with PostgreSQL's message. Needs `attome_report.author_sql`.
+         */
+        post: operations["run_sql"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/reports/{id}": {
@@ -25980,11 +26278,13 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Find passages like a record, file or description
+         * Find passages or images like a record, file, description or image
          * @description Embeds the record's text, the document's file text or the description and returns the nearest
          *     record passages the caller may read: records' long fields and, for entities whose search setting
          *     turns document embeddings on, the text of the files attached to them, with the page of a PDF.
-         *     An image answers 503 until an image-text model is supported.
+         *     With an image-text model configured, an `image`, or `images: true` with a description or a
+         *     document, returns the nearest images instead (documents attached to records of entities whose
+         *     search setting turns image embeddings on), each named by its document.
          */
         post: operations["similar_route"];
         delete?: never;
@@ -31251,6 +31551,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/{keyword}/api/v1/me/privacy-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My privacy requests
+         * @description R1-T2: the privacy requests the signed-in person made, newest first, with their status and
+         *     deadline.
+         */
+        get: operations["portal_privacy_requests"];
+        put?: never;
+        /**
+         * Ask about my personal data
+         * @description R1-T2: a privacy (data subject) request about the signed-in person: a copy of their data,
+         *     erasure, portability, objection, restriction of processing or rectification. They give their
+         *     password again to prove who they are; the subject is their verified email address. Staff work
+         *     it with every other data subject request, by the deadline the deployment's law sets.
+         */
+        post: operations["portal_privacy_request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/{keyword}/api/v1/me/sessions": {
         parameters: {
             query?: never;
@@ -31344,6 +31672,49 @@ export interface paths {
          *     portal's current consent.
          */
         get: operations["portal_metadata_entity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a portal's pages
+         * @description The published pages for portal users (audience `portal` or `public`), at most 100, the
+         *     deployment's own first, for the portal app's navigation. Needs a portal session and the
+         *     portal's current consent.
+         */
+        get: operations["portal_pages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/pages/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a portal page
+         * @description A published page for portal users, by name, with a record page's entity by logical name. Needs a
+         *     portal session and the portal's current consent. A page for staff only is 404.
+         */
+        get: operations["portal_page"];
         put?: never;
         post?: never;
         delete?: never;
@@ -36874,6 +37245,21 @@ export interface components {
         ConfirmToolCallRequest: {
             arguments_hash: string;
         };
+        /** @description What a registration conflicts with. */
+        Conflict: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "opportunity";
+            name?: string | null;
+        } | {
+            customer_name?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "registration";
+            status: string;
+        };
         /** @description A16-T7: the conflicts of the last `days` days, by entity and source. */
         ConflictCount: {
             /** Format: int64 */
@@ -36896,6 +37282,12 @@ export interface components {
             right_kind: string;
             /** Format: uuid */
             right_ref: string;
+        };
+        /** @description The registration's conflicts, found now. */
+        Conflicts: {
+            conflicts: components["schemas"]["Conflict"][];
+            /** Format: uuid */
+            id: string;
         };
         /** @description The result of a check. */
         ConformanceReport: {
@@ -39027,11 +39419,25 @@ export interface components {
             id: string;
             status: string;
         };
+        /** @description The registration after a decision. */
+        Decided: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            opportunity_id?: string | null;
+            /**
+             * Format: date-time
+             * @description When the partner's protection ends (approved only).
+             */
+            protection_ends_on?: string | null;
+            /** @description `approved` or `rejected`. */
+            status: string;
+        };
         /**
-         * @description A proposal's decision.
+         * @description A decision on a registration.
          * @enum {string}
          */
-        Decision: "confirm" | "dismiss";
+        Decision: "approve" | "reject";
         /** @description Z10-T9: a record attached to a decision. */
         DecisionAttachment: {
             /** @description The record's entity (its logical name). */
@@ -39041,6 +39447,17 @@ export interface components {
              * @description The record.
              */
             id: string;
+        };
+        /** @description `POST /api/v1/partner/registrations/{id}/decision`. */
+        DecisionBody: {
+            decision: components["schemas"]["Decision"];
+            /**
+             * Format: uuid
+             * @description Approve: link this opportunity instead of creating one.
+             */
+            opportunity_id?: string | null;
+            /** @description Required to reject; kept on the registration either way. */
+            reason?: string | null;
         };
         /** @description M9-T4: one decision on a request. */
         DecisionEntry: {
@@ -39502,6 +39919,49 @@ export interface components {
             from?: string | null;
             to: string;
         };
+        /** @description A device authorization response (RFC 8628 §3.2). */
+        DeviceAuthorization: {
+            /** @description Kept on the device and sent when polling; never shown. */
+            device_code: string;
+            /**
+             * Format: int64
+             * @description Seconds the grant waits for its approval.
+             */
+            expires_in: number;
+            /**
+             * Format: int32
+             * @description Seconds to wait between polls.
+             */
+            interval: number;
+            /** @description Shown to the person, `XXXX-XXXX`. */
+            user_code: string;
+            /** @description The page the person enters the code on. */
+            verification_uri: string;
+            /** @description The same page with the code filled in. */
+            verification_uri_complete: string;
+        };
+        /** @description A device authorization request (RFC 8628 §3.1), form-encoded. */
+        DeviceAuthorizationForm: {
+            /** @description `attome-cli`, `attome-outlook` or `attome-gmail`. */
+            client_id: string;
+            /** @description Accepted and ignored: the session has the person's own access. */
+            scope?: string | null;
+        };
+        /** @description Approving or denying a grant. */
+        DeviceDecision: {
+            /** @description `true` signs the device in as the caller; `false` refuses it. */
+            approve: boolean;
+            user_code: string;
+        };
+        /** @description An RFC 6749 §5.2 error answer. */
+        DeviceErrorBody: {
+            /**
+             * @description `invalid_request`, `invalid_client`, `unsupported_grant_type`,
+             *     `invalid_grant`, `authorization_pending`, `slow_down`,
+             *     `access_denied` or `expired_token`.
+             */
+            error: string;
+        };
         /** @description One reading a device posts. */
         DeviceReadingIn: {
             /** @description The device's id, as the asset's `device_id` holds it. */
@@ -39599,6 +40059,33 @@ export interface components {
             name: string;
             /** @description `new`, `compliance`, `active`, `failed` or `retired`. */
             status: string;
+        };
+        /** @description A device token request (RFC 8628 §3.4, RFC 6749 §6), form-encoded. */
+        DeviceTokenForm: {
+            client_id: string;
+            /** @description With the device code grant. */
+            device_code?: string | null;
+            /** @description `urn:ietf:params:oauth:grant-type:device_code` or `refresh_token`. */
+            grant_type: string;
+            /** @description With the refresh token grant. */
+            refresh_token?: string | null;
+        };
+        /** @description An issued session (RFC 6749 §5.1). */
+        DeviceTokens: {
+            /** @description For `Authorization: Bearer`. */
+            access_token: string;
+            /**
+             * Format: int64
+             * @description Seconds until the access token expires.
+             */
+            expires_in: number;
+            /**
+             * @description Redeemed here with `grant_type=refresh_token` for the next pair; each
+             *     one works once.
+             */
+            refresh_token: string;
+            /** @description Always `Bearer`. */
+            token_type: string;
         };
         /**
          * @description `GET /api/v1/process/case-defs/{id}/dfg` — the latest computed
@@ -45172,6 +45659,19 @@ export interface components {
             /** @description `read`, `reversible` or `consequential`. */
             risk: string;
         };
+        /** @description A request or claim after a decision. */
+        MdfDecided: {
+            /** Format: uuid */
+            id: string;
+            /** @description `approved` or `rejected`. */
+            status: string;
+        };
+        /** @description `POST .../decision` on a request or claim. */
+        MdfDecisionBody: {
+            decision: components["schemas"]["Decision"];
+            /** @description Required to reject; kept either way. */
+            reason?: string | null;
+        };
         Measure: {
             aggregation: components["schemas"]["MeasureFn"];
             /** @description Required unless `aggregation` is `count`. */
@@ -47486,6 +47986,23 @@ export interface components {
             public_key: string;
             /** Format: date-time */
             retired_at?: string | null;
+        };
+        /** @description One model object an installed pack shipped. */
+        PackObjectRow: {
+            detail?: string | null;
+            kind: string;
+            name: string;
+            /** Format: uuid */
+            object_id: string;
+            pack: string;
+            /**
+             * @description `installed`, `kept_customer` (the customer changed it, so an upgrade
+             *     left the customer's version) or `removed_from_pack` (a newer pack no
+             *     longer ships it).
+             */
+            status: string;
+            /** Format: date-time */
+            updated_at: string;
         };
         /** @description A pack as the list shows it. */
         PackSummary: {
@@ -53124,6 +53641,36 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_PackObjectRow: {
+            items: {
+                detail?: string | null;
+                kind: string;
+                name: string;
+                /** Format: uuid */
+                object_id: string;
+                pack: string;
+                /**
+                 * @description `installed`, `kept_customer` (the customer changed it, so an upgrade
+                 *     left the customer's version) or `removed_from_pack` (a newer pack no
+                 *     longer ships it).
+                 */
+                status: string;
+                /** Format: date-time */
+                updated_at: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_PageSummary: {
             items: {
                 /** Format: uuid */
@@ -53414,6 +53961,26 @@ export interface components {
             items: {
                 entity: string;
                 label?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_PortalPageSummary: {
+            items: {
+                name: string;
+                page_type: string;
+                title_ar?: string | null;
+                title_en?: string | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -56671,6 +57238,17 @@ export interface components {
             /** Format: uuid */
             payment_id: string;
         };
+        /** @description A pending grant, as the person approving it sees it. */
+        PendingDeviceGrant: {
+            client_id: string;
+            /** @description The application's name. */
+            client_name: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            user_code: string;
+        };
         /**
          * @description M10-T4: a timer still waiting, as people see it: what (its kind), for
          *     which record, when, and from which flow run. Never its payload.
@@ -57181,6 +57759,31 @@ export interface components {
             /** Format: int64 */
             row_version: number;
         };
+        /** @description A portal's own domain; `null` when it has none. */
+        PortalDomain: {
+            /** @description The host name, e.g. `support.example.com`; `null` clears it. */
+            domain?: string | null;
+        };
+        /**
+         * @description R1-T2: a request as the person who made it through a web portal sees
+         *     it, for tracking: never the subject reference or staff notes.
+         */
+        PortalDsrRequest: {
+            /**
+             * Format: date-time
+             * @description When it must be answered by, under the deployment's law.
+             */
+            due_at?: string | null;
+            /** Format: date-time */
+            fulfilled_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            request_type: string;
+            /** Format: date-time */
+            requested_at: string;
+            /** @description `pending`, `blocked`, `fulfilled` or `rejected`. */
+            status: string;
+        };
         /**
          * @description One entity the caller's role has a grant on. Its actions and fields:
          *     `GET /{keyword}/api/v1/metadata/{entity}`.
@@ -57225,6 +57828,10 @@ export interface components {
             required: boolean;
             writable: boolean;
         };
+        /** @description The portal served on the request's host. */
+        PortalHost: {
+            keyword: string;
+        };
         PortalMe: {
             /** @description D-777: optional when the account has a username. */
             email?: string | null;
@@ -57248,6 +57855,23 @@ export interface components {
             username?: string | null;
             /** Format: uuid */
             webportal_id: string;
+        };
+        /** @description One page as the portal app renders it. */
+        PortalPage: {
+            /** @description The page document (the page kind's shape), with its `id` and `name`. */
+            doc: Record<string, never>;
+            /** @description A record page's entity, by logical name. */
+            entity_name?: string | null;
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        /** @description One page a portal may show, for its navigation. */
+        PortalPageSummary: {
+            name: string;
+            page_type: string;
+            title_ar?: string | null;
+            title_en?: string | null;
         };
         /**
          * @description A record as a portal sees it: only allowlisted fields, no owner,
@@ -57617,6 +58241,16 @@ export interface components {
             discount_percent?: string | null;
             min_quantity?: string | null;
             price?: string | null;
+        };
+        /** @description A privacy request (R1-T2). */
+        PrivacyRequestBody: {
+            /**
+             * @description The current password, again: proof that the person asking is the
+             *     account's owner.
+             */
+            password: string;
+            /** @description `access`, `erasure`, `portability`, `objection`, `restriction` or `rectification`. */
+            request_type: string;
         };
         /**
          * @description `privilege` — privileges are platform-minted per entity
@@ -59032,6 +59666,15 @@ export interface components {
             /** @description For a lookup: the referenced records' names at the time of the change. */
             old_lookup_name?: string | null;
             old_value?: string | null;
+        };
+        /** @description The page an entity's records open on (D1-T2). */
+        RecordPageRef: {
+            /**
+             * Format: uuid
+             * @description The published page's id, for `GET /api/v1/cooked/page`.
+             */
+            id: string;
+            name: string;
         };
         /** @description One record's plan. */
         RecordPlan: {
@@ -63096,10 +63739,15 @@ export interface components {
         /** @description Exactly one of `record`, `text` or `image`. */
         SimilarRequest: {
             /**
-             * @description Passages like this image (base64). No image-text model is supported
-             *     yet, so this answers 503 `feature_unavailable`.
+             * @description Images like this one: a PNG, JPEG, WebP or GIF of at most 5 MB, as
+             *     base64 or a `data:` URL. 503 without an image-text model.
              */
             image?: string | null;
+            /**
+             * @description Find images instead of passages: the images a `text` describes, or
+             *     those like a document's image named as `record`. Implied by `image`.
+             */
+            images?: boolean | null;
             /**
              * Format: int64
              * @description Passages to return, 1 to 50; 10 when absent.
@@ -63717,6 +64365,29 @@ export interface components {
             parent_target_id: string;
             /** Format: double */
             sum_of_children: number;
+        };
+        /** @description What a run returns. */
+        SqlRun: {
+            /** @description The result's column names, in order. */
+            columns: string[];
+            /** @description `EXPLAIN (FORMAT JSON)` of the statement, when asked for. */
+            plan?: Record<string, never> | null;
+            /** @description One object per row, keyed by column name. */
+            rows: Record<string, never>[];
+            /** @description More rows matched than the cap returned. */
+            truncated: boolean;
+        };
+        /** @description The body of `POST /api/v1/reports/sql/run`. */
+        SqlRunRequest: {
+            /** @description Also return `EXPLAIN (FORMAT JSON)` of the statement. */
+            explain?: boolean;
+            /**
+             * Format: int64
+             * @description At most this many rows, up to 1000 (the default).
+             */
+            max_rows?: number | null;
+            /** @description One SELECT (a WITH query too). Entities are named as tables. */
+            sql: string;
         };
         /** @description The SSP version written. */
         SspVersion: {
@@ -92103,6 +92774,55 @@ export interface operations {
             };
         };
     };
+    list_pack_objects: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of pack objects */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_PackObjectRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_objects: {
         parameters: {
             query?: {
@@ -106793,6 +107513,128 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_admin_get_domain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Web portal id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The portal's domain */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalDomain"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such portal */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_admin_put_domain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Web portal id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalDomain"];
+            };
+        };
+        responses: {
+            /** @description The domain, as stored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalDomain"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such portal */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another portal uses this domain */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a host name */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -130989,6 +131831,47 @@ export interface operations {
             };
         };
     };
+    record_page: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The entity's record page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordPageRef"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity, or it has no record page */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     form_plan: {
         parameters: {
             query?: never;
@@ -131579,6 +132462,180 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    pending_grant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The code the device shows, with or without its dash. */
+                user_code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The pending grant */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingDeviceGrant"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No pending grant has this code */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    approve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeviceDecision"];
+            };
+        };
+        responses: {
+            /** @description Decided */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a browser session */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No pending grant has this code */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    token: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["DeviceTokenForm"];
+            };
+        };
+        responses: {
+            /** @description A session */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceTokens"];
+                };
+            };
+            /** @description Pending, too fast, denied, expired, or a bad request (the RFC 8628 error codes) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceErrorBody"];
+                };
+            };
+            /** @description The refresh token is not live */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceErrorBody"];
+                };
+            };
+            /** @description A sign-in rule of the person's roles refuses it */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    device_authorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["DeviceAuthorizationForm"];
+            };
+        };
+        responses: {
+            /** @description The grant's codes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceAuthorization"];
+                };
+            };
+            /** @description An unknown client */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceErrorBody"];
                 };
             };
         };
@@ -134078,6 +135135,263 @@ export interface operations {
             };
         };
     };
+    partner_mdf_claim_decide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The MDF claim */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MdfDecisionBody"];
+            };
+        };
+        responses: {
+            /** @description Decided */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MdfDecided"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a person, or no update access */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such claim the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already decided */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No approved request or no proof, or a rejection without a reason */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    partner_mdf_request_decide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The MDF request */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MdfDecisionBody"];
+            };
+        };
+        responses: {
+            /** @description Decided */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MdfDecided"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a person, or no update access */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such request the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already decided */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Over the fund, or a rejection without a reason */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    partner_registration_conflicts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The deal registration */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The conflicts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Conflicts"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such registration the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    partner_registration_decide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The deal registration */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecisionBody"];
+            };
+        };
+        responses: {
+            /** @description Decided */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Decided"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a person, or no update access */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such registration the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already decided, or another partner holds protection */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A rejection without a reason, or no customer account to create the opportunity on */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_pay: {
         parameters: {
             query?: never;
@@ -134173,6 +135487,35 @@ export interface operations {
             };
             /** @description The gateway could not be reached */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_host: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The portal on this host */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalHost"];
+                };
+            };
+            /** @description No portal uses this host */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -137563,6 +138906,57 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    run_sql: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SqlRunRequest"];
+            };
+        };
+        responses: {
+            /** @description The result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SqlRun"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks attome_report.author_sql */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The SQL is empty, too long or failed; PostgreSQL's message says why */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -142056,7 +143450,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description No embedding model, semantic search switched off, or an image was given */
+            /** @description No embedding model (or no image-text model for an image search), or semantic search switched off */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -156766,6 +158160,101 @@ export interface operations {
             };
         };
     };
+    portal_privacy_requests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Web portal keyword */
+                keyword: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The person's requests */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalDsrRequest"][];
+                };
+            };
+            /** @description No valid portal session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such portal */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_privacy_request: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Web portal keyword */
+                keyword: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrivacyRequestBody"];
+            };
+        };
+        responses: {
+            /** @description The request, recorded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalDsrRequest"];
+                };
+            };
+            /** @description No valid portal session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such portal */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The password is wrong, or an unknown request type */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     portal_list_sessions: {
         parameters: {
             query?: never;
@@ -156979,6 +158468,108 @@ export interface operations {
                 };
             };
             /** @description No such portal, or no access to this entity (indistinguishable from a missing one) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_pages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Web portal keyword */
+                keyword: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The portal's pages */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_PortalPageSummary"];
+                };
+            };
+            /** @description No valid portal session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Consent to the portal's current terms is missing */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such portal */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_page: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Web portal keyword */
+                keyword: string;
+                /** @description The page's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalPage"];
+                };
+            };
+            /** @description No valid portal session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Consent to the portal's current terms is missing */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such portal, or no such portal page */
             404: {
                 headers: {
                     [name: string]: unknown;

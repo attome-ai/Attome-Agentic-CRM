@@ -40844,6 +40844,85 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/model/pack-objects": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List pack model objects",
+        "description": "The model objects installed packs shipped, with what the last upgrade\ndid to each (G12-T1): the ones it could not replace because the customer\nchanged them, and the ones a newer pack no longer ships, sort first.",
+        "operationId": "list_pack_objects",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of pack objects",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PackObjectRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/model/{kind}": {
       "get": {
         "tags": [
@@ -64646,6 +64725,199 @@
           },
           "422": {
             "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/webportals/{id}/domain": {
+      "get": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "A web portal's domain",
+        "description": "G12-T3: the domain the portal is served on, if any. User administrators only.",
+        "operationId": "portal_admin_get_domain",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Web portal id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The portal's domain",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalDomain"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "put": {
+        "tags": [
+          "admin-security"
+        ],
+        "summary": "Serve a web portal on its own domain",
+        "description": "G12-T3: sets the domain the portal is served on (`null` clears it). Point the domain's DNS at\nthis server; with ACME on, its certificate is ordered at the next restart. User administrators\nonly. Audited.",
+        "operationId": "portal_admin_put_domain",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Web portal id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalDomain"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The domain, as stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalDomain"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another portal uses this domain",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a host name",
             "content": {
               "application/json": {
                 "schema": {
@@ -104792,6 +105064,73 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/model/entities/{entity}/record-page": {
+      "get": {
+        "tags": [
+          "model"
+        ],
+        "summary": "An entity's record page",
+        "description": "The published record page marked `\"default\": true` for an entity\n(D1-T2): the customer's own first, then an installed app's, by name.\n404 when the entity has none, and its records open on their form. Any\nsigned-in person may ask; the page's components read data under their\nown rights.",
+        "operationId": "record_page",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The entity's record page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordPageRef"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity, or it has no record page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/model/forms/{id}/plan": {
       "get": {
         "tags": [
@@ -105766,6 +106105,281 @@
         "x-idempotent": "key",
         "x-module": "core",
         "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/oauth/device": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "A pending device grant",
+        "description": "The application a user code belongs to, so the person sees what they are\nabout to sign in before approving it. 404 for a code that is unknown,\ndecided or expired.",
+        "operationId": "pending_grant",
+        "parameters": [
+          {
+            "name": "user_code",
+            "in": "path",
+            "description": "The code the device shows, with or without its dash.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The pending grant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingDeviceGrant"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No pending grant has this code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/oauth/device/approve": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Approve or deny a device",
+        "description": "RFC 8628 §3.3: the signed-in person approves the grant a user code names,\nso the device that asked receives a session as them on its next poll, or\ndenies it. Needs a browser session: an API key or another device's\nsession is refused (403). Audited with the application's name.",
+        "operationId": "approve",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceDecision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Decided"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a browser session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No pending grant has this code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "credential",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/oauth/device/token": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Exchange a device grant or refresh token",
+        "description": "RFC 8628 §3.4: a device polls with its device code until the person has\ndecided: `authorization_pending` meanwhile, `slow_down` when it polls\nfaster than `interval`, `access_denied` or `expired_token` at the end. An\napproved grant gives an ordinary session for the person, once. A refresh\ntoken gives the next pair (RFC 6749 §6), in the same family. Audited as a\nsign-in.",
+        "operationId": "token",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceTokenForm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "A session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceTokens"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Pending, too fast, denied, expired, or a bad request (the RFC 8628 error codes)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The refresh token is not live",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "A sign-in rule of the person's roles refuses it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "login"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/oauth/device_authorization": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Ask for a device grant",
+        "description": "RFC 8628 §3.1: a device asks to be signed in. Returns its device code,\nthe user code the person enters at `verification_uri` in a signed-in\nbrowser, and how often to poll `POST /api/v1/oauth/device/token`. No\ncredential: the grant does nothing until a signed-in person approves it.",
+        "operationId": "device_authorization",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceAuthorizationForm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The grant's codes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceAuthorization"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "An unknown client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit-exempt": {
+          "note": "opens a pending grant that does nothing until a signed-in person approves it; the approval and the session it creates are audited",
+          "reason": "delegated",
+          "via": "POST /api/v1/oauth/device/approve"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "public",
         "x-rate-class": "api",
         "x-risk": "medium"
       }
@@ -109756,6 +110370,416 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/partner/mdf/claims/{id}/decision": {
+      "post": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "Decide an MDF claim",
+        "description": "F9-T7: approve (only against an approved request, with a proof file; writes\n`partner.mdf_claim_approved` once for payment) or reject (with a reason). A person with update\naccess decides; API keys and S2S clients are refused. Audited.",
+        "operationId": "partner_mdf_claim_decide",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The MDF claim",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MdfDecisionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Decided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MdfDecided"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a person, or no update access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such claim the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already decided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No approved request or no proof, or a rejection without a reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "partner",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/partner/mdf/requests/{id}/decision": {
+      "post": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "Decide an MDF request",
+        "description": "F9-T7: approve (only while it fits what is left of the fund) or reject (with a reason). A\nperson with update access decides; API keys and S2S clients are refused. Audited.",
+        "operationId": "partner_mdf_request_decide",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The MDF request",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MdfDecisionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Decided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MdfDecided"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a person, or no update access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such request the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already decided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Over the fund, or a rejection without a reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "partner",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/partner/registrations/{id}/conflicts": {
+      "get": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "A deal registration's conflicts",
+        "description": "F9-T3: the open opportunities and other partners' live registrations this registration\nconflicts with, found now. Needs read access on the registration.",
+        "operationId": "partner_registration_conflicts",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The deal registration",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The conflicts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Conflicts"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such registration the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "partner",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/partner/registrations/{id}/decision": {
+      "post": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "Decide a deal registration",
+        "description": "F9-T3: approve (link the opportunity named, or create one on the customer account, naming the\npartner, with protection from the partner's tier) or reject (with a reason). A person with\nupdate access on the registration decides; API keys and S2S clients are refused. Audited.",
+        "operationId": "partner_registration_decide",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The deal registration",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Decided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Decided"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a person, or no update access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such registration the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already decided, or another partner holds protection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A rejection without a reason, or no customer account to create the opportunity on",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "partner",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/pay/{token}": {
       "get": {
         "tags": [
@@ -109913,6 +110937,47 @@
         "x-privilege": "public",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/portal-host": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "The web portal on this host",
+        "description": "G12-T3: the keyword of the enabled web portal served on the request's host, so the web app\nopens it at `/`. No sign-in; 404 when no portal uses the host.",
+        "operationId": "portal_host",
+        "responses": {
+          "200": {
+            "description": "The portal on this host",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalHost"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No portal uses this host",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/portfolio/{id}/summary": {
@@ -115354,6 +116419,87 @@
             }
           ],
           "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "report",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/reports/sql/run": {
+      "post": {
+        "tags": [
+          "report"
+        ],
+        "summary": "Run an SQL report",
+        "description": "Test-runs an author's SQL (P2-T1, P2-T2): one SELECT over the entities\nthe author may read, each seen as the author sees it in a list (their\nrows, their readable fields), as a role with no other access, in a\nread-only transaction that is rolled back. Returns the columns, up to\n1000 rows and, when asked, the plan. A statement error (syntax, an\nunknown or unreadable table, a type error, the 10-second limit) is a 422\nwith PostgreSQL's message. Needs `attome_report.author_sql`.",
+        "operationId": "run_sql",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SqlRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SqlRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks attome_report.author_sql",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The SQL is empty, too long or failed; PostgreSQL's message says why",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "runs the author's SELECT in a read-only transaction that is always rolled back",
+          "reason": "read_only",
+          "via": null
         },
         "x-cache": "no-store",
         "x-idempotent": "key",
@@ -122853,8 +123999,8 @@
         "tags": [
           "search"
         ],
-        "summary": "Find passages like a record, file or description",
-        "description": "Embeds the record's text, the document's file text or the description and returns the nearest\nrecord passages the caller may read: records' long fields and, for entities whose search setting\nturns document embeddings on, the text of the files attached to them, with the page of a PDF.\nAn image answers 503 until an image-text model is supported.",
+        "summary": "Find passages or images like a record, file, description or image",
+        "description": "Embeds the record's text, the document's file text or the description and returns the nearest\nrecord passages the caller may read: records' long fields and, for entities whose search setting\nturns document embeddings on, the text of the files attached to them, with the page of a PDF.\nWith an image-text model configured, an `image`, or `images: true` with a description or a\ndocument, returns the nearest images instead (documents attached to records of entities whose\nsearch setting turns image embeddings on), each named by its document.",
         "operationId": "similar_route",
         "requestBody": {
           "content": {
@@ -122918,7 +124064,7 @@
             }
           },
           "503": {
-            "description": "No embedding model, semantic search switched off, or an image was given",
+            "description": "No embedding model (or no image-text model for an image search), or semantic search switched off",
             "content": {
               "application/json": {
                 "schema": {
@@ -147815,6 +148961,164 @@
         "x-risk": "medium"
       }
     },
+    "/{keyword}/api/v1/me/privacy-requests": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "My privacy requests",
+        "description": "R1-T2: the privacy requests the signed-in person made, newest first, with their status and\ndeadline.",
+        "operationId": "portal_privacy_requests",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "Web portal keyword",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The person's requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PortalDsrRequest"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid portal session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Ask about my personal data",
+        "description": "R1-T2: a privacy (data subject) request about the signed-in person: a copy of their data,\nerasure, portability, objection, restriction of processing or rectification. They give their\npassword again to prove who they are; the subject is their verified email address. Staff work\nit with every other data subject request, by the deadline the deployment's law sets.",
+        "operationId": "portal_privacy_request",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "Web portal keyword",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrivacyRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The request, recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalDsrRequest"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid portal session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The password is wrong, or an unknown request type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/{keyword}/api/v1/me/sessions": {
       "get": {
         "tags": [
@@ -148159,6 +149463,163 @@
           },
           "404": {
             "description": "No such portal, or no access to this entity (indistinguishable from a missing one)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/{keyword}/api/v1/pages": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "List a portal's pages",
+        "description": "The published pages for portal users (audience `portal` or `public`), at most 100, the\ndeployment's own first, for the portal app's navigation. Needs a portal session and the\nportal's current consent.",
+        "operationId": "portal_pages",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "Web portal keyword",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The portal's pages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PortalPageSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid portal session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Consent to the portal's current terms is missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/{keyword}/api/v1/pages/{name}": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Get a portal page",
+        "description": "A published page for portal users, by name, with a record page's entity by logical name. Needs a\nportal session and the portal's current consent. A page for staff only is 404.",
+        "operationId": "portal_page",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "Web portal keyword",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The page's name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid portal session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Consent to the portal's current terms is missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal, or no such portal page",
             "content": {
               "application/json": {
                 "schema": {
@@ -163043,6 +164504,67 @@
         },
         "additionalProperties": false
       },
+      "Conflict": {
+        "oneOf": [
+          {
+            "type": "object",
+            "description": "An open opportunity on the same customer account.",
+            "required": [
+              "id",
+              "kind"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "opportunity"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "description": "Another partner's live registration for the same customer.",
+            "required": [
+              "id",
+              "status",
+              "kind"
+            ],
+            "properties": {
+              "customer_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "registration"
+                ]
+              },
+              "status": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "description": "What a registration conflicts with."
+      },
       "ConflictCount": {
         "type": "object",
         "description": "A16-T7: the conflicts of the last `days` days, by entity and source.",
@@ -163101,6 +164623,26 @@
             "type": "string"
           },
           "right_ref": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "Conflicts": {
+        "type": "object",
+        "description": "The registration's conflicts, found now.",
+        "required": [
+          "id",
+          "conflicts"
+        ],
+        "properties": {
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Conflict"
+            }
+          },
+          "id": {
             "type": "string",
             "format": "uuid"
           }
@@ -168470,12 +170012,45 @@
           }
         }
       },
+      "Decided": {
+        "type": "object",
+        "description": "The registration after a decision.",
+        "required": [
+          "id",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "opportunity_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "protection_ends_on": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When the partner's protection ends (approved only)."
+          },
+          "status": {
+            "type": "string",
+            "description": "`approved` or `rejected`."
+          }
+        }
+      },
       "Decision": {
         "type": "string",
-        "description": "A proposal's decision.",
+        "description": "A decision on a registration.",
         "enum": [
-          "confirm",
-          "dismiss"
+          "approve",
+          "reject"
         ]
       },
       "DecisionAttachment": {
@@ -168494,6 +170069,33 @@
             "type": "string",
             "format": "uuid",
             "description": "The record."
+          }
+        }
+      },
+      "DecisionBody": {
+        "type": "object",
+        "description": "`POST /api/v1/partner/registrations/{id}/decision`.",
+        "required": [
+          "decision"
+        ],
+        "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/Decision"
+          },
+          "opportunity_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Approve: link this opportunity instead of creating one."
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Required to reject; kept on the registration either way."
           }
         }
       },
@@ -169675,6 +171277,96 @@
           }
         }
       },
+      "DeviceAuthorization": {
+        "type": "object",
+        "description": "A device authorization response (RFC 8628 §3.2).",
+        "required": [
+          "device_code",
+          "user_code",
+          "verification_uri",
+          "verification_uri_complete",
+          "expires_in",
+          "interval"
+        ],
+        "properties": {
+          "device_code": {
+            "type": "string",
+            "description": "Kept on the device and sent when polling; never shown."
+          },
+          "expires_in": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Seconds the grant waits for its approval."
+          },
+          "interval": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Seconds to wait between polls."
+          },
+          "user_code": {
+            "type": "string",
+            "description": "Shown to the person, `XXXX-XXXX`."
+          },
+          "verification_uri": {
+            "type": "string",
+            "description": "The page the person enters the code on."
+          },
+          "verification_uri_complete": {
+            "type": "string",
+            "description": "The same page with the code filled in."
+          }
+        }
+      },
+      "DeviceAuthorizationForm": {
+        "type": "object",
+        "description": "A device authorization request (RFC 8628 §3.1), form-encoded.",
+        "required": [
+          "client_id"
+        ],
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "description": "`attome-cli`, `attome-outlook` or `attome-gmail`."
+          },
+          "scope": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Accepted and ignored: the session has the person's own access."
+          }
+        }
+      },
+      "DeviceDecision": {
+        "type": "object",
+        "description": "Approving or denying a grant.",
+        "required": [
+          "user_code",
+          "approve"
+        ],
+        "properties": {
+          "approve": {
+            "type": "boolean",
+            "description": "`true` signs the device in as the caller; `false` refuses it."
+          },
+          "user_code": {
+            "type": "string"
+          }
+        }
+      },
+      "DeviceErrorBody": {
+        "type": "object",
+        "description": "An RFC 6749 §5.2 error answer.",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "`invalid_request`, `invalid_client`, `unsupported_grant_type`,\n`invalid_grant`, `authorization_pending`, `slow_down`,\n`access_denied` or `expired_token`."
+          }
+        }
+      },
       "DeviceReadingIn": {
         "type": "object",
         "description": "One reading a device posts.",
@@ -169940,6 +171632,67 @@
           "status": {
             "type": "string",
             "description": "`new`, `compliance`, `active`, `failed` or `retired`."
+          }
+        }
+      },
+      "DeviceTokenForm": {
+        "type": "object",
+        "description": "A device token request (RFC 8628 §3.4, RFC 6749 §6), form-encoded.",
+        "required": [
+          "grant_type",
+          "client_id"
+        ],
+        "properties": {
+          "client_id": {
+            "type": "string"
+          },
+          "device_code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "With the device code grant."
+          },
+          "grant_type": {
+            "type": "string",
+            "description": "`urn:ietf:params:oauth:grant-type:device_code` or `refresh_token`."
+          },
+          "refresh_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "With the refresh token grant."
+          }
+        }
+      },
+      "DeviceTokens": {
+        "type": "object",
+        "description": "An issued session (RFC 6749 §5.1).",
+        "required": [
+          "access_token",
+          "token_type",
+          "expires_in",
+          "refresh_token"
+        ],
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "description": "For `Authorization: Bearer`."
+          },
+          "expires_in": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Seconds until the access token expires.",
+            "minimum": 0
+          },
+          "refresh_token": {
+            "type": "string",
+            "description": "Redeemed here with `grant_type=refresh_token` for the next pair; each\none works once."
+          },
+          "token_type": {
+            "type": "string",
+            "description": "Always `Bearer`."
           }
         }
       },
@@ -183951,6 +185704,43 @@
           }
         }
       },
+      "MdfDecided": {
+        "type": "object",
+        "description": "A request or claim after a decision.",
+        "required": [
+          "id",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "`approved` or `rejected`."
+          }
+        }
+      },
+      "MdfDecisionBody": {
+        "type": "object",
+        "description": "`POST .../decision` on a request or claim.",
+        "required": [
+          "decision"
+        ],
+        "properties": {
+          "decision": {
+            "$ref": "#/components/schemas/Decision"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Required to reject; kept either way."
+          }
+        }
+      },
       "Measure": {
         "type": "object",
         "required": [
@@ -190045,6 +191835,47 @@
               "string",
               "null"
             ],
+            "format": "date-time"
+          }
+        }
+      },
+      "PackObjectRow": {
+        "type": "object",
+        "description": "One model object an installed pack shipped.",
+        "required": [
+          "pack",
+          "kind",
+          "name",
+          "object_id",
+          "status",
+          "updated_at"
+        ],
+        "properties": {
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "object_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pack": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "description": "`installed`, `kept_customer` (the customer changed it, so an upgrade\nleft the customer's version) or `removed_from_pack` (a newer pack no\nlonger ships it)."
+          },
+          "updated_at": {
+            "type": "string",
             "format": "date-time"
           }
         }
@@ -204948,6 +206779,81 @@
           }
         }
       },
+      "PaginatedResponse_PackObjectRow": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One model object an installed pack shipped.",
+              "required": [
+                "pack",
+                "kind",
+                "name",
+                "object_id",
+                "status",
+                "updated_at"
+              ],
+              "properties": {
+                "detail": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "object_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "pack": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`installed`, `kept_customer` (the customer changed it, so an upgrade\nleft the customer's version) or `removed_from_pack` (a newer pack no\nlonger ships it)."
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_PageSummary": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -205776,6 +207682,68 @@
                   "type": "string"
                 },
                 "label": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_PortalPageSummary": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One page a portal may show, for its navigation.",
+              "required": [
+                "name",
+                "page_type"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "page_type": {
+                  "type": "string"
+                },
+                "title_ar": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "title_en": {
                   "type": [
                     "string",
                     "null"
@@ -214313,6 +216281,37 @@
           }
         }
       },
+      "PendingDeviceGrant": {
+        "type": "object",
+        "description": "A pending grant, as the person approving it sees it.",
+        "required": [
+          "client_id",
+          "client_name",
+          "user_code",
+          "created_at",
+          "expires_at"
+        ],
+        "properties": {
+          "client_id": {
+            "type": "string"
+          },
+          "client_name": {
+            "type": "string",
+            "description": "The application's name."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user_code": {
+            "type": "string"
+          }
+        }
+      },
       "PendingTimer": {
         "type": "object",
         "description": "M10-T4: a timer still waiting, as people see it: what (its kind), for\nwhich record, when, and from which flow run. Never its payload.",
@@ -215719,6 +217718,61 @@
           }
         }
       },
+      "PortalDomain": {
+        "type": "object",
+        "description": "A portal's own domain; `null` when it has none.",
+        "properties": {
+          "domain": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The host name, e.g. `support.example.com`; `null` clears it."
+          }
+        }
+      },
+      "PortalDsrRequest": {
+        "type": "object",
+        "description": "R1-T2: a request as the person who made it through a web portal sees\nit, for tracking: never the subject reference or staff notes.",
+        "required": [
+          "id",
+          "request_type",
+          "status",
+          "requested_at"
+        ],
+        "properties": {
+          "due_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When it must be answered by, under the deployment's law."
+          },
+          "fulfilled_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "request_type": {
+            "type": "string"
+          },
+          "requested_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "description": "`pending`, `blocked`, `fulfilled` or `rejected`."
+          }
+        }
+      },
       "PortalEntitySummary": {
         "type": "object",
         "description": "One entity the caller's role has a grant on. Its actions and fields:\n`GET /{keyword}/api/v1/metadata/{entity}`.",
@@ -215839,6 +217893,18 @@
           }
         }
       },
+      "PortalHost": {
+        "type": "object",
+        "description": "The portal served on the request's host.",
+        "required": [
+          "keyword"
+        ],
+        "properties": {
+          "keyword": {
+            "type": "string"
+          }
+        }
+      },
       "PortalMe": {
         "type": "object",
         "required": [
@@ -215890,6 +217956,63 @@
           "webportal_id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "PortalPage": {
+        "type": "object",
+        "description": "One page as the portal app renders it.",
+        "required": [
+          "id",
+          "name",
+          "doc"
+        ],
+        "properties": {
+          "doc": {
+            "type": "object",
+            "description": "The page document (the page kind's shape), with its `id` and `name`."
+          },
+          "entity_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A record page's entity, by logical name."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "PortalPageSummary": {
+        "type": "object",
+        "description": "One page a portal may show, for its navigation.",
+        "required": [
+          "name",
+          "page_type"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "page_type": {
+            "type": "string"
+          },
+          "title_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title_en": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -216836,6 +218959,24 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "PrivacyRequestBody": {
+        "type": "object",
+        "description": "A privacy request (R1-T2).",
+        "required": [
+          "request_type",
+          "password"
+        ],
+        "properties": {
+          "password": {
+            "type": "string",
+            "description": "The current password, again: proof that the person asking is the\naccount's owner."
+          },
+          "request_type": {
+            "type": "string",
+            "description": "`access`, `erasure`, `portability`, `objection`, `restriction` or `rectification`."
           }
         }
       },
@@ -220336,6 +222477,24 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "RecordPageRef": {
+        "type": "object",
+        "description": "The page an entity's records open on (D1-T2).",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The published page's id, for `GET /api/v1/cooked/page`."
+          },
+          "name": {
+            "type": "string"
           }
         }
       },
@@ -230725,7 +232884,14 @@
               "string",
               "null"
             ],
-            "description": "Passages like this image (base64). No image-text model is supported\nyet, so this answers 503 `feature_unavailable`."
+            "description": "Images like this one: a PNG, JPEG, WebP or GIF of at most 5 MB, as\nbase64 or a `data:` URL. 503 without an image-text model."
+          },
+          "images": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Find images instead of passages: the images a `text` describes, or\nthose like a document's image named as `record`. Implied by `image`."
           },
           "limit": {
             "type": [
@@ -232307,6 +234473,67 @@
           "sum_of_children": {
             "type": "number",
             "format": "double"
+          }
+        }
+      },
+      "SqlRun": {
+        "type": "object",
+        "description": "What a run returns.",
+        "required": [
+          "columns",
+          "rows",
+          "truncated"
+        ],
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The result's column names, in order."
+          },
+          "plan": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "`EXPLAIN (FORMAT JSON)` of the statement, when asked for."
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "One object per row, keyed by column name."
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "More rows matched than the cap returned."
+          }
+        }
+      },
+      "SqlRunRequest": {
+        "type": "object",
+        "description": "The body of `POST /api/v1/reports/sql/run`.",
+        "required": [
+          "sql"
+        ],
+        "properties": {
+          "explain": {
+            "type": "boolean",
+            "description": "Also return `EXPLAIN (FORMAT JSON)` of the statement."
+          },
+          "max_rows": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "At most this many rows, up to 1000 (the default)."
+          },
+          "sql": {
+            "type": "string",
+            "description": "One SELECT (a WITH query too). Entities are named as tables."
           }
         }
       },
@@ -242088,6 +244315,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-api-version": "2026-10",
   "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
@@ -242140,6 +244368,5 @@
         ]
       }
     }
-  },
-  "x-api-version": "2026-10"
+  }
 }

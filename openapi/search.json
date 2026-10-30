@@ -2130,8 +2130,8 @@
         "tags": [
           "search"
         ],
-        "summary": "Find passages like a record, file or description",
-        "description": "Embeds the record's text, the document's file text or the description and returns the nearest\nrecord passages the caller may read: records' long fields and, for entities whose search setting\nturns document embeddings on, the text of the files attached to them, with the page of a PDF.\nAn image answers 503 until an image-text model is supported.",
+        "summary": "Find passages or images like a record, file, description or image",
+        "description": "Embeds the record's text, the document's file text or the description and returns the nearest\nrecord passages the caller may read: records' long fields and, for entities whose search setting\nturns document embeddings on, the text of the files attached to them, with the page of a PDF.\nWith an image-text model configured, an `image`, or `images: true` with a description or a\ndocument, returns the nearest images instead (documents attached to records of entities whose\nsearch setting turns image embeddings on), each named by its document.",
         "operationId": "similar_route",
         "requestBody": {
           "content": {
@@ -2195,7 +2195,7 @@
             }
           },
           "503": {
-            "description": "No embedding model, semantic search switched off, or an image was given",
+            "description": "No embedding model (or no image-text model for an image search), or semantic search switched off",
             "content": {
               "application/json": {
                 "schema": {
@@ -4217,7 +4217,14 @@
               "string",
               "null"
             ],
-            "description": "Passages like this image (base64). No image-text model is supported\nyet, so this answers 503 `feature_unavailable`."
+            "description": "Images like this one: a PNG, JPEG, WebP or GIF of at most 5 MB, as\nbase64 or a `data:` URL. 503 without an image-text model."
+          },
+          "images": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Find images instead of passages: the images a `text` describes, or\nthose like a document's image named as `record`. Implied by `image`."
           },
           "limit": {
             "type": [
