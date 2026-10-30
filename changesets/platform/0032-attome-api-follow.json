@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:18a0eff73b903733de505496e07f32b12959f46ebbb91217220db68e54ade599",
+  "checksum": "sha256:37830e5ad6e872bcc5196ae971ebd3c8f294e9d20d2afad5ea12cd4530b74629",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-api-follow.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -150,6 +150,44 @@
       "target": {
         "entity": "follow",
         "view": "Active Follows"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "feed_post",
+          "entity_mappings": [],
+          "name": "Active Posts",
+          "required_privilege": "feed_post.read",
+          "sql": "SELECT id, body, created_at FROM feed_post WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "feed_post",
+        "query": "Active Posts"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "feed_post",
+          "is_default": true,
+          "name": "Active Posts",
+          "query": {
+            "entity": "feed_post",
+            "name": "Active Posts"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "feed_post",
+        "view": "Active Posts"
       }
     }
   ],

@@ -31,6 +31,12 @@
       "name": "Active Follows",
       "sql": "SELECT id, user_id, entity_name, record_id, created_at FROM follow WHERE is_active IS NOT FALSE",
       "required_privilege": "follow.read"
+    },
+    {
+      "entity": "feed_post",
+      "name": "Active Posts",
+      "sql": "SELECT id, body, created_at FROM feed_post WHERE is_active IS NOT FALSE",
+      "required_privilege": "feed_post.read"
     }
   ],
   "views": [
@@ -38,6 +44,12 @@
       "entity": "follow",
       "name": "Active Follows",
       "query": { "entity": "follow", "name": "Active Follows" },
+      "is_default": true
+    },
+    {
+      "entity": "feed_post",
+      "name": "Active Posts",
+      "query": { "entity": "feed_post", "name": "Active Posts" },
       "is_default": true
     }
   ]
