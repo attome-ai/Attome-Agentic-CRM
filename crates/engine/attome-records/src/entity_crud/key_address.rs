@@ -177,6 +177,7 @@ pub(super) async fn get_by_key(
         Path((entity_input, id)),
         select,
         expand,
+        Query(super::time_travel::AsOfParam::default()),
         headers,
     )
     .await

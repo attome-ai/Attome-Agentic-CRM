@@ -47,7 +47,7 @@ use axum::{
 };
 use chrono::{DateTime, Datelike, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value, json};
+use serde_json::{Map, Value};
 use sqlx::{Postgres, Transaction};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
@@ -720,6 +720,7 @@ pub(super) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 mod tests {
     use super::*;
     use attome_core::{DataClassification, OnTargetDelete};
+    use serde_json::json;
 
     fn attr(name: &str, field_type_int: i32) -> AttrInfo {
         AttrInfo {
