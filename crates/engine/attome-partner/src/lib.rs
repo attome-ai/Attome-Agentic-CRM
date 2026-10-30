@@ -5,6 +5,8 @@
 //! module.
 
 pub mod model;
+/// F9-T3: deal registration conflicts, decisions and lapse.
+pub mod registration;
 
 pub use model::PartnerModel;
 
@@ -13,7 +15,7 @@ pub use model::PartnerModel;
 pub const ADVISORY_LOCK_NAMESPACE: i32 = 37;
 
 /// This crate's slice of the workspace OpenAPI document, merged in by
-/// `attome::openapi::document()`. Empty until the first route lands.
+/// `attome::openapi::document()`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    utoipa::openapi::OpenApiBuilder::new().build()
+    <registration::RegistrationApiDoc as utoipa::OpenApi>::openapi()
 }

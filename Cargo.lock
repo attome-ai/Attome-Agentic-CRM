@@ -1918,10 +1918,23 @@ dependencies = [
 name = "attome-partner"
 version = "0.1.0"
 dependencies = [
+ "attome-audit",
  "attome-core",
+ "attome-db",
  "attome-modules",
+ "attome-notification",
+ "attome-records",
+ "attome-security",
+ "attome-server",
+ "attome-types",
  "axum",
+ "chrono",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tracing",
  "utoipa",
+ "uuid",
 ]
 
 [[package]]
@@ -2545,6 +2558,7 @@ dependencies = [
  "attome-modules",
  "attome-notification",
  "attome-ops",
+ "attome-partner",
  "attome-portal",
  "attome-records",
  "attome-sales",

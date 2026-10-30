@@ -6,7 +6,8 @@
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,
-    reason = "test helpers: a failed setup step should panic with its message"
+    clippy::disallowed_methods,
+    reason = "test helpers: a failed setup step should panic with its message; the portal and user are provisioned in a transaction opened directly on the test pool"
 )]
 
 use attome_portal::contact_link::{ContactLink, link_verified};

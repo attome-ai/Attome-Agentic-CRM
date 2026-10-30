@@ -3166,6 +3166,10 @@ const DEDUP_KEY_CHANGE_SIGNOFF: &str = "change-signoff";
 const DEDUP_KEY_RFQ_OPEN: &str = "rfq-open";
 /// W2-T1: vendor compliance document reminder timers (a registered job type).
 const DEDUP_KEY_COMPLIANCE_EXPIRY: &str = "compliance-expiry";
+/// F9-T3: new deal registrations checked for conflicts (a registered job type).
+const DEDUP_KEY_PARTNER_INTAKE: &str = "partner-registration-intake";
+/// F9-T3: approved deal registrations past their protection (a registered job type).
+const DEDUP_KEY_PARTNER_LAPSE: &str = "partner-registration-lapse";
 /// I5-T2: maintenance plan timers and meter checks (a registered job type).
 const DEDUP_KEY_MAINTENANCE: &str = "maintenance-generation";
 /// I7-T1: device readings and device rules (a registered job type).
@@ -3525,6 +3529,15 @@ pub const RFQ_OPEN: attome_jobs::JobType =
 /// has not been reminded for its expiry date.
 pub const COMPLIANCE_EXPIRY: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_procurement::compliance::JOB, 1);
+
+/// F9-T3: new deal registrations compared with open opportunities and other
+/// partners' registrations, the conflicting ones marked.
+pub const PARTNER_REGISTRATION_INTAKE: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_partner::registration::INTAKE_JOB, 1);
+
+/// F9-T3: approved deal registrations past their protection lapsed.
+pub const PARTNER_REGISTRATION_LAPSE: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_partner::registration::LAPSE_JOB, 1);
 
 /// I5-T2: one maintenance timer kept per date plan, and work orders made for
 /// meter plans whose reading passed the threshold.
@@ -4654,6 +4667,40 @@ pub fn register_job_types() {
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 if opened > 0 {
                     tracing::info!(opened, "rfq bids opened");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            PARTNER_REGISTRATION_INTAKE,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_PARTNER) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let checked = attome_partner::registration::intake_tick(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if checked > 0 {
+                    tracing::info!(checked, "deal registrations checked for conflicts");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            PARTNER_REGISTRATION_LAPSE,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_PARTNER) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let lapsed = attome_partner::registration::lapse_tick(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if lapsed > 0 {
+                    tracing::info!(lapsed, "deal registrations lapsed");
                 }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
@@ -6073,6 +6120,12 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == COMPLIANCE_EXPIRY.name => {
             DEDUP_KEY_COMPLIANCE_EXPIRY
         }
+        EngineJob::Registered(job) if job.name == PARTNER_REGISTRATION_INTAKE.name => {
+            DEDUP_KEY_PARTNER_INTAKE
+        }
+        EngineJob::Registered(job) if job.name == PARTNER_REGISTRATION_LAPSE.name => {
+            DEDUP_KEY_PARTNER_LAPSE
+        }
         EngineJob::Registered(job) if job.name == RFQ_OPEN.name => DEDUP_KEY_RFQ_OPEN,
         EngineJob::Registered(job) if job.name == CHANGE_SIGNOFF.name => DEDUP_KEY_CHANGE_SIGNOFF,
         EngineJob::Registered(job) if job.name == SURVEY_SEND.name => DEDUP_KEY_SURVEY_SEND,
@@ -7215,6 +7268,36 @@ pub fn spawn_compliance_expiry_scheduler(db: DbPool, interval: std::time::Durati
             "compliance document reminders",
         ),
         Err(error) => tracing::error!(%error, "compliance document reminders: not scheduled"),
+    }
+}
+
+/// F9-T3: every minute, new deal registrations checked for conflicts.
+pub fn spawn_partner_intake_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(PARTNER_REGISTRATION_INTAKE.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_PARTNER_INTAKE,
+            "deal registration intake",
+        ),
+        Err(error) => tracing::error!(%error, "deal registration intake: not scheduled"),
+    }
+}
+
+/// F9-T3: daily, approved deal registrations past their protection lapsed.
+pub fn spawn_partner_lapse_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(PARTNER_REGISTRATION_LAPSE.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_PARTNER_LAPSE,
+            "deal registration lapse",
+        ),
+        Err(error) => tracing::error!(%error, "deal registration lapse: not scheduled"),
     }
 }
 

@@ -1,0 +1,179 @@
+{
+  "author": "packs",
+  "checksum": "sha256:9399e7f7c7aab5df4748a9e4936d92cd05700bcbe2815a29837c34c59be3cc48",
+  "closed_at": "2026-10-30T00:00:00Z",
+  "description": "F9-T3: what a deal registration conflicts with, when it was checked and who decided it, and the partner on an opportunity (an approved registration names it; a partner portal role can scope opportunity reads to it).",
+  "format": "attome-changeset/v1",
+  "id": "01a18d9e-44ca-7110-80d9-57b2604808b9",
+  "layer": "product",
+  "name": "partner-registration",
+  "opened_at": "2026-10-30T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Conflicts",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "conflict_summary",
+          "lookup_entity": null,
+          "max_length": 2000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "deal_registration",
+        "field": "conflict_summary"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Checked",
+          "field_type": "date_time",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "checked_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "deal_registration",
+        "field": "checked_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Decided By",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "decided_by",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "deal_registration",
+        "field": "decided_by"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Partner",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "partner_account_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "opportunity",
+        "field": "partner_account_ref"
+      }
+    },
+    {
+      "args": {
+        "display_name": "\u0627\u0644\u062a\u0639\u0627\u0631\u0636\u0627\u062a"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "locale": "ar",
+        "object_key": "deal_registration.conflict_summary",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0641\u062d\u0635"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "locale": "ar",
+        "object_key": "deal_registration.checked_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "\u0635\u0627\u062d\u0628 \u0627\u0644\u0642\u0631\u0627\u0631"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "locale": "ar",
+        "object_key": "deal_registration.decided_by",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "\u0627\u0644\u0634\u0631\u064a\u0643"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity.partner_account_ref",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "partner",
+  "seq": 3,
+  "title": "Pack: deal registration decisions"
+}

@@ -55,6 +55,8 @@ attome-model.workspace = true
 attome-notification.workspace = true
 # D1-T3: linking a verified portal sign-up to its contact.
 attome-portal.workspace = true
+# F9-T3: deal registration conflicts, decisions and lapse.
+attome-partner.workspace = true
 attome-jobs.workspace = true
 attome-ledger.workspace = true
 attome-marketing.workspace = true

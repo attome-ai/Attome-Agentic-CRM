@@ -33,6 +33,6 @@ impl EngineModel for PartnerModel {
     }
 
     fn routes(&self) -> Router<EngineState> {
-        Router::new()
+        crate::registration::routes()
     }
 }
