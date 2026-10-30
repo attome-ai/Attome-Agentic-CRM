@@ -87,7 +87,8 @@ is set, so it never mails a real person. `--mode sample --percent N` (1 to 99, d
 entity (every entity outside the platform layer that is not reference data, people's accounts
 excepted), chosen by a hash of the id, plus every record they point at through a lookup, and
 deletes the rest; platform entities and reference data are kept whole, and notes and other timeline
-items of a removed record go with it. `--mode metadata` is not built yet.
+items of a removed record go with it. `--mode metadata` removes every record of those entities and keeps
+the model, configuration, reference data and people's accounts.
 
 `attome scratch verify --name <database>` (L10-T2) compares up to 200 records of every labelled field
 between this deployment and the copy, record by record by hash, lists each field with how many

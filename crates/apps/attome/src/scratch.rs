@@ -17,9 +17,9 @@
 //!   (Z8-T6).
 //!
 //! `--mode sample --percent N` keeps N% of each customer-data entity's
-//! records with everything they reference ([`sample_copy`]). `metadata`
-//! (the model without records) is refused: it needs a copy that boots before
-//! it is filled, which this command does not drive. The copy API the task names is not built either: creating a
+//! records with everything they reference ([`sample_copy`]); `--mode
+//! metadata` keeps none of them: the model, configuration, reference data
+//! and people's accounts stay, the customer records go. The copy API the task names is not built either: creating a
 //! database needs the server's own credentials, which the HTTP process does
 //! not hold apart from the migrator's.
 
@@ -131,9 +131,6 @@ pub fn parse_args(args: &[String], source: &str) -> Result<ScratchArgs, String> 
             "{name}: a copy's name is 3 to 63 lowercase letters, digits or underscores, \
              starting with a letter, and not the source database"
         ));
-    }
-    if mode == ScratchMode::Metadata {
-        return Err("--mode metadata is not built yet; full and sample copies are".to_owned());
     }
     Ok(ScratchArgs {
         name,
@@ -305,7 +302,8 @@ async fn sample_copy(
     .fetch_all(&mut *copy)
     .await
     .map_err(|e| format!("cannot read the lookups: {e}"))?;
-    for _ in 0..MAX_CLOSURE_PASSES {
+    let passes = if percent == 0 { 0 } else { MAX_CLOSURE_PASSES };
+    for _ in 0..passes {
         let mut added = 0;
         for (source, field, target) in &lookups {
             // A source kept whole keeps every target it names.
@@ -417,10 +415,11 @@ pub async fn create(config: &AppConfig, args: &ScratchArgs) -> Result<ScratchRep
         .await
         .map_err(|e| format!("cannot set the copy's schema: {e}"))?;
 
-    let sampled = if args.mode == ScratchMode::Sample {
-        sample_copy(&mut copy, args.percent).await?
-    } else {
-        Vec::new()
+    let sampled = match args.mode {
+        ScratchMode::Sample => sample_copy(&mut copy, args.percent).await?,
+        // No record of a customer-data entity is kept, nor followed.
+        ScratchMode::Metadata => sample_copy(&mut copy, 0).await?,
+        ScratchMode::Full => Vec::new(),
     };
     let labelled: Vec<LabelledField> =
         sqlx::query_as(LABELLED_FIELDS)
@@ -760,12 +759,13 @@ mod tests {
             )
             .is_err()
         );
-        assert!(
+        assert_eq!(
             parse_args(
                 &strings(&["--name", "copy_a", "--mode", "metadata"]),
                 "attome"
             )
-            .is_err()
+            .map(|a| a.mode),
+            Ok(ScratchMode::Metadata)
         );
         assert!(parse_args(&strings(&["--name"]), "attome").is_err());
         assert!(parse_args(&strings(&["--name", "copy_a", "--x"]), "attome").is_err());
