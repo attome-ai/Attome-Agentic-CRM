@@ -2019,6 +2019,10 @@ pub(crate) struct ModelFiles {
 pub(crate) struct ImportResponse {
     /// The drafts saved, in file order.
     drafts: Vec<CommandsResponse>,
+    /// A22-T1: the objects left as they were (`kind/app/name`): each is
+    /// what is published already and has no draft open, so importing the
+    /// files an export wrote saves nothing.
+    unchanged: Vec<String>,
 }
 
 /// The most files one import takes.
@@ -2078,10 +2082,12 @@ async fn export_files(
 /// Import metadata objects
 ///
 /// Imports object files as drafts: an object with the same kind, app and
-/// name gets a new draft, any other is created. Nothing is published. Every
-/// file is read (and upgraded to its kind's current shape) before anything
-/// is saved, and all drafts save in one transaction, so a bad file saves
-/// nothing.
+/// name gets a new draft, any other is created. Nothing is published. An
+/// object whose file is what is published already, with no draft open, is
+/// left as it is and listed as unchanged (A22-T1), so importing an export
+/// saves nothing. Every file is read (and upgraded to its kind's current
+/// shape) before anything is saved, and all drafts save in one
+/// transaction, so a bad file saves nothing.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/model/import",
@@ -2143,8 +2149,30 @@ async fn import_files(
 
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let mut drafts = Vec::with_capacity(objects.len());
+    let mut unchanged = Vec::new();
     for (kind, object) in &objects {
         let kind_name = kind.name();
+        // A22-T1: the published version already holds this file.
+        let hash =
+            attome_model::canonical::content_hash(&object.doc).map_err(AppError::Validation)?;
+        if let Some(existing) = attome_model::store::published_state(
+            &state.base.db,
+            kind_name.as_str(),
+            &object.app,
+            &object.name,
+        )
+        .await?
+            && existing.published.as_ref().map(|(_, h)| h.as_str()) == Some(hash.as_str())
+            && !pack_objects::has_draft(&mut tx, existing.id).await?
+        {
+            unchanged.push(format!(
+                "{}/{}/{}",
+                kind_name.as_str(),
+                object.app,
+                object.name
+            ));
+            continue;
+        }
         let id = store::find_by_name(&mut tx, kind_name.as_str(), &object.app, &object.name)
             .await?
             .unwrap_or_else(Uuid::now_v7);
@@ -2185,11 +2213,15 @@ async fn import_files(
             None,
         )
         .named("model.import")
-        .comment(format!("{} draft(s) imported from files", drafts.len())),
+        .comment(format!(
+            "{} draft(s) imported from files, {} unchanged",
+            drafts.len(),
+            unchanged.len()
+        )),
     )
     .await?;
     attome_db::tx::commit(tx).await?;
-    Ok(Json(ImportResponse { drafts }))
+    Ok(Json(ImportResponse { drafts, unchanged }))
 }
 
 /// One guided tour as a signed-in person receives it (B14-T1).

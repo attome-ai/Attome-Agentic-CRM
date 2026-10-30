@@ -682,6 +682,34 @@ fn export_then_import_keeps_content_hashes() {
         assert_eq!(draft["id"], form_id.to_string(), "same name → same object");
         assert_eq!(draft["content_hash"], hash.as_str());
 
+        // A22-T1: once published, importing the same file saves nothing.
+        let resp = app
+            .clone()
+            .oneshot(post_req(
+                &format!("/api/v1/admin/model/form/{form_id}/publish"),
+                &cookie,
+                serde_json::json!({}),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let resp = app
+            .clone()
+            .oneshot(post_req(
+                "/api/v1/admin/model/import",
+                &cookie,
+                serde_json::json!({ "files": [file] }),
+            ))
+            .await
+            .unwrap();
+        let again = body_json(resp).await;
+        assert_eq!(again["drafts"], serde_json::json!([]), "{again}");
+        assert_eq!(
+            again["unchanged"].as_array().map(Vec::len),
+            Some(1),
+            "{again}"
+        );
+
         let resp = app
             .oneshot(post_req(
                 "/api/v1/admin/model/import",

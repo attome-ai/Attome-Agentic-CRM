@@ -506,7 +506,8 @@ async fn save(
     Ok(())
 }
 
-async fn has_draft(tx: &mut attome_db::Tx<'_>, id: Uuid) -> Result<bool, AppError> {
+/// Whether the object has an open draft.
+pub(super) async fn has_draft(tx: &mut attome_db::Tx<'_>, id: Uuid) -> Result<bool, AppError> {
     sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM metadata_object_version \
                          WHERE object_id = $1 AND state = 'draft')",
