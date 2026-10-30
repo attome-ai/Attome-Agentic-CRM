@@ -74,11 +74,12 @@ mod table;
 mod tests;
 
 pub use attribute::{
-    MAX_ATTRIBUTES_PER_ENTITY, attribute_index_requires_async, backfill_lookup_indexes,
-    count_duplicate_values, ensure_attribute, ensure_entity, lookup_columns_without_index,
-    sync_attribute_index, sync_attribute_index_on_connection, sync_external_id_index,
-    sync_field_constraints, sync_trigram_index, sync_trigram_index_on_connection,
-    table_row_count_exceeds, trigram_index_candidates,
+    MAIN_TABLE_ATTRIBUTE_LIMIT, MAX_COLUMN_SLOTS, attribute_index_requires_async,
+    backfill_lookup_indexes, column_slots_used, count_duplicate_values, ensure_attribute,
+    ensure_entity, lookup_columns_without_index, sync_attribute_index,
+    sync_attribute_index_on_connection, sync_external_id_index, sync_field_constraints,
+    sync_trigram_index, sync_trigram_index_on_connection, table_row_count_exceeds,
+    trigram_index_candidates,
 };
 pub use bundle_walk::seed_bundle_for_tests;
 pub use business_key::{

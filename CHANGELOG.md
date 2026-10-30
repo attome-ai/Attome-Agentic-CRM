@@ -69,6 +69,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
   node's memory and was lost at the next restart or hourly reload, and never reached other nodes.
 
 ### Changed
+- An entity takes up to 1,000 fields (was 500) (A1-T3), and a new field is refused once the table has used 1,500 of PostgreSQL's 1,600 column slots, dropped columns included.
 - A platform upgrade that changes a property the customer also changed no longer keeps the customer's
   value silently (Y11-T6): it keeps it and records an open conflict in `metadata_layer_conflict` with
   the old and new platform values and the customer's, for a builder to resolve.

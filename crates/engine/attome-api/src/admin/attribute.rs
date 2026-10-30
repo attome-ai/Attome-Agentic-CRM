@@ -728,10 +728,19 @@ async fn do_create_attribute_one(
             .fetch_one(&state.base.db_migrator)
             .await
             .map_err(AppError::internal)?;
-    if attr_count >= provision::MAX_ATTRIBUTES_PER_ENTITY {
+    if attr_count >= provision::MAIN_TABLE_ATTRIBUTE_LIMIT {
         return Err(AppError::Validation(format!(
             "entity has reached the attribute limit ({}); deleted attributes count until their columns are purged",
-            provision::MAX_ATTRIBUTES_PER_ENTITY
+            provision::MAIN_TABLE_ATTRIBUTE_LIMIT
+        )));
+    }
+    // A1-T3: PostgreSQL's own count, which keeps dropped columns until the
+    // table is rebuilt.
+    let slots = provision::column_slots_used(&state.base.db_migrator, &entity_logicalname).await?;
+    if slots >= provision::MAX_COLUMN_SLOTS {
+        return Err(AppError::Validation(format!(
+            "the table has used {slots} of PostgreSQL's 1,600 column slots (dropped columns count \
+             until the table is rebuilt); no more fields can be added until it is"
         )));
     }
 

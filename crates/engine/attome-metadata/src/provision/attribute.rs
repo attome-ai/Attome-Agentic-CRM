@@ -32,14 +32,36 @@ pub(super) static ATTRIBUTE_INDEX_CONNECTION_LIMIT: Semaphore = Semaphore::const
 /// Ceiling on `attribute_info` rows per entity — counts soft-deleted
 /// attributes too, because `delete_attribute` leaves the physical column in
 /// place (P-data-lifecycle owns the purge path) and Postgres's hard limit is
-/// ~1,600 physical columns per table. 500 keeps a comfortable 3x margin.
-/// Deliberately not config-tunable — a customer who genuinely needs more is a
-/// design conversation, not a config edit. P-provisioning-hardening item (e).
+/// 1,600 physical columns per table. A1-T3 raised it from 500 to 1,000; the
+/// physical guard [`MAX_COLUMN_SLOTS`] keeps the rest of the margin for the
+/// columns PostgreSQL still counts after they are dropped. Deliberately not
+/// config-tunable. P-provisioning-hardening item (e).
 ///
 /// Lives here rather than in `attome-types` (BTY-10): it is a statement about
 /// this engine's table and Postgres's column limit, not about the wire
 /// vocabulary, and attome-types is consumed by crates that have no entities.
-pub const MAX_ATTRIBUTES_PER_ENTITY: i64 = 500;
+pub const MAIN_TABLE_ATTRIBUTE_LIMIT: i64 = 1000;
+
+/// A1-T3: the most column slots a table may use before a new field is
+/// refused. PostgreSQL counts every column a table ever had, dropped ones
+/// included, toward its 1,600 limit, and frees them only when the table is
+/// rebuilt; this keeps 100 in hand.
+pub const MAX_COLUMN_SLOTS: i64 = 1500;
+
+/// A1-T3: the column slots `table` uses: every column it has had, dropped
+/// ones included.
+pub async fn column_slots_used(db: &DbPool, table: &str) -> Result<i64, AppError> {
+    sqlx::query_scalar(
+        "SELECT COUNT(*) FROM pg_attribute a \
+           JOIN pg_class c ON c.oid = a.attrelid \
+          WHERE c.relname = $1 AND c.relnamespace = current_schema()::regnamespace \
+            AND a.attnum > 0",
+    )
+    .bind(table)
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)
+}
 
 /// P1.11(h): one btree index serves sortable/filterable access on an
 /// attribute AND (T2-1 / due-diligence finding 3.1) the FK existence and
