@@ -6,9 +6,9 @@
 //! database on the same PostgreSQL server, with the deployment's own
 //! credentials, then masks it before anything boots on it:
 //!
-//! - every value of a field labelled sensitive, or with a confirmed Personal,
-//!   Financial, Health or Secret label, is cleared (a required column keeps
-//!   its value and is listed, for L10-T1's deterministic fakes to replace);
+//! - every labelled field is masked by `crate::masking` (L10-T1): Personal
+//!   values become keyed fakes, Financial values are shuffled between
+//!   records, Health, Secret and unlabelled sensitive values are cleared;
 //! - API keys, refresh and portal tokens, connector OAuth tokens, SCIM
 //!   tokens and pending reset, invitation and verification links are
 //!   removed, so nothing issued for the source works against the copy;
@@ -141,6 +141,61 @@ const CREDENTIAL_TABLES: &[&str] = &[
     "email_verification_token",
 ];
 
+/// One labelled field of the copy: entity, field, label (`sensitive` when
+/// only `is_sensitive` marks it), the masking override, whether its column
+/// is nullable and whether it is text.
+type LabelledField = (String, String, String, Option<String>, bool, bool);
+
+/// Rows faked per statement.
+const FAKE_BATCH: i64 = 1000;
+
+fn hex_key(key: &[u8]) -> String {
+    key.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// Replaces every value of a text column with its keyed fake, a batch of
+/// rows at a time in id order.
+async fn fake_column(
+    copy: &mut sqlx::PgConnection,
+    entity: &str,
+    field: &str,
+    key: &[u8],
+) -> Result<(), sqlx::Error> {
+    let read = format!(
+        "SELECT id, {c}::text FROM {t} WHERE {c} IS NOT NULL AND id > $1 ORDER BY id LIMIT $2",
+        t = attome_core::quote_ident(entity),
+        c = attome_core::quote_ident(field)
+    );
+    let write = format!(
+        "UPDATE {t} SET {c} = u.v FROM unnest($1::uuid[], $2::text[]) AS u(id, v) \
+          WHERE {t}.id = u.id",
+        t = attome_core::quote_ident(entity),
+        c = attome_core::quote_ident(field)
+    );
+    let mut after = uuid::Uuid::nil();
+    loop {
+        let rows: Vec<(uuid::Uuid, String)> = sqlx::query_as(&read)
+            .bind(after)
+            .bind(FAKE_BATCH)
+            .fetch_all(&mut *copy)
+            .await?;
+        let Some(last) = rows.last().map(|r| r.0) else {
+            return Ok(());
+        };
+        let ids: Vec<uuid::Uuid> = rows.iter().map(|r| r.0).collect();
+        let fakes: Vec<String> = rows
+            .iter()
+            .map(|(_, value)| crate::masking::fake(key, field, value))
+            .collect();
+        sqlx::query(&write)
+            .bind(&ids)
+            .bind(&fakes)
+            .execute(&mut *copy)
+            .await?;
+        after = last;
+    }
+}
+
 /// Makes the copy `args` names.
 pub async fn create(config: &AppConfig, args: &ScratchArgs) -> Result<ScratchReport, String> {
     use sqlx::Connection;
@@ -168,9 +223,12 @@ pub async fn create(config: &AppConfig, args: &ScratchArgs) -> Result<ScratchRep
         .await
         .map_err(|e| format!("cannot set the copy's schema: {e}"))?;
 
-    let labelled: Vec<(String, String, bool)> = sqlx::query_as(
+    let labelled: Vec<LabelledField> = sqlx::query_as(
         "SELECT e.logicalname::text, a.logicalname::text, \
-                COALESCE(c.is_nullable = 'YES', false) \
+                CASE WHEN a.sensitivity_confirmed THEN a.sensitivity::text ELSE 'sensitive' END, \
+                a.options->>'masking', \
+                COALESCE(c.is_nullable = 'YES', false), \
+                COALESCE(c.data_type IN ('text', 'character varying', 'character'), false) \
            FROM attribute_info a \
            JOIN entity_info e ON e.id = a.entity_ref \
            LEFT JOIN information_schema.columns c \
@@ -184,23 +242,63 @@ pub async fn create(config: &AppConfig, args: &ScratchArgs) -> Result<ScratchRep
     .fetch_all(&mut copy)
     .await
     .map_err(|e| format!("cannot read the copy's labelled fields: {e}"))?;
+    // L10-T1: one key for this copy, never stored.
+    let key: [u8; 32] = rand::random();
     let mut masked = Vec::new();
     let mut unmasked_required = Vec::new();
-    for (entity, field, nullable) in labelled {
-        if !nullable {
-            unmasked_required.push(format!("{entity}.{field}"));
-            continue;
+    for (entity, field, label, override_rule, nullable, is_text) in labelled {
+        let name = format!("{entity}.{field}");
+        let mut rule = crate::masking::rule_for(&label, override_rule.as_deref(), !nullable);
+        // A fake is text; a field of another type is cleared, or left and
+        // listed when its column is required.
+        if rule == crate::masking::MaskRule::Fake && !is_text {
+            rule = if nullable {
+                crate::masking::MaskRule::Null
+            } else {
+                crate::masking::MaskRule::Keep
+            };
         }
-        let sql = format!(
-            "UPDATE {t} SET {c} = NULL WHERE {c} IS NOT NULL",
-            t = attome_core::quote_ident(&entity),
-            c = attome_core::quote_ident(&field)
-        );
-        sqlx::query(&sql)
-            .execute(&mut copy)
-            .await
-            .map_err(|e| format!("cannot clear {entity}.{field}: {e}"))?;
-        masked.push(format!("{entity}.{field}"));
+        match rule {
+            crate::masking::MaskRule::Keep => {
+                unmasked_required.push(name);
+                continue;
+            }
+            crate::masking::MaskRule::Null => {
+                let sql = format!(
+                    "UPDATE {t} SET {c} = NULL WHERE {c} IS NOT NULL",
+                    t = attome_core::quote_ident(&entity),
+                    c = attome_core::quote_ident(&field)
+                );
+                sqlx::query(&sql)
+                    .execute(&mut copy)
+                    .await
+                    .map_err(|e| format!("cannot clear {name}: {e}"))?;
+            }
+            crate::masking::MaskRule::Shuffle => {
+                // The values stay in the column, each moved to another
+                // record in an order only this copy's key decides.
+                let sql = format!(
+                    "WITH src AS (SELECT {c} AS v, row_number() OVER (ORDER BY id) AS n \
+                                   FROM {t} WHERE {c} IS NOT NULL), \
+                          dst AS (SELECT id, row_number() OVER (ORDER BY md5(id::text || $1)) AS n \
+                                   FROM {t} WHERE {c} IS NOT NULL) \
+                     UPDATE {t} SET {c} = src.v FROM src JOIN dst USING (n) WHERE {t}.id = dst.id",
+                    t = attome_core::quote_ident(&entity),
+                    c = attome_core::quote_ident(&field)
+                );
+                sqlx::query(&sql)
+                    .bind(hex_key(&key))
+                    .execute(&mut copy)
+                    .await
+                    .map_err(|e| format!("cannot shuffle {name}: {e}"))?;
+            }
+            crate::masking::MaskRule::Fake => {
+                fake_column(&mut copy, &entity, &field, &key)
+                    .await
+                    .map_err(|e| format!("cannot fake {name}: {e}"))?;
+            }
+        }
+        masked.push(name);
     }
     for table in CREDENTIAL_TABLES {
         let exists: bool = sqlx::query_scalar("SELECT to_regclass(quote_ident($1)) IS NOT NULL")

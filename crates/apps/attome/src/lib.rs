@@ -45,6 +45,8 @@ pub mod kms;
 pub mod listener;
 /// D15-T2: personal emails captured onto matching records.
 pub mod mail_capture;
+/// L10-T1: masking rules and keyed fakes for sandbox copies.
+pub mod masking;
 pub mod observability;
 pub mod omnichannel;
 pub mod openapi;

@@ -73,9 +73,14 @@ replication for files.
 
 `attome scratch create --name <database> [--from latest|<archive>]` makes a masked copy of this
 deployment's database on the same PostgreSQL server (T5-T1): it restores a backup (a fresh one when
-`--from` is left out) into the new database, then, before anything boots on it, clears every value
-of a field labelled sensitive or with a confirmed Personal, Financial, Health or Secret label (a
-required column keeps its value and is listed), removes API keys, refresh and portal tokens,
+`--from` is left out) into the new database, then, before anything boots on it, masks every labelled
+field (L10-T1): a Personal value becomes a fake derived from it with a key made for this copy and
+never stored (the same value gets the same fake everywhere, so records still match; Arabic and
+English names, Saudi and Emirati mobile numbers, ten-digit national ids, `example.invalid`
+emails), a Financial value is moved to another record of the same field, and Health, Secret and
+unlabelled sensitive values are cleared (a required column is faked instead, and a required
+non-text column is left and listed). A field's options may name its rule:
+`{"masking": "fake" | "null" | "shuffle" | "keep"}`. It then removes API keys, refresh and portal tokens,
 connector OAuth tokens, SCIM tokens and pending reset, invitation and verification links, and marks
 the database as a sandbox. A sandbox refuses to boot with email on unless `email.test_mode_catch_all`
 is set, so it never mails a real person. Only full copies are made so far; `--mode metadata` and

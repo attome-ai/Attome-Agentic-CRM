@@ -14,7 +14,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
-- `attome scratch create` (T5-T1): a masked full copy of the deployment's database for testing, with labelled field values cleared, issued credentials removed and a `sandbox_copy` marker (migration 0341); a marked copy refuses to boot with email on unless email test mode is set. See `docs/backup.md`.
+- `attome scratch create` (T5-T1): a masked full copy of the deployment's database for testing, with labelled fields masked by label (keyed fakes for Personal, shuffled Financial, cleared Health and Secret; L10-T1), issued credentials removed and a `sandbox_copy` marker (migration 0341); a marked copy refuses to boot with email on unless email test mode is set. See `docs/backup.md`.
 - High-volume entities (A1-T6): `POST /api/v1/admin/entities` takes `storage_mode: "high_volume"`
   (migration 0340, `entity_info.storage_mode`) for a table partitioned by month on `created_at`
   with a BRIN index and twelve months of partitions ahead. Queries on it must name a window on
