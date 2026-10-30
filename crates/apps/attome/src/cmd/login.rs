@@ -54,6 +54,9 @@ pub struct Targets {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Target {
     pub url: String,
+    /// T4-T5: a writing command here also needs `--confirm-target <name>`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub production: bool,
 }
 
 /// A target's session, as the credential store keeps it.
@@ -330,8 +333,14 @@ pub fn system_store(dir: &std::path::Path) -> Box<dyn CredentialStore> {
 /// A parsed `attome login|logout|targets` command.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LoginCommand {
-    Login { target: String, url: String },
-    Logout { target: String },
+    Login {
+        target: String,
+        url: String,
+        production: bool,
+    },
+    Logout {
+        target: String,
+    },
     Targets,
 }
 
@@ -339,6 +348,7 @@ pub enum LoginCommand {
 pub fn parse(verb: &str, args: &[String]) -> Result<LoginCommand, String> {
     let mut target: Option<String> = None;
     let mut url: Option<String> = None;
+    let mut production = false;
     let mut iter = args.iter();
     while let Some(flag) = iter.next() {
         let mut value = || {
@@ -349,6 +359,7 @@ pub fn parse(verb: &str, args: &[String]) -> Result<LoginCommand, String> {
         match (verb, flag.as_str()) {
             ("login" | "logout", "--target") => target = Some(value()?),
             ("login", "--url") => url = Some(value()?),
+            ("login", "--production") => production = true,
             _ => return Err(format!("unknown flag `{flag}`\n{USAGE}")),
         }
     }
@@ -370,6 +381,7 @@ pub fn parse(verb: &str, args: &[String]) -> Result<LoginCommand, String> {
             Ok(LoginCommand::Login {
                 target: named(target)?,
                 url,
+                production,
             })
         }
         "logout" => Ok(LoginCommand::Logout {
@@ -382,12 +394,31 @@ pub fn parse(verb: &str, args: &[String]) -> Result<LoginCommand, String> {
 
 /// Runs `attome login|logout|targets`.
 pub fn run(verb: &str, args: &[String]) -> Result<(), String> {
-    let command = parse(verb, args)?;
+    let mut args = args.to_vec();
+    let json = crate::cmd::output::take_flag(&mut args, "--json");
+    let command = parse(verb, &args)?;
     let dir = config_dir()?;
     let store = system_store(&dir);
     match command {
         LoginCommand::Targets => {
             let targets = Targets::load(&dir)?;
+            if json {
+                let mut listed = Vec::new();
+                for (name, target) in &targets.targets {
+                    listed.push(serde_json::json!({
+                        "name": name,
+                        "url": target.url,
+                        "production": target.production,
+                        "signed_in": store.get(name)?.is_some(),
+                    }));
+                }
+                let out = crate::cmd::output::envelope(
+                    "targets",
+                    serde_json::json!({ "default": targets.default, "targets": listed }),
+                );
+                println!("{out}");
+                return Ok(());
+            }
             if targets.targets.is_empty() {
                 println!("no targets; run `attome login --target <name> --url <url>`");
             }
@@ -408,25 +439,51 @@ pub fn run(verb: &str, args: &[String]) -> Result<(), String> {
         }
         LoginCommand::Logout { target } => {
             store.delete(&target)?;
-            println!("signed out of {target}");
+            if json {
+                let out = crate::cmd::output::envelope(
+                    "logout",
+                    serde_json::json!({ "target": target, "signed_in": false }),
+                );
+                println!("{out}");
+            } else {
+                println!("signed out of {target}");
+            }
             Ok(())
         }
-        LoginCommand::Login { target, url } => {
+        LoginCommand::Login {
+            target,
+            url,
+            production,
+        } => {
             let runtime = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()
                 .map_err(|error| format!("start the runtime: {error}"))?;
-            let tokens = runtime.block_on(device_login(&url))?;
+            let tokens = runtime.block_on(device_login(&url, json))?;
             store.set(&target, &tokens)?;
             let mut targets = Targets::load(&dir)?;
-            targets
-                .targets
-                .insert(target.clone(), Target { url: url.clone() });
+            targets.targets.insert(
+                target.clone(),
+                Target {
+                    url: url.clone(),
+                    production,
+                },
+            );
             if targets.default.is_none() {
                 targets.default = Some(target.clone());
             }
             targets.save(&dir)?;
-            println!("signed in to {target} ({url})");
+            if json {
+                let out = crate::cmd::output::envelope(
+                    "login",
+                    serde_json::json!({
+                        "target": target, "url": url, "production": production, "signed_in": true,
+                    }),
+                );
+                println!("{out}");
+            } else {
+                println!("signed in to {target} ({url})");
+            }
             Ok(())
         }
     }
@@ -475,7 +532,16 @@ pub fn tokens_of(body: &Value, now: i64) -> Result<Tokens, String> {
 }
 
 /// The device flow against `url` (see the module docs).
-async fn device_login(url: &str) -> Result<Tokens, String> {
+/// With `json`, what the person must do goes to standard error, so standard
+/// output carries only the JSON answer.
+async fn device_login(url: &str, json: bool) -> Result<Tokens, String> {
+    let say = |line: String| {
+        if json {
+            eprintln!("{line}");
+        } else {
+            println!("{line}");
+        }
+    };
     let http = client(url)?;
     let (status, grant) = form(
         &http,
@@ -491,13 +557,13 @@ async fn device_login(url: &str) -> Result<Tokens, String> {
         .as_str()
         .ok_or("the server sent no device code")?
         .to_owned();
-    println!(
+    say(format!(
         "To sign in, open {} and enter the code {}",
         grant["verification_uri"].as_str().unwrap_or_default(),
         grant["user_code"].as_str().unwrap_or_default()
-    );
+    ));
     if let Some(link) = grant["verification_uri_complete"].as_str() {
-        println!("(or open {link})");
+        say(format!("(or open {link})"));
     }
     let mut interval = grant["interval"].as_u64().unwrap_or(5).max(1);
     let deadline = std::time::Instant::now()
@@ -552,6 +618,14 @@ pub async fn credentials(
         }
         None => Ok((url, api_key.map(|key| format!("ApiKey {key}")))),
     }
+}
+
+/// T4-T5: whether the target `name` (or the default) is marked production.
+pub fn is_production(name: Option<&str>) -> bool {
+    config_dir()
+        .and_then(|dir| Targets::load(&dir))
+        .and_then(|targets| targets.resolve(name))
+        .is_ok_and(|(_, target)| target.production)
 }
 
 /// The URL and a live access token of `target` (or the default), refreshed
@@ -648,7 +722,8 @@ mod tests {
             ),
             Ok(LoginCommand::Login {
                 target: "prod".into(),
-                url: "https://crm.example.com".into()
+                url: "https://crm.example.com".into(),
+                production: false,
             })
         );
         assert!(parse("login", &args(&["--target", "prod"])).is_err());
@@ -673,6 +748,7 @@ mod tests {
             "prod".into(),
             Target {
                 url: "https://a".into(),
+                production: true,
             },
         );
         targets.default = Some("prod".into());

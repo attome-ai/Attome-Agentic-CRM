@@ -14,6 +14,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- CLI output and safety (T4-T5): `--json` on `login`, `logout`, `targets`, `model` and `data` prints a versioned object (`schema_version` 1); `model import` and `data import` need `--yes`, and on a target signed in with `attome login --production` also `--confirm-target <name>`; `attome completions powershell|bash|zsh`.
 - `attome data query|export|import` (T4-T4): query records (`--where`, `--fields`, `--format table|csv|json`, JSON with `schema_version`), download an export, or upload a CSV or XLSX for import, as the signed-in person (`--target`) or with an API key.
 - Customer portal pages (G12-T1): `/p/{keyword}` in the web app signs a portal user in through the portal's API, shows the portal's pages (pages with a portal audience, read with the new `GET /{keyword}/api/v1/pages` and `/pages/{name}`) drawn by the page runtime over the portal's record API, and has profile and consent pages, in Arabic and English. The customer-service pack ships home, my cases, case (with replies, the new `case_message` entity), knowledge and services pages. See `docs/pages.md`.
 - Outlook add-in and Gmail add-on (C7-T1): for the open email, the sender's contact, open opportunities and cases; log the email as a `communication` on the contact; create a lead or a case; suggested reply templates. Both sign in with the device grant (`attome-outlook`, `attome-gmail`) and act with the person's own access. See `addins/README.md`.

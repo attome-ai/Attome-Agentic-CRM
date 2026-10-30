@@ -23,6 +23,10 @@ Usage:
                                 code); later commands take --target <name>
   attome logout --target <name> | attome targets
                                 Forget a target's session; list the targets
+  attome completions powershell|bash|zsh
+                                Print a shell completion script
+                                (deployment commands take --json; writing ones
+                                need --yes, and --confirm-target on production)
   attome data query <entity> [--where f=v]... [--format table|csv|json]
   attome data export <entity> --out <file> | import <entity> --file <csv|xlsx>
                 [--target <name> | --url <url> [--api-key <key>]]
@@ -158,6 +162,16 @@ fn main() -> ExitCode {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             outcome(attome::cmd::login::run(verb, &rest).map_err(Into::into))
         }
+        ["completions", shell] => match attome::cmd::output::completions(shell) {
+            Ok(script) => {
+                let _ = std::io::stdout().write_all(script.as_bytes());
+                ExitCode::SUCCESS
+            }
+            Err(error) => {
+                let _ = writeln!(std::io::stderr(), "{error}");
+                ExitCode::from(2)
+            }
+        },
         ["data", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             outcome(attome::cmd::data::run(&rest).map_err(Into::into))

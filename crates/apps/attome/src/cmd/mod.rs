@@ -18,6 +18,8 @@ pub mod init;
 pub mod login;
 pub mod migrate;
 pub mod model_files;
+/// T4-T5: `--json`, write confirmation and shell completions.
+pub mod output;
 pub mod preflight;
 pub mod runbook;
 pub mod secrets;

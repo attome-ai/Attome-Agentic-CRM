@@ -58,6 +58,12 @@ it), and the first target signed in becomes the default. A command given `--targ
 session and refreshes it when the access token is about to expire; a session that has ended is
 forgotten and the command asks to sign in again.
 
+The deployment commands (`login`, `logout`, `targets`, `model`, `data`) take `--json` and then
+print one object, `{"schema_version": 1, "kind": "<command>", ...}`, on standard output (a sign-in
+code goes to standard error). A command that writes (`model import`, `data import`) runs only with
+`--yes`; on a target signed in with `--production` it also needs `--confirm-target <name>` naming
+that target. `attome completions powershell|bash|zsh` prints a completion script.
+
 ## The mail add-ins
 
 The Outlook add-in (`attome-outlook`) and the Gmail add-on (`attome-gmail`) sign in the same way and

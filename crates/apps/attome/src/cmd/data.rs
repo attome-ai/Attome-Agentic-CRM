@@ -344,7 +344,25 @@ pub fn multipart(boundary: &str, filename: &str, content_type: &str, bytes: &[u8
 
 /// Runs `attome data ...`.
 pub fn run(args: &[String]) -> Result<(), String> {
-    let (command, connection) = parse(args)?;
+    use crate::cmd::output::{confirm, take_flag, take_value};
+    let mut args = args.to_vec();
+    let json = take_flag(&mut args, "--json");
+    let yes = take_flag(&mut args, "--yes");
+    let confirm_target = take_value(&mut args, "--confirm-target")?;
+    let (mut command, connection) = parse(&args)?;
+    // T4-T5: --json is --format json for a query.
+    if let (true, DataCommand::Query { format, .. }) = (json, &mut command) {
+        *format = Format::Json;
+    }
+    // An import writes records, so it needs --yes (and on a production
+    // target its name).
+    if matches!(command, DataCommand::Import { .. }) {
+        let named = connection
+            .target
+            .as_deref()
+            .map(|t| (t, crate::cmd::login::is_production(Some(t))));
+        confirm("data import", yes, confirm_target.as_deref(), named)?;
+    }
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -377,8 +395,8 @@ pub fn run(args: &[String]) -> Result<(), String> {
                 filters,
                 out,
                 format,
-            } => export(&url, &auth, &entity, &filters, &out, &format).await,
-            DataCommand::Import { entity, file } => import(&url, &auth, &entity, &file).await,
+            } => export(&url, &auth, &entity, &filters, &out, &format, json).await,
+            DataCommand::Import { entity, file } => import(&url, &auth, &entity, &file, json).await,
         }
     })
 }
@@ -432,6 +450,7 @@ async fn export(
     filters: &[(String, String)],
     out: &std::path::Path,
     format: &str,
+    json: bool,
 ) -> Result<(), String> {
     let filter: Vec<Value> = filters
         .iter()
@@ -448,10 +467,12 @@ async fn export(
     let id = started["id"]
         .as_str()
         .ok_or("the server sent no export id")?;
-    println!(
-        "export {id} accepted: {} row(s)",
-        started["matching_rows"].as_i64().unwrap_or(0)
-    );
+    if !json {
+        println!(
+            "export {id} accepted: {} row(s)",
+            started["matching_rows"].as_i64().unwrap_or(0)
+        );
+    }
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30 * 60);
     let download = loop {
         tokio::time::sleep(std::time::Duration::from_secs(2)).await;
@@ -502,7 +523,15 @@ async fn export(
         .await
         .map_err(|error| format!("download the export: {error}"))?;
     std::fs::write(out, &bytes).map_err(|error| format!("write {}: {error}", out.display()))?;
-    println!("wrote {} ({} bytes)", out.display(), bytes.len());
+    if json {
+        let answer = crate::cmd::output::envelope(
+            "data_export",
+            json!({ "id": id, "out": out.display().to_string(), "bytes": bytes.len() }),
+        );
+        println!("{answer}");
+    } else {
+        println!("wrote {} ({} bytes)", out.display(), bytes.len());
+    }
     Ok(())
 }
 
@@ -511,6 +540,7 @@ async fn import(
     auth: &Auth,
     entity: &str,
     file: &std::path::Path,
+    json: bool,
 ) -> Result<(), String> {
     let bytes = std::fs::read(file).map_err(|error| format!("read {}: {error}", file.display()))?;
     let name = file
@@ -543,6 +573,14 @@ async fn import(
         .map_err(|error| format!("read the response: {error}"))?;
     if !status.is_success() {
         return Err(format!("the server answered {status}: {body}"));
+    }
+    if json {
+        let answer = crate::cmd::output::envelope(
+            "data_import",
+            json!({ "id": body["id"], "status": body["status"], "entity": entity }),
+        );
+        println!("{answer}");
+        return Ok(());
     }
     println!(
         "import {} {}: review and apply it in the app, or at /api/v1/{entity}/imports/{}",

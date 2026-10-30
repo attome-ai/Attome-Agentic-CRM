@@ -84,7 +84,20 @@ pub fn parse(args: &[String]) -> Result<ModelCommand, String> {
 
 /// Runs `attome model ...`.
 pub fn run(args: &[String]) -> Result<(), String> {
-    let command = parse(args)?;
+    use crate::cmd::output::{confirm, envelope, take_flag, take_value};
+    let mut args = args.to_vec();
+    let json = take_flag(&mut args, "--json");
+    let yes = take_flag(&mut args, "--yes");
+    let confirm_target = take_value(&mut args, "--confirm-target")?;
+    let command = parse(&args)?;
+    // T4-T5: an import writes drafts, so it needs --yes (and on a production
+    // target its name).
+    if let ModelCommand::Import { target, .. } = &command {
+        let named = target
+            .as_deref()
+            .map(|t| (t, crate::cmd::login::is_production(Some(t))));
+        confirm("model import", yes, confirm_target.as_deref(), named)?;
+    }
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -98,7 +111,17 @@ pub fn run(args: &[String]) -> Result<(), String> {
                 out,
             } => {
                 let (url, auth) = credentials(url, api_key, target).await?;
-                export(&url, auth, &out).await
+                let count = export(&url, auth, &out).await?;
+                if json {
+                    let out = envelope(
+                        "model_export",
+                        json!({ "objects": count, "out": out.display().to_string() }),
+                    );
+                    println!("{out}");
+                } else {
+                    println!("exported {count} object(s) to {}", out.display());
+                }
+                Ok(())
             }
             ModelCommand::Import {
                 url,
@@ -107,7 +130,15 @@ pub fn run(args: &[String]) -> Result<(), String> {
                 dir,
             } => {
                 let (url, auth) = credentials(url, api_key, target).await?;
-                import(&url, auth, &dir).await
+                let (files, drafts) = import(&url, auth, &dir).await?;
+                if json {
+                    println!("{}", envelope("model_import", json!({ "files": files, "drafts": drafts })));
+                } else {
+                    println!(
+                        "imported {files} file(s) as {drafts} draft(s); publish them to make them live"
+                    );
+                }
+                Ok(())
             }
         }
     })
@@ -151,7 +182,7 @@ fn safe_relative(path: &str) -> Option<PathBuf> {
         .then(|| candidate.to_path_buf())
 }
 
-async fn export(url: &str, auth: Auth, out: &Path) -> Result<(), String> {
+async fn export(url: &str, auth: Auth, out: &Path) -> Result<usize, String> {
     let response = authorised(
         client(url)?.get(format!("{url}/api/v1/admin/model/export")),
         auth.as_deref(),
@@ -174,8 +205,7 @@ async fn export(url: &str, auth: Auth, out: &Path) -> Result<(), String> {
         std::fs::write(&target, text.replace("\r\n", "\n"))
             .map_err(|error| format!("write {}: {error}", target.display()))?;
     }
-    println!("exported {} object(s) to {}", files.len(), out.display());
-    Ok(())
+    Ok(files.len())
 }
 
 /// Every `.json` file under `dir`, as (path relative to `dir` with `/`
@@ -210,7 +240,7 @@ fn read_tree(dir: &Path) -> Result<Vec<(String, String)>, String> {
     Ok(found)
 }
 
-async fn import(url: &str, auth: Auth, dir: &Path) -> Result<(), String> {
+async fn import(url: &str, auth: Auth, dir: &Path) -> Result<(usize, usize), String> {
     let files: Vec<Value> = read_tree(dir)?
         .into_iter()
         .map(|(path, text)| json!({ "path": path, "text": text }))
@@ -227,8 +257,7 @@ async fn import(url: &str, auth: Auth, dir: &Path) -> Result<(), String> {
     .map_err(|error| format!("reach {url}: {error}"))?;
     let body = answer(response).await?;
     let drafts = body["drafts"].as_array().map_or(0, Vec::len);
-    println!("imported {count} file(s) as {drafts} draft(s); publish them to make them live");
-    Ok(())
+    Ok((count, drafts))
 }
 
 #[cfg(test)]
