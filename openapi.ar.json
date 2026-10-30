@@ -40484,7 +40484,7 @@
           "admin"
         ],
         "summary": "Import metadata objects",
-        "description": "Imports object files as drafts: an object with the same kind, app and\nname gets a new draft, any other is created. Nothing is published. Every\nfile is read (and upgraded to its kind's current shape) before anything\nis saved, and all drafts save in one transaction, so a bad file saves\nnothing.",
+        "description": "Imports object files as drafts: an object with the same kind, app and\nname gets a new draft, any other is created. Nothing is published. An\nobject whose file is what is published already, with no draft open, is\nleft as it is and listed as unchanged (A22-T1), so importing an export\nsaves nothing. Every file is read (and upgraded to its kind's current\nshape) before anything is saved, and all drafts save in one\ntransaction, so a bad file saves nothing.",
         "operationId": "import_files",
         "requestBody": {
           "content": {
@@ -106116,7 +106116,7 @@
         ],
         "summary": "A pending device grant",
         "description": "The application a user code belongs to, so the person sees what they are\nabout to sign in before approving it. 404 for a code that is unknown,\ndecided or expired.",
-        "operationId": "pending_grant",
+        "operationId": "oauth_device_pending",
         "parameters": [
           {
             "name": "user_code",
@@ -106180,7 +106180,7 @@
         ],
         "summary": "Approve or deny a device",
         "description": "RFC 8628 §3.3: the signed-in person approves the grant a user code names,\nso the device that asked receives a session as them on its next poll, or\ndenies it. Needs a browser session: an API key or another device's\nsession is refused (403). Audited with the application's name.",
-        "operationId": "approve",
+        "operationId": "oauth_device_approve",
         "requestBody": {
           "content": {
             "application/json": {
@@ -106253,9 +106253,9 @@
         "tags": [
           "auth"
         ],
-        "summary": "الحصول على رمز وصول للتكامل بين الخوادم",
+        "summary": "Exchange a device grant or refresh token",
         "description": "RFC 8628 §3.4: a device polls with its device code until the person has\ndecided: `authorization_pending` meanwhile, `slow_down` when it polls\nfaster than `interval`, `access_denied` or `expired_token` at the end. An\napproved grant gives an ordinary session for the person, once. A refresh\ntoken gives the next pair (RFC 6749 §6), in the same family. Audited as a\nsign-in.",
-        "operationId": "token",
+        "operationId": "oauth_device_token",
         "requestBody": {
           "content": {
             "application/x-www-form-urlencoded": {
@@ -106335,7 +106335,7 @@
         ],
         "summary": "Ask for a device grant",
         "description": "RFC 8628 §3.1: a device asks to be signed in. Returns its device code,\nthe user code the person enters at `verification_uri` in a signed-in\nbrowser, and how often to poll `POST /api/v1/oauth/device/token`. No\ncredential: the grant does nothing until a signed-in person approves it.",
-        "operationId": "device_authorization",
+        "operationId": "oauth_device_authorization",
         "requestBody": {
           "content": {
             "application/x-www-form-urlencoded": {
@@ -180796,7 +180796,8 @@
       "ImportResponse": {
         "type": "object",
         "required": [
-          "drafts"
+          "drafts",
+          "unchanged"
         ],
         "properties": {
           "drafts": {
@@ -180805,6 +180806,13 @@
               "$ref": "#/components/schemas/CommandsResponse"
             },
             "description": "The drafts saved, in file order."
+          },
+          "unchanged": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "A22-T1: the objects left as they were (`kind/app/name`): each is\nwhat is published already and has no draft open, so importing the\nfiles an export wrote saves nothing."
           }
         }
       },
@@ -244315,7 +244323,6 @@
       "description": "فحوص السلامة والجاهزية والإصدار"
     }
   ],
-  "x-api-version": "2026-10",
   "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
@@ -244368,5 +244375,6 @@
         ]
       }
     }
-  }
+  },
+  "x-api-version": "2026-10"
 }

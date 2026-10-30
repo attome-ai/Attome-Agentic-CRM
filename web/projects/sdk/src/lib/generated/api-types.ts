@@ -8122,10 +8122,12 @@ export interface paths {
         /**
          * Import metadata objects
          * @description Imports object files as drafts: an object with the same kind, app and
-         *     name gets a new draft, any other is created. Nothing is published. Every
-         *     file is read (and upgraded to its kind's current shape) before anything
-         *     is saved, and all drafts save in one transaction, so a bad file saves
-         *     nothing.
+         *     name gets a new draft, any other is created. Nothing is published. An
+         *     object whose file is what is published already, with no draft open, is
+         *     left as it is and listed as unchanged (A22-T1), so importing an export
+         *     saves nothing. Every file is read (and upgraded to its kind's current
+         *     shape) before anything is saved, and all drafts save in one
+         *     transaction, so a bad file saves nothing.
          */
         post: operations["import_files"];
         delete?: never;
@@ -22421,7 +22423,7 @@ export interface paths {
          *     about to sign in before approving it. 404 for a code that is unknown,
          *     decided or expired.
          */
-        get: operations["pending_grant"];
+        get: operations["oauth_device_pending"];
         put?: never;
         post?: never;
         delete?: never;
@@ -22446,7 +22448,7 @@ export interface paths {
          *     denies it. Needs a browser session: an API key or another device's
          *     session is refused (403). Audited with the application's name.
          */
-        post: operations["approve"];
+        post: operations["oauth_device_approve"];
         delete?: never;
         options?: never;
         head?: never;
@@ -22471,7 +22473,7 @@ export interface paths {
          *     token gives the next pair (RFC 6749 §6), in the same family. Audited as a
          *     sign-in.
          */
-        post: operations["token"];
+        post: operations["oauth_device_token"];
         delete?: never;
         options?: never;
         head?: never;
@@ -22494,7 +22496,7 @@ export interface paths {
          *     browser, and how often to poll `POST /api/v1/oauth/device/token`. No
          *     credential: the grant does nothing until a signed-in person approves it.
          */
-        post: operations["device_authorization"];
+        post: operations["oauth_device_authorization"];
         delete?: never;
         options?: never;
         head?: never;
@@ -43816,6 +43818,12 @@ export interface components {
         ImportResponse: {
             /** @description The drafts saved, in file order. */
             drafts: components["schemas"]["CommandsResponse"][];
+            /**
+             * @description A22-T1: the objects left as they were (`kind/app/name`): each is
+             *     what is published already and has no draft open, so importing the
+             *     files an export wrote saves nothing.
+             */
+            unchanged: string[];
         };
         ImportResult: {
             /** Format: uuid */
@@ -132466,7 +132474,7 @@ export interface operations {
             };
         };
     };
-    pending_grant: {
+    oauth_device_pending: {
         parameters: {
             query?: never;
             header?: never;
@@ -132507,7 +132515,7 @@ export interface operations {
             };
         };
     };
-    approve: {
+    oauth_device_approve: {
         parameters: {
             query?: never;
             header?: never;
@@ -132556,7 +132564,7 @@ export interface operations {
             };
         };
     };
-    token: {
+    oauth_device_token: {
         parameters: {
             query?: never;
             header?: never;
@@ -132607,7 +132615,7 @@ export interface operations {
             };
         };
     };
-    device_authorization: {
+    oauth_device_authorization: {
         parameters: {
             query?: never;
             header?: never;
