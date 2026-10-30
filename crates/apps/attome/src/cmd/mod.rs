@@ -22,6 +22,8 @@ pub mod migrate;
 pub mod model_files;
 /// T4-T5: `--json`, write confirmation and shell completions.
 pub mod output;
+/// T8-T4: build, publish and install packages.
+pub mod package;
 pub mod preflight;
 pub mod runbook;
 pub mod secrets;

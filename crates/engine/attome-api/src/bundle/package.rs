@@ -240,6 +240,29 @@ pub fn sign(package: &mut Package, key: &SigningKey) -> Result<(), String> {
     Ok(())
 }
 
+/// T8-T4: the signing key a publisher's key file holds, a base64 32-byte
+/// Ed25519 seed.
+fn key_from_seed(seed_b64: &str) -> Result<SigningKey, String> {
+    let seed: [u8; 32] = base64::engine::general_purpose::STANDARD
+        .decode(seed_b64.trim())
+        .ok()
+        .and_then(|b| b.try_into().ok())
+        .ok_or("the signing key is not a 32-byte base64 Ed25519 seed")?;
+    Ok(SigningKey::from_bytes(&seed))
+}
+
+/// T8-T4: signs `package` with the key in a publisher's key file.
+pub fn sign_with_seed(package: &mut Package, seed_b64: &str) -> Result<(), String> {
+    sign(package, &key_from_seed(seed_b64)?)
+}
+
+/// T8-T4: the base64 public key of a publisher's key file, the value a
+/// target trusts the publisher by.
+pub fn public_key_of(seed_b64: &str) -> Result<String, String> {
+    let key = key_from_seed(seed_b64)?;
+    Ok(base64::engine::general_purpose::STANDARD.encode(key.verifying_key().to_bytes()))
+}
+
 /// Checks `package`'s format, manifest and signature against the trusted
 /// key (base64) of its publisher, from `trusted` (`(publisher, key)` pairs).
 pub fn verify(package: &Package, trusted: &[(String, String)]) -> Result<(), String> {

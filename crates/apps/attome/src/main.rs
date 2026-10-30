@@ -25,6 +25,9 @@ Usage:
                                 Forget a target's session; list the targets
   attome flags list|get <name>|set <name> on|off|off-now <name>
                                 Customer flags (admin.deployment; changes need --yes)
+  attome package keygen|build|publish|install
+                                Signed packages: build from a folder, publish to a
+                                catalogue folder, install to a target (--yes)
   attome completions powershell|bash|zsh
                                 Print a shell completion script
                                 (deployment commands take --json; writing ones
@@ -174,6 +177,10 @@ fn main() -> ExitCode {
                 ExitCode::from(2)
             }
         },
+        ["package", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            outcome(attome::cmd::package::run(&rest).map_err(Into::into))
+        }
         ["flags", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             outcome(attome::cmd::flags::run(&rest).map_err(Into::into))

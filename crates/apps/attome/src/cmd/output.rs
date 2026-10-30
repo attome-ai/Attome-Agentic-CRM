@@ -120,6 +120,26 @@ const COMMANDS: &[(&str, &[&str])] = &[
         ],
     ),
     (
+        "package",
+        &[
+            "keygen",
+            "build",
+            "publish",
+            "install",
+            "--out",
+            "--key",
+            "--to",
+            "--from",
+            "--trust",
+            "--trust-file",
+            "--target",
+            "--url",
+            "--yes",
+            "--confirm-target",
+            "--json",
+        ],
+    ),
+    (
         "flags",
         &[
             "list",
