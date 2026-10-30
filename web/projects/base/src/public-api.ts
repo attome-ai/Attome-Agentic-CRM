@@ -51,7 +51,8 @@ export type { Shortcut }                   from './lib/shortcut-registry.service
 export { BrandService }                    from './lib/brand.service';
 export type { Branding }                   from './lib/brand.service';
 export { CurrencyService }                 from './lib/currency.service';
-export type { CurrencyRate }               from './lib/currency.service';
+export { amountStep, formatAmount }        from './lib/currency.service';
+export type { CurrencyInfo }               from './lib/currency.service';
 export { LangService }                     from './lib/lang.service';
 export { compareText, textCollator, textDirection } from './lib/text-direction';
 // AA12-T1: the next screens' code loads while the browser is idle.

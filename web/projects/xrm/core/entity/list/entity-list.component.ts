@@ -261,11 +261,9 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
   private readonly bulkJobs  = inject(BulkJobRunner);
   private readonly currency  = inject(CurrencyService);
 
-  // D-490 — a signal over the viewer's preferred display currency, read by
-  // `currencyCellDisplay`/`currencyIcon` below; reading it from a template
-  // method re-renders on a preference change the same way a direct binding
-  // would (Angular's OnPush + signals integration).
-  private readonly preferredCurrency = this.currency.preferredCurrency;
+  // A19-T5: the currency list a money cell reads its decimals from; reading
+  // it in the template keeps a cell current when the list arrives.
+  private readonly currencies = this.currency.currencies;
 
   // ── State ──────────────────────────────────────────────────────────────────
   readonly columns_ = signal<Col[]>([]);
@@ -1470,17 +1468,17 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
     return (Array.isArray(value) ? value : [value]).map(String);
   }
 
-  /** D-490 — `col.type === 'currency'` cell: the stored USD amount,
-   *  converted to the viewer's preferred currency and formatted with its
-   *  icon. */
+  /** A19-T5 — `col.type === 'currency'` cell: the amount in its own
+   *  currency (`<col>_currency` on the row, else the base), with that
+   *  currency's decimals. */
   currencyCellDisplay(row: EntityRecord, col: Col): string {
     const raw = row.data[col.name];
     if (raw == null || raw === '') return '';
-    const usd = Number(raw);
-    if (!Number.isFinite(usd)) return String(raw);
-    const code = this.preferredCurrency();
-    const rate = this.currency.getRate(code);
-    return `${rate.icon}${this.currency.fromBase(usd, code).toFixed(2)}`;
+    const amount = Number(raw);
+    if (!Number.isFinite(amount)) return String(raw);
+    this.currencies();
+    const code = row.data[`${col.name}_currency`];
+    return this.currency.format(amount, typeof code === 'string' ? code : null);
   }
 
   formatCellValue(value: unknown, col: Col): string {

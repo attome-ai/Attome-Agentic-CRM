@@ -69,24 +69,32 @@
     }
 
     @case ('currency') {
-      <!-- D-490: the control (field().name) always holds a plain USD
-           amount; this input shows/edits it converted to the viewer's
-           preferred currency, entirely client-side. -->
+      <!-- A19-T5: the amount in its own currency (the `_currency`
+           companion), with that currency's decimals; the base amount, when
+           the field converts, as a hint. -->
       <div class="currency-field">
-        <span class="currency-icon" aria-hidden="true">{{ currencyIcon() }}</span>
-        <input [id]="field().name" type="number" step="0.01" class="xf-input"
+        <span class="currency-icon" aria-hidden="true">{{ currencySymbol() }}</span>
+        <input [id]="field().name" type="number" [step]="currencyStep()" class="xf-input"
                [class.is-invalid]="showRequiredError()"
                [attr.aria-invalid]="showRequiredError()"
+               [attr.title]="currencyBaseHint()"
                [value]="currencyDisplayValue()"
                (input)="onCurrencyAmountInput($any($event.target).value)" />
-        <select class="currency-code-select" [value]="preferredCurrency()"
-                (change)="onCurrencyCodeChange($any($event.target).value)"
-                [attr.aria-label]="'Display currency'">
-          @for (code of currencyCodes(); track code) {
-            <option [value]="code">{{ code }}</option>
-          }
-        </select>
+        @if (hasCurrencyPicker()) {
+          <select class="currency-code-select" [value]="currencyCode()"
+                  (change)="onCurrencyCodeChange($any($event.target).value)"
+                  [attr.aria-label]="'fieldInput.currency' | translate">
+            @for (c of currencies(); track c.code) {
+              <option [value]="c.code">{{ c.code }}</option>
+            }
+          </select>
+        } @else {
+          <span class="currency-code">{{ currencyCode() }}</span>
+        }
       </div>
+      @if (currencyBaseHint(); as hint) {
+        <p class="field-hint">{{ hint }}</p>
+      }
       @if (showRequiredError()) {
         <p class="field-error" role="alert">{{ field().display_name || field().name }} is required.</p>
       }

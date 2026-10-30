@@ -1628,6 +1628,7 @@ export const xrmEn = {
     dropzone: 'Drop files here or click to browse',
   },
   fieldInput: {
+    currency: 'Currency', baseAmount: 'In the base currency: {amount}',
     scan: {
       button: 'Scan a code into {field}',
       cancel: 'Cancel scanning',

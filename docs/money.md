@@ -105,3 +105,11 @@ difference, a gain when positive; `total_gain_loss` adds the lines that have a r
 `missing_rates` names the currencies with none on or before the day. Without `open_field` every
 live record counts. The totals cover every record, so the report needs read access to every record
 of the entity.
+
+## In the app
+
+The money control (A19-T5) shows and edits an amount in its own currency, with that currency's
+symbol and decimals, and a currency picker bound to `<field>_currency`; a field with the `fx` option
+shows its base amount as a hint. Lists show each amount with its own currency. The currencies come
+from `GET /api/v1/currencies` (code, decimals, symbol, name, and which is the base). Nothing is
+converted in the browser; the old static rate table is gone.

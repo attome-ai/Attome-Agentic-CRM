@@ -19,14 +19,11 @@ import { FieldSchema } from '@attome/xrm';
 // `ATTOME_CONFIG`/`HttpClient`, neither provided in these describe blocks, so
 // every TestBed configuration below mocks it instead.
 const MOCK_CURRENCY_SERVICE = {
-  preferredCurrency: signal('USD'),
-  rates: signal([{ code: 'USD', icon: '$', rate: 1 }]),
-  getPreferredCurrency: () => 'USD',
-  getRates: () => [{ code: 'USD', icon: '$', rate: 1 }],
-  getRate: () => ({ code: 'USD', icon: '$', rate: 1 }),
-  fromBase: (n: number) => n,
-  toBase: (n: number) => n,
-  setPreferredCurrency: vi.fn(),
+  currencies: signal([{ code: 'USD', decimals: 2, symbol: '$', name: 'US Dollar', is_base: true }]),
+  baseCurrency: signal('USD'),
+  info: (code?: string | null) => ({ code: code ?? 'USD', decimals: 2, symbol: '$', name: 'US Dollar' }),
+  decimals: () => 2,
+  format: (n: number, code?: string | null) => `${n.toFixed(2)} ${code ?? 'USD'}`,
 };
 
 const FILE_FIELD: FieldSchema = {

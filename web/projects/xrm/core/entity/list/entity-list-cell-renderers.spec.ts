@@ -60,7 +60,7 @@ describe('EntityListComponent — registered cell renderers', () => {
         { provide: EntityService, useValue: { getSchema: vi.fn(() => of(null)) } },
         { provide: DialogService, useValue: {} },
         { provide: BulkJobRunner, useValue: {} },
-        { provide: CurrencyService, useValue: { preferredCurrency: signal('USD'), getPreferredCurrency: () => 'USD' } },
+        { provide: CurrencyService, useValue: { currencies: signal([]), baseCurrency: signal('USD'), format: (n: number, c?: string | null) => `${n.toFixed(2)} ${c ?? 'USD'}` } },
         {
           provide: Router,
           useValue: {

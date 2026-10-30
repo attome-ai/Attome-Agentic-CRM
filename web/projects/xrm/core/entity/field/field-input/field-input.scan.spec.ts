@@ -2,7 +2,7 @@ import { Component, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { CurrencyService, LangService } from '@attome/base';
 import { FieldSchema } from '@attome/xrm';
 
@@ -12,10 +12,11 @@ import { EntityService } from '../../services/entity.service';
 import { FileUploadService } from '../file-upload.service';
 
 const MOCK_CURRENCY_SERVICE = {
-  preferredCurrency: signal('USD'),
-  rates: signal([{ code: 'USD', icon: '$', rate: 1 }]),
-  getPreferredCurrency: () => 'USD', getRates: () => [], getRate: () => ({ code: 'USD', icon: '$', rate: 1 }),
-  fromBase: (n: number) => n, toBase: (n: number) => n, setPreferredCurrency: vi.fn(),
+  currencies: signal([{ code: 'USD', decimals: 2, symbol: '$', name: 'US Dollar', is_base: true }]),
+  baseCurrency: signal('USD'),
+  info: (code?: string | null) => ({ code: code ?? 'USD', decimals: 2, symbol: '$', name: 'US Dollar' }),
+  decimals: () => 2,
+  format: (n: number, code?: string | null) => `${n.toFixed(2)} ${code ?? 'USD'}`,
 };
 
 const GS1 = { scan: { enabled: true, formats: ['code_128'], gs1_batch_attribute: 'batch_no', gs1_expiry_attribute: 'expires_on' } };

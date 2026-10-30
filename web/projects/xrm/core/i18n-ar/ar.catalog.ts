@@ -1589,6 +1589,7 @@ export const xrmAr = {
     dropzone: 'أفلت الملفات هنا أو انقر للتصفح',
   },
   fieldInput: {
+    currency: 'العملة', baseAmount: 'بالعملة الأساسية: {amount}',
     scan: {
       button: 'امسح رمزًا في {field}',
       cancel: 'إلغاء المسح',

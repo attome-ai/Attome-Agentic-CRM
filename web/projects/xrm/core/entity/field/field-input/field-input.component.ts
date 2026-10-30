@@ -10,7 +10,7 @@ import { Subscription } from 'rxjs';
 import { ScanService } from '@attome/base/scan';
 
 import {
-  CurrencyService, HijriParts, LangService, TranslatePipe, UserPreferencesService,
+  amountStep, CurrencyService, HijriParts, LangService, TranslatePipe, UserPreferencesService,
   fromHijri, hijriMonthName, toHijri,
 } from '@attome/base';
 import {
@@ -284,8 +284,8 @@ export class FieldInputComponent implements OnInit, OnDestroy {
       case 'currency': {
         const n = Number(v);
         if (!Number.isFinite(n)) return String(v);
-        const shown = Math.round(this.currency.fromBase(n, this.preferredCurrency()) * 100) / 100;
-        return `${shown.toLocaleString()} ${this.preferredCurrency()}`;
+        const code = this.policy?.value(`${f.name}_currency`);
+        return this.currency.format(n, typeof code === 'string' ? code : null);
       }
       case 'number': {
         const n = Number(v);
@@ -313,22 +313,16 @@ export class FieldInputComponent implements OnInit, OnDestroy {
   private readonly formulaCtrlValue = signal<unknown>(null);
   private formulaCtrlValueSub?: Subscription;
 
-  // ── Currency state (D-490) ────────────────────────────────────────────────
-  // Every `currency` field stores/validates as a plain USD amount; the
-  // displayed amount is converted for the viewer's preferred currency,
-  // entirely client-side. `preferredCurrency`/`currencyRatesList` are the
-  // service's own signals — a template method reading a signal
-  // establishes the same reactive dependency a direct template binding would
-  // (Angular's OnPush + signals integration), so no manual `markForCheck` is
-  // needed when the viewer switches currency. `currencyCtrlValue` mirrors
-  // `fileCtrlValue`'s pattern above for the same reason: reactive-forms
-  // `ctrl.value` reads don't re-render an OnPush view on an *external* patch
-  // (e.g. loading an existing record into the form), only on a local user
-  // event — see `fileCtrlValue`'s doc comment for the confirmed-live proof.
-  readonly preferredCurrency  = this.currency.preferredCurrency;
-  readonly currencyRatesList  = this.currency.rates;
+  // ── Money state (A19-T5) ──────────────────────────────────────────────────
+  // A money amount is stored in its own currency, the companion field
+  // `<name>_currency`, and rounded to that currency's decimals; nothing is
+  // converted here. A field with the `fx` option also has `<name>_base`, its
+  // amount in the base currency, shown as a hint.
+  readonly currencies = this.currency.currencies;
   private readonly currencyCtrlValue = signal<unknown>(null);
+  private readonly currencyCodeValue = signal<string | null>(null);
   private currencyCtrlValueSub?: Subscription;
+  private currencyCodeSub?: Subscription;
 
   // ── Lookup state ──────────────────────────────────────────────────────────
   readonly lookupSearch  = signal('');
@@ -496,22 +490,40 @@ export class FieldInputComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ── Currency methods (D-490) ──────────────────────────────────────────────
-  currencyCodes(): string[] { return this.currencyRatesList().map(r => r.code); }
-
-  currencyIcon(): string { return this.currency.getRate(this.preferredCurrency()).icon; }
-
-  /** The stored USD amount, converted to the viewer's preferred currency.
-   *  Rounded to cents for display — the conversion multiply routinely
-   *  produces float noise (e.g. 0.9199999999999999) that would otherwise
-   *  show up verbatim in the input. */
-  currencyDisplayValue(): number {
-    const raw = Number(this.currencyCtrlValue() ?? 0);
-    if (!Number.isFinite(raw)) return 0;
-    return Math.round(this.currency.fromBase(raw, this.preferredCurrency()) * 100) / 100;
+  // ── Money methods (A19-T5) ────────────────────────────────────────────────
+  /** A companion of this money field (`_currency`, `_base`), if the form has it. */
+  private moneyCompanion(suffix: string): AbstractControl | null {
+    return (this.cc.control as FormGroup).get(`${this.field().name}${suffix}`) ?? null;
   }
 
-  /** Writes the field's control (always USD) from a display-currency input. */
+  /** Whether the amount's currency can be picked here. */
+  hasCurrencyPicker(): boolean { return this.moneyCompanion('_currency') !== null; }
+
+  /** The amount's currency: its own, else the base currency. */
+  currencyCode(): string { return this.currencyCodeValue() || this.currency.baseCurrency(); }
+
+  currencySymbol(): string { return this.currency.info(this.currencyCode()).symbol; }
+
+  currencyStep(): string { return amountStep(this.currency.decimals(this.currencyCode())); }
+
+  /** The amount as stored, in its own currency. */
+  currencyDisplayValue(): string {
+    const raw = this.currencyCtrlValue();
+    return raw === null || raw === undefined || raw === '' ? '' : String(raw);
+  }
+
+  /** The base amount hint, when the field converts and the base differs. */
+  currencyBaseHint(): string | null {
+    const base = this.moneyCompanion('_base')?.value;
+    if (base === null || base === undefined || base === '') return null;
+    const n = Number(base);
+    if (!Number.isFinite(n) || this.currencyCode() === this.currency.baseCurrency()) return null;
+    return this.lang.translate('fieldInput.baseAmount', {
+      amount: this.currency.format(n, this.currency.baseCurrency()),
+    });
+  }
+
+  /** Writes the amount as typed, in the amount's own currency. */
   onCurrencyAmountInput(displayed: string): void {
     if (displayed.trim() === '') {
       this.ctrl.setValue(null);
@@ -520,14 +532,17 @@ export class FieldInputComponent implements OnInit, OnDestroy {
     }
     const n = Number(displayed);
     if (!Number.isFinite(n)) return;
-    this.ctrl.setValue(this.currency.toBase(n, this.preferredCurrency()));
+    this.ctrl.setValue(n);
     this.ctrl.markAsDirty();
   }
 
-  /** Switches the viewer's preferred display currency app-wide (D-490 —
-   *  `localStorage` only, not persisted to the user's account). */
+  /** Sets the amount's currency (the `_currency` companion). */
   onCurrencyCodeChange(code: string): void {
-    this.currency.setPreferredCurrency(code);
+    const companion = this.moneyCompanion('_currency');
+    if (!companion) return;
+    companion.setValue(code);
+    companion.markAsDirty();
+    this.currencyCodeValue.set(code);
   }
 
   /**
@@ -758,6 +773,13 @@ export class FieldInputComponent implements OnInit, OnDestroy {
     if (this.field().field_type === 'currency') {
       this.currencyCtrlValue.set(value ?? null);
       this.currencyCtrlValueSub = this.ctrl.valueChanges.subscribe(v => this.currencyCtrlValue.set(v));
+      const companion = this.moneyCompanion('_currency');
+      if (companion) {
+        const code = companion.value;
+        this.currencyCodeValue.set(typeof code === 'string' && code ? code : null);
+        this.currencyCodeSub = companion.valueChanges.subscribe(v =>
+          this.currencyCodeValue.set(typeof v === 'string' && v ? v : null));
+      }
     }
     if (this.field().field_type === 'formula' || this.field().field_type === 'rollup') {
       this.formulaCtrlValue.set(value ?? null);
@@ -771,6 +793,7 @@ export class FieldInputComponent implements OnInit, OnDestroy {
     this.pipeline.cancel();
     this.fileCtrlValueSub?.unsubscribe();
     this.currencyCtrlValueSub?.unsubscribe();
+    this.currencyCodeSub?.unsubscribe();
     this.formulaCtrlValueSub?.unsubscribe();
     this.lookupSub?.unsubscribe();
   }
