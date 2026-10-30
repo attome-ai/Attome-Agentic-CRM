@@ -3,6 +3,14 @@
 The metadata half of each pack: changesets, form and page layouts, sample data and translations.
 A pack installs and uninstalls by publishing these changesets.
 
+A pack may also ship model objects (forms, pages, flows, dashboards and the other kinds
+`attome model export` writes) under `model/<kind>/<pack>/<name>.json`, in the export file shape with
+`app` set to the pack's name. Boot installs them after the pack's changesets and publishes each on
+the pack's layer, all in one transaction. An upgrade replaces an object only while it is still the
+pack's: if the customer published their own version or has a draft open, the customer's version is
+kept, and an object a newer pack no longer ships is left in place. Both are listed with
+`GET /api/v1/admin/model/pack-objects` and warned about in the boot log.
+
 ## library-core
 
 The MENA base library other packs and agents build on (A1-T12): `party` (a person or an

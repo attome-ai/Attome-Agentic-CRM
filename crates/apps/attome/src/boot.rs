@@ -342,6 +342,33 @@ async fn apply_configured_packs(
         for document in attome_api::changeset::boot::read_pack_documents(config, pack)? {
             attome_api::changeset::boot::apply_pack_document(state, &document).await?;
         }
+        // G12-T1: the pack's model objects, once its entities exist.
+        let files = attome_api::model_admin::pack_objects::read_pack_model_files(config, pack)?;
+        if !files.is_empty() {
+            let outcome =
+                attome_api::model_admin::pack_objects::install_pack_model(state, pack, files)
+                    .await?;
+            for object in &outcome.kept_customer {
+                tracing::warn!(
+                    pack,
+                    object,
+                    "the customer changed this pack object; the upgrade kept the customer's version"
+                );
+            }
+            for object in &outcome.removed_from_pack {
+                tracing::warn!(
+                    pack,
+                    object,
+                    "the pack no longer ships this object; retire it once nothing uses it"
+                );
+            }
+            tracing::info!(
+                pack,
+                published = outcome.published,
+                unchanged = outcome.unchanged,
+                "pack model objects installed"
+            );
+        }
         tracing::info!(pack, "pack applied");
     }
     Ok(())

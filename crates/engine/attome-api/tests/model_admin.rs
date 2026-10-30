@@ -1240,3 +1240,108 @@ fn cooked_artefact_is_immutable_and_brotli() {
         );
     });
 }
+
+/// G12-T1: a pack's model objects install on its layer, a reinstall changes
+/// nothing, an upgrade keeps an object the customer changed, and an object a
+/// newer pack no longer ships is left and reported.
+#[test]
+fn pack_model_objects_install_and_upgrade() {
+    use attome_api::model_admin::pack_objects::install_pack_model;
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let db = state.base.db.clone();
+        let (_, cookie) = seed_admin(&db).await;
+        let app = full_app(system);
+        let entity_id: Uuid =
+            sqlx::query_scalar("SELECT id FROM entity_info WHERE is_active IS NOT FALSE LIMIT 1")
+                .fetch_one(&db)
+                .await
+                .expect("a seeded entity");
+        let pack = format!("pack_{}", &Uuid::now_v7().simple().to_string()[..12]);
+        let form = |name: &str, label: &str| {
+            let text = serde_json::to_string_pretty(&serde_json::json!({
+                "kind": "form", "app": pack, "name": name, "schema_version": 1,
+                "doc": { "entity": entity_id.to_string(), "sections": [{ "label": label, "fields": [] }] }
+            }))
+            .unwrap()
+                + "\n";
+            (format!("form/{pack}/{name}.json"), text)
+        };
+
+        let first = install_pack_model(&state, &pack, vec![form("a", "One"), form("b", "One")])
+            .await
+            .expect("install");
+        assert_eq!(first.published, 2);
+        let layer: String = sqlx::query_scalar(
+            "SELECT owner_layer FROM metadata_object WHERE app = $1 AND name = 'a'",
+        )
+        .bind(&pack)
+        .fetch_one(&db)
+        .await
+        .unwrap();
+        assert_eq!(layer, "app");
+
+        let again = install_pack_model(&state, &pack, vec![form("a", "One"), form("b", "One")])
+            .await
+            .expect("reinstall");
+        assert_eq!((again.published, again.unchanged), (0, 2));
+
+        // The customer publishes their own version of `a`.
+        let (path, text) = form("a", "Customer");
+        let resp = app
+            .clone()
+            .oneshot(post_req(
+                "/api/v1/admin/model/blueprint/apply",
+                &cookie,
+                serde_json::json!({ "files": [{ "path": path, "text": text }] }),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let upgrade = install_pack_model(&state, &pack, vec![form("a", "Two"), form("b", "Two")])
+            .await
+            .expect("upgrade");
+        assert_eq!(upgrade.published, 1, "only `b` is still the pack's");
+        assert_eq!(upgrade.kept_customer, vec!["form/a".to_owned()]);
+
+        let removed = install_pack_model(&state, &pack, vec![form("a", "Two")])
+            .await
+            .expect("upgrade without b");
+        assert_eq!(removed.removed_from_pack, vec!["form/b".to_owned()]);
+
+        let stranger = install_pack_model(
+            &state,
+            &pack,
+            vec![(
+                "form/customer/x.json".to_owned(),
+                serde_json::to_string(&serde_json::json!({
+                    "kind": "form", "app": "customer", "name": "x", "schema_version": 1,
+                    "doc": { "entity": entity_id.to_string(), "sections": [] }
+                }))
+                .unwrap(),
+            )],
+        )
+        .await;
+        assert!(stranger.is_err(), "a pack ships only its own objects");
+
+        let resp = app
+            .clone()
+            .oneshot(get_req(
+                "/api/v1/admin/model/pack-objects?page_size=200",
+                &cookie,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp).await;
+        let mine: Vec<&serde_json::Value> = body["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|row| row["pack"] == pack.as_str())
+            .collect();
+        assert_eq!(mine.len(), 2, "{body}");
+    });
+}

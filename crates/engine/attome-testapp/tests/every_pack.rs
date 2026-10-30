@@ -47,6 +47,14 @@ async fn install(app: &TestApp, pack: &str) -> Result<(), String> {
             .await
             .map_err(|e| format!("{}: {e}", file.display()))?;
     }
+    // G12-T1: the pack's model objects, after its changesets.
+    let model =
+        attome_api::model_admin::pack_objects::read_model_dir(&packs_dir().join(pack), pack)?;
+    if !model.is_empty() {
+        attome_api::model_admin::pack_objects::install_pack_model(&app.state, pack, model)
+            .await
+            .map_err(|e| format!("{pack} model: {e}"))?;
+    }
     Ok(())
 }
 

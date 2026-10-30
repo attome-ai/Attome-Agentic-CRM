@@ -23,6 +23,8 @@ pub(crate) mod flow_template;
 pub(crate) mod layers;
 /// A5-T2: merging one option set value into another.
 pub mod option_merge;
+/// G12-T1: the model objects packs ship.
+pub mod pack_objects;
 
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
@@ -2774,6 +2776,10 @@ pub fn routes() -> Router<EngineState> {
             post(flow_template::instantiate),
         )
         .route("/api/v1/admin/model/kinds", get(list_kinds))
+        .route(
+            "/api/v1/admin/model/pack-objects",
+            get(pack_objects::list_pack_objects),
+        )
         .route("/api/v1/model/navigation/{id}", get(menu))
         .route(
             "/api/v1/model/navigation/{id}/opened",
@@ -2854,6 +2860,7 @@ pub fn routes() -> Router<EngineState> {
         layers::upgrade_impact,
         layers::list_app_layers,
         flow_template::instantiate,
+        pack_objects::list_pack_objects,
         export_files,
         import_files,
         blueprint_plan,
@@ -2895,6 +2902,7 @@ pub fn routes() -> Router<EngineState> {
         layers::UpgradeImpactView,
         flow_template::InstantiateRequest,
         flow_template::InstantiateResponse,
+        pack_objects::PackObjectRow,
         ModelFile,
         ModelFiles,
         MenuView,
