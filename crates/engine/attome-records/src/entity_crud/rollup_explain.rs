@@ -103,7 +103,8 @@ fn explanation_head(
     path = "/api/v1/{entity}/{id}/rollups/{attribute}/explain",
     tag = "entity",
     operation_id = "explain_rollup",
-    description = "Why a rollup field has its value (A10-T5): its definition, the stored value, how many related records it counts, and the first 100 of them the caller may read, with their amounts. Related records the caller may not read are counted but not listed. Needs read access to the record and the field.",
+    summary = "Explain a rollup field's value",
+    description ="Why a rollup field has its value (A10-T5): its definition, the stored value, how many related records it counts, and the first 100 of them the caller may read, with their amounts. Related records the caller may not read are counted but not listed. Needs read access to the record and the field.",
     params(
         ("entity" = String, Path, description = "The entity's logical name"),
         ("id" = Uuid, Path, description = "The record"),

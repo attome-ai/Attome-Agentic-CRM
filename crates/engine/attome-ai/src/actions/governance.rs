@@ -221,15 +221,18 @@ impl Action for Governance {
     }
 }
 
+/// The policies an overdue list covers: every one for an administrator (`$1`),
+/// else those of the domains where the caller (`$2`) holds a governance role.
+const IN_SCOPE: &str = "($1 OR EXISTS (SELECT 1 FROM governance_role g \
+                        WHERE g.domain_ref = p.domain_ref AND g.user_id = $2))";
+
 async fn list_overdue(state: &EngineState, user: Uuid, admin: bool) -> Result<Value, AppError> {
     let db = &state.base.db;
-    let in_scope = "($1 OR EXISTS (SELECT 1 FROM governance_role g \
-                     WHERE g.domain_ref = p.domain_ref AND g.user_id = $2))";
     let waiting: Vec<(Uuid, Uuid, String, String)> = sqlx::query_as(&format!(
         "SELECT x.id, p.id, p.name_en, x.target_ref FROM governance_policy_exception x \
            JOIN governance_policy p ON p.id = x.policy_id \
           WHERE x.status = 'requested' AND x.created_at < now() - make_interval(days => $3) \
-            AND {in_scope} ORDER BY x.created_at LIMIT $4"
+            AND {IN_SCOPE} ORDER BY x.created_at LIMIT $4"
     ))
     .bind(admin)
     .bind(user)
@@ -241,7 +244,7 @@ async fn list_overdue(state: &EngineState, user: Uuid, admin: bool) -> Result<Va
     let lapsed: Vec<(Uuid, Uuid, String, String)> = sqlx::query_as(&format!(
         "SELECT x.id, p.id, p.name_en, x.target_ref FROM governance_policy_exception x \
            JOIN governance_policy p ON p.id = x.policy_id \
-          WHERE x.status = 'approved' AND x.expires_at < now() AND {in_scope} \
+          WHERE x.status = 'approved' AND x.expires_at < now() AND {IN_SCOPE} \
           ORDER BY x.expires_at LIMIT $3"
     ))
     .bind(admin)

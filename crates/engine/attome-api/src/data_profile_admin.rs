@@ -336,11 +336,11 @@ async fn hide_unreadable(
         .iter()
         .filter_map(|f| f["field"].as_str().map(str::to_owned))
         .collect();
-    let mut attrs = state
+    let (mut attrs, primary_name) = state
         .entities
         .load()
         .get(&entity)
-        .map(|meta| meta.attrs.clone())
+        .map(|meta| (meta.attrs.clone(), meta.primary_name_attribute.clone()))
         .unwrap_or_default();
     if names
         .iter()
@@ -350,11 +350,19 @@ async fn hide_unreadable(
     {
         attrs = fresh;
     }
+    // D-589: a profile summarises a field across every record, so the bulk
+    // field gate decides which fields this caller sees.
     fields.retain(|f| {
         f["field"].as_str().is_some_and(|name| {
             attrs.iter().any(|a| {
                 a.logicalname == name
-                    && (!a.is_read_gated() || ctx.has_field_read_grant(&entity, &a.logicalname))
+                    && attome_security::field_gate::readable(
+                        ctx,
+                        &entity,
+                        a,
+                        primary_name.as_deref(),
+                        attome_security::field_gate::Surface::Bulk,
+                    )
             })
         })
     });

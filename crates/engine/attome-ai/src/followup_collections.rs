@@ -159,23 +159,24 @@ pub async fn detect_collections(
         }
     }
     let db = &state.base.db;
-    let table = attome_core::quote_ident(entity);
     let sql = if rule.kind == "renewal_due" {
         format!(
-            "SELECT id, COALESCE(owner_ref, created_by) FROM {table} \
+            "SELECT id, COALESCE(owner_ref, created_by) FROM {} \
               WHERE status::text IN ('active', 'trial') \
                 AND end_date::date BETWEEN $1 AND $2 \
                 AND COALESCE(owner_ref, created_by) IS NOT NULL \
-                AND (is_active IS NULL OR is_active = true) ORDER BY id LIMIT $3"
+                AND (is_active IS NULL OR is_active = true) ORDER BY id LIMIT $3",
+            attome_core::quote_ident(entity)
         )
     } else {
         format!(
-            "SELECT id, COALESCE(owner_ref, created_by) FROM {table} t \
+            "SELECT id, COALESCE(owner_ref, created_by) FROM {} t \
               WHERE status::text IN ('issued', 'sent', 'overdue') \
                 AND COALESCE((to_jsonb(t)->>'open_total')::numeric, 1) > 0 \
                 AND due_date::date BETWEEN $1 AND $2 \
                 AND COALESCE(owner_ref, created_by) IS NOT NULL \
-                AND (is_active IS NULL OR is_active = true) ORDER BY id LIMIT $3"
+                AND (is_active IS NULL OR is_active = true) ORDER BY id LIMIT $3",
+            attome_core::quote_ident(entity)
         )
     };
     let found: Vec<(Uuid, Uuid)> = sqlx::query_as(&sql)

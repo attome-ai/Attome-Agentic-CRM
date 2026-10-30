@@ -98,6 +98,96 @@ use Classification::{ExcludesSystemCols, Projection, ServerConstructed};
 /// `ExcludesSystemCols`, and the test will hold you to it.
 const ATTRIBUTE_SQL_SITES: &[(&str, &str, Classification, &str)] = &[
     (
+        "crates/engine/attome-api/src/inbound_hooks.rs",
+        "record_by_key",
+        Projection,
+        "Finds the record whose key field equals the hook's key: a WHERE predicate, a read.",
+    ),
+    (
+        "crates/engine/attome-api/src/quality/incremental.rs",
+        "score_records",
+        Projection,
+        "Reads the changed records as JSON to score them: a read.",
+    ),
+    (
+        "crates/engine/attome-core/src/formula.rs",
+        "generated_part",
+        Projection,
+        "A stored formula's generated-column expression reads its base columns; nothing is written from a body.",
+    ),
+    (
+        "crates/engine/attome-core/src/sql_ident.rs",
+        "select_columns_access",
+        Projection,
+        "The field-mask-aware SELECT/RETURNING projection builder: reads only.",
+    ),
+    (
+        "crates/engine/attome-integration/src/warehouse_export.rs",
+        "run",
+        Projection,
+        "Reads the changed records as JSON for the warehouse export: a read.",
+    ),
+    (
+        "crates/engine/attome-metric/src/builder.rs",
+        "filter_sql",
+        Projection,
+        "A metric filter's condition on one attribute: a WHERE predicate, a read.",
+    ),
+    (
+        "crates/engine/attome-metric/src/builder.rs",
+        "spec_sql",
+        Projection,
+        "The metric's aggregate SELECT over the entity's table: a read.",
+    ),
+    (
+        "crates/engine/attome-records/src/entity_mutation.rs",
+        "recompute_time_based_formulas",
+        ServerConstructed,
+        "A9-T3 sweep: SET of the stored time-based formula fields to values this process just computed from the row; the columns come from metadata and no request body is involved.",
+    ),
+    (
+        "crates/engine/attome-records/src/query_spec/aggregate.rs",
+        "compile",
+        Projection,
+        "The query spec's aggregate SELECT over the root table: a read.",
+    ),
+    (
+        "crates/engine/attome-records/src/query_spec/compile.rs",
+        "resolve",
+        Projection,
+        "A LEFT JOIN through a lookup hop for a path: a read.",
+    ),
+    (
+        "crates/engine/attome-records/src/query_spec/compile.rs",
+        "polymorphic_field",
+        Projection,
+        "A LEFT JOIN through a polymorphic lookup and its entity-name column: a read.",
+    ),
+    (
+        "crates/engine/attome-records/src/query_spec/compile.rs",
+        "exists",
+        Projection,
+        "An EXISTS subquery over a child or link table: a read.",
+    ),
+    (
+        "crates/engine/attome-records/src/query_spec/compile.rs",
+        "compile",
+        Projection,
+        "The query spec's SELECT list over the root table: a read.",
+    ),
+    (
+        "crates/engine/attome-records/src/query_spec/compile.rs",
+        "compile_scope_rows",
+        Projection,
+        "SELECT of the ids a scope admits: a read.",
+    ),
+    (
+        "crates/engine/attome-search/src/corpus/record_chunks.rs",
+        "reindex_source",
+        Projection,
+        "Reads the record's indexable fields as text to rebuild its chunks: a read.",
+    ),
+    (
         "crates/engine/attome-api/src/data_profile_admin.rs",
         "one_scan",
         Projection,
@@ -170,7 +260,7 @@ const ATTRIBUTE_SQL_SITES: &[(&str, &str, Classification, &str)] = &[
     ),
     (
         "crates/engine/attome-search/src/corpus/mod.rs",
-        "project_record",
+        "project_record_in",
         Projection,
         "SELECT list of indexable attributes for the search corpus.",
     ),

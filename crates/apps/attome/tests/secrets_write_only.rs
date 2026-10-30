@@ -82,6 +82,61 @@ const ALLOWED: &[(&str, &str, &str)] = &[
         "newly generated signing secret, shown once",
     ),
     (
+        "SubscriptionCreatedResponse",
+        "webhook_secret_standard",
+        "M13-T2: the same generated signing secret in Standard Webhooks form (whsec_), shown once",
+    ),
+    (
+        "SecretRotatedResponse",
+        "webhook_secret_standard",
+        "M13-T2: the new signing secret in Standard Webhooks form (whsec_), shown once",
+    ),
+    (
+        "EmbedToken",
+        "token",
+        "P8-T1: a short-lived signed viewer link minted per request; nothing is stored",
+    ),
+    (
+        "ExportStatusResponse",
+        "stream_token",
+        "L7-T5: a change-stream cursor at the export's snapshot, not a credential; reading from it still needs the subscription's own client",
+    ),
+    (
+        "InboundHookView",
+        "secret_last4",
+        "M14-T1: the last four characters of the hook secret as a hint; the secret itself is never returned",
+    ),
+    (
+        "IssuedScimToken",
+        "token",
+        "Q3-T1: the generated SCIM bearer token, shown once at issue; only its peppered hash is stored",
+    ),
+    (
+        "OidcProviderItem",
+        "secret_set",
+        "whether a client secret is set: the is_set this test asks for",
+    ),
+    (
+        "OidcProviderItem",
+        "secret_updated_at",
+        "when the client secret last changed: the updated_at this test asks for",
+    ),
+    (
+        "OidcProviderItem",
+        "secret_fingerprint",
+        "the first 8 hex characters of the secret's SHA-256, to tell secrets apart; not the secret",
+    ),
+    (
+        "TokenBody",
+        "access_token",
+        "the OAuth token endpoint's response (RFC 6749 5.1): a short-lived token minted per request",
+    ),
+    (
+        "TokenBody",
+        "token_type",
+        "always `Bearer` (RFC 6749 5.1); not a secret",
+    ),
+    (
         "MfaEnrollment",
         "secret",
         "TOTP seed, shown once to enrol an authenticator",

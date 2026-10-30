@@ -166,15 +166,22 @@ impl Action for ProfileTool {
                     .filter(|a| a.is_sensitive)
                     .map(|a| a.logicalname.clone())
                     .collect();
-                let hidden: HashSet<String> = if ctx.security.is_admin {
-                    HashSet::new()
-                } else {
-                    sensitive
-                        .iter()
-                        .filter(|a| !ctx.security.has_field_read_grant(entity, a))
-                        .cloned()
-                        .collect()
-                };
+                // D-589: a profile summarises a field across every record, so
+                // the bulk field gate decides what this person sees of it.
+                let hidden: HashSet<String> = meta
+                    .attrs
+                    .iter()
+                    .filter(|a| {
+                        !attome_security::field_gate::readable(
+                            &ctx.security,
+                            entity,
+                            a,
+                            meta.primary_name_attribute.as_deref(),
+                            attome_security::field_gate::Surface::Bulk,
+                        )
+                    })
+                    .map(|a| a.logicalname.clone())
+                    .collect();
                 (sensitive, hidden)
             };
             let Some(profile) = attome_core::data_profile::latest(&state.base.db, entity).await?

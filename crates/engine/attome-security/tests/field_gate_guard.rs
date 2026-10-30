@@ -65,6 +65,30 @@ const INTERACTIVE: &[(&str, &str)] = &[
         "crates/engine/attome-api/src/rule_admin.rs",
         "rule authoring: refuses a rule that names a field its author cannot read; not a read surface",
     ),
+    (
+        "crates/engine/attome-api/src/catalog_admin.rs",
+        "the data catalogue names an entity's attributes (metadata, lineage, glossary), never their values",
+    ),
+    (
+        "crates/engine/attome-api/src/catalog_index.rs",
+        "the catalogue's asset scope: which attributes a person may see named, never their values",
+    ),
+    (
+        "crates/engine/attome-api/src/schema.rs",
+        "an entity's schema description withholds the fields the caller may not read; no values",
+    ),
+    (
+        "crates/engine/attome-api/src/master_admin.rs",
+        "one golden record's attribute provenance, viewed interactively",
+    ),
+    (
+        "crates/engine/attome-sales/src/orgchart/committee.rs",
+        "one opportunity's buying committee: hides the influence gap without the influence grant",
+    ),
+    (
+        "crates/engine/attome-security/src/view_log.rs",
+        "Q15-T5: decides which full reads are logged, not what anyone may see",
+    ),
 ];
 
 /// D-589's bulk surfaces: each must call the gate.

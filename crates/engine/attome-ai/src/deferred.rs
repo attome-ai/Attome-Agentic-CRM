@@ -634,14 +634,16 @@ pub async fn decide_review(
             ));
         }
     };
-    let set = if apply {
-        "status = 'pending', run_at = now() + make_interval(secs => $5), reason = NULL"
-    } else {
-        "status = 'cancelled', cancelled_by = $4, reason = 'discarded in review'"
-    };
+    // `$6` applies (pending, run after the undo window) or discards
+    // (cancelled by the caller); bound, so the statement is one constant.
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let decided: Vec<DeferredAction> = sqlx::query_as(&format!(
-        "UPDATE ai_deferred_action SET {set}, updated_at = now() \
+        "UPDATE ai_deferred_action SET \
+           status = CASE WHEN $6 THEN 'pending' ELSE 'cancelled' END, \
+           run_at = CASE WHEN $6 THEN now() + make_interval(secs => $5) ELSE run_at END, \
+           cancelled_by = CASE WHEN $6 THEN cancelled_by ELSE $4 END, \
+           reason = CASE WHEN $6 THEN NULL ELSE 'discarded in review' END, \
+           updated_at = now() \
          WHERE status = 'staged' \
            AND ($1::uuid IS NULL OR agent_session_id = $1) \
            AND ($2::uuid[] IS NULL OR id = ANY($2)) \
@@ -654,6 +656,7 @@ pub async fn decide_review(
     .bind(is_admin)
     .bind(user_id)
     .bind(f64::from(window))
+    .bind(apply)
     .fetch_all(&mut *tx)
     .await
     .map_err(AppError::internal)?;

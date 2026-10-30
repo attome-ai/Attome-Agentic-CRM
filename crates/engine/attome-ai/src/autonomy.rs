@@ -362,6 +362,9 @@ async fn used_today(
     .map_err(AppError::internal)
 }
 
+/// `attome_core::live_row_predicate("t", false)`: a live row of alias `t`.
+const LIVE_T: &str = "(t.is_active IS NULL OR t.is_active = true)";
+
 /// Whether the record the arguments name is owned by the person the agent
 /// acts for. No single record named: not owned.
 async fn targets_owned_record(
@@ -375,12 +378,9 @@ async fn targets_owned_record(
     if state.entities.load().get(&entity).is_none() {
         return Ok(false);
     }
-    let table = attome_core::quote_ident(&entity);
-    let live = attome_core::live_row_predicate("t", false)
-        .map(|p| format!("AND {p}"))
-        .unwrap_or_default();
     let owner: Option<Option<Uuid>> = sqlx::query_scalar(&format!(
-        "SELECT t.owner_ref FROM {table} t WHERE t.id = $1 {live}"
+        "SELECT t.owner_ref FROM {} t WHERE t.id = $1 AND {LIVE_T}",
+        attome_core::quote_ident(&entity)
     ))
     .bind(record_id)
     .fetch_optional(&state.base.db)
@@ -1247,6 +1247,14 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 mod tests {
     use super::*;
     use crate::descriptor::RetryClass;
+
+    #[test]
+    fn live_t_is_the_core_live_row_predicate() {
+        assert_eq!(
+            attome_core::live_row_predicate("t", false).as_deref(),
+            Some(LIVE_T)
+        );
+    }
     use attome_modules::MODULE_AI;
     use chrono::TimeZone;
 

@@ -267,6 +267,8 @@ pub struct BackfillMetricQueued {
     pub queued: bool,
 }
 
+/// Backfill a metric's past periods
+///
 /// Queues the computation of the metric's past periods in `[from, to)`. Each value is recorded as a
 /// backfilled snapshot; a period that already has a snapshot is left alone. Only builder and
 /// formula metrics can be backfilled. Needs update rights on metric definitions. Audited.

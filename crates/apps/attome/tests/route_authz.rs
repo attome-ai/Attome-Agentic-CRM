@@ -179,21 +179,6 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
         "M14-T2: Meta's subscription check; it reads nothing but whether the token matches the hook's auth.verify_token (constant-time digest compare) and echoes the caller's own challenge. Bypass-listed by its one-segment shape.",
     ),
     (
-        "POST",
-        "/api/v1/hooks/{name}",
-        "M14-T1: a provider's call to a builder-defined hook; the hook's own address allow-list, mTLS, signature or bearer secret (constant-time), timestamp window and once-only event id are the credential, and its handler runs as the hook's service user through the ordinary write paths. Bypass-listed by its one-segment shape.",
-    ),
-    (
-        "GET",
-        "/scim/v2/Users",
-        "Q3-T1: the SCIM bearer token of one identity provider (peppered hash, address allow-list) is the credential; it provisions only users and teams, each change audited. Bypass-listed by the /scim/v2/ prefix.",
-    ),
-    (
-        "POST",
-        "/scim/v2/Users",
-        "Q3-T1: the SCIM bearer token of one identity provider (peppered hash, address allow-list) is the credential; it provisions only users and teams, each change audited. Bypass-listed by the /scim/v2/ prefix.",
-    ),
-    (
         "GET",
         "/scim/v2/Users/{id}",
         "Q3-T1: the SCIM bearer token of one identity provider (peppered hash, address allow-list) is the credential; it provisions only users and teams, each change audited. Bypass-listed by the /scim/v2/ prefix.",
@@ -206,16 +191,6 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
     (
         "PATCH",
         "/scim/v2/Users/{id}",
-        "Q3-T1: the SCIM bearer token of one identity provider (peppered hash, address allow-list) is the credential; it provisions only users and teams, each change audited. Bypass-listed by the /scim/v2/ prefix.",
-    ),
-    (
-        "DELETE",
-        "/scim/v2/Users/{id}",
-        "Q3-T1: the SCIM bearer token of one identity provider (peppered hash, address allow-list) is the credential; it provisions only users and teams, each change audited. Bypass-listed by the /scim/v2/ prefix.",
-    ),
-    (
-        "GET",
-        "/scim/v2/Groups",
         "Q3-T1: the SCIM bearer token of one identity provider (peppered hash, address allow-list) is the credential; it provisions only users and teams, each change audited. Bypass-listed by the /scim/v2/ prefix.",
     ),
     (
@@ -337,11 +312,6 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
         "POST",
         "/api/v1/cobrowse/join",
         "J9-T2: the customer joins with the six-character code the agent read out; it works once, for ten minutes, and any other code is the same 404. Bypass-listed and rate-limited (portal_status); the join is audited.",
-    ),
-    (
-        "GET",
-        "/api/v1/cobrowse/visitor/messages",
-        "J9-T2: the customer side's frame token, stored only as its SHA-256, is the credential for one open session; it reads only the agent's frames of that session. Bypass-listed and rate-limited (webchat).",
     ),
     (
         "POST",
@@ -591,6 +561,13 @@ const ADMIN_PATH_EXCEPTIONS: &[(&str, &str, &str)] = &[
          the handler checks the share. It changes the QuerySpec only, never SQL, \
          and a spec compiles with each caller's own security.",
     ),
+    (
+        "GET",
+        "/api/v1/admin/operations",
+        "A non-admin lists only the operations they started (every branch of \
+         OPERATIONS_SQL filters on `$2 OR started_by/created_by = $1`); only an \
+         admin sees everyone's and the live index builds.",
+    ),
 ];
 
 /// A parser break that silently matched nothing would make this file pass
@@ -727,6 +704,20 @@ fn blank_comments(src: &str) -> String {
                 }
                 continue;
             }
+        }
+
+        // A char literal, such as the `'"'` an If-Match parser trims with:
+        // its quote must not open a string, or every later `"//"` (a path
+        // check in a handler) reads as a comment and unbalances the braces.
+        if c == '\'' && chars.get(i + 2) == Some(&'\'') {
+            out.extend_from_slice(&chars[i..i + 3]);
+            i += 3;
+            continue;
+        }
+        if c == '\'' && chars.get(i + 1) == Some(&'\\') && chars.get(i + 3) == Some(&'\'') {
+            out.extend_from_slice(&chars[i..i + 4]);
+            i += 4;
+            continue;
         }
 
         // Ordinary string literal, honouring escapes.

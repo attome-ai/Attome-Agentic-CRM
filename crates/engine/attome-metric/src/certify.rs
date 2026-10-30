@@ -35,6 +35,8 @@ pub struct MetricCertification {
     pub certified_at: Option<DateTime<Utc>>,
 }
 
+/// Certify a metric
+///
 /// Certifies the metric, or withdraws its certification. Needs `attome_metric.certify` as well as
 /// update rights on metric definitions. Audited.
 #[utoipa::path(

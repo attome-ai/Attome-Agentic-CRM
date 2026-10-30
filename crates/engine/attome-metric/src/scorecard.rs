@@ -44,6 +44,7 @@ pub fn is_stale(period: &str, computed_at: DateTime<Utc>, now: DateTime<Utc>) ->
 
 /// How fresh a metric's newest value is.
 #[derive(Debug, Serialize, ToSchema)]
+#[schema(as = MetricFreshness)]
 pub struct Freshness {
     pub computed_at: Option<DateTime<Utc>>,
     /// No value, or the newest is older than twice the period.
