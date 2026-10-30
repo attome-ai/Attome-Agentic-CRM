@@ -9527,6 +9527,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/sandboxes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sandbox copies
+         * @description The copies asked for, newest first, with their outcome.
+         */
+        get: operations["list_sandboxes"];
+        put?: never;
+        /**
+         * Ask for a sandbox copy
+         * @description Queues a masked copy of this deployment's database into a new database on the same server, as
+         *     `attome scratch create` makes it. Answers at once; read the request for its outcome.
+         */
+        post: operations["request_sandbox"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/sandboxes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A sandbox copy
+         * @description One requested copy and its outcome.
+         */
+        get: operations["get_sandbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/sbom": {
         parameters: {
             query?: never;
@@ -12545,6 +12590,32 @@ export interface paths {
          *     required. A failing theme is refused naming each pair and its ratio.
          */
         post: operations["publish_theme"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/time-travel/{entity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read an entity's time-travel settings
+         * @description Whether earlier versions of the entity's records are kept, and for how long.
+         */
+        get: operations["get_time_travel"];
+        /**
+         * Change an entity's time-travel settings
+         * @description Switching time travel on creates the entity's history table and its partitions; from then on
+         *     every update and delete keeps the version it replaces. Switching it off keeps the versions
+         *     already kept. Send `If-Match` with the `row_version` read (`"0"` the first time).
+         */
+        put: operations["put_time_travel"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -18368,6 +18439,27 @@ export interface paths {
          *     a year without asking again.
          */
         get: operations["get_cooked_artefact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/currencies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Currencies
+         * @description Every currency a money amount may carry, with its decimals and symbol, and which one is the
+         *     deployment's base currency. Any signed-in person.
+         */
+        get: operations["list_currencies"];
         put?: never;
         post?: never;
         delete?: never;
@@ -24277,6 +24369,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/fx-revaluation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Foreign-currency revaluation
+         * @description For one money field converted to the base currency, the open amounts per currency: the base
+         *     amount booked against the amount at the rate on `as_of`, and the gain or loss. Needs read access
+         *     to every record of the entity.
+         */
+        get: operations["fx_revaluation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reports/runs/{run_id}": {
         parameters: {
             query?: never;
@@ -25850,6 +25964,29 @@ export interface paths {
         get: operations["run"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/search/similar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Find passages like a record, file or description
+         * @description Embeds the record's text, the document's file text or the description and returns the nearest
+         *     record passages the caller may read: records' long fields and, for entities whose search setting
+         *     turns document embeddings on, the text of the files attached to them, with the page of a PDF.
+         *     An image answers 503 until an image-text model is supported.
+         */
+        post: operations["similar_route"];
         delete?: never;
         options?: never;
         head?: never;
@@ -30128,6 +30265,29 @@ export interface paths {
          * @description Brings a soft-deleted record back from the recycle bin, with the same checks as a write. Audited.
          */
         post: operations["restore_record"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/{id}/restore-version": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore an earlier version
+         * @description A1-T10: writes back the values of the version of this record valid at `as_of` (an entity with
+         *     time travel on), through the ordinary update: `If-Match` is required and validation, rules and
+         *     audit run as for any edit. Only values that differ from the current ones are written; computed
+         *     and encrypted fields, and fields the caller may not read or write, are never restored.
+         */
+        post: operations["restore_version_route"];
         delete?: never;
         options?: never;
         head?: never;
@@ -37220,6 +37380,12 @@ export interface components {
             logicalname: string;
             name: string;
             primary_name_attribute?: string | null;
+            /**
+             * @description A1-T6: `standard` (the default) or `high_volume`: a table partitioned
+             *     by month on `created_at`, whose reads must name a window on it and
+             *     which takes no unique business key. Chosen here and never changed.
+             */
+            storage_mode?: string | null;
         };
         CreateEntityDefaultShareBody: {
             capability: string;
@@ -37877,6 +38043,20 @@ export interface components {
             code: string;
             /** Format: date-time */
             converted_at?: string | null;
+        };
+        /** @description A19-T5: one currency a money amount may carry. */
+        CurrencyRow: {
+            /** @description ISO 4217 code. */
+            code: string;
+            /**
+             * Format: int32
+             * @description The decimals an amount in it is rounded to.
+             */
+            decimals: number;
+            /** @description The deployment's base currency (`core.base_currency`). */
+            is_base: boolean;
+            name: string;
+            symbol: string;
         };
         /** @description A statement's section in one currency. */
         CurrencyStatement: {
@@ -40278,6 +40458,11 @@ export interface components {
             is_customized?: boolean;
             logicalname: string;
             primary_name_attribute?: string | null;
+            /**
+             * @description A1-T6: `high_volume` for a partitioned entity; absent for a standard
+             *     one (so a standard entity's bundle reads as before).
+             */
+            storage_mode?: string | null;
         };
         EntityDefaultShareItem: {
             capability: string;
@@ -40345,6 +40530,8 @@ export interface components {
             /** @description Solution 7 (D-785): the layer that owns this entity. */
             owner_layer: string;
             primary_name_attribute?: string | null;
+            /** @description A1-T6: `standard` or `high_volume`. */
+            storage_mode: string;
         };
         EntityGroup: {
             display_name: string;
@@ -40413,6 +40600,11 @@ export interface components {
              */
             owner_layer: string;
             primary_name_attribute?: string | null;
+            /**
+             * @description A1-T6: `standard` or `high_volume` (partitioned by month; reads name
+             *     a window on `created_at`).
+             */
+            storage_mode: string;
         };
         /** @description One record of any entity. P-api-contract Phase 1: the platform dispatches generic CRUD from runtime metadata (D-003), so `data`'s property names differ per entity and per deployment and cannot be enumerated in a static document — call `GET /api/v1/schema/{logicalname}` for a live entity's fields. Everything outside `data` is the same on every entity. */
         EntityRecordResponse: {
@@ -49453,6 +49645,33 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_CurrencyRow: {
+            items: {
+                /** @description ISO 4217 code. */
+                code: string;
+                /**
+                 * Format: int32
+                 * @description The decimals an amount in it is rounded to.
+                 */
+                decimals: number;
+                /** @description The deployment's base currency (`core.base_currency`). */
+                is_base: boolean;
+                name: string;
+                symbol: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_CurrentConflict: {
             items: {
                 /** Format: uuid */
@@ -50555,6 +50774,11 @@ export interface components {
                  */
                 owner_layer: string;
                 primary_name_attribute?: string | null;
+                /**
+                 * @description A1-T6: `standard` or `high_volume` (partitioned by month; reads name
+                 *     a window on `created_at`).
+                 */
+                storage_mode: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -54435,6 +54659,38 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_SandboxRequest: {
+            items: {
+                /** Format: date-time */
+                created_at: string;
+                database_name: string;
+                /** @description What the copy did, or why it failed. */
+                detail?: string | null;
+                /** Format: date-time */
+                finished_at?: string | null;
+                /** Format: uuid */
+                id: string;
+                mode: string;
+                /** Format: uuid */
+                requested_by: string;
+                /** Format: int32 */
+                sample_percent?: number | null;
+                /** @description `queued`, `running`, `done` or `failed`. */
+                status: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_ScanHit: {
             items: {
                 /** @description The field that matched. */
@@ -55003,6 +55259,44 @@ export interface components {
                 id: string;
                 key: string;
                 name: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_SimilarPassage: {
+            items: {
+                /** @description The record the passage belongs to. */
+                entity_logicalname: string;
+                /** @description The headings above the passage, outermost first. */
+                heading_path: string[];
+                /**
+                 * Format: int32
+                 * @description For a document's PDF, the one-based page the passage is on.
+                 */
+                page?: number | null;
+                /** Format: uuid */
+                record_id: string;
+                /**
+                 * Format: double
+                 * @description One minus the cosine distance to the source; higher is nearer.
+                 */
+                score: number;
+                /** @description Where it came from: the record itself, or a document attached to it. */
+                source_entity: string;
+                /** Format: uuid */
+                source_id: string;
+                /** @description The passage, cut to 500 characters. */
+                text: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -59740,6 +60034,16 @@ export interface components {
             id: string;
             restored: boolean;
         };
+        /** @description What to restore. */
+        RestoreVersionBody: {
+            /**
+             * Format: date-time
+             * @description The moment whose version to restore (RFC 3339, UTC).
+             */
+            as_of: string;
+            /** @description Only these attributes; every restorable one when absent. */
+            attributes?: string[] | null;
+        };
         RestoreVersionResponse: {
             object_key: string;
             /** Format: int32 */
@@ -59824,6 +60128,44 @@ export interface components {
             row_version?: number | null;
             /** @description Defaults to `created_at`. */
             start_attribute?: string | null;
+        };
+        /** @description The revaluation of one money field. */
+        Revaluation: {
+            /** Format: date */
+            as_of: string;
+            attribute: string;
+            base_currency: string;
+            entity: string;
+            /** @description Currencies other than the base, alphabetically. */
+            lines: components["schemas"]["RevaluationLine"][];
+            /** @description Currencies with no rate on or before `as_of`, left out of the total. */
+            missing_rates: string[];
+            /** @description The sum of every line's gain or loss that has a rate. */
+            total_gain_loss: string;
+        };
+        /** @description One currency's revaluation. */
+        RevaluationLine: {
+            /** @description Their amounts, in this currency. */
+            amount: string;
+            /** @description The base amount booked for them. */
+            booked_base: string;
+            currency: string;
+            /** @description `revalued_base - booked_base`: a gain when positive. */
+            gain_loss?: string | null;
+            /**
+             * @description The rate on `as_of`, from this currency to the base; `null` when none
+             *     is stored on or before it.
+             */
+            rate?: string | null;
+            /** Format: date */
+            rate_date?: string | null;
+            /**
+             * Format: int64
+             * @description Open records in this currency.
+             */
+            records: number;
+            /** @description The amounts at that rate, in the base currency. */
+            revalued_base?: string | null;
         };
         ReverseRequest: {
             reason: string;
@@ -61203,6 +61545,41 @@ export interface components {
             /** Format: uuid */
             record_id: string;
         };
+        /** @description What to copy. */
+        SandboxBody: {
+            /** @description `full` (the default), `sample` or `metadata`. */
+            mode?: string | null;
+            /**
+             * @description The new database: 3 to 63 lowercase letters, digits or underscores,
+             *     starting with a letter.
+             */
+            name: string;
+            /**
+             * Format: int32
+             * @description `sample`: the share of each customer-data entity kept, 1 to 99
+             *     (default 10).
+             */
+            percent?: number | null;
+        };
+        /** @description A requested copy. */
+        SandboxRequest: {
+            /** Format: date-time */
+            created_at: string;
+            database_name: string;
+            /** @description What the copy did, or why it failed. */
+            detail?: string | null;
+            /** Format: date-time */
+            finished_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            mode: string;
+            /** Format: uuid */
+            requested_by: string;
+            /** Format: int32 */
+            sample_percent?: number | null;
+            /** @description `queued`, `running`, `done` or `failed`. */
+            status: string;
+        };
         SaveAsTemplate: {
             /** @description The record's entity (its logical name). */
             entity: string;
@@ -61657,6 +62034,12 @@ export interface components {
              *     to the impression log's feature vector.
              */
             matched_legs: string[];
+            /**
+             * Format: int32
+             * @description A25-T6: for a document, the page of its file (a PDF) the query best
+             *     matches, one-based, so the file opens there.
+             */
+            page?: number | null;
             /** Format: uuid */
             record_id: string;
             /** Format: double */
@@ -62677,6 +63060,54 @@ export interface components {
         SignupMode: "invite_only" | "self_service" | "domain_allowlist";
         SignupVerifyBody: {
             token: string;
+        };
+        /** @description One passage near the source. */
+        SimilarPassage: {
+            /** @description The record the passage belongs to. */
+            entity_logicalname: string;
+            /** @description The headings above the passage, outermost first. */
+            heading_path: string[];
+            /**
+             * Format: int32
+             * @description For a document's PDF, the one-based page the passage is on.
+             */
+            page?: number | null;
+            /** Format: uuid */
+            record_id: string;
+            /**
+             * Format: double
+             * @description One minus the cosine distance to the source; higher is nearer.
+             */
+            score: number;
+            /** @description Where it came from: the record itself, or a document attached to it. */
+            source_entity: string;
+            /** Format: uuid */
+            source_id: string;
+            /** @description The passage, cut to 500 characters. */
+            text: string;
+        };
+        /** @description A record to find passages like. */
+        SimilarRecord: {
+            /** @description The entity's logical name; `attome_document` for a file. */
+            entity: string;
+            /** Format: uuid */
+            id: string;
+        };
+        /** @description Exactly one of `record`, `text` or `image`. */
+        SimilarRequest: {
+            /**
+             * @description Passages like this image (base64). No image-text model is supported
+             *     yet, so this answers 503 `feature_unavailable`.
+             */
+            image?: string | null;
+            /**
+             * Format: int64
+             * @description Passages to return, 1 to 50; 10 when absent.
+             */
+            limit?: number | null;
+            record?: null | components["schemas"]["SimilarRecord"];
+            /** @description Passages like this description (at most 4,000 characters). */
+            text?: string | null;
         };
         SimulateNodeTrace: {
             error?: string | null;
@@ -64573,6 +65004,31 @@ export interface components {
         /** @description `PATCH /api/v1/admin/themes/{id}` and `POST .../preview-check`. */
         ThemeTokensBody: {
             tokens: components["schemas"]["ThemeTokens"];
+        };
+        /** @description The settings to save. */
+        TimeTravelBody: {
+            enabled: boolean;
+            /**
+             * Format: int32
+             * @description 1 to 36,500; absent keeps versions for ever.
+             */
+            retention_days?: number | null;
+        };
+        /** @description An entity's time-travel settings. */
+        TimeTravelSettings: {
+            /** @description Whether earlier versions are kept. */
+            enabled: boolean;
+            entity: string;
+            /**
+             * Format: int32
+             * @description Days a version is kept after it was replaced; `None` keeps it for ever.
+             */
+            retention_days?: number | null;
+            /**
+             * Format: int64
+             * @description `0` until the settings are first saved; send it as `If-Match`.
+             */
+            row_version: number;
         };
         /** @description One entry in a record's timeline. */
         TimelineEntry: {
@@ -95601,6 +96057,165 @@ export interface operations {
             };
         };
     };
+    list_sandboxes: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of requests */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_SandboxRequest"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not administer the deployment */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    request_sandbox: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SandboxBody"];
+            };
+        };
+        responses: {
+            /** @description The copy is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SandboxRequest"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not administer the deployment */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A copy with this name is queued, running or made */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A name, mode or percent out of range */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_sandbox: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The request */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SandboxRequest"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not administer the deployment */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such request */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_sbom: {
         parameters: {
             query?: never;
@@ -105327,6 +105942,128 @@ export interface operations {
                 };
             };
             /** @description Missing If-Match, or colours that fail the contrast check */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_time_travel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The settings; row_version 0 when never saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimeTravelSettings"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not change the data model */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_time_travel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TimeTravelBody"];
+            };
+        };
+        responses: {
+            /** @description The saved settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimeTravelSettings"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not change the data model */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Stale row_version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing If-Match, a retention out of range or an entity name too long */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -120775,6 +121512,35 @@ export interface operations {
             };
             /** @description Not a kind served here, or no artefact with this hash in the current version */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_currencies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every currency, by code, on one page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_CurrencyRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -136585,6 +137351,73 @@ export interface operations {
             };
         };
     };
+    fx_revaluation: {
+        parameters: {
+            query: {
+                /** @description The entity's logical name. */
+                entity: string;
+                /** @description A money field with the `fx` option (it has `<field>_base`). */
+                attribute: string;
+                /** @description The day whose rate revalues the amounts; today when absent. */
+                as_of?: string;
+                /** @description A field whose value says a record is open (`status`, say). */
+                open_field?: string;
+                /** @description The comma-separated values of `open_field` that mean open. */
+                open_values?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The revaluation per currency */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Revaluation"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller cannot read every record of the entity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a money field with the fx option, or an unknown open field */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     run_status: {
         parameters: {
             query?: never;
@@ -141156,6 +141989,75 @@ export interface operations {
             };
             /** @description The saved query text or pagination is outside the documented caps */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    similar_route: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimilarRequest"];
+            };
+        };
+        responses: {
+            /** @description The nearest readable passages, nearest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_SimilarPassage"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Search is not licensed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The record or document does not exist or is not readable */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not exactly one source, or a source with no text */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No embedding model, semantic search switched off, or an image was given */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -150700,6 +151602,11 @@ export interface operations {
                  *     under `expanded.<attribute>` when the caller may read it.
                  */
                 expand?: string;
+                /**
+                 * @description A1-T10: read the version of the record valid at this moment (RFC 3339,
+                 *     UTC), on an entity with time travel on.
+                 */
+                as_of?: string;
             };
             header?: never;
             path: {
@@ -150737,7 +151644,16 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Request failed validation */
+            /** @description No such record, or with as_of no version of it then */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation, or as_of on an entity without time travel */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -153168,6 +154084,80 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    restore_version_route: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+                /** @description The record */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RestoreVersionBody"];
+            };
+        };
+        responses: {
+            /** @description The record with the earlier values restored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntityRecordResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update this record */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, or no version of it kept for as_of */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The record changed since the If-Match version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No If-Match, no time travel on the entity, as_of is the current version, nothing to restore, a field that cannot be restored, or the values fail validation */
             422: {
                 headers: {
                     [name: string]: unknown;

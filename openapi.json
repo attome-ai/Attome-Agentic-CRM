@@ -47337,6 +47337,256 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/sandboxes": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Sandbox copies",
+        "description": "The copies asked for, newest first, with their outcome.",
+        "operationId": "list_sandboxes",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_SandboxRequest"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not administer the deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Ask for a sandbox copy",
+        "description": "Queues a masked copy of this deployment's database into a new database on the same server, as\n`attome scratch create` makes it. Answers at once; read the request for its outcome.",
+        "operationId": "request_sandbox",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SandboxBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The copy is queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SandboxRequest"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not administer the deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A copy with this name is queued, running or made",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A name, mode or percent out of range",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/sandboxes/{id}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A sandbox copy",
+        "description": "One requested copy and its outcome.",
+        "operationId": "get_sandbox",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The request",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SandboxRequest"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not administer the deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/sbom": {
       "get": {
         "tags": [
@@ -63047,6 +63297,197 @@
           },
           "422": {
             "description": "Missing If-Match, or colours that fail the contrast check",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/time-travel/{entity}": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Read an entity's time-travel settings",
+        "description": "Whether earlier versions of the entity's records are kept, and for how long.",
+        "operationId": "get_time_travel",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The settings; row_version 0 when never saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeTravelSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not change the data model",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "put": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Change an entity's time-travel settings",
+        "description": "Switching time travel on creates the entity's history table and its partitions; from then on\nevery update and delete keeps the version it replaces. Switching it off keeps the versions\nalready kept. Send `If-Match` with the `row_version` read (`\"0\"` the first time).",
+        "operationId": "put_time_travel",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TimeTravelBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The saved settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeTravelSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not change the data model",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale row_version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Missing If-Match, a retention out of range or an entity name too long",
             "content": {
               "application/json": {
                 "schema": {
@@ -88485,6 +88926,52 @@
           }
         ],
         "x-cache": "private-immutable",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/currencies": {
+      "get": {
+        "tags": [
+          "money"
+        ],
+        "summary": "Currencies",
+        "description": "Every currency a money amount may carry, with its decimals and symbol, and which one is the\ndeployment's base currency. Any signed-in person.",
+        "operationId": "list_currencies",
+        "responses": {
+          "200": {
+            "description": "Every currency, by code, on one page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_CurrencyRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
         "x-idempotent": "natural",
         "x-module": "core",
         "x-privilege": "authenticated",
@@ -114496,6 +114983,130 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/reports/fx-revaluation": {
+      "get": {
+        "tags": [
+          "money"
+        ],
+        "summary": "Foreign-currency revaluation",
+        "description": "For one money field converted to the base currency, the open amounts per currency: the base\namount booked against the amount at the rate on `as_of`, and the gain or loss. Needs read access\nto every record of the entity.",
+        "operationId": "fx_revaluation",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "query",
+            "description": "The entity's logical name.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "attribute",
+            "in": "query",
+            "description": "A money field with the `fx` option (it has `<field>_base`).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "description": "The day whose rate revalues the amounts; today when absent.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "open_field",
+            "in": "query",
+            "description": "A field whose value says a record is open (`status`, say).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "open_values",
+            "in": "query",
+            "description": "The comma-separated values of `open_field` that mean open.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The revaluation per currency",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Revaluation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller cannot read every record of the entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a money field with the fx option, or an unknown open field",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/reports/runs/{run_id}": {
       "get": {
         "tags": [
@@ -122235,6 +122846,107 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/search/similar": {
+      "post": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Find passages like a record, file or description",
+        "description": "Embeds the record's text, the document's file text or the description and returns the nearest\nrecord passages the caller may read: records' long fields and, for entities whose search setting\nturns document embeddings on, the text of the files attached to them, with the page of a PDF.\nAn image answers 503 until an image-text model is supported.",
+        "operationId": "similar_route",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimilarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The nearest readable passages, nearest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_SimilarPassage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Search is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The record or document does not exist or is not readable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not exactly one source, or a source with no text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No embedding model, semantic search switched off, or an image was given",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "a bounded, permission-filtered nearest-passage search; persists nothing",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "search",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/search/suggest": {
@@ -138180,6 +138892,16 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "as_of",
+            "in": "query",
+            "description": "A1-T10: read the version of the record valid at this moment (RFC 3339,\nUTC), on an entity with time travel on.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
           }
         ],
         "responses": {
@@ -138206,8 +138928,18 @@
               }
             }
           },
+          "404": {
+            "description": "No such record, or with as_of no version of it then",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "422": {
-            "description": "Request failed validation",
+            "description": "Request failed validation, or as_of on an entity without time travel",
             "content": {
               "application/json": {
                 "schema": {
@@ -142592,6 +143324,132 @@
             {
               "category": "entity",
               "operation": "restore"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "{entity}.create",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/{entity}/{id}/restore-version": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Restore an earlier version",
+        "description": "A1-T10: writes back the values of the version of this record valid at `as_of` (an entity with\ntime travel on), through the ordinary update: `If-Match` is required and validation, rules and\naudit run as for any edit. Only values that differ from the current ones are written; computed\nand encrypted fields, and fields the caller may not read or write, are never restored.",
+        "operationId": "restore_version_route",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The record",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreVersionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The record with the earlier values restored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityRecordResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update this record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or no version of it kept for as_of",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since the If-Match version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No If-Match, no time travel on the entity, as_of is the current version, nothing to restore, a field that cannot be restored, or the values fail validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
             }
           ],
           "policy": "entity_policy"
@@ -163494,6 +164352,13 @@
               "string",
               "null"
             ]
+          },
+          "storage_mode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A1-T6: `standard` (the default) or `high_volume`: a table partitioned\nby month on `created_at`, whose reads must name a window on it and\nwhich takes no unique business key. Chosen here and never changed."
           }
         }
       },
@@ -165221,6 +166086,38 @@
               "null"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "CurrencyRow": {
+        "type": "object",
+        "description": "A19-T5: one currency a money amount may carry.",
+        "required": [
+          "code",
+          "decimals",
+          "symbol",
+          "name",
+          "is_base"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "ISO 4217 code."
+          },
+          "decimals": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The decimals an amount in it is rounded to."
+          },
+          "is_base": {
+            "type": "boolean",
+            "description": "The deployment's base currency (`core.base_currency`)."
+          },
+          "name": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": "string"
           }
         }
       },
@@ -171316,6 +172213,13 @@
               "string",
               "null"
             ]
+          },
+          "storage_mode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A1-T6: `high_volume` for a partitioned entity; absent for a standard\none (so a standard entity's bundle reads as before)."
           }
         }
       },
@@ -171422,6 +172326,7 @@
           "is_reference_data",
           "business_key_index_state",
           "master_data",
+          "storage_mode",
           "attributes"
         ],
         "properties": {
@@ -171498,6 +172403,10 @@
               "string",
               "null"
             ]
+          },
+          "storage_mode": {
+            "type": "string",
+            "description": "A1-T6: `standard` or `high_volume`."
           }
         }
       },
@@ -171584,7 +172493,8 @@
           "is_append_only",
           "attribute_count",
           "owner_layer",
-          "is_reference_data"
+          "is_reference_data",
+          "storage_mode"
         ],
         "properties": {
           "attribute_count": {
@@ -171652,6 +172562,10 @@
               "string",
               "null"
             ]
+          },
+          "storage_mode": {
+            "type": "string",
+            "description": "A1-T6: `standard` or `high_volume` (partitioned by month; reads name\na window on `created_at`)."
           }
         }
       },
@@ -194876,6 +195790,72 @@
           }
         }
       },
+      "PaginatedResponse_CurrencyRow": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A19-T5: one currency a money amount may carry.",
+              "required": [
+                "code",
+                "decimals",
+                "symbol",
+                "name",
+                "is_base"
+              ],
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "description": "ISO 4217 code."
+                },
+                "decimals": {
+                  "type": "integer",
+                  "format": "int32",
+                  "description": "The decimals an amount in it is rounded to."
+                },
+                "is_base": {
+                  "type": "boolean",
+                  "description": "The deployment's base currency (`core.base_currency`)."
+                },
+                "name": {
+                  "type": "string"
+                },
+                "symbol": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_CurrentConflict": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -197713,7 +198693,8 @@
                 "is_append_only",
                 "attribute_count",
                 "owner_layer",
-                "is_reference_data"
+                "is_reference_data",
+                "storage_mode"
               ],
               "properties": {
                 "attribute_count": {
@@ -197781,6 +198762,10 @@
                     "string",
                     "null"
                   ]
+                },
+                "storage_mode": {
+                  "type": "string",
+                  "description": "A1-T6: `standard` or `high_volume` (partitioned by month; reads name\na window on `created_at`)."
                 }
               }
             }
@@ -208081,6 +209066,97 @@
           }
         }
       },
+      "PaginatedResponse_SandboxRequest": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A requested copy.",
+              "required": [
+                "id",
+                "database_name",
+                "mode",
+                "status",
+                "requested_by",
+                "created_at"
+              ],
+              "properties": {
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "database_name": {
+                  "type": "string"
+                },
+                "detail": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "What the copy did, or why it failed."
+                },
+                "finished_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "mode": {
+                  "type": "string"
+                },
+                "requested_by": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "sample_percent": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int32"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`queued`, `running`, `done` or `failed`."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_ScanHit": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -209575,6 +210651,95 @@
                 },
                 "name": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_SimilarPassage": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One passage near the source.",
+              "required": [
+                "entity_logicalname",
+                "record_id",
+                "source_entity",
+                "source_id",
+                "heading_path",
+                "text",
+                "score"
+              ],
+              "properties": {
+                "entity_logicalname": {
+                  "type": "string",
+                  "description": "The record the passage belongs to."
+                },
+                "heading_path": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "The headings above the passage, outermost first."
+                },
+                "page": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int32",
+                  "description": "For a document's PDF, the one-based page the passage is on."
+                },
+                "record_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "score": {
+                  "type": "number",
+                  "format": "double",
+                  "description": "One minus the cosine distance to the source; higher is nearer."
+                },
+                "source_entity": {
+                  "type": "string",
+                  "description": "Where it came from: the record itself, or a document attached to it."
+                },
+                "source_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "The passage, cut to 500 characters."
                 }
               }
             }
@@ -221625,6 +222790,30 @@
           }
         }
       },
+      "RestoreVersionBody": {
+        "type": "object",
+        "description": "What to restore.",
+        "required": [
+          "as_of"
+        ],
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The moment whose version to restore (RFC 3339, UTC)."
+          },
+          "attributes": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Only these attributes; every restorable one when absent."
+          }
+        }
+      },
       "RestoreVersionResponse": {
         "type": "object",
         "required": [
@@ -221881,6 +223070,108 @@
           }
         },
         "additionalProperties": false
+      },
+      "Revaluation": {
+        "type": "object",
+        "description": "The revaluation of one money field.",
+        "required": [
+          "entity",
+          "attribute",
+          "base_currency",
+          "as_of",
+          "lines",
+          "total_gain_loss",
+          "missing_rates"
+        ],
+        "properties": {
+          "as_of": {
+            "type": "string",
+            "format": "date"
+          },
+          "attribute": {
+            "type": "string"
+          },
+          "base_currency": {
+            "type": "string"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RevaluationLine"
+            },
+            "description": "Currencies other than the base, alphabetically."
+          },
+          "missing_rates": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Currencies with no rate on or before `as_of`, left out of the total."
+          },
+          "total_gain_loss": {
+            "type": "string",
+            "description": "The sum of every line's gain or loss that has a rate."
+          }
+        }
+      },
+      "RevaluationLine": {
+        "type": "object",
+        "description": "One currency's revaluation.",
+        "required": [
+          "currency",
+          "records",
+          "amount",
+          "booked_base"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "Their amounts, in this currency."
+          },
+          "booked_base": {
+            "type": "string",
+            "description": "The base amount booked for them."
+          },
+          "currency": {
+            "type": "string"
+          },
+          "gain_loss": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`revalued_base - booked_base`: a gain when positive."
+          },
+          "rate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The rate on `as_of`, from this currency to the base; `null` when none\nis stored on or before it."
+          },
+          "rate_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "records": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Open records in this currency."
+          },
+          "revalued_base": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The amounts at that rate, in the base currency."
+          }
+        }
       },
       "ReverseRequest": {
         "type": "object",
@@ -225519,6 +226810,91 @@
           }
         }
       },
+      "SandboxBody": {
+        "type": "object",
+        "description": "What to copy.",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "mode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`full` (the default), `sample` or `metadata`."
+          },
+          "name": {
+            "type": "string",
+            "description": "The new database: 3 to 63 lowercase letters, digits or underscores,\nstarting with a letter."
+          },
+          "percent": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "`sample`: the share of each customer-data entity kept, 1 to 99\n(default 10)."
+          }
+        }
+      },
+      "SandboxRequest": {
+        "type": "object",
+        "description": "A requested copy.",
+        "required": [
+          "id",
+          "database_name",
+          "mode",
+          "status",
+          "requested_by",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "database_name": {
+            "type": "string"
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What the copy did, or why it failed."
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "requested_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sample_percent": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "status": {
+            "type": "string",
+            "description": "`queued`, `running`, `done` or `failed`."
+          }
+        }
+      },
       "SaveAsTemplate": {
         "type": "object",
         "required": [
@@ -226703,6 +228079,14 @@
               "type": "string"
             },
             "description": "Which legs matched this row. Useful to a human debugging relevance and\nto the impression log's feature vector."
+          },
+          "page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "A25-T6: for a document, the page of its file (a PDF) the query best\nmatches, one-based, so the file opens there."
           },
           "record_id": {
             "type": "string",
@@ -229256,6 +230640,118 @@
         "properties": {
           "token": {
             "type": "string"
+          }
+        }
+      },
+      "SimilarPassage": {
+        "type": "object",
+        "description": "One passage near the source.",
+        "required": [
+          "entity_logicalname",
+          "record_id",
+          "source_entity",
+          "source_id",
+          "heading_path",
+          "text",
+          "score"
+        ],
+        "properties": {
+          "entity_logicalname": {
+            "type": "string",
+            "description": "The record the passage belongs to."
+          },
+          "heading_path": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The headings above the passage, outermost first."
+          },
+          "page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "For a document's PDF, the one-based page the passage is on."
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "score": {
+            "type": "number",
+            "format": "double",
+            "description": "One minus the cosine distance to the source; higher is nearer."
+          },
+          "source_entity": {
+            "type": "string",
+            "description": "Where it came from: the record itself, or a document attached to it."
+          },
+          "source_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string",
+            "description": "The passage, cut to 500 characters."
+          }
+        }
+      },
+      "SimilarRecord": {
+        "type": "object",
+        "description": "A record to find passages like.",
+        "required": [
+          "entity",
+          "id"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string",
+            "description": "The entity's logical name; `attome_document` for a file."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "SimilarRequest": {
+        "type": "object",
+        "description": "Exactly one of `record`, `text` or `image`.",
+        "properties": {
+          "image": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Passages like this image (base64). No image-text model is supported\nyet, so this answers 503 `feature_unavailable`."
+          },
+          "limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Passages to return, 1 to 50; 10 when absent."
+          },
+          "record": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SimilarRecord",
+                "description": "Passages like this record's text, or like this document's file."
+              }
+            ]
+          },
+          "text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Passages like this description (at most 4,000 characters)."
           }
         }
       },
@@ -234424,6 +235920,57 @@
         "properties": {
           "tokens": {
             "$ref": "#/components/schemas/ThemeTokens"
+          }
+        }
+      },
+      "TimeTravelBody": {
+        "type": "object",
+        "description": "The settings to save.",
+        "required": [
+          "enabled"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "retention_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "1 to 36,500; absent keeps versions for ever."
+          }
+        }
+      },
+      "TimeTravelSettings": {
+        "type": "object",
+        "description": "An entity's time-travel settings.",
+        "required": [
+          "entity",
+          "enabled",
+          "row_version"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether earlier versions are kept."
+          },
+          "entity": {
+            "type": "string"
+          },
+          "retention_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Days a version is kept after it was replaced; `None` keeps it for ever."
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64",
+            "description": "`0` until the settings are first saved; send it as `If-Match`."
           }
         }
       },
@@ -240541,6 +242088,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -240593,6 +242141,5 @@
       }
     }
   },
-  "x-version-adapters": [],
   "x-api-version": "2026-10"
 }

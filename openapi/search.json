@@ -2125,6 +2125,107 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/search/similar": {
+      "post": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Find passages like a record, file or description",
+        "description": "Embeds the record's text, the document's file text or the description and returns the nearest\nrecord passages the caller may read: records' long fields and, for entities whose search setting\nturns document embeddings on, the text of the files attached to them, with the page of a PDF.\nAn image answers 503 until an image-text model is supported.",
+        "operationId": "similar_route",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimilarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The nearest readable passages, nearest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_SimilarPassage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Search is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The record or document does not exist or is not readable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not exactly one source, or a source with no text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No embedding model, semantic search switched off, or an image was given",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "a bounded, permission-filtered nearest-passage search; persists nothing",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "search",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/search/suggest": {
       "get": {
         "tags": [
@@ -3245,6 +3346,95 @@
           }
         }
       },
+      "PaginatedResponse_SimilarPassage": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One passage near the source.",
+              "required": [
+                "entity_logicalname",
+                "record_id",
+                "source_entity",
+                "source_id",
+                "heading_path",
+                "text",
+                "score"
+              ],
+              "properties": {
+                "entity_logicalname": {
+                  "type": "string",
+                  "description": "The record the passage belongs to."
+                },
+                "heading_path": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "The headings above the passage, outermost first."
+                },
+                "page": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int32",
+                  "description": "For a document's PDF, the one-based page the passage is on."
+                },
+                "record_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "score": {
+                  "type": "number",
+                  "format": "double",
+                  "description": "One minus the cosine distance to the source; higher is nearer."
+                },
+                "source_entity": {
+                  "type": "string",
+                  "description": "Where it came from: the record itself, or a document attached to it."
+                },
+                "source_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "The passage, cut to 500 characters."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PathsRequest": {
         "type": "object",
         "required": [
@@ -3648,6 +3838,14 @@
             },
             "description": "Which legs matched this row. Useful to a human debugging relevance and\nto the impression log's feature vector."
           },
+          "page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "A25-T6: for a document, the page of its file (a PDF) the query best\nmatches, one-based, so the file opens there."
+          },
           "record_id": {
             "type": "string",
             "format": "uuid"
@@ -3991,6 +4189,63 @@
           }
         },
         "additionalProperties": false
+      },
+      "SimilarRecord": {
+        "type": "object",
+        "description": "A record to find passages like.",
+        "required": [
+          "entity",
+          "id"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string",
+            "description": "The entity's logical name; `attome_document` for a file."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "SimilarRequest": {
+        "type": "object",
+        "description": "Exactly one of `record`, `text` or `image`.",
+        "properties": {
+          "image": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Passages like this image (base64). No image-text model is supported\nyet, so this answers 503 `feature_unavailable`."
+          },
+          "limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Passages to return, 1 to 50; 10 when absent."
+          },
+          "record": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SimilarRecord",
+                "description": "Passages like this record's text, or like this document's file."
+              }
+            ]
+          },
+          "text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Passages like this description (at most 4,000 characters)."
+          }
+        }
       },
       "SuggestResponse": {
         "type": "object",
