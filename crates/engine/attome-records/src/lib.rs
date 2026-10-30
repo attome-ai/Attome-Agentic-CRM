@@ -33,6 +33,9 @@
 pub mod access_plan;
 /// M9-T1: the write lock of a pending approval process.
 pub mod approval_lock;
+/// Q19-T1: encryption of labelled attributes, blind indexes, and the
+/// refusal of sorts and range filters on them.
+pub mod attr_crypto;
 pub mod bulk;
 /// B5-T1: `POST /api/v1/{entity}/bulk-edit`, per-attribute operations over
 /// many records, applied by the bulk engine.

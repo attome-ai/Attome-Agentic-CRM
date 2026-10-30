@@ -2846,6 +2846,16 @@ pub async fn execute_stored_query_with_definition(
         let registry = state.entities.load();
         if let Some(meta) = registry.get_by_id(entity_id) {
             let find = |name: &str| meta.attrs.iter().find(|a| a.logicalname == name);
+            // Q19-T1: an encrypted attribute answers no sort and no range
+            // or text filter; refuse before any SQL runs.
+            if let Some(a) = find(&body.order_by) {
+                crate::attr_crypto::check_sort(a)?;
+            }
+            for f in &body.filters {
+                if let Some(a) = find(&f.field) {
+                    crate::attr_crypto::check_filter(a, &f.op)?;
+                }
+            }
             if !body.order_by.is_empty()
                 && let Some(a) = find(&body.order_by).filter(|a| !a.is_sortable)
             {

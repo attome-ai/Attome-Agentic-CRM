@@ -26,6 +26,14 @@
 //! versions (a `0x01` value written before binding opens without one). The
 //! version byte is not authenticated, but changing `0x02` to `0x01` only
 //! makes the value open with no associated data, which fails its tag.
+//!
+//! Q19-T1: version `0x03` is deterministic, for an encrypted attribute that
+//! must answer equality filters: the nonce is an HMAC of the value and its
+//! context (`table|column`) instead of random, so one value in one column
+//! always seals to the same bytes. Its key and its nonce key are derived from
+//! the ring's key (HMAC-SHA256 with a fixed label), so the raw key never
+//! seals a value both ways. [`blind_index`] is the keyed, truncated HMAC an
+//! equality search compares instead of the value.
 
 use attome_config::KeyRing;
 use attome_types::AppError;
@@ -40,6 +48,15 @@ use aes_gcm::{
 const FORMAT_VERSION: u8 = 0x01;
 /// Q18-T2: the row-bound version.
 const FORMAT_BOUND: u8 = 0x02;
+/// Q19-T1: the deterministic version.
+const FORMAT_DETERMINISTIC: u8 = 0x03;
+/// Q19-T1: the labels the deterministic and blind-index keys are derived
+/// under. Changing one makes every stored value under it unreadable.
+const LABEL_DETERMINISTIC_KEY: &[u8] = b"attome/envelope/deterministic-key/v1";
+const LABEL_DETERMINISTIC_NONCE: &[u8] = b"attome/envelope/deterministic-nonce/v1";
+const LABEL_BLIND_INDEX: &[u8] = b"attome/envelope/blind-index/v1";
+/// Q19-T1: bytes of HMAC-SHA256 a blind index keeps (128 bits).
+const BLIND_INDEX_LEN: usize = 16;
 const NONCE_LEN: usize = 12;
 
 /// Q18-T2: where a bound ciphertext lives.
@@ -98,6 +115,150 @@ pub fn decrypt_bound(
 pub fn stored_is_bound(encoded: &str) -> bool {
     B64.decode(encoded)
         .is_ok_and(|combined| combined.first() == Some(&FORMAT_BOUND))
+}
+
+/// Q19-T1: HMAC-SHA256 of `parts` under `key`, each part length-prefixed so
+/// `("ab", "c")` and `("a", "bc")` differ.
+#[expect(clippy::expect_used, reason = "HMAC accepts a key of any length")]
+fn hmac_parts(key: &[u8], parts: &[&[u8]]) -> [u8; 32] {
+    use hmac::{Hmac, Mac};
+    let mut mac = <Hmac<sha2::Sha256> as Mac>::new_from_slice(key)
+        .expect("HMAC-SHA256 takes a key of any length");
+    for part in parts {
+        mac.update(&(part.len() as u64).to_be_bytes());
+        mac.update(part);
+    }
+    mac.finalize().into_bytes().into()
+}
+
+/// Q19-T1: the deterministic encryption key and nonce key derived from one
+/// ring key.
+fn deterministic_keys(key: &[u8; 32]) -> ([u8; 32], [u8; 32]) {
+    (
+        hmac_parts(key, &[LABEL_DETERMINISTIC_KEY]),
+        hmac_parts(key, &[LABEL_DETERMINISTIC_NONCE]),
+    )
+}
+
+/// Q19-T1: seals `plaintext` under `ring`'s active key so the same value
+/// with the same `context` always gives the same base64 (`0x03` envelope).
+/// Use it only where equality on the ciphertext is wanted: it shows which
+/// stored values are equal. `context` (for an attribute, `table|column`) is
+/// both the associated data and part of the nonce, so a value sealed for one
+/// column neither opens in nor matches another.
+pub fn encrypt_deterministic(
+    field_name: &str,
+    ring: &KeyRing,
+    plaintext: &str,
+    context: &[u8],
+) -> Result<String, AppError> {
+    let active_id = ring.active_key_id.as_str();
+    let active_hex = ring
+        .active()
+        .ok_or_else(|| AppError::internal(format!("{field_name} has no active key configured")))?;
+    if active_id.len() > u8::MAX as usize {
+        return Err(AppError::internal(format!(
+            "{field_name} active_key_id is too long to encode"
+        )));
+    }
+    let (enc_key, nonce_key) = deterministic_keys(&parse_key(field_name, active_hex)?);
+    let synthetic = hmac_parts(&nonce_key, &[context, plaintext.as_bytes()]);
+    let nonce = Nonce::from_slice(&synthetic[..NONCE_LEN]);
+    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&enc_key));
+    let ciphertext = cipher
+        .encrypt(
+            nonce,
+            Payload {
+                msg: plaintext.as_bytes(),
+                aad: context,
+            },
+        )
+        .map_err(|_| AppError::internal(format!("{field_name} encryption failed")))?;
+
+    let mut combined = Vec::with_capacity(2 + active_id.len() + NONCE_LEN + ciphertext.len());
+    combined.push(FORMAT_DETERMINISTIC);
+    combined.push(active_id.len() as u8);
+    combined.extend_from_slice(active_id.as_bytes());
+    combined.extend_from_slice(nonce);
+    combined.extend_from_slice(&ciphertext);
+    Ok(B64.encode(combined))
+}
+
+/// Q19-T1: opens a value [`encrypt_deterministic`] sealed for `context`.
+pub fn decrypt_deterministic(
+    field_name: &str,
+    ring: &KeyRing,
+    encoded: &str,
+    context: &[u8],
+) -> Result<SecretString, AppError> {
+    let combined = B64
+        .decode(encoded)
+        .map_err(|_| AppError::internal(format!("{field_name} ciphertext is not valid base64")))?;
+    if combined.first() != Some(&FORMAT_DETERMINISTIC) {
+        return Err(AppError::internal(format!(
+            "{field_name} ciphertext is not a deterministic envelope"
+        )));
+    }
+    let plaintext = decrypt_bytes_with_aad(field_name, ring, &combined, context)?;
+    String::from_utf8(plaintext)
+        .map(SecretString::new)
+        .map_err(|_| AppError::internal(format!("{field_name} decrypted to invalid UTF-8")))
+}
+
+/// Q19-T1: whether a base64 value is a deterministic (`0x03`) envelope.
+pub fn stored_is_deterministic(encoded: &str) -> bool {
+    B64.decode(encoded)
+        .is_ok_and(|combined| combined.first() == Some(&FORMAT_DETERMINISTIC))
+}
+
+/// Q19-T1: the blind index of `value` in `context` under the ring key
+/// `key_id`: `<key_id>:<32 hex>`, the first 128 bits of an HMAC-SHA256 keyed
+/// by a key derived from that ring key. An equality search compares indexes,
+/// never values. The key id is part of the index so a rotation can tell which
+/// rows still carry an old one.
+pub fn blind_index_with(
+    field_name: &str,
+    ring: &KeyRing,
+    key_id: &str,
+    context: &[u8],
+    value: &str,
+) -> Result<String, AppError> {
+    let key_hex = ring.get(key_id).ok_or_else(|| {
+        AppError::internal(format!("{field_name} has no key with the requested id"))
+    })?;
+    let index_key = hmac_parts(&parse_key(field_name, key_hex)?, &[LABEL_BLIND_INDEX]);
+    let digest = hmac_parts(&index_key, &[context, value.as_bytes()]);
+    Ok(format!(
+        "{key_id}:{}",
+        hex::encode(&digest[..BLIND_INDEX_LEN])
+    ))
+}
+
+/// Q19-T1: [`blind_index_with`] under the ring's active key: what a write
+/// stores.
+pub fn blind_index(
+    field_name: &str,
+    ring: &KeyRing,
+    context: &[u8],
+    value: &str,
+) -> Result<String, AppError> {
+    blind_index_with(field_name, ring, &ring.active_key_id, context, value)
+}
+
+/// Q19-T1: the blind index of `value` under every key in the ring, sorted:
+/// what an equality search matches, so a row still indexed under a key a
+/// rotation has not reached yet is found.
+pub fn blind_indexes(
+    field_name: &str,
+    ring: &KeyRing,
+    context: &[u8],
+    value: &str,
+) -> Result<Vec<String>, AppError> {
+    let mut ids: Vec<&String> = ring.keys.keys().collect();
+    ids.sort();
+    ids.into_iter()
+        .map(|id| blind_index_with(field_name, ring, id, context, value))
+        .collect()
 }
 
 fn parse_key(field_name: &str, hex_key: &str) -> Result<[u8; 32], AppError> {
@@ -199,7 +360,10 @@ pub fn decrypt_bytes_with_aad(
             "{field_name} ciphertext names a key id the ring does not hold"
         ))
     })?;
-    let key_bytes = parse_key(field_name, key_hex)?;
+    let mut key_bytes = parse_key(field_name, key_hex)?;
+    if combined.first() == Some(&FORMAT_DETERMINISTIC) {
+        key_bytes = deterministic_keys(&key_bytes).0;
+    }
     decrypt_with_key(field_name, &key_bytes, nonce_and_ciphertext, aad)
 }
 
@@ -217,6 +381,16 @@ pub fn reseal_bytes(
         .first()
         .ok_or_else(|| AppError::internal(format!("{field_name} ciphertext is empty")))?;
     let plain = decrypt_bytes_with_aad(field_name, ring, combined, aad)?;
+    if version == FORMAT_DETERMINISTIC {
+        // Q19-T1: a deterministic value stays deterministic, or equality
+        // on it would stop matching after a rotation.
+        let text = String::from_utf8(plain)
+            .map_err(|_| AppError::internal(format!("{field_name} decrypted to invalid UTF-8")))?;
+        let encoded = encrypt_deterministic(field_name, ring, &text, aad)?;
+        return B64.decode(encoded).map_err(|_| {
+            AppError::internal(format!("{field_name} ciphertext is not valid base64"))
+        });
+    }
     let mut fresh = encrypt_bytes_with_aad(field_name, ring, &plain, aad)?;
     // A reader that opens without a binding must keep getting an unbound
     // value, and a bound one stays bound.
@@ -285,7 +459,10 @@ pub fn decrypt(field_name: &str, ring: &KeyRing, encoded: &str) -> Result<Secret
 /// Returns `(key_id, nonce || ciphertext)` if `combined` parses as this
 /// module's versioned format — purely structural, does not check the ring.
 fn parse_versioned(combined: &[u8]) -> Option<(&str, &[u8])> {
-    if !matches!(combined.first(), Some(&FORMAT_VERSION | &FORMAT_BOUND)) {
+    if !matches!(
+        combined.first(),
+        Some(&FORMAT_VERSION | &FORMAT_BOUND | &FORMAT_DETERMINISTIC)
+    ) {
         return None;
     }
     let key_id_len = *combined.get(1)? as usize;
@@ -392,6 +569,112 @@ pub fn canary(field_name: &str, ring: &KeyRing) -> Result<(), AppError> {
         )));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod deterministic_tests {
+    use super::*;
+
+    fn ring(ids: &[(&str, u8)], active: &str) -> KeyRing {
+        KeyRing {
+            keys: ids
+                .iter()
+                .map(|(id, byte)| (id.to_string(), hex::encode([*byte; 32])))
+                .collect(),
+            active_key_id: active.to_string(),
+        }
+    }
+
+    #[test]
+    fn deterministic_seal_is_stable_and_opens() {
+        let ring = ring(&[("k1", 3)], "k1");
+        let a = encrypt_deterministic("f", &ring, "layla@example.com", b"contact|email").unwrap();
+        let b = encrypt_deterministic("f", &ring, "layla@example.com", b"contact|email").unwrap();
+        assert_eq!(a, b, "same value, same context: same ciphertext");
+        assert!(stored_is_deterministic(&a));
+        assert!(!a.contains("layla"));
+        assert_eq!(stored_key_id(&a).as_deref(), Some("k1"));
+        assert_eq!(
+            decrypt_deterministic("f", &ring, &a, b"contact|email")
+                .unwrap()
+                .expose_secret(),
+            "layla@example.com"
+        );
+    }
+
+    #[test]
+    fn deterministic_seal_differs_by_value_and_context() {
+        let ring = ring(&[("k1", 3)], "k1");
+        let base = encrypt_deterministic("f", &ring, "a", b"contact|email").unwrap();
+        assert_ne!(
+            base,
+            encrypt_deterministic("f", &ring, "b", b"contact|email").unwrap()
+        );
+        let other_column = encrypt_deterministic("f", &ring, "a", b"contact|phone").unwrap();
+        assert_ne!(base, other_column);
+        assert!(
+            decrypt_deterministic("f", &ring, &base, b"contact|phone").is_err(),
+            "a value moved to another column must not open"
+        );
+    }
+
+    #[test]
+    fn deterministic_value_is_not_a_random_one() {
+        let ring = ring(&[("k1", 3)], "k1");
+        let random = encrypt("f", &ring, "a").unwrap();
+        assert!(decrypt_deterministic("f", &ring, &random, b"").is_err());
+        assert!(!stored_is_deterministic(&random));
+    }
+
+    #[test]
+    fn deterministic_reseal_moves_to_the_active_key_and_stays_deterministic() {
+        let old = ring(&[("k1", 3)], "k1");
+        let sealed = encrypt_deterministic("f", &old, "v", b"t|c").unwrap();
+        let rotated = ring(&[("k1", 3), ("k2", 4)], "k2");
+        let combined = B64.decode(&sealed).unwrap();
+        let fresh = B64.encode(reseal_bytes("f", &rotated, &combined, b"t|c").unwrap());
+        assert_eq!(stored_key_id(&fresh).as_deref(), Some("k2"));
+        assert_eq!(
+            fresh,
+            encrypt_deterministic("f", &rotated, "v", b"t|c").unwrap(),
+            "a resealed value still equals a fresh seal of the same value"
+        );
+    }
+
+    #[test]
+    fn blind_index_is_keyed_truncated_and_per_context() {
+        let one = ring(&[("k1", 3)], "k1");
+        let a = blind_index("f", &one, b"contact|email", "x@y.test").unwrap();
+        assert_eq!(
+            a,
+            blind_index("f", &one, b"contact|email", "x@y.test").unwrap()
+        );
+        let (key_id, digest) = a.split_once(':').unwrap();
+        assert_eq!(key_id, "k1");
+        assert_eq!(digest.len(), BLIND_INDEX_LEN * 2);
+        assert_ne!(
+            a,
+            blind_index("f", &one, b"contact|phone", "x@y.test").unwrap()
+        );
+        assert_ne!(
+            a,
+            blind_index("f", &one, b"contact|email", "x@y.tesu").unwrap()
+        );
+        let other_key = ring(&[("k1", 9)], "k1");
+        assert_ne!(
+            a,
+            blind_index("f", &other_key, b"contact|email", "x@y.test").unwrap()
+        );
+    }
+
+    #[test]
+    fn blind_indexes_cover_every_ring_key() {
+        let two = ring(&[("k2", 4), ("k1", 3)], "k2");
+        let all = blind_indexes("f", &two, b"t|c", "v").unwrap();
+        assert_eq!(all.len(), 2);
+        assert!(all[0].starts_with("k1:") && all[1].starts_with("k2:"));
+        assert!(all.contains(&blind_index("f", &two, b"t|c", "v").unwrap()));
+    }
 }
 
 #[cfg(test)]
