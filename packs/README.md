@@ -11,6 +11,12 @@ pack's: if the customer published their own version or has a draft open, the cus
 kept, and an object a newer pack no longer ships is left in place. Both are listed with
 `GET /api/v1/admin/model/pack-objects` and warned about in the boot log.
 
+Ids differ per deployment, so a pack file names what its document refers to; a string that is
+exactly one of these is replaced by the id at install, and a name that matches nothing stops the
+install: `@entity:account`, `@attribute:account.industry`, `@view:account/Active Accounts`,
+`@query:account/Open Pipeline` (`@query:/<name>` for a query of no entity) and
+`@<kind>:<app>/<name>` for another model object, this pack's own included (`@component:crm/kpi_tile`).
+
 ## library-core
 
 The MENA base library other packs and agents build on (A1-T12): `party` (a person or an

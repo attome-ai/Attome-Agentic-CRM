@@ -1253,16 +1253,18 @@ fn pack_model_objects_install_and_upgrade() {
         let db = state.base.db.clone();
         let (_, cookie) = seed_admin(&db).await;
         let app = full_app(system);
-        let entity_id: Uuid =
-            sqlx::query_scalar("SELECT id FROM entity_info WHERE is_active IS NOT FALSE LIMIT 1")
-                .fetch_one(&db)
-                .await
-                .expect("a seeded entity");
+        let (entity_id, entity): (Uuid, String) = sqlx::query_as(
+            "SELECT id, logicalname FROM entity_info WHERE is_active IS NOT FALSE LIMIT 1",
+        )
+        .fetch_one(&db)
+        .await
+        .expect("a seeded entity");
         let pack = format!("pack_{}", &Uuid::now_v7().simple().to_string()[..12]);
         let form = |name: &str, label: &str| {
             let text = serde_json::to_string_pretty(&serde_json::json!({
                 "kind": "form", "app": pack, "name": name, "schema_version": 1,
-                "doc": { "entity": entity_id.to_string(), "sections": [{ "label": label, "fields": [] }] }
+                // Named, not by id: resolved at install.
+                "doc": { "entity": format!("@entity:{entity}"), "sections": [{ "label": label, "fields": [] }] }
             }))
             .unwrap()
                 + "\n";
@@ -1281,6 +1283,33 @@ fn pack_model_objects_install_and_upgrade() {
         .await
         .unwrap();
         assert_eq!(layer, "app");
+        let stored: Uuid = sqlx::query_scalar(
+            "SELECT (v.doc->>'entity')::uuid FROM metadata_object o \
+               JOIN metadata_object_version v ON v.object_id = o.id \
+              WHERE o.app = $1 AND o.name = 'a' AND v.state = 'published'",
+        )
+        .bind(&pack)
+        .fetch_one(&db)
+        .await
+        .unwrap();
+        assert_eq!(stored, entity_id, "the entity name became its id");
+        let missing = install_pack_model(
+            &state,
+            &pack,
+            vec![(
+                format!("form/{pack}/c.json"),
+                serde_json::json!({
+                    "kind": "form", "app": pack, "name": "c", "schema_version": 1,
+                    "doc": { "entity": "@entity:no_such_entity", "sections": [] }
+                })
+                .to_string(),
+            )],
+        )
+        .await;
+        assert!(
+            missing.is_err(),
+            "a name that resolves to nothing is refused"
+        );
 
         let again = install_pack_model(&state, &pack, vec![form("a", "One"), form("b", "One")])
             .await
@@ -1288,7 +1317,12 @@ fn pack_model_objects_install_and_upgrade() {
         assert_eq!((again.published, again.unchanged), (0, 2));
 
         // The customer publishes their own version of `a`.
-        let (path, text) = form("a", "Customer");
+        let path = format!("form/{pack}/a.json");
+        let text = serde_json::json!({
+            "kind": "form", "app": pack, "name": "a", "schema_version": 1,
+            "doc": { "entity": entity_id.to_string(), "sections": [{ "label": "Customer", "fields": [] }] }
+        })
+        .to_string();
         let resp = app
             .clone()
             .oneshot(post_req(

@@ -13,6 +13,18 @@
 //! and the row says so (`kept_customer`). An object a newer pack no longer
 //! ships stays as it is (`removed_from_pack`), for an administrator to retire
 //! once nothing uses it. `GET /api/v1/admin/model/pack-objects` lists the rows.
+//!
+//! Ids differ per deployment, so a pack file names what it refers to. A
+//! string in a document that is exactly one of these is replaced by the id
+//! before the file is read:
+//!
+//! - `@entity:<entity>`
+//! - `@attribute:<entity>.<field>`
+//! - `@view:<entity>/<view name>`
+//! - `@query:<entity>/<query name>` (`@query:/<name>` for a query of no entity)
+//! - `@<kind>:<app>/<name>`, another model object, this pack's own included
+
+use std::collections::HashMap;
 
 use attome_core::EngineState;
 use attome_model::store::{self, ObjectSpec};
@@ -25,6 +37,7 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use serde::Serialize;
+use serde_json::Value;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -115,6 +128,8 @@ pub async fn install_pack_model(
     pack: &str,
     files: Vec<(String, String)>,
 ) -> Result<PackModelOutcome, AppError> {
+    let db = &state.base.db;
+    let (files, new_ids) = resolve_names(db, pack, files).await?;
     let request = ModelFiles {
         files: files
             .into_iter()
@@ -129,7 +144,6 @@ pub async fn install_pack_model(
         )));
     }
 
-    let db = &state.base.db;
     let ledger: Vec<LedgerRow> = sqlx::query_as(
         "SELECT kind, name, content_hash, status FROM pack_model_object WHERE pack = $1",
     )
@@ -155,7 +169,10 @@ pub async fn install_pack_model(
         let existing = store::published_state(db, kind_name, pack, &object.name).await?;
         let label = format!("{kind_name}/{}", object.name);
         let Some(existing) = existing else {
-            let id = Uuid::now_v7();
+            let id = new_ids
+                .get(&(kind_name.to_owned(), object.name.clone()))
+                .copied()
+                .unwrap_or_else(Uuid::now_v7);
             save(&mut tx, item, id).await?;
             to_publish.push((item, id, hash));
             continue;
@@ -255,6 +272,213 @@ pub async fn install_pack_model(
         refresh_cooked(state).await?;
     }
     Ok(outcome)
+}
+
+/// Replaces the name references in each file's `doc` (see the module docs)
+/// with ids. Returns the files and the id each of this pack's objects that
+/// does not exist yet will be created with, so the pack's objects can refer
+/// to each other. A reference to nothing is an error naming the file.
+async fn resolve_names(
+    db: &attome_db::DbPool,
+    pack: &str,
+    files: Vec<(String, String)>,
+) -> Result<(Vec<(String, String)>, HashMap<(String, String), Uuid>), AppError> {
+    let mut parsed = Vec::with_capacity(files.len());
+    let mut objects: HashMap<(String, String, String), Uuid> = HashMap::new();
+    let mut new_ids = HashMap::new();
+    for (path, text) in files {
+        let Ok(value) = serde_json::from_str::<Value>(&text) else {
+            // Not JSON: left for the file reader to report.
+            parsed.push((path, text, None));
+            continue;
+        };
+        let field = |key: &str| value[key].as_str().unwrap_or_default().to_owned();
+        let (kind, app, name) = (field("kind"), field("app"), field("name"));
+        if app == pack && !kind.is_empty() && !name.is_empty() {
+            let id = match object_id(db, &kind, &app, &name).await? {
+                Some(id) => id,
+                None => {
+                    let id = Uuid::now_v7();
+                    new_ids.insert((kind.clone(), name.clone()), id);
+                    id
+                }
+            };
+            objects.insert((kind, app, name), id);
+        }
+        parsed.push((path, text, Some(value)));
+    }
+
+    let mut out = Vec::with_capacity(parsed.len());
+    let mut cache: HashMap<String, Uuid> = HashMap::new();
+    for (path, text, value) in parsed {
+        let Some(mut value) = value else {
+            out.push((path, text));
+            continue;
+        };
+        let mut found = Vec::new();
+        collect_references(&value["doc"], &mut found);
+        if found.is_empty() {
+            out.push((path, text));
+            continue;
+        }
+        for reference in found {
+            if cache.contains_key(&reference) {
+                continue;
+            }
+            let id = resolve(db, &reference, &objects).await?.ok_or_else(|| {
+                AppError::Validation(format!(
+                    "pack {pack}: {path} refers to {reference}, which does not exist"
+                ))
+            })?;
+            cache.insert(reference, id);
+        }
+        replace_references(&mut value["doc"], &cache);
+        let text = serde_json::to_string(&value).map_err(AppError::internal)?;
+        out.push((path, text));
+    }
+    Ok((out, new_ids))
+}
+
+/// The kinds of reference a pack file may name besides model objects.
+const NAMED: [&str; 4] = ["entity", "attribute", "view", "query"];
+
+/// `(prefix, rest)` of a string that is a name reference.
+fn split_reference(text: &str) -> Option<(&str, &str)> {
+    let (prefix, rest) = text.strip_prefix('@')?.split_once(':')?;
+    let known = NAMED.contains(&prefix) || kinds().get(prefix).is_some();
+    (known && !rest.is_empty()).then_some((prefix, rest))
+}
+
+fn collect_references(value: &Value, out: &mut Vec<String>) {
+    match value {
+        Value::String(text) if split_reference(text).is_some() => out.push(text.clone()),
+        Value::Array(items) => items.iter().for_each(|v| collect_references(v, out)),
+        Value::Object(map) => map.values().for_each(|v| collect_references(v, out)),
+        _ => {}
+    }
+}
+
+fn replace_references(value: &mut Value, ids: &HashMap<String, Uuid>) {
+    match value {
+        Value::String(text) => {
+            if let Some(id) = ids.get(text.as_str()) {
+                *value = Value::String(id.to_string());
+            }
+        }
+        Value::Array(items) => items.iter_mut().for_each(|v| replace_references(v, ids)),
+        Value::Object(map) => map.values_mut().for_each(|v| replace_references(v, ids)),
+        _ => {}
+    }
+}
+
+async fn object_id(
+    db: &attome_db::DbPool,
+    kind: &str,
+    app: &str,
+    name: &str,
+) -> Result<Option<Uuid>, AppError> {
+    sqlx::query_scalar(
+        "SELECT id FROM metadata_object WHERE kind = $1 AND app = $2 AND name = $3 AND is_active",
+    )
+    .bind(kind)
+    .bind(app)
+    .bind(name)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)
+}
+
+async fn entity_id(db: &attome_db::DbPool, name: &str) -> Result<Option<Uuid>, AppError> {
+    sqlx::query_scalar(
+        "SELECT id FROM entity_info WHERE logicalname = $1 AND is_active IS NOT FALSE",
+    )
+    .bind(name)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// The id a name reference stands for, if it exists.
+async fn resolve(
+    db: &attome_db::DbPool,
+    reference: &str,
+    pack_objects: &HashMap<(String, String, String), Uuid>,
+) -> Result<Option<Uuid>, AppError> {
+    let Some((prefix, rest)) = split_reference(reference) else {
+        return Ok(None);
+    };
+    match prefix {
+        "entity" => entity_id(db, rest).await,
+        "attribute" => {
+            let Some((entity, field)) = rest.split_once('.') else {
+                return Ok(None);
+            };
+            let Some(entity) = entity_id(db, entity).await? else {
+                return Ok(None);
+            };
+            sqlx::query_scalar(
+                "SELECT id FROM attribute_info \
+                 WHERE entity_ref = $1 AND logicalname = $2 AND is_active IS NOT FALSE",
+            )
+            .bind(entity)
+            .bind(field)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)
+        }
+        "view" => {
+            let Some((entity, name)) = rest.split_once('/') else {
+                return Ok(None);
+            };
+            let Some(entity) = entity_id(db, entity).await? else {
+                return Ok(None);
+            };
+            sqlx::query_scalar(
+                "SELECT id FROM view \
+                 WHERE entity_logical_name = $1 AND name = $2 AND is_active \
+                   AND scope IN ('system', 'shared') \
+                 ORDER BY id LIMIT 1",
+            )
+            .bind(entity)
+            .bind(name)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)
+        }
+        "query" => {
+            let Some((entity, name)) = rest.split_once('/') else {
+                return Ok(None);
+            };
+            let entity = if entity.is_empty() {
+                None
+            } else {
+                match entity_id(db, entity).await? {
+                    Some(id) => Some(id),
+                    None => return Ok(None),
+                }
+            };
+            sqlx::query_scalar(
+                "SELECT id FROM sql_query \
+                 WHERE record_no = $1 AND entity_logical_name IS NOT DISTINCT FROM $2 \
+                   AND (is_active IS NULL OR is_active = true) \
+                 ORDER BY created_at DESC NULLS LAST, id DESC LIMIT 1",
+            )
+            .bind(name)
+            .bind(entity)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)
+        }
+        kind => {
+            let Some((app, name)) = rest.split_once('/') else {
+                return Ok(None);
+            };
+            match pack_objects.get(&(kind.to_owned(), app.to_owned(), name.to_owned())) {
+                Some(id) => Ok(Some(*id)),
+                None => object_id(db, kind, app, name).await,
+            }
+        }
+    }
 }
 
 /// Saves `item` as the draft of object `id` on the pack's layer. No person
