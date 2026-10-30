@@ -148,11 +148,14 @@ pub async fn request_sandbox(
     .bind(ctx.user_id)
     .fetch_one(&mut *tx)
     .await
-    .map_err(|e| match &e {
-        sqlx::Error::Database(db) if db.code().as_deref() == Some("23505") => {
+    .map_err(|e| {
+        let taken =
+            matches!(&e, sqlx::Error::Database(db) if db.code().as_deref() == Some("23505"));
+        if taken {
             AppError::Conflict("a copy with this name is queued, running or made")
+        } else {
+            AppError::internal(e)
         }
-        _ => AppError::internal(e),
     })?;
     attome_jobs::enqueue_in_tx(
         &mut tx,
