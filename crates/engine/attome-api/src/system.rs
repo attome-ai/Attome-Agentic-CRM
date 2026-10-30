@@ -200,6 +200,7 @@ impl EngineSystem {
             .merge(crate::business_rule_admin::routes())
             .merge(crate::expression_admin::routes())
             .merge(crate::metadata_label_admin::routes())
+            .merge(crate::exchange_rates::routes())
             .merge(
                 // P-environment-promotion: the bundle engine's admin surface
                 // (export / plan / apply / status / drift) and the break-glass

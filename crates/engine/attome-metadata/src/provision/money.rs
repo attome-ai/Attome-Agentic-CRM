@@ -8,7 +8,9 @@
 //! fills it with the base currency when a write names none and rounds the
 //! amount to the currency's decimals. Reconciling a money attribute ensures
 //! its companion; [`backfill_currency_companions`] adds the companion to
-//! money attributes made before A19-T1, at boot.
+//! money attributes made before A19-T1, at boot. A19-T3: a money attribute
+//! whose options carry `fx` also gets `<field>_base` and `<field>_rate`
+//! ([`ensure_conversion`]).
 
 use attome_core::money::{BASE_CURRENCY_SETTING, DEFAULT_BASE_CURRENCY, companion};
 use attome_core::quote_ident;
@@ -90,6 +92,81 @@ pub(super) async fn ensure_companion(
             .await?;
     if outcome == ReconcileOutcome::Created {
         backfill_base_currency(db, entity_id, field, &name).await?;
+    }
+    Ok(())
+}
+
+/// A19-T3: ensures the number attributes `<field>_base` (the amount in the
+/// base currency) and `<field>_rate` (the rate used) beside a money
+/// attribute whose options ask for conversion, under the money attribute's
+/// policy and layer. The record write path fills them; amounts stored
+/// before are converted on their next write. A name already taken by an
+/// attribute of another type is left alone, with a warning, and the amount
+/// is then not converted.
+pub(super) async fn ensure_conversion(
+    db: &DbPool,
+    entity_id: Uuid,
+    field: &str,
+    display_name: &str,
+    policy: ReconcilePolicy,
+    rec: Option<RecordAs<'_>>,
+) -> Result<(), AppError> {
+    for (name, label, purpose) in [
+        (
+            attome_core::fx::base_field(field),
+            format!("{display_name} (base currency)"),
+            format!("A19-T3: {field} in the base currency"),
+        ),
+        (
+            attome_core::fx::rate_field(field),
+            format!("{display_name} rate"),
+            format!("A19-T3: the exchange rate {field}'s base amount used"),
+        ),
+    ] {
+        if !valid_identifier(&name) {
+            tracing::warn!(%entity_id, %field, "money field name too long for its conversion attributes");
+            return Ok(());
+        }
+        let taken: Option<i32> = sqlx::query_scalar(
+            r#"SELECT COALESCE("type", 3) FROM attribute_info
+                WHERE entity_ref = $1 AND logicalname = $2
+                  AND (is_active IS NULL OR is_active = true)
+                LIMIT 1"#,
+        )
+        .bind(entity_id)
+        .bind(&name)
+        .fetch_optional(db)
+        .await
+        .map_err(AppError::internal)?;
+        if taken.is_some_and(|t| t != attome_core::FieldType::Number.to_int()) {
+            tracing::warn!(
+                %entity_id, %field, attribute = %name,
+                "a conversion attribute name is taken by an attribute of another type; the amount is not converted"
+            );
+            return Ok(());
+        }
+        let desc = AttributeDesc {
+            logicalname: name,
+            display_name: label,
+            field_type: "number".to_owned(),
+            is_required: false,
+            is_sensitive: false,
+            is_write_restricted: None,
+            is_sortable: false,
+            is_filterable: true,
+            lookup_entity: None,
+            options: None,
+            max_length: None,
+            on_target_delete: None,
+            data_classification: None,
+            purpose: Some(purpose),
+        };
+        let rec = rec.map(|r| RecordAs {
+            recording: r.recording,
+            op: None,
+        });
+        super::reconcile::reconcile_attribute_inner(db, entity_id, &desc, None, policy, None, rec)
+            .await?;
     }
     Ok(())
 }

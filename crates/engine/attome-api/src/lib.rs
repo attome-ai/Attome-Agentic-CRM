@@ -73,6 +73,8 @@ mod customer_flags_admin;
 mod customer_test_admin;
 /// A30-T1 — `/api/v1/admin/env-variables`.
 mod env_variable_admin;
+/// A19-T2: `/api/v1/exchange-rates*`, dated exchange rates.
+pub mod exchange_rates;
 /// A20-T2: agent-drafted label translations for review.
 pub mod label_drafts;
 /// AA9-T6 — the limits registry, its values and use.

@@ -63,6 +63,7 @@ arrow-schema.workspace        = true
 bytes.workspace               = true
 chrono.workspace              = true
 chrono-tz.workspace           = true
+rust_decimal.workspace        = true
 ed25519-dalek.workspace       = true
 fred.workspace                = true
 futures-util.workspace        = true

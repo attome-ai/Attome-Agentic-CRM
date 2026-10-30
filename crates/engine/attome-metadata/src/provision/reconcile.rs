@@ -890,6 +890,12 @@ pub(super) async fn reconcile_attribute_with_lookup_ref(
     desired_id: Option<Uuid>,
     rec: Option<RecordAs<'_>>,
 ) -> Result<(Uuid, ReconcileOutcome), AppError> {
+    // A19-T3: a money attribute's conversion options are checked before
+    // anything is written.
+    let converts = desc.field_type == "currency"
+        && attome_core::fx::Conversion::from_options(desc.options.as_ref())
+            .map_err(AppError::Validation)?
+            .is_some();
     let result = reconcile_attribute_inner(
         db,
         entity_id,
@@ -903,6 +909,18 @@ pub(super) async fn reconcile_attribute_with_lookup_ref(
     // A19-T1: a money amount keeps its currency in the attribute beside it.
     if desc.field_type == "currency" {
         super::money::ensure_companion(
+            db,
+            entity_id,
+            &desc.logicalname,
+            &desc.display_name,
+            policy,
+            rec,
+        )
+        .await?;
+    }
+    // A19-T3: and, when it converts, its base amount and rate.
+    if converts {
+        super::money::ensure_conversion(
             db,
             entity_id,
             &desc.logicalname,

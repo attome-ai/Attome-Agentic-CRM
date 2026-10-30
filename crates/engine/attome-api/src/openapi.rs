@@ -58,6 +58,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         (crate::record_template_routes::openapi_fragment(), "core"),
         (crate::customer_test_admin::openapi_fragment(), "core"),
         (crate::metadata_label_admin::openapi_fragment(), "core"),
+        (crate::exchange_rates::openapi_fragment(), "core"),
         (crate::bundle::routes::openapi_fragment(), "core"),
         (crate::bundle::break_glass::openapi_fragment(), "core"),
         // Solution 7 Phase 1 (D-785) — changeset authoring.

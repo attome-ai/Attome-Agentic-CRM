@@ -11617,3 +11617,404 @@ fn polymorphic_lookup_accepts_only_allowed_live_targets() {
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     })
 }
+
+fn json_request(
+    method: &str,
+    uri: &str,
+    cookie: &str,
+    body: Option<serde_json::Value>,
+) -> Request<Body> {
+    let builder = Request::builder()
+        .method(method)
+        .uri(uri)
+        .header("cookie", cookie);
+    match body {
+        Some(body) => builder
+            .header("content-type", "application/json")
+            .body(Body::from(body.to_string())),
+        None => builder.body(Body::empty()),
+    }
+    .unwrap()
+}
+
+fn rate_of(body: &Value) -> f64 {
+    body["rate"]
+        .as_str()
+        .map(|s| s.parse().expect("decimal string"))
+        .or_else(|| body["rate"].as_f64())
+        .expect("rate")
+}
+
+/// A19-T2: rates entered by hand and imported, the rate that applies on a
+/// day (newest on or before it, the inverse when only the other direction is
+/// stored), and writes refused without the Deployment area.
+// op: POST /api/v1/exchange-rates, POST /api/v1/exchange-rates/import, GET /api/v1/exchange-rates/rate, GET /api/v1/exchange-rates, DELETE /api/v1/exchange-rates/{id}
+#[test]
+fn exchange_rates_store_and_answer_the_rate_for_a_day() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let admin_cookie = seed_admin(&system).await;
+        let user_cookie = session_cookie(seed_user_row(&state.base.db).await);
+        let app = full_app(system);
+
+        // A day range no other run uses: the table outlives a test run.
+        let offset = u64::from(Uuid::now_v7().as_bytes()[15]) * 211
+            + u64::from(Uuid::new_v4().as_bytes()[0]) * 7;
+        let base =
+            chrono::NaiveDate::from_ymd_opt(1900, 1, 1).unwrap() + chrono::Days::new(offset * 10);
+        let day = |n: u64| (base + chrono::Days::new(n)).to_string();
+
+        let res = app
+            .clone()
+            .oneshot(json_request(
+                "POST",
+                "/api/v1/exchange-rates",
+                &user_cookie,
+                Some(
+                    serde_json::json!({"from_currency": "USD", "to_currency": "SAR",
+                    "rate": "3.75", "rate_date": day(0)}),
+                ),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(
+            res.status(),
+            StatusCode::FORBIDDEN,
+            "a plain user cannot enter rates"
+        );
+
+        let res = app
+            .clone()
+            .oneshot(json_request(
+                "POST",
+                "/api/v1/exchange-rates",
+                &admin_cookie,
+                Some(
+                    serde_json::json!({"from_currency": "usd", "to_currency": "SAR",
+                    "rate": "3.75", "rate_date": day(0)}),
+                ),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let manual = body_json(res).await;
+        assert_eq!(manual["from_currency"], "USD");
+        assert_eq!(manual["source"], "manual");
+
+        let res = app
+            .clone()
+            .oneshot(json_request(
+                "POST",
+                "/api/v1/exchange-rates/import",
+                &admin_cookie,
+                Some(serde_json::json!({"source": "sama", "rates": [
+                    {"from_currency": "USD", "to_currency": "SAR", "rate": "3.7510", "rate_date": day(5)},
+                    {"from_currency": "SAR", "to_currency": "KWD", "rate": "0.0820", "rate_date": day(5)}
+                ]})),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        assert_eq!(body_json(res).await["stored"], 2);
+
+        let res = app
+            .clone()
+            .oneshot(json_request(
+                "POST",
+                "/api/v1/exchange-rates/import",
+                &admin_cookie,
+                Some(serde_json::json!({"source": "sama", "rates": [
+                    {"from_currency": "USD", "to_currency": "XXZ", "rate": "1", "rate_date": day(5)}
+                ]})),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(
+            res.status(),
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "an unknown currency refuses the batch"
+        );
+
+        let rate_at = |from: &str, to: &str, n: u64| {
+            json_request(
+                "GET",
+                &format!(
+                    "/api/v1/exchange-rates/rate?from={from}&to={to}&on={}",
+                    day(n)
+                ),
+                &user_cookie,
+                None,
+            )
+        };
+        let res = app.clone().oneshot(rate_at("USD", "SAR", 3)).await.unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let applied = body_json(res).await;
+        assert!((rate_of(&applied) - 3.75).abs() < 1e-9, "{applied}");
+        assert_eq!(applied["rate_date"], day(0));
+
+        let res = app.clone().oneshot(rate_at("USD", "SAR", 9)).await.unwrap();
+        let applied = body_json(res).await;
+        assert!((rate_of(&applied) - 3.751).abs() < 1e-9, "{applied}");
+        assert_eq!(applied["source"], "sama");
+
+        let res = app.clone().oneshot(rate_at("KWD", "SAR", 6)).await.unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let applied = body_json(res).await;
+        assert_eq!(applied["inverted"], true, "{applied}");
+        assert!((rate_of(&applied) - 1.0 / 0.082).abs() < 1e-6, "{applied}");
+
+        let res = app.clone().oneshot(rate_at("KWD", "SAR", 4)).await.unwrap();
+        assert_eq!(
+            res.status(),
+            StatusCode::NOT_FOUND,
+            "nothing on or before the day"
+        );
+
+        let res = app
+            .clone()
+            .oneshot(json_request(
+                "GET",
+                "/api/v1/exchange-rates?from=USD&to=SAR&page=1&page_size=200",
+                &user_cookie,
+                None,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let listed = body_json(res).await;
+        let mine = |id: &Value| {
+            listed["items"]
+                .as_array()
+                .expect("items")
+                .iter()
+                .any(|r| &r["id"] == id)
+        };
+        assert!(mine(&manual["id"]), "{listed}");
+
+        let id = manual["id"].as_str().expect("id");
+        let res = app
+            .clone()
+            .oneshot(json_request(
+                "DELETE",
+                &format!("/api/v1/exchange-rates/{id}"),
+                &admin_cookie,
+                None,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::NO_CONTENT);
+        let res = app.clone().oneshot(rate_at("USD", "SAR", 3)).await.unwrap();
+        assert_eq!(
+            res.status(),
+            StatusCode::NOT_FOUND,
+            "the deleted manual rate no longer applies"
+        );
+    })
+}
+
+fn number_in(value: &Value) -> Option<f64> {
+    value
+        .as_f64()
+        .or_else(|| value.as_str().and_then(|s| s.parse().ok()))
+}
+
+/// A19-T3: a money field with `options.fx` stores its amount in the base
+/// currency and the rate used, on the date attribute's day; a changed day
+/// takes that day's rate; once the stage is `won` the rate stays; with
+/// `missing_rate: block` a write without a rate is refused.
+// op: POST /api/v1/{entity}, PATCH /api/v1/{entity}/{id}, POST /api/v1/exchange-rates/import
+#[test]
+fn fx_convert_stores_base_amounts_at_the_right_rate() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+
+        let base: String = sqlx::query_scalar(
+            "SELECT value #>> '{}' FROM setting \
+              WHERE key = 'core.base_currency' AND scope = 'deployment' AND NOT is_deleted \
+              LIMIT 1",
+        )
+        .fetch_optional(&state.base.db)
+        .await
+        .expect("base currency")
+        .flatten()
+        .unwrap_or_else(|| "USD".to_owned());
+        let foreign = if base == "EUR" { "GBP" } else { "EUR" };
+
+        // A day range no other run uses: the rate table outlives a test run.
+        let offset = u64::from(Uuid::now_v7().as_bytes()[15]) * 233
+            + u64::from(Uuid::new_v4().as_bytes()[1]) * 11;
+        let start =
+            chrono::NaiveDate::from_ymd_opt(1700, 1, 1).unwrap() + chrono::Days::new(offset * 20);
+        let day = |n: u64| (start + chrono::Days::new(n)).to_string();
+
+        let res = app
+            .clone()
+            .oneshot(json_request(
+                "POST",
+                "/api/v1/exchange-rates/import",
+                &admin_cookie,
+                Some(serde_json::json!({"source": "fxtest", "rates": [
+                    {"from_currency": foreign, "to_currency": base, "rate": "4", "rate_date": day(1)},
+                    {"from_currency": foreign, "to_currency": base, "rate": "5", "rate_date": day(10)}
+                ]})),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK, "{}", body_json(res).await);
+
+        let (logicalname, entity_id) = create_entity(&app, &admin_cookie, "fxc").await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            r#"{"logicalname":"closed_on","name":"Closed on","field_type":"date"}"#,
+        )
+        .await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            r#"{"logicalname":"stage","name":"Stage","field_type":"text"}"#,
+        )
+        .await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            r#"{"logicalname":"amount","name":"Amount","field_type":"currency",
+                "options":{"fx":{"rate_date":"attribute:closed_on",
+                  "lock_at_stage":{"attribute":"stage","values":["won"]},
+                  "missing_rate":"block"}}}"#,
+        )
+        .await;
+        sync_registry(&state).await;
+
+        let send = |method: &str, uri: String, version: Option<i64>, body: Value| {
+            let mut builder = Request::builder()
+                .method(method)
+                .uri(uri)
+                .header("cookie", &admin_cookie)
+                .header("content-type", "application/json");
+            if let Some(version) = version {
+                builder = builder.header("if-match", format!("\"{version}\""));
+            }
+            builder.body(Body::from(body.to_string())).unwrap()
+        };
+
+        let res = app
+            .clone()
+            .oneshot(send(
+                "POST",
+                format!("/api/v1/{logicalname}"),
+                None,
+                serde_json::json!({"amount": 100, "amount_currency": foreign,
+                    "closed_on": day(2), "stage": "open"}),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let created = body_json(res).await;
+        assert_eq!(
+            number_in(&created["data"]["amount_base"]),
+            Some(400.0),
+            "{created}"
+        );
+        assert_eq!(
+            number_in(&created["data"]["amount_rate"]),
+            Some(4.0),
+            "{created}"
+        );
+        let id = created["id"].as_str().expect("id").to_owned();
+        let mut version = created["row_version"].as_i64().expect("row_version");
+
+        let patch = |body: Value, version: i64| {
+            app.clone().oneshot(send(
+                "PATCH",
+                format!("/api/v1/{logicalname}/{id}"),
+                Some(version),
+                body,
+            ))
+        };
+
+        // A later day takes that day's rate, with the amount unchanged.
+        let res = patch(serde_json::json!({"closed_on": day(12)}), version)
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let updated = body_json(res).await;
+        assert_eq!(
+            number_in(&updated["data"]["amount_base"]),
+            Some(500.0),
+            "{updated}"
+        );
+        version = updated["row_version"].as_i64().expect("row_version");
+
+        // Won: the rate locks.
+        let res = patch(serde_json::json!({"stage": "won"}), version)
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        version = body_json(res).await["row_version"]
+            .as_i64()
+            .expect("row_version");
+        let res = patch(
+            serde_json::json!({"closed_on": day(3), "amount": 200}),
+            version,
+        )
+        .await
+        .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let locked = body_json(res).await;
+        assert_eq!(
+            number_in(&locked["data"]["amount_rate"]),
+            Some(5.0),
+            "{locked}"
+        );
+        assert_eq!(
+            number_in(&locked["data"]["amount_base"]),
+            Some(1000.0),
+            "{locked}"
+        );
+
+        // No rate on or before the day: refused.
+        let res = app
+            .clone()
+            .oneshot(send(
+                "POST",
+                format!("/api/v1/{logicalname}"),
+                None,
+                serde_json::json!({"amount": 1, "amount_currency": foreign,
+                    "closed_on": day(0)}),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        let refused = body_json(res).await;
+        assert!(
+            refused.to_string().contains("missing_rate"),
+            "the refusal names the missing rate: {refused}"
+        );
+
+        // A malformed conversion option is refused when the field is made.
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!("/api/v1/admin/entities/{entity_id}/fields"))
+            .header("cookie", &admin_cookie)
+            .header("content-type", "application/json")
+            .body(Body::from(
+                r#"{"logicalname":"fee","name":"Fee","field_type":"currency",
+                    "options":{"fx":{"rate_date":"yesterday"}}}"#,
+            ))
+            .unwrap();
+        let res = app.clone().oneshot(req).await.unwrap();
+        assert!(
+            res.status().is_client_error(),
+            "a bad fx option is refused: {}",
+            res.status()
+        );
+    })
+}

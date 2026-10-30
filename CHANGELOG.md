@@ -14,6 +14,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Dated exchange rates (A19-T2): `exchange_rate` (migration 0337) and `/api/v1/exchange-rates` to
+  look up the rate on a day, list, enter, import from a source and delete rates; the setting
+  `core.fx_source` names the preferred source. See `docs/money.md`.
+- A money attribute with the option `fx` (A19-T3) also stores its amount in the base currency
+  (`<name>_base`) and the rate used (`<name>_rate`), at the rate of the record's day, a date
+  attribute's day or today; the rate can lock at a stage, and a missing rate warns or refuses the
+  write. See `docs/money.md`.
 - `POST /api/v1/composite` takes `all_or_none: true` (S1-T8): every operation runs in one
   transaction and commits together with its own audit event, or the first failure rolls them all
   back and every result carries `rolled_back: true` (the failing one its error, later ones 424).

@@ -1218,6 +1218,17 @@ fn core_settings() -> Vec<SettingDescriptor> {
             || json!(""),
         ),
         SettingDescriptor::new(
+            "core.fx_source",
+            "The exchange-rate source preferred when two sources published a \
+             rate for the same pair and day (A19-T2): `manual` for rates an \
+             administrator entered, or the source name an import used. Empty: \
+             no preference.",
+            || json!({"type": "string", "pattern": "^([a-z0-9_.-]{1,64})?$"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(""),
+        ),
+        SettingDescriptor::new(
             "email.tracking.enabled",
             "Whether outgoing record email carries tracked links and an open \
              pixel (D16-T1). A contact, lead or account who withdrew the \
