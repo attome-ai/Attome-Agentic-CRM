@@ -13,8 +13,15 @@
 //! `entity_crud::staged`, and they commit together with one audit event
 //! each; the first that fails rolls them all back, and every result is
 //! marked `rolled_back`.
+//!
+//! S1-T9: a create may carry `children`, the records to create with it,
+//! keyed `<child_entity>.<lookup_attribute>`: each becomes a create right
+//! after its parent, named `<parent_ref>_c<n>`, with the lookup set to the
+//! parent ([`expand_children`]). The lookup must point at the parent's
+//! entity, children go one level deep, the expanded request holds at most
+//! [`MAX_EXPANDED_OPERATIONS`], and a request with children is all or none.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use attome_core::EngineState;
 use attome_security::SecurityContextExt;
@@ -28,6 +35,10 @@ use uuid::Uuid;
 
 /// The most operations one request carries.
 pub const MAX_OPERATIONS: usize = 25;
+
+/// S1-T9: the most operations one request carries once its children are
+/// expanded.
+pub const MAX_EXPANDED_OPERATIONS: usize = 100;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
@@ -52,6 +63,12 @@ pub struct CompositeOp {
     /// The record's `row_version`; required for update.
     pub if_match: Option<i64>,
     pub body: Option<Value>,
+    /// S1-T9: records created with this one (create only), keyed
+    /// `<child_entity>.<lookup_attribute>`, each a child record's body; the
+    /// lookup is set to this record. The request then runs all or none.
+    #[serde(default)]
+    #[schema(value_type = Option<Object>)]
+    pub children: Option<BTreeMap<String, Vec<Value>>>,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -116,6 +133,85 @@ fn validate(request: &CompositeRequest) -> Result<(), AppError> {
         }
     }
     Ok(())
+}
+
+/// S1-T9: `ops` with each create's `children` turned into creates right
+/// after it, named `<parent_ref>_c<n>`, the lookup attribute set to
+/// `${<parent_ref>.id}`. `links(child_entity, attribute, parent_entity)`
+/// answers whether `attribute` of `child_entity` is a lookup to
+/// `parent_entity`. Refuses children on anything but a create, a key that is
+/// not `<entity>.<attribute>`, a lookup to another entity, a child that is
+/// not an object, and more than [`MAX_EXPANDED_OPERATIONS`] in all. Pure.
+pub fn expand_children(
+    ops: Vec<CompositeOp>,
+    links: impl Fn(&str, &str, &str) -> bool,
+) -> Result<Vec<CompositeOp>, AppError> {
+    let mut out = Vec::with_capacity(ops.len());
+    for mut op in ops {
+        let Some(children) = op.children.take() else {
+            out.push(op);
+            continue;
+        };
+        if op.method != CompositeMethod::Create {
+            return Err(AppError::Validation(format!(
+                "{}: children go only with a create",
+                op.reference
+            )));
+        }
+        let parent_ref = op.reference.clone();
+        let parent_entity = op.entity.clone();
+        out.push(op);
+        let mut n = 0;
+        for (key, bodies) in children {
+            let Some((child_entity, attribute)) = key
+                .split_once('.')
+                .filter(|(e, a)| !e.is_empty() && !a.is_empty())
+            else {
+                return Err(AppError::Validation(format!(
+                    "{parent_ref}: children are keyed <child_entity>.<lookup_attribute>, not {key:?}"
+                )));
+            };
+            if !links(child_entity, attribute, &parent_entity) {
+                return Err(AppError::Validation(format!(
+                    "{parent_ref}: {key} is not a lookup to {parent_entity}"
+                )));
+            }
+            for body in bodies {
+                let Value::Object(mut body) = body else {
+                    return Err(AppError::Validation(format!(
+                        "{parent_ref}: each child in {key} is an object"
+                    )));
+                };
+                n += 1;
+                body.insert(
+                    attribute.to_owned(),
+                    Value::String(format!("${{{parent_ref}.id}}")),
+                );
+                out.push(CompositeOp {
+                    reference: format!("{parent_ref}_c{n}"),
+                    method: CompositeMethod::Create,
+                    entity: child_entity.to_owned(),
+                    id: None,
+                    if_match: None,
+                    body: Some(Value::Object(body)),
+                    children: None,
+                });
+            }
+        }
+    }
+    if out.len() > MAX_EXPANDED_OPERATIONS {
+        return Err(AppError::Validation(format!(
+            "a composite request carries at most {MAX_EXPANDED_OPERATIONS} operations with its children"
+        )));
+    }
+    let mut seen = HashSet::new();
+    if let Some(dup) = out.iter().find(|op| !seen.insert(op.reference.as_str())) {
+        return Err(AppError::Validation(format!(
+            "ref {:?} is used twice (a child of an earlier operation is named so)",
+            dup.reference
+        )));
+    }
+    Ok(out)
 }
 
 /// The value `${ref.field}` names: the result's own field, else the
@@ -461,7 +557,7 @@ async fn run_all_or_none(
 
 /// Run several record operations
 ///
-/// Up to 25 creates, updates and deletes in order, each on its own; a later one may use an earlier one's result through ${ref.field}. With all_or_none, they run in one transaction and the first failure rolls them all back. One result per operation.
+/// Up to 25 creates, updates and deletes in order, each on its own; a later one may use an earlier one's result through ${ref.field}. With all_or_none, they run in one transaction and the first failure rolls them all back. A create may carry children, created with it and pointing at it; such a request is all or none. One result per operation.
 #[utoipa::path(
     post,
     path = "/api/v1/composite",
@@ -472,7 +568,7 @@ async fn run_all_or_none(
     responses(
         (status = 200, description = "One result per operation, in order", body = CompositeResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
-        (status = 422, description = "The request's own shape is wrong (count or refs)", body = ErrorResponse),
+        (status = 422, description = "The request's own shape is wrong (count, refs, or children: not on a create, not a lookup to the parent, or more than 100 operations once expanded)", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
@@ -482,13 +578,34 @@ pub async fn composite(
     Json(request): Json<CompositeRequest>,
 ) -> Result<Json<CompositeResponse>, AppError> {
     validate(&request)?;
-    if request.all_or_none {
-        let results = run_all_or_none(&state, &ctx, &request.operations).await?;
+    let CompositeRequest {
+        all_or_none,
+        operations,
+    } = request;
+    // S1-T9: children become creates, and the request all or none.
+    let has_children = operations.iter().any(|op| op.children.is_some());
+    let operations = if has_children {
+        let registry = state.entities.load();
+        expand_children(operations, |child, attribute, parent| {
+            let Some(parent) = registry.get(parent) else {
+                return false;
+            };
+            registry.get(child).is_some_and(|c| {
+                c.attrs.iter().any(|a| {
+                    a.logicalname == attribute && a.lookup_entity_ref == Some(parent.entity_id)
+                })
+            })
+        })?
+    } else {
+        operations
+    };
+    if all_or_none || has_children {
+        let results = run_all_or_none(&state, &ctx, &operations).await?;
         return Ok(Json(CompositeResponse { results }));
     }
     let mut results: HashMap<String, Value> = HashMap::new();
-    let mut out = Vec::with_capacity(request.operations.len());
-    for op in &request.operations {
+    let mut out = Vec::with_capacity(operations.len());
+    for op in &operations {
         match run_one(&state, &ctx, op, &results).await {
             Ok((status, body)) => {
                 results.insert(op.reference.clone(), body.clone());
@@ -549,7 +666,89 @@ mod tests {
             id: None,
             if_match: None,
             body: None,
+            children: None,
         }
+    }
+
+    fn with_children(reference: &str, entity: &str, children: Value) -> CompositeOp {
+        CompositeOp {
+            entity: entity.into(),
+            body: Some(json!({"number": "SO-1"})),
+            children: Some(serde_json::from_value(children).expect("children")),
+            ..op(reference)
+        }
+    }
+
+    /// `order_line.order_ref` and `order_note.order_ref` look up `order`.
+    fn order_links(child: &str, attribute: &str, parent: &str) -> bool {
+        parent == "order"
+            && attribute == "order_ref"
+            && matches!(child, "order_line" | "order_note")
+    }
+
+    #[test]
+    fn expand_children_links_children_to_parent() {
+        let ops = vec![
+            with_children(
+                "o",
+                "order",
+                json!({
+                    "order_line.order_ref": [{"sku": "A", "qty": 1}, {"sku": "B", "qty": 2}],
+                    "order_note.order_ref": [{"text": "gift"}]
+                }),
+            ),
+            op("after"),
+        ];
+        let expanded = expand_children(ops, order_links).expect("expand");
+        let refs: Vec<&str> = expanded.iter().map(|o| o.reference.as_str()).collect();
+        assert_eq!(refs, ["o", "o_c1", "o_c2", "o_c3", "after"]);
+        assert!(expanded.iter().all(|o| o.children.is_none()));
+        assert_eq!(expanded[1].entity, "order_line");
+        assert_eq!(expanded[1].method, CompositeMethod::Create);
+        assert_eq!(
+            expanded[1].body,
+            Some(json!({"sku": "A", "qty": 1, "order_ref": "${o.id}"}))
+        );
+        assert_eq!(expanded[3].entity, "order_note");
+        assert_eq!(expanded[3].body.as_ref().unwrap()["order_ref"], "${o.id}");
+    }
+
+    #[test]
+    fn expand_children_rejects_wrong_lookup_target() {
+        let wrong_target = vec![with_children(
+            "a",
+            "account",
+            json!({"order_line.order_ref": [{"sku": "A"}]}),
+        )];
+        assert!(expand_children(wrong_target, order_links).is_err());
+        let not_a_lookup = vec![with_children(
+            "o",
+            "order",
+            json!({"order_line.sku": [{"qty": 1}]}),
+        )];
+        assert!(expand_children(not_a_lookup, order_links).is_err());
+        let bad_key = vec![with_children("o", "order", json!({"order_line": [{}]}))];
+        assert!(expand_children(bad_key, order_links).is_err());
+        let mut on_update = with_children("o", "order", json!({"order_line.order_ref": [{}]}));
+        on_update.method = CompositeMethod::Update;
+        assert!(expand_children(vec![on_update], order_links).is_err());
+        let not_object = vec![with_children(
+            "o",
+            "order",
+            json!({"order_line.order_ref": ["A"]}),
+        )];
+        assert!(expand_children(not_object, order_links).is_err());
+        let clash = vec![
+            with_children("o", "order", json!({"order_line.order_ref": [{}]})),
+            op("o_c1"),
+        ];
+        assert!(expand_children(clash, order_links).is_err());
+        let too_many = vec![with_children(
+            "o",
+            "order",
+            json!({"order_line.order_ref": vec![json!({}); MAX_EXPANDED_OPERATIONS]}),
+        )];
+        assert!(expand_children(too_many, order_links).is_err());
     }
 
     #[test]

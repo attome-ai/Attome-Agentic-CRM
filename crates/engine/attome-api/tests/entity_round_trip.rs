@@ -12018,3 +12018,97 @@ fn fx_convert_stores_base_amounts_at_the_right_rate() {
         );
     })
 }
+
+/// S1-T9: one composite create carries its children: the parent and every
+/// child are created together, each child pointing at the parent; when one
+/// child fails, none of them is kept. A lookup to another entity is refused.
+// op: POST /api/v1/composite
+#[test]
+fn create_order_with_lines_in_one_call() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+        let (order, line) = all_or_none_fixture(&app, &admin_cookie, &state, "ordl").await;
+        let key = format!("{line}.parent_ref");
+
+        let res = app
+            .clone()
+            .oneshot(composite_request(
+                &admin_cookie,
+                serde_json::json!({"operations": [
+                    {"ref": "o", "method": "create", "entity": order, "body": {"title": "SO-1"},
+                     "children": {key.clone(): [{}, {}, {}]}}
+                ]}),
+            ))
+            .await
+            .expect("composite");
+        assert_eq!(res.status(), StatusCode::OK);
+        let body = body_json(res).await;
+        let results = body["results"].as_array().expect("results");
+        let refs: Vec<&str> = results.iter().filter_map(|r| r["ref"].as_str()).collect();
+        assert_eq!(refs, ["o", "o_c1", "o_c2", "o_c3"], "{body}");
+        assert!(results.iter().all(|r| r["status"] == 201), "{body}");
+        let order_id = results[0]["body"]["id"]
+            .as_str()
+            .expect("order id")
+            .to_owned();
+        for child in &results[1..] {
+            assert_eq!(
+                child["body"]["data"]["parent_ref"],
+                order_id.as_str(),
+                "{body}"
+            );
+        }
+        let lines: i64 = sqlx::query_scalar(&format!(
+            "SELECT COUNT(*) FROM \"{line}\" WHERE parent_ref = $1::uuid"
+        ))
+        .bind(&order_id)
+        .fetch_one(&state.base.db)
+        .await
+        .expect("count lines");
+        assert_eq!(lines, 3);
+
+        // One bad child: nothing is kept, though all_or_none was not asked for.
+        let res = app
+            .clone()
+            .oneshot(composite_request(
+                &admin_cookie,
+                serde_json::json!({"operations": [
+                    {"ref": "o", "method": "create", "entity": order, "body": {"title": "SO-2"},
+                     "children": {key.clone(): [{}, {"no_such_field": 1}]}}
+                ]}),
+            ))
+            .await
+            .expect("composite");
+        assert_eq!(res.status(), StatusCode::OK);
+        let body = body_json(res).await;
+        let results = body["results"].as_array().expect("results");
+        assert!(
+            results.iter().all(|r| r["rolled_back"] == true),
+            "every result is rolled back: {body}"
+        );
+        let orders: i64 = sqlx::query_scalar(&format!(
+            "SELECT COUNT(*) FROM \"{order}\" WHERE title = 'SO-2'"
+        ))
+        .fetch_one(&state.base.db)
+        .await
+        .expect("count orders");
+        assert_eq!(orders, 0, "the parent of a failed child is not kept");
+
+        // A lookup that does not point at the parent's entity.
+        let res = app
+            .clone()
+            .oneshot(composite_request(
+                &admin_cookie,
+                serde_json::json!({"operations": [
+                    {"ref": "l", "method": "create", "entity": line, "body": {},
+                     "children": {key.clone(): [{}]}}
+                ]}),
+            ))
+            .await
+            .expect("composite");
+        assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    })
+}

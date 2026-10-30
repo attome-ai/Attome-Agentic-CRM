@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- A create in `POST /api/v1/composite` may carry `children` (S1-T9), keyed
+  `<child_entity>.<lookup_attribute>`: each child is created right after it, pointing at it, as
+  `<ref>_c<n>`; such a request runs all or none, with at most 100 operations once expanded.
 - Dated exchange rates (A19-T2): `exchange_rate` (migration 0337) and `/api/v1/exchange-rates` to
   look up the rate on a day, list, enter, import from a source and delete rates; the setting
   `core.fx_source` names the preferred source. See `docs/money.md`.
