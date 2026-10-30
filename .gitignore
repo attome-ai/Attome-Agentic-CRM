@@ -24,3 +24,6 @@ Thumbs.db
 # Shipped templates (placeholders only) are tracked; they are read by attome-config tests
 !.env.example
 !.env.runtime.example
+# C7-T1: built add-ins, one per deployment.
+/addins/outlook/dist/
+/addins/gmail/dist/

@@ -58,6 +58,11 @@ it), and the first target signed in becomes the default. A command given `--targ
 session and refreshes it when the access token is about to expire; a session that has ended is
 forgotten and the command asks to sign in again.
 
+## The mail add-ins
+
+The Outlook add-in (`attome-outlook`) and the Gmail add-on (`attome-gmail`) sign in the same way and
+keep the session themselves; see `addins/README.md`.
+
 ## What the session is
 
 An ordinary session of the person: their roles and record access, their role's sign-in rules and

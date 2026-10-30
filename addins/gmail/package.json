@@ -1,0 +1,10 @@
+{
+  "name": "attome-gmail-addon",
+  "private": true,
+  "description": "C7-T1: the Attome add-on for Gmail (Apps Script).",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test ../shared/attome-mail-client.test.mjs code.test.mjs"
+  }
+}
