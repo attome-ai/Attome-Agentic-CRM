@@ -1,0 +1,36 @@
+{
+  "app": "partner",
+  "doc": {
+    "audience": "portal",
+    "page_type": "portal",
+    "root": {
+      "children": [
+        {
+          "binding": {
+            "entity": "partner_resource",
+            "where": [
+              {
+                "field": "is_published",
+                "op": "eq",
+                "value": true
+              }
+            ]
+          },
+          "id": "resources",
+          "props": {
+            "title_ar": "الموارد",
+            "title_en": "Resources"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "الموارد",
+    "title_en": "Resources"
+  },
+  "kind": "page",
+  "name": "portal-resources",
+  "schema_version": 1
+}

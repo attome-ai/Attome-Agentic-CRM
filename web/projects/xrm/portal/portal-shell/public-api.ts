@@ -14,6 +14,8 @@ export {
   PortalConsentComponent, PortalHereComponent, PortalLoginComponent, PortalPageHostComponent, PortalProfileComponent, replyOf,
 } from './portal-pages.component';
 export type { ReplyTarget } from './portal-pages.component';
+export { PortalCreateFormComponent, createOf, formFields, valueFor } from './portal-create-form.component';
+export type { CreateTarget, PortalField } from './portal-create-form.component';
 export { PRIVACY_REQUEST_TYPES, PortalPrivacyComponent } from './portal-privacy.component';
 export type { PortalPrivacyRequest } from './portal-privacy.component';
 export { PORTAL_ROWS, PortalPageData, PortalSiteService, portalFilters } from './portal-site.service';

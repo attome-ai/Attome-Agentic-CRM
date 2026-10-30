@@ -6,6 +6,7 @@ import { PageDataService, PageRuntimeComponent } from '@attome/xrm/core/page-run
 import type { PageDoc } from '@attome/xrm/core/page-runtime';
 import { of } from 'rxjs';
 
+import { PortalCreateFormComponent, createOf } from './portal-create-form.component';
 import { PortalConsent, PortalMe, PortalPageData, PortalSiteService } from './portal-site.service';
 
 /** What a record page offers for replying: the entity a reply is, its lookup to the record, its text field. */
@@ -38,7 +39,7 @@ export function replyOf(doc: PageDoc | null): ReplyTarget | null {
   selector: 'xrm-portal-page-host',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PageRuntimeComponent, TranslatePipe],
+  imports: [PageRuntimeComponent, PortalCreateFormComponent, TranslatePipe],
   providers: [
     { provide: PageDataService, useClass: PortalPageData },
     // The portal has no staff schema; the runtime shows field names instead.
@@ -50,6 +51,9 @@ export function replyOf(doc: PageDoc | null): ReplyTarget | null {
     } @else if (doc(); as d) {
       @if (shown()) {
         <xrm-page-runtime [page]="d" [entity]="entityName() ?? undefined" [record]="recordId() ?? undefined" />
+      }
+      @if (create(); as target) {
+        <xrm-portal-create-form [target]="target" (created)="redraw()" />
       }
       @if (reply() && recordId()) {
         <form class="pp-reply" (submit)="$event.preventDefault(); send()">
@@ -84,6 +88,8 @@ export class PortalPageHostComponent {
   readonly entityName = signal<string | null>(null);
   readonly recordId = computed(() => this.id() ?? null);
   readonly reply = computed(() => replyOf(this.doc()));
+  /** AC11-T2 / R1-T2: what the page offers to create (\`props.create\`). */
+  readonly create = computed(() => createOf(this.doc()));
   readonly error = signal<string | null>(null);
   readonly text = signal('');
   readonly busy = signal(false);
@@ -114,6 +120,12 @@ export class PortalPageHostComponent {
     });
   }
 
+  /** Draws the page again, so a list shows what was just written. */
+  redraw(): void {
+    this.shown.set(false);
+    queueMicrotask(() => this.shown.set(true));
+  }
+
   send(): void {
     const target = this.reply();
     const id = this.recordId();
@@ -126,8 +138,7 @@ export class PortalPageHostComponent {
         this.busy.set(false);
         this.text.set('');
         this.sent.set(true);
-        this.shown.set(false);
-        queueMicrotask(() => this.shown.set(true));
+        this.redraw();
       },
       error: (e: ApiError) => {
         this.busy.set(false);

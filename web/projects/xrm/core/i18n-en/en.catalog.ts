@@ -3101,6 +3101,7 @@ export const xrmEn = {
     denied: 'The device was refused.', notFound: 'This code is unknown, already used or expired.',
   },
   portalSite: {
+    create: 'New', submit: 'Submit', created: 'Submitted.',
     privacy: 'My data', privacyType: 'What do you want?', privacySend: 'Send the request',
     privacySent: 'Your request is recorded. We answer it by its deadline.', privacyMine: 'Your requests',
     privacyNone: 'No requests yet.', privacyDue: 'answer due',

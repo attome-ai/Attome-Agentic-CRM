@@ -3023,6 +3023,7 @@ export const xrmAr = {
     denied: 'تم رفض الجهاز.', notFound: 'هذا الرمز غير معروف أو مستخدم أو منتهي الصلاحية.',
   },
   portalSite: {
+    create: 'جديد', submit: 'إرسال', created: 'تم الإرسال.',
     privacy: 'بياناتي', privacyType: 'ماذا تريد؟', privacySend: 'إرسال الطلب',
     privacySent: 'تم تسجيل طلبك، وسنرد عليه ضمن المهلة.', privacyMine: 'طلباتك',
     privacyNone: 'لا توجد طلبات بعد.', privacyDue: 'موعد الرد',

@@ -1,0 +1,47 @@
+{
+  "app": "partner",
+  "doc": {
+    "audience": "portal",
+    "page_type": "portal",
+    "root": {
+      "children": [
+        {
+          "binding": {
+            "entity": "deal_registration"
+          },
+          "events": [
+            {
+              "do": "navigate",
+              "on": "select",
+              "target": "/p/-/portal-deal/{id}"
+            }
+          ],
+          "id": "deals",
+          "props": {
+            "title_ar": "تسجيلات صفقاتي",
+            "title_en": "My deal registrations"
+          },
+          "type": "list"
+        },
+        {
+          "binding": {
+            "entity": "partner_resource"
+          },
+          "id": "resources",
+          "props": {
+            "title_ar": "الموارد",
+            "title_en": "Resources"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "بوابة الشركاء",
+    "title_en": "Partner portal"
+  },
+  "kind": "page",
+  "name": "portal-home",
+  "schema_version": 1
+}

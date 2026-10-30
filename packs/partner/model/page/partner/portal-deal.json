@@ -1,0 +1,40 @@
+{
+  "app": "partner",
+  "doc": {
+    "audience": "portal",
+    "entity": "@entity:deal_registration",
+    "page_type": "record",
+    "root": {
+      "children": [
+        {
+          "binding": {
+            "record": "current"
+          },
+          "id": "details",
+          "props": {
+            "fields": [
+              "customer_name",
+              "customer_account_ref",
+              "product_ref",
+              "amount",
+              "expected_close",
+              "status",
+              "protection_ends_on",
+              "decision_reason"
+            ],
+            "title_ar": "تسجيل الصفقة",
+            "title_en": "Deal registration"
+          },
+          "type": "form"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "تسجيل الصفقة",
+    "title_en": "Deal registration"
+  },
+  "kind": "page",
+  "name": "portal-deal",
+  "schema_version": 1
+}

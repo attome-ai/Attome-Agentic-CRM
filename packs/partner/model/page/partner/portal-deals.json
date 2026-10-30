@@ -1,0 +1,49 @@
+{
+  "app": "partner",
+  "doc": {
+    "audience": "portal",
+    "page_type": "portal",
+    "root": {
+      "children": [
+        {
+          "binding": {
+            "entity": "deal_registration"
+          },
+          "events": [
+            {
+              "do": "navigate",
+              "on": "select",
+              "target": "/p/-/portal-deal/{id}"
+            }
+          ],
+          "id": "deals",
+          "props": {
+            "title_ar": "تسجيلات صفقاتي",
+            "title_en": "My deal registrations"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "props": {
+        "create": {
+          "entity": "deal_registration",
+          "fields": [
+            "partner_account_ref",
+            "customer_name",
+            "customer_account_ref",
+            "product_ref",
+            "amount",
+            "expected_close"
+          ]
+        }
+      },
+      "type": "container"
+    },
+    "title_ar": "تسجيل صفقة",
+    "title_en": "Register a deal"
+  },
+  "kind": "page",
+  "name": "portal-deals",
+  "schema_version": 1
+}
