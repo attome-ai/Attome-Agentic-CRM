@@ -501,7 +501,7 @@ pub(crate) async fn run_sql(
         ..RunOptions::default()
     };
     let started = std::time::Instant::now();
-    let result = run(&state, ctx.get(), &request.sql, options).await;
+    let result = run(&state, &ctx, &request.sql, options).await;
     tracing::info!(
         user_id = %ctx.user_id,
         chars = request.sql.chars().count(),

@@ -196,6 +196,7 @@ async fn write_flag(
 }
 
 /// T6-T4: the flags agent tool's write, the route's own.
+#[derive(Debug, Clone, Copy, Default)]
 pub struct ApiFlagsWriter;
 
 impl attome_core::customer_flags::FlagsWriter for ApiFlagsWriter {

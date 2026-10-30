@@ -217,6 +217,7 @@ pub async fn run_passes(state: &EngineState) {
 }
 
 /// One image near the source.
+#[derive(Debug, Clone)]
 pub struct NearImage {
     pub entity_logicalname: String,
     pub record_id: Uuid,
