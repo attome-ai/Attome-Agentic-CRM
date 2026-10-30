@@ -509,6 +509,57 @@ pub async fn delete_rate(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// A19-T5: one currency a money amount may carry.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct CurrencyRow {
+    /// ISO 4217 code.
+    pub code: String,
+    /// The decimals an amount in it is rounded to.
+    pub decimals: i16,
+    pub symbol: String,
+    pub name: String,
+    /// The deployment's base currency (`core.base_currency`).
+    pub is_base: bool,
+}
+
+/// Currencies
+///
+/// Every currency a money amount may carry, with its decimals and symbol, and which one is the
+/// deployment's base currency. Any signed-in person.
+#[utoipa::path(
+    get,
+    path = "/api/v1/currencies",
+    tag = "money",
+    responses(
+        (status = 200, description = "Every currency, by code, on one page", body = PaginatedResponse<CurrencyRow>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub async fn list_currencies(
+    State(state): State<EngineState>,
+    _ctx: Authorized<SelfService>,
+) -> Result<Json<PaginatedResponse<CurrencyRow>>, AppError> {
+    let base = attome_records::money::base_currency(&state);
+    let rows: Vec<(String, i16, String, String)> =
+        sqlx::query_as("SELECT code::text, decimals, symbol, name FROM currency ORDER BY code")
+            .fetch_all(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    let items: Vec<CurrencyRow> = rows
+        .into_iter()
+        .map(|(code, decimals, symbol, name)| CurrencyRow {
+            is_base: code == base,
+            code,
+            decimals,
+            symbol,
+            name,
+        })
+        .collect();
+    let total = i64::try_from(items.len()).unwrap_or(i64::MAX);
+    Ok(Json(PaginatedResponse::new(items, total, 1, total.max(1))))
+}
+
 /// `GET /api/v1/reports/fx-revaluation` parameters.
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
@@ -763,6 +814,7 @@ pub fn routes() -> Router<EngineState> {
         .route("/api/v1/exchange-rates/import", post(import_rates))
         .route("/api/v1/exchange-rates/{id}", delete(delete_rate))
         .route("/api/v1/reports/fx-revaluation", get(fx_revaluation))
+        .route("/api/v1/currencies", get(list_currencies))
 }
 
 #[derive(utoipa::OpenApi)]
@@ -773,7 +825,8 @@ pub fn routes() -> Router<EngineState> {
         create_rate,
         import_rates,
         delete_rate,
-        fx_revaluation
+        fx_revaluation,
+        list_currencies
     ),
     components(schemas(
         ExchangeRateRow,
@@ -783,7 +836,8 @@ pub fn routes() -> Router<EngineState> {
         ExchangeRateImported,
         AppliedRateResponse,
         Revaluation,
-        RevaluationLine
+        RevaluationLine,
+        CurrencyRow
     ))
 )]
 struct ApiDocFragment;
