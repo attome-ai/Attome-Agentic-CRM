@@ -89,11 +89,11 @@ async fn published(state: &EngineState, filter: ProcessFilter) -> Result<Process
         ProcessFilter::Id(id) => (published_process!("o.id::text = $1"), id.to_string()),
     };
     sqlx::query_as::<_, ProcessRow>(sql)
-    .bind(bind)
-    .fetch_optional(&state.base.db)
-    .await
-    .map_err(AppError::internal)?
-    .ok_or(AppError::NotFound)
+        .bind(bind)
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(AppError::internal)?
+        .ok_or(AppError::NotFound)
 }
 
 enum ProcessFilter {

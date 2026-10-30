@@ -54,12 +54,12 @@ pub async fn assign_open(db: &DbPool, meta: &EntityMeta) -> Result<u64, AppError
             .to_owned()
     };
     let assigned = sqlx::query(&sql)
-    .bind(entity)
-    .bind(DEFAULT_SLA_DAYS)
-    .execute(db)
-    .await
-    .map_err(AppError::internal)?
-    .rows_affected();
+        .bind(entity)
+        .bind(DEFAULT_SLA_DAYS)
+        .execute(db)
+        .await
+        .map_err(AppError::internal)?
+        .rows_affected();
     Ok(assigned)
 }
 

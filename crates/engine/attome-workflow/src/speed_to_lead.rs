@@ -296,11 +296,11 @@ pub async fn rebalance(state: &EngineState) -> Result<usize, AppError> {
         stale_leads!("")
     };
     let leads: Vec<Value> = sqlx::query_scalar(sql)
-    .bind(days as i32)
-    .bind(REBALANCE_BATCH)
-    .fetch_all(db)
-    .await
-    .map_err(AppError::internal)?;
+        .bind(days as i32)
+        .bind(REBALANCE_BATCH)
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?;
     let mut moved = 0;
     for lead in leads {
         let (Some(id), Some(rule_id)) =
