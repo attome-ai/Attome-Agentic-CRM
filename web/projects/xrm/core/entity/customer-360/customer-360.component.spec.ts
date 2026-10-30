@@ -87,6 +87,7 @@ describe('Customer360Component (G15-T1)', () => {
     const link = (fixture.nativeElement as HTMLElement).querySelector('[data-record-page]');
     expect(link?.getAttribute('href')).toContain('/xrm/pages/p360');
     expect(link?.getAttribute('href')).toContain('record=acc1');
+    TestBed.resetTestingModule();
     const contact = create('contact');
     expect((contact.fixture.nativeElement as HTMLElement).querySelector('[data-record-page]')).toBeNull();
   });
