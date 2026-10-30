@@ -1,6 +1,6 @@
-sha256:3aadc90bea713db59cf67ad19375c737cef52a61244930e29b8d4144f7410296{
+{
   "author": "packs",
-  "checksum": "",
+  "checksum": "sha256:3aadc90bea713db59cf67ad19375c737cef52a61244930e29b8d4144f7410296",
   "closed_at": "2026-10-30T00:00:00Z",
   "description": "AC11-T2: partner resources (guides, presentations, price lists, training and marketing material), optionally for one tier, published to partners on the partner portal.",
   "format": "attome-changeset/v1",
