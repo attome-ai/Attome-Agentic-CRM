@@ -368,7 +368,7 @@
                       </div>
                     </div>
 
-                    <div class="xnp-card-body xnp-rich" [innerHTML]="formatNote(activeNote.note_text)"></div>
+                    <div class="xnp-card-body"><xrm-note-text [text]="activeNote.note_text" /></div>
                     <xrm-translate-text [text]="activeNote.note_text" />
 
                     <!-- Attachments -->
@@ -470,7 +470,7 @@
                           </div>
                         </div>
                       } @else {
-                        <div class="xnp-card-body xnp-rich" [innerHTML]="formatNote(reply.note_text)"></div>
+                        <div class="xnp-card-body"><xrm-note-text [text]="reply.note_text" /></div>
                         <xrm-translate-text [text]="reply.note_text" />
                       }
 

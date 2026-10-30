@@ -1034,14 +1034,3 @@
         max-height: 220px;
       }
     }
-
-/* B3-T2: formatted note text, the format bar, drop targets and thumbnails. */
-.xnp-rich { white-space: normal; }
-.xnp-rich ul { margin: .25rem 0; padding-inline-start: 1.25rem; }
-.xnp-rich blockquote { margin: .25rem 0; padding-inline-start: .75rem; border-inline-start: 3px solid var(--color-border, #d0d5dd); color: var(--color-text-secondary, #555); }
-.xnp-rich code { font-family: var(--font-mono, monospace); background: var(--color-surface-muted, #f2f4f7); padding: 0 .25rem; border-radius: 4px; }
-.xnp-mention { color: var(--color-primary, #2563eb); font-weight: 600; }
-.xnp-format-bar { display: flex; gap: .25rem; margin-block-end: .25rem; }
-.xnp-format-btn { border: 1px solid var(--color-border, #d0d5dd); background: transparent; border-radius: 6px; padding: .125rem .375rem; cursor: pointer; }
-.xnp-dropzone-over, .xnp-composer-over { outline: 2px dashed var(--color-primary, #2563eb); outline-offset: 2px; }
-.xnp-att-thumb { inline-size: 2rem; block-size: 2rem; object-fit: cover; border-radius: 4px; }

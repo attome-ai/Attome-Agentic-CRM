@@ -14,7 +14,8 @@ import { EntityService } from '../services/entity.service';
 import { FileUploadService } from '../field/file-upload.service';
 import { UploadPipeline } from '../field/upload-pipeline';
 import { TranslateTextComponent } from '../translate/translate-text.component';
-import { NoteMark, applyMark, filesOf, isPreviewable, renderNoteText } from './note-format';
+import { NoteMark, applyMark, filesOf, isPreviewable } from './note-format';
+import { NoteTextComponent } from './note-text.component';
 import { NoteThreadComponent } from './note-thread.component';
 
 /**
@@ -119,7 +120,7 @@ const EXTENSION_ICONS: Record<string, string> = {
   selector: 'xrm-notes-panel',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, TranslatePipe, TranslateTextComponent, MentionPickerComponent, NoteThreadComponent],
+  imports: [CommonModule, FormsModule, TranslatePipe, TranslateTextComponent, MentionPickerComponent, NoteThreadComponent, NoteTextComponent],
   styleUrls: ['./notes-panel.component.css'],
   templateUrl: './notes-panel.component.html',
 })
@@ -647,8 +648,6 @@ export class NotesPanelComponent implements OnInit {
     this.fetchNotes();
   }
 
-  /** B3-T2: a note's text with its marks formatted, as safe HTML. */
-  readonly formatNote = renderNoteText;
   /** B3-T2: the marks the composer's toolbar offers. */
   readonly marks: readonly NoteMark[] = ['bold', 'italic', 'code', 'list', 'quote'];
   /** B3-T2: which composer a file is being dragged over. */
