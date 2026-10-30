@@ -5277,6 +5277,16 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"shares": []})),
             )
         }
+        // ── A1-T10: time-travel settings (off: no history table to create) ──
+        "PUT /api/v1/admin/time-travel/{entity}" => with_if_match(
+            request(
+                "PUT",
+                &format!("/api/v1/admin/time-travel/{}", fx.entity),
+                t,
+                Some(json!({"enabled": false, "retention_days": 30})),
+            ),
+            0,
+        ),
         // ── search administration (A25-T9) ─────────────────────────────────
         "PUT /api/v1/admin/search/entities/{entity}" => with_if_match(
             request(

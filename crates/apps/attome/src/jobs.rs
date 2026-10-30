@@ -9114,6 +9114,8 @@ async fn ensure_audit_partitions(
             tracing::info!(table = %table, created, "partition create-ahead: new partitions created");
         }
     }
+    // A1-T10: the history tables of entities with time travel on.
+    attome_records::entity_crud::time_travel::maintain(db).await?;
     Ok(())
 }
 

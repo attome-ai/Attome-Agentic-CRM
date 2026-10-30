@@ -14,6 +14,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Time travel per entity (A1-T10), off by default: `GET`/`PUT /api/v1/admin/time-travel/{entity}`
+  switches it on with an optional retention (migration 0339, `entity_time_travel`); every update and
+  delete then keeps the version it replaces in `<entity>__history`, partitioned by month.
+  `GET /api/v1/{entity}/{id}?as_of=` reads the version valid at a moment with the same field
+  security as a current read, and `POST /api/v1/{entity}/{id}/restore-version` writes one back
+  through the ordinary update. See `docs/time-travel.md`.
 - Attached files in search (A25-T6): Excel (`.xlsx`) and email (`.eml`) text is extracted beside
   PDF, Word and plain text; a PDF keeps its pages, and a search hit for a document carries `page`,
   the page the query matches best. A document shows only to someone who can read the record it is

@@ -55,6 +55,8 @@ pub use survivorship::{
     Contribution, SOURCE_SYSTEM_RANK, SourceSystemRank, TieBreak, check_rule_config,
 };
 pub mod tags;
+/// A1-T10: opt-in time travel (history table, as-of reads, restore).
+pub mod time_travel;
 /// U3 (basic-units plan B-R4, D-601): `/{entity}/{id}/timeline`, the
 /// entity-generic record timeline. `pub` so `attome-service`'s ticket route is a
 /// thin caller of it.
@@ -188,6 +190,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(access_explain::openapi_fragment());
     doc.merge(rollup_explain::openapi_fragment());
     doc.merge(history::openapi_fragment());
+    doc.merge(time_travel::openapi_fragment());
     doc.merge(favourites::openapi_fragment());
     doc.merge(clone::openapi_fragment());
     doc.merge(tags::openapi_fragment());
@@ -360,6 +363,14 @@ pub fn routes() -> Router<EngineState> {
         .route(
             "/api/v1/{entity}/{id}/history",
             get(history::get_record_history),
+        )
+        .route(
+            "/api/v1/{entity}/{id}/restore-version",
+            axum::routing::post(time_travel::restore_version_route),
+        )
+        .route(
+            "/api/v1/admin/time-travel/{entity}",
+            get(time_travel::get_time_travel).put(time_travel::put_time_travel),
         )
         .route(
             "/api/v1/{entity}/{id}/shares",

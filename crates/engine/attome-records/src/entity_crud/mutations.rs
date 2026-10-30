@@ -194,12 +194,14 @@ pub async fn field_changes_from_obj(
         ("id" = Uuid, Path, description = "The record"),
         super::response::SelectParam,
         super::expand::ExpandParam,
+        super::time_travel::AsOfParam,
     ),
     responses(
         (status = 200, description = "Success"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
-        (status = 422, description = "Request failed validation", body = ErrorResponse),
+        (status = 404, description = "No such record, or with as_of no version of it then", body = ErrorResponse),
+        (status = 422, description = "Request failed validation, or as_of on an entity without time travel", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
@@ -211,6 +213,7 @@ pub(super) async fn get_record(
     Path((entity_input, record_id)): Path<(String, Uuid)>,
     axum::extract::Query(select): axum::extract::Query<super::response::SelectParam>,
     axum::extract::Query(expand): axum::extract::Query<super::expand::ExpandParam>,
+    axum::extract::Query(as_of): axum::extract::Query<super::time_travel::AsOfParam>,
     headers: axum::http::HeaderMap,
 ) -> Result<axum::response::Response, AppError> {
     let select =
@@ -263,7 +266,10 @@ pub(super) async fn get_record(
     // net win over the single wide SELECT under real traffic before calling
     // this optimization validated â€” see coding-guidelines.md Â§14
     // (performance work is evidence-driven).
-    if let Some(if_none_match) = if_none_match_row_version(&headers) {
+    // A1-T10: an earlier version is never answered with 304.
+    if as_of.as_of.is_none()
+        && let Some(if_none_match) = if_none_match_row_version(&headers)
+    {
         // AA7-T8: the version comes from process memory when this node
         // holds it (access was checked above), else from the probe.
         let current_version =
@@ -293,16 +299,33 @@ pub(super) async fn get_record(
         }
     }
 
-    let response = read_record_projection(
-        &state,
-        &ctx,
-        entity_id,
-        &entity_name,
-        &attrs,
-        record_id,
-        attome_security::field_gate::Surface::Interactive,
-    )
-    .await?;
+    let response = match as_of.as_of {
+        // A1-T10: the version valid then, through the same projection.
+        Some(at) => {
+            super::time_travel::read_as_of(
+                &state,
+                &ctx,
+                entity_id,
+                &entity_name,
+                &attrs,
+                record_id,
+                at,
+            )
+            .await?
+        }
+        None => {
+            read_record_projection(
+                &state,
+                &ctx,
+                entity_id,
+                &entity_name,
+                &attrs,
+                record_id,
+                attome_security::field_gate::Surface::Interactive,
+            )
+            .await?
+        }
+    };
     // A15-T5: a record kept after a merge names the one it was merged into.
     let merged_into: Option<Uuid> = sqlx::query_scalar(attome_db::tagged_sql!(
         "entity.mutations",
@@ -365,10 +388,52 @@ pub(crate) async fn read_record_projection(
     record_id: Uuid,
     surface: attome_security::field_gate::Surface,
 ) -> Result<EntityRecordResponse, AppError> {
+    project_row(
+        state,
+        ctx,
+        entity_id,
+        entity_name,
+        attrs,
+        RowSource::Live(record_id),
+        surface,
+    )
+    .await
+}
+
+/// A1-T10: where [`project_row`] reads a record from.
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum RowSource<'a> {
+    /// The live row with this id.
+    Live(Uuid),
+    /// An earlier image of the row (its whole row as JSON, from the
+    /// entity's history table), read through the table's own row type so
+    /// the same projection, masking and field grants apply to it.
+    Image(&'a Value),
+}
+
+/// [`read_record_projection`] over a [`RowSource`].
+pub(crate) async fn project_row(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_id: Uuid,
+    entity_name: &str,
+    attrs: &[AttrInfo],
+    source: RowSource<'_>,
+    surface: attome_security::field_gate::Surface,
+) -> Result<EntityRecordResponse, AppError> {
     // entity_name is DB-sourced, safe for dynamic SQL; quoted so a
     // logicalname matching a reserved word (order, user, group, ...) still
     // parses.
-    let table = quote_ident(entity_name);
+    let from = match source {
+        RowSource::Live(_) => format!(
+            "{} WHERE id = $1 AND is_active = true",
+            quote_ident(entity_name)
+        ),
+        RowSource::Image(_) => format!(
+            "jsonb_populate_record(NULL::{}, $1::jsonb) AS x",
+            quote_ident(entity_name)
+        ),
+    };
     // P1.12: routes to the readonly pool when configured, unless this caller
     // wrote recently (sticky-primary) â€” see AppState::read_pool.
     let pool = state.base.read_pool(ctx.user_id).await;
@@ -395,13 +460,15 @@ pub(crate) async fn read_record_projection(
             )
         })
     };
-    let sql = format!(
-        "SELECT row_to_json(t) FROM (SELECT {cols} FROM {table} WHERE id = $1 AND is_active = true) t"
-    );
+    let sql = format!("SELECT row_to_json(t) FROM (SELECT {cols} FROM {from}) t");
 
     let sql = attome_db::tag_dynamic("entity.mutations", &sql);
-    let row: Option<Value> = sqlx::query_scalar::<_, Value>(&sql)
-        .bind(record_id)
+    let query = sqlx::query_scalar::<_, Value>(&sql);
+    let query = match source {
+        RowSource::Live(record_id) => query.bind(record_id),
+        RowSource::Image(image) => query.bind(image.clone()),
+    };
+    let row: Option<Value> = query
         .fetch_optional(pool)
         .await
         .map_err(AppError::internal)?;

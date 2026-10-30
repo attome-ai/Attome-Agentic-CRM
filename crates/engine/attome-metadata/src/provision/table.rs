@@ -926,3 +926,56 @@ pub async fn drop_table(db: &DbPool, logicalname: &str) -> Result<(), AppError> 
 
     Ok(())
 }
+
+/// A1-T10: the suffix of an entity's history table.
+pub const HISTORY_SUFFIX: &str = "__history";
+
+/// A1-T10: the longest entity logical name time travel takes, so that the
+/// history table and its monthly partitions (`<entity>__history_pYYYY_MM`)
+/// stay within PostgreSQL's 63-character names.
+pub const MAX_HISTORY_ENTITY_LEN: usize =
+    attome_db::ident::PG_MAX_IDENTIFIER_LEN - HISTORY_SUFFIX.len() - "_p2026_10".len();
+
+/// A1-T10: the history table of `logicalname`, when the name is a valid
+/// identifier no longer than [`MAX_HISTORY_ENTITY_LEN`]. Pure.
+pub fn history_table_name(logicalname: &str) -> Option<String> {
+    (valid_identifier(logicalname) && logicalname.len() <= MAX_HISTORY_ENTITY_LEN)
+        .then(|| format!("{logicalname}{HISTORY_SUFFIX}"))
+}
+
+/// A1-T10: creates `logicalname`'s history table if it is missing:
+/// every earlier version of a record, its whole row as `data`, valid from
+/// `valid_from` until `valid_to`, partitioned by month on `valid_to`
+/// (partitions come from `attome_core::partition_maintenance`). Returns the
+/// table's name. Idempotent; runs on the migrator pool.
+pub async fn provision_history_table(db: &DbPool, logicalname: &str) -> Result<String, AppError> {
+    let table = history_table_name(logicalname).ok_or_else(|| {
+        AppError::Validation(format!(
+            "time travel needs an entity name of at most {MAX_HISTORY_ENTITY_LEN} characters"
+        ))
+    })?;
+    let create = format!(
+        "CREATE TABLE IF NOT EXISTS {t} (id uuid NOT NULL, valid_from timestamptz NOT NULL, \
+         valid_to timestamptz NOT NULL, row_version bigint NOT NULL, changed_by uuid, \
+         data jsonb NOT NULL) PARTITION BY RANGE (valid_to)",
+        t = quote_ident(&table)
+    );
+    match exec_ddl_locked(db, &[], &create).await {
+        Ok(()) => {}
+        Err(e) if is_concurrent_create_race(&e) => {}
+        Err(e) => {
+            tracing::error!(error = %e, table = %table, "CREATE TABLE failed for a history table");
+            return Err(AppError::internal(e));
+        }
+    }
+    let index = format!(
+        "CREATE INDEX IF NOT EXISTS {i} ON {t} (id, valid_to)",
+        i = quote_ident(&format!("{table}_id_idx")),
+        t = quote_ident(&table)
+    );
+    exec_ddl_locked(db, &[], &index).await.map_err(|e| {
+        tracing::error!(error = %e, table = %table, "CREATE INDEX failed for a history table");
+        AppError::internal(e)
+    })?;
+    Ok(table)
+}

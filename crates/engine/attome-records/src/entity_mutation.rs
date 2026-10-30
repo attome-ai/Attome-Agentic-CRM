@@ -3529,6 +3529,9 @@ pub async fn update_one_as(
     // lock — see `lock_hierarchy_entity`'s doc comment for why.
     lock_hierarchy_entity(tx, entity_name, entity_id, attrs, obj).await?;
     guard_hierarchy_cycles(tx, entity_name, entity_id, record_id, attrs, obj).await?;
+    // A1-T10: the version this update replaces, kept when the entity has
+    // time travel on; a version conflict below rolls it back with the rest.
+    crate::entity_crud::time_travel::capture(tx, entity_name, record_id, modified_by).await?;
 
     let version_param = 3 + set_parts.len();
     // Explicit projection, not `SELECT *`/`RETURNING *` (external review,
@@ -4435,6 +4438,9 @@ pub async fn delete_one_as(
         return Err(AppError::Conflict("record is under an active legal hold"));
     }
     require_delete_reason(tx, target_entity_name, origin).await?;
+    // A1-T10: the last live version, kept when the entity has time travel on.
+    crate::entity_crud::time_travel::capture(tx, target_entity_name, record_id, modified_by)
+        .await?;
     let policy = apply_dependents_on_delete(
         tx,
         target_entity_name,

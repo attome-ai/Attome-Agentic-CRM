@@ -117,7 +117,10 @@ pub use schema_change::{
     queue_contract_change_recorded, queue_schema_change_plan, queue_schema_change_plan_in_tx,
     validate_backfill_default,
 };
-pub use table::{backfill_rls_columns, drop_table};
+pub use table::{
+    HISTORY_SUFFIX, MAX_HISTORY_ENTITY_LEN, backfill_rls_columns, drop_table, history_table_name,
+    provision_history_table,
+};
 
 // Not part of the public surface — brought into this module's own namespace
 // (private `use`, not `pub use`) purely so `tests` (a child module of this
