@@ -7961,6 +7961,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/model/apps/{app}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retire an app's objects
+         * @description A21-T4: retires every active object of one app in one transaction and
+         *     refreshes the cooked metadata, so the app stops applying at once. Versions
+         *     are kept, and importing the app again brings the objects back. Entities,
+         *     their records and the fields they added stay. Refused when an object outside
+         *     the app still refers to one. Calling it again retires nothing. Audited.
+         */
+        post: operations["retire_model_app"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/model/blueprint/apply": {
         parameters: {
             query?: never;
@@ -61049,6 +61073,10 @@ export interface components {
             /** @description Defaults to `created_at`. */
             start_attribute?: string | null;
         };
+        /** @description What an app's removal did. */
+        RetireAppResponse: {
+            retired: number;
+        };
         /** @description The revaluation of one money field. */
         Revaluation: {
             /** Format: date */
@@ -92458,6 +92486,65 @@ export interface operations {
                 };
             };
             /** @description Run is not yet approved */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    retire_model_app: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The app's name */
+                app: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description How many objects were retired */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetireAppResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another save of one of the objects is in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `customer` or an app with platform objects, or something outside the app still refers to it */
             422: {
                 headers: {
                     [name: string]: unknown;

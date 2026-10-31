@@ -28280,6 +28280,102 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/model/apps/{app}/retire": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Retire an app's objects",
+        "description": "A21-T4: retires every active object of one app in one transaction and\nrefreshes the cooked metadata, so the app stops applying at once. Versions\nare kept, and importing the app again brings the objects back. Entities,\ntheir records and the fields they added stay. Refused when an object outside\nthe app still refers to one. Calling it again retires nothing. Audited.",
+        "operationId": "retire_model_app",
+        "parameters": [
+          {
+            "name": "app",
+            "in": "path",
+            "description": "The app's name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "How many objects were retired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetireAppResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another save of one of the objects is in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`customer` or an app with platform objects, or something outside the app still refers to it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "soft_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/model/blueprint/apply": {
       "post": {
         "tags": [
@@ -123049,6 +123145,19 @@
           }
         },
         "additionalProperties": false
+      },
+      "RetireAppResponse": {
+        "type": "object",
+        "description": "What an app's removal did.",
+        "required": [
+          "retired"
+        ],
+        "properties": {
+          "retired": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
       },
       "Revaluation": {
         "type": "object",
