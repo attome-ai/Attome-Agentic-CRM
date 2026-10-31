@@ -1,6 +1,8 @@
 //! One module per `attome` subcommand, each with a `run` entry point.
 
 pub mod ai_pack;
+/// AB8-T2: `attome upgrade check|sign-manifest`.
+pub mod app_cmd;
 pub mod audit_chainer;
 pub mod bundle_offline;
 pub mod changeset_replay;
@@ -8,12 +10,12 @@ pub mod changeset_replay;
 pub mod cluster;
 /// U3-T1: `attome cluster create|expand`, a profile installed over SSH.
 pub mod cluster_ssh;
+/// T6-T4: `attome flags list|get|set|off-now`.
+pub mod config_cmd;
 /// T4-T4: `attome data query|export|import`.
 pub mod data;
 /// AB4-T3: drill keys, evidence verification and readiness.
 pub mod drill;
-/// T6-T4: `attome flags list|get|set|off-now`.
-pub mod config_cmd;
 pub mod flags;
 pub mod healthcheck;
 pub mod init;
@@ -26,6 +28,7 @@ pub mod output;
 /// T8-T4: build, publish and install packages.
 pub mod package;
 pub mod preflight;
+pub mod promote;
 pub mod runbook;
 pub mod secrets;
 pub mod service;
@@ -41,9 +44,6 @@ pub mod storage_migrate;
 pub mod supervise;
 /// U8-T1: rolling upgrade with a canary and automatic stop.
 pub mod upgrade;
-/// AB8-T2: `attome upgrade check|sign-manifest`.
-pub mod app_cmd;
-pub mod promote;
 pub mod upgrade_apply;
 pub mod upgrade_check;
 pub mod verify_audit_chain;

@@ -819,9 +819,20 @@ async fn seed_without_an_opinion_leaves_is_write_restricted_alone() {
     .await
     .expect("create entity");
 
+    // The seed creates the row, so `name` stays the seed's: a bundle that
+    // created it would own every property (Y11-T4) and hold the rename below.
+    let (attr_id, outcome) = reconcile_attribute(
+        &db,
+        entity_id,
+        &text_attr("title", "Title"),
+        ReconcilePolicy::Seed,
+    )
+    .await
+    .expect("seed create");
+    assert_eq!(outcome, ReconcileOutcome::Created);
     let mut restricted = text_attr("title", "Title");
     restricted.is_write_restricted = Some(true);
-    let (attr_id, outcome) = reconcile_attribute(
+    let (_, outcome) = reconcile_attribute(
         &db,
         entity_id,
         &restricted,
@@ -830,8 +841,8 @@ async fn seed_without_an_opinion_leaves_is_write_restricted_alone() {
         },
     )
     .await
-    .expect("bundle create");
-    assert_eq!(outcome, ReconcileOutcome::Created);
+    .expect("bundle update");
+    assert_eq!(outcome, ReconcileOutcome::Updated);
     assert!(write_restricted(&db, attr_id).await);
     assert!(
         !attr_probe(&db, entity_id, "title").await.is_customized,

@@ -29,6 +29,7 @@ attome-modules.workspace  = true
 attome-ops.workspace      = true
 attome-partner.workspace  = true
 attome-records.workspace  = true
+attome-search.workspace   = true
 attome-sales = { workspace = true, features = ["test-support"] }
 attome-security.workspace = true
 attome-server.workspace   = true
@@ -62,7 +63,6 @@ attome-ledger.workspace = true
 attome-marketing.workspace = true
 attome-metadata.workspace = true
 attome-metric.workspace = true
-attome-search.workspace = true
 attome-service.workspace = true
 # D4-T1: the lead assignment sweep test.
 attome-workflow.workspace = true

@@ -22,13 +22,16 @@ use uuid::Uuid;
 
 async fn test_db() -> Option<DbPool> {
     let url = attome_testkit::migrated_db_url()?;
-    Some(
-        PgPoolOptions::new()
-            .max_connections(5)
-            .connect(&url)
-            .await
-            .expect("failed to connect to DATABASE_URL"),
-    )
+    let db = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&url)
+        .await
+        .expect("failed to connect to DATABASE_URL");
+    // A grant's audit event needs the audit entities registered.
+    attome_audit::seed(&db)
+        .await
+        .expect("seed audit entities (idempotent)");
+    Some(db)
 }
 
 fn short(id: Uuid) -> String {

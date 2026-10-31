@@ -1937,7 +1937,7 @@ async fn explain_metric(
     let query_name: Option<String> =
         match query_ref.as_deref().and_then(|r| Uuid::parse_str(r).ok()) {
             Some(query_id) => {
-                sqlx::query_scalar::<_, Option<String>>("SELECT name FROM sql_query WHERE id = $1")
+                sqlx::query_scalar::<_, Option<String>>("SELECT record_no FROM sql_query WHERE id = $1")
                     .bind(query_id)
                     .fetch_optional(db)
                     .await
@@ -2014,7 +2014,7 @@ async fn explain_query(
         .or_else(|| uuid(config.get("query_ref")));
     let (query_name, required_privilege) = match query_id {
         Some(id) => sqlx::query_as::<_, (Option<String>, Option<String>)>(
-            "SELECT name, required_privilege FROM sql_query WHERE id = $1",
+            "SELECT record_no, required_privilege FROM sql_query WHERE id = $1",
         )
         .bind(id)
         .fetch_optional(&state.base.db)

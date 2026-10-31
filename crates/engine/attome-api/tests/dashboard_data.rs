@@ -416,7 +416,7 @@ async fn insert_section(db: &PgPool, page_id: Uuid, layout_mode: &str) -> Uuid {
 const STATUSES: [&str; 3] = ["open", "won", "lost"];
 
 /// A throwaway `deal` entity: `status` (single choice), `amount` (number),
-/// `closed_on` (date), `region` (text). Registered in the in-process metadata
+/// `closed_on` (date_time), `region` (text). Registered in the in-process metadata
 /// registry the way `EngineSystem::build` would.
 async fn provision_deals(system: &EngineSystem) -> (String, Uuid) {
     let db = &system.state().base.db;
@@ -432,7 +432,7 @@ async fn provision_deals(system: &EngineSystem) -> (String, Uuid) {
             Some(json!({ "choices": STATUSES, "multi": false })),
         ),
         ("amount", "number", None),
-        ("closed_on", "date", None),
+        ("closed_on", "date_time", None),
         ("region", "text", None),
     ];
     for (name, field_type, options) in attributes {

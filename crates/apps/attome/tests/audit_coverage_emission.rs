@@ -5792,6 +5792,57 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 None,
             )
         }
+        // ── exchange rates (A19-T2) ─────────────────────────────────────────
+        "POST /api/v1/exchange-rates" => request(
+            "POST",
+            "/api/v1/exchange-rates",
+            t,
+            Some(json!({
+                "from_currency": "USD", "to_currency": "AED",
+                "rate": "3.6725", "rate_date": "2026-01-02",
+            })),
+        ),
+        "POST /api/v1/exchange-rates/import" => request(
+            "POST",
+            "/api/v1/exchange-rates/import",
+            t,
+            Some(json!({
+                "source": "emission",
+                "rates": [{
+                    "from_currency": "USD", "to_currency": "SAR",
+                    "rate": "3.75", "rate_date": "2026-01-02",
+                }],
+            })),
+        ),
+        "DELETE /api/v1/exchange-rates/{id}" => {
+            let created = call(
+                fx,
+                request(
+                    "POST",
+                    "/api/v1/exchange-rates",
+                    t,
+                    Some(json!({
+                        "from_currency": "USD", "to_currency": "EUR",
+                        "rate": "0.9", "rate_date": "2026-01-03",
+                    })),
+                ),
+            )
+            .await;
+            let id = created["id"].as_str().expect("the rate's id");
+            request(
+                "DELETE",
+                &format!("/api/v1/exchange-rates/{id}"),
+                t,
+                None,
+            )
+        }
+        // A21-T4: replaying a removal writes its event too.
+        "POST /api/v1/admin/model/apps/{app}/retire" => request(
+            "POST",
+            "/api/v1/admin/model/apps/emission_app/retire",
+            t,
+            None,
+        ),
         // ── caches (Z3-T9) ──────────────────────────────────────────────────
         "POST /api/v1/admin/caches/{name}/purge" => {
             // A cache built in this process, so the purge finds it here.

@@ -364,7 +364,7 @@ pub async fn current_spec(
            JOIN dashboard_metric_definition m ON m.id = s.metric_ref \
            JOIN sql_query q ON q.id::text = m.query_ref \
           WHERE s.metric_ref = $1 AND m.source_kind = 'query' \
-            AND q.name = $2 AND q.is_active = true",
+            AND q.record_no = $2 AND q.is_active = true",
     )
     .bind(metric_id)
     .bind(builder_query_name(metric_id))

@@ -304,10 +304,9 @@ pub async fn resolve_widget_context<'a>(
     if data_class == DataClass::Kpi {
         let refs = crate::execution::kpi_metric_refs(widget);
         if let [metric_id] = refs.as_slice()
-            && matches!(
-                attome_metric::builder::current_spec(&state.base.db, *metric_id).await,
-                Ok(Some(_))
-            )
+            && attome_metric::builder::current_spec(&state.base.db, *metric_id)
+                .await?
+                .is_some()
         {
             drillability = Drillability::Exact;
         }

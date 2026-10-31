@@ -264,6 +264,8 @@ async fn build_with(config: AppConfig) -> Option<TestApp> {
         .register(attome_partner::PartnerModel)
         .register(attome_sales::SalesModel)
         .register(attome_docgen::model::DocgenModel)
+        // A25: the search settings and facet routes `search_settings` calls.
+        .register(attome_search::SearchModel)
         .build()
         .await
         .expect("build the engine system");
@@ -283,6 +285,9 @@ async fn build_with(config: AppConfig) -> Option<TestApp> {
     attome_api::changeset::boot::apply_platform_definition(&state, "attome-docgen")
         .await
         .expect("apply the docgen platform definition");
+    attome_api::changeset::boot::apply_platform_definition(&state, "attome-search-saved-search")
+        .await
+        .expect("apply the saved search platform definition");
     let admin = seed_admin(&state.base.db).await;
     Some(TestApp {
         router,

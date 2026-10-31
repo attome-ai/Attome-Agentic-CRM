@@ -180,7 +180,7 @@ fn build_whitelist(meta: &attome_core::EntityMeta, ctx: &SecurityContext) -> Whi
         if let Some(field_type) = system_column_type(column) {
             fields
                 .entry((*column).to_owned())
-                .or_insert_with(|| field_type.as_str());
+                .or_insert_with(|| data_type_of_storage(&field_type));
         }
     }
     Whitelist {
@@ -228,6 +228,8 @@ pub struct AggregateScope {
     pub is_append_only: bool,
     pub primary_name_attribute: Option<String>,
     whitelist: Whitelist,
+    /// The fields stored as a calendar day, which no time zone moves.
+    calendar_dates: HashSet<String>,
     conds: Vec<String>,
     params: Vec<String>,
 }
@@ -259,7 +261,7 @@ impl AggregateScope {
                 "aggregation is not available for this entity".into(),
             ));
         }
-        let (entity_id, is_append_only, primary_name_attribute, whitelist) = {
+        let (entity_id, is_append_only, primary_name_attribute, whitelist, calendar_dates) = {
             let registry = state.entities.load();
             let meta = registry.get(entity_logicalname).ok_or(AppError::NotFound)?;
             (
@@ -267,6 +269,11 @@ impl AggregateScope {
                 meta.is_append_only,
                 meta.primary_name_attribute.clone(),
                 build_whitelist(meta, ctx),
+                meta.attrs
+                    .iter()
+                    .filter(|attr| attr.storage_type() == attome_core::FieldType::Date)
+                    .map(|attr| attr.logicalname.clone())
+                    .collect(),
             )
         };
         let mut scope = Self {
@@ -275,6 +282,7 @@ impl AggregateScope {
             is_append_only,
             primary_name_attribute,
             whitelist,
+            calendar_dates,
             conds: Vec::new(),
             params: Vec::new(),
         };
@@ -528,11 +536,22 @@ fn interval_for(bucket: DateBucket) -> &'static str {
     }
 }
 
+/// A time bucket's input in local time. A `date_time` is an instant, read in
+/// `tz`; a `date` is already a calendar day, and a conversion would carry it
+/// through midnight UTC into the day before anywhere west of Greenwich. Pure.
+fn local_time(column: &str, calendar_date: bool, tz_param: usize) -> String {
+    if calendar_date {
+        format!("{column}::timestamp")
+    } else {
+        format!("{column} AT TIME ZONE ${tz_param}")
+    }
+}
+
 /// AG1-T4: the join that places each row's local day in its Umm al-Qura
 /// month (or year), as `h.gregorian_start`/`h.gregorian_end`. The table
 /// carries this deployment's moon-sighting corrections.
-fn hijri_join(bucket: DateBucket, column: &str, tz_param: usize) -> String {
-    let day = format!("({column} AT TIME ZONE ${tz_param})::date");
+fn hijri_join(bucket: DateBucket, local: &str) -> String {
+    let day = format!("({local})::date");
     let source = if bucket == DateBucket::HijriYear {
         "(SELECT hijri_year, min(gregorian_start) AS gregorian_start, \
          max(gregorian_end) AS gregorian_end FROM hijri_month GROUP BY hijri_year)"
@@ -620,10 +639,14 @@ pub async fn run_structured_aggregate(
                     ));
                 }
                 let tz_param = scope.bind(tz.name().to_owned());
+                let input = local_time(
+                    &column,
+                    scope.calendar_dates.contains(&group.field),
+                    tz_param,
+                );
                 match date_trunc_unit(bucket) {
                     Some(unit) => {
-                        let local =
-                            format!("date_trunc('{unit}', {column} AT TIME ZONE ${tz_param})");
+                        let local = format!("date_trunc('{unit}', {input})");
                         select.push(format!("({local} AT TIME ZONE ${tz_param}) AS g_start"));
                         select.push(format!(
                             "(({local} + interval '{}') AT TIME ZONE ${tz_param}) AS g_end",
@@ -631,7 +654,7 @@ pub async fn run_structured_aggregate(
                         ));
                     }
                     None => {
-                        join_sql = hijri_join(bucket, &column, tz_param);
+                        join_sql = hijri_join(bucket, &input);
                         select.push(format!(
                             "(h.gregorian_start::timestamp AT TIME ZONE ${tz_param}) AS g_start"
                         ));
@@ -1346,10 +1369,11 @@ mod tests {
 
     #[test]
     fn hijri_month_bucket_sql_joins_reference_table() {
-        let join = hijri_join(DateBucket::HijriMonth, "t.\"closed_on\"", 3);
+        let local = local_time("t.\"closed_on\"", false, 3);
+        let join = hijri_join(DateBucket::HijriMonth, &local);
         assert!(join.starts_with("LEFT JOIN hijri_month h ON"), "{join}");
         assert!(join.contains("(t.\"closed_on\" AT TIME ZONE $3)::date >= h.gregorian_start"));
-        let year = hijri_join(DateBucket::HijriYear, "t.\"closed_on\"", 3);
+        let year = hijri_join(DateBucket::HijriYear, &local);
         assert!(year.contains("GROUP BY hijri_year"), "{year}");
         assert_eq!(date_trunc_unit(DateBucket::HijriMonth), None);
 
