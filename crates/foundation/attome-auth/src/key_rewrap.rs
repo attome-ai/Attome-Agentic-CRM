@@ -297,12 +297,22 @@ pub async fn rewrap_batch(
 /// Where `col`'s last unfinished run stopped, or `""` to start at the top
 /// (and the progress row reset for a new run).
 async fn resume_point(db: &DbPool, col: &EncryptedColumn) -> Result<String, AppError> {
+    resume_column(db, col.table, col.column, col.domain).await
+}
+
+/// [`resume_point`] for a column outside the registry (Q19-T3).
+pub async fn resume_column(
+    db: &DbPool,
+    table: &str,
+    column: &str,
+    domain: &str,
+) -> Result<String, AppError> {
     let row: Option<(Option<String>, bool)> = sqlx::query_as(
         "SELECT last_key, finished_at IS NOT NULL FROM key_rewrap_progress \
          WHERE table_name = $1 AND column_name = $2",
     )
-    .bind(col.table)
-    .bind(col.column)
+    .bind(table)
+    .bind(column)
     .fetch_optional(db)
     .await
     .map_err(AppError::internal)?;
@@ -317,9 +327,9 @@ async fn resume_point(db: &DbPool, col: &EncryptedColumn) -> Result<String, AppE
              domain = EXCLUDED.domain, last_key = NULL, scanned = 0, rewrapped = 0, failed = 0, \
              started_at = NOW(), finished_at = NULL",
     )
-    .bind(col.table)
-    .bind(col.column)
-    .bind(col.domain)
+    .bind(table)
+    .bind(column)
+    .bind(domain)
     .execute(db)
     .await
     .map_err(AppError::internal)?;
@@ -332,6 +342,18 @@ async fn record_batch(
     totals: &ColumnTotals,
     last: Option<&str>,
 ) -> Result<(), AppError> {
+    record_column(db, col.table, col.column, totals, last).await
+}
+
+/// [`record_batch`] for a column outside the registry (Q19-T3). A batch that
+/// scanned nothing finishes the column.
+pub async fn record_column(
+    db: &DbPool,
+    table: &str,
+    column: &str,
+    totals: &ColumnTotals,
+    last: Option<&str>,
+) -> Result<(), AppError> {
     sqlx::query(
         "UPDATE key_rewrap_progress SET \
              last_key = COALESCE($3, last_key), scanned = scanned + $4, \
@@ -339,8 +361,8 @@ async fn record_batch(
              finished_at = CASE WHEN $4 = 0 THEN NOW() END \
          WHERE table_name = $1 AND column_name = $2",
     )
-    .bind(col.table)
-    .bind(col.column)
+    .bind(table)
+    .bind(column)
     .bind(last)
     .bind(totals.scanned as i64)
     .bind(totals.rewrapped as i64)

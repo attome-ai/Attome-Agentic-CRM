@@ -2819,6 +2819,32 @@ async fn drain_rewrap_secrets(
                 after_id = progress.last_id;
             }
         }
+        RewrapDomain::Attributes => {
+            let ring = &attome_state.base.config.storage.attribute_encryption_key;
+            let totals = attome_records::attr_crypto::rewrap_attributes(db, ring).await?;
+            tracing::info!(
+                scanned = totals.scanned,
+                rewrapped = totals.rewrapped,
+                failed = totals.failed,
+                "attribute rewrap complete"
+            );
+            attome_audit::security::SecurityAuditor::from_state(attome_state)
+                .write(
+                    attome_audit::security::SecurityEvent::new(
+                        attome_audit::security::MandatoryCategory::Configuration,
+                        attome_audit::AuditOperation::Update,
+                        uuid::Uuid::nil(),
+                        "key_rewrap",
+                        None,
+                    )
+                    .named("rewrap:attributes:complete")
+                    .comment(format!(
+                        "{} scanned, {} rewrapped, {} failed",
+                        totals.scanned, totals.rewrapped, totals.failed
+                    )),
+                )
+                .await?;
+        }
         RewrapDomain::Registry => {
             let report = attome_auth::key_rewrap::rewrap_registry(db, |domain| {
                 registry_ring(attome_state, domain)

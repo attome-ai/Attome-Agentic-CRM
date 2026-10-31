@@ -17,10 +17,19 @@ pub enum RewrapDomain {
     /// Q18-T4: every column of the encrypted-column registry whose domain
     /// has a ring (`attome_auth::key_rewrap`).
     Registry,
+    /// Q19-T3: every encrypted attribute
+    /// (`attome_records::attr_crypto::rewrap_attributes`).
+    Attributes,
 }
 
 impl RewrapDomain {
-    pub const ALL: [Self; 4] = [Self::Mfa, Self::S2s, Self::Erasure, Self::Registry];
+    pub const ALL: [Self; 5] = [
+        Self::Mfa,
+        Self::S2s,
+        Self::Erasure,
+        Self::Registry,
+        Self::Attributes,
+    ];
 
     pub const fn as_str(self) -> &'static str {
         match self {
@@ -28,6 +37,7 @@ impl RewrapDomain {
             Self::S2s => "s2s",
             Self::Erasure => "erasure",
             Self::Registry => "registry",
+            Self::Attributes => "attributes",
         }
     }
 }
@@ -47,7 +57,8 @@ impl FromStr for RewrapDomain {
             "s2s" => Ok(Self::S2s),
             "erasure" => Ok(Self::Erasure),
             "registry" => Ok(Self::Registry),
-            _ => Err("domain must be one of: mfa, s2s, erasure, registry"),
+            "attributes" => Ok(Self::Attributes),
+            _ => Err("domain must be one of: mfa, s2s, erasure, registry, attributes"),
         }
     }
 }

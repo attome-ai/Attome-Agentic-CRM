@@ -416,6 +416,133 @@ pub async fn sample_open(
 /// How many stored values of each field [`sample_open`] tries.
 const SAMPLE_ROWS: u32 = 20;
 
+/// Rows per batch of [`rewrap_attributes`].
+const REWRAP_BATCH: i64 = 500;
+/// The `key_rewrap_progress` domain of an encrypted attribute.
+const REWRAP_DOMAIN: &str = "attribute";
+
+/// `stored` sealed under `ring`'s active key, in the mode it was stored in, or
+/// `None` when it already is. Pure.
+pub fn reseal(
+    ring: &KeyRing,
+    binding: AttrBinding<'_>,
+    stored: &str,
+) -> Result<Option<String>, AppError> {
+    if envelope::stored_key_id(stored).as_deref() == Some(ring.active_key_id.as_str()) {
+        return Ok(None);
+    }
+    let mode = if envelope::stored_is_deterministic(stored) {
+        AttrCryptoMode::Deterministic
+    } else {
+        AttrCryptoMode::Randomised
+    };
+    let clear = open(ring, binding, stored)?;
+    seal(ring, mode, binding, clear.expose_secret()).map(Some)
+}
+
+/// Q19-T3: moves every encrypted attribute's stored values onto `ring`'s active
+/// key, in resumable batches, and a deterministic value's blind index with it.
+/// Each write is a compare-and-set, so a value changed meanwhile keeps the new
+/// one; a value that will not open is counted and left alone.
+pub async fn rewrap_attributes(
+    db: &attome_db::DbPool,
+    ring: &KeyRing,
+) -> Result<attome_auth::key_rewrap::ColumnTotals, AppError> {
+    let fields: Vec<(String, String)> = sqlx::query_as(
+        "SELECT e.logicalname, a.logicalname \
+           FROM attribute_info a JOIN entity_info e ON e.id = a.entity_ref \
+          WHERE a.options ? 'encryption' AND (a.is_active IS NULL OR a.is_active = true) \
+            AND (e.is_active IS NULL OR e.is_active = true)",
+    )
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut totals = attome_auth::key_rewrap::ColumnTotals::default();
+    for (table, column) in fields {
+        let mut after =
+            attome_auth::key_rewrap::resume_column(db, &table, &column, REWRAP_DOMAIN).await?;
+        loop {
+            let (batch, last) = rewrap_field(db, ring, &table, &column, &after).await?;
+            attome_auth::key_rewrap::record_column(db, &table, &column, &batch, last.as_deref())
+                .await?;
+            totals.scanned += batch.scanned;
+            totals.rewrapped += batch.rewrapped;
+            totals.failed += batch.failed;
+            match last {
+                Some(last) if batch.scanned > 0 => after = last,
+                _ => break,
+            }
+        }
+    }
+    Ok(totals)
+}
+
+/// One batch of a field after `after`: its totals and the last row read.
+async fn rewrap_field(
+    db: &attome_db::DbPool,
+    ring: &KeyRing,
+    table: &str,
+    column: &str,
+    after: &str,
+) -> Result<(attome_auth::key_rewrap::ColumnTotals, Option<String>), AppError> {
+    let quoted = attome_core::quote_ident(column);
+    let from = attome_core::quote_ident(table);
+    let index = attome_core::quote_ident(&index_column(column));
+    let rows: Vec<(Uuid, String)> = sqlx::query_as(&format!(
+        "SELECT id, {quoted} FROM {from} WHERE {quoted} IS NOT NULL AND id::text > $1 \
+          ORDER BY id::text LIMIT $2"
+    ))
+    .bind(after)
+    .bind(REWRAP_BATCH)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut totals = attome_auth::key_rewrap::ColumnTotals {
+        scanned: rows.len() as u64,
+        ..Default::default()
+    };
+    let last = rows.last().map(|(id, _)| id.to_string());
+    let with_index =
+        format!("UPDATE {from} SET {quoted} = $1, {index} = $2 WHERE id = $3 AND {quoted} = $4");
+    let without_index = format!("UPDATE {from} SET {quoted} = $1 WHERE id = $2 AND {quoted} = $3");
+    for (row_id, stored) in rows {
+        let binding = AttrBinding {
+            table,
+            column,
+            row_id,
+        };
+        let fresh = match reseal(ring, binding, &stored) {
+            Ok(Some(fresh)) => fresh,
+            Ok(None) => continue,
+            Err(error) => {
+                tracing::error!(table, column, row = %row_id, %error, "attribute rewrap: a value does not open");
+                totals.failed += 1;
+                continue;
+            }
+        };
+        let update = if envelope::stored_is_deterministic(&stored) {
+            let clear = open(ring, binding, &stored)?;
+            sqlx::query(&with_index).bind(&fresh).bind(blind_index(
+                ring,
+                table,
+                column,
+                clear.expose_secret(),
+            )?)
+        } else {
+            sqlx::query(&without_index).bind(&fresh)
+        };
+        let written = update
+            .bind(row_id)
+            .bind(&stored)
+            .execute(db)
+            .await
+            .map_err(AppError::internal)?
+            .rows_affected();
+        totals.rewrapped += written;
+    }
+    Ok((totals, last))
+}
+
 /// Opens the encrypted fields of a row in place, leaving those `skip` names.
 /// A value that will not open reads as empty and is logged, so a read never
 /// answers ciphertext and one bad value does not fail a whole page.
@@ -779,5 +906,30 @@ mod tests {
         );
         let retired = ring(&[("k2", 8)], "k2");
         assert!(open(&retired, binding(row), &random).is_err());
+    }
+
+    #[test]
+    fn attr_rotation_reseals_once_and_keeps_the_value() {
+        let old = KeyRing::single("07".repeat(32));
+        let mut new = old.clone();
+        new.keys.insert("next".to_owned(), "08".repeat(32));
+        new.active_key_id = "next".to_owned();
+        let row_id = Uuid::now_v7();
+        let binding = AttrBinding {
+            table: "contact",
+            column: "national_id",
+            row_id,
+        };
+        for mode in [AttrCryptoMode::Randomised, AttrCryptoMode::Deterministic] {
+            let stored = seal(&old, mode, binding, "784").unwrap();
+            let fresh = reseal(&new, binding, &stored).unwrap().unwrap();
+            assert_ne!(fresh, stored);
+            assert_eq!(open(&new, binding, &fresh).unwrap().expose_secret(), "784");
+            assert_eq!(
+                envelope::stored_is_deterministic(&fresh),
+                mode == AttrCryptoMode::Deterministic
+            );
+            assert_eq!(reseal(&new, binding, &fresh).unwrap(), None);
+        }
     }
 }

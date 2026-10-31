@@ -210,3 +210,49 @@ fn encryption_needs_a_label_and_cannot_be_changed_later() {
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
     });
 }
+
+// feature: Q19
+#[test]
+fn rotation_moves_values_and_blind_indexes_to_the_new_key() {
+    attome_testkit::run_shared(async {
+        let Some(app) = start().await else {
+            return;
+        };
+        let (name, _, _) = entity(&app, "deterministic").await;
+        create(&app, &name, NATIONAL_ID).await;
+        let table = attome_core::quote_ident(&name);
+        let index = format!("SELECT national_id__bidx FROM {table}");
+        let before: String = sqlx::query_scalar(&index)
+            .fetch_one(app.db())
+            .await
+            .unwrap();
+
+        let mut ring = KeyRing::single("07".repeat(32));
+        ring.keys.insert("next".to_owned(), "09".repeat(32));
+        ring.active_key_id = "next".to_owned();
+        let first = attome_records::attr_crypto::rewrap_attributes(app.db(), &ring)
+            .await
+            .unwrap();
+        assert!(first.rewrapped >= 1, "{first:?}");
+        assert_eq!(first.failed, 0, "{first:?}");
+
+        let after: String = sqlx::query_scalar(&index)
+            .fetch_one(app.db())
+            .await
+            .unwrap();
+        assert_ne!(after, before, "the blind index moves with the value");
+        let stored: String = sqlx::query_scalar(&format!("SELECT national_id FROM {table}"))
+            .fetch_one(app.db())
+            .await
+            .unwrap();
+        assert_eq!(
+            attome_auth::envelope::stored_key_id(&stored).as_deref(),
+            Some("next")
+        );
+
+        let again = attome_records::attr_crypto::rewrap_attributes(app.db(), &ring)
+            .await
+            .unwrap();
+        assert_eq!(again.rewrapped, 0, "a finished rotation has nothing left");
+    });
+}
