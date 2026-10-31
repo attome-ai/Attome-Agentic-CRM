@@ -3174,6 +3174,12 @@ const DEDUP_KEY_PARTNER_LAPSE: &str = "partner-registration-lapse";
 const DEDUP_KEY_PARTNER_MDF: &str = "partner-mdf-check";
 /// F9-T7: partner certifications within 30 days of expiry warned once per date. (a registered job type).
 const DEDUP_KEY_PARTNER_CERT_EXPIRY: &str = "partner-certification-expiry";
+/// F9-T5: partner tiers re-evaluated on a fiscal quarter's first day (a registered job type).
+const DEDUP_KEY_PARTNER_TIERS: &str = "partner-tier-evaluation";
+/// F9-T4: partner leads past their limit or gone stale returned (a registered job type).
+const DEDUP_KEY_PARTNER_LEAD_RETURN: &str = "partner-lead-return";
+/// F9-T6: onboarding items for signed partner agreements (a registered job type).
+const DEDUP_KEY_PARTNER_ONBOARDING: &str = "partner-onboarding";
 /// I5-T2: maintenance plan timers and meter checks (a registered job type).
 const DEDUP_KEY_MAINTENANCE: &str = "maintenance-generation";
 /// I7-T1: device readings and device rules (a registered job type).
@@ -3550,6 +3556,18 @@ pub const PARTNER_MDF_CHECK: attome_jobs::JobType =
 /// F9-T7: partner certifications within 30 days of expiry warned once per date.
 pub const PARTNER_CERTIFICATION_EXPIRY: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_partner::certification::EXPIRY_JOB, 1);
+
+/// F9-T5: partner tiers re-evaluated on a fiscal quarter's first day.
+pub const PARTNER_TIER_EVALUATION: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_partner::tiers::EVALUATION_JOB, 1);
+
+/// F9-T4: partner leads past their limit or gone stale returned.
+pub const PARTNER_LEAD_RETURN: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_partner::leads::RETURN_JOB, 1);
+
+/// F9-T6: onboarding items for signed partner agreements.
+pub const PARTNER_ONBOARDING: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_partner::recruiting::ONBOARDING_JOB, 1);
 
 /// I5-T2: one maintenance timer kept per date plan, and work orders made for
 /// meter plans whose reading passed the threshold.
@@ -4747,6 +4765,57 @@ pub fn register_job_types() {
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 if done > 0 {
                     tracing::info!(done, "partner certifications warned of expiry");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            PARTNER_TIER_EVALUATION,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_PARTNER) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let done = attome_partner::tiers::evaluate_tick(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if done > 0 {
+                    tracing::info!(done, "partner tier changes proposed");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            PARTNER_LEAD_RETURN,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_PARTNER) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let done = attome_partner::leads::return_tick(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if done > 0 {
+                    tracing::info!(done, "partner leads returned");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            PARTNER_ONBOARDING,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_PARTNER) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let done = attome_partner::recruiting::onboarding_tick(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if done > 0 {
+                    tracing::info!(done, "partner leads returned");
                 }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
@@ -6176,6 +6245,15 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == PARTNER_CERTIFICATION_EXPIRY.name => {
             DEDUP_KEY_PARTNER_CERT_EXPIRY
         }
+        EngineJob::Registered(job) if job.name == PARTNER_TIER_EVALUATION.name => {
+            DEDUP_KEY_PARTNER_TIERS
+        }
+        EngineJob::Registered(job) if job.name == PARTNER_LEAD_RETURN.name => {
+            DEDUP_KEY_PARTNER_LEAD_RETURN
+        }
+        EngineJob::Registered(job) if job.name == PARTNER_ONBOARDING.name => {
+            DEDUP_KEY_PARTNER_ONBOARDING
+        }
         EngineJob::Registered(job) if job.name == RFQ_OPEN.name => DEDUP_KEY_RFQ_OPEN,
         EngineJob::Registered(job) if job.name == CHANGE_SIGNOFF.name => DEDUP_KEY_CHANGE_SIGNOFF,
         EngineJob::Registered(job) if job.name == SURVEY_SEND.name => DEDUP_KEY_SURVEY_SEND,
@@ -7378,6 +7456,51 @@ pub fn spawn_partner_certification_scheduler(db: DbPool, interval: std::time::Du
             "partner certification expiry",
         ),
         Err(error) => tracing::error!(%error, "partner certification expiry: not scheduled"),
+    }
+}
+
+/// F9-T4: hourly, partner leads past their limit or gone stale returned.
+pub fn spawn_partner_lead_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(PARTNER_LEAD_RETURN.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_PARTNER_LEAD_RETURN,
+            "partner lead return",
+        ),
+        Err(error) => tracing::error!(%error, "partner lead return: not scheduled"),
+    }
+}
+
+/// F9-T6: hourly, onboarding items for signed partner agreements.
+pub fn spawn_partner_onboarding_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(PARTNER_ONBOARDING.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_PARTNER_ONBOARDING,
+            "partner onboarding",
+        ),
+        Err(error) => tracing::error!(%error, "partner onboarding: not scheduled"),
+    }
+}
+
+/// F9-T5: daily; acts on a fiscal quarter's first day.
+pub fn spawn_partner_tier_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(PARTNER_TIER_EVALUATION.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_PARTNER_TIERS,
+            "partner tier evaluation",
+        ),
+        Err(error) => tracing::error!(%error, "partner tier evaluation: not scheduled"),
     }
 }
 

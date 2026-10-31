@@ -47,6 +47,28 @@ every key.
   `ops.drill_public_keys`), `attome drill verify <report.json>` checks a drill report's signature, and
   `attome drill readiness` runs the preflight checks plus the drill's own (exit 2: bad signature,
   3: the drill failed, 4: not ready).
+- **Configuration as a folder**: `attome config pull --out <dir>` writes the deployment's bundle and
+  its metadata objects, `attome config plan --dir <dir>` shows what a push would change, `attome
+  config diff` shows the drift from the last applied bundle, `attome config push --dir <dir>`
+  applies the plan and saves the objects as drafts (publish them to make them live), and `attome
+  config rollback <bundle> --to <version>` queues a rollback. Push and rollback need `--yes`, and on
+  a production target `--confirm-target <name>`; retiring anything needs `--allow-retire`.
+- **Moving one app**: `attome app export <app> --out <folder>` writes the app's objects, and
+  `attome app install --dir <folder>` shows what is new and changed on the target; `--yes` imports
+  and publishes them, stopping at the first refusal. `attome app remove <app>` lists what the app
+  holds and removes nothing: objects cannot be retired yet.
+- **Promoting configuration**: `attome promote --dir <folder> --to <target> --copy <target> --report
+  <file> --yes` plans on the target, applies to its masked copy first, then applies to the target,
+  which on production waits for a second administrator. `--at <time>` holds the apply until then.
+- **Applying an upgrade**: from the installed binary, `attome upgrade apply --manifest <file>
+  --new-binary <path> --restart <command> --ready-url <url> --yes`. The restart command receives
+  the binary to start in `ATTOME_BINARY`. `attome upgrade rollback --to <version> --restart <command>
+  --yes` goes back until `attome upgrade contract --manifest <file> --dir <dir> --yes` has removed
+  old structure; after that only a point-in-time restore to the recorded safety point does.
+- **Before an upgrade**: `attome upgrade check --manifest <file> --free-bytes <n>` verifies the
+  signed release manifest and reports the version path, the dependencies, free disk against twice
+  the largest table, the last proven restore and the deprecated features in use. It reads the
+  database directly and writes nothing; any fail exits 5.
 
 ## Email
 

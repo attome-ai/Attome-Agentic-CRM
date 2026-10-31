@@ -6,12 +6,18 @@
 
 /// F9-T7: certifications warn before they expire.
 pub mod certification;
+/// F9-T4: leads offered to partners with a time limit.
+pub mod leads;
 /// F9-T7: market development fund requests and claims.
 pub mod mdf;
 pub mod model;
+/// F9-T6: recruiting, from a public application to onboarding.
+pub mod recruiting;
 /// F9-T3: deal registration conflicts, decisions and lapse.
 pub mod registration;
 mod support;
+/// F9-T5: quarterly tier proposals a person confirms.
+pub mod tiers;
 
 pub use model::PartnerModel;
 
@@ -24,5 +30,8 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 37;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = <registration::RegistrationApiDoc as utoipa::OpenApi>::openapi();
     doc.merge(<mdf::MdfApiDoc as utoipa::OpenApi>::openapi());
+    doc.merge(<tiers::TiersApiDoc as utoipa::OpenApi>::openapi());
+    doc.merge(<leads::LeadsApiDoc as utoipa::OpenApi>::openapi());
+    doc.merge(<recruiting::RecruitingApiDoc as utoipa::OpenApi>::openapi());
     doc
 }

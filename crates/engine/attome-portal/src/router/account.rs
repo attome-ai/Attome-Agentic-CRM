@@ -9,14 +9,14 @@ use attome_core::EngineState;
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
-    extract::{ConnectInfo, Path, State},
+    extract::{ConnectInfo, Path, Query, State},
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     routing::{delete, get, post},
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use super::{
@@ -927,8 +927,339 @@ async fn privacy_requests(
         .map(Json)
 }
 
+/// The signed-in person's answer to a lead offered to their partner account (F9-T4).
+async fn answer_partner_lead(
+    state: &EngineState,
+    keyword: &str,
+    headers: &HeaderMap,
+    id: Uuid,
+    accept: bool,
+) -> Result<Json<attome_partner::leads::PartnerLead>, AppError> {
+    if !state.modules.load().has(attome_modules::MODULE_PARTNER) {
+        return Err(AppError::NotFound);
+    }
+    let portal = portal_for(state, keyword).await?;
+    let principal = authenticate(state, &portal, headers, false).await?;
+    let partner = attome_partner::leads::partner_of_portal_user(state, principal.user_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    attome_partner::leads::respond(state, partner, principal.user_id, id, accept)
+        .await
+        .map(Json)
+}
+
+/// Accept a lead
+///
+/// F9-T4: only the partner the lead is offered to, before the limit. Audited.
+#[utoipa::path(
+    post,
+    path = "/{keyword}/api/v1/partner/leads/{id}/accept",
+    operation_id = "portal_partner_lead_accept",
+    tag = "partner",
+    params(
+        ("keyword" = String, Path, description = "Web portal keyword"),
+        ("id" = Uuid, Path, description = "The lead"),
+    ),
+    extensions(("x-audit" = json!(x_audit(&[(AuditCategory::BusinessEvent, AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "Accepted", body = attome_partner::leads::PartnerLead),
+        (status = 401, description = "No valid portal session", body = ErrorResponse),
+        (status = 404, description = "No such portal, or no live offer to the caller's partner", body = ErrorResponse),
+    ),
+)]
+async fn partner_lead_accept(
+    State(state): State<EngineState>,
+    Path((keyword, id)): Path<(String, Uuid)>,
+    headers: HeaderMap,
+) -> Result<Json<attome_partner::leads::PartnerLead>, AppError> {
+    answer_partner_lead(&state, &keyword, &headers, id, true).await
+}
+
+/// Reject a lead
+///
+/// F9-T4: only the partner the lead is offered to, before the limit; the lead stops naming the
+/// partner. Audited.
+#[utoipa::path(
+    post,
+    path = "/{keyword}/api/v1/partner/leads/{id}/reject",
+    operation_id = "portal_partner_lead_reject",
+    tag = "partner",
+    params(
+        ("keyword" = String, Path, description = "Web portal keyword"),
+        ("id" = Uuid, Path, description = "The lead"),
+    ),
+    extensions(("x-audit" = json!(x_audit(&[(AuditCategory::BusinessEvent, AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "Rejected", body = attome_partner::leads::PartnerLead),
+        (status = 401, description = "No valid portal session", body = ErrorResponse),
+        (status = 404, description = "No such portal, or no live offer to the caller's partner", body = ErrorResponse),
+    ),
+)]
+async fn partner_lead_reject(
+    State(state): State<EngineState>,
+    Path((keyword, id)): Path<(String, Uuid)>,
+    headers: HeaderMap,
+) -> Result<Json<attome_partner::leads::PartnerLead>, AppError> {
+    answer_partner_lead(&state, &keyword, &headers, id, false).await
+}
+
+/// `GET /{keyword}/api/v1/partner/statement`.
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct PartnerStatementQuery {
+    /// The commission period.
+    pub period_id: Uuid,
+    /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
+    pub page: Option<i64>,
+    /// Rows per page.
+    pub page_size: Option<i64>,
+}
+
+/// The partner's commission statement
+///
+/// F10-T12: the statement of the signed-in person's own partner account, for one period.
+#[utoipa::path(
+    get,
+    path = "/{keyword}/api/v1/partner/statement",
+    operation_id = "portal_partner_statement",
+    tag = "partner",
+    params(("keyword" = String, Path, description = "The portal"), PartnerStatementQuery),
+    responses(
+        (status = 200, description = "The statement", body = attome_types::PaginatedResponse<attome_commission::statement::CommissionStatementRow>),
+        (status = 401, description = "Not signed in to the portal", body = ErrorResponse),
+        (status = 404, description = "No such portal, or nothing for the caller's partner in the period", body = ErrorResponse),
+    ),
+)]
+async fn partner_statement(
+    State(state): State<EngineState>,
+    Path(keyword): Path<String>,
+    headers: HeaderMap,
+    Query(query): Query<PartnerStatementQuery>,
+) -> Result<
+    Json<attome_types::PaginatedResponse<attome_commission::statement::CommissionStatementRow>>,
+    AppError,
+> {
+    if !state.modules.load().has(attome_modules::MODULE_PARTNER) {
+        return Err(AppError::NotFound);
+    }
+    let portal = portal_for(&state, &keyword).await?;
+    let principal = authenticate(&state, &portal, &headers, false).await?;
+    let partner = attome_partner::leads::partner_of_portal_user(&state, principal.user_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    let page = attome_types::OnePageQuery {
+        page: query.page,
+        page_size: query.page_size,
+    };
+    let statement = attome_commission::partner_pay::partner_statement(
+        &state,
+        partner,
+        query.period_id,
+        &page,
+    )
+    .await?;
+    Ok(Json(statement))
+}
+
+/// A public partner application, with the CAPTCHA token sign-up takes.
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub struct PartnerApplicationBody {
+    #[serde(flatten)]
+    pub application: attome_partner::recruiting::Application,
+    #[serde(default)]
+    pub captcha_token: Option<String>,
+}
+
+/// Apply to become a partner
+///
+/// F9-T6: anyone may apply, through the same limits and CAPTCHA as sign-up. The answer says nothing
+/// about whether the company is known. Audited.
+#[utoipa::path(
+    post,
+    path = "/{keyword}/api/v1/partner/applications",
+    operation_id = "portal_partner_application",
+    tag = "partner",
+    params(("keyword" = String, Path, description = "Web portal keyword")),
+    request_body = PartnerApplicationBody,
+    extensions(("x-audit" = json!(x_audit(&[(AuditCategory::BusinessEvent, AuditOperation::Create)])))),
+    responses(
+        (status = 202, description = "Received", body = PortalAck),
+        (status = 404, description = "No such portal", body = ErrorResponse),
+        (status = 422, description = "A field is invalid, or the CAPTCHA failed", body = ErrorResponse),
+        (status = 429, description = "Too many attempts", body = ErrorResponse),
+    ),
+)]
+async fn partner_application(
+    State(state): State<EngineState>,
+    Path(keyword): Path<String>,
+    connect: Option<axum::Extension<ConnectInfo<SocketAddr>>>,
+    headers: HeaderMap,
+    Json(body): Json<PartnerApplicationBody>,
+) -> Result<(StatusCode, Json<PortalAck>), AppError> {
+    if !state.modules.load().has(attome_modules::MODULE_PARTNER) {
+        return Err(AppError::NotFound);
+    }
+    let portal = portal_for(&state, &keyword).await?;
+    check_same_origin(&state, &portal, &headers)?;
+    portal_budget(&state, &portal).await?;
+    let ip = connect.map(|c| {
+        attome_server::middleware::client_ip::client_ip_from_parts(
+            c.0.0.ip(),
+            &headers,
+            &state.base.config,
+        )
+    });
+    if let Some(ip) = ip {
+        budget(
+            &state,
+            format!("attome-portal:rl:partner-apply-ip:{}:{ip}", portal.id),
+            IP_SIGNUP_RPM,
+        )
+        .await?;
+    }
+    let ip_text = ip.map(|i| i.to_string());
+    let pow_secret = state
+        .base
+        .secrets
+        .load()
+        .jwt_secret
+        .active()
+        .map(str::to_owned);
+    if !attome_auth::captcha::verify_challenge(
+        &state.base.config.portal.captcha,
+        state.base.config.deployment.sovereign,
+        &state.base.redis_coordination,
+        pow_secret.as_deref(),
+        body.captcha_token.as_deref(),
+        ip_text.as_deref(),
+    )
+    .await
+    {
+        return Err(AppError::Validation("the CAPTCHA check failed".into()));
+    }
+    attome_partner::recruiting::submit(&state, &body.application).await?;
+    Ok((StatusCode::ACCEPTED, Json(PortalAck { ok: true })))
+}
+
+/// `POST /api/v1/partner/applications/{id}/decision`.
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub struct PartnerApplicationDecision {
+    pub approve: bool,
+    /// Required to reject.
+    #[serde(default)]
+    pub reason: Option<String>,
+    /// The portal the partner's administrator signs in to; required to approve.
+    #[serde(default)]
+    pub portal_id: Option<Uuid>,
+}
+
+/// What a decision made.
+#[derive(Debug, Serialize, utoipa::ToSchema)]
+pub struct PartnerApplicationDecided {
+    /// `approved` or `rejected`.
+    pub status: String,
+    pub partner_account_id: Option<Uuid>,
+    /// The administrator's portal membership, invited.
+    pub portal_user_id: Option<Uuid>,
+}
+
+/// Decide a partner application
+///
+/// F9-T6: a person with update access approves or rejects. Approval marks the matched account a
+/// partner, or creates one, and invites its administrator to the portal, in one transaction. Audited.
+#[utoipa::path(
+    post,
+    path = "/api/v1/partner/applications/{id}/decision",
+    operation_id = "partner_application_decision",
+    tag = "partner",
+    params(("id" = Uuid, Path, description = "The application")),
+    request_body = PartnerApplicationDecision,
+    extensions(("x-audit" = json!(x_audit(&[(AuditCategory::BusinessEvent, AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "Decided", body = PartnerApplicationDecided),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Not a person, or no update access", body = ErrorResponse),
+        (status = 404, description = "No such application the caller may read", body = ErrorResponse),
+        (status = 409, description = "Already decided, or the email has a portal account", body = ErrorResponse),
+        (status = 422, description = "No reason to reject, or no portal to approve into", body = ErrorResponse),
+    ),
+    security(("session_cookie" = [])),
+)]
+async fn partner_application_decision(
+    State(state): State<EngineState>,
+    ctx: attome_server::authz::Authorized<attome_server::authz::SelfService>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<PartnerApplicationDecision>,
+) -> Result<Json<PartnerApplicationDecided>, AppError> {
+    use attome_partner::recruiting;
+    if !state.modules.load().has(attome_modules::MODULE_PARTNER) {
+        return Err(AppError::NotFound);
+    }
+    if !body.approve {
+        let reason = body
+            .reason
+            .as_deref()
+            .ok_or_else(|| AppError::Validation("a rejection needs a reason".into()))?;
+        recruiting::reject(&state, &ctx, id, reason).await?;
+        return Ok(Json(PartnerApplicationDecided {
+            status: "rejected".to_owned(),
+            partner_account_id: None,
+            portal_user_id: None,
+        }));
+    }
+    let portal = body
+        .portal_id
+        .ok_or_else(|| AppError::Validation("an approval needs a portal_id".into()))?;
+    recruiting::may_decide(&state, &ctx, id).await?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let (row, approved) = recruiting::approve_in_tx(&state, &mut tx, ctx.user_id, id).await?;
+    let user = crate::provision::create_user(
+        &mut tx,
+        ctx.user_id,
+        portal,
+        crate::provision::NewPortalUser {
+            name: row.contact_name.unwrap_or(row.company_name),
+            email: row.contact_email,
+            username: None,
+        },
+    )
+    .await?;
+    sqlx::query(
+        "UPDATE webportal_user SET contact_ref = $2, row_version = row_version + 1 WHERE id = $1",
+    )
+    .bind(user.id)
+    .bind(approved.contact_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    attome_db::tx::commit(tx).await?;
+    Ok(Json(PartnerApplicationDecided {
+        status: "approved".to_owned(),
+        partner_account_id: Some(approved.partner_account_id),
+        portal_user_id: Some(user.id),
+    }))
+}
+
 pub(super) fn routes() -> Router<EngineState> {
     Router::new()
+        .route(
+            "/{keyword}/api/v1/partner/applications",
+            post(partner_application),
+        )
+        .route(
+            "/api/v1/partner/applications/{id}/decision",
+            post(partner_application_decision),
+        )
+        .route("/{keyword}/api/v1/partner/statement", get(partner_statement))
+        .route(
+            "/{keyword}/api/v1/partner/leads/{id}/accept",
+            post(partner_lead_accept),
+        )
+        .route(
+            "/{keyword}/api/v1/partner/leads/{id}/reject",
+            post(partner_lead_reject),
+        )
         .route(
             "/{keyword}/api/v1/me/privacy-requests",
             get(privacy_requests).post(privacy_request),
@@ -957,18 +1288,30 @@ pub(super) fn routes() -> Router<EngineState> {
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(
-    signup_request,
-    signup_verify,
-    email_add_verify,
-    consent_state,
-    consent_accept,
-    change_password,
-    list_sessions,
-    end_session,
-    end_other_sessions,
-    erasure_request,
-    privacy_request,
-    privacy_requests,
-))]
+#[openapi(
+    paths(
+        signup_request,
+        signup_verify,
+        email_add_verify,
+        consent_state,
+        consent_accept,
+        change_password,
+        list_sessions,
+        end_session,
+        end_other_sessions,
+        erasure_request,
+        privacy_request,
+        privacy_requests,
+        partner_lead_accept,
+        partner_lead_reject,
+        partner_statement,
+        partner_application,
+        partner_application_decision,
+    ),
+    components(schemas(
+        PartnerApplicationBody,
+        PartnerApplicationDecision,
+        PartnerApplicationDecided
+    ))
+)]
 pub(super) struct AccountApiDoc;

@@ -235,7 +235,7 @@ pub fn area(key: &str) -> &'static str {
         Some("ops") => "operations",
         Some("commission") => "sales",
         Some("billing") => "sales",
-        Some("sales") => "sales",
+        Some("sales" | "partner") => "sales",
         Some("records") => "data",
         Some("customer_tests") => "data",
         Some("limits") => "operations",
@@ -646,6 +646,7 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
         }
         "billing.seller_street" => "شارع البائع (العنوان الوطني) في الفواتير الإلكترونية.",
         "billing.seller_building_number" => "رقم مبنى البائع من أربعة أرقام (العنوان الوطني).",
+        "partner.lead_stale_days" => "عدد الأيام التي يبقى فيها العميل المحتمل الذي قبله الشريك دون نشاط قبل أن يعود إلى مالكه.",
         "billing.seller_district" => "حيّ البائع (العنوان الوطني).",
         "billing.seller_city" => "مدينة البائع (العنوان الوطني).",
         "billing.seller_postal_zone" => "الرمز البريدي للبائع من خمسة أرقام (العنوان الوطني).",

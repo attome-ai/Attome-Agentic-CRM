@@ -448,10 +448,10 @@
       },
       "Decision": {
         "type": "string",
-        "description": "A decision on a registration.",
+        "description": "A proposal's decision.",
         "enum": [
-          "approve",
-          "reject"
+          "confirm",
+          "dismiss"
         ]
       },
       "DecisionResult": {

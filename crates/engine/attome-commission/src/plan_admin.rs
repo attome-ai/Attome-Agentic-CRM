@@ -116,6 +116,13 @@ pub(crate) async fn commission_post_publish(
             "the draft version has no components".into(),
         ));
     }
+    if let Some(participant) =
+        crate::partner_pay::invalid_participant(&state.base.db, version).await?
+    {
+        return Err(AppError::Validation(format!(
+            "participant {participant}: name either a user or a partner account"
+        )));
+    }
     let hash = compiled_hash(&components);
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let published = sqlx::query(

@@ -14,6 +14,35 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- `attome config pull|plan|diff|push|rollback` move a deployment's configuration as a folder
+  through its admin API (T4-T2).
+- `attome upgrade check --manifest <file>` reports, before an upgrade, whether a signed release can
+  go ahead: version path, dependencies, free disk, the last proven restore and deprecated features
+  in use, as text or `--json`, exit 5 on a fail. `attome upgrade sign-manifest` signs a manifest
+  (AB8-T2).
+- Leads can be offered to a partner with a time limit: `POST /api/v1/partner/leads/{id}/offer`, the
+  portal's `accept` and `reject`, and an hourly return of lapsed offers and of accepted leads
+  untouched for `partner.lead_stale_days` days (F9-T4).
+- `attome app export|install|remove` (A21-T4): moves one app's metadata objects as a unit; install
+  shows what is new and changed and publishes them with `--yes`; remove lists what the app holds and
+  what stays behind, and removes nothing yet.
+- `attome promote --dir <dir> --to <target> [--copy <target>] [--at <time>] [--report <file>]`
+  (A22-T2): plans on a named environment, applies to a masked copy first, waits for the time, applies
+  through the target's approval rule and writes a release report.
+- `attome upgrade apply`, `rollback` and `contract` (AB8-T7): apply refuses a failing check, names a
+  restore point, migrates, restarts and waits for ready; rollback returns to the recorded binary
+  until contract SQL has run, which only `contract` does, after each file's hold period and against
+  the signed manifest's digests.
+- Partner pay (F10-T12): `plan_participant.partner_account_ref` names a partner in place of a user
+  (publishing refuses a participant with neither or both); a won deal naming the partner credits it,
+  and `GET /{keyword}/api/v1/partner/statement` returns its own statement to a partner portal session.
+- Partner recruiting (F9-T6): `POST /{keyword}/api/v1/partner/applications` takes a public
+  application, matched to an account by name or email domain;
+  `POST /api/v1/partner/applications/{id}/decision` approves it into a partner account and an invited
+  portal administrator, or rejects it; `POST /api/v1/partner/applications/{id}/agreement` sends the
+  agreement for signature, and signing adds three onboarding items due at 30, 60 and 90 days.
+- Partner tiers are re-evaluated on each fiscal quarter's first day into `tier_change_proposal`
+  rows; `POST /api/v1/partner/tier-proposals/{id}/confirm` and `/dismiss` decide them (F9-T5).
 - Portal privacy requests (R1-T2): `POST`/`GET /{keyword}/api/v1/me/privacy-requests` let a signed-in portal user ask for access, portability, rectification, restriction, objection or erasure of their own data, re-entering their password to prove who they are, and follow each request's status and deadline; the request is a data subject request about their verified email, with the deadline the deployment's law sets. The portal app's My data page uses them.
 - Portal sign-ups and contacts (D1-T3): with the crm pack (changeset 0010: `webportal_user.contact_ref`, `contact.portal_review`), a verified portal sign-up is linked to the one live contact with its email address, in the verification's own transaction and audited; with none or several, a new contact pending review is created, owned by the portal's owning team. A name never matches on its own.
 - Customer flags from the CLI and for agents (T6-T4): `attome flags list|get|set|off-now` (`admin.deployment`; changes need `--yes`), and the `flags.list` and `flags.set` agent tools with the same permission, `flags.set` waiting for a person's approval and writing through the flags API itself.

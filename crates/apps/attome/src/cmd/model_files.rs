@@ -189,7 +189,8 @@ fn safe_relative(path: &str) -> Option<PathBuf> {
         .then(|| candidate.to_path_buf())
 }
 
-async fn export(url: &str, auth: Auth, out: &Path) -> Result<usize, String> {
+/// Every object file of the deployment, as (path, text).
+pub(crate) async fn exported_files(url: &str, auth: Auth) -> Result<Vec<(String, String)>, String> {
     let response = authorised(
         client(url)?.get(format!("{url}/api/v1/admin/model/export")),
         auth.as_deref(),
@@ -198,26 +199,62 @@ async fn export(url: &str, auth: Auth, out: &Path) -> Result<usize, String> {
     .await
     .map_err(|error| format!("reach {url}: {error}"))?;
     let body = answer(response).await?;
-    let files = body["files"].as_array().cloned().unwrap_or_default();
-    for file in &files {
-        let (Some(path), Some(text)) = (file["path"].as_str(), file["text"].as_str()) else {
-            return Err("the server sent a file without a path or text".into());
-        };
-        let relative = safe_relative(path).ok_or_else(|| format!("unsafe file path `{path}`"))?;
-        let target = out.join(relative);
-        if let Some(parent) = target.parent() {
-            std::fs::create_dir_all(parent)
-                .map_err(|error| format!("create {}: {error}", parent.display()))?;
-        }
-        std::fs::write(&target, text.replace("\r\n", "\n"))
-            .map_err(|error| format!("write {}: {error}", target.display()))?;
+    body["files"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(
+            |file| match (file["path"].as_str(), file["text"].as_str()) {
+                (Some(path), Some(text)) => Ok((path.to_owned(), text.to_owned())),
+                _ => Err("the server sent a file without a path or text".to_owned()),
+            },
+        )
+        .collect()
+}
+
+/// Writes one exported file under `out`, refusing a path that leaves it.
+pub(crate) fn safe_write(out: &Path, path: &str, text: &str) -> Result<(), String> {
+    let relative = safe_relative(path).ok_or_else(|| format!("unsafe file path `{path}`"))?;
+    let target = out.join(relative);
+    if let Some(parent) = target.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|error| format!("create {}: {error}", parent.display()))?;
+    }
+    std::fs::write(&target, text.replace("\r\n", "\n"))
+        .map_err(|error| format!("write {}: {error}", target.display()))
+}
+
+pub(crate) async fn export(url: &str, auth: Auth, out: &Path) -> Result<usize, String> {
+    let files = exported_files(url, auth).await?;
+    for (path, text) in &files {
+        safe_write(out, path, text)?;
     }
     Ok(files.len())
 }
 
+/// Publishes one object's open draft.
+pub(crate) async fn publish_object(
+    url: &str,
+    auth: Auth,
+    kind: &str,
+    id: &str,
+) -> Result<(), String> {
+    let response = authorised(
+        client(url)?.post(format!("{url}/api/v1/admin/model/{kind}/{id}/publish")),
+        auth.as_deref(),
+    )
+    .send()
+    .await
+    .map_err(|error| format!("reach {url}: {error}"))?;
+    answer(response)
+        .await
+        .map(|_| ())
+        .map_err(|error| format!("publish {kind} {id}: {error}"))
+}
+
 /// Every `.json` file under `dir`, as (path relative to `dir` with `/`
 /// separators, text), sorted by path.
-fn read_tree(dir: &Path) -> Result<Vec<(String, String)>, String> {
+pub(crate) fn read_tree(dir: &Path) -> Result<Vec<(String, String)>, String> {
     let mut found = Vec::new();
     let mut pending = vec![dir.to_path_buf()];
     while let Some(current) = pending.pop() {
@@ -247,12 +284,12 @@ fn read_tree(dir: &Path) -> Result<Vec<(String, String)>, String> {
     Ok(found)
 }
 
-async fn import(url: &str, auth: Auth, dir: &Path) -> Result<(usize, usize, usize), String> {
+/// Imports the folder and answers the server's `{drafts, unchanged}`.
+pub(crate) async fn import_files(url: &str, auth: Auth, dir: &Path) -> Result<Value, String> {
     let files: Vec<Value> = read_tree(dir)?
         .into_iter()
         .map(|(path, text)| json!({ "path": path, "text": text }))
         .collect();
-    let count = files.len();
     let response = authorised(
         client(url)?
             .post(format!("{url}/api/v1/admin/model/import"))
@@ -262,7 +299,16 @@ async fn import(url: &str, auth: Auth, dir: &Path) -> Result<(usize, usize, usiz
     .send()
     .await
     .map_err(|error| format!("reach {url}: {error}"))?;
-    let body = answer(response).await?;
+    answer(response).await
+}
+
+pub(crate) async fn import(
+    url: &str,
+    auth: Auth,
+    dir: &Path,
+) -> Result<(usize, usize, usize), String> {
+    let count = read_tree(dir)?.len();
+    let body = import_files(url, auth, dir).await?;
     let drafts = body["drafts"].as_array().map_or(0, Vec::len);
     // A22-T1: objects already published as the files say.
     let unchanged = body["unchanged"].as_array().map_or(0, Vec::len);

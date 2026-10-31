@@ -260,6 +260,10 @@ async fn build_with(config: AppConfig) -> Option<TestApp> {
         .register(attome_document::engine::DocumentModel)
         // AB4-T6: the ops engine's routes (drill evidence, schedules).
         .register(attome_ops::OpsModel)
+        // F9, D6: the partner and sales routes their pack tests call.
+        .register(attome_partner::PartnerModel)
+        .register(attome_sales::SalesModel)
+        .register(attome_docgen::model::DocgenModel)
         .build()
         .await
         .expect("build the engine system");
@@ -275,6 +279,10 @@ async fn build_with(config: AppConfig) -> Option<TestApp> {
         attome_server::ServerBuilder::new(base_state.clone(), (*base_state.config).clone())
             .add_bundle(system.core_routes())
             .build(|r| attome_api::apply_s2s_layer(r, base_state.clone()));
+    // Boot seeds this entity; the packs upsert their document templates into it.
+    attome_api::changeset::boot::apply_platform_definition(&state, "attome-docgen")
+        .await
+        .expect("apply the docgen platform definition");
     let admin = seed_admin(&state.base.db).await;
     Some(TestApp {
         router,

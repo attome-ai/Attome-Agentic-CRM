@@ -10,6 +10,7 @@ pub mod credit;
 pub mod dispute;
 pub mod draw;
 pub mod model;
+pub mod partner_pay;
 pub mod plan_admin;
 pub mod recalc;
 pub mod rules;

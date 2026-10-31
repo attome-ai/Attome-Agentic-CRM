@@ -182,6 +182,14 @@ pub fn sign(
     })
 }
 
+/// [`sign`] with the release key's 32-byte seed.
+pub fn sign_with_seed(
+    manifest: &ReleaseManifest,
+    seed: &[u8; 32],
+) -> Result<SignedReleaseManifest, OpsError> {
+    sign(manifest, &SigningKey::from_bytes(seed))
+}
+
 /// Reads a signed manifest file and checks it against `keys` (base64
 /// Ed25519 public keys, the binary's `RELEASE_PUBLIC_KEYS`). An unsigned,
 /// malformed or altered manifest, or one signed by a key not listed, is

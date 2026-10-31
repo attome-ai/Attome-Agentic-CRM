@@ -13,6 +13,7 @@ pub mod data;
 /// AB4-T3: drill keys, evidence verification and readiness.
 pub mod drill;
 /// T6-T4: `attome flags list|get|set|off-now`.
+pub mod config_cmd;
 pub mod flags;
 pub mod healthcheck;
 pub mod init;
@@ -40,5 +41,10 @@ pub mod storage_migrate;
 pub mod supervise;
 /// U8-T1: rolling upgrade with a canary and automatic stop.
 pub mod upgrade;
+/// AB8-T2: `attome upgrade check|sign-manifest`.
+pub mod app_cmd;
+pub mod promote;
+pub mod upgrade_apply;
+pub mod upgrade_check;
 pub mod verify_audit_chain;
 pub mod worker;

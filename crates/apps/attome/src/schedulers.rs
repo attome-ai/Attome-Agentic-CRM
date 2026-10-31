@@ -219,6 +219,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(86_400),
     );
+    // F9-T4: partner leads past their limit or gone stale, hourly.
+    crate::jobs::spawn_partner_lead_scheduler(db.clone(), std::time::Duration::from_secs(3_600));
+    crate::jobs::spawn_partner_onboarding_scheduler(db.clone(), std::time::Duration::from_secs(3_600));
+    // F9-T5: partner tiers, daily; acts on a fiscal quarter's first day.
+    crate::jobs::spawn_partner_tier_scheduler(db.clone(), std::time::Duration::from_secs(86_400));
     // I5-T2: maintenance plan timers and meter checks, daily.
     crate::jobs::spawn_maintenance_scheduler(db.clone(), std::time::Duration::from_secs(86_400));
     // I7-T1: device readings and device rules, every minute.

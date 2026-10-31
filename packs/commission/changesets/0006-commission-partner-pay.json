@@ -1,0 +1,86 @@
+{
+  "author": "packs",
+  "checksum": "sha256:40478c1796e21667a7b728421fe0768b539e2087c3093a704ea77d76b4747446",
+  "closed_at": "2026-10-31T00:00:00Z",
+  "description": "F10-T12: a partner account can take part in a plan in place of a user, and a won deal naming it credits that participation.",
+  "format": "attome-changeset/v1",
+  "id": "01a19135-4abb-7000-8be7-92134f5ce9a8",
+  "layer": "product",
+  "name": "commission-partner-pay",
+  "opened_at": "2026-10-31T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Partner",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "partner_account_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "plan_participant",
+        "field": "partner_account_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Source",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "source_kind",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "split",
+              "order",
+              "invoice",
+              "payment",
+              "credit_note",
+              "refund",
+              "partner_deal"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "comp_credit",
+        "field": "source_kind"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "commission",
+  "seq": 6,
+  "title": "Commission: partner pay"
+}

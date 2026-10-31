@@ -47,6 +47,9 @@ pub mod status_watch;
 /// AB2-T8: planned switchover under two-person control.
 pub mod switchover;
 /// AB8-T6: the upgrade record and its routes.
+/// AB8-T2: what `attome upgrade check` judges.
+pub mod upgrade_apply;
+pub mod upgrade_check;
 pub mod upgrades;
 
 pub use error::OpsError;

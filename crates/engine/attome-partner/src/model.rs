@@ -33,6 +33,10 @@ impl EngineModel for PartnerModel {
     }
 
     fn routes(&self) -> Router<EngineState> {
-        crate::registration::routes().merge(crate::mdf::routes())
+        crate::registration::routes()
+            .merge(crate::mdf::routes())
+            .merge(crate::tiers::routes())
+            .merge(crate::leads::routes())
+            .merge(crate::recruiting::routes())
     }
 }

@@ -23422,6 +23422,70 @@ export interface paths {
         patch: operations["update_ops_upgrade"];
         trace?: never;
     };
+    "/api/v1/partner/applications/{id}/agreement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send the partner agreement
+         * @description F9-T6: an e-sign envelope to the applicant of an approved application. A person with update
+         *     access sends it, once; when it is signed the partner's onboarding items appear. Audited.
+         */
+        post: operations["partner_application_agreement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/partner/applications/{id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decide a partner application
+         * @description F9-T6: a person with update access approves or rejects. Approval marks the matched account a
+         *     partner, or creates one, and invites its administrator to the portal, in one transaction. Audited.
+         */
+        post: operations["partner_application_decision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/partner/leads/{id}/offer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Offer a lead to a partner
+         * @description F9-T4: gives the partner until the limit to accept; a lead a partner already holds cannot be
+         *     offered. A person with update access on the lead offers; API keys and S2S clients are refused.
+         *     Audited.
+         */
+        post: operations["partner_lead_offer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/partner/mdf/claims/{id}/decision": {
         parameters: {
             query?: never;
@@ -23502,6 +23566,48 @@ export interface paths {
          *     update access on the registration decides; API keys and S2S clients are refused. Audited.
          */
         post: operations["partner_registration_decide"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/partner/tier-proposals/{id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm a tier change
+         * @description F9-T5: sets the partner's tier to the proposal's. A person with update access decides, with
+         *     the proposal's `If-Match` row version; API keys and S2S clients are refused. Audited.
+         */
+        post: operations["partner_tier_proposal_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/partner/tier-proposals/{id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss a tier change
+         * @description F9-T5: closes the proposal and leaves the partner's tier alone. A person with update access
+         *     decides, with the proposal's `If-Match` row version. Audited.
+         */
+        post: operations["partner_tier_proposal_dismiss"];
         delete?: never;
         options?: never;
         head?: never;
@@ -31725,6 +31831,88 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/{keyword}/api/v1/partner/applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply to become a partner
+         * @description F9-T6: anyone may apply, through the same limits and CAPTCHA as sign-up. The answer says nothing
+         *     about whether the company is known. Audited.
+         */
+        post: operations["portal_partner_application"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/partner/leads/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept a lead
+         * @description F9-T4: only the partner the lead is offered to, before the limit. Audited.
+         */
+        post: operations["portal_partner_lead_accept"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/partner/leads/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a lead
+         * @description F9-T4: only the partner the lead is offered to, before the limit; the lead stops naming the
+         *     partner. Audited.
+         */
+        post: operations["portal_partner_lead_reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/partner/statement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The partner's commission statement
+         * @description F10-T12: the statement of the signed-in person's own partner account, for one period.
+         */
+        get: operations["portal_partner_statement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/{keyword}/api/v1/records/{entity}": {
         parameters: {
             query?: never;
@@ -32604,6 +32792,19 @@ export interface components {
         AggregateResult: {
             groups: components["schemas"]["Group"][];
         };
+        /** @description `POST /api/v1/partner/applications/{id}/agreement`. */
+        AgreementBody: {
+            /**
+             * Format: uuid
+             * @description The `attome_document` record holding the agreement.
+             */
+            document_id: string;
+        };
+        /** @description The envelope sent. */
+        AgreementSent: {
+            /** Format: uuid */
+            envelope_id: string;
+        };
         /** @description One collections reminder of an invoice (a follow-up ledger row). */
         AiCollectionsReminder: {
             /** Format: uuid */
@@ -32933,6 +33134,13 @@ export interface components {
              * @description 1 for the first app installed; later apps sit above earlier ones.
              */
             position: number;
+        };
+        /** @description What an applicant sends. */
+        Application: {
+            company_name: string;
+            contact_email: string;
+            contact_name: string;
+            contact_phone?: string | null;
         };
         AppliedFilter: {
             filter: components["schemas"]["Filter"];
@@ -33315,6 +33523,13 @@ export interface components {
             /** Format: int64 */
             row_version: number;
             status: string;
+        };
+        /** @description What an approval made. */
+        Approved: {
+            /** Format: uuid */
+            contact_id: string;
+            /** Format: uuid */
+            partner_account_id: string;
         };
         ApproverFigures: {
             /** Format: int64 */
@@ -39436,10 +39651,10 @@ export interface components {
             status: string;
         };
         /**
-         * @description A decision on a registration.
+         * @description A proposal's decision.
          * @enum {string}
          */
-        Decision: "approve" | "reject";
+        Decision: "confirm" | "dismiss";
         /** @description Z10-T9: a record attached to a decision. */
         DecisionAttachment: {
             /** @description The record's entity (its logical name). */
@@ -39452,7 +39667,7 @@ export interface components {
         };
         /** @description `POST /api/v1/partner/registrations/{id}/decision`. */
         DecisionBody: {
-            decision: components["schemas"]["Decision"];
+            decision: components["schemas"]["PartnerDecision"];
             /**
              * Format: uuid
              * @description Approve: link this opportunity instead of creating one.
@@ -45676,7 +45891,7 @@ export interface components {
         };
         /** @description `POST .../decision` on a request or claim. */
         MdfDecisionBody: {
-            decision: components["schemas"]["Decision"];
+            decision: components["schemas"]["PartnerDecision"];
             /** @description Required to reject; kept either way. */
             reason?: string | null;
         };
@@ -47212,6 +47427,16 @@ export interface components {
             state: string;
             /** Format: int64 */
             version_no: number;
+        };
+        /** @description `POST /api/v1/partner/leads/{id}/offer`. */
+        OfferBody: {
+            /**
+             * Format: int32
+             * @description Hours the partner has to accept; 48 when absent.
+             */
+            accept_hours?: number | null;
+            /** Format: uuid */
+            partner_account_id: string;
         };
         /** @description An offer after a step. */
         OfferState: {
@@ -57118,6 +57343,50 @@ export interface components {
             /** @description PUT the part's bytes here. */
             upload_url: string;
         };
+        /** @description A public partner application, with the CAPTCHA token sign-up takes. */
+        PartnerApplicationBody: components["schemas"]["Application"] & {
+            captcha_token?: string | null;
+        };
+        /** @description What a decision made. */
+        PartnerApplicationDecided: {
+            /** Format: uuid */
+            partner_account_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The administrator's portal membership, invited.
+             */
+            portal_user_id?: string | null;
+            /** @description `approved` or `rejected`. */
+            status: string;
+        };
+        /** @description `POST /api/v1/partner/applications/{id}/decision`. */
+        PartnerApplicationDecision: {
+            approve: boolean;
+            /**
+             * Format: uuid
+             * @description The portal the partner's administrator signs in to; required to approve.
+             */
+            portal_id?: string | null;
+            /** @description Required to reject. */
+            reason?: string | null;
+        };
+        /**
+         * @description A decision on a registration.
+         * @enum {string}
+         */
+        PartnerDecision: "approve" | "reject";
+        /** @description The lead after an offer or an answer. */
+        PartnerLead: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: date-time
+             * @description When an offer lapses.
+             */
+            partner_accept_by?: string | null;
+            /** @description `offered`, `accepted` or `rejected`. */
+            partner_status: string;
+        };
         /** @description A passkey assertion: the browser's response to the request options. */
         PasskeyAssertionBody: {
             /** @description `PublicKeyCredential.toJSON()` of `navigator.credentials.get`. */
@@ -65683,6 +65952,15 @@ export interface components {
         /** @description `PATCH /api/v1/admin/themes/{id}` and `POST .../preview-check`. */
         ThemeTokensBody: {
             tokens: components["schemas"]["ThemeTokens"];
+        };
+        /** @description The proposal after a decision. */
+        TierProposalDecided: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            row_version: number;
+            /** @description `confirmed` or `dismissed`. */
+            status: string;
         };
         /** @description The settings to save. */
         TimeTravelBody: {
@@ -135143,6 +135421,222 @@ export interface operations {
             };
         };
     };
+    partner_application_agreement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The application */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgreementBody"];
+            };
+        };
+        responses: {
+            /** @description Sent */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgreementSent"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a person, or no update access */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such application the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not approved, or already sent */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The document cannot be signed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    partner_application_decision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The application */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerApplicationDecision"];
+            };
+        };
+        responses: {
+            /** @description Decided */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerApplicationDecided"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a person, or no update access */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such application the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already decided, or the email has a portal account */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No reason to reject, or no portal to approve into */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    partner_lead_offer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The lead */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OfferBody"];
+            };
+        };
+        responses: {
+            /** @description Offered */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerLead"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a person, or no update access */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such lead the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A partner holds the lead, or the account is not a partner */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The hours are not above zero */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     partner_mdf_claim_decide: {
         parameters: {
             query?: never;
@@ -135390,6 +135884,148 @@ export interface operations {
                 };
             };
             /** @description A rejection without a reason, or no customer account to create the opportunity on */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    partner_tier_proposal_confirm: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The proposal's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The tier change proposal */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Confirmed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierProposalDecided"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a person, or no update access */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such proposal the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already decided, or changed since read */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match missing or malformed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    partner_tier_proposal_dismiss: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The proposal's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The tier change proposal */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dismissed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierProposalDecided"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a person, or no update access */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such proposal the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already decided, or changed since read */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match missing or malformed */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -158578,6 +159214,194 @@ export interface operations {
                 };
             };
             /** @description No such portal, or no such portal page */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_partner_application: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Web portal keyword */
+                keyword: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerApplicationBody"];
+            };
+        };
+        responses: {
+            /** @description Received */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalAck"];
+                };
+            };
+            /** @description No such portal */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A field is invalid, or the CAPTCHA failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many attempts */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_partner_lead_accept: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Web portal keyword */
+                keyword: string;
+                /** @description The lead */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerLead"];
+                };
+            };
+            /** @description No valid portal session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such portal, or no live offer to the caller's partner */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_partner_lead_reject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Web portal keyword */
+                keyword: string;
+                /** @description The lead */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rejected */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerLead"];
+                };
+            };
+            /** @description No valid portal session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such portal, or no live offer to the caller's partner */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_partner_statement: {
+        parameters: {
+            query: {
+                /** @description The commission period. */
+                period_id: string;
+                /** @description One-based: page 1 is the first page. */
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The statement */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_CommissionStatementRow"];
+                };
+            };
+            /** @description Not signed in to the portal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such portal, or nothing for the caller's partner in the period */
             404: {
                 headers: {
                     [name: string]: unknown;

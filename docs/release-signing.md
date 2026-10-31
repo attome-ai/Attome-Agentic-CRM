@@ -52,6 +52,11 @@ never kept; put the real public keys there before the first release that ships a
 `attome_ops::release_manifest::verify_manifest` refuses an unsigned or altered manifest and one
 signed by a key not listed.
 
+`attome upgrade sign-manifest --in <file> --key <seed> --out <file>` signs a manifest, and `attome
+upgrade check --manifest <file>` checks a deployment against it before an upgrade. A deprecated
+feature's `how_to_check` of `uses_table:<table>` fails the check when that table holds a row; any
+other value is a warning to look by hand.
+
 ## A lost or leaked key
 
 Make a new key pair as above, commit the new `deploy/cosign.pub`, and say in

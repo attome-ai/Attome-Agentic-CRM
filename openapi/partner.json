@@ -14,6 +14,234 @@
   },
   "x-api-version": "2026-10",
   "paths": {
+    "/api/v1/partner/applications/{id}/agreement": {
+      "post": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "Send the partner agreement",
+        "description": "F9-T6: an e-sign envelope to the applicant of an approved application. A person with update\naccess sends it, once; when it is signed the partner's onboarding items appear. Audited.",
+        "operationId": "partner_application_agreement",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The application",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgreementBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgreementSent"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a person, or no update access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such application the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not approved, or already sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The document cannot be signed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "partner",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/partner/leads/{id}/offer": {
+      "post": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "Offer a lead to a partner",
+        "description": "F9-T4: gives the partner until the limit to accept; a lead a partner already holds cannot be\noffered. A person with update access on the lead offers; API keys and S2S clients are refused.\nAudited.",
+        "operationId": "partner_lead_offer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The lead",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfferBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Offered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerLead"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a person, or no update access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such lead the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A partner holds the lead, or the account is not a partner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The hours are not above zero",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "partner",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/partner/mdf/claims/{id}/decision": {
       "post": {
         "tags": [
@@ -423,10 +651,263 @@
         "x-rate-class": "api",
         "x-risk": "medium"
       }
+    },
+    "/api/v1/partner/tier-proposals/{id}/confirm": {
+      "post": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "Confirm a tier change",
+        "description": "F9-T5: sets the partner's tier to the proposal's. A person with update access decides, with\nthe proposal's `If-Match` row version; API keys and S2S clients are refused. Audited.",
+        "operationId": "partner_tier_proposal_confirm",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The tier change proposal",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The proposal's row_version, quoted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Confirmed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TierProposalDecided"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a person, or no update access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such proposal the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already decided, or changed since read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "If-Match missing or malformed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "partner",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/partner/tier-proposals/{id}/dismiss": {
+      "post": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "Dismiss a tier change",
+        "description": "F9-T5: closes the proposal and leaves the partner's tier alone. A person with update access\ndecides, with the proposal's `If-Match` row version. Audited.",
+        "operationId": "partner_tier_proposal_dismiss",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The tier change proposal",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The proposal's row_version, quoted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dismissed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TierProposalDecided"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a person, or no update access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such proposal the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already decided, or changed since read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "If-Match missing or malformed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "partner",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
     }
   },
   "components": {
     "schemas": {
+      "AgreementBody": {
+        "type": "object",
+        "description": "`POST /api/v1/partner/applications/{id}/agreement`.",
+        "required": [
+          "document_id"
+        ],
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The `attome_document` record holding the agreement."
+          }
+        }
+      },
+      "AgreementSent": {
+        "type": "object",
+        "description": "The envelope sent.",
+        "required": [
+          "envelope_id"
+        ],
+        "properties": {
+          "envelope_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "Conflict": {
         "oneOf": [
           {
@@ -541,14 +1022,6 @@
           }
         }
       },
-      "Decision": {
-        "type": "string",
-        "description": "A decision on a registration.",
-        "enum": [
-          "approve",
-          "reject"
-        ]
-      },
       "DecisionBody": {
         "type": "object",
         "description": "`POST /api/v1/partner/registrations/{id}/decision`.",
@@ -557,7 +1030,7 @@
         ],
         "properties": {
           "decision": {
-            "$ref": "#/components/schemas/Decision"
+            "$ref": "#/components/schemas/PartnerDecision"
           },
           "opportunity_id": {
             "type": [
@@ -841,7 +1314,7 @@
         ],
         "properties": {
           "decision": {
-            "$ref": "#/components/schemas/Decision"
+            "$ref": "#/components/schemas/PartnerDecision"
           },
           "reason": {
             "type": [
@@ -849,6 +1322,61 @@
               "null"
             ],
             "description": "Required to reject; kept either way."
+          }
+        }
+      },
+      "OfferBody": {
+        "type": "object",
+        "description": "`POST /api/v1/partner/leads/{id}/offer`.",
+        "required": [
+          "partner_account_id"
+        ],
+        "properties": {
+          "accept_hours": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Hours the partner has to accept; 48 when absent."
+          },
+          "partner_account_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "PartnerDecision": {
+        "type": "string",
+        "description": "A decision on a registration.",
+        "enum": [
+          "approve",
+          "reject"
+        ]
+      },
+      "PartnerLead": {
+        "type": "object",
+        "description": "The lead after an offer or an answer.",
+        "required": [
+          "id",
+          "partner_status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "partner_accept_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When an offer lapses."
+          },
+          "partner_status": {
+            "type": "string",
+            "description": "`offered`, `accepted` or `rejected`."
           }
         }
       },
@@ -899,6 +1427,29 @@
             "items": {
               "$ref": "#/components/schemas/RuleFailure"
             }
+          }
+        }
+      },
+      "TierProposalDecided": {
+        "type": "object",
+        "description": "The proposal after a decision.",
+        "required": [
+          "id",
+          "status",
+          "row_version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string",
+            "description": "`confirmed` or `dismissed`."
           }
         }
       }

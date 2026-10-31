@@ -140,6 +140,25 @@ const COMMANDS: &[(&str, &[&str])] = &[
         ],
     ),
     (
+        "config",
+        &[
+            "pull",
+            "plan",
+            "diff",
+            "push",
+            "rollback",
+            "--out",
+            "--dir",
+            "--to",
+            "--allow-retire",
+            "--target",
+            "--url",
+            "--yes",
+            "--confirm-target",
+            "--json",
+        ],
+    ),
+    (
         "flags",
         &[
             "list",

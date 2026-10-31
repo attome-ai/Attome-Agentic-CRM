@@ -36,7 +36,20 @@ pub(crate) fn all() -> Vec<SettingDescriptor> {
     all.extend(limit_settings());
     all.extend(service_settings());
     all.extend(marketing_settings());
+    all.extend(partner_settings());
     all
+}
+
+/// F9-T4: how long an accepted partner lead may sit untouched.
+fn partner_settings() -> Vec<SettingDescriptor> {
+    vec![SettingDescriptor::new(
+        "partner.lead_stale_days",
+        "Days a lead a partner accepted may sit untouched before it returns to its owner.",
+        || json!({"type": "integer", "minimum": 1, "maximum": 365}),
+        &[SettingScope::Deployment],
+        false,
+        || json!(14),
+    )]
 }
 
 /// E16-T1: SMS campaigns. The price makes the cost estimate (0: no estimate

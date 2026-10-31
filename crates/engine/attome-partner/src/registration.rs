@@ -301,7 +301,7 @@ pub async fn intake_tick(state: &EngineState) -> Result<u64, AppError> {
     }
     let rows: Vec<Value> = sqlx::query_scalar(
         "SELECT to_jsonb(r) FROM deal_registration r \
-          WHERE r.status = 'submitted' AND r.checked_at IS NULL \
+          WHERE COALESCE(r.status, 'submitted') = 'submitted' AND r.checked_at IS NULL \
             AND (r.is_active IS NULL OR r.is_active = true) \
           ORDER BY r.id LIMIT $1",
     )
@@ -322,7 +322,7 @@ pub async fn intake_tick(state: &EngineState) -> Result<u64, AppError> {
         let done = sqlx::query(
             "UPDATE deal_registration SET status = $2, conflict_summary = $3, checked_at = now(), \
                     modified_at = now(), row_version = row_version + 1 \
-              WHERE id = $1 AND status = 'submitted' AND checked_at IS NULL",
+              WHERE id = $1 AND COALESCE(status, 'submitted') = 'submitted' AND checked_at IS NULL",
         )
         .bind(registration.id)
         .bind(status)
@@ -403,6 +403,7 @@ pub async fn lapse_tick(state: &EngineState) -> Result<u64, AppError> {
 /// A decision on a registration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
+#[schema(as = PartnerDecision)]
 pub enum Decision {
     Approve,
     Reject,
@@ -613,6 +614,9 @@ pub async fn decide(
         )),
     )
     .await?;
+    if let Some(partner) = registration.partner_account {
+        crate::recruiting::finish_first_deal(&mut tx, partner).await?;
+    }
     tx.commit().await.map_err(AppError::internal)?;
     Ok(Decided {
         id,

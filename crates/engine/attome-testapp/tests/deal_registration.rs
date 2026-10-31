@@ -39,8 +39,15 @@ async fn install(app: &TestApp, pack: &str) -> Result<(), String> {
 
 /// The packs the partner pack's lookups need, in whatever order they install.
 async fn install_partner(app: &TestApp) {
-    let mut left = vec!["crm", "sales", "contract-management", "partner"];
-    for _ in 0..4 {
+    let mut left = vec![
+        "crm",
+        "sales",
+        "vendor-supplier",
+        "contract-management",
+        "partner",
+    ];
+    let mut last = Vec::new();
+    for _ in 0..5 {
         let mut failed = Vec::new();
         for pack in left {
             if let Err(error) = install(app, pack).await {
@@ -53,11 +60,12 @@ async fn install_partner(app: &TestApp) {
             return;
         }
         left = failed.iter().map(|(pack, _)| *pack).collect();
-        if left.len() == 4 {
+        if left.len() == 5 {
             panic!("no pack installs: {failed:?}");
         }
+        last = failed;
     }
-    panic!("packs left uninstalled: {left:?}");
+    panic!("packs left uninstalled: {last:?}");
 }
 
 async fn create(app: &TestApp, entity: &str, body: Value) -> Uuid {

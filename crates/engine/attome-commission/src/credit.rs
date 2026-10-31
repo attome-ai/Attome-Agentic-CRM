@@ -126,6 +126,16 @@ pub async fn credit_from_source(
     participant: Uuid,
     source: &CreditSource,
 ) -> Result<bool, AppError> {
+    write_credit(state, participant, source, Some(source.user)).await
+}
+
+/// [`credit_from_source`], owned by `owner`; a partner's credit has no owner.
+pub(crate) async fn write_credit(
+    state: &EngineState,
+    participant: Uuid,
+    source: &CreditSource,
+    owner: Option<Uuid>,
+) -> Result<bool, AppError> {
     let Some((period, locked_original)) =
         crate::close::late_credit_target(&state.base.db, source.credited_on).await?
     else {
@@ -178,7 +188,7 @@ pub async fn credit_from_source(
     .bind(&source.amount)
     .bind(&source.currency)
     .bind(source.credited_on)
-    .bind(source.user)
+    .bind(owner)
     .bind(source.reverses)
     .execute(&mut *tx)
     .await
@@ -194,7 +204,7 @@ pub async fn credit_from_source(
             "late credit {} {} dated {} belongs to closed period {original}",
             source.kind, source.source_id, source.credited_on
         ))
-        .bind(source.user)
+        .bind(owner)
         .execute(&mut *tx)
         .await
         .map_err(AppError::internal)?;
@@ -247,7 +257,9 @@ pub async fn credit_won_deal(state: &EngineState, deal: Uuid) -> Result<u64, App
     .await
     .map_err(AppError::internal)?;
     let on = close_date.unwrap_or_else(|| Utc::now().date_naive());
-    let mut written = 0;
+    let mut written =
+        crate::partner_pay::credit_partner_deal(state, deal, amount.clone(), currency.clone(), on)
+            .await?;
     for source in won_deal_credits(deal, owner, amount, currency, on, &splits) {
         let Some(participant) = participant_for(db, source.user, "split_amount", on).await? else {
             continue;
@@ -378,7 +390,7 @@ async fn claw_back(
     on: NaiveDate,
 ) -> Result<u64, AppError> {
     let credits: Vec<CreditRow> = sqlx::query_as(
-        "SELECT id, participant_ref, owner_ref, credited_on, currency FROM comp_credit \
+        "SELECT id, participant_ref, owner_ref, credited_on::date, currency FROM comp_credit \
           WHERE source_kind = $1 AND source_id = $2 AND reverses_credit_ref IS NULL \
             AND (is_active IS NULL OR is_active = true)",
     )
@@ -471,7 +483,7 @@ pub async fn credit_business_source(
         "invoice" => {
             let row: Option<InvoiceRow> = sqlx::query_as(
                 "SELECT kind, status, account_ref, original_invoice_ref, net_total::text, \
-                        currency, issued_date FROM invoice \
+                        currency, issued_date::date FROM invoice \
                   WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
             )
             .bind(id)
@@ -513,7 +525,7 @@ pub async fn credit_business_source(
         }
         "customer_payment" => {
             let row: Option<PaymentRow> = sqlx::query_as(
-                "SELECT status, payer_account_ref, amount::text, currency, received_on \
+                "SELECT status, payer_account_ref, amount::text, currency, received_on::date \
                    FROM customer_payment WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
             )
             .bind(id)

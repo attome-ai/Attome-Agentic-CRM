@@ -86,6 +86,15 @@ Usage:
   attome storage migrate --from <config.json> --to <config.json> [--state <file>]
                                 Copy every file to another storage backend,
                                 verify each, and resume where a stop left off
+  attome upgrade check --manifest <file> [--free-bytes <n>] [--json]
+  attome upgrade sign-manifest --in <file> --key <file> --out <file>
+  attome upgrade apply|rollback|contract
+                  apply a signed release, go back to the old binary, or run
+                  its held-back removals
+  attome promote --dir <dir> --to <target>
+                  plan, rehearse on a copy and apply configuration
+  attome app export|install|remove
+                  move one app's metadata objects as a unit
   attome upgrade --plan <nodes.json>
                                 Upgrade nodes one at a time, watching each
                                 and rolling back the first that gets worse
@@ -181,6 +190,18 @@ fn main() -> ExitCode {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             outcome(attome::cmd::package::run(&rest).map_err(Into::into))
         }
+        ["app", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            outcome(attome::cmd::app_cmd::run(&rest).map_err(Into::into))
+        }
+        ["promote", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            outcome(attome::cmd::promote::run(&rest).map_err(Into::into))
+        }
+        ["config", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            outcome(attome::cmd::config_cmd::run(&rest).map_err(Into::into))
+        }
         ["flags", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             outcome(attome::cmd::flags::run(&rest).map_err(Into::into))
@@ -235,6 +256,14 @@ fn main() -> ExitCode {
         ["settings", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             attome::cmd::settings::run(&rest)
+        }
+        ["upgrade", "apply" | "rollback" | "contract", ..] => {
+            let rest: Vec<String> = args[1..].iter().map(|arg| (*arg).to_owned()).collect();
+            attome::cmd::upgrade_apply::run(&rest)
+        }
+        ["upgrade", "check" | "sign-manifest", ..] => {
+            let rest: Vec<String> = args[1..].iter().map(|arg| (*arg).to_owned()).collect();
+            attome::cmd::upgrade_check::run(&rest)
         }
         ["upgrade", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();

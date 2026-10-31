@@ -2853,6 +2853,120 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/partner/applications/{id}/decision": {
+      "post": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "Decide a partner application",
+        "description": "F9-T6: a person with update access approves or rejects. Approval marks the matched account a\npartner, or creates one, and invites its administrator to the portal, in one transaction. Audited.",
+        "operationId": "partner_application_decision",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The application",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartnerApplicationDecision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Decided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerApplicationDecided"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a person, or no update access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such application the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already decided, or the email has a portal account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No reason to reject, or no portal to approve into",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/portal-host": {
       "get": {
         "tags": [
@@ -6081,6 +6195,360 @@
         "x-risk": "low"
       }
     },
+    "/{keyword}/api/v1/partner/applications": {
+      "post": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "Apply to become a partner",
+        "description": "F9-T6: anyone may apply, through the same limits and CAPTCHA as sign-up. The answer says nothing\nabout whether the company is known. Audited.",
+        "operationId": "portal_partner_application",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "Web portal keyword",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartnerApplicationBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Received",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalAck"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A field is invalid, or the CAPTCHA failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many attempts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/{keyword}/api/v1/partner/leads/{id}/accept": {
+      "post": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "Accept a lead",
+        "description": "F9-T4: only the partner the lead is offered to, before the limit. Audited.",
+        "operationId": "portal_partner_lead_accept",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "Web portal keyword",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The lead",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerLead"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid portal session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal, or no live offer to the caller's partner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/{keyword}/api/v1/partner/leads/{id}/reject": {
+      "post": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "Reject a lead",
+        "description": "F9-T4: only the partner the lead is offered to, before the limit; the lead stops naming the\npartner. Audited.",
+        "operationId": "portal_partner_lead_reject",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "Web portal keyword",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The lead",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rejected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerLead"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid portal session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal, or no live offer to the caller's partner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/{keyword}/api/v1/partner/statement": {
+      "get": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "The partner's commission statement",
+        "description": "F10-T12: the statement of the signed-in person's own partner account, for one period.",
+        "operationId": "portal_partner_statement",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "period_id",
+            "in": "query",
+            "description": "The commission period.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based: page 1 is the first page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The statement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_CommissionStatementRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal, or nothing for the caller's partner in the period",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/{keyword}/api/v1/records/{entity}": {
       "get": {
         "tags": [
@@ -7299,6 +7767,32 @@
           }
         }
       },
+      "Application": {
+        "type": "object",
+        "description": "What an applicant sends.",
+        "required": [
+          "company_name",
+          "contact_name",
+          "contact_email"
+        ],
+        "properties": {
+          "company_name": {
+            "type": "string"
+          },
+          "contact_email": {
+            "type": "string"
+          },
+          "contact_name": {
+            "type": "string"
+          },
+          "contact_phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "AuthPolicy": {
         "type": "object",
         "properties": {
@@ -8096,6 +8590,96 @@
           }
         }
       },
+      "PaginatedResponse_CommissionStatementRow": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One row of a statement.",
+              "required": [
+                "id",
+                "kind"
+              ],
+              "properties": {
+                "amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Absent when the caller may not see pay amounts."
+                },
+                "component_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "credit_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "explanation": {
+                  "description": "A line's explanation steps; an adjustment's reason."
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "type": "string",
+                  "description": "`line`, `adjustment` or `clawback`."
+                },
+                "participant_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "run_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_EntityConfigView": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -8626,6 +9210,106 @@
               "$ref": "#/components/schemas/Warning"
             },
             "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PartnerApplicationBody": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Application"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "captcha_token": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "A public partner application, with the CAPTCHA token sign-up takes."
+      },
+      "PartnerApplicationDecided": {
+        "type": "object",
+        "description": "What a decision made.",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "partner_account_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "portal_user_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The administrator's portal membership, invited."
+          },
+          "status": {
+            "type": "string",
+            "description": "`approved` or `rejected`."
+          }
+        }
+      },
+      "PartnerApplicationDecision": {
+        "type": "object",
+        "description": "`POST /api/v1/partner/applications/{id}/decision`.",
+        "required": [
+          "approve"
+        ],
+        "properties": {
+          "approve": {
+            "type": "boolean"
+          },
+          "portal_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The portal the partner's administrator signs in to; required to approve."
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Required to reject."
+          }
+        }
+      },
+      "PartnerLead": {
+        "type": "object",
+        "description": "The lead after an offer or an answer.",
+        "required": [
+          "id",
+          "partner_status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "partner_accept_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When an offer lapses."
+          },
+          "partner_status": {
+            "type": "string",
+            "description": "`offered`, `accepted` or `rejected`."
           }
         }
       },

@@ -280,6 +280,29 @@ async fn statement(
     ))
 }
 
+/// Every source of a period's statement, $1 the period.
+pub(crate) fn sources_union() -> String {
+    SOURCES.map(|(_, select)| select).join(" UNION ALL ")
+}
+
+/// One row of a reader who sees amounts.
+pub(crate) fn row_from_note(row: &serde_json::Value) -> Option<CommissionStatementRow> {
+    let (id, kind, participant, run, component, credit, amount, note) = row_from_json(row)?;
+    Some(CommissionStatementRow {
+        id,
+        explanation: note.map(|n| match kind.as_str() {
+            "line" => serde_json::from_str(&n).unwrap_or(serde_json::Value::String(n)),
+            _ => serde_json::Value::String(n),
+        }),
+        amount,
+        kind,
+        participant_id: participant,
+        run_id: run,
+        component_id: component,
+        credit_id: credit,
+    })
+}
+
 fn row_from_json(row: &serde_json::Value) -> Option<RawRow> {
     let uuid = |key: &str| row.get(key)?.as_str().and_then(|s| Uuid::parse_str(s).ok());
     let text = |key: &str| row.get(key)?.as_str().map(str::to_owned);
