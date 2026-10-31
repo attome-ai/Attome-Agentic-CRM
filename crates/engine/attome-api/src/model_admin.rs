@@ -2079,6 +2079,64 @@ async fn export_files(
     Ok(Json(ModelFiles { files }))
 }
 
+/// Retire an app's objects
+///
+/// A21-T4: retires every active object of one app in one transaction and
+/// refreshes the cooked metadata, so the app stops applying at once. Versions
+/// are kept, and importing the app again brings the objects back. Entities,
+/// their records and the fields they added stay. Refused when an object outside
+/// the app still refers to one. Calling it again retires nothing. Audited.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/model/apps/{app}/retire",
+    operation_id = "retire_model_app",
+    tag = "admin",
+    params(("app" = String, Path, description = "The app's name")),
+    responses(
+        (status = 200, description = "How many objects were retired", body = RetireAppResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 409, description = "Another save of one of the objects is in progress", body = ErrorResponse),
+        (status = 422, description = "`customer` or an app with platform objects, or something outside the app still refers to it", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::SoftDelete)])))),
+)]
+async fn retire_app(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<area::DataModel>>,
+    Path(app): Path<String>,
+) -> Result<Json<RetireAppResponse>, AppError> {
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let retired = store::retire_app(&mut tx, &app).await?;
+    write_security_event(
+        &mut tx,
+        &audit_service(&state),
+        SecurityEvent::new(
+            MandatoryCategory::Configuration,
+            AuditOperation::SoftDelete,
+            ctx.user_id,
+            "metadata_object",
+            None,
+        )
+        .named("model.app_retired")
+        .comment(format!("{app}: {retired} object(s) retired")),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    refresh_cooked(&state).await?;
+    if let Err(error) = crate::catalog_index::rebuild_assets(&state).await {
+        tracing::warn!(%error, "catalog asset index not rebuilt after an app's removal");
+    }
+    Ok(Json(RetireAppResponse { retired }))
+}
+
+/// What an app's removal did.
+#[derive(Serialize, ToSchema)]
+pub(crate) struct RetireAppResponse {
+    retired: usize,
+}
+
 /// Import metadata objects
 ///
 /// Imports object files as drafts: an object with the same kind, app and
@@ -2150,8 +2208,13 @@ async fn import_files(
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let mut drafts = Vec::with_capacity(objects.len());
     let mut unchanged = Vec::new();
+    let mut returned = false;
     for (kind, object) in &objects {
         let kind_name = kind.name();
+        // A21-T4: an object an app's removal retired comes back as itself.
+        returned |=
+            store::reactivate_by_name(&mut tx, kind_name.as_str(), &object.app, &object.name)
+                .await?;
         // A22-T1: the published version already holds this file.
         let hash =
             attome_model::canonical::content_hash(&object.doc).map_err(AppError::Validation)?;
@@ -2221,6 +2284,11 @@ async fn import_files(
     )
     .await?;
     attome_db::tx::commit(tx).await?;
+    // A file the published version already holds saves no draft, so nothing
+    // would publish a returned object back into the cooked metadata.
+    if returned {
+        refresh_cooked(&state).await?;
+    }
     Ok(Json(ImportResponse { drafts, unchanged }))
 }
 
@@ -2899,6 +2967,7 @@ pub fn routes() -> Router<EngineState> {
             post(apply_commands),
         )
         .route("/api/v1/admin/model/{kind}/{id}/publish", post(publish))
+        .route("/api/v1/admin/model/apps/{app}/retire", post(retire_app))
         .route("/api/v1/model/forms/{id}/plan", get(form_plan))
         .route(
             "/api/v1/model/entities/{entity}/default-form",
@@ -2932,6 +3001,7 @@ pub fn routes() -> Router<EngineState> {
         validate,
         apply_commands,
         publish,
+        retire_app,
         switch_version,
         list_versions,
         version_nodes,

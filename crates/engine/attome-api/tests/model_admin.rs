@@ -607,6 +607,162 @@ fn a_published_form_has_a_render_plan() {
 
 /// Y1-T10's done-when: export, then import, gives drafts whose content
 /// hashes equal the exported objects' own.
+// feature: A21
+#[test]
+fn an_app_retires_as_a_unit_and_comes_back_on_install() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let db = system.state().base.db.clone();
+        let (_, cookie) = seed_admin(&db).await;
+        let app = full_app(system);
+        let entity_id: Uuid =
+            sqlx::query_scalar("SELECT id FROM entity_info WHERE is_active IS NOT FALSE LIMIT 1")
+                .fetch_one(&db)
+                .await
+                .expect("a seeded entity");
+        let form_id = Uuid::now_v7();
+        let name = format!("retire form {form_id}");
+        app.clone()
+            .oneshot(post_req(
+                &format!("/api/v1/admin/model/form/{form_id}/commands"),
+                &cookie,
+                serde_json::json!({
+                    "base_hash": "",
+                    "name": name,
+                    "commands": [
+                        { "op": "set", "path": "/entity", "value": entity_id.to_string() },
+                        { "op": "set", "path": "/sections", "value": [{ "label": "Main", "fields": [] }] }
+                    ]
+                }),
+            ))
+            .await
+            .unwrap();
+        let export = |app: axum::Router, cookie: String| async move {
+            let resp = app
+                .oneshot(get_req("/api/v1/admin/model/export", &cookie))
+                .await
+                .unwrap();
+            body_json(resp).await["files"]
+                .as_array()
+                .expect("files")
+                .clone()
+        };
+        let file = export(app.clone(), cookie.clone())
+            .await
+            .into_iter()
+            .find(|f| f["text"].as_str().is_some_and(|t| t.contains(&name)))
+            .expect("the form is exported");
+        let label = format!("app{}", form_id.simple());
+        let in_app = serde_json::json!({
+            "path": file["path"].as_str().unwrap().replace("/customer/", &format!("/{label}/")),
+            "text": file["text"]
+                .as_str()
+                .unwrap()
+                .replace("\"app\": \"customer\"", &format!("\"app\": \"{label}\"")),
+        });
+        let resp = app
+            .clone()
+            .oneshot(post_req(
+                "/api/v1/admin/model/import",
+                &cookie,
+                serde_json::json!({ "files": [in_app] }),
+            ))
+            .await
+            .unwrap();
+        let status = resp.status();
+        let imported = body_json(resp).await;
+        assert_eq!(status, StatusCode::OK, "{imported}");
+        let id = imported["drafts"][0]["id"].as_str().expect("id").to_owned();
+        let retire = format!("/api/v1/admin/model/apps/{label}/retire");
+
+        // Something outside the app refers to it: nothing goes.
+        let holder = Uuid::now_v7();
+        sqlx::query(
+            "INSERT INTO metadata_reference (from_kind, from_ref, to_entity, to_attribute, mode) \
+             VALUES ('form', $1, $2, '', 'reads')",
+        )
+        .bind(holder)
+        .bind(format!("form:{id}"))
+        .execute(&db)
+        .await
+        .expect("a reference");
+        let resp = app
+            .clone()
+            .oneshot(post_req(&retire, &cookie, serde_json::json!({})))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        let active: bool =
+            sqlx::query_scalar("SELECT is_active FROM metadata_object WHERE id = $1")
+                .bind(Uuid::parse_str(&id).unwrap())
+                .fetch_one(&db)
+                .await
+                .unwrap();
+        assert!(active, "a refused removal retires nothing");
+        sqlx::query("DELETE FROM metadata_reference WHERE from_ref = $1")
+            .bind(holder)
+            .execute(&db)
+            .await
+            .unwrap();
+
+        let resp = app
+            .clone()
+            .oneshot(post_req(&retire, &cookie, serde_json::json!({})))
+            .await
+            .unwrap();
+        let status = resp.status();
+        let retired = body_json(resp).await;
+        assert_eq!(status, StatusCode::OK, "{retired}");
+        assert_eq!(retired["retired"], 1);
+        let gone = export(app.clone(), cookie.clone()).await;
+        assert!(
+            !gone
+                .iter()
+                .any(|f| { f["path"].as_str().is_some_and(|p| p.contains(&label)) })
+        );
+
+        // A second call retires nothing, and `customer` is not an app.
+        let resp = app
+            .clone()
+            .oneshot(post_req(&retire, &cookie, serde_json::json!({})))
+            .await
+            .unwrap();
+        assert_eq!(body_json(resp).await["retired"], 0);
+        let resp = app
+            .clone()
+            .oneshot(post_req(
+                "/api/v1/admin/model/apps/customer/retire",
+                &cookie,
+                serde_json::json!({}),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
+
+        // Installing again resumes the same object.
+        let resp = app
+            .clone()
+            .oneshot(post_req(
+                "/api/v1/admin/model/import",
+                &cookie,
+                serde_json::json!({ "files": [in_app] }),
+            ))
+            .await
+            .unwrap();
+        let again = body_json(resp).await;
+        assert_eq!(
+            again["drafts"][0]["id"].as_str(),
+            Some(id.as_str()),
+            "{again}"
+        );
+        let back = export(app, cookie).await;
+        assert!(
+            back.iter()
+                .any(|f| { f["path"].as_str().is_some_and(|p| p.contains(&label)) })
+        );
+    });
+}
+
 #[test]
 fn export_then_import_keeps_content_hashes() {
     attome_testkit::run_shared(async {

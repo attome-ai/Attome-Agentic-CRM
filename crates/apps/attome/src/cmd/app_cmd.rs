@@ -4,15 +4,16 @@
 //! ```text
 //! attome app export <app> --out <dir>
 //! attome app install --dir <dir> [--yes] [--confirm-target <name>]
-//! attome app remove <app>
+//! attome app remove <app> [--yes] [--confirm-target <name>]
 //!   each with [--target <name> | --url <url>] [--json]
 //! ```
 //!
 //! An app's objects are the store's files under `<kind>/<app>/`. `install`
 //! shows what is new, changed and the same on the target; with `--yes` it
 //! imports them and publishes each one, stopping at the first refusal. `remove`
-//! changes nothing: the model store has no way to retire an object, so it lists
-//! what would go and what stays behind.
+//! lists what would go and what stays behind; with `--yes` it retires them all
+//! in one transaction, which something outside the app still using them
+//! refuses. Installing the app again brings them back.
 
 #![allow(
     clippy::print_stdout,
@@ -26,12 +27,12 @@ use serde_json::{Value, json};
 
 use crate::cmd::login::credentials;
 use crate::cmd::model_files::{
-    exported_files, import_files, publish_object, read_tree, safe_write,
+    exported_files, import_files, publish_object, read_tree, retire_app, safe_write,
 };
 use crate::cmd::output::{confirm, envelope, take_flag, take_value};
 
 const DEFAULT_URL: &str = "http://127.0.0.1:7865";
-const USAGE: &str = "usage: attome app export <app> --out <dir>\n       attome app install --dir <dir> [--yes] [--confirm-target <name>]\n       attome app remove <app>\n  each with [--target <name> | --url <url>] [--json]";
+const USAGE: &str = "usage: attome app export <app> --out <dir>\n       attome app install --dir <dir> [--yes] [--confirm-target <name>]\n       attome app remove <app> [--yes] [--confirm-target <name>]\n  each with [--target <name> | --url <url>] [--json]";
 
 /// What a deployment already has of an app's files.
 #[derive(Debug, Default, Clone, PartialEq, Eq, serde::Serialize)]
@@ -184,22 +185,39 @@ pub fn run(args: &[String]) -> Result<(), String> {
                 ))
             }
             ["remove", app] => {
-                let files = exported_files(&url, auth).await?;
+                let files = exported_files(&url, auth.clone()).await?;
                 let mine: Vec<&String> = files
                     .iter()
                     .map(|(path, _)| path)
                     .filter(|path| in_app(path, app))
                     .collect();
+                let listed = mine
+                    .iter()
+                    .map(|p| p.as_str())
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                if !yes {
+                    let line = format!(
+                        "{} object(s) belong to {app}; nothing changed, add --yes to retire \
+                         them. Entities, their records and the fields they added stay.\n{listed}",
+                        mine.len()
+                    );
+                    return Ok(("app_remove", json!({ "objects": mine }), line));
+                }
+                let named = target
+                    .as_deref()
+                    .map(|t| (t, crate::cmd::login::is_production(Some(t))));
+                confirm("app remove", yes, confirm_target.as_deref(), named)?;
+                let retired = retire_app(&url, auth, app).await?;
                 let line = format!(
-                    "{} object(s) belong to {app}; nothing was removed, objects cannot be \
-                     retired yet. Entities, their records and the fields they added stay.\n{}",
-                    mine.len(),
-                    mine.iter()
-                        .map(|p| p.as_str())
-                        .collect::<Vec<_>>()
-                        .join("\n")
+                    "retired {retired} object(s) of {app}. Entities, their records and the \
+                     fields they added stay.\n{listed}"
                 );
-                Ok(("app_remove", json!({ "objects": mine }), line))
+                Ok((
+                    "app_remove",
+                    json!({ "retired": retired, "objects": mine }),
+                    line,
+                ))
             }
             _ => Err(USAGE.to_owned()),
         }

@@ -254,6 +254,23 @@ pub(crate) async fn publish_object(
 
 /// Every `.json` file under `dir`, as (path relative to `dir` with `/`
 /// separators, text), sorted by path.
+/// A21-T4: retires one app's objects; answers how many went.
+pub(crate) async fn retire_app(url: &str, auth: Auth, app: &str) -> Result<u64, String> {
+    let body = answer(
+        authorised(
+            client(url)?.post(format!("{url}/api/v1/admin/model/apps/{app}/retire")),
+            auth.as_deref(),
+        )
+        .send()
+        .await
+        .map_err(|error| error.to_string())?,
+    )
+    .await?;
+    body["retired"]
+        .as_u64()
+        .ok_or_else(|| "the server did not say how many it retired".to_owned())
+}
+
 pub(crate) fn read_tree(dir: &Path) -> Result<Vec<(String, String)>, String> {
     let mut found = Vec::new();
     let mut pending = vec![dir.to_path_buf()];

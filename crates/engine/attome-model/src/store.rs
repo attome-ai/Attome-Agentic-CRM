@@ -523,6 +523,100 @@ pub async fn find_by_name(
     .map_err(AppError::internal)
 }
 
+/// A21-T4: retires every active object of `app` together, keeping their
+/// versions, and answers how many went. An object outside the app that still
+/// refers to one refuses the whole call, so a removal never half happens and
+/// never leaves a dangling reference. A platform object is not removable, and
+/// `customer` is where a deployment's own objects live, not an app.
+pub async fn retire_app(tx: &mut Tx<'_>, app: &str) -> Result<usize, AppError> {
+    if app == "customer" {
+        return Err(AppError::Validation(
+            "customer holds this deployment's own objects and is not an app".into(),
+        ));
+    }
+    let objects: Vec<(Uuid, String, String)> = sqlx::query_as(
+        "SELECT id, kind, owner_layer FROM metadata_object \
+          WHERE app = $1 AND is_active ORDER BY id FOR UPDATE",
+    )
+    .bind(app)
+    .fetch_all(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    if objects.iter().any(|(_, _, layer)| layer == "platform") {
+        return Err(AppError::Validation(format!(
+            "{app} holds platform objects, which cannot be removed"
+        )));
+    }
+    for (id, _, _) in &objects {
+        let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
+            .bind(crate::ADVISORY_LOCK_NAMESPACE)
+            .bind(format!("attome-model/save:{id}"))
+            .fetch_one(&mut **tx)
+            .await
+            .map_err(AppError::internal)?;
+        if !locked {
+            return Err(AppError::Conflict(
+                "a metadata write is already in progress",
+            ));
+        }
+    }
+    let ids: Vec<Uuid> = objects.iter().map(|(id, _, _)| *id).collect();
+    let targets: Vec<String> = objects
+        .iter()
+        .map(|(id, kind, _)| format!("{kind}:{id}"))
+        .collect();
+    // A retired referrer keeps its rows for when it returns, and holds nothing.
+    let holders: Vec<(String, Uuid)> = sqlx::query_as(
+        "SELECT DISTINCT r.from_kind, r.from_ref FROM metadata_reference r \
+          WHERE r.to_entity = ANY($1) AND NOT r.from_ref = ANY($2) \
+            AND NOT EXISTS (SELECT 1 FROM metadata_object o \
+                             WHERE o.id = r.from_ref AND NOT o.is_active) \
+          ORDER BY r.from_kind, r.from_ref LIMIT 10",
+    )
+    .bind(&targets)
+    .bind(&ids)
+    .fetch_all(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    if !holders.is_empty() {
+        let named: Vec<String> = holders
+            .iter()
+            .map(|(kind, id)| format!("{kind} {id}"))
+            .collect();
+        return Err(AppError::Validation(format!(
+            "{app} is still referred to by {}",
+            named.join(", ")
+        )));
+    }
+    sqlx::query("UPDATE metadata_object SET is_active = false WHERE id = ANY($1)")
+        .bind(&ids)
+        .execute(&mut **tx)
+        .await
+        .map_err(AppError::internal)?;
+    Ok(ids.len())
+}
+
+/// A21-T4: brings back the retired object of `kind` named `name` in `app`, so
+/// installing an app again resumes its history; `true` when there was one.
+pub async fn reactivate_by_name(
+    tx: &mut Tx<'_>,
+    kind: &str,
+    app: &str,
+    name: &str,
+) -> Result<bool, AppError> {
+    let done = sqlx::query(
+        "UPDATE metadata_object SET is_active = true \
+          WHERE kind = $1 AND app = $2 AND name = $3 AND NOT is_active",
+    )
+    .bind(kind)
+    .bind(app)
+    .bind(name)
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(done.rows_affected() == 1)
+}
+
 /// An object found by name, with its newest published version, if any.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PublishedState {
