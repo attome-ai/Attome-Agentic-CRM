@@ -266,6 +266,8 @@ async fn build_with(config: AppConfig) -> Option<TestApp> {
         .register(attome_docgen::model::DocgenModel)
         // A25: the search settings and facet routes `search_settings` calls.
         .register(attome_search::SearchModel)
+        // F10: the payroll hand-off the commission scenario ends on.
+        .register(attome_hr::HrModel)
         .build()
         .await
         .expect("build the engine system");

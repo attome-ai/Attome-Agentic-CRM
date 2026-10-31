@@ -2551,6 +2551,7 @@ dependencies = [
  "attome-events",
  "attome-fulfilment",
  "attome-grc",
+ "attome-hr",
  "attome-integration",
  "attome-jobs",
  "attome-ledger",
