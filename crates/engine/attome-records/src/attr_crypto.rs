@@ -28,6 +28,7 @@ use attome_config::KeyRing;
 use attome_core::{AttrInfo, FieldType};
 use attome_types::AppError;
 use attome_types::secret::SecretString;
+use serde_json::{Map, Value};
 use uuid::Uuid;
 
 /// Shapes error messages only; never key material.
@@ -35,6 +36,17 @@ const KEY_FIELD: &str = "attribute encryption key";
 
 /// The options key an attribute's encryption settings live under.
 pub const OPTIONS_KEY: &str = "encryption";
+
+/// The hidden column beside a deterministic attribute that holds its blind
+/// index. It is no attribute, so no read path selects it.
+pub const INDEX_SUFFIX: &str = "__bidx";
+/// PostgreSQL's identifier limit, less [`INDEX_SUFFIX`].
+const MAX_COLUMN_LEN: usize = 63 - INDEX_SUFFIX.len();
+
+/// The blind index column of `column`.
+pub fn index_column(column: &str) -> String {
+    format!("{column}{INDEX_SUFFIX}")
+}
 
 /// How an encrypted attribute's values are sealed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -120,10 +132,43 @@ pub fn is_eligible(attr: &AttrInfo) -> bool {
 /// asks for none, or asks for a known mode on an eligible attribute that is
 /// not sortable. Names the field and the reason; never a value.
 pub fn validate(attr: &AttrInfo) -> Result<(), AppError> {
-    let Some(options) = encryption_options(attr) else {
+    validate_new(
+        &attr.logicalname,
+        attr.field_type() == FieldType::Text,
+        attr.sensitivity_confirmed && attr.sensitivity.is_gated(),
+        attr.is_sortable,
+        attr.options.as_ref(),
+    )
+}
+
+/// Whether `options` ask for a blind index.
+pub fn wants_index(options: Option<&Value>) -> bool {
+    options
+        .and_then(|o| o.get(OPTIONS_KEY))
+        .and_then(|e| e.get("mode"))
+        .and_then(Value::as_str)
+        .and_then(AttrCryptoMode::parse)
+        .is_some_and(AttrCryptoMode::equality_search)
+}
+
+/// [`validate`] for an attribute not stored yet: `is_text`, `gated` (it has a
+/// confirmed personal, financial, health or secret label) and `is_sortable`
+/// come from the request.
+pub fn validate_new(
+    field: &str,
+    is_text: bool,
+    gated: bool,
+    is_sortable: bool,
+    options: Option<&Value>,
+) -> Result<(), AppError> {
+    let Some(options) = options.and_then(|o| o.get(OPTIONS_KEY)) else {
         return Ok(());
     };
-    let field = &attr.logicalname;
+    if field.len() > MAX_COLUMN_LEN {
+        return Err(AppError::Validation(format!(
+            "{field}: an encrypted field's name is at most {MAX_COLUMN_LEN} characters"
+        )));
+    }
     if !options.is_object() {
         return Err(AppError::Validation(format!(
             "{field}: options.encryption must be an object"
@@ -136,17 +181,17 @@ pub fn validate(attr: &AttrInfo) -> Result<(), AppError> {
             "{field}: options.encryption.mode must be randomised or deterministic"
         )));
     }
-    if attr.field_type() != FieldType::Text {
+    if !is_text {
         return Err(AppError::Validation(format!(
             "{field}: only a text field can be encrypted"
         )));
     }
-    if !(attr.sensitivity_confirmed && attr.sensitivity.is_gated()) {
+    if !gated {
         return Err(AppError::Validation(format!(
             "{field}: encryption needs a confirmed personal, financial, health or secret label"
         )));
     }
-    if attr.is_sortable {
+    if is_sortable {
         return Err(AppError::Validation(format!(
             "{field}: an encrypted field cannot be sortable"
         )));
@@ -259,6 +304,116 @@ pub fn search_indexes(
         &column_context(table, column),
         &normalise_for_index(value),
     )
+}
+
+/// A write's fields with its encrypted ones sealed, and the blind indexes to
+/// store beside them.
+#[derive(Debug)]
+pub struct Sealed {
+    pub fields: Map<String, Value>,
+    pub indexes: Vec<(String, Option<String>)>,
+}
+
+/// Whether any of `attrs` is encrypted.
+pub fn has_encrypted(attrs: &[AttrInfo]) -> bool {
+    attrs.iter().any(|a| mode_for(a).is_some())
+}
+
+/// Seals the encrypted fields `fields` holds for the row `row_id` of `table`;
+/// `None` when it holds none. Refused without a key: a value meant to be
+/// encrypted is never stored in clear.
+pub fn seal_fields(
+    ring: &KeyRing,
+    table: &str,
+    row_id: Uuid,
+    attrs: &[AttrInfo],
+    fields: &Map<String, Value>,
+) -> Result<Option<Sealed>, AppError> {
+    let mut sealed = Sealed {
+        fields: fields.clone(),
+        indexes: Vec::new(),
+    };
+    let mut any = false;
+    for attr in attrs {
+        let (Some(mode), Some(value)) = (mode_for(attr), fields.get(&attr.logicalname)) else {
+            continue;
+        };
+        any = true;
+        let column = attr.logicalname.as_str();
+        let index = match value {
+            Value::Null => None,
+            Value::String(text) => {
+                if ring.is_empty() {
+                    return Err(AppError::Validation(format!(
+                        "{column}: no attribute encryption key is configured"
+                    )));
+                }
+                let binding = AttrBinding {
+                    table,
+                    column,
+                    row_id,
+                };
+                sealed
+                    .fields
+                    .insert(column.to_owned(), seal(ring, mode, binding, text)?.into());
+                mode.equality_search()
+                    .then(|| blind_index(ring, table, column, text))
+                    .transpose()?
+            }
+            _ => {
+                return Err(AppError::Validation(format!(
+                    "{column}: an encrypted field holds text"
+                )));
+            }
+        };
+        if mode.equality_search() {
+            sealed.indexes.push((index_column(column), index));
+        }
+    }
+    Ok(any.then_some(sealed))
+}
+
+/// Opens the encrypted fields of a row in place, leaving those `skip` names.
+/// A value that will not open reads as empty and is logged, so a read never
+/// answers ciphertext and one bad value does not fail a whole page.
+pub fn open_fields(
+    ring: &KeyRing,
+    table: &str,
+    attrs: &[AttrInfo],
+    row: &mut Map<String, Value>,
+    skip: impl Fn(&str) -> bool,
+) {
+    let row_id = row
+        .get("id")
+        .and_then(Value::as_str)
+        .and_then(|id| Uuid::parse_str(id).ok());
+    for attr in attrs {
+        let column = attr.logicalname.as_str();
+        if mode_for(attr).is_none() || skip(column) {
+            continue;
+        }
+        let Some(value) = row.get_mut(column) else {
+            continue;
+        };
+        let Some(stored) = value.as_str() else {
+            continue;
+        };
+        let opened = row_id.and_then(|row_id| {
+            let binding = AttrBinding {
+                table,
+                column,
+                row_id,
+            };
+            open(ring, binding, stored).ok()
+        });
+        *value = match opened {
+            Some(text) => Value::String(text.expose_secret().to_owned()),
+            None => {
+                tracing::warn!(table, column, "an encrypted value did not open");
+                Value::Null
+            }
+        };
+    }
 }
 
 #[cfg(test)]
@@ -508,6 +663,58 @@ mod tests {
         assert_eq!(search.len(), 2);
         assert!(search.contains(&stored_before_rotation));
         assert!(search.contains(&blind_index(&rotating, "contact", "email", "a@b.test").unwrap()));
+    }
+
+    #[test]
+    fn attr_crypto_fields_seal_and_open_round_trip() {
+        let ring = ring(&[("k1", 7)], "k1");
+        let row = Uuid::now_v7();
+        let attrs = [encrypted("deterministic")];
+        let mut fields = Map::new();
+        fields.insert("national_id".into(), json!("784-1"));
+        fields.insert("other".into(), json!("clear"));
+        let sealed = seal_fields(&ring, "contact", row, &attrs, &fields)
+            .unwrap()
+            .unwrap();
+        let stored = sealed.fields["national_id"].as_str().unwrap().to_owned();
+        assert!(!stored.contains("784"));
+        assert_eq!(sealed.fields["other"], "clear");
+        assert_eq!(sealed.indexes.len(), 1);
+        assert_eq!(sealed.indexes[0].0, "national_id__bidx");
+        assert!(sealed.indexes[0].1.is_some());
+
+        let mut read = sealed.fields.clone();
+        read.insert("id".into(), json!(row.to_string()));
+        open_fields(&ring, "contact", &attrs, &mut read, |_| false);
+        assert_eq!(read["national_id"], "784-1");
+    }
+
+    #[test]
+    fn attr_crypto_refuses_to_store_in_clear_without_a_key() {
+        let empty = KeyRing::default();
+        let attrs = [encrypted("randomised")];
+        let mut fields = Map::new();
+        fields.insert("national_id".into(), json!("784-1"));
+        let refused = seal_fields(&empty, "contact", Uuid::now_v7(), &attrs, &fields);
+        assert!(matches!(refused, Err(AppError::Validation(_))));
+        fields.clear();
+        fields.insert("other".into(), json!("x"));
+        assert!(
+            seal_fields(&empty, "contact", Uuid::now_v7(), &attrs, &fields)
+                .unwrap()
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn attr_crypto_a_value_that_will_not_open_reads_empty() {
+        let ring = ring(&[("k1", 7)], "k1");
+        let attrs = [encrypted("randomised")];
+        let mut read = Map::new();
+        read.insert("id".into(), json!(Uuid::now_v7().to_string()));
+        read.insert("national_id".into(), json!("not sealed"));
+        open_fields(&ring, "contact", &attrs, &mut read, |_| false);
+        assert_eq!(read["national_id"], Value::Null);
     }
 
     #[test]

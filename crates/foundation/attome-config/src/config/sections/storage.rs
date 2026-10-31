@@ -271,6 +271,12 @@ pub struct StorageSection {
     /// under them still name them.
     #[serde(default)]
     pub encryption_key: crate::KeyRing,
+    /// Q19-T1: the ring that seals attributes marked for encryption, its own
+    /// trust domain. Every entry is 64 hex chars. Empty, no attribute can be
+    /// created encrypted and a write to one is refused. Keep old keys in the
+    /// ring after a rotation: values sealed under them still name them.
+    #[serde(default)]
+    pub attribute_encryption_key: crate::KeyRing,
     /// Z6-T4: encrypt files in the server on S3, Azure or GCS too, instead of
     /// relying on the backend's own server-side encryption. Needs
     /// `encryption_key`. Presigned download links then serve ciphertext, so
@@ -332,6 +338,7 @@ impl std::fmt::Debug for StorageSection {
             .field("quota_warning_pct", &self.quota_warning_pct)
             .field("clamd_address", &self.clamd_address)
             .field("encryption_key", &self.encryption_key)
+            .field("attribute_encryption_key", &self.attribute_encryption_key)
             .field("encrypt_client_side", &self.encrypt_client_side)
             .finish()
     }

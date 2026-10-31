@@ -609,6 +609,7 @@ Required.
 
 | Key | Type | Default | Secret | Description |
 |---|---|---|---|---|
+| `storage.attribute_encryption_key` | string \| object |  | yes | Q19-T1: the ring that seals attributes marked for encryption, its own trust domain. Every entry is 64 hex chars. Empty, no attribute can be created encrypted and a write to one is refused. Keep old keys in the ring after a rotation: values sealed under them still name them. |
 | `storage.azure.access_key` | string |  | yes | The storage account's shared access key. Presigned links are signed with it, so it must be a key rather than a token. |
 | `storage.azure.account` | string | `""` |  | The storage account name. |
 | `storage.azure.container` | string | `""` |  | The blob container that holds the files. |

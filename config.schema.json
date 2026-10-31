@@ -3540,6 +3540,29 @@
     },
     "StorageSection": {
       "properties": {
+        "attribute_encryption_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "properties": {
+                "active_key_id": {
+                  "type": "string"
+                },
+                "keys": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
+          ],
+          "description": "Q19-T1: the ring that seals attributes marked for encryption, its own\ntrust domain. Every entry is 64 hex chars. Empty, no attribute can be\ncreated encrypted and a write to one is refused. Keep old keys in the\nring after a rotation: values sealed under them still name them.",
+          "writeOnly": true
+        },
         "azure": {
           "$ref": "#/$defs/AzureStorageSettings"
         },

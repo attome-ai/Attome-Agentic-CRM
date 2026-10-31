@@ -154,7 +154,7 @@ async fn hierarchy_rows(
 
     Ok(rows
         .into_iter()
-        .map(|row| build_response(entity_id, row, attrs, None, ctx, entity_name))
+        .map(|row| build_response(&state.base.config.storage.attribute_encryption_key, entity_id, row, attrs, None, ctx, entity_name))
         .collect())
 }
 

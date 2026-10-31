@@ -531,6 +531,41 @@ pub async fn count_duplicate_values(
     .map_err(AppError::internal)
 }
 
+/// Q19-T1: adds the hidden blind index column of an encrypted attribute and
+/// its index. The column is new and empty, so the index holds nothing yet.
+pub async fn ensure_blind_index(
+    db: &DbPool,
+    entity_logicalname: &str,
+    column: &str,
+) -> Result<(), AppError> {
+    if !valid_identifier(entity_logicalname) || !valid_identifier(column) {
+        return Err(AppError::internal(format!(
+            "invalid identifier: entity={entity_logicalname}, column={column}"
+        )));
+    }
+    let hash = format!("{entity_logicalname}.{column}")
+        .bytes()
+        .fold(0xcbf2_9ce4_8422_2325_u64, |h, b| {
+            (h ^ u64::from(b)).wrapping_mul(0x0100_0000_01b3)
+        });
+    let table = attome_core::quote_ident(entity_logicalname);
+    let quoted = attome_core::quote_ident(column);
+    sqlx::raw_sql(&format!(
+        "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {quoted} text"
+    ))
+    .execute(db)
+    .await
+    .map_err(AppError::internal)?;
+    sqlx::raw_sql(&format!(
+        "CREATE INDEX CONCURRENTLY IF NOT EXISTS {} ON {table} ({quoted})",
+        attome_core::quote_ident(&format!("blind_{hash:016x}"))
+    ))
+    .execute(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
+}
+
 /// A29-T1, A3-T6: makes the unique index of an external-id or unique field
 /// match its metadata. The attribute's `options.external_id.system` and
 /// `options.unique` are re-read here, so a caller only says which field

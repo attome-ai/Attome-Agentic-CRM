@@ -5037,7 +5037,7 @@ fn sensitivity_label_round_trips() {
         let (status, created) = send(
             "POST",
             fields.clone(),
-            r#"{"logicalname":"salary","name":"Salary","field_type":"decimal","sensitivity":"financial"}"#,
+            r#"{"logicalname":"salary","name":"Salary","field_type":"number","sensitivity":"financial"}"#,
         )
         .await;
         assert_eq!(status, StatusCode::CREATED, "{created:?}");

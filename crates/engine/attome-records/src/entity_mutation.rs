@@ -2327,11 +2327,34 @@ pub async fn create_one_as(
     let sanitized = sanitize_rich_text_fields(attrs, obj);
     let obj: &serde_json::Map<String, Value> = &sanitized;
 
-    let (mut cols, mut placeholders, values) = build_insert_binds(attrs, obj, 6);
+    // Q19-T1: an encrypted value is bound to its row, so the row's id is known
+    // before the insert; business rules and lookups above saw the clear value.
+    let encrypted = crate::attr_crypto::has_encrypted(attrs);
+    let bundle_id = match mode {
+        MutationMode::BundleRecordSet(Some(id)) | MutationMode::ClientId(id) => Some(id),
+        _ => encrypted.then(Uuid::now_v7),
+    };
+    let sealed = match bundle_id.filter(|_| encrypted) {
+        Some(id) => crate::attr_crypto::seal_fields(
+            &state.base.config.storage.attribute_encryption_key,
+            entity_name,
+            id,
+            attrs,
+            obj,
+        )?,
+        None => None,
+    };
+    let stored = sealed.as_ref().map_or(obj, |s| &s.fields);
+    let (mut cols, mut placeholders, mut values) = build_insert_binds(attrs, stored, 6);
     if cols.is_empty() {
         return Err(AppError::Validation(
             "no recognised fields in record".into(),
         ));
+    }
+    for (column, index) in sealed.iter().flat_map(|s| s.indexes.iter()) {
+        cols.push(quote_ident(column));
+        placeholders.push(format!("${}", 6 + values.len()));
+        values.push(index.clone());
     }
 
     if mode.enforce_lookup_liveness() {
@@ -2374,10 +2397,6 @@ pub async fn create_one_as(
     // audit columns, so its placeholder number is just "one past whatever
     // came before" — no renumbering of the already-built `$6.."` attrs
     // placeholders above.
-    let bundle_id = match mode {
-        MutationMode::BundleRecordSet(Some(id)) | MutationMode::ClientId(id) => Some(id),
-        _ => None,
-    };
     if bundle_id.is_some() {
         let next_param = placeholders.len() + 1;
         cols.push("id".to_owned());
@@ -3501,11 +3520,24 @@ pub async fn update_one_as(
     let sanitized = sanitize_rich_text_fields(attrs, &with_computed);
     let obj: &serde_json::Map<String, Value> = &sanitized;
 
-    let (set_parts, values) = build_update_binds(attrs, obj, 3);
+    // Q19-T1: as on insert.
+    let sealed = crate::attr_crypto::seal_fields(
+        &state.base.config.storage.attribute_encryption_key,
+        entity_name,
+        record_id,
+        attrs,
+        obj,
+    )?;
+    let stored = sealed.as_ref().map_or(obj, |s| &s.fields);
+    let (mut set_parts, mut values) = build_update_binds(attrs, stored, 3);
     if set_parts.is_empty() {
         return Err(AppError::Validation(
             "no recognised fields to update".into(),
         ));
+    }
+    for (column, index) in sealed.iter().flat_map(|s| s.indexes.iter()) {
+        set_parts.push(format!("{} = ${}", quote_ident(column), 3 + values.len()));
+        values.push(index.clone());
     }
 
     if mode.enforce_lookup_liveness() {

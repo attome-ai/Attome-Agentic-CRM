@@ -147,3 +147,20 @@ Each side's encryption applies: an encrypted local folder is read as plaintext, 
 `encryption_key` set encrypts what it receives. To switch over: run it while the server runs, stop
 the server, run it once more to copy what arrived meanwhile, put the new `storage` section in the
 deployment's config and start the server. Delete the old files only after checking the new backend.
+
+## Encrypted attributes
+
+With `storage.attribute_encryption_key` set (a key ring of 64 hex characters per key, separate from
+the file key), a text field can be created encrypted: it needs a confirmed personal, financial, health
+or secret label, must not be sortable, and carries `options.encryption.mode`:
+
+- `randomised` (the default): equal values look different at rest, and only `is_null` and
+  `is_not_null` can filter it.
+- `deterministic`: `eq`, `neq` and `in` work through a hidden blind index, ignoring case and
+  surrounding spaces.
+
+Encryption is chosen when the field is created and cannot change afterwards. Writes are refused
+without a key, never stored in clear. Record reads and `query/execute` open the value. The audit trail records
+that such a field changed, never its value, and duplicate rules skip it. Exports, reports, search and
+history hold the sealed value, and filters outside `query/execute` do not
+use the blind index. Keep retired keys in the ring until their values are resealed.

@@ -301,7 +301,7 @@ pub(super) async fn list_related(
         .into_iter()
         .map(|row| {
             build_response(
-                other_entity_id,
+                &state.base.config.storage.attribute_encryption_key, other_entity_id,
                 row,
                 &other_attrs,
                 None,

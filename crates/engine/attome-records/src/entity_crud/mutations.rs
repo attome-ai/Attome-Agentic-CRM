@@ -160,20 +160,29 @@ pub async fn field_changes_from_obj(
 
                 let (old_lookup_entity, old_lookup_name) = resolve(old_v);
                 let (new_lookup_entity, new_lookup_name) = resolve(Some(new_v));
+                // Q19-T1: the body holds an encrypted field's clear value, and
+                // the audit trail records that it changed, never to what.
+                let encrypted = crate::attr_crypto::mode_for(attr).is_some();
 
                 AuditFieldChange {
                     field_name: attr.logicalname.clone(),
                     display_name: None,
                     data_type: None,
-                    old_value: old_v.and_then(|v| json_to_str(v, attr)),
-                    new_value: json_to_str(new_v, attr),
+                    old_value: old_v
+                        .filter(|_| !encrypted)
+                        .and_then(|v| json_to_str(v, attr)),
+                    new_value: if encrypted {
+                        None
+                    } else {
+                        json_to_str(new_v, attr)
+                    },
                     old_display_value: None,
                     new_display_value: None,
                     old_lookup_entity,
                     old_lookup_name,
                     new_lookup_entity,
                     new_lookup_name,
-                    is_sensitive: attr.is_sensitive,
+                    is_sensitive: attr.is_sensitive || encrypted,
                 }
             })
         })
@@ -496,6 +505,7 @@ pub(crate) async fn project_row(
     .await?;
     let lookups = resolve_lookup_meta(state, ctx, &row, attrs).await;
     Ok(build_response(
+        &state.base.config.storage.attribute_encryption_key,
         entity_id,
         row,
         attrs,
@@ -992,9 +1002,17 @@ async fn create_record_in_mode(
     crate::duplicate_check::write_match_keys(&state, &entity_name, committed.result.record_id, obj)
         .await;
     let lookups = resolve_lookup_meta(&state, ctx, &row, &attrs).await;
-    let response = build_response(entity_id, row, &attrs, lookups, ctx, &entity_name)
-        .with_warnings(warnings)
-        .with_duplicates(duplicates, hidden_duplicates);
+    let response = build_response(
+        &state.base.config.storage.attribute_encryption_key,
+        entity_id,
+        row,
+        &attrs,
+        lookups,
+        ctx,
+        &entity_name,
+    )
+    .with_warnings(warnings)
+    .with_duplicates(duplicates, hidden_duplicates);
     Ok((committed.result.record_id, response))
 }
 
@@ -1232,20 +1250,28 @@ pub async fn update_record_for_outcome(
 
     crate::duplicate_check::write_match_keys(&state, &entity_name, record_id, obj).await;
     let lookups = resolve_lookup_meta(&state, ctx, &row, &attrs).await;
-    let response = build_response(entity_id, row, &attrs, lookups, ctx, &entity_name)
-        .with_approval_request_id(
-            approval
-                .as_ref()
-                .map(|a| a.request_id)
-                .or(held.as_ref().map(|h| h.request_id)),
-        )
-        .with_held_attributes(
-            held.as_ref()
-                .map(|h| h.attributes.clone())
-                .unwrap_or_default(),
-        )
-        .with_warnings(warnings)
-        .with_duplicates(duplicates, hidden_duplicates);
+    let response = build_response(
+        &state.base.config.storage.attribute_encryption_key,
+        entity_id,
+        row,
+        &attrs,
+        lookups,
+        ctx,
+        &entity_name,
+    )
+    .with_approval_request_id(
+        approval
+            .as_ref()
+            .map(|a| a.request_id)
+            .or(held.as_ref().map(|h| h.request_id)),
+    )
+    .with_held_attributes(
+        held.as_ref()
+            .map(|h| h.attributes.clone())
+            .unwrap_or_default(),
+    )
+    .with_warnings(warnings)
+    .with_duplicates(duplicates, hidden_duplicates);
     Ok(UpdateOutcome {
         response,
         approval,
@@ -2200,7 +2226,15 @@ pub async fn restore_record_for(
         .await?;
 
     let lookups = resolve_lookup_meta(state, ctx, &row, &attrs).await;
-    let response = build_response(entity_id, row, &attrs, lookups, ctx, &entity_name);
+    let response = build_response(
+        &state.base.config.storage.attribute_encryption_key,
+        entity_id,
+        row,
+        &attrs,
+        lookups,
+        ctx,
+        &entity_name,
+    );
 
     Ok(response)
 }

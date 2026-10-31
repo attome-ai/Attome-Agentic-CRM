@@ -932,6 +932,31 @@ async fn do_create_attribute_one(
     // contract held at its defaults and the target is recorded + queued
     // right after, exactly as `do_update_attribute` does for its own
     // `Expensive` case.
+    // Q19-T1: chosen at creation, while the column is empty.
+    if let Some(options) = body
+        .options
+        .as_ref()
+        .filter(|o| o.get(attome_records::attr_crypto::OPTIONS_KEY).is_some())
+    {
+        attome_records::attr_crypto::validate_new(
+            &logicalname,
+            field_type == FieldType::Text.as_str(),
+            sensitivity.is_some_and(|label| label.is_gated()),
+            body.is_sortable,
+            Some(options),
+        )?;
+        if state
+            .base
+            .config
+            .storage
+            .attribute_encryption_key
+            .is_empty()
+        {
+            return Err(AppError::Validation(format!(
+                "{logicalname}: storage.attribute_encryption_key is not configured"
+            )));
+        }
+    }
     let desc = AttributeDesc {
         logicalname: logicalname.clone(),
         display_name: display_name.clone(),
@@ -1121,6 +1146,14 @@ async fn do_create_attribute_one(
             &logicalname,
             range,
             strict,
+        )
+        .await?;
+    }
+    if attome_records::attr_crypto::wants_index(body.options.as_ref()) {
+        provision::ensure_blind_index(
+            &state.base.db_migrator,
+            &entity_logicalname,
+            &attome_records::attr_crypto::index_column(&logicalname),
         )
         .await?;
     }
@@ -1380,6 +1413,23 @@ pub(crate) async fn do_update_attribute_recorded(
     .map_err(AppError::internal)?;
 
     let cur = cur.ok_or(AppError::NotFound)?;
+    // Q19-T1: stored values were sealed under these settings, so they stand.
+    let encryption_of = |options: Option<&serde_json::Value>| {
+        options
+            .and_then(|o| o.get(attome_records::attr_crypto::OPTIONS_KEY))
+            .cloned()
+    };
+    let encrypted = encryption_of(cur.options.as_ref());
+    if body
+        .options
+        .as_ref()
+        .is_some_and(|o| encryption_of(Some(o)) != encrypted)
+        || (encrypted.is_some() && (body.sensitivity.is_some() || body.is_sortable == Some(true)))
+    {
+        return Err(AppError::Validation(
+            "a field's encryption, label and sorting are fixed once it is created".into(),
+        ));
+    }
 
     let entity_logicalname: Option<String> =
         sqlx::query_scalar("SELECT logicalname FROM entity_info WHERE id = $1")

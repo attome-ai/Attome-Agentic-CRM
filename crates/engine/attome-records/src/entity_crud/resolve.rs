@@ -34,6 +34,8 @@ pub async fn resolve_entity_from_db(
         lookup_entity_ref: Option<Uuid>,
         on_target_delete: String,
         data_classification: String,
+        sensitivity: String,
+        sensitivity_confirmed: bool,
         options: Option<Value>,
     }
 
@@ -67,6 +69,8 @@ pub async fn resolve_entity_from_db(
                   lookup_entity_ref,
                   COALESCE(on_target_delete, 'orphan') AS on_target_delete,
                   COALESCE(data_classification, 'general') AS data_classification,
+                  COALESCE(sensitivity, 'internal') AS sensitivity,
+                  COALESCE(sensitivity_confirmed, false) AS sensitivity_confirmed,
                   {OPTIONS_SQL} AS options
            FROM attribute_info
            WHERE entity_ref = $1 AND (is_active IS NULL OR is_active = true)
@@ -93,8 +97,8 @@ pub async fn resolve_entity_from_db(
             lookup_entity_ref: r.lookup_entity_ref,
             on_target_delete: OnTargetDelete::from_db_str(&r.on_target_delete),
             data_classification: DataClassification::from_db_str(&r.data_classification),
-            sensitivity: Default::default(),
-            sensitivity_confirmed: false,
+            sensitivity: attome_core::Sensitivity::from_db_str(&r.sensitivity),
+            sensitivity_confirmed: r.sensitivity_confirmed,
             options: r.options,
         })
         .collect();

@@ -1113,6 +1113,35 @@ struct QueryExecFilterSchema<'a> {
     hierarchies: std::collections::HashMap<String, attome_core::filter::Hierarchy>,
     /// B4-T4: the base entity and caller, for `tagged`.
     tag_scope: Option<attome_core::filter::TagScope>,
+    /// Q19-T1: the base entity's deterministic attributes.
+    blind: Option<BlindColumns<'a>>,
+}
+
+/// What equality on an encrypted attribute compares through.
+struct BlindColumns<'a> {
+    ring: &'a attome_config::KeyRing,
+    table: String,
+    columns: std::collections::HashSet<String>,
+}
+
+/// Q19-T1: the deterministic attributes of a single-entity result.
+fn blind_columns<'a>(state: &'a EngineState, entity: Option<Uuid>) -> Option<BlindColumns<'a>> {
+    let registry = state.entities.load();
+    let meta = registry.get_by_id(entity?)?;
+    let columns: std::collections::HashSet<String> = meta
+        .attrs
+        .iter()
+        .filter(|a| {
+            crate::attr_crypto::mode_for(a)
+                .is_some_and(crate::attr_crypto::AttrCryptoMode::equality_search)
+        })
+        .map(|a| a.logicalname.clone())
+        .collect();
+    (!columns.is_empty()).then(|| BlindColumns {
+        ring: &state.base.config.storage.attribute_encryption_key,
+        table: meta.logicalname.clone(),
+        columns,
+    })
 }
 
 /// A17-T2: for each lookup column, the target entity's tree, when it has one
@@ -1172,6 +1201,23 @@ impl FilterSchema for QueryExecFilterSchema<'_> {
         self.columns
             .iter()
             .any(|column| column.name == field && column.data_type == "geolocation")
+    }
+
+    fn blind_index(
+        &self,
+        field: &str,
+        value: &str,
+    ) -> Option<Result<attome_core::filter::BlindIndex, AppError>> {
+        let blind = self.blind.as_ref().filter(|b| b.columns.contains(field))?;
+        Some(
+            crate::attr_crypto::search_indexes(blind.ring, &blind.table, field, value).map(
+                |hashes| attome_core::filter::BlindIndex {
+                    table: blind.table.clone(),
+                    column: crate::attr_crypto::index_column(field),
+                    hashes,
+                },
+            ),
+        )
     }
 }
 
@@ -2695,6 +2741,7 @@ pub async fn execute_stored_query_with_definition(
     // `legal_matter_admin.rs`; this loop keeps only the whitelist membership
     // check and this endpoint's own `ColumnDef` adapter.
     let filter_schema = QueryExecFilterSchema {
+        blind: blind_columns(state, qrow.entity_logical_name),
         columns: &validation_columns,
         multi_choice: &multi_choice_fields,
         hierarchies: lookup_hierarchies(&validation_columns, &state.entities.load()),
@@ -3130,6 +3177,13 @@ pub async fn execute_stored_query_with_definition(
             .get_by_id(entity_id)
             .map(|meta| (meta.logicalname.clone(), meta.attrs.clone()));
         if let Some((name, attrs)) = entity {
+            // Q19-T1: formulas below read the opened value.
+            if crate::attr_crypto::has_encrypted(&attrs) {
+                let ring = &state.base.config.storage.attribute_encryption_key;
+                for object in records.iter_mut().filter_map(Value::as_object_mut) {
+                    crate::attr_crypto::open_fields(ring, &name, &attrs, object, |_| false);
+                }
+            }
             crate::entity_mutation::fill_read_time_formulas(state, &name, &attrs, &mut records)
                 .await;
         }
@@ -3573,6 +3627,7 @@ mod contract_tests {
             multi_choice: &multi_choice,
             hierarchies: std::collections::HashMap::new(),
             tag_scope: None,
+            blind: None,
         };
         assert_eq!(FilterSchema::cast(&schema, "amount"), Ok("numeric"));
         assert_eq!(FilterSchema::cast(&schema, "name"), Ok("text"));
@@ -3587,6 +3642,7 @@ mod contract_tests {
             multi_choice: &multi_choice,
             hierarchies: std::collections::HashMap::new(),
             tag_scope: None,
+            blind: None,
         };
         assert_eq!(
             FilterSchema::cast(&schema, "ssn"),
@@ -3603,6 +3659,7 @@ mod contract_tests {
             multi_choice: &multi_choice,
             hierarchies: std::collections::HashMap::new(),
             tag_scope: None,
+            blind: None,
         };
         assert!(FilterSchema::is_multi_choice(&schema, "tags"));
         assert!(!FilterSchema::is_multi_choice(&schema, "amount"));
@@ -3795,7 +3852,7 @@ mod proptests {
                 choice_styles: None,
             }];
             let multi_choice = std::collections::HashSet::new();
-            let schema = QueryExecFilterSchema { columns: &columns, multi_choice: &multi_choice, hierarchies: Default::default(), tag_scope: None };
+            let schema = QueryExecFilterSchema { columns: &columns, multi_choice: &multi_choice, hierarchies: Default::default(), tag_scope: None, blind: None };
             prop_assert_eq!(
                 FilterSchema::cast(&schema, &field).is_ok(),
                 parameter_cast(&data_type).is_some()
@@ -3828,7 +3885,7 @@ mod proptests {
                 })
                 .collect();
             let multi_choice = std::collections::HashSet::new();
-            let schema = QueryExecFilterSchema { columns: &columns, multi_choice: &multi_choice, hierarchies: Default::default(), tag_scope: None };
+            let schema = QueryExecFilterSchema { columns: &columns, multi_choice: &multi_choice, hierarchies: Default::default(), tag_scope: None, blind: None };
             prop_assert!(FilterSchema::cast(&schema, &probe).is_err());
         }
 

@@ -295,7 +295,22 @@ pub type Bind = String;
 /// `AttrInfo`-backed callers ([`cast_for_attr`]/[`is_multi_choice_attr`])
 /// each need a different lookup, but the trait itself is the same three
 /// bits of information for all of them.
+/// Q19-T1: where equality on an encrypted attribute compares: `hashes` are
+/// the value's blind indexes, one per key in the ring, against `column`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BlindIndex {
+    pub table: String,
+    pub column: String,
+    pub hashes: Vec<String>,
+}
+
 pub trait FilterSchema {
+    /// Q19-T1: `field`'s blind index for `value`, when equality on it goes
+    /// through one. The default is for a schema with no encrypted attributes.
+    fn blind_index(&self, _field: &str, _value: &str) -> Option<Result<BlindIndex, AppError>> {
+        None
+    }
+
     /// `Err(FieldCastError::Unknown)` when `field` is not in this caller's
     /// whitelist at all (including "exists but caller can't read it" —
     /// never distinguish those two to the client). `Ok(cast)` otherwise,
@@ -521,11 +536,51 @@ pub fn expand_dynamic(filter: &Filter, dynamic: &DynamicValues) -> Result<Vec<Fi
     })
 }
 
+/// Q19-T1: `eq`, `neq` and `in` on an attribute with a blind index, matching
+/// rows by id through the index; `None` for any other filter.
+fn compile_blind(
+    filter: &Filter,
+    schema: &dyn FilterSchema,
+    n: usize,
+) -> Option<Result<(String, Vec<Bind>), AppError>> {
+    let values: Vec<&str> = match (filter.op.as_str(), filter.value.as_ref()) {
+        ("eq" | "neq", Some(Value::String(value))) => vec![value.as_str()],
+        ("in", Some(Value::Array(values))) => values.iter().filter_map(Value::as_str).collect(),
+        _ => return None,
+    };
+    let mut found: Option<BlindIndex> = None;
+    for value in values {
+        let index = match schema.blind_index(&filter.field, value)? {
+            Ok(index) => index,
+            Err(error) => return Some(Err(error)),
+        };
+        match &mut found {
+            Some(all) => all.hashes.extend(index.hashes),
+            None => found = Some(index),
+        }
+    }
+    let found = found?;
+    let hashes: Vec<&str> = found.hashes.iter().map(String::as_str).collect();
+    let membership = if filter.op == "neq" { "NOT IN" } else { "IN" };
+    Some(Ok((
+        format!(
+            "{} {membership} (SELECT b.id FROM {} b WHERE b.{} = ANY(${n}::text[]))",
+            quote_ident("id"),
+            quote_ident(&found.table),
+            quote_ident(&found.column),
+        ),
+        vec![text_array_literal(&hashes)],
+    )))
+}
+
 pub fn compile(
     filter: &Filter,
     schema: &dyn FilterSchema,
     placeholder_start: usize,
 ) -> Result<(String, Vec<Bind>), AppError> {
+    if let Some(compiled) = compile_blind(filter, schema, placeholder_start) {
+        return compiled;
+    }
     let cast = schema.cast(&filter.field).map_err(|e| match e {
         FieldCastError::Unknown => {
             AppError::Validation(format!("unknown filter field: {}", filter.field))
@@ -916,6 +971,40 @@ mod tests {
             op: op.to_owned(),
             value: Some(value),
         }
+    }
+
+    #[test]
+    fn compile_equality_on_an_encrypted_field_goes_through_its_blind_index() {
+        struct Blind;
+        impl FilterSchema for Blind {
+            fn cast(&self, _: &str) -> Result<&'static str, FieldCastError> {
+                Ok("text")
+            }
+            fn blind_index(
+                &self,
+                field: &str,
+                value: &str,
+            ) -> Option<Result<BlindIndex, AppError>> {
+                Some(Ok(BlindIndex {
+                    table: "contact".into(),
+                    column: format!("{field}__bidx"),
+                    hashes: vec![format!("h-{value}")],
+                }))
+            }
+        }
+        let filter = Filter {
+            field: "national_id".into(),
+            op: "neq".into(),
+            value: Some(Value::String("784".into())),
+        };
+        let (sql, binds) = compile(&filter, &Blind, 1).expect("compiles");
+        assert_eq!(
+            sql,
+            "\"id\" NOT IN (SELECT b.id FROM \"contact\" b WHERE b.\"national_id__bidx\" = ANY($1::text[]))"
+        );
+        assert_eq!(binds.len(), 1);
+        assert!(binds[0].contains("h-784"), "the value itself is not bound");
+        assert!(!binds[0].contains("{784"));
     }
 
     #[test]

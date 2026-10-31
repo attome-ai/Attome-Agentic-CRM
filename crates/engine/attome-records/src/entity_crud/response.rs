@@ -538,6 +538,7 @@ pub(super) async fn resolve_lookup_meta(
 /// (create/update/etc.), whose `row` always carries every column because the
 /// audit diff needs it regardless of the HTTP caller's own visibility.
 pub(super) fn build_response(
+    ring: &attome_config::KeyRing,
     entity_id: Uuid,
     row: Value,
     attrs: &[AttrInfo],
@@ -587,6 +588,10 @@ pub(super) fn build_response(
     // Filter in place (serde_json::Map::retain) instead of cloning every
     // retained key/value into a new map.
     let data = if let Value::Object(mut map) = row {
+        // Q19-T1: before the id goes, which a randomised value is bound to.
+        crate::attr_crypto::open_fields(ring, entity_name, attrs, &mut map, |field| {
+            masked.contains_key(field)
+        });
         map.retain(|k, _| !SYSTEM_COLS.contains(&k.as_str()) && !sensitive.contains(k.as_str()));
         for (field, format) in &masked {
             if let Some(value) = map.get_mut(*field)

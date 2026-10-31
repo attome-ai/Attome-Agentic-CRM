@@ -503,7 +503,7 @@ pub async fn committed_response(
     }
     let lookups = super::response::resolve_lookup_meta(state, ctx, &row, &prepared.attrs).await;
     let response = super::response::build_response(
-        prepared.entity_id,
+        &state.base.config.storage.attribute_encryption_key, prepared.entity_id,
         row,
         &prepared.attrs,
         lookups,

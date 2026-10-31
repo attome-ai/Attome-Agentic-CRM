@@ -293,6 +293,20 @@ async fn try_write_match_keys(
     values: &Map<String, Value>,
 ) -> Result<(), AppError> {
     let db = &state.base.db;
+    // Q19-T1: a match key is a readable form of its value, so an encrypted
+    // field never gets one.
+    let encrypted: Vec<String> =
+        state
+            .entities
+            .load()
+            .get(entity_name)
+            .map_or_else(Vec::new, |meta| {
+                meta.attrs
+                    .iter()
+                    .filter(|a| crate::attr_crypto::mode_for(a).is_some())
+                    .map(|a| a.logicalname.clone())
+                    .collect()
+            });
     let rules: Vec<(Uuid, Value)> = sqlx::query_as(
         "SELECT id, fields FROM match_rule \
           WHERE entity_logicalname = $1 AND is_active AND NOT is_deleted",
@@ -308,6 +322,7 @@ async fn try_write_match_keys(
         for field in fields
             .iter()
             .filter(|f| f.comparator.is_key() && values.contains_key(&f.field))
+            .filter(|f| !encrypted.contains(&f.field))
         {
             let key = values
                 .get(&field.field)

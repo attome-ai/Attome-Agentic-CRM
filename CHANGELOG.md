@@ -23,6 +23,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Leads can be offered to a partner with a time limit: `POST /api/v1/partner/leads/{id}/offer`, the
   portal's `accept` and `reject`, and an hourly return of lapsed offers and of accepted leads
   untouched for `partner.lead_stale_days` days (F9-T4).
+- Encrypted attributes (Q19-T1): with `storage.attribute_encryption_key` set, a text field with a
+  confirmed personal, financial, health or secret label can be created with
+  `options.encryption.mode` `randomised` or `deterministic`. Its values are sealed on write and opened
+  on record reads and `query/execute`; `eq`, `neq` and `in` on a deterministic field go through a blind
+  index. Audit records the change without the value; exports, reports, search and history hold the sealed value.
 - `attome app export|install|remove` (A21-T4): moves one app's metadata objects as a unit; install
   shows what is new and changed and publishes them with `--yes`; remove lists what the app holds and
   what stays behind, and removes nothing yet.

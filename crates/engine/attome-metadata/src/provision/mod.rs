@@ -76,7 +76,7 @@ mod tests;
 pub use attribute::{
     MAIN_TABLE_ATTRIBUTE_LIMIT, MAX_COLUMN_SLOTS, attribute_index_requires_async,
     backfill_lookup_indexes, column_slots_used, count_duplicate_values, ensure_attribute,
-    ensure_entity, lookup_columns_without_index, sync_attribute_index,
+    ensure_blind_index, ensure_entity, lookup_columns_without_index, sync_attribute_index,
     sync_attribute_index_on_connection, sync_external_id_index, sync_field_constraints,
     sync_trigram_index, sync_trigram_index_on_connection, table_row_count_exceeds,
     trigram_index_candidates,

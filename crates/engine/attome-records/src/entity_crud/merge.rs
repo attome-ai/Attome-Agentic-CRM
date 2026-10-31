@@ -941,7 +941,7 @@ pub async fn do_merge_core_with_version(
         })?;
 
     let lookups = resolve_lookup_meta(state, ctx, &merged_row, &attrs).await;
-    let response = build_response(entity_id, merged_row, &attrs, lookups, ctx, &entity_name);
+    let response = build_response(&state.base.config.storage.attribute_encryption_key, entity_id, merged_row, &attrs, lookups, ctx, &entity_name);
 
     Ok(MergeOutcome {
         response,

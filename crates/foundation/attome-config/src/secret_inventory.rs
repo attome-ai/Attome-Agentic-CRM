@@ -174,6 +174,10 @@ pub const SECRETS: &[SecretSpec] = &[
         "storage.encryption_key",
         &["stored files' per-file keys at rest (Z6-T4)"],
     ),
+    ring(
+        "storage.attribute_encryption_key",
+        &["attributes encrypted at the engine layer (Q19-T1)"],
+    ),
     value(
         "storage.local.url_signing_key",
         &["file storage links (local disk)"],

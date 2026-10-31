@@ -516,7 +516,7 @@ async fn upsert_record_inner(
         .await?;
 
     let lookups = resolve_lookup_meta(&state, &ctx, &row, &attrs).await;
-    let response = build_response(entity_id, row, &attrs, lookups, &ctx, &entity_name)
+    let response = build_response(&state.base.config.storage.attribute_encryption_key, entity_id, row, &attrs, lookups, &ctx, &entity_name)
         .with_warnings(warnings)
         .with_duplicates(duplicates, hidden_duplicates);
 

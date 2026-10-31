@@ -1585,6 +1585,18 @@ impl AppConfig {
                 reason: "needs storage.encryption_key".into(),
             });
         }
+        // Q19-T1 — optional too, and well formed when configured.
+        if !self.storage.attribute_encryption_key.is_empty() {
+            Self::check_secret_ring(
+                "storage.attribute_encryption_key",
+                &self.storage.attribute_encryption_key,
+                production,
+            )?;
+            Self::check_hex_key_ring(
+                "storage.attribute_encryption_key",
+                &self.storage.attribute_encryption_key,
+            )?;
+        }
         // D-788 rule 9 — the recovery-archive ring is optional (absent = the
         // archive-needing operations fail closed), but a configured one must
         // be well formed: a malformed ring is a boot error, never a runtime
