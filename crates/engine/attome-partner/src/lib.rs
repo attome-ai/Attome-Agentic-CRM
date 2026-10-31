@@ -11,6 +11,8 @@ pub mod leads;
 /// F9-T7: market development fund requests and claims.
 pub mod mdf;
 pub mod model;
+/// F9-T9: one performance snapshot per partner per day.
+pub mod performance;
 /// F9-T6: recruiting, from a public application to onboarding.
 pub mod recruiting;
 /// F9-T3: deal registration conflicts, decisions and lapse.

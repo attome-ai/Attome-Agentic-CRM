@@ -73,6 +73,7 @@ pub async fn offer_lead_to_partner(
     sqlx::query_scalar(
         "UPDATE lead SET partner_account_ref = $2, partner_status = 'offered', \
                 partner_accept_by = now() + make_interval(hours => $3), \
+                partner_offered_at = now(), partner_responded_at = NULL, \
                 modified_at = now(), row_version = row_version + 1 \
           WHERE id = $1 AND (partner_status IS NULL OR partner_status NOT IN ('offered', 'accepted')) \
             AND EXISTS (SELECT 1 FROM account WHERE id = $2 AND is_partner = true) \
@@ -161,6 +162,7 @@ pub async fn respond(
     let done = sqlx::query(
         "UPDATE lead SET partner_status = $3, \
                 partner_account_ref = CASE WHEN $3 = 'accepted' THEN partner_account_ref END, \
+                partner_responded_at = now(), \
                 modified_at = now(), row_version = row_version + 1 \
           WHERE id = $1 AND partner_account_ref = $2 AND partner_status = 'offered' \
             AND partner_accept_by > now()",

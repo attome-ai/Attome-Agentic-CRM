@@ -1,0 +1,610 @@
+{
+  "author": "packs",
+  "checksum": "sha256:0ec7a6a87234c7b929a189c3bbf2ded517c37e8a2b23b4a580459ac37e41d152",
+  "closed_at": "2026-11-01T00:00:00Z",
+  "description": "F9-T9: daily partner performance snapshots, the lead timestamps behind them, and internal stored reports.",
+  "format": "attome-changeset/v1",
+  "id": "01a19411-7a86-7e24-b683-d28c5a110601",
+  "layer": "product",
+  "name": "partner-performance",
+  "opened_at": "2026-11-01T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Offered to partner",
+          "field_type": "date_time",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "partner_offered_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "lead",
+        "field": "partner_offered_at"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ العرض على الشريك"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.partner_offered_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Partner responded",
+          "field_type": "date_time",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "partner_responded_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "lead",
+        "field": "partner_responded_at"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ رد الشريك"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.partner_responded_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Partner Performance Snapshot",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "partner_performance_snapshot",
+          "primary_name_attribute": "as_of"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "partner_performance_snapshot"
+      }
+    },
+    {
+      "args": {
+        "display_name": "لقطة أداء الشريك"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "locale": "ar",
+        "object_key": "partner_performance_snapshot",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Partner",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "partner_account_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "partner_performance_snapshot",
+        "field": "partner_account_ref"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الشريك"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "locale": "ar",
+        "object_key": "partner_performance_snapshot.partner_account_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "As of",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "as_of",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "partner_performance_snapshot",
+        "field": "as_of"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بتاريخ"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "locale": "ar",
+        "object_key": "partner_performance_snapshot.as_of",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Pipeline",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "pipeline",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "partner_performance_snapshot",
+        "field": "pipeline"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الصفقات المفتوحة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "locale": "ar",
+        "object_key": "partner_performance_snapshot.pipeline",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Won revenue",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "won_revenue",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "partner_performance_snapshot",
+        "field": "won_revenue"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الإيراد المحقق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "locale": "ar",
+        "object_key": "partner_performance_snapshot.won_revenue",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Win rate",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "win_rate",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "partner_performance_snapshot",
+        "field": "win_rate"
+      }
+    },
+    {
+      "args": {
+        "display_name": "معدل الفوز"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "locale": "ar",
+        "object_key": "partner_performance_snapshot.win_rate",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Average hours to accept",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "avg_accept_hours",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "partner_performance_snapshot",
+        "field": "avg_accept_hours"
+      }
+    },
+    {
+      "args": {
+        "display_name": "متوسط ساعات القبول"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "locale": "ar",
+        "object_key": "partner_performance_snapshot.avg_accept_hours",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Certified people",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "certified_people",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "partner_performance_snapshot",
+        "field": "certified_people"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الأشخاص المعتمدون"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "locale": "ar",
+        "object_key": "partner_performance_snapshot.certified_people",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "MDF spent",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "mdf_spent",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "partner_performance_snapshot",
+        "field": "mdf_spent"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ما أُنفق من صندوق التسويق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "locale": "ar",
+        "object_key": "partner_performance_snapshot.mdf_spent",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "MDF attributed revenue",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "mdf_attributed_revenue",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "partner_performance_snapshot",
+        "field": "mdf_attributed_revenue"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الإيراد المنسوب لصندوق التسويق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "locale": "ar",
+        "object_key": "partner_performance_snapshot.mdf_attributed_revenue",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "opportunity",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "partner_pipeline",
+          "required_privilege": "partner_performance_snapshot.read",
+          "sql": "SELECT partner_account_ref, sum(amount) AS pipeline FROM opportunity WHERE partner_account_ref IS NOT NULL AND stage NOT IN ('closed_won', 'closed_lost') AND is_active = true GROUP BY partner_account_ref",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "opportunity",
+        "query": "partner_pipeline"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "opportunity",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "partner_won_revenue",
+          "required_privilege": "partner_performance_snapshot.read",
+          "sql": "SELECT partner_account_ref, sum(amount) AS won_revenue FROM opportunity WHERE partner_account_ref IS NOT NULL AND stage = 'closed_won' AND is_active = true GROUP BY partner_account_ref",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "opportunity",
+        "query": "partner_won_revenue"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "opportunity",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "partner_win_rate",
+          "required_privilege": "partner_performance_snapshot.read",
+          "sql": "SELECT partner_account_ref, 100.0 * count(*) FILTER (WHERE stage = 'closed_won') / NULLIF(count(*), 0) AS win_rate FROM opportunity WHERE partner_account_ref IS NOT NULL AND stage IN ('closed_won', 'closed_lost') AND is_active = true GROUP BY partner_account_ref",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "opportunity",
+        "query": "partner_win_rate"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "lead",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "partner_lead_accept_hours",
+          "required_privilege": "partner_performance_snapshot.read",
+          "sql": "SELECT partner_account_ref, avg(extract(epoch FROM partner_responded_at - partner_offered_at) / 3600) AS accept_hours FROM lead WHERE partner_status = 'accepted' AND partner_responded_at IS NOT NULL GROUP BY partner_account_ref",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "lead",
+        "query": "partner_lead_accept_hours"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "partner_certification",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "partner_certifications",
+          "required_privilege": "partner_performance_snapshot.read",
+          "sql": "SELECT partner_account_ref, count(DISTINCT partner_contact_ref) AS certified_people FROM partner_certification WHERE (expires_on IS NULL OR expires_on > CURRENT_DATE) AND is_active = true GROUP BY partner_account_ref",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "partner_certification",
+        "query": "partner_certifications"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "partner_performance_snapshot",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "partner_mdf_return",
+          "required_privilege": "partner_performance_snapshot.read",
+          "sql": "SELECT partner_account_ref, as_of, mdf_spent, mdf_attributed_revenue FROM partner_performance_snapshot WHERE is_active = true ORDER BY partner_account_ref, as_of DESC",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "partner_performance_snapshot",
+        "query": "partner_mdf_return"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "partner",
+  "seq": 6,
+  "title": "Pack: partner performance"
+}

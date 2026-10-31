@@ -3180,6 +3180,8 @@ const DEDUP_KEY_PARTNER_TIERS: &str = "partner-tier-evaluation";
 const DEDUP_KEY_PARTNER_LEAD_RETURN: &str = "partner-lead-return";
 /// F9-T6: onboarding items for signed partner agreements (a registered job type).
 const DEDUP_KEY_PARTNER_ONBOARDING: &str = "partner-onboarding";
+/// F9-T9: partner performance snapshots (a registered job type).
+const DEDUP_KEY_PARTNER_PERFORMANCE: &str = "partner-performance-rollup";
 /// I5-T2: maintenance plan timers and meter checks (a registered job type).
 const DEDUP_KEY_MAINTENANCE: &str = "maintenance-generation";
 /// I7-T1: device readings and device rules (a registered job type).
@@ -3568,6 +3570,10 @@ pub const PARTNER_LEAD_RETURN: attome_jobs::JobType =
 /// F9-T6: onboarding items for signed partner agreements.
 pub const PARTNER_ONBOARDING: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_partner::recruiting::ONBOARDING_JOB, 1);
+
+/// F9-T9: one performance snapshot per partner per day.
+pub const PARTNER_PERFORMANCE_ROLLUP: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_partner::performance::ROLLUP_JOB, 1);
 
 /// I5-T2: one maintenance timer kept per date plan, and work orders made for
 /// meter plans whose reading passed the threshold.
@@ -4767,6 +4773,21 @@ pub fn register_job_types() {
                     tracing::info!(done, "partner certifications warned of expiry");
                 }
                 Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            PARTNER_PERFORMANCE_ROLLUP,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_PARTNER) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let written = attome_partner::performance::rollup_tick(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(written, "partner performance snapshots written");
+                Ok(())
             },
         ) {
             tracing::error!(%error, "job type registration failed");
@@ -6254,6 +6275,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == PARTNER_ONBOARDING.name => {
             DEDUP_KEY_PARTNER_ONBOARDING
         }
+        EngineJob::Registered(job) if job.name == PARTNER_PERFORMANCE_ROLLUP.name => {
+            DEDUP_KEY_PARTNER_PERFORMANCE
+        }
         EngineJob::Registered(job) if job.name == RFQ_OPEN.name => DEDUP_KEY_RFQ_OPEN,
         EngineJob::Registered(job) if job.name == CHANGE_SIGNOFF.name => DEDUP_KEY_CHANGE_SIGNOFF,
         EngineJob::Registered(job) if job.name == SURVEY_SEND.name => DEDUP_KEY_SURVEY_SEND,
@@ -7486,6 +7510,21 @@ pub fn spawn_partner_onboarding_scheduler(db: DbPool, interval: std::time::Durat
             "partner onboarding",
         ),
         Err(error) => tracing::error!(%error, "partner onboarding: not scheduled"),
+    }
+}
+
+/// F9-T9: daily.
+pub fn spawn_partner_performance_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(PARTNER_PERFORMANCE_ROLLUP.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_PARTNER_PERFORMANCE,
+            "partner performance rollup",
+        ),
+        Err(error) => tracing::error!(%error, "partner performance rollup: not scheduled"),
     }
 }
 

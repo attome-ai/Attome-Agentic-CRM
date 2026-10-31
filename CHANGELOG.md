@@ -28,6 +28,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `options.encryption.mode` `randomised` or `deterministic`. Its values are sealed on write and opened
   on record reads and `query/execute`; `eq`, `neq` and `in` on a deterministic field go through a blind
   index. Audit records the change without the value; exports, reports, search and history hold the sealed value.
+- Partner performance (F9-T9): a `partner_performance_snapshot` per partner per day for the portal
+  scorecard, written nightly, with internal stored reports and `lead.partner_offered_at` and
+  `partner_responded_at`. `mdf_attributed_revenue` stays empty until funds link to deals.
 - `POST /api/v1/admin/model/apps/{app}/retire` and `attome app remove <app> --yes` (A21-T4): retire an
   app's objects in one transaction, refused while something outside the app refers to them; importing
   the app again brings them back.
