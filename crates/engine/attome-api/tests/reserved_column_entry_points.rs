@@ -351,10 +351,11 @@ const UUID_SYSTEM_COLS: [&str; 5] = [
 
 /// The remaining system columns, with the `field_type` matching each one's
 /// physical column type so provisioning is a no-op (`ADD COLUMN IF NOT
-/// EXISTS`) rather than a type change.
+/// EXISTS`) rather than a type change. The timestamps are `date_time`
+/// (`timestamptz`); `date` is a calendar day since Y2-T1.
 const TYPED_SYSTEM_COLS: [(&str, &str); 5] = [
-    ("created_at", "date"),
-    ("modified_at", "date"),
+    ("created_at", "date_time"),
+    ("modified_at", "date_time"),
     ("is_active", "bool"),
     ("row_version", "number"),
     ("owner_type", "number"),

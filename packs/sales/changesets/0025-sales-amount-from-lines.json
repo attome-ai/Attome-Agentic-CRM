@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:27e95b60c1b55a4182d53a1569c40da6739213105ee2f1092f073397b058ecfe",
+  "checksum": "sha256:7dfd5594f76600b385caabe21147cf2d25a7c05d190949b28061972514149479",
   "closed_at": "2026-10-20T00:00:00Z",
   "description": "D6-T4 (step 6): while a deal has lines its amount is locked by a business rule; the lines set it.",
   "format": "attome-changeset/v1",
@@ -24,7 +24,6 @@
           "entity_logicalname": "opportunity",
           "is_active": true,
           "kind": "business",
-          "message": "amount_from_lines: this deal's amount comes from its lines",
           "name": "opportunity_amount_from_lines",
           "policies": [
             {

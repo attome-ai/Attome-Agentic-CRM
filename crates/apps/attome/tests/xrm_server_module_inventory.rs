@@ -158,6 +158,9 @@ const BASELINE: &[&str] = &[
     // A30-T1: values of the `environment_variable` model kind, which the
     // changeset and model admin here define; no engine crate owns kinds.
     "env_variable_admin",
+    // A19-T2: dated rates are reference data every money field reads; no one
+    // engine owns them.
+    "exchange_rates",
     // Z11-T12: what an expression editor needs from the server.
     "expression_admin",
     "features_admin",
@@ -219,6 +222,9 @@ const BASELINE: &[&str] = &[
     "rule_admin",
     // A11-T4: business-rule test cases, run by the rule publish here.
     "rule_test_cases",
+    // T5-T1: asks for a masked copy of the whole deployment, which sees every
+    // engine's tables at once.
+    "sandboxes",
     // AC7-T11: the bill of materials embedded by this crate's build.rs and
     // the packs in this crate's changeset ledger.
     "sbom_admin",

@@ -100,7 +100,10 @@ async fn build_test_system() -> Option<EngineSystem> {
     let _ = tracing_subscriber::fmt().with_test_writer().try_init();
     attome_testkit::migrated_db_url()?;
 
-    let config = test_config();
+    let mut config = test_config();
+    // Deleting a field that holds values archives them sealed under this
+    // ring; without one the delete is refused (`archive_key_missing`).
+    config.metadata.recovery_archive_key_encryption_key = KeyRing::single("12".repeat(32));
     let db = attome_db::create_pool(&config)
         .await
         .expect("connect DATABASE_URL");

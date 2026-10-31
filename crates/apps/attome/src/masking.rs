@@ -170,14 +170,14 @@ pub fn fake(key: &[u8], field: &str, value: &str) -> String {
     match kind {
         FieldKind::Email => format!("user{}@example.invalid", &hex(&h)[..10]),
         FieldKind::Phone => {
-            if h[0] % 2 == 0 {
+            if h[0].is_multiple_of(2) {
                 format!("+9665{}", digits(&h[1..], 8))
             } else {
                 format!("+9715{}", digits(&h[1..], 8))
             }
         }
         FieldKind::NationalId => {
-            let first = if h[0] % 2 == 0 { '1' } else { '2' };
+            let first = if h[0].is_multiple_of(2) { '1' } else { '2' };
             format!("{first}{}", digits(&h[1..], 9))
         }
         FieldKind::Name => format!(

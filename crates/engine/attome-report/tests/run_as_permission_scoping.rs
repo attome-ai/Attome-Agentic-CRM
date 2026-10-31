@@ -624,6 +624,19 @@ async fn scheduled_run_never_surfaces_a_row_run_as_cannot_see() {
     .execute(&db)
     .await
     .expect("backdate next_run_at to force the schedule due");
+    // M12-T2: a report schedule fires from the Z7 schedule ledger
+    // (`job_schedule`), not `next_run_at`. A first sweep registers it there
+    // with its next due time; backdate that, and the next sweep fires it.
+    attome_report::scheduler::sweep(&state)
+        .await
+        .expect("register the schedule in the ledger");
+    sqlx::query(
+        "UPDATE job_schedule SET next_due_at = NOW() - INTERVAL '1 minute' WHERE name = $1",
+    )
+    .bind(attome_report::scheduler::ledger_name(schedule_id))
+    .execute(&db)
+    .await
+    .expect("backdate the ledger to force the schedule due");
 
     let stats = attome_report::scheduler::sweep(&state)
         .await
@@ -632,6 +645,10 @@ async fn scheduled_run_never_surfaces_a_row_run_as_cannot_see() {
         stats.dispatched, 1,
         "the due schedule must be dispatched exactly once"
     );
+    // The dispatched EngineJob::ReportScheduleFire, run as the worker would.
+    attome_report::scheduler::fire(&state, schedule_id)
+        .await
+        .expect("fire the dispatched schedule");
 
     let scheduled_run_id: Uuid = sqlx::query_scalar(
         "SELECT id FROM report_run WHERE schedule_ref = $1 ORDER BY requested_at DESC LIMIT 1",

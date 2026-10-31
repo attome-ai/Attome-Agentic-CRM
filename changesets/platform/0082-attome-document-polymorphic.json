@@ -1,6 +1,6 @@
 {
   "author": "attome-records (A8-T4)",
-  "checksum": "sha256:100f78202036748741ec07fc77e3bb0080c4a98b0e38c53c58a177e2a7e0598b",
+  "checksum": "sha256:89d4599eb92df190322545c8cf47fbabd2ccbfd348d871cfa8f546609487adb0",
   "closed_at": "2026-10-30T00:00:00Z",
   "description": "A8-T4: the record a document belongs to is a polymorphic lookup (entity_name and record_id, any entity), checked on every write: a staff writer must be able to read the record, and a portal user may name only a record of an entity its portal role reads, inside that role's read scope.",
   "format": "attome-changeset/v1",
@@ -18,8 +18,8 @@
           "logicalname": "record_id",
           "options": {
             "polymorphic": {
-              "pair": "entity_name",
-              "any": true
+              "any": true,
+              "pair": "entity_name"
             }
           }
         }
@@ -32,5 +32,14 @@
         "field": "record_id"
       }
     }
-  ]
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "platform",
+  "seq": 82,
+  "title": "Documents on the polymorphic lookup"
 }

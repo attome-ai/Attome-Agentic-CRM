@@ -331,6 +331,22 @@ async fn sequence(state: &EngineState, exit_on: &[&str]) -> String {
     .expect("make the definition a sequence")
 }
 
+/// The person who enrols: `workflow_instance.started_by` must name a real
+/// user account.
+async fn enroller(state: &EngineState) -> Uuid {
+    let id = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO user_account (id, user_name, email, is_active) \
+         VALUES ($1, $2, $2 || '@test.invalid', true)",
+    )
+    .bind(id)
+    .bind(format!("sequence-enrol-{id}"))
+    .execute(&state.base.db)
+    .await
+    .expect("insert the enrolling user");
+    id
+}
+
 async fn contact(state: &EngineState, email: &str) -> Uuid {
     let id = Uuid::now_v7();
     sqlx::query("INSERT INTO contact (id, email) VALUES ($1, $2)")
@@ -417,15 +433,20 @@ async fn sequence_enrols_once_and_moves_through_steps() {
     let person = contact(&state, "steps@test.invalid").await;
     let missing = Uuid::now_v7();
 
-    let first =
-        attome_workflow::sequence::enrol(&state, &logicalname, &[person, missing], Uuid::now_v7())
-            .await
-            .expect("enrol");
+    let first = attome_workflow::sequence::enrol(
+        &state,
+        &logicalname,
+        &[person, missing],
+        enroller(&state).await,
+    )
+    .await
+    .expect("enrol");
     assert_eq!(first.enrolled, 1);
     assert_eq!(first.skipped_missing, 1);
-    let second = attome_workflow::sequence::enrol(&state, &logicalname, &[person], Uuid::now_v7())
-        .await
-        .expect("enrol again");
+    let second =
+        attome_workflow::sequence::enrol(&state, &logicalname, &[person], enroller(&state).await)
+            .await
+            .expect("enrol again");
     assert_eq!(second.enrolled, 0);
     assert_eq!(second.skipped_active, 1);
 
@@ -445,7 +466,7 @@ async fn sequence_reply_exits_before_next_step() {
     let state = skip_if_no_db!(sequence_state().await);
     let logicalname = sequence(&state, &["reply", "meeting"]).await;
     let person = contact(&state, "replies@test.invalid").await;
-    attome_workflow::sequence::enrol(&state, &logicalname, &[person], Uuid::now_v7())
+    attome_workflow::sequence::enrol(&state, &logicalname, &[person], enroller(&state).await)
         .await
         .expect("enrol");
 
@@ -467,7 +488,7 @@ async fn sequence_reply_ignored_when_not_an_exit() {
     let state = skip_if_no_db!(sequence_state().await);
     let logicalname = sequence(&state, &["meeting"]).await;
     let person = contact(&state, "meetings-only@test.invalid").await;
-    attome_workflow::sequence::enrol(&state, &logicalname, &[person], Uuid::now_v7())
+    attome_workflow::sequence::enrol(&state, &logicalname, &[person], enroller(&state).await)
         .await
         .expect("enrol");
     reply_from(&state, person).await;
@@ -499,7 +520,8 @@ async fn sequence_enrol_refuses_other_kinds() {
     .expect("the flow");
     let person = contact(&state, "flow@test.invalid").await;
     let refused =
-        attome_workflow::sequence::enrol(&state, &logicalname, &[person], Uuid::now_v7()).await;
+        attome_workflow::sequence::enrol(&state, &logicalname, &[person], enroller(&state).await)
+            .await;
     assert!(
         matches!(refused, Err(attome_types::AppError::NotFound)),
         "{refused:?}"

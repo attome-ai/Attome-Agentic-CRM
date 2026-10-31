@@ -291,6 +291,18 @@ async fn admin_cannot_use_email_code() {
     let db = skip_if_no_db!(test_db().await);
     let user = seed_user(&db).await;
     require_mfa_allowing_email(&db, user).await;
+    // The boot seed creates system.admin; this database is migrations only,
+    // so make sure it exists rather than relying on another test having
+    // made it.
+    sqlx::query(
+        "INSERT INTO privilege (id, key, name, is_active, created_at, owner_layer) \
+         SELECT $1, 'system.admin', 'System administration', true, now(), 'platform' \
+          WHERE NOT EXISTS (SELECT 1 FROM privilege WHERE key = 'system.admin')",
+    )
+    .bind(Uuid::now_v7())
+    .execute(&db)
+    .await
+    .expect("ensure system.admin");
     let admin: Uuid = sqlx::query_scalar("SELECT id FROM privilege WHERE key = 'system.admin'")
         .fetch_one(&db)
         .await

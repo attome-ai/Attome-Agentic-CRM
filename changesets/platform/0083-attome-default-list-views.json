@@ -1,0 +1,212 @@
+{
+  "author": "attome-api (fresh bootstrap)",
+  "checksum": "sha256:4927ec641226849887e44cd8074b15606ff489d185c4ac2942744c9b945392de",
+  "closed_at": "2026-10-31T00:00:00Z",
+  "description": "Entities created without a list view get their default one, so their admin list opens on a fresh install.",
+  "format": "attome-changeset/v1",
+  "id": "01a1912a-8cad-72d9-b4ca-e7baec6ca2c8",
+  "layer": "platform",
+  "name": "attome-default-list-views",
+  "opened_at": "2026-10-31T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "queue",
+          "entity_mappings": [],
+          "name": "Active Queue",
+          "required_privilege": "queue.read",
+          "sql": "SELECT id FROM \"queue\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "queue",
+        "query": "Active Queue"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "queue",
+          "is_default": true,
+          "name": "Active Queue",
+          "query": {
+            "entity": "queue",
+            "name": "Active Queue"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "queue",
+        "view": "Active Queue"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "queue_item",
+          "entity_mappings": [],
+          "name": "Active Queue Item",
+          "required_privilege": "queue_item.read",
+          "sql": "SELECT id FROM \"queue_item\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "queue_item",
+        "query": "Active Queue Item"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "queue_item",
+          "is_default": true,
+          "name": "Active Queue Item",
+          "query": {
+            "entity": "queue_item",
+            "name": "Active Queue Item"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "queue_item",
+        "view": "Active Queue Item"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "queue_item_skill",
+          "entity_mappings": [],
+          "name": "Active Queue Item Skill",
+          "required_privilege": "queue_item_skill.read",
+          "sql": "SELECT id FROM \"queue_item_skill\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "queue_item_skill",
+        "query": "Active Queue Item Skill"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "queue_item_skill",
+          "is_default": true,
+          "name": "Active Queue Item Skill",
+          "query": {
+            "entity": "queue_item_skill",
+            "name": "Active Queue Item Skill"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "queue_item_skill",
+        "view": "Active Queue Item Skill"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "agent_channel_capacity",
+          "entity_mappings": [],
+          "name": "Active Agent Channel Capacity",
+          "required_privilege": "agent_channel_capacity.read",
+          "sql": "SELECT id FROM \"agent_channel_capacity\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "agent_channel_capacity",
+        "query": "Active Agent Channel Capacity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "agent_channel_capacity",
+          "is_default": true,
+          "name": "Active Agent Channel Capacity",
+          "query": {
+            "entity": "agent_channel_capacity",
+            "name": "Active Agent Channel Capacity"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "agent_channel_capacity",
+        "view": "Active Agent Channel Capacity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "social_profile",
+          "entity_mappings": [],
+          "name": "Active Social Profile",
+          "required_privilege": "social_profile.read",
+          "sql": "SELECT id FROM \"social_profile\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "social_profile",
+        "query": "Active Social Profile"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "social_profile",
+          "is_default": true,
+          "name": "Active Social Profile",
+          "query": {
+            "entity": "social_profile",
+            "name": "Active Social Profile"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "social_profile",
+        "view": "Active Social Profile"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "platform",
+  "seq": 83,
+  "title": "Platform definitions: default list views"
+}

@@ -79,7 +79,7 @@ pub async fn run(state: &EngineState, job: &HandBack) -> Result<HandBackOutcome,
     {
         let conversation: Option<Uuid> = sqlx::query_scalar(
             "SELECT id FROM ai_conversation WHERE agent_session_id = $1 \
-              ORDER BY created_at DESC, id DESC LIMIT 1",
+              ORDER BY started_at DESC, id DESC LIMIT 1",
         )
         .bind(session.id)
         .fetch_optional(db)

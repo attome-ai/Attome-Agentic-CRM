@@ -27,6 +27,21 @@ use serde_json::Value;
 /// `(schema, property, why it may appear in a response)`.
 const ALLOWED: &[(&str, &str, &str)] = &[
     (
+        "DeviceTokens",
+        "access_token",
+        "C7-T1/T4-T1: the session the device grant issues, returned once to the device that redeemed it.",
+    ),
+    (
+        "DeviceTokens",
+        "refresh_token",
+        "C7-T1/T4-T1: the single-use refresh token, returned once; only its hash is stored.",
+    ),
+    (
+        "DeviceTokens",
+        "token_type",
+        "C7-T1/T4-T1: always `Bearer`, not a secret.",
+    ),
+    (
         "AnonymousRequestAccepted",
         "status_token",
         "G2-T1: the anonymous submitter's status bearer, generated and shown once; only its hash is stored",

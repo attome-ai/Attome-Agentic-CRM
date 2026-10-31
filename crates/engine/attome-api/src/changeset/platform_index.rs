@@ -484,6 +484,13 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
             "../../../../../changesets/platform/0082-attome-document-polymorphic.json"
         ),
     },
+    PlatformChangeset {
+        file: "0083-attome-default-list-views.json",
+        name: "attome-default-list-views",
+        json: include_str!(
+            "../../../../../changesets/platform/0083-attome-default-list-views.json"
+        ),
+    },
 ];
 
 #[cfg(test)]

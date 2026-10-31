@@ -93,7 +93,10 @@ pub struct Filter {
 pub fn parameter_cast(data_type: &str) -> Option<&'static str> {
     match data_type {
         "number" | "numeric" | "decimal" | "integer" | "currency" => Some("numeric"),
-        "date" | "datetime" | "timestamp" => Some("timestamptz"),
+        // Y2-T1: `date_time` is FieldType::DateTime's name (and the system
+        // columns' `created_at`/`modified_at`); without it no query could
+        // select, sort or filter on them.
+        "date" | "date_time" | "datetime" | "timestamp" => Some("timestamptz"),
         "bool" | "boolean" => Some("boolean"),
         // `icon`/`color` are text columns (a CSS glyph class, a `#rrggbb` hex
         // string) rather than prose — they cast and filter exactly like
@@ -840,6 +843,7 @@ mod tests {
     fn parameter_cast_covers_every_known_data_type() {
         assert_eq!(parameter_cast("number"), Some("numeric"));
         assert_eq!(parameter_cast("date"), Some("timestamptz"));
+        assert_eq!(parameter_cast("date_time"), Some("timestamptz"));
         assert_eq!(parameter_cast("bool"), Some("boolean"));
         assert_eq!(parameter_cast("choice"), Some("text"));
         assert_eq!(parameter_cast("lookup"), Some("uuid"));

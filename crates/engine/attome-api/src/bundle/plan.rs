@@ -720,8 +720,18 @@ fn diff_entities(live: &Bundle, desired: &Bundle, diff: &mut Diff, opts: PlanOpt
                 .iter()
                 .map(|a| a.logicalname.as_str())
                 .collect();
+            // A19-T1: provisioning a money attribute adds its currency
+            // companion, which the bundle does not list; it is not retired.
+            let companions: BTreeSet<String> = e
+                .attributes
+                .iter()
+                .filter(|a| a.field_type == "currency")
+                .map(|a| attome_core::money::companion(&a.logicalname))
+                .collect();
             for la in &le.attributes {
-                if !desired_attrs.contains(la.logicalname.as_str()) {
+                if !desired_attrs.contains(la.logicalname.as_str())
+                    && !companions.contains(&la.logicalname)
+                {
                     diff.retire(
                         opts,
                         COMPONENT_ATTRIBUTE,

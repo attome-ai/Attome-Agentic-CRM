@@ -67,7 +67,7 @@ pub fn parse_trust(pairs: &[String]) -> Result<Vec<(String, String)>, String> {
         .iter()
         .map(|pair| {
             let (publisher, key) = pair
-                .rsplit_once('=')
+                .split_once('=')
                 .filter(|(p, k)| !p.trim().is_empty() && !k.trim().is_empty())
                 .ok_or_else(|| format!("`{pair}` is not <publisher>=<public key>"))?;
             Ok((publisher.trim().to_owned(), key.trim().to_owned()))

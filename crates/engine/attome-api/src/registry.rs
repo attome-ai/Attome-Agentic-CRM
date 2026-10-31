@@ -274,8 +274,9 @@ mod entity_module_tests {
         // `attome_service::model::ServiceModel::owned_entities` for the actual
         // lists; `entity_module_gate.rs`'s
         // `the_real_engines_declare_exactly_these_entities` is what pins
-        // those against each engine's own seed.
-        assert_eq!(map.len(), 39, "unexpected claimed-entity count");
+        // those against each engine's own seed. G4-T1 and J10-T1 added
+        // `queue_item_skill` and `agent_channel_capacity` to the service model.
+        assert_eq!(map.len(), 41, "unexpected claimed-entity count");
     }
 
     #[test]

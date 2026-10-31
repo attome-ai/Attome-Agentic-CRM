@@ -174,6 +174,14 @@ async fn test_system(required_actions: &[&str]) -> Option<EngineSystem> {
     )
     .await
     .expect("apply the metric governance changeset");
+    // Z11-T16: and `dashboard_variable.expression`, which resolving a
+    // dashboard's variables reads.
+    attome_api::changeset::boot::apply_platform_definition(
+        system.state(),
+        "attome-dashboard-variable-expression",
+    )
+    .await
+    .expect("apply the dashboard variable expression changeset");
     system
         .state()
         .modules

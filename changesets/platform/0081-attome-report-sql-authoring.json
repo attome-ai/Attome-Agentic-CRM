@@ -1,6 +1,6 @@
 {
   "author": "attome-report (P2-T2)",
-  "checksum": "sha256:aa0a9346d361b2af32c179970c8cf99c1c22ae04ceb4c4448c1507d03a22f59b",
+  "checksum": "sha256:34035d930f3c716b565472bda411c7e4a4b699539460e6ef92f392bb9a056861",
   "closed_at": "2026-10-30T00:00:00Z",
   "description": "P2-T2: the privilege to write and run SQL reports, which run under the author's own record and field access (P2-T1).",
   "format": "attome-changeset/v1",
@@ -24,5 +24,14 @@
         "privilege": "attome_report.author_sql"
       }
     }
-  ]
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "platform",
+  "seq": 81,
+  "title": "SQL report authoring privilege"
 }

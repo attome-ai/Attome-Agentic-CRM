@@ -163,6 +163,8 @@ fn sets_session_state(sql: &str) -> bool {
         statement.starts_with("SET ")
             && !statement.starts_with("SET LOCAL ")
             && !statement.starts_with("SET TRANSACTION ")
+            // A fragment of `UPDATE t SET (a, b) = ...`; no session SET has it.
+            && !statement.starts_with("SET (")
     });
     let prepare = sql
         .split(';')
@@ -183,6 +185,7 @@ fn the_detector_tells_session_state_from_transaction_state() {
     assert!(!sets_session_state("SET LOCAL statement_timeout = '5s'"));
     assert!(!sets_session_state("SET TRANSACTION READ ONLY"));
     assert!(!sets_session_state("UPDATE t SET a = 1"));
+    assert!(!sets_session_state(" SET ("));
     assert!(!sets_session_state(
         "SELECT pg_try_advisory_xact_lock($1, hashtext($2))"
     ));

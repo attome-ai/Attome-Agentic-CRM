@@ -3612,7 +3612,8 @@ async fn bot_analytics_are_admin_only_and_carry_no_identifiers() {
     let (status, _) = send(
         &fx.app,
         "GET",
-        &analytics_uri(from, to, "sms"),
+        // N18-T1 made whatsapp and sms channel surfaces; fax is none.
+        &analytics_uri(from, to, "fax"),
         Some(&fx.owner_cookie),
         None,
     )

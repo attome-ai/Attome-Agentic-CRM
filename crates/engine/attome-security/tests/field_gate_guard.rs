@@ -54,6 +54,10 @@ const INTERACTIVE: &[(&str, &str)] = &[
         "rule evaluation on a record the caller is writing, not a read surface",
     ),
     (
+        "crates/engine/attome-records/src/entity_crud/time_travel.rs",
+        "one record as of a time, viewed interactively",
+    ),
+    (
         "crates/engine/attome-records/src/entity_crud/timeline.rs",
         "one record's timeline, viewed interactively",
     ),

@@ -54,7 +54,10 @@ use std::path::{Path, PathBuf};
 /// sightings of one year, a legal hold's newly added custodians, a group
 /// trial balance, the built-in role templates, live and own adherence, and a
 /// person's own schedule and preferences.
-const MAX_BARE_LIST_HANDLERS: usize = 37;
+///
+/// 38 (2026-10-31): R1-T2's privacy requests one portal person made, an
+/// exemption below.
+const MAX_BARE_LIST_HANDLERS: usize = 38;
 
 /// Handler return-type signatures that are a *deliberate* exception to the
 /// `PaginatedResponse<T>` rule, not backlog — this scan still counts them
@@ -99,6 +102,7 @@ const EXEMPT_BARE_LIST_HANDLERS: &[&str] = &[
     "attome-security/src/admin/role_templates.rs",
     "attome-workforce/src/adherence.rs",
     "attome-workforce/src/self_service.rs",
+    "attome-portal/src/router/account.rs",
 ];
 
 /// Every non-test, non-target `.rs` file under `crates/`.

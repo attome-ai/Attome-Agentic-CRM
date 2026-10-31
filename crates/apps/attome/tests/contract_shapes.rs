@@ -59,6 +59,11 @@ const ERROR_SHAPE_EXEMPT: &[(&str, &str)] = &[
     ("scim_replace_user", "409"),
     // OAuth 2.0 token endpoint: errors are the RFC 6749 §5.2 body (`error`,
     // `error_description`) every OAuth client expects.
+    // C7-T1/T4-T1: the device grant's token and authorization endpoints answer
+    // the same way (RFC 8628 §3.5 extends that body).
+    ("oauth_device_authorization", "400"),
+    ("oauth_device_token", "400"),
+    ("oauth_device_token", "401"),
     ("token", "400"),
     ("token", "401"),
     ("token", "500"),
@@ -70,6 +75,8 @@ const ERROR_SHAPE_EXEMPT: &[(&str, &str)] = &[
 /// design: a fixed catalogue, one caller's or one group's rows over a capped
 /// period, a report that is only meaningful whole, or the echo of a write.
 const BARE_ARRAY_EXEMPT: &[&str] = &[
+    // R1-T2: the privacy requests one person made, a handful at most.
+    "portal_privacy_requests",
     "add_custodians",
     "assign_entities",
     "candidates_for_record",

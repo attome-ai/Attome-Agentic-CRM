@@ -116,8 +116,8 @@ async fn set_based_seed_all_matches_the_row_at_a_time_path_exactly() {
 
     assert_eq!(
         reference.len(),
-        6,
-        "the reference path should write 4 CRUD actions plus bulk and hard_delete"
+        7,
+        "the reference path should write 4 CRUD actions plus bulk, hard_delete and share (Q14-T1)"
     );
     assert_eq!(
         subject, reference,

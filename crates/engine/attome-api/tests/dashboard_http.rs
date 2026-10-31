@@ -194,6 +194,15 @@ async fn test_system(required_actions: &[&str]) -> Option<EngineSystem> {
         .build()
         .await
         .expect("build EngineSystem");
+    // Z11-T16: `dashboard_variable.expression` arrives with a platform
+    // changeset at boot; apply it as boot does, since this harness's
+    // database is migrations only.
+    attome_api::changeset::boot::apply_platform_definition(
+        system.state(),
+        "attome-dashboard-variable-expression",
+    )
+    .await
+    .expect("apply the dashboard variable expression changeset");
     system
         .state()
         .modules

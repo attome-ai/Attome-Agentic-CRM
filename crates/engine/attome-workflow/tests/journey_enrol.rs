@@ -460,7 +460,7 @@ async fn exit_condition_cancels_before_next_step() {
         &state,
         "after_exit",
         None,
-        Some("email == 'leaving@test.invalid'"),
+        Some("email == \"leaving@test.invalid\""),
     )
     .await;
     let person = contact(&state, "leaving@test.invalid").await;

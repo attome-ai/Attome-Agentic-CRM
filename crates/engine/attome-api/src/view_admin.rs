@@ -415,9 +415,28 @@ fn validate_view_filters(
         };
         for expanded in attome_core::filter::expand_dynamic(&filter, &dynamic).map_err(indexed)? {
             attome_core::filter::compile(&expanded, &schema, 1).map_err(indexed)?;
+            // `compile` binds the value and leaves its parsing to the
+            // database, so a date compared with what is neither a date nor a
+            // dynamic value (`@next_year`) would save and fail every run.
+            if schema.cast(&expanded.field) == Ok("timestamptz")
+                && let Some(value) = expanded.value.as_ref().and_then(Value::as_str)
+                && !is_date_value(value)
+            {
+                return Err(indexed(AppError::Validation(format!(
+                    "{}: {value} is not a date (YYYY-MM-DD or RFC 3339) or a dynamic value",
+                    expanded.field
+                ))));
+            }
         }
     }
     Ok(())
+}
+
+/// A day (`YYYY-MM-DD`) or an RFC 3339 instant.
+fn is_date_value(value: &str) -> bool {
+    let value = value.trim();
+    chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d").is_ok()
+        || chrono::DateTime::parse_from_rfc3339(value).is_ok()
 }
 
 const VIEW_SELECT: &str = "SELECT v.id, v.name, v.icon, v.entity_logical_name, e.logicalname AS entity_name, \

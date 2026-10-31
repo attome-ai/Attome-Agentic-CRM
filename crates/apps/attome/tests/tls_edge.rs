@@ -4,7 +4,9 @@
 //!
 //! The certificate in `tests/fixtures/tls/` is a self-signed one for
 //! `localhost` made for this test only (valid for a century), like the one
-//! attome-storage's tests use; it protects nothing.
+//! attome-storage's tests use; it protects nothing. It is not a CA
+//! (`CA:FALSE`): on Linux the client's verifier refuses a CA certificate
+//! presented as the server's own.
 
 #![allow(
     clippy::expect_used,
