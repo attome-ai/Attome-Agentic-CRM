@@ -117,6 +117,14 @@ pub async fn record_start(
     .await
 }
 
+/// The upgrade's current row version, for `If-Match`.
+pub async fn row_version(db: &attome_db::DbPool, id: Uuid) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar("SELECT row_version FROM ops_upgrade WHERE id = $1")
+        .bind(id)
+        .fetch_one(db)
+        .await
+}
+
 /// Moves an upgrade to `status`; `false` when it has already moved on.
 pub async fn record_status(
     db: &attome_db::DbPool,

@@ -373,6 +373,49 @@ pub fn seal_fields(
     Ok(any.then_some(sealed))
 }
 
+/// AB8-T7: opens up to [`SAMPLE_ROWS`] stored values of each encrypted field
+/// and answers how many opened and how many did not. A read cannot show this,
+/// because a value that will not open reads as empty.
+pub async fn sample_open(
+    db: &attome_db::DbPool,
+    ring: &KeyRing,
+) -> Result<(usize, usize), sqlx::Error> {
+    let fields: Vec<(String, String)> = sqlx::query_as(
+        "SELECT e.logicalname, a.logicalname \
+           FROM attribute_info a JOIN entity_info e ON e.id = a.entity_ref \
+          WHERE a.options ? 'encryption' AND (a.is_active IS NULL OR a.is_active = true) \
+            AND (e.is_active IS NULL OR e.is_active = true)",
+    )
+    .fetch_all(db)
+    .await?;
+    let (mut opened, mut failed) = (0, 0);
+    for (table, column) in fields {
+        let quoted = attome_core::quote_ident(&column);
+        let rows: Vec<(Uuid, String)> = sqlx::query_as(&format!(
+            "SELECT id, {quoted} FROM {} WHERE {quoted} IS NOT NULL ORDER BY id DESC LIMIT {SAMPLE_ROWS}",
+            attome_core::quote_ident(&table)
+        ))
+        .fetch_all(db)
+        .await?;
+        for (row_id, stored) in rows {
+            let binding = AttrBinding {
+                table: &table,
+                column: &column,
+                row_id,
+            };
+            if open(ring, binding, &stored).is_ok() {
+                opened += 1;
+            } else {
+                failed += 1;
+            }
+        }
+    }
+    Ok((opened, failed))
+}
+
+/// How many stored values of each field [`sample_open`] tries.
+const SAMPLE_ROWS: u32 = 20;
+
 /// Opens the encrypted fields of a row in place, leaving those `skip` names.
 /// A value that will not open reads as empty and is logged, so a read never
 /// answers ciphertext and one bad value does not fail a whole page.

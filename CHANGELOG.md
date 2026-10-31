@@ -28,6 +28,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `options.encryption.mode` `randomised` or `deterministic`. Its values are sealed on write and opened
   on record reads and `query/execute`; `eq`, `neq` and `in` on a deterministic field go through a blind
   index. Audit records the change without the value; exports, reports, search and history hold the sealed value.
+- `POST /api/v1/admin/model/apps/{app}/retire` and `attome app remove <app> --yes` (A21-T4): retire an
+  app's objects in one transaction, refused while something outside the app refers to them; importing
+  the app again brings them back.
 - `attome app export|install|remove` (A21-T4): moves one app's metadata objects as a unit; install
   shows what is new and changed and publishes them with `--yes`; remove lists what the app holds and
   what stays behind, and removes nothing yet.
@@ -37,7 +40,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - `attome upgrade apply`, `rollback` and `contract` (AB8-T7): apply refuses a failing check, names a
   restore point, migrates, restarts and waits for ready; rollback returns to the recorded binary
   until contract SQL has run, which only `contract` does, after each file's hold period and against
-  the signed manifest's digests.
+  the signed manifest's digests. After the restart apply now verifies the migration count, audit
+  chain, entity reads, sealed values, metadata drift and a refused no-role key, stores signed evidence
+  and records the outcome through the audited API; it now also requires `--base-url`,
+  `--admin-key-file`, `--no-role-key-file`, `ops.drill_signing_key_path` and a manifest
+  `migration_count`.
 - Partner pay (F10-T12): `plan_participant.partner_account_ref` names a partner in place of a user
   (publishing refuses a participant with neither or both); a won deal naming the partner credits it,
   and `GET /{keyword}/api/v1/partner/statement` returns its own statement to a partner portal session.
@@ -103,6 +110,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   when `ATTOME_KMS` is set; the node does not start when it cannot unwrap. See `docs/secrets.md`.
 
 ### Fixed
+- Dashboards: a KPI built with the metric builder drills to its records and explains again, and metric
+  backfill reads its specification again: three queries read a `sql_query.name` column that does not
+  exist, one of them behind a swallowed error that showed every such KPI as explain-only. A month, quarter
+  or year bucket on `created_at` or `modified_at` is accepted again, and a `date` field stays on its own
+  calendar day in every time zone instead of moving to the day before west of Greenwich.
 - Undoing a deal discount now also removes the discount (D6-T11). Before, the lines came back but
   the deal kept its discount percent, so repricing applied it to them again. Migration 0333 keeps
   the deal's previous discount with the snapshot.

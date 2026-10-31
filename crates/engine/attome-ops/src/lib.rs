@@ -50,6 +50,7 @@ pub mod switchover;
 /// AB8-T2: what `attome upgrade check` judges.
 pub mod upgrade_apply;
 pub mod upgrade_check;
+pub mod upgrade_verify;
 pub mod upgrades;
 
 pub use error::OpsError;

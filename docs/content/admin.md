@@ -56,13 +56,21 @@ every key.
 - **Moving one app**: `attome app export <app> --out <folder>` writes the app's objects, and
   `attome app install --dir <folder>` shows what is new and changed on the target; `--yes` imports
   and publishes them, stopping at the first refusal. `attome app remove <app>` lists what the app
-  holds and removes nothing: objects cannot be retired yet.
+  holds; with `--yes` it retires all of it in one step, refused while something outside the app
+  still refers to it. Entities and their records stay, and installing the app again brings its
+  objects back.
 - **Promoting configuration**: `attome promote --dir <folder> --to <target> --copy <target> --report
   <file> --yes` plans on the target, applies to its masked copy first, then applies to the target,
   which on production waits for a second administrator. `--at <time>` holds the apply until then.
 - **Applying an upgrade**: from the installed binary, `attome upgrade apply --manifest <file>
-  --new-binary <path> --restart <command> --ready-url <url> --yes`. The restart command receives
-  the binary to start in `ATTOME_BINARY`. `attome upgrade rollback --to <version> --restart <command>
+  --new-binary <path> --restart <command> --ready-url <url> --base-url <url> --admin-key-file
+  <path> --no-role-key-file <path> --yes`. The restart command receives the binary to start in
+  `ATTOME_BINARY`. After the restart it checks the migration count, the audit chain, a first page of
+  up to 50 entities, sampled encrypted values, metadata drift, and that the no-role key is refused,
+  then stores a signed report and marks the upgrade verified or failed. It needs
+  `ops.drill_signing_key_path`, a manifest with `migration_count`, and a key made by an account with
+  no roles; lacking any of these it refuses before changing anything. `--pgbackrest-stanza <name>`
+  also takes an incremental backup at the safety point. `attome upgrade rollback --to <version> --restart <command>
   --yes` goes back until `attome upgrade contract --manifest <file> --dir <dir> --yes` has removed
   old structure; after that only a point-in-time restore to the recorded safety point does.
 - **Before an upgrade**: `attome upgrade check --manifest <file> --free-bytes <n>` verifies the

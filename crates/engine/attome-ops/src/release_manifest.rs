@@ -85,6 +85,10 @@ pub struct ReleaseManifest {
     /// How long the pause is expected to last.
     #[serde(default)]
     pub pause_estimate_seconds: Option<u32>,
+    /// How many migrations the release's binary holds, which `upgrade apply`
+    /// checks against the ledger. Left out of the signed bytes when absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub migration_count: Option<u32>,
     #[serde(default)]
     pub deprecated: Vec<Deprecated>,
     #[serde(default)]
@@ -240,6 +244,7 @@ mod tests {
             max_skip_minor: 2,
             requires_pause: true,
             pause_estimate_seconds: Some(45),
+            migration_count: Some(412),
             deprecated: vec![Deprecated {
                 feature: "legacy export".into(),
                 removed_in: "2.4.0".into(),

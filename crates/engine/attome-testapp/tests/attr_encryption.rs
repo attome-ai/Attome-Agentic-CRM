@@ -135,6 +135,19 @@ fn randomised_value_is_sealed_at_rest_and_reads_in_clear() {
         .await
         .unwrap();
         assert_eq!(leaked, 0, "a clear value reached the audit trail");
+
+        // AB8-T7: the upgrade check opens stored values, and a wrong key shows.
+        let right = KeyRing::single("07".repeat(32));
+        let (opened, failed) = attome_records::attr_crypto::sample_open(app.db(), &right)
+            .await
+            .unwrap();
+        assert!(opened >= 2, "{opened} opened");
+        assert_eq!(failed, 0);
+        let wrong = KeyRing::single("08".repeat(32));
+        let (_, failed) = attome_records::attr_crypto::sample_open(app.db(), &wrong)
+            .await
+            .unwrap();
+        assert!(failed >= 2, "{failed} failed under a wrong key");
     });
 }
 

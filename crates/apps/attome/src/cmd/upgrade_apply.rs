@@ -2,15 +2,28 @@
 //!
 //! ```text
 //! attome upgrade apply --manifest <file> --new-binary <path> --restart <command>
-//!                      --ready-url <url> [--config <path>] [--free-bytes <n>] --yes
+//!                      --ready-url <url> --base-url <url> --admin-key-file <path>
+//!                      --no-role-key-file <path> [--evidence-dir <dir>]
+//!                      [--pgbackrest-stanza <name>] [--config <path>]
+//!                      [--free-bytes <n>] --yes
 //! attome upgrade rollback --to <version> --restart <command> [--config <path>] --yes
 //! attome upgrade contract --manifest <file> --dir <dir> [--config <path>] --yes
 //! ```
 //!
 //! `apply` runs from the old binary: it refuses a failing check, names a
 //! restore point, records the upgrade, runs the new binary's `migrate`, runs
-//! the restart command with `ATTOME_BINARY` naming the binary to start, and
-//! waits for the ready URL. `rollback` runs the same command with the binary
+//! the restart command with `ATTOME_BINARY` naming the binary to start, waits
+//! for the ready URL, then verifies: the migration ledger against the manifest,
+//! the audit chain, a first page of up to 50 entities, a sample of sealed
+//! values, metadata drift, and that a key with no roles is refused. The report
+//! is signed, stored through `/api/v1/ops/drills/evidence`, and the upgrade
+//! moves to `verified` or `failed` through the API, which audits it.
+//!
+//! A key can only be minted by a person's own session (D-510, D-535), so the
+//! no-role key is the operator's, made once, not a temporary one made here.
+//! Anything `apply` needs and lacks refuses it before it changes anything.
+//!
+//! `rollback` runs the same command with the binary
 //! `apply` recorded, until contract SQL has run. `contract` runs the held-back
 //! removals whose hold period has passed, and is the only thing that does.
 
@@ -22,18 +35,23 @@
 use std::process::ExitCode;
 use std::time::Duration;
 
+use attome_ops::evidence::{self, Check};
 use attome_ops::release_manifest::verify_manifest;
 use attome_ops::upgrade_apply as rules;
-use serde_json::json;
+use attome_ops::upgrade_verify as verification;
+use serde_json::{Value, json};
+use uuid::Uuid;
 
 use crate::cmd::output::{take_flag, take_value};
 use crate::cmd::upgrade_check::{self, CheckArgs};
 
-const USAGE: &str = "usage: attome upgrade apply --manifest <file> --new-binary <path> --restart <command> --ready-url <url> [--config <path>] [--free-bytes <n>] --yes\n       attome upgrade rollback --to <version> --restart <command> [--config <path>] --yes\n       attome upgrade contract --manifest <file> --dir <dir> [--config <path>] --yes";
+const USAGE: &str = "usage: attome upgrade apply --manifest <file> --new-binary <path> --restart <command> --ready-url <url> --base-url <url> --admin-key-file <path> --no-role-key-file <path> [--evidence-dir <dir>] [--pgbackrest-stanza <name>] [--config <path>] [--free-bytes <n>] --yes\n       attome upgrade rollback --to <version> --restart <command> [--config <path>] --yes\n       attome upgrade contract --manifest <file> --dir <dir> [--config <path>] --yes";
 /// Exit code of a refused or failed step.
 const REFUSED: u8 = 5;
 /// How long a restarted service has to answer ready.
 const READY_WAIT: Duration = Duration::from_secs(120);
+/// How many entities verification reads a first page of.
+const SAMPLE_ENTITIES: u32 = 50;
 
 /// The words of `--restart`, split on spaces and never given to a shell. Pure.
 fn command_words(command: &str) -> Result<Vec<String>, String> {
@@ -76,6 +94,183 @@ fn run_migrate(binary: &str) -> Result<(), String> {
     } else {
         Err(format!("{binary} migrate exited with {status}"))
     }
+}
+
+/// Takes the incremental backup that goes with the restore point.
+fn run_pgbackrest(stanza: &str) -> Result<(), String> {
+    let status = std::process::Command::new("pgbackrest")
+        .arg(format!("--stanza={stanza}"))
+        .args(["backup", "--type=incr"])
+        .status()
+        .map_err(|error| format!("run pgbackrest: {error}"))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("pgbackrest exited with {status}"))
+    }
+}
+
+/// Runs the new binary's audit chain verifier.
+fn run_audit_chain(binary: &str) -> Result<(), String> {
+    let output = std::process::Command::new(binary)
+        .arg("verify-audit-chain")
+        .output()
+        .map_err(|error| format!("run {binary} verify-audit-chain: {error}"))?;
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(format!("verify-audit-chain exited with {}", output.status))
+    }
+}
+
+fn read_key(path: &str) -> Result<String, String> {
+    let key = std::fs::read_to_string(path).map_err(|error| format!("read {path}: {error}"))?;
+    let key = key.trim().to_owned();
+    if key.is_empty() {
+        return Err(format!("{path} is empty"));
+    }
+    Ok(key)
+}
+
+/// What verification reads the running service with.
+struct Probe {
+    client: reqwest::Client,
+    base: String,
+    admin: String,
+    no_role: String,
+}
+
+impl Probe {
+    async fn send(
+        &self,
+        request: reqwest::RequestBuilder,
+        key: &str,
+    ) -> Result<(u16, Value), String> {
+        let response = request
+            .header("authorization", format!("ApiKey {key}"))
+            .send()
+            .await
+            .map_err(|error| error.to_string())?;
+        let status = response.status().as_u16();
+        let body = response.json().await.unwrap_or(Value::Null);
+        Ok((status, body))
+    }
+
+    async fn get(&self, path: &str, key: &str) -> Result<(u16, Value), String> {
+        let url = format!("{}{path}", self.base);
+        self.send(self.client.get(url), key).await
+    }
+
+    async fn sample_reads(&self) -> Result<Vec<(String, u16)>, String> {
+        let path = format!("/api/v1/admin/entities?page=1&page_size={SAMPLE_ENTITIES}");
+        let (status, listed) = self.get(&path, &self.admin).await?;
+        if status != 200 {
+            return Err(format!("listing entities answered {status}"));
+        }
+        let names: Vec<String> = listed["items"]
+            .as_array()
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(|item| item["logicalname"].as_str().map(str::to_owned))
+                    .collect()
+            })
+            .unwrap_or_default();
+        let mut reads = Vec::with_capacity(names.len());
+        for name in names {
+            let (status, _) = self.get(&format!("/api/v1/{name}"), &self.admin).await?;
+            reads.push((name, status));
+        }
+        Ok(reads)
+    }
+}
+
+/// Every check, each one running whatever the others found.
+async fn run_checks(
+    probe: &Probe,
+    db: &attome_db::DbPool,
+    ring: &attome_config::KeyRing,
+    binary: &str,
+    migrations: u32,
+) -> Result<Vec<Check>, String> {
+    let (applied, unfinished) = verification::migration_ledger(db)
+        .await
+        .map_err(|error| format!("read the migration ledger: {error}"))?;
+    let (opened, failed) = attome_records::attr_crypto::sample_open(db, ring)
+        .await
+        .map_err(|error| format!("sample the sealed values: {error}"))?;
+    let (denied, _) = probe
+        .get("/api/v1/admin/api-usage/summary", &probe.no_role)
+        .await?;
+    let (drift_status, drift) = probe
+        .get("/api/v1/admin/metadata/drift", &probe.admin)
+        .await?;
+    Ok(vec![
+        verification::migration_check(applied, unfinished, migrations),
+        verification::audit_chain_check(run_audit_chain(binary)),
+        verification::sample_read_check(&probe.sample_reads().await?),
+        verification::permission_check(denied),
+        verification::metadata_check(drift_status, &drift),
+        verification::decrypt_check(opened, failed),
+    ])
+}
+
+/// Signs the report, stores it, and moves the upgrade through the API.
+/// Answers whether it verified.
+async fn record_verification(
+    probe: &Probe,
+    db: &attome_db::DbPool,
+    key: &evidence::SigningKey,
+    report: &evidence::Evidence,
+    file: &std::path::Path,
+) -> Result<bool, String> {
+    evidence::write_signed(file, report, key).map_err(|error| error.to_string())?;
+    let signed = evidence::sign(report, key).map_err(|error| error.to_string())?;
+    let url = format!("{}/api/v1/ops/drills/evidence", probe.base);
+    let (status, stored) = probe
+        .send(probe.client.post(url).json(&signed), &probe.admin)
+        .await?;
+    if status != 200 && status != 201 {
+        return Err(format!("storing the evidence answered {status}"));
+    }
+    let upgrade = report.drill_id;
+    let version = rules::row_version(db, upgrade)
+        .await
+        .map_err(|error| format!("read the upgrade: {error}"))?;
+    let url = format!("{}/api/v1/ops/upgrades/{upgrade}", probe.base);
+    let body = json!({
+        "status": if report.overall_ok { "verified" } else { "failed" },
+        "verification_evidence_id": stored["id"],
+    });
+    let request = probe
+        .client
+        .patch(url)
+        .header("if-match", format!("\"{version}\""))
+        .json(&body);
+    let (status, _) = probe.send(request, &probe.admin).await?;
+    if status != 200 {
+        return Err(format!("recording the outcome answered {status}"));
+    }
+    Ok(report.overall_ok)
+}
+
+/// What `apply` needs before it may change anything; an error refuses it.
+fn signing_key(settings: &attome_config::AppConfig) -> Result<evidence::SigningKey, String> {
+    let path = settings
+        .ops
+        .drill_signing_key_path
+        .as_deref()
+        .ok_or("ops.drill_signing_key_path is not set, so the evidence could not be signed")?;
+    let key = evidence::read_signing_key(std::path::Path::new(path))
+        .map_err(|error| error.to_string())?;
+    if !settings
+        .ops
+        .drill_public_keys
+        .contains(&evidence::public_key_base64(&key))
+    {
+        return Err("ops.drill_public_keys does not hold the signing key's public half".to_owned());
+    }
+    Ok(key)
 }
 
 async fn wait_ready(url: &str) -> Result<(), String> {
@@ -125,6 +320,11 @@ fn apply(args: &[String]) -> Result<ExitCode, String> {
     let new_binary = take_value(&mut args, "--new-binary")?.ok_or(USAGE)?;
     let restart = command_words(&take_value(&mut args, "--restart")?.ok_or(USAGE)?)?;
     let ready_url = take_value(&mut args, "--ready-url")?.ok_or(USAGE)?;
+    let base_url = take_value(&mut args, "--base-url")?.ok_or(USAGE)?;
+    let admin_key = read_key(&take_value(&mut args, "--admin-key-file")?.ok_or(USAGE)?)?;
+    let no_role_key = read_key(&take_value(&mut args, "--no-role-key-file")?.ok_or(USAGE)?)?;
+    let evidence_dir = take_value(&mut args, "--evidence-dir")?.unwrap_or_else(|| ".".to_owned());
+    let stanza = take_value(&mut args, "--pgbackrest-stanza")?;
     let config = take_value(&mut args, "--config")?;
     let free_bytes = take_value(&mut args, "--free-bytes")?
         .map(|n| n.parse().map_err(|_| format!("--free-bytes: `{n}`")))
@@ -132,6 +332,11 @@ fn apply(args: &[String]) -> Result<ExitCode, String> {
     if !args.is_empty() || !yes {
         return Err(USAGE.to_owned());
     }
+    let bytes = std::fs::read(&manifest).map_err(|error| format!("read {manifest}: {error}"))?;
+    let migrations = verify_manifest(&bytes, crate::release_keys::RELEASE_PUBLIC_KEYS)
+        .map_err(|error| format!("{manifest}: {error}"))?
+        .migration_count
+        .ok_or("the manifest names no migration_count, so the upgrade could not be verified")?;
     let report = upgrade_check::build_report(&CheckArgs {
         manifest,
         config: config.clone(),
@@ -155,12 +360,16 @@ fn apply(args: &[String]) -> Result<ExitCode, String> {
     );
 
     let runtime = runtime()?;
-    let (db, id) = runtime.block_on(async {
+    let (db, id, settings, key) = runtime.block_on(async {
         let settings = config_at(config.as_deref()).await?;
+        let key = signing_key(&settings)?;
         let db = owner_pool(&settings).await?;
         rules::create_restore_point(&db, &name)
             .await
             .map_err(|error| format!("name the restore point: {error}"))?;
+        if let Some(stanza) = &stanza {
+            run_pgbackrest(stanza)?;
+        }
         let id = rules::record_start(
             &db,
             &report.from_version,
@@ -170,30 +379,68 @@ fn apply(args: &[String]) -> Result<ExitCode, String> {
         )
         .await
         .map_err(|error| format!("record the upgrade: {error}"))?;
-        Ok::<_, String>((db, id))
+        Ok::<_, String>((db, id, settings, key))
     })?;
     println!("safety point {name}, upgrade {id}");
 
     let steps = run_migrate(&new_binary)
         .and_then(|()| run_restart(&restart, &new_binary))
         .and_then(|()| runtime.block_on(wait_ready(&ready_url)));
-    let status = if steps.is_ok() { "verified" } else { "failed" };
-    runtime
-        .block_on(rules::record_status(&db, id, "started", status))
-        .map_err(|error| format!("record the outcome: {error}"))?;
-    match steps {
-        Ok(()) => {
+    let outcome = steps.and_then(|()| {
+        runtime.block_on(async {
+            let probe = Probe {
+                client: reqwest::Client::builder()
+                    .timeout(Duration::from_secs(30))
+                    .build()
+                    .map_err(|error| error.to_string())?,
+                base: base_url.trim_end_matches('/').to_owned(),
+                admin: admin_key,
+                no_role: no_role_key,
+            };
+            let started = chrono::Utc::now();
+            let ring = &settings.storage.attribute_encryption_key;
+            let checks = run_checks(&probe, &db, ring, &new_binary, migrations).await?;
+            let evidence =
+                verification::evidence(id, started, chrono::Utc::now(), &report.to_version, checks);
+            for check in &evidence.checks {
+                let detail = check.detail.as_deref().unwrap_or_default();
+                println!("{}: {:?}, {detail}", check.name, check.result);
+            }
+            let file = std::path::Path::new(&evidence_dir).join(format!("upgrade-{id}.json"));
+            let verified = record_verification(&probe, &db, &key, &evidence, &file).await?;
+            println!("evidence {}", file.display());
+            Ok::<_, String>(verified)
+        })
+    });
+    let rollback_hint = format!("Run `attome upgrade rollback --to {}`", report.to_version);
+    match outcome {
+        Ok(true) => {
             println!("upgraded to {}", report.to_version);
             Ok(ExitCode::SUCCESS)
         }
+        Ok(false) => {
+            println!("failed: verification did not pass. {rollback_hint} to go back");
+            Ok(ExitCode::from(REFUSED))
+        }
         Err(message) => {
-            println!(
-                "failed: {message}. Run `attome upgrade rollback --to {}` to go back",
-                report.to_version
-            );
+            record_failed(&runtime, &db, id)?;
+            println!("failed: {message}. {rollback_hint} to go back");
             Ok(ExitCode::from(REFUSED))
         }
     }
+}
+
+/// The upgrade could not reach the API, or stopped before it; the record is
+/// direct because the service may be down.
+fn record_failed(
+    runtime: &tokio::runtime::Runtime,
+    db: &attome_db::DbPool,
+    id: Uuid,
+) -> Result<(), String> {
+    runtime
+        .block_on(rules::record_status(db, id, "started", "failed"))
+        .map(|_| ())
+        .map_err(|error| format!("record the outcome: {error}"))
 }
 
 fn rollback(args: &[String]) -> Result<ExitCode, String> {
