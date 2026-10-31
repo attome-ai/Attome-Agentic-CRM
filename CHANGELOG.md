@@ -110,6 +110,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   when `ATTOME_KMS` is set; the node does not start when it cannot unwrap. See `docs/secrets.md`.
 
 ### Fixed
+- Search: an administrator's synonym now applies when a person types one or two words, not only in a
+  longer search, so a synonym for `CR` finds what it stands for in the search box.
 - Dashboards: a KPI built with the metric builder drills to its records and explains again, and metric
   backfill reads its specification again: three queries read a `sql_query.name` column that does not
   exist, one of them behind a swallowed error that showed every such KPI as explain-only. A month, quarter

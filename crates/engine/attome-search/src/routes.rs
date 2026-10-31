@@ -128,19 +128,29 @@ fn legs_for_route(
         Route::Phrase => vec![Box::new(LexicalLeg {
             stemmed_query: stemmed.to_owned(),
         })],
-        Route::NameLookup => vec![
-            Box::new(ExactKeyLeg {
-                normalized_query: normalized.to_owned(),
-            }),
-            Box::new(PrefixLeg {
-                normalized_query: normalized.to_owned(),
-            }),
-            Box::new(FuzzyLeg {
-                normalized_query: normalized.to_owned(),
-                deferred: true,
-                ..FuzzyLeg::default()
-            }),
-        ],
+        Route::NameLookup => {
+            let mut legs: Vec<Box<dyn SqlLeg>> = vec![
+                Box::new(ExactKeyLeg {
+                    normalized_query: normalized.to_owned(),
+                }),
+                Box::new(PrefixLeg {
+                    normalized_query: normalized.to_owned(),
+                }),
+                Box::new(FuzzyLeg {
+                    normalized_query: normalized.to_owned(),
+                    deferred: true,
+                    ..FuzzyLeg::default()
+                }),
+            ];
+            // A25-T3: an abbreviation is what people type, so a synonym of a
+            // word or two applies here as well as in a full search.
+            if !synonyms.is_empty() {
+                legs.push(Box::new(crate::legs::stage1::SynonymLeg {
+                    stemmed_alternatives: synonyms.to_vec(),
+                }));
+            }
+            legs
+        }
         Route::Aggregation { .. } => Vec::new(),
         Route::Hybrid => {
             let mut legs: Vec<Box<dyn SqlLeg>> = vec![

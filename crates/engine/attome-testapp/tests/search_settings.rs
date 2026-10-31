@@ -14,6 +14,18 @@ use axum::http::{Method, StatusCode};
 use serde_json::json;
 use uuid::Uuid;
 
+/// A unique tag of letters only: a word with a digit in it is routed as an
+/// identifier, to the exact leg alone, and these tests search as text.
+fn word_tag() -> String {
+    Uuid::now_v7().simple().to_string()[24..]
+        .chars()
+        .map(|c| match c.to_digit(10) {
+            Some(digit) => char::from(b'g' + digit as u8),
+            None => c,
+        })
+        .collect()
+}
+
 /// A fresh entity with a `title`, and one record per title, each indexed.
 async fn indexed(app: &TestApp, titles: &[&str]) -> (String, Vec<Uuid>) {
     let name = format!("ss_{}", &Uuid::now_v7().simple().to_string()[..12]);
@@ -63,7 +75,7 @@ fn synonym_cr_finds_commercial_registration() {
         let Some(app) = TestApp::start().await else {
             return;
         };
-        let tag = &Uuid::now_v7().simple().to_string()[..8];
+        let tag = &word_tag();
         let title = format!("Commercial registration filed {tag}");
         let (_entity, ids) = indexed(&app, &[&title]).await;
         let admin = app.state.base.security.resolve(app.admin.id).await.unwrap();
@@ -104,7 +116,7 @@ fn pin_hidden_from_unauthorized() {
         let Some(app) = TestApp::start().await else {
             return;
         };
-        let tag = &Uuid::now_v7().simple().to_string()[..8];
+        let tag = &word_tag();
         let query = format!("pinned{tag}");
         let (entity, ids) = indexed(
             &app,
@@ -169,7 +181,7 @@ fn alert_sends_once_for_new_match() {
         let Some(app) = TestApp::start().await else {
             return;
         };
-        let tag = &Uuid::now_v7().simple().to_string()[..8];
+        let tag = &word_tag();
         let word = format!("alertword{tag}");
         let (entity, _) = indexed(&app, &[&format!("{word} first")]).await;
         let name = format!("Alert {tag}");
@@ -264,7 +276,7 @@ fn facet_counts_exclude_hidden_records() {
         let Some(app) = TestApp::start().await else {
             return;
         };
-        let tag = &Uuid::now_v7().simple().to_string()[..8];
+        let tag = &word_tag();
         let word = format!("facetword{tag}");
         let (seen, _) = indexed(&app, &[&format!("{word} one"), &format!("{word} two")]).await;
         let (hidden, _) = indexed(&app, &[&format!("{word} three")]).await;
@@ -443,10 +455,12 @@ fn attachment_result_requires_parent_access() {
         let Some(app) = TestApp::start().await else {
             return;
         };
-        let tag = &Uuid::now_v7().simple().to_string()[..8];
+        let tag = &word_tag();
         let (seen, seen_ids) = indexed(&app, &[&format!("Seen parent {tag}")]).await;
         let (hidden, hidden_ids) = indexed(&app, &[&format!("Hidden parent {tag}")]).await;
-        let word = format!("attachword{tag}");
+        // Three words: a person's one or two are a name lookup, which never reads
+        // the text of a file.
+        let word = format!("attachword{tag} signed copy");
         let on_seen =
             attached_document(&app, &format!("Contract {tag}"), &word, &seen, seen_ids[0]).await;
         let on_hidden = attached_document(
