@@ -30451,7 +30451,7 @@
             }
           },
           "422": {
-            "description": "The draft fails the publish checks, an eval suite's newest run fails a safety case (the issues are listed), or customer_tests_failed (blocking customer tests failed while customer_tests.require_pass_before_publish is on)",
+            "description": "The draft fails the publish checks, an eval suite's newest run fails a safety case (the issues are listed), an agent's permission test fails (the failing cases are listed), or customer_tests_failed (blocking customer tests failed while customer_tests.require_pass_before_publish is on)",
             "content": {
               "application/json": {
                 "schema": {
@@ -73379,7 +73379,7 @@
           "admin-webcrawl"
         ],
         "summary": "Import crawled pages",
-        "description": "Import crawled pages. Administrators only. Audited.",
+        "description": "Import crawled pages. A page imported before whose text changed on a\nrecrawl replaces its item's text as the next version (K6-T4).\nAdministrators only. Audited.",
         "operationId": "import_pages",
         "parameters": [
           {
@@ -73405,7 +73405,7 @@
         },
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "New pages imported, and changed imported pages updated as new versions",
             "content": {
               "application/json": {
                 "schema": {
@@ -100077,7 +100077,8 @@
         "type": "object",
         "required": [
           "data_source_ref",
-          "imported_count"
+          "imported_count",
+          "updated_count"
         ],
         "properties": {
           "data_source_ref": {
@@ -100087,6 +100088,11 @@
           "imported_count": {
             "type": "integer",
             "format": "int64"
+          },
+          "updated_count": {
+            "type": "integer",
+            "format": "int64",
+            "description": "K6-T4: imported pages whose changed text replaced their item's, as\nits next version."
           }
         }
       },

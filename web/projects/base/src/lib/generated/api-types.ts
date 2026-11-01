@@ -20391,6 +20391,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/marketing/c/{token}/{n}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Email link click
+         * @description A tracked link in an A/B-tested campaign email: records the click (and
+         *     the open) and redirects to the email's own link at that position, never
+         *     to an address the request names. Public; the token is the recipient's
+         *     own.
+         */
+        get: operations["email_campaign_click"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/marketing/campaigns/{id}/members/from-list": {
         parameters: {
             query?: never;
@@ -20973,6 +20996,28 @@ export interface paths {
          *     holding each message until the recipient's quiet hours end.
          */
         post: operations["start_sms_campaign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/o/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Email open pixel
+         * @description The image an A/B-tested campaign email carries: the first load records
+         *     that the recipient opened it. Public; the token is the recipient's own,
+         *     and an unknown one answers the same image.
+         */
+        get: operations["email_campaign_open"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -28267,7 +28312,9 @@ export interface paths {
         put?: never;
         /**
          * Import crawled pages
-         * @description Import crawled pages. Administrators only. Audited.
+         * @description Import crawled pages. A page imported before whose text changed on a
+         *     recrawl replaces its item's text as the next version (K6-T4).
+         *     Administrators only. Audited.
          */
         post: operations["import_pages"];
         delete?: never;
@@ -32138,6 +32185,26 @@ export interface components {
         A2aTaskRequest: {
             /** @description The task, matching the agent's input contract. */
             input: Record<string, never>;
+        };
+        /** @description How a test picks its winner; every field has a default. */
+        AbTestBody: {
+            /**
+             * @description Without a significant winner: `leader` (default) sends the best
+             *     variant to the rest, `stop` sends nothing more.
+             */
+            fallback?: string | null;
+            /** @description `opens` (default) or `clicks`. */
+            metric?: string | null;
+            /**
+             * Format: int32
+             * @description Recipients per variant in the test, 10 to 50,000 (default 1,000).
+             */
+            recipients_per_variant?: number | null;
+            /**
+             * Format: int32
+             * @description Minutes before the winner is picked, 15 to 10,080 (default 240).
+             */
+            window_minutes?: number | null;
         };
         /** @description The answer of `POST .../fields/{field_id}/runs/{run_id}/abandon`. */
         AbandonedFieldRun: {
@@ -41081,6 +41148,7 @@ export interface components {
         };
         /** @description A campaign to start. */
         EmailCampaignBody: {
+            ab_test?: null | components["schemas"]["AbTestBody"];
             /** @description The email designer's JSON (E2-T1): blocks, direction, width, colour. */
             design: Record<string, never>;
             /** @description `en` (default) or `ar`: how values are formatted. */
@@ -41089,6 +41157,11 @@ export interface components {
             purpose_key: string;
             /** @description The subject line (at most 200 characters). */
             subject: string;
+            /**
+             * @description E4-T1: more versions to test against this one (which is `A`), up to
+             *     four; with any, the campaign is an A/B test.
+             */
+            variants?: components["schemas"]["EmailVariantBody"][];
         };
         /** @description A campaign started. */
         EmailCampaignStarted: {
@@ -41108,6 +41181,13 @@ export interface components {
             body: string;
             /** Format: int64 */
             row_version: number;
+        };
+        /** @description One more version of the email to test. */
+        EmailVariantBody: {
+            /** @description Its email designer JSON. */
+            design: Record<string, never>;
+            /** @description Its subject line (at most 200 characters). */
+            subject: string;
         };
         EmbedContext: {
             entity_logical_name?: string | null;
@@ -44094,6 +44174,12 @@ export interface components {
             data_source_ref: string;
             /** Format: int64 */
             imported_count: number;
+            /**
+             * Format: int64
+             * @description K6-T4: imported pages whose changed text replaced their item's, as
+             *     its next version.
+             */
+            updated_count: number;
         };
         /** @description The multipart body of an upload, for the API document. */
         ImportUpload: {
@@ -94061,7 +94147,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description The draft fails the publish checks, an eval suite's newest run fails a safety case (the issues are listed), or customer_tests_failed (blocking customer tests failed while customer_tests.require_pass_before_publish is on) */
+            /** @description The draft fails the publish checks, an eval suite's newest run fails a safety case (the issues are listed), an agent's permission test fails (the failing cases are listed), or customer_tests_failed (blocking customer tests failed while customer_tests.require_pass_before_publish is on) */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -128192,6 +128278,38 @@ export interface operations {
             };
         };
     };
+    email_campaign_click: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The token from the email's link */
+                token: string;
+                /** @description The link's position in the email */
+                n: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description On to the link's address, as the email was sent with it */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such email link */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     add_campaign_members_from_list: {
         parameters: {
             query?: never;
@@ -129778,6 +129896,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    email_campaign_open: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The token from the email's tracking image */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A transparent one-pixel image (the same for any token) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/gif": number[];
                 };
             };
         };
@@ -149212,7 +149353,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Success */
+            /** @description New pages imported, and changed imported pages updated as new versions */
             200: {
                 headers: {
                     [name: string]: unknown;

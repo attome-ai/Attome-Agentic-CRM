@@ -85,6 +85,62 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/marketing/c/{token}/{n}": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Email link click",
+        "description": "A tracked link in an A/B-tested campaign email: records the click (and\nthe open) and redirects to the email's own link at that position, never\nto an address the request names. Public; the token is the recipient's\nown.",
+        "operationId": "email_campaign_click",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "description": "The token from the email's link",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "n",
+            "in": "path",
+            "description": "The link's position in the email",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "On to the link's address, as the email was sent with it"
+          },
+          "404": {
+            "description": "No such email link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/marketing/campaigns/{id}/members/from-list": {
       "post": {
         "tags": [
@@ -2788,6 +2844,53 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/marketing/o/{token}": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Email open pixel",
+        "description": "The image an A/B-tested campaign email carries: the first load records\nthat the recipient opened it. Public; the token is the recipient's own,\nand an unknown one answers the same image.",
+        "operationId": "email_campaign_open",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "description": "The token from the email's tracking image",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A transparent one-pixel image (the same for any token)",
+            "content": {
+              "image/gif": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/marketing/opportunities/{id}/attribution": {
       "get": {
         "tags": [
@@ -3348,6 +3451,44 @@
   },
   "components": {
     "schemas": {
+      "AbTestBody": {
+        "type": "object",
+        "description": "How a test picks its winner; every field has a default.",
+        "properties": {
+          "fallback": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Without a significant winner: `leader` (default) sends the best\nvariant to the rest, `stop` sends nothing more."
+          },
+          "metric": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`opens` (default) or `clicks`."
+          },
+          "recipients_per_variant": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Recipients per variant in the test, 10 to 50,000 (default 1,000).",
+            "minimum": 0
+          },
+          "window_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Minutes before the winner is picked, 15 to 10,080 (default 240).",
+            "minimum": 0
+          }
+        }
+      },
       "AddressCheckBody": {
         "type": "object",
         "required": [
@@ -3755,6 +3896,17 @@
           "purpose_key"
         ],
         "properties": {
+          "ab_test": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AbTestBody",
+                "description": "E4-T1: how the test picks its winner; defaults when absent."
+              }
+            ]
+          },
           "design": {
             "type": "object",
             "description": "The email designer's JSON (E2-T1): blocks, direction, width, colour."
@@ -3773,6 +3925,13 @@
           "subject": {
             "type": "string",
             "description": "The subject line (at most 200 characters)."
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmailVariantBody"
+            },
+            "description": "E4-T1: more versions to test against this one (which is `A`), up to\nfour; with any, the campaign is an A/B test."
           }
         }
       },
@@ -3792,6 +3951,24 @@
           "send_id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "EmailVariantBody": {
+        "type": "object",
+        "description": "One more version of the email to test.",
+        "required": [
+          "subject",
+          "design"
+        ],
+        "properties": {
+          "design": {
+            "type": "object",
+            "description": "Its email designer JSON."
+          },
+          "subject": {
+            "type": "string",
+            "description": "Its subject line (at most 200 characters)."
           }
         }
       },
