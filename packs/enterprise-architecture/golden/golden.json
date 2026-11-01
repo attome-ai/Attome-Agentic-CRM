@@ -1,0 +1,86 @@
+{
+  "format": "attome-pack-golden/v1",
+  "packs": ["crm", "itsm", "enterprise-architecture"],
+  "tests": [
+    {
+      "name": "An application is assessed and its TIME decision recorded",
+      "description": "تقييم تطبيق وتسجيل قرار TIME. A capability's application goes live, is assessed as poor technical fit and set to migrate.",
+      "definition": {
+        "given": [
+          { "entity": "ea_capability", "ref": "billing", "record": { "name": "Customer billing / فوترة العملاء", "capability_type": "Core", "maturity": "defined", "strategic_importance": "high" } },
+          {
+            "entity": "ea_application",
+            "ref": "app",
+            "record": { "name": "Legacy Billing 4 / نظام الفوترة القديم", "capability_ref": { "$ref": "billing" }, "vendor": "In-house", "hosting": "on_premises", "annual_cost": 420000, "user_count": 85, "lifecycle_status": "planned" }
+          }
+        ],
+        "when": [
+          { "op": "update", "entity": "ea_application", "ref": "app", "values": { "lifecycle_status": "active" } },
+          {
+            "op": "create",
+            "entity": "ea_assessment",
+            "ref": "assessment",
+            "values": { "application_ref": { "$ref": "app" }, "period_label": "2026-H2", "business_fit": "good", "technical_fit": "poor", "submitted_on": "2026-10-15T09:00:00Z" }
+          },
+          {
+            "op": "update",
+            "entity": "ea_application",
+            "ref": "app",
+            "values": { "business_fit": "good", "technical_fit": "poor", "time_decision": "migrate", "time_rationale": "Fits the business, not the platform / مناسب للعمل وغير مناسب تقنيًا", "estimated_savings": 150000 }
+          }
+        ],
+        "expect": [
+          { "entity": "ea_application", "ref": "app", "attribute": "lifecycle_status", "equals": "active" },
+          { "entity": "ea_application", "ref": "app", "attribute": "time_decision", "equals": "migrate" }
+        ]
+      }
+    },
+    {
+      "name": "An application is retired only after it is deprecated",
+      "description": "لا يُتقاعد التطبيق إلا بعد إيقاف دعمه. Moving an active application straight to retired is refused; deprecated then retired passes.",
+      "definition": {
+        "given": [
+          { "entity": "ea_application", "ref": "app", "record": { "name": "Fax Gateway / بوابة الفاكس", "hosting": "on_premises", "lifecycle_status": "planned" } }
+        ],
+        "when": [
+          { "op": "update", "entity": "ea_application", "ref": "app", "values": { "lifecycle_status": "active" } },
+          { "op": "update", "entity": "ea_application", "ref": "app", "values": { "lifecycle_status": "retired" } }
+        ],
+        "expect": [
+          { "error": "validation" },
+          { "entity": "ea_application", "ref": "app", "attribute": "lifecycle_status", "equals": "active" }
+        ]
+      }
+    },
+    {
+      "name": "An architecture review approves an integration with conditions",
+      "description": "مراجعة معمارية تعتمد تكاملًا بشروط. The interface carries personal data, so the review approves it with conditions.",
+      "definition": {
+        "given": [
+          { "entity": "ea_application", "ref": "crm", "record": { "name": "Attome CRM", "hosting": "private_cloud", "lifecycle_status": "planned" } },
+          { "entity": "ea_application", "ref": "erp", "record": { "name": "Finance ERP / نظام المالية", "hosting": "on_premises", "lifecycle_status": "planned" } }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "ea_interface",
+            "ref": "interface",
+            "values": { "name": "Customer to ERP", "source_ref": { "$ref": "crm" }, "target_ref": { "$ref": "erp" }, "protocol": "rest", "frequency": "real_time", "carries_personal_data": true }
+          },
+          {
+            "op": "create",
+            "entity": "ea_review",
+            "ref": "review",
+            "values": { "title": "CRM to ERP customer sync / مزامنة العملاء", "application_ref": { "$ref": "crm" }, "proposal": "Push new customers to the ERP in real time", "status": "intake" }
+          },
+          { "op": "update", "entity": "ea_review", "ref": "review", "values": { "status": "in_review" } },
+          { "op": "update", "entity": "ea_review", "ref": "review", "values": { "status": "approved_with_conditions", "decision": "Mask national ids in transit logs" } }
+        ],
+        "expect": [
+          { "entity": "ea_review", "ref": "review", "attribute": "status", "equals": "approved_with_conditions" },
+          { "entity": "ea_interface", "ref": "interface", "attribute": "carries_personal_data", "equals": true }
+        ]
+      }
+    }
+  ]
+}

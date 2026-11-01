@@ -1,0 +1,107 @@
+{
+  "format": "attome-pack-golden/v1",
+  "packs": ["crm", "sales", "retail"],
+  "tests": [
+    {
+      "name": "A Ramadan promotion claim is validated, partly approved and paid",
+      "description": "مطالبة عرض رمضان تُتحقق وتُعتمد جزئيًا ثم تُدفع. The chain claims its display fee; the evidence supports part of it.",
+      "definition": {
+        "given": [
+          { "entity": "rtl_chain", "ref": "chain", "record": { "name": "أسواق الدانة Al Dana Markets", "channel": "supermarket" } },
+          {
+            "entity": "rtl_promotion",
+            "ref": "promotion",
+            "record": {
+              "name": "Ramadan end-cap display",
+              "name_ar": "عرض نهاية الممر في رمضان",
+              "chain_ref": { "$ref": "chain" },
+              "season": "ramadan",
+              "mechanic": "display",
+              "budget": 40000,
+              "status": "running"
+            }
+          }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "rtl_promotion_claim",
+            "ref": "claim",
+            "values": { "reference": "CLM-GOLDEN-0001", "promotion_ref": { "$ref": "promotion" }, "chain_ref": { "$ref": "chain" }, "claimed_amount": 12000, "status": "submitted" }
+          },
+          { "op": "update", "entity": "rtl_promotion_claim", "ref": "claim", "values": { "status": "validating" } },
+          { "op": "update", "entity": "rtl_promotion_claim", "ref": "claim", "values": { "status": "partly_approved", "approved_amount": 9000 } },
+          { "op": "update", "entity": "rtl_promotion_claim", "ref": "claim", "values": { "status": "paid" } }
+        ],
+        "expect": [
+          { "entity": "rtl_promotion_claim", "ref": "claim", "attribute": "status", "equals": "paid" }
+        ]
+      }
+    },
+    {
+      "name": "A promotion claim is not paid before it is validated",
+      "description": "لا تُدفع مطالبة العرض قبل التحقق منها. A submitted claim cannot go straight to paid.",
+      "definition": {
+        "given": [
+          { "entity": "rtl_chain", "ref": "chain", "record": { "name": "صيدليات الشفاء Al Shifa Pharmacies", "channel": "pharmacy" } },
+          { "entity": "rtl_promotion", "ref": "promotion", "record": { "name": "National Day price-off", "name_ar": "تخفيض اليوم الوطني", "chain_ref": { "$ref": "chain" }, "season": "national_day", "mechanic": "price_off" } }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "rtl_promotion_claim",
+            "ref": "claim",
+            "values": { "reference": "CLM-GOLDEN-0002", "promotion_ref": { "$ref": "promotion" }, "claimed_amount": 5000, "status": "submitted" }
+          },
+          { "op": "update", "entity": "rtl_promotion_claim", "ref": "claim", "values": { "status": "paid" } }
+        ],
+        "expect": [
+          { "error": "validation" },
+          { "entity": "rtl_promotion_claim", "ref": "claim", "attribute": "status", "equals": "submitted" }
+        ]
+      }
+    },
+    {
+      "name": "A store visit records a shelf audit and a pre-order",
+      "description": "زيارة متجر تسجّل تدقيق الرف وطلبًا مسبقًا. The rep visits an A-class outlet, audits the shelf and takes an order sent to the ERP.",
+      "definition": {
+        "given": [
+          { "entity": "rtl_route", "ref": "route", "record": { "name": "Riyadh North R3", "visit_days": "sun,tue,thu", "region": "Riyadh" } },
+          {
+            "entity": "rtl_outlet",
+            "ref": "outlet",
+            "record": { "name": "Tamimi Al Malqa", "name_ar": "التميمي الملقا", "route_ref": { "$ref": "route" }, "outlet_class": "a", "city": "Riyadh" }
+          }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "rtl_visit",
+            "ref": "visit",
+            "values": { "outlet_ref": { "$ref": "outlet" }, "visit_date": "2026-11-01T07:00:00Z", "planned": true, "status": "in_progress" }
+          },
+          {
+            "op": "create",
+            "entity": "rtl_store_audit",
+            "ref": "audit",
+            "values": { "visit_ref": { "$ref": "visit" }, "barcode": "6281000000011", "on_shelf": true, "facings": 4, "shelf_price": 12.5, "stock_count": 36 }
+          },
+          {
+            "op": "create",
+            "entity": "rtl_order",
+            "ref": "order",
+            "values": { "reference": "ORD-GOLDEN-0001", "outlet_ref": { "$ref": "outlet" }, "visit_ref": { "$ref": "visit" }, "kind": "pre_order", "total": 1450, "status": "draft" }
+          },
+          { "op": "update", "entity": "rtl_order", "ref": "order", "values": { "status": "submitted" } },
+          { "op": "update", "entity": "rtl_order", "ref": "order", "values": { "status": "sent_to_erp", "erp_order_id": "SO-778812" } },
+          { "op": "update", "entity": "rtl_visit", "ref": "visit", "values": { "status": "done" } }
+        ],
+        "expect": [
+          { "entity": "rtl_order", "ref": "order", "attribute": "status", "equals": "sent_to_erp" },
+          { "entity": "rtl_visit", "ref": "visit", "attribute": "status", "equals": "done" },
+          { "entity": "rtl_store_audit", "ref": "audit", "attribute": "on_shelf", "equals": true }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,108 @@
+{
+  "format": "attome-pack-golden/v1",
+  "packs": ["crm", "telecom-energy"],
+  "tests": [
+    {
+      "name": "A new fibre connection goes from request to an active service",
+      "description": "طلب توصيل ألياف جديد من الطلب إلى خدمة فعالة. Feasibility passes, the request is approved, scheduled and installed, and the service goes live.",
+      "definition": {
+        "given": [
+          { "entity": "account", "ref": "customer", "record": { "name": "مكتب الرواد للمحاماة Al Rowad Law Office" } },
+          { "entity": "tel_site", "ref": "site", "record": { "account_ref": { "$ref": "customer" }, "name": "Head office / المكتب الرئيسي", "area_code": "RYD-OLY-04", "national_address": "RRRD2929" } },
+          {
+            "entity": "tel_catalogue_item",
+            "ref": "fibre",
+            "record": { "name": "Business Fibre 500", "name_ar": "ألياف الأعمال 500", "line_of_business": "broadband", "bss_product_id": "BF-500", "monthly_price": 799, "is_active": true }
+          }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "tel_connection_request",
+            "ref": "request",
+            "values": {
+              "reference": "CR-GOLDEN-0001",
+              "account_ref": { "$ref": "customer" },
+              "site_ref": { "$ref": "site" },
+              "kind": "new_connection",
+              "catalogue_item_ref": { "$ref": "fibre" },
+              "identity_checked": true,
+              "status": "requested"
+            }
+          },
+          { "op": "update", "entity": "tel_connection_request", "ref": "request", "values": { "status": "feasibility", "feasible": true } },
+          { "op": "update", "entity": "tel_connection_request", "ref": "request", "values": { "status": "approved" } },
+          { "op": "update", "entity": "tel_connection_request", "ref": "request", "values": { "status": "scheduled", "appointment_on": "2026-11-04T07:00:00Z" } },
+          { "op": "update", "entity": "tel_connection_request", "ref": "request", "values": { "status": "installed", "oss_order_id": "OSS-55120" } },
+          { "op": "update", "entity": "tel_connection_request", "ref": "request", "values": { "status": "active" } },
+          {
+            "op": "create",
+            "entity": "tel_service",
+            "ref": "service",
+            "values": { "site_ref": { "$ref": "site" }, "catalogue_item_ref": { "$ref": "fibre" }, "service_identifier": "FTTH-0114567890", "kind": "circuit", "status": "active" }
+          }
+        ],
+        "expect": [
+          { "entity": "tel_connection_request", "ref": "request", "attribute": "status", "equals": "active" },
+          { "entity": "tel_service", "ref": "service", "attribute": "status", "equals": "active" }
+        ]
+      }
+    },
+    {
+      "name": "A connection is not scheduled before feasibility and approval",
+      "description": "لا يُجدول التوصيل قبل دراسة الجدوى والاعتماد. A requested connection cannot go straight to scheduled.",
+      "definition": {
+        "given": [
+          { "entity": "account", "ref": "customer", "record": { "name": "شركة النخبة Al Nukhba Co." } }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "tel_connection_request",
+            "ref": "request",
+            "values": { "reference": "CR-GOLDEN-0002", "account_ref": { "$ref": "customer" }, "kind": "upgrade", "status": "requested" }
+          },
+          { "op": "update", "entity": "tel_connection_request", "ref": "request", "values": { "status": "scheduled" } }
+        ],
+        "expect": [
+          { "error": "validation" },
+          { "entity": "tel_connection_request", "ref": "request", "attribute": "status", "equals": "requested" }
+        ]
+      }
+    },
+    {
+      "name": "A regulated complaint and an outage notice are recorded",
+      "description": "شكوى لدى الهيئة وإشعار انقطاع. A vulnerable customer's complaint to the regulator is upheld, and an outage in their area is restored with a notice sent.",
+      "definition": {
+        "given": [
+          {
+            "entity": "account",
+            "ref": "customer",
+            "record": { "name": "أحمد المالكي Ahmed Almalki", "is_vulnerable_customer": true, "vulnerability_reason": "medical_equipment" }
+          }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "tel_outage",
+            "ref": "outage",
+            "values": { "title": "Fibre cut, Olaya / قطع ألياف العليا", "area_codes": "RYD-OLY-04", "line_of_business": "broadband", "started_at": "2026-10-20T13:00:00Z", "customers_affected": 1200, "status": "open" }
+          },
+          { "op": "update", "entity": "tel_outage", "ref": "outage", "values": { "status": "restored", "restored_at": "2026-10-20T18:30:00Z", "notice_sent": true } },
+          {
+            "op": "create",
+            "entity": "tel_complaint",
+            "ref": "complaint",
+            "values": { "reference": "TC-GOLDEN-0001", "account_ref": { "$ref": "customer" }, "regulator": "cst", "received_on": "2026-10-21T08:00:00Z", "regulator_deadline": "2026-11-04T08:00:00Z", "outcome": "open" }
+          },
+          { "op": "update", "entity": "tel_complaint", "ref": "complaint", "values": { "outcome": "upheld" } }
+        ],
+        "expect": [
+          { "entity": "tel_outage", "ref": "outage", "attribute": "notice_sent", "equals": true },
+          { "entity": "tel_complaint", "ref": "complaint", "attribute": "outcome", "equals": "upheld" },
+          { "entity": "account", "ref": "customer", "attribute": "is_vulnerable_customer", "equals": true }
+        ]
+      }
+    }
+  ]
+}
