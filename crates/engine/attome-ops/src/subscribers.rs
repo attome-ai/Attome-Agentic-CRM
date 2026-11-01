@@ -155,9 +155,9 @@ pub fn address_problem(channel: &str, address: &str) -> Option<String> {
                     if !local.is_empty() && domain.contains('.') && !domain.starts_with('.')
                         && !domain.ends_with('.')
             ) && !address.chars().any(|c| c.is_whitespace() || c.is_control());
-            (!ok).then(|| "not an email address".into())
+            (!ok).then_some("not an email address".to_owned())
         }
-        _ => (!address.starts_with("https://")).then(|| "a webhook address is https".into()),
+        _ => (!address.starts_with("https://")).then_some("a webhook address is https".to_owned()),
     }
 }
 
