@@ -722,6 +722,7 @@ pub async fn run_model_record_checks(
     state: &EngineState,
     entity_name: &str,
     record_id: Option<Uuid>,
+    actor: Option<Uuid>,
     obj: &serde_json::Map<String, Value>,
 ) -> Result<Option<serde_json::Map<String, Value>>, AppError> {
     let Some(checks) = state.record_checks.get(entity_name) else {
@@ -733,6 +734,7 @@ pub async fn run_model_record_checks(
         let save = attome_core::record_check::RecordSave {
             entity: entity_name,
             record_id,
+            actor,
             body,
         };
         let filled = check.check(&mut *conn, state, save).await?;
@@ -2226,7 +2228,7 @@ pub async fn create_one_as(
     validate_model_record_validators(state, entity_name, obj)?;
     // W1-T5: checks that read related records, in this transaction.
     let checked;
-    let obj = match run_model_record_checks(tx, state, entity_name, None, obj).await? {
+    let obj = match run_model_record_checks(tx, state, entity_name, None, actor, obj).await? {
         Some(map) => {
             checked = map;
             &checked
@@ -3365,13 +3367,16 @@ pub async fn update_one_as(
     // W1-T5: checks that read related records, in this transaction (after
     // the engine-managed check: a check fills engine-managed values).
     let checked;
-    let obj = match run_model_record_checks(tx, state, entity_name, Some(record_id), obj).await? {
-        Some(map) => {
-            checked = map;
-            &checked
-        }
-        None => obj,
-    };
+    let obj =
+        match run_model_record_checks(tx, state, entity_name, Some(record_id), modified_by, obj)
+            .await?
+        {
+            Some(map) => {
+                checked = map;
+                &checked
+            }
+            None => obj,
+        };
     // M9-T1: a record held by a pending approval process takes only the
     // process's editable attributes, from people and their agents.
     if matches!(mode, MutationMode::Strict | MutationMode::ClientId(_)) {

@@ -51,6 +51,8 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 25;
 pub mod a2a;
 pub mod actions;
 pub mod agent;
+/// AH7-T3: the permission test gates every agent activation.
+pub mod agent_activation;
 pub mod agent_stats;
 pub mod agent_stats_routes;
 pub mod ai_status;

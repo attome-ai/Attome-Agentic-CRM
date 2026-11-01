@@ -37,6 +37,8 @@ pub struct RecordSave<'a> {
     pub entity: &'a str,
     /// The record's id on update; `None` on create, before the row exists.
     pub record_id: Option<Uuid>,
+    /// The staff user saving it; `None` for a portal user or a system write.
+    pub actor: Option<Uuid>,
     /// The submitted fields after the engine's own fills: the full body on
     /// create, the changed fields on update.
     pub body: &'a Map<String, Value>,

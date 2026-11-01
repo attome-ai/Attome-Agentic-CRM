@@ -56,6 +56,26 @@ impl EngineModel for ActionModel {
         "attome-ai"
     }
 
+    /// AH7-T3: activating an agent, or changing an active agent's policy,
+    /// runs its permission test in the save.
+    fn record_checks(
+        &self,
+    ) -> Vec<(
+        &'static str,
+        std::sync::Arc<dyn attome_core::record_check::RecordCheck>,
+    )> {
+        vec![
+            (
+                "ai_agent",
+                std::sync::Arc::new(crate::agent_activation::ActivationCheck),
+            ),
+            (
+                crate::agent::POLICY_ENTITY,
+                std::sync::Arc::new(crate::agent_activation::ActivationCheck),
+            ),
+        ]
+    }
+
     fn module_id(&self) -> ModuleId {
         MODULE_AI
     }

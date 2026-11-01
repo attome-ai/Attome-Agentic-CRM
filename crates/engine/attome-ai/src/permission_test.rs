@@ -237,23 +237,24 @@ pub fn is_failure(expect: Expect, got: Outcome) -> bool {
     }
 }
 
-/// AH7-T2: runs every case for the agent definition `agent_ref` as the
-/// caller `actor` would start it, executing nothing, and stores the report.
-pub async fn run(state: &EngineState, actor: Uuid, agent_ref: Uuid) -> Result<Report, AppError> {
-    let security = state.base.security.resolve(actor).await?;
-    let definition =
-        attome_records::entity_crud::read_record(state, &security, "ai_agent", agent_ref).await?;
-    let resolved = crate::agent::resolve_start(
-        state,
-        &security,
-        agent_ref,
-        crate::agent::SessionConstraints {
-            risk_ceiling: RiskTier::Consequential,
-            allowed_action_ids: None,
-        },
-    )
-    .await?;
-    let effective = &resolved.effective;
+/// AH7-T3: what one judgement of an agent's cases found.
+#[derive(Debug, Clone)]
+pub struct Judged {
+    pub cases: usize,
+    pub failures: Vec<Failure>,
+    /// Expected-allowed calls the gate stopped.
+    pub over_restricted: usize,
+}
+
+/// Puts every case for an agent whose owner is `security` and whose
+/// session would hold `effective` through the gate, executing nothing.
+/// The shared core of [`run`] and the activation check
+/// (`crate::agent_activation`).
+pub fn judge(
+    state: &EngineState,
+    security: &std::sync::Arc<attome_server::security::SecurityContext>,
+    effective: &crate::agent::SessionConstraints,
+) -> Judged {
     let policy = AgentPolicy {
         risk_ceiling: effective.risk_ceiling,
         allowed_action_ids: effective.allowed_action_ids.clone(),
@@ -313,6 +314,35 @@ pub async fn run(state: &EngineState, actor: Uuid, agent_ref: Uuid) -> Result<Re
         }
     }
 
+    Judged {
+        cases: cases.len(),
+        failures,
+        over_restricted,
+    }
+}
+
+/// AH7-T2: runs every case for the agent definition `agent_ref` as the
+/// caller `actor` would start it, executing nothing, and stores the report.
+pub async fn run(state: &EngineState, actor: Uuid, agent_ref: Uuid) -> Result<Report, AppError> {
+    let security = state.base.security.resolve(actor).await?;
+    let definition =
+        attome_records::entity_crud::read_record(state, &security, "ai_agent", agent_ref).await?;
+    let resolved = crate::agent::resolve_start(
+        state,
+        &security,
+        agent_ref,
+        crate::agent::SessionConstraints {
+            risk_ceiling: RiskTier::Consequential,
+            allowed_action_ids: None,
+        },
+    )
+    .await?;
+    let Judged {
+        cases,
+        failures,
+        over_restricted,
+    } = judge(state, &security, &resolved.effective);
+
     let run_id = Uuid::now_v7();
     let passed = failures.is_empty();
     sqlx::query(
@@ -324,7 +354,7 @@ pub async fn run(state: &EngineState, actor: Uuid, agent_ref: Uuid) -> Result<Re
     .bind(agent_ref)
     .bind(definition.row_version())
     .bind(passed)
-    .bind(i32::try_from(cases.len()).unwrap_or(i32::MAX))
+    .bind(i32::try_from(cases).unwrap_or(i32::MAX))
     .bind(serde_json::to_value(&failures).map_err(AppError::internal)?)
     .bind(actor)
     .execute(&state.base.db)
@@ -334,7 +364,7 @@ pub async fn run(state: &EngineState, actor: Uuid, agent_ref: Uuid) -> Result<Re
         run_id,
         agent_ref,
         passed,
-        cases: cases.len(),
+        cases,
         failures,
         over_restricted,
     })
