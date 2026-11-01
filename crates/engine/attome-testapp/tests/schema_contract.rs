@@ -65,6 +65,12 @@ fn contract_waits_for_lagging_node() {
         let Some(app) = TestApp::start().await else {
             return;
         };
+        // Only the nodes this test names: the app's own switch at boot
+        // would otherwise lag behind the version the test records.
+        sqlx::query("DELETE FROM metadata_node_switch")
+            .execute(app.db())
+            .await
+            .unwrap();
         let table = entity(&app).await;
         let (code, body) = app
             .request(

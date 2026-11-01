@@ -1,7 +1,8 @@
 //! AB11-T6: following the public status. Consent is required, an unconfirmed
-//! subscriber gets nothing, the one-click unsubscribe works once, a webhook
-//! to a private address is refused, and every public route answers 404
-//! while the deployment does not publish its status.
+//! subscriber gets nothing, the one-click unsubscribe works once and a
+//! webhook to a private address is refused. Every test here publishes the
+//! status; the 404 while it is not published is in `status_unpublished.rs`
+//! (tests in one binary share one app and its settings).
 
 #![recursion_limit = "512"]
 #![allow(
@@ -51,8 +52,9 @@ async fn subscriber_id(app: &TestApp, address: &str) -> Uuid {
         .unwrap()
 }
 
-/// A public incident with one update published a second from now.
-async fn public_update(app: &TestApp) {
+/// A public incident with one update published `offset` from now (a
+/// Postgres interval).
+async fn public_update(app: &TestApp, offset: &str) {
     let incident: Uuid = sqlx::query_scalar(
         "INSERT INTO ops_incident (title_en, audience, state, components, impact, created_by) \
          VALUES ('Payments are slow', 'public', 'investigating', ARRAY['records'], 'major', $1) \
@@ -64,10 +66,11 @@ async fn public_update(app: &TestApp) {
     .unwrap();
     sqlx::query(
         "INSERT INTO ops_incident_update (incident_id, stage, body_en, published_by, published_at) \
-         VALUES ($1, 'identified', 'A card network is slow.', $2, now() + interval '1 second')",
+         VALUES ($1, 'identified', 'A card network is slow.', $2, now() + $3::interval)",
     )
     .bind(incident)
     .bind(app.admin.id)
+    .bind(offset)
     .execute(app.db())
     .await
     .unwrap();
@@ -122,7 +125,7 @@ fn unconfirmed_subscriber_gets_nothing() {
         let body = json!({ "channel": "email", "address": address, "consent": true });
         assert_eq!(subscribe(&app, body).await, StatusCode::ACCEPTED);
         let id = subscriber_id(&app, &address).await;
-        public_update(&app).await;
+        public_update(&app, "-1 minute").await;
         attome_ops::subscribers::deliver_due(&app.state)
             .await
             .unwrap();
@@ -148,7 +151,7 @@ fn unconfirmed_subscriber_gets_nothing() {
             "single use"
         );
 
-        public_update(&app).await;
+        public_update(&app, "1 second").await;
         attome_ops::subscribers::deliver_due(&app.state)
             .await
             .unwrap();
@@ -240,30 +243,5 @@ fn webhook_to_private_ip_refused() {
                 "{address}"
             );
         }
-    });
-}
-
-// feature: AB11
-// negative: GET /api/v1/public/status/feed.rss
-#[test]
-fn public_routes_404_when_disabled() {
-    attome_testkit::run_shared(async {
-        let Some(app) = TestApp::start().await else {
-            return;
-        };
-        let body = json!({ "channel": "email", "address": "a@example.com", "consent": true });
-        assert_eq!(subscribe(&app, body).await, StatusCode::NOT_FOUND);
-        for path in [
-            "/api/v1/public/status/confirm?token=x",
-            "/api/v1/public/status/unsubscribe?token=x",
-            "/api/v1/public/status/feed.rss",
-        ] {
-            assert_eq!(get(&app, path).await, StatusCode::NOT_FOUND, "{path}");
-        }
-        publish_status(&app, true).await;
-        assert_eq!(
-            get(&app, "/api/v1/public/status/feed.rss").await,
-            StatusCode::OK
-        );
     });
 }

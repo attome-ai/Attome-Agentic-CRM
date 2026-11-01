@@ -1,6 +1,7 @@
 //! AB11-T8: `GET /api/v1/public/status` answers anyone, without signing in,
-//! with the public status only, and 404 while the deployment does not
-//! publish it.
+//! with the public status only. The 404 while the deployment does not
+//! publish it is in `status_unpublished.rs`: tests in one binary share one
+//! app and its settings, and run at the same time.
 
 #![recursion_limit = "512"]
 #![allow(
@@ -73,29 +74,5 @@ fn public_status_hides_internal() {
             !keys.contains(&"ai"),
             "a non-public component leaked: {keys:?}"
         );
-    });
-}
-
-// feature: AB11
-// negative: GET /api/v1/public/status
-#[test]
-fn public_status_404_when_disabled() {
-    attome_testkit::run_shared(async {
-        let Some(app) = TestApp::start().await else {
-            return;
-        };
-        incident(&app, "Visible only when published", "public").await;
-        let (status, body) = app
-            .request_public(Method::GET, "/api/v1/public/status", &[], Vec::new())
-            .await;
-        assert_eq!(status, StatusCode::NOT_FOUND, "off by default: {body}");
-        assert!(!body.to_string().contains("Visible only"));
-
-        publish_status(&app, true).await;
-        publish_status(&app, false).await;
-        let (status, _) = app
-            .request_public(Method::GET, "/api/v1/public/status", &[], Vec::new())
-            .await;
-        assert_eq!(status, StatusCode::NOT_FOUND, "switched off again");
     });
 }
