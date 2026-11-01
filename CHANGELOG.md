@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- CRM pack `0012`: the Global Account Manager role reads and updates the accounts, contacts and
+  opportunities owned by everyone under its holder in the position hierarchy, so a group's manager
+  sees its subsidiaries (D2-T2).
 - Workflow test cases (M4-T2): publishing a workflow version runs the customer tests that simulate it on
   the draft about to go live; `GET /api/v1/workflow/definitions/{id}/versions/{version_id}/coverage` lists
   the steps no case reaches, and the editor shows it; `POST /api/v1/workflow/instances/{id}/test` turns a

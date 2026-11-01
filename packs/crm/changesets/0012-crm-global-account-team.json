@@ -1,0 +1,208 @@
+{
+  "author": "packs",
+  "checksum": "sha256:a5ab7a20469bf126983d477ebb861df159fe68af6bc8f1b9171c3b9b01d0e89d",
+  "closed_at": "2026-11-01T00:00:00Z",
+  "description": "Global account team (D2-T2): the Global Account Manager role reads and updates the accounts, contacts and opportunities owned by them and by everyone under them in the position hierarchy (A17-T3 owner subtree), and reads their activities, so the manager of a parent account sees its subsidiaries' records once the subsidiaries' account managers hold positions under theirs.",
+  "format": "attome-changeset/v1",
+  "id": "01a1974c-94d4-74fc-8386-90f5ae98715d",
+  "layer": "product",
+  "name": "crm-global-account-team",
+  "opened_at": "2026-11-01T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "access_level": 0,
+          "description": "Looks after a customer group: reads and updates the accounts, contacts and opportunities they own and those owned by everyone under them in the position hierarchy, so the account managers of the group's subsidiaries report to them.",
+          "is_customized": false,
+          "name": "Global Account Manager",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "role": "Global Account Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "privilege": "account.read",
+        "role": "Global Account Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "privilege": "account.update",
+        "role": "Global Account Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "privilege": "contact.read",
+        "role": "Global Account Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "privilege": "contact.update",
+        "role": "Global Account Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "privilege": "opportunity.read",
+        "role": "Global Account Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "privilege": "opportunity.update",
+        "role": "Global Account Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "privilege": "activity.read",
+        "role": "Global Account Manager"
+      }
+    },
+    {
+      "args": {
+        "access": {
+          "delete_access_level": 0,
+          "delete_owner_visible": false,
+          "read_access_level": 0,
+          "read_owner_subtree": true,
+          "read_owner_visible": true,
+          "write_access_level": 0,
+          "write_owner_subtree": true,
+          "write_owner_visible": true
+        }
+      },
+      "op": "set_role_entity_access",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "account",
+        "role": "Global Account Manager"
+      }
+    },
+    {
+      "args": {
+        "access": {
+          "delete_access_level": 0,
+          "delete_owner_visible": false,
+          "read_access_level": 0,
+          "read_owner_subtree": true,
+          "read_owner_visible": true,
+          "write_access_level": 0,
+          "write_owner_subtree": true,
+          "write_owner_visible": true
+        }
+      },
+      "op": "set_role_entity_access",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "contact",
+        "role": "Global Account Manager"
+      }
+    },
+    {
+      "args": {
+        "access": {
+          "delete_access_level": 0,
+          "delete_owner_visible": false,
+          "read_access_level": 0,
+          "read_owner_subtree": true,
+          "read_owner_visible": true,
+          "write_access_level": 0,
+          "write_owner_subtree": true,
+          "write_owner_visible": true
+        }
+      },
+      "op": "set_role_entity_access",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "opportunity",
+        "role": "Global Account Manager"
+      }
+    },
+    {
+      "args": {
+        "access": {
+          "delete_access_level": 0,
+          "delete_owner_visible": false,
+          "read_access_level": 0,
+          "read_owner_subtree": true,
+          "read_owner_visible": true,
+          "write_access_level": 0,
+          "write_owner_subtree": false,
+          "write_owner_visible": false
+        }
+      },
+      "op": "set_role_entity_access",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "activity",
+        "role": "Global Account Manager"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "crm",
+  "seq": 12,
+  "title": "Pack: global account manager role"
+}

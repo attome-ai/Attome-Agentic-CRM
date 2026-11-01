@@ -261,3 +261,11 @@ the fixed-date public holidays. Hijri holidays follow the moon sighting and are 
 `0010` links a portal user to the contact it is (`webportal_user.contact_ref`), set when a portal
 sign-up's email is verified: the one live contact with that address, or else a new contact with
 `portal_review = pending` for staff to confirm or merge.
+
+## crm: global account team
+
+`0012` adds the **Global Account Manager** role (D2-T2). It reads and updates the accounts, contacts
+and opportunities its holder owns and those owned by everyone under them in the position hierarchy
+(the owner subtree, A17-T3), and reads their activities. To give a group's global account manager
+its subsidiaries, put the subsidiaries' account managers in positions under the global manager's;
+nothing else widens, and being on an account's team still grants nothing by itself.
