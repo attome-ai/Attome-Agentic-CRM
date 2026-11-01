@@ -11,6 +11,10 @@ npx playwright test
 
 The config starts the web app on port 4199, or uses one already running there.
 
+The specs under `tests/mobile` run only in the `phone` project (a Pixel 7): the record list as cards,
+a swipe that completes a task, and the Arabic phone layout right to left, with axe on the cards
+(`npx playwright test --project=phone`).
+
 ## Core Web Vitals
 
 `npx playwright test -c perf.config.ts` opens the record list, a record form and a dashboard over a
