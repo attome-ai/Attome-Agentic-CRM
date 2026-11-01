@@ -23,6 +23,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   wide access (`wide_access_granted`, needs `marketing_list.grant_wide_access` and is an Access
   security event), as the marketing user the setting `marketing.segment_user` names; a wide list with
   none set is refused (`segment.no_marketing_role`). Marketing pack changeset 0014 adds the privilege.
+- Data governance is documented in `docs/data-governance.md` (L3-T10): domains, roles, policies and
+  exceptions, the steward inbox, governed change, certification, coverage and the agent tools.
 - Marketing list routes (E7-T9): `POST /api/v1/marketing/lists/{id}/refresh` queues a refresh (202,
   one waiting per list, job `marketing_list_refresh`); `GET /api/v1/marketing/lists/{id}/members` pages
   the current members the caller may read; `GET /api/v1/marketing/lists/{id}/usage` names the email

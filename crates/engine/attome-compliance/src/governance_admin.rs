@@ -2,34 +2,16 @@
 //! CRUD for `data_domain` (migration `0171_data_domain.sql`),
 //! entity <-> domain assignment (`entity_info.domain_ref`), and the
 //! plan's §3/§4 accountability report endpoint. A dedicated route (guidelines
-//! §9: this isn't CRUD on a registered entity), gated on `system.admin` and
-//! mounted with the `strict_authz` re-resolve layer at `system.rs`'s
+//! §9: this isn't CRUD on a registered entity), gated on the compliance
+//! area privilege (`area::Compliance`) and mounted with the `strict_authz` re-resolve layer at `system.rs`'s
 //! composition point, matching `retention_admin.rs`/`dsr_admin.rs`/
 //! `legal_hold_admin.rs`'s established pattern in this crate.
 //!
-//! **Scope note (M15 plan §4 checklist, adjusted for this pass):**
-//! - "Standards rules (M45 `kind = standard`)" is skipped entirely — M45's
-//!   own plan (`M45-rules-engine.md` §3.2) defines its rule `kind` enum as
-//!   exactly `validation | calculation | visibility | requirement | default |
-//!   policy | routing`; there is no `standard` kind to wire into, and M45 is
-//!   owned by a different, concurrently-in-progress crate this session must
-//!   not edit. A future session should extend M45's `kind` enum first.
-//! - "Data policies... become M20 policy objects" is not attempted — M20
-//!   does not exist yet. Nothing here needs an `applies_to` field, since no
-//!   policy-object table is created by this change.
-//! - Steward defaulting for M03 (access reviews)/M13 (duplicate queues)/M14
-//!   (quality issues) is not wired anywhere — none of those engines exist
-//!   yet. The reusable primitive
-//!   (`attome_core::resolve_steward_for_domain`) is ready for them.
-//!   M24 (DSR) genuinely exists today, but `dsr_request` carries no
-//!   entity/domain association until fulfillment time (scopes are supplied
-//!   only in the `fulfill-*` request bodies, never stored at request
-//!   creation) — wiring a "default reviewer" onto DSR creation would mean
-//!   changing that table's contract, out of scope for this pass and a real
-//!   risk of colliding with a concurrent sibling change to `dsr_admin.rs`'s
-//!   export/DSR-writer paths. `legal_hold_admin::place_hold` DOES have
-//!   entity context at creation time, so that is where the hook is actually
-//!   wired (see its own doc comment).
+//! Governance roles, policies, exceptions and certifications are in
+//! [`crate::governance_policy`] (L3-T2), the steward inbox in
+//! [`crate::steward_inbox`] (L3-T3), and coverage, scorecards and evidence
+//! in [`crate::governance_coverage`] (L3-T6); `docs/data-governance.md`
+//! describes them together.
 
 use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};

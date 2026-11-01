@@ -45,6 +45,7 @@
 - [Data lineage](lineage.md): the graph of what uses what, impact before a field change, hand-documented links and the OpenLineage export.
 - [Imports and exports](imports-and-exports.md): import jobs (upload, dry run, apply, undo, error file, policy, recurring sources, agent tools) and exports (CSV, XLSX, JSON, Parquet, parts, labels).
 - [Data profiling](data-profiling.md): what a profile measures, masking, personal-data proposals, drift and schedules.
+- [Data governance](data-governance.md): domains, governance roles, policies and exceptions, the steward inbox, governed change, certification and coverage.
 - [Data quality](data-quality.md): dimensions, measure-only rules, targets, issues and their owners, fixes and alerts.
 - [Data enrichment](enrichment.md): proposals with provenance, budgets, and the free sources (commercial register, National Address, the company website).
 - [Arabic page paths: the link-preview check](content/seo-arabic-preview-check.md): the manual WhatsApp, X and LinkedIn check that keeps `content.seo_arabic_paths` off until it passes.
