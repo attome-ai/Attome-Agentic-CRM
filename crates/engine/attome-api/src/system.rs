@@ -89,6 +89,7 @@ pub struct EngineSystemBuilder {
     notifications: Arc<dyn NotificationService>,
     my_work_providers: Vec<Box<dyn MyWorkProvider>>,
     workflow_starter: Option<Arc<dyn attome_core::WorkflowStarter>>,
+    workflow_simulator: Option<Arc<dyn attome_core::WorkflowSimulator>>,
     stock_source: Option<Arc<dyn attome_core::stock_seam::StockSource>>,
     workflow_step_handlers: std::collections::HashMap<
         &'static str,
@@ -117,6 +118,7 @@ impl EngineSystem {
             notifications: Arc::new(NoopNotifications),
             my_work_providers: Vec::new(),
             workflow_starter: None,
+            workflow_simulator: None,
             stock_source: None,
             workflow_step_handlers: std::collections::HashMap::new(),
             workflow_kind_guards: std::collections::HashMap::new(),
@@ -879,6 +881,17 @@ impl EngineSystemBuilder {
         self
     }
 
+    /// T7-T1 — register the one `WorkflowSimulator`, the seam customer
+    /// tests simulate a published workflow through. A single slot, like the
+    /// starter.
+    pub fn register_workflow_simulator(
+        mut self,
+        simulator: impl attome_core::WorkflowSimulator + 'static,
+    ) -> Self {
+        self.workflow_simulator = Some(Arc::new(simulator));
+        self
+    }
+
     /// E8-T1 — adds an engine's workflow step handler, keyed by its node
     /// key. A second handler for one key is a programming error found at
     /// boot.
@@ -956,6 +969,7 @@ impl EngineSystemBuilder {
         state.my_work_providers = std::sync::Arc::new(self.my_work_providers);
         // C5 — the registered `WorkflowStarter`, frozen the same way.
         state.workflow_starter = self.workflow_starter;
+        state.workflow_simulator = self.workflow_simulator;
         // F6-T5 — the stock seam, frozen the same way.
         state.stock_source = self.stock_source;
         // U10-T2: the settings agent tool writes through the settings API.

@@ -272,6 +272,8 @@ async fn build_with(config: AppConfig) -> Option<TestApp> {
         .register(attome_contract::ContractModel)
         // AH7-T3: the agent activation check, and the action routes.
         .register(attome_ai::ActionModel)
+        // T7-T1: customer tests simulate published workflows.
+        .register_workflow_simulator(attome_workflow::simulate::PublishedWorkflowSimulator)
         .build()
         .await
         .expect("build the engine system");

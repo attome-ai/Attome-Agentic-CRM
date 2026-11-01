@@ -86,3 +86,29 @@ pub trait WorkflowStarter: Send + Sync + 'static {
         Box::pin(async { Err(AppError::CapabilityUnavailable("batched workflow start")) })
     }
 }
+
+/// T7-T1: how a published workflow would run on a trigger payload, without
+/// running it: the run's status (`completed`, `would_wait` or `failed`) and
+/// the nodes it reached, in order.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkflowSimulation {
+    pub status: String,
+    pub reached: Vec<String>,
+}
+
+/// The boxed future [`WorkflowSimulator::simulate`] returns.
+pub type WorkflowSimulateFuture<'a> =
+    Pin<Box<dyn Future<Output = Result<WorkflowSimulation, AppError>> + Send + 'a>>;
+
+/// T7-T1: the seam through which `attome-records`' customer tests simulate
+/// a published workflow (`attome-workflow` depends on `attome-records`, so
+/// the runner cannot call it). Registered once by the composition root,
+/// like [`WorkflowStarter`]; nothing is written and nothing is authorized.
+pub trait WorkflowSimulator: Send + Sync + 'static {
+    fn simulate<'a>(
+        &'a self,
+        state: &'a EngineState,
+        definition_logicalname: &'a str,
+        payload: serde_json::Value,
+    ) -> WorkflowSimulateFuture<'a>;
+}

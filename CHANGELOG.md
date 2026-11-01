@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Customer tests state permissions and flow outcomes (T7-T1): an expectation `{"entity", "action", "allowed"}`
+  checks whether the acting role or caller holds the entity privilege, and `{"flow", "entity", "ref", "status",
+  "reaches"}` simulates the published workflow on the record the test left (nothing it would do happens) and
+  checks its status and the nodes it reaches, through the new `attome_core::WorkflowSimulator` seam.
 - WhatsApp numbers and their templates (J5-T3, `/xrm/admin/whatsapp`): connect a WhatsApp Business number
   (its Meta ids, with the access token and app secret sealed), sync its approved templates from Meta
   (`POST /api/v1/admin/integrations/whatsapp/{id}/templates/sync`; added, updated and no-longer-approved

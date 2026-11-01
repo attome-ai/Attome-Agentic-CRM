@@ -243,6 +243,10 @@ pub struct EngineState {
     /// implementation is registered — `workflow.start` then answers as
     /// absent, never as a silent no-op (`workflow_start.rs`).
     pub workflow_starter: Option<Arc<dyn crate::workflow_start::WorkflowStarter>>,
+    /// T7-T1: the one workflow simulator, registered by the composition
+    /// root. `None` in a bare state: a customer test's flow expectation
+    /// then fails saying so.
+    pub workflow_simulator: Option<Arc<dyn crate::workflow_start::WorkflowSimulator>>,
     /// F6-T5 — the stock seam the inventory engine registers on the
     /// builder; `None` (no inventory) means stock is not tracked.
     pub stock_source: Option<Arc<dyn crate::stock_seam::StockSource>>,
@@ -357,6 +361,7 @@ impl EngineState {
             feature_flags: create_hot_cache(10_000, 30),
             my_work_providers: Arc::new(Vec::new()),
             workflow_starter: None,
+            workflow_simulator: None,
             stock_source: None,
             settings_writer: None,
             flags_writer: None,

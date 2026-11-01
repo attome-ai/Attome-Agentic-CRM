@@ -9,6 +9,12 @@
 //! - `expect` reads attributes back in the same transaction, or names the
 //!   error a step must have met (`validation`, `forbidden`, `conflict`,
 //!   `not_found`).
+//! - T7-T1: `expect` may also state a permission (`{"entity", "action",
+//!   "allowed"}`: whether the acting role or caller holds the entity
+//!   privilege) or a flow's outcome (`{"flow", "entity", "ref", "status",
+//!   "reaches"}`: the published workflow simulated on the record as the
+//!   test left it, through `EngineState::workflow_simulator`; nothing it
+//!   would do happens).
 //!
 //! Nothing a test does is ever committed: the transaction is rolled back on
 //! every path, and jobs a write enqueues roll back with it. The run's
@@ -100,6 +106,53 @@ pub enum Expectation {
         attribute: String,
         equals: Value,
     },
+    /// T7-T1: the acting role or caller may, or may not, do `action`
+    /// (`read`, `create`, `update`, `delete`) on `entity`.
+    Access {
+        entity: String,
+        action: String,
+        allowed: bool,
+    },
+    /// T7-T1: the published workflow `flow`, simulated on the record, ends
+    /// with `status` (`completed`, `would_wait`, `failed`) when given and
+    /// reaches every node in `reaches`.
+    Flow {
+        flow: String,
+        entity: String,
+        #[serde(rename = "ref")]
+        reference: String,
+        #[serde(default)]
+        status: Option<String>,
+        #[serde(default)]
+        reaches: Vec<String>,
+    },
+}
+
+/// The actions an access expectation names.
+const ACTIONS: [&str; 4] = ["read", "create", "update", "delete"];
+
+/// What a flow expectation finds wrong with a simulation. Pure.
+pub fn flow_failures(
+    flow: &str,
+    status: Option<&str>,
+    reaches: &[String],
+    simulated: &attome_core::WorkflowSimulation,
+) -> Vec<String> {
+    let mut out = Vec::new();
+    if let Some(expected) = status
+        && expected != simulated.status
+    {
+        out.push(format!(
+            "flow {flow} ended {}, expected {expected}",
+            simulated.status
+        ));
+    }
+    for node in reaches {
+        if !simulated.reached.contains(node) {
+            out.push(format!("flow {flow} did not reach {node}"));
+        }
+    }
+    out
 }
 
 /// What a run found.
@@ -444,6 +497,67 @@ pub async fn run_test(
                             }
                             Ok(None) => failures.push(format!("{entity} {reference} is gone")),
                             Err(e) => failures.push(format!("reading {entity} {reference}: {e}")),
+                        }
+                    }
+                    Expectation::Access {
+                        entity,
+                        action,
+                        allowed,
+                    } => {
+                        if !ACTIONS.contains(&action.as_str()) {
+                            failures.push(format!(
+                                "access {entity}.{action}: the action is read, create, update or delete"
+                            ));
+                            continue;
+                        }
+                        let holds = acting.require(entity, action).is_ok();
+                        if holds != *allowed {
+                            failures.push(format!(
+                                "{entity}.{action} is {}, expected {}",
+                                if holds { "allowed" } else { "refused" },
+                                if *allowed { "allowed" } else { "refused" }
+                            ));
+                        }
+                    }
+                    Expectation::Flow {
+                        flow,
+                        entity,
+                        reference,
+                        status,
+                        reaches,
+                    } => {
+                        let Some(simulator) = state.workflow_simulator.as_ref() else {
+                            failures.push(format!("flow {flow}: workflows are not available here"));
+                            continue;
+                        };
+                        let Some((_, id)) = run.refs.get(reference) else {
+                            failures.push(format!("no record named {reference}"));
+                            continue;
+                        };
+                        let record = match read_row(&mut tx, entity, *id).await {
+                            Ok(Some(row)) => row,
+                            Ok(None) => {
+                                failures.push(format!("{entity} {reference} is gone"));
+                                continue;
+                            }
+                            Err(e) => {
+                                failures.push(format!("reading {entity} {reference}: {e}"));
+                                continue;
+                            }
+                        };
+                        let payload = serde_json::json!({
+                            "entity": entity,
+                            "record_id": id.to_string(),
+                            "record": record,
+                        });
+                        match simulator.simulate(state, flow, payload).await {
+                            Ok(simulated) => failures.extend(flow_failures(
+                                flow,
+                                status.as_deref(),
+                                reaches,
+                                &simulated,
+                            )),
+                            Err(e) => failures.push(format!("flow {flow}: {e}")),
                         }
                     }
                 }
@@ -904,6 +1018,44 @@ pub async fn import_tests(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn access_and_flow_expectations_read_from_json() {
+        let definition: TestDefinition = serde_json::from_value(json!({
+            "expect": [
+                { "entity": "deal", "action": "delete", "allowed": false },
+                { "flow": "welcome", "entity": "contact", "ref": "c", "status": "completed",
+                  "reaches": ["send_email"] },
+                { "entity": "contact", "ref": "c", "attribute": "status", "equals": "new" }
+            ]
+        }))
+        .unwrap_or_else(|e| panic!("{e}"));
+        assert!(matches!(
+            definition.expect[0],
+            Expectation::Access { allowed: false, .. }
+        ));
+        assert!(matches!(definition.expect[1], Expectation::Flow { .. }));
+        assert!(matches!(definition.expect[2], Expectation::Value { .. }));
+    }
+
+    #[test]
+    fn a_flow_is_judged_by_its_status_and_the_nodes_it_reached() {
+        let simulated = attome_core::WorkflowSimulation {
+            status: "completed".into(),
+            reached: vec!["trigger".into(), "send_email".into()],
+        };
+        assert!(
+            flow_failures("w", Some("completed"), &["send_email".into()], &simulated).is_empty()
+        );
+        assert_eq!(
+            flow_failures("w", Some("would_wait"), &[], &simulated).len(),
+            1
+        );
+        assert_eq!(
+            flow_failures("w", None, &["create_task".into()], &simulated).len(),
+            1
+        );
+    }
     use serde_json::json;
 
     #[test]

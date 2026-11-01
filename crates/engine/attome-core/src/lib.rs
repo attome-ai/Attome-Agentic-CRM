@@ -283,4 +283,7 @@ pub use state_registry::{
     check_transition_with, locked_violations,
 };
 pub use transfer_gate::{TransferDecision, assert_transfer_allowed};
-pub use workflow_start::{WorkflowStartFuture, WorkflowStartRequest, WorkflowStarter};
+pub use workflow_start::{
+    WorkflowSimulateFuture, WorkflowSimulation, WorkflowSimulator, WorkflowStartFuture,
+    WorkflowStartRequest, WorkflowStarter,
+};

@@ -1889,6 +1889,8 @@ pub fn register_engines(
         // reaches through `attome_core::WorkflowStarter`, since attome-ai
         // cannot depend on attome-workflow (the reverse edge exists).
         .register_workflow_starter(attome_workflow::instance_admin::PublishedWorkflowStarter)
+        // T7-T1: customer tests simulate a published workflow through this.
+        .register_workflow_simulator(attome_workflow::simulate::PublishedWorkflowSimulator)
         // E8-T4: a journey's exit and goal conditions, before every node.
         .register_workflow_kind_guard(attome_marketing::journey::guard::JourneyGuard)
         // D17-T1: a sequence run ends once its contact has left the sequence,

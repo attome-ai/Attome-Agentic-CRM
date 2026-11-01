@@ -147,6 +147,49 @@ pub async fn with_real_record(
     Ok(merge_record(payload, &record.entity, record.id, data))
 }
 
+/// T7-T1: `attome-workflow`'s `attome_core::WorkflowSimulator`: the
+/// published, active version of a workflow named by its logical name, run
+/// through [`run_simulation`] on the payload. Nothing is written.
+#[derive(Debug)]
+pub struct PublishedWorkflowSimulator;
+
+impl attome_core::WorkflowSimulator for PublishedWorkflowSimulator {
+    fn simulate<'a>(
+        &'a self,
+        state: &'a EngineState,
+        definition_logicalname: &'a str,
+        payload: Value,
+    ) -> attome_core::WorkflowSimulateFuture<'a> {
+        Box::pin(async move {
+            let graph_json: Value = sqlx::query_scalar(
+                "SELECT v.graph FROM workflow_definition_version v \
+                 JOIN workflow_definition d ON d.id = v.definition_id \
+                 WHERE d.logicalname = $1 AND v.status = 'published' \
+                   AND d.is_active = TRUE AND d.is_deleted = FALSE",
+            )
+            .bind(definition_logicalname)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?
+            .ok_or_else(|| {
+                AppError::Validation(format!(
+                    "workflow {definition_logicalname:?} has no published, active version"
+                ))
+            })?;
+            let graph = Graph::parse(&graph_json).map_err(AppError::internal)?;
+            let (status, trace) = run_simulation(state, &graph, payload, &HashMap::new());
+            Ok(attome_core::WorkflowSimulation {
+                status,
+                reached: trace
+                    .into_iter()
+                    .filter(|n| n.status != "skipped")
+                    .map(|n| n.node_id)
+                    .collect(),
+            })
+        })
+    }
+}
+
 /// The trigger payload with the read record merged over it.
 pub(crate) fn merge_record(payload: Value, entity: &str, id: Uuid, data: Value) -> Value {
     let mut out = match payload {
