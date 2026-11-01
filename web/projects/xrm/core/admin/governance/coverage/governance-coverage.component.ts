@@ -97,7 +97,12 @@ export interface Scorecard {
       <section class="gc-card" data-testid="gc-scorecard" [attr.aria-label]="'governance.coverage.scorecard' | translate">
         <h3 dir="auto">{{ s.domain.name }}</h3>
         <p>{{ 'governance.coverage.quality' | translate }}:
-          {{ (s.quality_average ?? null) !== null ? (s.quality_average | localNumber) : ('governance.coverage.notScored' | translate) }}</p>
+          @if (s.quality_average !== null && s.quality_average !== undefined) {
+            {{ s.quality_average | localNumber }}
+          } @else {
+            {{ 'governance.coverage.notScored' | translate }}
+          }
+        </p>
         <p>{{ 'governance.coverage.items' | translate: { open: s.open_items, overdue: s.overdue_items } }}</p>
         <p>{{ 'governance.coverage.policies' | translate: { enforced: s.enforced_policies, total: s.policies } }}</p>
         <p>{{ 'governance.coverage.exceptions' | translate: { n: s.open_exceptions } }}</p>
