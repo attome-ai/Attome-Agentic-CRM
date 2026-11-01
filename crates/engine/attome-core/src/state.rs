@@ -153,6 +153,10 @@ pub struct EngineState {
     /// like `record_validators`. Empty here, which checks nothing extra.
     pub record_checks:
         Arc<std::collections::HashMap<String, Vec<Arc<dyn crate::record_check::RecordCheck>>>>,
+    /// E8-T9 — the engines' steps in erasing a record, declared through
+    /// `EngineModel::erasure_hooks` and frozen by `EngineSystemBuilder::build`
+    /// like `record_checks`. Empty here, which erases nothing extra.
+    pub erasure_hooks: Arc<Vec<Arc<dyn crate::erasure_hook::ErasureHook>>>,
     /// Y4-T1: every registered engine's manifest, frozen by
     /// `EngineSystemBuilder::build`. Module Management checks a new
     /// configuration against their dependencies. Empty here (bare state).
@@ -342,6 +346,7 @@ impl EngineState {
             engine_owned_entities: Arc::new(HashSet::new()),
             record_validators: Arc::new(std::collections::HashMap::new()),
             record_checks: Arc::new(std::collections::HashMap::new()),
+            erasure_hooks: Arc::new(Vec::new()),
             engine_manifests: Arc::new(Vec::new()),
             notifications: Arc::new(NoopNotifications),
             audit_signer,

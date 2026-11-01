@@ -138,6 +138,13 @@ pub trait EngineModel: Send + Sync + 'static {
         Vec::new()
     }
 
+    /// E8-T9: this model's steps in erasing a record (`crate::erasure_hook`),
+    /// run by every erasure path in its transaction. Collected into
+    /// `EngineState::erasure_hooks` at boot like `record_checks`.
+    fn erasure_hooks(&self) -> Vec<std::sync::Arc<dyn crate::erasure_hook::ErasureHook>> {
+        Vec::new()
+    }
+
     /// Y4-T1: the engine's version, platform range and module dependencies.
     /// Every registered engine declares one; `ModelRegistry::manifests`
     /// refuses a registry with an engine that does not, so boot stops.

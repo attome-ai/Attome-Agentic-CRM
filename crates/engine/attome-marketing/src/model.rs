@@ -57,6 +57,11 @@ impl EngineModel for MarketingModel {
         ]
     }
 
+    /// E8-T9: a person's journey rows go with them when they are erased.
+    fn erasure_hooks(&self) -> Vec<std::sync::Arc<dyn attome_core::erasure_hook::ErasureHook>> {
+        vec![std::sync::Arc::new(crate::journey::insight::JourneyErasure)]
+    }
+
     /// E7-T6: a segment saved as live needs a query that may run live.
     /// E7-T8: only a holder of the grant privilege changes wide access.
     /// E7-T9: a live journey's list changes only when confirmed.

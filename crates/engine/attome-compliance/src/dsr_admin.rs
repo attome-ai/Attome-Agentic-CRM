@@ -1201,6 +1201,8 @@ pub async fn do_fulfill_erasure(
             tracing::info!(record_id = %record_id, report_erased,
                 "DSR erasure: release-report conflict items deleted");
         }
+        // E8-T9: the engines' own rows about the subject.
+        attome_core::erasure_hook::run(state, &mut tx, entity_logicalname, *record_id).await?;
 
         let event = AuditEvent {
             organization_ref,

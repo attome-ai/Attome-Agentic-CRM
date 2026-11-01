@@ -9,6 +9,7 @@ pub mod control_step;
 pub mod enrol;
 pub mod entry;
 pub mod guard;
+pub mod insight;
 /// E8-T6: the message steps and the rules they check.
 pub mod message_step;
 pub mod rules;

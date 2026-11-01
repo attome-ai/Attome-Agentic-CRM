@@ -145,6 +145,15 @@ impl ModelRegistry {
         checks
     }
 
+    /// E8-T9 — every `EngineModel::erasure_hooks` step, in model order. Call
+    /// once at boot; the result is read-only.
+    pub fn erasure_hooks(&self) -> Vec<std::sync::Arc<dyn attome_core::erasure_hook::ErasureHook>> {
+        self.models
+            .iter()
+            .flat_map(|model| model.erasure_hooks())
+            .collect()
+    }
+
     /// Y4-T1 — every registered model's manifest, resolved with its module's
     /// name and its entities. A model without a manifest, or a manifest with
     /// a problem of its own (`EngineManifest::check`), is an error naming

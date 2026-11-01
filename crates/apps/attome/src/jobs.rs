@@ -3264,6 +3264,7 @@ const DEDUP_KEY_WFM_ADHERENCE_DAY: &str = "wfm-adherence-day";
 const DEDUP_KEY_MARKETING_ATTRIBUTION: &str = "marketing-attribution";
 /// E7-T6: the live segment tick (a registered job type).
 const DEDUP_KEY_SEGMENT_LIVE: &str = "marketing-segment-live";
+const DEDUP_KEY_JOURNEY_COUNTS: &str = "marketing-journey-counts";
 /// E8-T5: the journey entry tick and the date entry (registered job types).
 const DEDUP_KEY_JOURNEY_ENTRY: &str = "marketing-journey-entry";
 const DEDUP_KEY_JOURNEY_DATE_ENTRY: &str = "marketing-journey-date-entry";
@@ -3538,6 +3539,10 @@ pub const MARKETING_ATTRIBUTION: attome_jobs::JobType =
 /// E7-T6: live segments re-checked for the people a change-feed batch touched.
 pub const SEGMENT_LIVE: attome_jobs::JobType =
     attome_jobs::JobType::new("marketing_segment_live", 1);
+
+/// E8-T9: journey node counts recomputed for versions with recent runs.
+pub const JOURNEY_COUNTS: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_marketing::journey::insight::COUNTS_JOB, 1);
 
 /// E23-T1: drops profile event months past retention.
 pub const PROFILE_EVENT_RETENTION: attome_jobs::JobType =
@@ -6020,6 +6025,20 @@ pub fn register_job_types() {
             }
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            JOURNEY_COUNTS,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_MARKETING) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                attome_marketing::journey::insight::refresh_counts(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             SEGMENT_LIVE,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 if !state.modules.load().has(attome_modules::MODULE_MARKETING) {
@@ -6464,6 +6483,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
             DEDUP_KEY_REPUTATION_FETCH
         }
         EngineJob::Registered(job) if job.name == SEGMENT_LIVE.name => DEDUP_KEY_SEGMENT_LIVE,
+        EngineJob::Registered(job) if job.name == JOURNEY_COUNTS.name => DEDUP_KEY_JOURNEY_COUNTS,
         EngineJob::Registered(job) if job.name == STOCK_LEDGER.name => DEDUP_KEY_STOCK_LEDGER,
         EngineJob::Registered(job) if job.name == WORK_ORDER_INVOICING.name => {
             DEDUP_KEY_WORK_ORDER_INVOICING
@@ -7465,6 +7485,25 @@ pub fn spawn_segment_live_scheduler(db: DbPool, interval: std::time::Duration) {
         }
     };
     spawn_dedup_scheduler(db, interval, job, DEDUP_KEY_SEGMENT_LIVE, "live segments");
+}
+
+/// E8-T9: every 30 seconds, journey node counts (one pending at most).
+pub fn spawn_journey_counts_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(JOURNEY_COUNTS.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "journey counts: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_JOURNEY_COUNTS,
+        "journey counts",
+    );
 }
 
 /// I6-T2: every minute, one tick of work order stock.

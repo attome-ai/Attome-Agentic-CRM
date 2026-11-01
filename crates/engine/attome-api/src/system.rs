@@ -985,6 +985,8 @@ impl EngineSystemBuilder {
         state.record_validators = std::sync::Arc::new(self.registry.record_validators());
         // W1-T5 — model-declared save-time checks, frozen the same way.
         state.record_checks = std::sync::Arc::new(self.registry.record_checks());
+        // E8-T9 — model-declared erasure steps, frozen the same way.
+        state.erasure_hooks = std::sync::Arc::new(self.registry.erasure_hooks());
         // Y4-T1 — every engine's manifest, frozen the same way; a missing or
         // broken manifest stops boot here.
         state.engine_manifests = std::sync::Arc::new(self.registry.manifests()?);

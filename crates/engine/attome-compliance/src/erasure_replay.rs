@@ -44,6 +44,7 @@ async fn apply(state: &EngineState, entry: &LedgerEntry) -> Result<bool, AppErro
     let destroyed = attome_audit::erasure::replay_destroy(&mut tx, entry.record_id).await?;
     attome_core::recovery_archive::erase_record(&mut tx, &entry.entity, entry.record_id).await?;
     attome_core::release_report::erase_record(&mut tx, &entry.entity, entry.record_id).await?;
+    attome_core::erasure_hook::run(state, &mut tx, &entry.entity, entry.record_id).await?;
     if entry.kind == ErasureKind::Purge {
         let registry = state.entities.load();
         match registry.get(&entry.entity) {
