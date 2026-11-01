@@ -21,6 +21,17 @@
 //! An empty piece is stored as no value. Rows are written directly, as the
 //! other data step runs write theirs, with `row_version` raised so an open
 //! form sees the change.
+//!
+//! **Text to option set.** `POST /api/v1/admin/entities/{entity_id}/refactor/option-set-preview`
+//! groups a text attribute's distinct values (up to [`MAX_DISTINCT`]) by
+//! their normal form (trimmed, case-folded, Arabic letters normalised), so
+//! `Riyadh`, ` riyadh ` and `RIYADH` are one option; a `merge_map` joins
+//! further forms (`{"ruh": "Riyadh"}`). Each group's option is the merge
+//! map's value or the group's most common spelling. The answer carries the
+//! groups with their row counts and the `map` (every stored spelling to its
+//! option) ready for the field's existing type change to `choice`
+//! (`POST .../fields/{field_id}/change-type` with `conversion.map`), which
+//! converts the column and is recorded like any other structure change.
 
 use std::collections::BTreeMap;
 
@@ -49,6 +60,12 @@ pub const SPLIT_BATCH: i64 = 1_000;
 pub const MAX_TARGETS: usize = 8;
 /// Examples a preview shows.
 pub const MAX_EXAMPLES: usize = 20;
+/// Distinct values an option set preview reads.
+pub const MAX_DISTINCT: i64 = 5_000;
+/// The longest option value (the type change's own limit).
+pub const MAX_OPTION_LEN: usize = 100;
+/// Spellings listed per option.
+const MAX_SPELLINGS: usize = 20;
 
 /// One attribute a split fills, and how.
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
@@ -96,6 +113,105 @@ pub struct SplitPreview {
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct SplitQueued {
     pub run_id: Uuid,
+}
+
+/// A text attribute to turn into an option set.
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct OptionSetBody {
+    /// The text attribute.
+    pub source: String,
+    /// Further spellings to join: a spelling (compared in its normal form)
+    /// to the option it belongs to.
+    #[serde(default)]
+    pub merge_map: BTreeMap<String, String>,
+}
+
+/// One option and the stored spellings that become it.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct OptionGroup {
+    pub value: String,
+    pub rows: i64,
+    /// Up to 20 of its stored spellings.
+    pub spellings: Vec<String>,
+}
+
+/// What turning a text attribute into an option set would give.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct OptionSetPreview {
+    /// Distinct stored values read (at most 5,000).
+    pub values_read: i64,
+    /// Whether the attribute has more distinct values than were read.
+    pub more_values: bool,
+    /// The options, most rows first.
+    pub groups: Vec<OptionGroup>,
+    /// Rows whose value would become no value: longer than 100 characters
+    /// once normalised, or only spaces.
+    pub rows_unconvertible: i64,
+    /// Every stored spelling to its option: the `conversion.map` for the
+    /// field's type change to `choice`.
+    #[schema(value_type = Object)]
+    pub map: BTreeMap<String, String>,
+}
+
+/// A value's normal form: trimmed, case-folded, Arabic letters normalised.
+/// Pure.
+pub fn normal_form(value: &str) -> String {
+    attome_rules::arabic::normalize_ar(&value.trim().to_lowercase())
+}
+
+/// Groups `(stored value, rows)` by normal form and `merge_map`, into the
+/// options (most rows first), the spelling-to-option map, and the rows that
+/// cannot become an option. Pure.
+pub fn option_groups(
+    values: &[(String, i64)],
+    merge_map: &BTreeMap<String, String>,
+) -> (Vec<OptionGroup>, BTreeMap<String, String>, i64) {
+    let merges: BTreeMap<String, String> = merge_map
+        .iter()
+        .map(|(from, to)| (normal_form(from), to.trim().to_owned()))
+        .collect();
+    // normal form -> (rows, spellings with their rows)
+    let mut by_form: BTreeMap<String, (i64, Vec<(String, i64)>)> = BTreeMap::new();
+    let mut unconvertible = 0;
+    for (value, rows) in values {
+        let form = normal_form(value);
+        if form.is_empty() {
+            unconvertible += rows;
+            continue;
+        }
+        let key = merges.get(&form).map(|to| normal_form(to)).unwrap_or(form);
+        let entry = by_form.entry(key).or_default();
+        entry.0 += rows;
+        entry.1.push((value.clone(), *rows));
+    }
+    let mut groups = Vec::new();
+    let mut map = BTreeMap::new();
+    for (form, (rows, mut spellings)) in by_form {
+        spellings.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+        let value = merges
+            .iter()
+            .find(|(_, to)| normal_form(to) == form)
+            .map(|(_, to)| to.clone())
+            .unwrap_or_else(|| spellings[0].0.trim().to_owned());
+        if value.chars().count() > MAX_OPTION_LEN {
+            unconvertible += rows;
+            continue;
+        }
+        for (spelling, _) in &spellings {
+            map.insert(spelling.clone(), value.clone());
+        }
+        groups.push(OptionGroup {
+            value,
+            rows,
+            spellings: spellings
+                .into_iter()
+                .take(MAX_SPELLINGS)
+                .map(|(s, _)| s)
+                .collect(),
+        });
+    }
+    groups.sort_by(|a, b| b.rows.cmp(&a.rows).then_with(|| a.value.cmp(&b.value)));
+    (groups, map, unconvertible)
 }
 
 /// A checked split: the entity's table, the source and the compiled targets.
@@ -438,8 +554,85 @@ pub(crate) async fn continue_split(state: &EngineState, run: &fc::RunRow) -> Res
     Ok(())
 }
 
+/// Preview a text attribute as an option set
+///
+/// Groups a text attribute's stored values into options (trimmed,
+/// case-folded, Arabic letters normalised, plus a merge map) and answers the
+/// options with their row counts and the map for the field's type change to
+/// `choice`. Writes nothing. Administrators only.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/entities/{entity_id}/refactor/option-set-preview",
+    tag = "admin",
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::DryRun,
+        None,
+        "groups a text attribute's stored values into options; writes nothing"
+    )))),
+    params(("entity_id" = Uuid, Path, description = "The entity")),
+    request_body = OptionSetBody,
+    responses(
+        (status = 200, description = "The options and the conversion map", body = OptionSetPreview),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such entity", body = ErrorResponse),
+        (status = 422, description = "Not a text attribute", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn preview_option_set(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
+    Path(entity_id): Path<Uuid>,
+    Json(body): Json<OptionSetBody>,
+) -> Result<Json<OptionSetPreview>, AppError> {
+    let (entity, source) = {
+        let registry = state.entities.load();
+        let meta = registry.get_by_id(entity_id).ok_or(AppError::NotFound)?;
+        let source = body.source.trim().to_owned();
+        let is_text = meta
+            .attrs
+            .iter()
+            .any(|a| a.logicalname == source && a.field_type() == FieldType::Text);
+        if !is_text || fc::is_system_column(&source) {
+            return Err(AppError::Validation(format!(
+                "{source:?} is not a text attribute of {}",
+                meta.logicalname
+            )));
+        }
+        (meta.logicalname.clone(), source)
+    };
+    // Identifiers from validated metadata, quoted; values bound.
+    let sql = format!(
+        "SELECT {src}::text, COUNT(*)::bigint FROM {table} \
+          WHERE is_active IS DISTINCT FROM false AND {src} IS NOT NULL \
+          GROUP BY 1 ORDER BY 2 DESC, 1 LIMIT $1",
+        src = quote_ident(&source),
+        table = quote_ident(&entity),
+    );
+    let mut values: Vec<(String, i64)> = sqlx::query_as(&sql)
+        .bind(MAX_DISTINCT + 1)
+        .fetch_all(&state.base.db_migrator)
+        .await
+        .map_err(AppError::internal)?;
+    let more_values = values.len() as i64 > MAX_DISTINCT;
+    values.truncate(MAX_DISTINCT as usize);
+    let (groups, map, rows_unconvertible) = option_groups(&values, &body.merge_map);
+    Ok(Json(OptionSetPreview {
+        values_read: values.len() as i64,
+        more_values,
+        groups,
+        rows_unconvertible,
+        map,
+    }))
+}
+
 pub(super) fn routes() -> Router<EngineState> {
     Router::new()
+        .route(
+            "/api/v1/admin/entities/{entity_id}/refactor/option-set-preview",
+            post(preview_option_set),
+        )
         .route(
             "/api/v1/admin/entities/{entity_id}/refactor/preview",
             post(preview_split),
@@ -451,7 +644,7 @@ pub(super) fn routes() -> Router<EngineState> {
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(preview_split, queue_split))]
+#[openapi(paths(preview_split, queue_split, preview_option_set))]
 struct ApiDocFragment;
 
 pub(super) fn openapi_fragment() -> utoipa::openapi::OpenApi {
@@ -495,6 +688,32 @@ mod tests {
             split_value("full_name", &t, "Sara Ali").unwrap(),
             vec![Some("Sara".to_owned()), None, None, Some("Ali".to_owned())]
         );
+    }
+
+    #[test]
+    fn text_to_option_set_merges_variants() {
+        let values = vec![
+            ("Riyadh".to_owned(), 10),
+            (" riyadh ".to_owned(), 3),
+            ("RUH".to_owned(), 2),
+            ("جدة".to_owned(), 4),
+            ("جده".to_owned(), 1),
+            ("   ".to_owned(), 5),
+        ];
+        let merge: BTreeMap<String, String> = [("ruh".to_owned(), "Riyadh".to_owned())]
+            .into_iter()
+            .collect();
+        let (groups, map, unconvertible) = option_groups(&values, &merge);
+        assert_eq!(unconvertible, 5);
+        assert_eq!(groups.len(), 2, "{groups:?}");
+        assert_eq!(groups[0].value, "Riyadh");
+        assert_eq!(groups[0].rows, 15);
+        assert_eq!(groups[1].value, "جدة");
+        assert_eq!(groups[1].rows, 5);
+        assert_eq!(map.get(" riyadh ").map(String::as_str), Some("Riyadh"));
+        assert_eq!(map.get("RUH").map(String::as_str), Some("Riyadh"));
+        assert_eq!(map.get("جده").map(String::as_str), Some("جدة"));
+        assert!(!map.contains_key("   "));
     }
 
     #[test]

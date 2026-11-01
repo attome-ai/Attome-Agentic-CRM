@@ -444,6 +444,11 @@ const EXCLUDED: &[(&str, &str)] = &[
         "A1-T8: evaluates a split of a text attribute over the entity's rows; writes nothing",
     ),
     (
+        "POST /api/v1/admin/entities/{entity_id}/refactor/option-set-preview",
+        "A1-T8: groups a text attribute's stored values into options; writes nothing (the \
+         type change it prepares is recorded by the change-type route)",
+    ),
+    (
         "POST /api/v1/admin/entities/{entity_id}/refactor",
         "A1-T8: splits a text attribute's values into other attributes as a data step run: \
          record data, no metadata (the targets are added, and recorded, by the field routes)",
