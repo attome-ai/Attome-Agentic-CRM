@@ -1,0 +1,257 @@
+{
+  "author": "packs",
+  "checksum": "sha256:ac2303069dc0bdee3387e427c54bdd9d33336ece10e8e436db622f61e8763673",
+  "closed_at": "2026-11-01T00:00:00Z",
+  "description": "Contract views and KPIs (W1-T15): my contracts, active contracts by notice deadline, obligations due and contracts with playbook deviations to review, and the reports cycle time by stage (drafting, negotiation, signature, from the contract's versions) and playbook deviation count, beside the three earlier ones.",
+  "format": "attome-changeset/v1",
+  "id": "01a19691-f63c-792b-a946-b67fc1cc0a3d",
+  "layer": "product",
+  "name": "contract-management-views",
+  "opened_at": "2026-11-01T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "contract",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": false,
+          "name": "Contract: My Contracts",
+          "required_privilege": "contract.read",
+          "sql": "SELECT id, title, status, counterparty, end_date, notice_deadline FROM contract WHERE is_active IS NOT FALSE",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "contract",
+        "query": "Contract: My Contracts"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "contract",
+          "icon": "las la-file-signature",
+          "is_customized": true,
+          "is_default": false,
+          "kind": "list",
+          "name": "Contract: My Contracts",
+          "query": {
+            "entity": "contract",
+            "name": "Contract: My Contracts"
+          },
+          "table_definition": [],
+          "view_metadata": {
+            "filters": [
+              {
+                "field": "owner_ref",
+                "op": "eq",
+                "value": "@me"
+              }
+            ]
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "contract",
+        "view": "Contract: My Contracts"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "contract",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": false,
+          "name": "Contract: Expiring by Notice Deadline",
+          "required_privilege": "contract.read",
+          "sql": "SELECT id, title, counterparty, notice_deadline, end_date FROM contract WHERE is_active IS NOT FALSE AND status = 'active' AND notice_deadline IS NOT NULL",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "contract",
+        "query": "Contract: Expiring by Notice Deadline"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "contract",
+          "icon": "las la-file-signature",
+          "is_customized": true,
+          "is_default": false,
+          "kind": "list",
+          "name": "Contract: Expiring by Notice Deadline",
+          "query": {
+            "entity": "contract",
+            "name": "Contract: Expiring by Notice Deadline"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "contract",
+        "view": "Contract: Expiring by Notice Deadline"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "obligation",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": false,
+          "name": "Obligation: Due",
+          "required_privilege": "obligation.read",
+          "sql": "SELECT id, title, due_date, contract_ref FROM obligation WHERE is_active IS NOT FALSE AND is_complete IS NOT TRUE AND due_date IS NOT NULL",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "obligation",
+        "query": "Obligation: Due"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "obligation",
+          "icon": "las la-file-signature",
+          "is_customized": true,
+          "is_default": false,
+          "kind": "list",
+          "name": "Obligation: Due",
+          "query": {
+            "entity": "obligation",
+            "name": "Obligation: Due"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "obligation",
+        "view": "Obligation: Due"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "contract",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": false,
+          "name": "Contract: Deviations to Review",
+          "required_privilege": "contract.read",
+          "sql": "SELECT id, title, status, playbook_deviations FROM contract WHERE is_active IS NOT FALSE AND playbook_deviations IS NOT NULL AND playbook_deviations NOT IN ('', '[]') AND status IN ('draft', 'review')",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "contract",
+        "query": "Contract: Deviations to Review"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "contract",
+          "icon": "las la-file-signature",
+          "is_customized": true,
+          "is_default": false,
+          "kind": "list",
+          "name": "Contract: Deviations to Review",
+          "query": {
+            "entity": "contract",
+            "name": "Contract: Deviations to Review"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "contract",
+        "view": "Contract: Deviations to Review"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "contract",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Contract: Cycle Time by Stage",
+          "required_privilege": null,
+          "sql": "SELECT s.stage, ROUND(AVG(s.days)::numeric, 1) AS avg_days, COUNT(*) AS contracts FROM (SELECT c.created_at, v.first_draft, v.last_counter, v.signed FROM contract c JOIN (SELECT contract_id, MIN(created_at) FILTER (WHERE source = 'draft') AS first_draft, MAX(created_at) FILTER (WHERE source = 'counterparty_upload') AS last_counter, MIN(created_at) FILTER (WHERE source = 'signed') AS signed FROM contract_version WHERE is_active IS NOT FALSE GROUP BY contract_id) v ON v.contract_id = c.id::text WHERE c.is_active IS NOT FALSE) x CROSS JOIN LATERAL (VALUES ('1 drafting', EXTRACT(EPOCH FROM (x.first_draft - x.created_at)) / 86400), ('2 negotiation', EXTRACT(EPOCH FROM (x.last_counter - x.first_draft)) / 86400), ('3 signature', EXTRACT(EPOCH FROM (x.signed - COALESCE(x.last_counter, x.first_draft))) / 86400)) AS s(stage, days) WHERE s.days IS NOT NULL GROUP BY s.stage ORDER BY s.stage",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "contract",
+        "query": "Contract: Cycle Time by Stage"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "contract",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Contract: Playbook Deviation Count",
+          "required_privilege": null,
+          "sql": "SELECT COUNT(*) FILTER (WHERE playbook_deviations IS NOT NULL AND playbook_deviations NOT IN ('', '[]')) AS with_deviations, COUNT(*) FILTER (WHERE playbook_deviations LIKE '%needs_legal%') AS needing_legal, COUNT(*) AS open_contracts FROM contract WHERE is_active IS NOT FALSE AND status IN ('draft', 'review', 'approved')",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "contract",
+        "query": "Contract: Playbook Deviation Count"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "contract-management",
+  "seq": 8,
+  "title": "Pack: contract views and KPIs"
+}
