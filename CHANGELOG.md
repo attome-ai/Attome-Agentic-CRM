@@ -20,7 +20,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `map_values` or `convert` when applied (A22-T4).
 - Journey email step `marketing.send_email` with consent, suppression, sunset, quiet-hours and weekly
   cap checks, once per run and step, and a test mode; settings `marketing.weekly_message_cap` and
-  `marketing.journey_quiet_hours` (E8-T6, migration 0365).
+  `marketing.journey_quiet_hours` and `marketing.journey_calendar_ref` (E8-T6, migration 0365).
 - Marketing sunset policy: one re-engagement email after `sunset_months` without engagement, sunset
   14 days later if still unengaged, back on an open, click, form submission or reply (E6-T9).
 - Status subscribers: email and webhook subscriptions with consent and a confirmation link, one-click

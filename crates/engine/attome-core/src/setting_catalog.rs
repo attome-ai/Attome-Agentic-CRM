@@ -104,6 +104,16 @@ fn marketing_settings() -> Vec<SettingDescriptor> {
             || json!(3),
         ),
         SettingDescriptor::new(
+            "marketing.journey_calendar_ref",
+            "The calendar whose working time journeys send their messages in (weekends and \
+             holidays included); a message due outside it waits for the next working time. \
+             Empty (the default) uses no calendar.",
+            || json!({"type": "string", "maxLength": 100}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(""),
+        ),
+        SettingDescriptor::new(
             "marketing.journey_quiet_hours",
             "When journeys hold their messages, in the deployment's time zone: a window \
              {\"start\": \"21:00\", \"end\": \"08:00\"} and weekend days (0 Monday to 6 \

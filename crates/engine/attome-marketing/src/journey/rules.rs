@@ -4,7 +4,9 @@
 //! (`consent_current`, granted for the channel or `any`); for email, the
 //! suppression list; the sunset policy (`marketing_sunset_at`, E6-T9); the
 //! quiet hours and weekend days of `marketing.journey_quiet_hours` in the
-//! deployment's time zone; and the weekly cap (`marketing.weekly_message_cap`,
+//! deployment's time zone, and the working time (weekends and holidays
+//! included) of the calendar `marketing.journey_calendar_ref` names; and
+//! the weekly cap (`marketing.weekly_message_cap`,
 //! the cap campaigns already honour, 3 by default) over the last seven days
 //! of journey messages, campaign emails and campaign SMS together. The first
 //! that fails decides: [`RuleVerdict::Blocked`], or for quiet hours
@@ -21,6 +23,8 @@ use crate::sms_campaign::QuietHours;
 
 /// The quiet-hours setting.
 pub const QUIET_SETTING: &str = "marketing.journey_quiet_hours";
+/// The setting naming the calendar whose working time journeys message in.
+pub const CALENDAR_SETTING: &str = "marketing.journey_calendar_ref";
 
 /// What the rules say.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -90,26 +94,28 @@ pub fn quiet_of(setting: &Value) -> Option<(Option<QuietHours>, Vec<u32>)> {
     (hours.is_some() || !weekend.is_empty()).then_some((hours, weekend))
 }
 
-/// The first minute at or after `at` outside the quiet window and the
-/// weekend days, in `zone`; `None` when `at` itself is allowed. Searches a
-/// week ahead, minute by minute in 15-minute steps. Pure.
+/// The first moment at or after `at` outside the quiet window, the weekend
+/// days (in `zone`) and the times `closed` names (a calendar's non-working
+/// time); `None` when `at` itself is allowed. Searches two weeks ahead in
+/// 15-minute steps. Pure.
 pub fn next_allowed(
     at: DateTime<Utc>,
     hours: Option<&QuietHours>,
     weekend: &[u32],
     zone: chrono_tz::Tz,
+    closed: impl Fn(DateTime<Utc>) -> bool,
 ) -> Option<DateTime<Utc>> {
     let blocked = |t: DateTime<Utc>| {
         let local = t.with_timezone(&zone);
         let day = local.weekday().num_days_from_monday();
         let minute = NaiveTime::from_hms_opt(local.hour(), local.minute(), 0).unwrap_or_default();
-        weekend.contains(&day) || hours.is_some_and(|h| h.holds(minute))
+        weekend.contains(&day) || hours.is_some_and(|h| h.holds(minute)) || closed(t)
     };
     if !blocked(at) {
         return None;
     }
     let mut t = at;
-    for _ in 0..(7 * 24 * 4) {
+    for _ in 0..(14 * 24 * 4) {
         t += Duration::minutes(15);
         if !blocked(t) {
             return Some(t);
@@ -167,14 +173,37 @@ pub async fn check(
     } else {
         false
     };
-    let quiet_until = quiet_of(&setting(state, QUIET_SETTING)).and_then(|(hours, weekend)| {
+    // A calendar that cannot be used is left out (logged): the quiet hours
+    // and the cap still hold.
+    let calendar = match attome_core::calendar::parse_calendar_ref(
+        setting(state, CALENDAR_SETTING).as_str(),
+    ) {
+        Ok(Some(id)) => match attome_core::calendar::load_calendar(db, id).await? {
+            Ok(loaded) => Some(loaded),
+            Err(unresolved) => {
+                tracing::warn!(reason = %unresolved, "journey calendar cannot be used");
+                None
+            }
+        },
+        Ok(None) => None,
+        Err(unresolved) => {
+            tracing::warn!(reason = %unresolved, "journey calendar cannot be used");
+            None
+        }
+    };
+    let quiet = quiet_of(&setting(state, QUIET_SETTING));
+    let quiet_until = if quiet.is_some() || calendar.is_some() {
+        let (hours, weekend) = quiet.unwrap_or((None, Vec::new()));
         next_allowed(
             at,
             hours.as_ref(),
             &weekend,
             crate::sms_campaign::deployment_zone(state),
+            |t| calendar.as_ref().is_some_and(|c| !c.calendar.is_working(t)),
         )
-    });
+    } else {
+        None
+    };
     let sent_last_7_days: i64 = sqlx::query_scalar(
         "SELECT (SELECT COUNT(*) FROM marketing_message_log \
                   WHERE person_id = $2 AND NOT is_test AND sent_at > now() - interval '7 days') \
@@ -232,7 +261,7 @@ mod tests {
         let night = DateTime::parse_from_rfc3339("2026-11-02T23:00:00Z")
             .unwrap()
             .with_timezone(&Utc);
-        let until = next_allowed(night, Some(&quiet), &[], chrono_tz::UTC).unwrap();
+        let until = next_allowed(night, Some(&quiet), &[], chrono_tz::UTC, |_| false).unwrap();
         assert_eq!(until.hour(), 8);
         let facts = Facts {
             quiet_until: Some(until),
@@ -240,12 +269,21 @@ mod tests {
         };
         assert_eq!(verdict(&facts), RuleVerdict::Deferred(until));
         let noon = night - Duration::hours(11);
-        assert_eq!(next_allowed(noon, Some(&quiet), &[], chrono_tz::UTC), None);
+        assert_eq!(
+            next_allowed(noon, Some(&quiet), &[], chrono_tz::UTC, |_| false),
+            None
+        );
         // Saturday (5) as a weekend day moves Saturday noon to Sunday.
         let saturday = DateTime::parse_from_rfc3339("2026-11-07T12:00:00Z")
             .unwrap()
             .with_timezone(&Utc);
-        let after = next_allowed(saturday, None, &[5], chrono_tz::UTC).unwrap();
+        let after = next_allowed(saturday, None, &[5], chrono_tz::UTC, |_| false).unwrap();
+        // A closed calendar (here: Sunday too) pushes it on to Monday.
+        let monday = next_allowed(saturday, None, &[5], chrono_tz::UTC, |t| {
+            t.weekday().num_days_from_monday() == 6
+        })
+        .unwrap();
+        assert_eq!(monday.weekday().num_days_from_monday(), 0);
         assert_eq!(after.weekday().num_days_from_monday(), 6);
     }
 

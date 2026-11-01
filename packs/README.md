@@ -75,7 +75,8 @@ contact's reply to one of our emails (a shared mailbox, J2) brings a person back
 
 **Journey email step** (E8-T6, `marketing.send_email`: `design_id`, `purpose`, `on_blocked` skip or
 wait, `send_time` now or best): before sending it checks consent for the purpose, the suppression
-list, the sunset, the quiet hours of `marketing.journey_quiet_hours` and the weekly cap
+list, the sunset, the quiet hours of `marketing.journey_quiet_hours`, the working time (holidays
+included) of the calendar `marketing.journey_calendar_ref` names, and the weekly cap
 `marketing.weekly_message_cap` (3, shared with campaigns); a quiet hour waits, the others block
 (`marketing_journey_block`). It sends once per run and step, as a one-recipient campaign send, so
 the unsubscribe link and consent re-check apply. A test enrolment goes to the journey's first
