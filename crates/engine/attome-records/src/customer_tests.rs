@@ -574,6 +574,157 @@ pub async fn run_test(
     }
 }
 
+/// T7-T2: what a change can affect, or what a test touches: entities by
+/// logical name and flows by their workflow's logical name.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Impact {
+    pub entities: std::collections::BTreeSet<String>,
+    pub flows: std::collections::BTreeSet<String>,
+}
+
+impl Impact {
+    /// Whether a test touching `self` can be affected by `changed`. Pure.
+    pub fn meets(&self, changed: &Impact) -> bool {
+        !self.entities.is_disjoint(&changed.entities) || !self.flows.is_disjoint(&changed.flows)
+    }
+}
+
+/// The entities and flows a test touches: every entity its records, steps
+/// and expectations name, and every flow it simulates. Pure.
+pub fn touches(definition: &TestDefinition) -> Impact {
+    let mut out = Impact::default();
+    for given in &definition.given {
+        out.entities.insert(given.entity.clone());
+    }
+    for step in &definition.when {
+        out.entities.insert(step.entity.clone());
+    }
+    for expectation in &definition.expect {
+        match expectation {
+            Expectation::Error { .. } => {}
+            Expectation::Value { entity, .. } | Expectation::Access { entity, .. } => {
+                out.entities.insert(entity.clone());
+            }
+            Expectation::Flow { flow, entity, .. } => {
+                out.entities.insert(entity.clone());
+                out.flows.insert(flow.clone());
+            }
+        }
+    }
+    out
+}
+
+/// T7-T2: what publishing one metadata object can affect, from the L5
+/// reference graph (`metadata_reference`, replaced on every save): the
+/// entities the object reads, writes or triggers on, the entity itself when
+/// it is one, and the flow itself when it is a workflow.
+pub async fn publish_impact(
+    db: &attome_db::DbPool,
+    kind: &str,
+    id: Uuid,
+    logicalname: Option<&str>,
+) -> Result<Impact, AppError> {
+    let referenced: Vec<String> = sqlx::query_scalar(
+        "SELECT DISTINCT to_entity FROM metadata_reference \
+          WHERE from_kind = $1 AND from_ref = $2 AND position(':' in to_entity) = 0",
+    )
+    .bind(kind)
+    .bind(id)
+    .fetch_all(db)
+    .await
+    .map_err(attome_db::classify)?;
+    let mut out = Impact {
+        entities: referenced.into_iter().collect(),
+        flows: std::collections::BTreeSet::new(),
+    };
+    if let Some(name) = logicalname.filter(|n| !n.is_empty()) {
+        match kind {
+            "entity" => {
+                out.entities.insert(name.to_owned());
+            }
+            "workflow" | "flow" => {
+                out.flows.insert(name.to_owned());
+            }
+            _ => {}
+        }
+    }
+    Ok(out)
+}
+
+/// One test's result in a publish preview.
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
+pub struct AffectedTestResult {
+    pub id: Uuid,
+    pub name: String,
+    pub blocking: bool,
+    pub passed: bool,
+    pub failures: Vec<String>,
+}
+
+/// T7-T2: every active test a change can affect, run as `ctx`.
+pub async fn run_affected(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    changed: &Impact,
+) -> Result<Vec<AffectedTestResult>, AppError> {
+    let blocking: std::collections::HashSet<Uuid> = active_tests(&state.base.db, true)
+        .await?
+        .into_iter()
+        .map(|(id, _, _)| id)
+        .collect();
+    let mut out = Vec::new();
+    for (id, name, definition) in active_tests(&state.base.db, false).await? {
+        let outcome = match definition {
+            Ok(definition) if touches(&definition).meets(changed) => {
+                run_test(state, ctx, &definition).await
+            }
+            Ok(_) => continue,
+            Err(e) => TestOutcome {
+                passed: false,
+                failures: vec![format!("the definition no longer reads: {e}")],
+            },
+        };
+        out.push(AffectedTestResult {
+            id,
+            blocking: blocking.contains(&id),
+            name,
+            passed: outcome.passed,
+            failures: outcome.failures,
+        });
+    }
+    Ok(out)
+}
+
+/// T7-T2: [`publish_guard`] for a change whose impact is known: only the
+/// blocking tests that change can affect run.
+pub async fn publish_guard_for(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    changed: &Impact,
+) -> Result<(), AppError> {
+    if !require_pass(state) {
+        return Ok(());
+    }
+    let mut failed = Vec::new();
+    for (_, name, definition) in active_tests(&state.base.db, true).await? {
+        let passed = match definition {
+            Ok(definition) if touches(&definition).meets(changed) => {
+                run_test(state, ctx, &definition).await.passed
+            }
+            Ok(_) => continue,
+            Err(_) => false,
+        };
+        if !passed {
+            failed.push(name);
+        }
+    }
+    if failed.is_empty() {
+        Ok(())
+    } else {
+        Err(AppError::CustomerTestsFailed(failed))
+    }
+}
+
 /// Runs a stored test and records the run; the outcome and the run's id.
 pub async fn run_and_record(
     state: &EngineState,
@@ -1142,6 +1293,31 @@ mod tests {
         ));
         assert!(matches!(definition.expect[1], Expectation::Flow { .. }));
         assert!(matches!(definition.expect[2], Expectation::Value { .. }));
+    }
+
+    #[test]
+    fn a_test_is_picked_by_the_entities_and_flows_it_touches() {
+        let definition: TestDefinition = serde_json::from_value(json!({
+            "given": [{ "entity": "account", "ref": "a", "record": {} }],
+            "expect": [{ "flow": "welcome", "entity": "contact", "ref": "c" }]
+        }))
+        .unwrap_or_else(|e| panic!("{e}"));
+        let touched = touches(&definition);
+        let by_entity = Impact {
+            entities: ["contact".to_owned()].into(),
+            ..Impact::default()
+        };
+        let by_flow = Impact {
+            flows: ["welcome".to_owned()].into(),
+            ..Impact::default()
+        };
+        let elsewhere = Impact {
+            entities: ["invoice".to_owned()].into(),
+            flows: ["other".to_owned()].into(),
+        };
+        assert!(touched.meets(&by_entity));
+        assert!(touched.meets(&by_flow));
+        assert!(!touched.meets(&elsewhere));
     }
 
     #[test]

@@ -351,6 +351,9 @@ pub(crate) struct ModelValidateResponse {
     /// B22-T2: accessibility findings with their fixes (a form's or a page's
     /// labels, order and contrast). They do not stop a publish.
     warnings: Vec<String>,
+    /// T7-T2: with `run_tests`, the customer tests the object can affect and
+    /// how they ran (blocking ones stop a publish while the guard is on).
+    tests: Vec<attome_records::customer_tests::AffectedTestResult>,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -358,6 +361,9 @@ pub(crate) struct ValidateRequest {
     /// The document to check, as it would be saved.
     #[schema(value_type = Object)]
     doc: Value,
+    /// T7-T2: also run the customer tests the object can affect.
+    #[serde(default)]
+    run_tests: bool,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -716,8 +722,8 @@ async fn get_references(
 )]
 async fn validate(
     State(state): State<EngineState>,
-    _ctx: Authorized<Privilege<area::DataModel>>,
-    Path((kind_name, _id)): Path<(String, Uuid)>,
+    ctx: Authorized<Privilege<area::DataModel>>,
+    Path((kind_name, id)): Path<(String, Uuid)>,
     Json(request): Json<ValidateRequest>,
 ) -> Result<Json<ModelValidateResponse>, AppError> {
     let kind = kind(&kind_name)?;
@@ -726,10 +732,27 @@ async fn validate(
         attome_model::validate::validate_save(&mut tx, kinds(), kind.as_ref(), &request.doc)
             .await?;
     tx.rollback().await.map_err(AppError::internal)?;
+    let tests = if request.run_tests {
+        let name = attome_model::store::read(&state.base.db, id, None)
+            .await
+            .ok()
+            .map(|o| o.name);
+        let impact = attome_records::customer_tests::publish_impact(
+            &state.base.db,
+            kind.name().as_str(),
+            id,
+            name.as_deref(),
+        )
+        .await?;
+        attome_records::customer_tests::run_affected(&state, &ctx, &impact).await?
+    } else {
+        Vec::new()
+    };
     Ok(Json(ModelValidateResponse {
         valid: issues.is_empty(),
         issues: issues.iter().map(IssueView::from).collect(),
         warnings: a11y_warnings(kind.name().as_str(), &request.doc),
+        tests,
     }))
 }
 
@@ -937,8 +960,17 @@ async fn publish(
         let draft = attome_model::store::read(&state.base.db, id, None).await?;
         warnings.extend(a11y_warnings(kind.name().as_str(), &draft.doc));
     }
-    // Z15-T14: with the guard on, blocking customer tests pass first.
-    attome_records::customer_tests::publish_guard(&state, &ctx).await?;
+    // Z15-T14, T7-T2: with the guard on, the blocking customer tests this
+    // object can affect (by the L5 reference graph) pass first.
+    let object = attome_model::store::read(&state.base.db, id, None).await?;
+    let impact = attome_records::customer_tests::publish_impact(
+        &state.base.db,
+        kind.name().as_str(),
+        id,
+        Some(object.name.as_str()),
+    )
+    .await?;
+    attome_records::customer_tests::publish_guard_for(&state, &ctx, &impact).await?;
     // A27-T1: an entity's first record type gives its table the
     // `record_type` column, before the type goes live. A publish refused
     // below leaves only an empty nullable column behind.

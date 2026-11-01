@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Publishing a metadata object runs only the customer tests it can affect (T7-T2): the entities its L5
+  references name (and the entity or workflow itself) against the entities and flows each test touches.
+  `POST /api/v1/admin/model/{kind}/{id}/validate` with `run_tests: true` runs those tests and returns their
+  results as `tests` in the preview.
 - Customer tests marked `live_safe` run every night against the live configuration (a test always rolls
   back, so the check is read-only), as their author; failures alert the administrators, and a test whose
   runs on one test and configuration version both passed and failed is flagged flaky (`flaky_since`) until
