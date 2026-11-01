@@ -34,6 +34,7 @@
 - [Delta tokens](delta-tokens.md): keeping a copy of a list up to date with only what changed.
 - [Change data capture](change-data-capture.md): change-stream subscriptions, erasure and schema events, a first copy without gaps, resync and consumer health.
 - [Marketing profiles](marketing-profiles.md): profile events and traits, identity links and their conflicts, attribution of won deals, and campaign members from a list.
+- [Marketing journeys](marketing-journeys.md): entry sources, admission, steps and their rules, versions, counts, a person's path and erasure.
 - [Marketing email deliverability](marketing-deliverability.md): the dashboard, the pre-send check, alerts, sunset, blocklists, reputation and DMARC reports, and what is off by default.
 - [Device sign-in](device-sign-in.md): the CLI and the mail add-ins signing a person in with the RFC 8628 device grant, approved from a signed-in browser.
 - [Pages](pages.md): component pages, their bindings to views, queries, entities and the record, and an entity's record page such as the crm pack's Account 360.
