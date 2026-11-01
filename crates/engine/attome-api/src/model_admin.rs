@@ -354,6 +354,13 @@ pub(crate) struct ModelValidateResponse {
     /// T7-T2: with `run_tests`, the customer tests the object can affect and
     /// how they ran (blocking ones stop a publish while the guard is on).
     tests: Vec<attome_records::customer_tests::AffectedTestResult>,
+    /// T1-T4: performance findings with their fixes (a form's fields and
+    /// related lists, a page's data-loading components).
+    performance: Vec<String>,
+    /// T1-T4: `block` when the accessibility and performance findings
+    /// above would refuse a publish (`model.publish.quality_gate`), else
+    /// `warn`.
+    quality_gate: String,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -753,7 +760,36 @@ async fn validate(
         issues: issues.iter().map(IssueView::from).collect(),
         warnings: a11y_warnings(kind.name().as_str(), &request.doc),
         tests,
+        performance: perf_warnings(kind.name().as_str(), &request.doc),
+        quality_gate: if quality_gate_blocks(&state) {
+            "block"
+        } else {
+            "warn"
+        }
+        .to_owned(),
     }))
+}
+
+/// T1-T4: the performance findings of a form or page document, one line
+/// each with its fix.
+fn perf_warnings(kind: &str, doc: &serde_json::Value) -> Vec<String> {
+    attome_model::perf::check(kind, doc)
+        .iter()
+        .map(attome_model::perf::PerfFinding::as_warning)
+        .collect()
+}
+
+/// T1-T4: the setting that makes accessibility and performance findings
+/// refuse a publish.
+const QUALITY_GATE_SETTING: &str = "model.publish.quality_gate";
+
+/// Whether accessibility and performance findings refuse a publish here.
+fn quality_gate_blocks(state: &EngineState) -> bool {
+    let Some(descriptor) = attome_core::setting_registry().get(QUALITY_GATE_SETTING) else {
+        return false;
+    };
+    let (value, _) = state.settings.load().resolve(descriptor, None, None);
+    value.as_str() == Some("block")
 }
 
 /// B22-T2: the accessibility findings of a form or page document, one line
@@ -954,11 +990,20 @@ async fn publish(
         let draft = attome_model::store::read(&state.base.db, id, None).await?;
         attome_ai::agent_activation::check_publish(&state, ctx.user_id, &draft.doc).await?;
     }
-    // B22-T2: a form's or page's accessibility findings warn; they never block.
+    // B22-T2, T1-T4: a form's or page's accessibility and performance
+    // findings warn, or refuse the publish under `model.publish.quality_gate`.
     let mut warnings = gate.warnings;
     if matches!(kind.name().as_str(), "form" | "page") {
         let draft = attome_model::store::read(&state.base.db, id, None).await?;
-        warnings.extend(a11y_warnings(kind.name().as_str(), &draft.doc));
+        let mut quality = a11y_warnings(kind.name().as_str(), &draft.doc);
+        quality.extend(perf_warnings(kind.name().as_str(), &draft.doc));
+        if !quality.is_empty() && quality_gate_blocks(&state) {
+            return Err(AppError::Validation(format!(
+                "the quality gate refuses this publish: {}",
+                quality.join("; ")
+            )));
+        }
+        warnings.extend(quality);
     }
     // Z15-T14, T7-T2: with the guard on, the blocking customer tests this
     // object can affect (by the L5 reference graph) pass first.

@@ -3582,6 +3582,9 @@ export const xrmAr = {
   modelTests: {
     run: 'شغّل الاختبارات التي قد يؤثر فيها هذا التغيير', none: 'لا يمس أي اختبار عميل ما يغيّره هذا.',
     passed: 'نجح', failed: 'فشل', blocking: 'يمنع النشر',
+    accessibility: 'إمكانية الوصول', performance: 'الأداء',
+    gateBlock: 'هذه الملاحظات توقف النشر حتى تُصلح.',
+    gateWarn: 'هذه الملاحظات تحذيرات، ويمضي النشر.',
   },
   webhooksPage: {
     title: 'الويب هوك',

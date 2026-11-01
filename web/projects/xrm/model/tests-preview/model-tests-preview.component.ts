@@ -1,13 +1,15 @@
-import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { ApiError, TranslatePipe } from '@attome/base';
 
-import { AffectedTest, ModelService } from '../model.service';
+import { ModelService, QualityReport } from '../model.service';
 
 /**
- * T7-T2 — the customer tests a metadata object's publish can affect, run on
+ * T7-T2, T1-T4 — the quality report of a metadata object's publish, run on
  * demand before publishing (`POST /api/v1/admin/model/{kind}/{id}/validate`
- * with `run_tests`). A failing blocking test stops the publish while the
- * deployment requires tests to pass; the others only report.
+ * with `run_tests`): the customer tests it can affect, and a form's or
+ * page's accessibility and performance findings. A failing blocking test
+ * stops the publish while the deployment requires tests to pass; the
+ * findings stop it when `model.publish.quality_gate` is `block`.
  */
 @Component({
   selector: 'xrm-model-tests-preview',
@@ -30,6 +32,25 @@ import { AffectedTest, ModelService } from '../model.service';
         </button>
       </div>
       @if (error(); as e) { <p class="mtp-fail" role="alert">{{ e }}</p> }
+      @if (report(); as q) {
+        @if (q.warnings.length || q.performance.length) {
+          <p data-testid="mtp-gate" [class.mtp-fail]="q.quality_gate === 'block'" [class.mtp-muted]="q.quality_gate !== 'block'">
+            {{ (q.quality_gate === 'block' ? 'modelTests.gateBlock' : 'modelTests.gateWarn') | translate }}
+          </p>
+        }
+        @if (q.warnings.length) {
+          <div data-testid="mtp-a11y">
+            <strong>{{ 'modelTests.accessibility' | translate }}</strong>
+            <ul>@for (w of q.warnings; track $index) { <li dir="auto">{{ w }}</li> }</ul>
+          </div>
+        }
+        @if (q.performance.length) {
+          <div data-testid="mtp-perf">
+            <strong>{{ 'modelTests.performance' | translate }}</strong>
+            <ul>@for (w of q.performance; track $index) { <li dir="auto">{{ w }}</li> }</ul>
+          </div>
+        }
+      }
       @if (results(); as rs) {
         @if (rs.length === 0) {
           <p class="mtp-muted" role="status">{{ 'modelTests.none' | translate }}</p>
@@ -56,15 +77,16 @@ export class ModelTestsPreviewComponent {
   /** The document as it would be published. */
   readonly doc = input<unknown>(null);
 
-  readonly results = signal<AffectedTest[] | null>(null);
+  readonly report = signal<QualityReport | null>(null);
+  readonly results = computed(() => this.report()?.tests ?? null);
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
 
   run(): void {
     this.busy.set(true);
     this.error.set(null);
-    this.model.previewTests(this.kind(), this.objectId(), this.doc()).subscribe({
-      next: tests => { this.busy.set(false); this.results.set(tests); },
+    this.model.previewQuality(this.kind(), this.objectId(), this.doc()).subscribe({
+      next: report => { this.busy.set(false); this.report.set(report); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });
   }

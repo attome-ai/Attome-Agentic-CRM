@@ -14,6 +14,7 @@
 
 /// B22-T2: accessibility checks on forms and pages at publish (warnings).
 pub mod a11y;
+pub mod perf;
 pub mod agent;
 pub mod canonical;
 pub mod commands;

@@ -115,6 +115,12 @@ A model publish runs only the blocking tests it can affect: the entities the obj
 the entity or workflow itself) against the entities and flows each test touches. The preview,
 `POST /api/v1/admin/model/{kind}/{id}/validate` with `run_tests: true`, runs every affected test and
 returns the results; the page designer shows them beside Publish.
+The same preview is the publish's quality report: beside the tests it lists a form's or page's
+accessibility findings (`warnings`: labels, reading order, contrast) and performance findings
+(`performance`: more than 120 fields or 8 related lists on a form, more than 12 data-loading
+components on a page), each with its fix, and `quality_gate`. With the deployment setting
+`model.publish.quality_gate` at `warn` (the default) the findings only warn; at `block` a publish
+with any of them is refused with `422` naming them.
 
 A workflow's **test cases** are the tests with a flow expectation on it. Publishing a workflow
 version runs them (and every other blocking test the flow can affect) on the draft about to go

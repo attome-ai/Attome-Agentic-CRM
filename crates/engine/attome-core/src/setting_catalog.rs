@@ -814,6 +814,17 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(false),
         ),
+        // T1-T4: whether a form's or page's accessibility and performance
+        // findings only warn at publish or refuse it.
+        SettingDescriptor::new(
+            "model.publish.quality_gate",
+            "What a form's or page's accessibility and performance findings do at publish: \
+             `warn` lists them and publishes, `block` refuses the publish until they are fixed (T1-T4).",
+            || json!({"type": "string", "enum": ["warn", "block"]}),
+            &[SettingScope::Deployment],
+            false,
+            || json!("warn"),
+        ),
         SettingDescriptor::new(
             "contract.review_link_days",
             "Days a contract review link sent to a counterparty stays valid (W1-T8).",

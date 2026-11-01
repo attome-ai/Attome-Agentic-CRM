@@ -173,6 +173,17 @@ export interface AffectedTest {
   failures: string[];
 }
 
+/** T1-T4: what a publish of an object would meet, from the validate preview. */
+export interface QualityReport {
+  tests: AffectedTest[];
+  /** Accessibility findings (B22-T2), each with its fix. */
+  warnings: string[];
+  /** Performance findings, each with its fix. */
+  performance: string[];
+  /** `block` when the findings refuse a publish, else `warn`. */
+  quality_gate: 'warn' | 'block';
+}
+
 /** The published metadata model, as the renderer reads it (roadmap Y14). */
 @Injectable({ providedIn: 'root' })
 export class ModelService {
@@ -273,12 +284,21 @@ export class ModelService {
     );
   }
 
-  /** T7-T2: runs the customer tests a publish of the object can affect (the preview). */
-  previewTests(kind: string, id: string, doc: unknown): Observable<AffectedTest[]> {
-    return this.api.post<{ tests?: AffectedTest[] }>(
+  /**
+   * T7-T2, T1-T4: the publish preview: runs the customer tests a publish of
+   * the object can affect and returns them with the accessibility and
+   * performance findings and whether those block.
+   */
+  previewQuality(kind: string, id: string, doc: unknown): Observable<QualityReport> {
+    return this.api.post<Partial<QualityReport>>(
       `/api/v1/admin/model/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/validate`,
       { doc, run_tests: true },
-    ).pipe(map(r => r.tests ?? []));
+    ).pipe(map(r => ({
+      tests: r.tests ?? [],
+      warnings: r.warnings ?? [],
+      performance: r.performance ?? [],
+      quality_gate: r.quality_gate === 'block' ? 'block' : 'warn',
+    })));
   }
 
   publish(kind: string, id: string): Observable<{ id: string; version_no: number }> {

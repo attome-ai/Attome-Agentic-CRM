@@ -3660,6 +3660,9 @@ export const xrmEn = {
   modelTests: {
     run: 'Run the tests this change can affect', none: 'No customer test touches what this changes.',
     passed: 'passed', failed: 'failed', blocking: 'blocks publishing',
+    accessibility: 'Accessibility', performance: 'Performance',
+    gateBlock: 'These findings stop the publish until they are fixed.',
+    gateWarn: 'These findings are warnings; the publish goes ahead.',
   },
   webhooksPage: {
     title: 'Webhooks',
