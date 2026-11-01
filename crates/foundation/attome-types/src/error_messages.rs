@@ -79,6 +79,11 @@ const MESSAGES: &[(&str, &str, &str)] = &[
         "فشلت اختباراتك لهذا التغيير.",
     ),
     (
+        "governance_roles_held",
+        "This person still looks after data domains. Hand their roles to someone else first.",
+        "ما زال هذا الشخص مسؤولًا عن مجالات بيانات. انقل أدواره إلى شخص آخر أولًا.",
+    ),
+    (
         "rule_violation",
         "A business rule refused this change.",
         "رفضت قاعدة عمل هذا التغيير.",

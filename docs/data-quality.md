@@ -125,3 +125,11 @@ the screen that handles it. An entity is listed only when the steward may read e
 (its `read` privilege at the global level), so no item points at a record they cannot read and the
 total counts none; a steward who reads only part of an entity works its items from that screen.
 Held contributions, access reviews and data-subject request scopes join it once they name records.
+
+A deputy sees a domain's items only while its steward is out of office (an active out-of-office
+delegation, `PUT /api/v1/approvals/out-of-office`) or the domain has no steward. Once a day, items
+that have waited more than two days are escalated to the domain's owners (the governance `owner`
+role): each owner gets one notice per domain naming how many, and an item is escalated once. A
+user who still stewards, deputises or owns a domain cannot be deactivated:
+`POST /api/v1/admin/security/users/{id}/disable` answers `409 governance_roles_held` with the roles
+in `roles`; reassign them first.

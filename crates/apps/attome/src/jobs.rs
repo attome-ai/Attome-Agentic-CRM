@@ -1710,6 +1710,49 @@ async fn dispatch_platform_job(
                 tracing::debug!(touched, "base index: records re-read");
             }
         }
+        // L3-T4: overdue steward inbox items go to their domain's owners,
+        // one notice per owner and domain.
+        EngineJob::StewardEscalation => {
+            let notices = attome_compliance::steward_inbox::escalate_overdue(&attome_state).await?;
+            for notice in &notices {
+                let request = attome_notification::dispatch::DispatchRequest {
+                    template_key: None,
+                    locale: "en".to_string(),
+                    recipient_user_ref: Some(notice.owner),
+                    is_global: false,
+                    organization_ref: None,
+                    channels: None,
+                    subject: Some(format!("Overdue governance work in {}", notice.domain)),
+                    body_html: None,
+                    body_text: Some(format!(
+                        "{} item(s) in the {} data domain have waited more than {} days in the steward's inbox.",
+                        notice.items,
+                        notice.domain,
+                        attome_compliance::steward_inbox::OVERDUE_DAYS
+                    )),
+                    route: None,
+                    variables: std::collections::HashMap::new(),
+                    priority: "normal".to_string(),
+                    escalate_after_minutes: None,
+                    escalate_channels: None,
+                };
+                if let Err(error) = attome_notification::dispatch::create_dispatch(
+                    &attome_state.base.db,
+                    &attome_state.base.config.notification,
+                    request,
+                )
+                .await
+                {
+                    tracing::warn!(owner = %notice.owner, %error, "steward inbox: escalation notice failed");
+                }
+            }
+            if !notices.is_empty() {
+                tracing::info!(
+                    notices = notices.len(),
+                    "steward inbox: overdue items escalated"
+                );
+            }
+        }
         // T7-T3: live-safe customer tests, nightly; failures and newly
         // flaky tests alert the administrators.
         EngineJob::CustomerTestNightly => {
@@ -3105,6 +3148,7 @@ const DEDUP_KEY_CONTRACT_SIGNATURE_SWEEP: &str = "contract-signature-sweep";
 const DEDUP_KEY_CONTRACT_REVIEW_SWEEP: &str = "contract-review-sweep";
 const DEDUP_KEY_BASE_INDEX_SWEEP: &str = "base-index-sweep";
 const DEDUP_KEY_CUSTOMER_TEST_NIGHTLY: &str = "customer-test-nightly";
+const DEDUP_KEY_STEWARD_ESCALATION: &str = "steward-escalation";
 const DEDUP_KEY_GEOCODE_SWEEP: &str = "geocode-sweep";
 const DEDUP_KEY_BILLING_HANDOFF_SWEEP: &str = "billing-handoff-sweep";
 const DEDUP_KEY_BILLING_RENEWAL_SWEEP: &str = "billing-renewal-sweep";
@@ -6176,6 +6220,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::ContractReviewSweep => DEDUP_KEY_CONTRACT_REVIEW_SWEEP,
         EngineJob::BaseIndexSweep => DEDUP_KEY_BASE_INDEX_SWEEP,
         EngineJob::CustomerTestNightly => DEDUP_KEY_CUSTOMER_TEST_NIGHTLY,
+        EngineJob::StewardEscalation => DEDUP_KEY_STEWARD_ESCALATION,
         EngineJob::GeocodeSweep => DEDUP_KEY_GEOCODE_SWEEP,
         EngineJob::BillingHandoffSweep => DEDUP_KEY_BILLING_HANDOFF_SWEEP,
         EngineJob::BillingRenewalSweep => DEDUP_KEY_BILLING_RENEWAL_SWEEP,
@@ -9047,6 +9092,17 @@ pub fn spawn_customer_test_nightly_scheduler(db: DbPool, interval: std::time::Du
         EngineJob::CustomerTestNightly,
         DEDUP_KEY_CUSTOMER_TEST_NIGHTLY,
         "customer tests",
+    );
+}
+
+/// L3-T4: once a day, overdue steward inbox items go to domain owners.
+pub fn spawn_steward_escalation_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::StewardEscalation,
+        DEDUP_KEY_STEWARD_ESCALATION,
+        "steward escalation",
     );
 }
 

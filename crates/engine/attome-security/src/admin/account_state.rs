@@ -207,6 +207,7 @@ async fn set_user_active(
         (status = 204, description = "Success"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 409, description = "governance_roles_held: the user still owns, stewards or deputises data domains (`roles` names them); reassign them first", body = ErrorResponse),
         (status = 422, description = "Request failed validation", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
@@ -217,7 +218,33 @@ pub(super) async fn disable_user(
     Path(user_id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     crate::delegation::require_not_above(&state.base.db, &ctx, user_id).await?;
+    // L3-T4: nobody is left looking after a data domain.
+    let held = governance_roles_of(&state.base.db, user_id).await?;
+    if !held.is_empty() {
+        return Err(AppError::GovernanceRolesHeld(held));
+    }
     set_user_active(&state, &ctx, user_id, false).await
+}
+
+/// L3-T4: the data-governance roles `user` holds, as `<role> of <domain>`:
+/// a domain's steward or deputy (`data_domain`) and the owner and steward
+/// roles of L3-T2 (`governance_role`), live domains only.
+async fn governance_roles_of(db: &sqlx::PgPool, user: Uuid) -> Result<Vec<String>, AppError> {
+    sqlx::query_scalar(
+        "SELECT held FROM ( \
+             SELECT r.role || ' of ' || d.name AS held FROM governance_role r \
+               JOIN data_domain d ON d.id = r.domain_ref \
+              WHERE r.user_id = $1 AND d.is_deleted = false \
+             UNION \
+             SELECT 'steward of ' || name FROM data_domain WHERE steward_ref = $1 AND is_deleted = false \
+             UNION \
+             SELECT 'deputy of ' || name FROM data_domain WHERE deputy_ref = $1 AND is_deleted = false \
+         ) roles ORDER BY held",
+    )
+    .bind(user)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)
 }
 
 /// Enable a user

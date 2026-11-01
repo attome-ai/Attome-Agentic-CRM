@@ -71,6 +71,11 @@ pub const ERROR_CODES: &[ErrorCode] = &[
         false,
     ),
     code(
+        "governance_roles_held",
+        "The user still holds data-governance roles; `roles` names them. Reassign them first.",
+        false,
+    ),
+    code(
         "rule_violation",
         "A business rule refused the write; `rule_id` names it.",
         false,

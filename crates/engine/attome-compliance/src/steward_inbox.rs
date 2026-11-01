@@ -13,6 +13,12 @@
 //! and DSR scopes (R1) have no entity-scoped rows yet and contribute
 //! nothing until they do.
 //!
+//! **Cover (L3-T4).** A deputy sees a domain's items only while its
+//! steward is out of office (an active `out_of_office` delegation, the
+//! approvals' absence record) or the domain has no steward. Once a day
+//! ([`escalate_overdue`]) items older than two days go to the domain's
+//! owners, once each.
+//!
 //! Record-level access is applied per entity, before the query: an entity
 //! is listed only when the steward may read every record of it (the `read`
 //! privilege at the global level, or an administrator), so no item names a
@@ -178,14 +184,22 @@ type Row = (
     i64,
 );
 
-/// The entities of the domains `user` looks after.
+/// The entities of the domains `user` looks after: those they steward or
+/// own or steward under L3-T2's roles, and (L3-T4) those they deputise
+/// while the steward is out of office (an active `out_of_office`
+/// delegation of the steward's) or the domain has no steward.
 async fn steward_entities(db: &sqlx::PgPool, user: Uuid) -> Result<Vec<String>, AppError> {
     sqlx::query_scalar(
         "SELECT e.logicalname FROM entity_info e \
           WHERE (e.is_active IS NULL OR e.is_active = true) \
             AND e.domain_ref IN ( \
-                SELECT id FROM data_domain \
-                 WHERE is_deleted = false AND (steward_ref = $1 OR deputy_ref = $1) \
+                SELECT id FROM data_domain d \
+                 WHERE d.is_deleted = false \
+                   AND (d.steward_ref = $1 \
+                        OR (d.deputy_ref = $1 AND (d.steward_ref IS NULL OR EXISTS ( \
+                            SELECT 1 FROM approval_delegation a \
+                             WHERE a.from_user = d.steward_ref AND a.source = 'out_of_office' \
+                               AND a.is_deleted = false AND now() >= a.valid_from AND now() < a.valid_to)))) \
                 UNION \
                 SELECT domain_ref FROM governance_role \
                  WHERE user_id = $1 AND role IN ('owner', 'steward')) \
@@ -297,6 +311,71 @@ async fn readable_in_full(
         }
     }
     Ok(out)
+}
+
+/// L3-T4: how long an item may wait before its domain's owners hear of it.
+pub const OVERDUE_DAYS: i32 = 2;
+
+/// One notice an escalation run owes a domain owner.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OverdueNotice {
+    pub owner: Uuid,
+    pub domain: String,
+    /// The items newly overdue in the domain.
+    pub items: usize,
+}
+
+/// L3-T4, the daily job: every inbox item older than [`OVERDUE_DAYS`] that
+/// was not escalated before is recorded in `steward_escalation`, and each
+/// domain with new ones owes each of its owners (L3-T2's `owner` role) one
+/// notice naming how many; the job sends them. An item is escalated once.
+pub async fn escalate_overdue(state: &EngineState) -> Result<Vec<OverdueNotice>, AppError> {
+    let all = providers();
+    let selects: Vec<&str> = all.iter().filter_map(|p| p.select()).collect();
+    if selects.is_empty() {
+        return Ok(Vec::new());
+    }
+    let domains: Vec<(Uuid, String, Vec<String>)> = sqlx::query_as(
+        "SELECT d.id, d.name, array_agg(e.logicalname ORDER BY e.logicalname) \
+           FROM data_domain d JOIN entity_info e ON e.domain_ref = d.id \
+          WHERE d.is_deleted = false AND (e.is_active IS NULL OR e.is_active = true) \
+          GROUP BY d.id, d.name",
+    )
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut notices = Vec::new();
+    for (domain, name, entities) in domains {
+        let fresh: Vec<Uuid> = sqlx::query_scalar(&format!(
+            "INSERT INTO steward_escalation (source, item_id, domain_ref) \
+             SELECT source, id, $2 FROM ({}) items \
+              WHERE due_at < now() - make_interval(days => $3::int) \
+             ON CONFLICT (source, item_id) DO NOTHING RETURNING item_id",
+            selects.join(" UNION ALL ")
+        ))
+        .bind(&entities)
+        .bind(domain)
+        .bind(OVERDUE_DAYS)
+        .fetch_all(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+        if fresh.is_empty() {
+            continue;
+        }
+        let owners: Vec<Uuid> = sqlx::query_scalar(
+            "SELECT user_id FROM governance_role WHERE domain_ref = $1 AND role = 'owner'",
+        )
+        .bind(domain)
+        .fetch_all(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+        notices.extend(owners.into_iter().map(|owner| OverdueNotice {
+            owner,
+            domain: name.clone(),
+            items: fresh.len(),
+        }));
+    }
+    Ok(notices)
 }
 
 pub fn routes() -> Router<EngineState> {

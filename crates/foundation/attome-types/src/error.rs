@@ -53,6 +53,12 @@ pub enum AppError {
     #[error("blocking customer tests failed: {}", .0.join(", "))]
     CustomerTestsFailed(Vec<String>),
 
+    /// L3-T4: a user who still holds data-governance roles cannot be
+    /// deactivated until they are reassigned. Carries the roles held, as
+    /// `<role> of <domain>` (the body's `roles`). `409 governance_roles_held`.
+    #[error("the user still holds governance roles: {}", .0.join(", "))]
+    GovernanceRolesHeld(Vec<String>),
+
     #[error("conflict: {0}")]
     Conflict(&'static str),
 
@@ -437,6 +443,7 @@ impl IntoResponse for AppError {
             AppError::InvalidCursor => (StatusCode::BAD_REQUEST, "invalid_cursor"),
             AppError::ResyncNeeded => (StatusCode::GONE, "resync_needed"),
             AppError::CascadeRestricted(_) => (StatusCode::CONFLICT, "cascade_restricted"),
+            AppError::GovernanceRolesHeld(_) => (StatusCode::CONFLICT, "governance_roles_held"),
             AppError::IdempotencyOutcomeUnknown => {
                 (StatusCode::CONFLICT, "idempotency_outcome_unknown")
             }
@@ -485,6 +492,9 @@ impl IntoResponse for AppError {
         }
         if let AppError::CustomerTestsFailed(tests) = &self {
             body["tests"] = json!(tests);
+        }
+        if let AppError::GovernanceRolesHeld(roles) = &self {
+            body["roles"] = json!(roles);
         }
         if let AppError::LimitExceeded { limit, value, next } = &self {
             body["limit"] = json!(limit);
@@ -1430,6 +1440,7 @@ mod tests {
             AppError::InvalidCursor => 32,
             AppError::ResyncNeeded => 33,
             AppError::CascadeRestricted(_) => 34,
+            AppError::GovernanceRolesHeld(_) => 35,
         }
     }
 
@@ -1510,6 +1521,7 @@ mod tests {
             AppError::InvalidCursor,
             AppError::ResyncNeeded,
             AppError::CascadeRestricted("account -> contact.account_ref".to_string()),
+            AppError::GovernanceRolesHeld(vec!["steward of Customers".to_string()]),
             AppError::IdempotencyOutcomeUnknown,
             AppError::IdempotencyReplayUnavailable,
             AppError::Internal("x".to_string()),

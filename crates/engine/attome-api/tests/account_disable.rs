@@ -727,3 +727,57 @@ fn coverage_flags_admin_without_passkey() {
         assert_eq!(resp.status(), StatusCode::OK);
     })
 }
+
+/// L3-T4: a user who still stewards a data domain cannot be deactivated;
+/// the 409 names the roles, and once they are reassigned the disable goes
+/// through.
+#[test]
+fn deactivation_blocked_while_governance_roles_held() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (_, admin_cookie) = seed_admin(&system).await;
+        let (target_id, _) = seed_target_with_api_key(&system).await;
+        let db = system.state().base.db.clone();
+        let app = full_app(system);
+        let domain_name = format!("Disable domain {}", Uuid::now_v7().simple());
+        let domain: Uuid = sqlx::query_scalar(
+            "INSERT INTO data_domain (name, owner_layer, steward_ref) VALUES ($1, 'customer', $2) RETURNING id",
+        )
+        .bind(&domain_name)
+        .bind(target_id)
+        .fetch_one(&db)
+        .await
+        .expect("seed a domain");
+
+        let disable = || {
+            Request::builder()
+                .method("POST")
+                .uri(format!("/api/v1/admin/security/users/{target_id}/disable"))
+                .header("cookie", &admin_cookie)
+                .header("origin", "http://localhost:4200")
+                .header("sec-fetch-site", "same-origin")
+                .body(Body::empty())
+                .unwrap()
+        };
+        let resp = app.clone().oneshot(disable()).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
+        let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(body["error"], "governance_roles_held", "{body}");
+        assert_eq!(
+            body["roles"],
+            serde_json::json!([format!("steward of {domain_name}")]),
+            "{body}"
+        );
+
+        sqlx::query("UPDATE data_domain SET steward_ref = NULL WHERE id = $1")
+            .bind(domain)
+            .execute(&db)
+            .await
+            .expect("reassign");
+        let resp = app.oneshot(disable()).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+    })
+}
