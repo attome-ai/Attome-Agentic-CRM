@@ -28,7 +28,6 @@ use axum::{
     routing::{delete, get, post},
 };
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
