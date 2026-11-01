@@ -114,6 +114,9 @@ pub struct DiscoveredPage {
     /// K6-T2: the page did not change since the last crawl (a 304, or the
     /// same text hash); its stored content stays.
     pub unchanged: bool,
+    /// K6-T5: the language the page declared (`ar`, `en`, or its own
+    /// `lang`); `None` when unknown or not read this time.
+    pub language: Option<String>,
 }
 
 pub trait PageSink {
@@ -469,6 +472,7 @@ pub async fn walk_with<F: Fetcher, S: PageSink>(
                     last_modified: page.last_modified,
                     content_hash: known.and_then(|k| k.content_hash.clone()),
                     unchanged: true,
+                    language: None,
                 })
                 .await;
             }
@@ -481,15 +485,22 @@ pub async fn walk_with<F: Fetcher, S: PageSink>(
                 let is_html = page.content_type.starts_with("text/html");
                 let is_text = page.content_type.starts_with("text/plain");
                 let size = page.body.len() as i32;
-                let content: Option<String> = if is_html {
-                    // Visible text only: `<script>`/`<style>`/`<noscript>`
-                    // content is code or a fallback, never page content a
-                    // knowledge-base import should see (owner decision 4).
-                    Some(attome_html::html_to_text(&page.body))
+                // K6-T5: an HTML page's main content, without its navigation,
+                // header, footer, side panels and cookie banner (scripts,
+                // styles and noscript fallbacks are never content, owner
+                // decision 4), and the language it declares.
+                let (content, language): (Option<String>, Option<String>) = if is_html {
+                    let main = attome_html::main_content::extract_main(&page.body);
+                    let text = if main.text_markdown.trim().is_empty() {
+                        attome_html::html_to_text(&page.body)
+                    } else {
+                        main.text_markdown
+                    };
+                    (Some(text), main.lang)
                 } else if is_text {
-                    Some(page.body.clone())
+                    (Some(page.body.clone()), None)
                 } else {
-                    None
+                    (None, None)
                 };
                 let content_hash = content.as_deref().map(text_hash);
                 let unchanged = content_hash.is_some()
@@ -505,6 +516,7 @@ pub async fn walk_with<F: Fetcher, S: PageSink>(
                     last_modified: page.last_modified.clone(),
                     content_hash,
                     unchanged,
+                    language,
                 })
                 .await;
 
@@ -533,6 +545,7 @@ pub async fn walk_with<F: Fetcher, S: PageSink>(
                     last_modified: None,
                     content_hash: None,
                     unchanged: false,
+                    language: None,
                 })
                 .await;
                 errors_in_a_row += 1;
@@ -570,6 +583,7 @@ fn document_page(path: &str, depth: i32) -> DiscoveredPage {
         last_modified: None,
         content_hash: None,
         unchanged: false,
+        language: None,
     }
 }
 
@@ -675,8 +689,8 @@ impl PageSink for DbPageSink<'_> {
         let result = sqlx::query(
             r#"INSERT INTO webcrawl_page
                    (target_ref, url_path, parent_path, depth, size_bytes, status, content,
-                    etag, last_modified, content_hash)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                    etag, last_modified, content_hash, language)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                ON CONFLICT (target_ref, url_path) DO UPDATE
                SET parent_path = EXCLUDED.parent_path,
                    depth = EXCLUDED.depth,
@@ -688,6 +702,7 @@ impl PageSink for DbPageSink<'_> {
                    last_modified = EXCLUDED.last_modified,
                    content_hash = CASE WHEN EXCLUDED.status = 'document'
                                        THEN webcrawl_page.content_hash ELSE EXCLUDED.content_hash END,
+                   language = COALESCE(EXCLUDED.language, webcrawl_page.language),
                    missing_count = 0,
                    row_version = webcrawl_page.row_version + 1,
                    updated_at = NOW()"#,
@@ -702,6 +717,7 @@ impl PageSink for DbPageSink<'_> {
         .bind(&page.etag)
         .bind(&page.last_modified)
         .bind(&page.content_hash)
+        .bind(&page.language)
         .execute(self.db)
         .await;
         if result.is_ok()

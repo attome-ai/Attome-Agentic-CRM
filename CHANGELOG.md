@@ -224,6 +224,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   when `ATTOME_KMS` is set; the node does not start when it cannot unwrap. See `docs/secrets.md`.
 
 ### Fixed
+- The crawler now keeps a page's main content (K6-T5's extraction: no navigation, header, footer, side
+  panels or cookie banner) and records the language the page declares; a source's `languages` setting
+  (K6-T1) now keeps pages in other languages out of imports. Until now the crawl stored the whole page's
+  visible text and no language, so the setting had no effect. Pages change text once on their next crawl.
 - Search: an administrator's synonym now applies when a person types one or two words, not only in a
   longer search, so a synonym for `CR` finds what it stands for in the search box.
 - Dashboards: a KPI built with the metric builder drills to its records and explains again, and metric

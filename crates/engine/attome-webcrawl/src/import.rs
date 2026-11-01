@@ -445,14 +445,15 @@ pub async fn import_pages(
     let fields = item_fields(state);
     let published = target.import_mode == AUTOMATIC;
 
-    let candidates = sqlx::query_as::<_, Candidate>(
+    let candidates = sqlx::query_as::<_, Candidate>(&format!(
         "SELECT id, url_path, content, content_hash, imported_data_item_ref FROM webcrawl_page \
          WHERE target_ref = $1 AND id = ANY($2) AND is_deleted = FALSE \
            AND status IN ('crawled', 'document') AND content IS NOT NULL \
+           AND {IN_LANGUAGE} \
            AND ((imported_data_item_ref IS NULL AND alias_of IS NULL) \
                 OR (imported_data_item_ref <> $3 \
-                    AND content_hash IS DISTINCT FROM imported_content_hash))",
-    )
+                    AND content_hash IS DISTINCT FROM imported_content_hash))"
+    ))
     .bind(target_id)
     .bind(page_ids)
     .bind(NIL_CLAIM)
@@ -586,13 +587,13 @@ pub async fn sync_after_crawl(state: &EngineState, target_id: Uuid) -> Result<Sy
     }
 
     if target.import_mode == AUTOMATIC && ctx.require(ITEM, "create").is_ok() {
-        let fresh = sqlx::query_as::<_, Candidate>(
+        let fresh = sqlx::query_as::<_, Candidate>(&format!(
             "SELECT id, url_path, content, content_hash, imported_data_item_ref FROM webcrawl_page \
              WHERE target_ref = $1 AND is_deleted = FALSE AND status IN ('crawled', 'document') \
                AND content IS NOT NULL AND imported_data_item_ref IS NULL \
-               AND alias_of IS NULL \
-             ORDER BY id LIMIT $2",
-        )
+               AND alias_of IS NULL AND {IN_LANGUAGE} \
+             ORDER BY id LIMIT $2"
+        ))
         .bind(target_id)
         .bind(MAX_SYNC_PAGES)
         .fetch_all(&state.base.db)
@@ -744,6 +745,14 @@ pub async fn retire_missing(
     }
     Ok(retired)
 }
+
+/// K6-T1: a page in a language its source keeps: one the source lists (by
+/// its primary subtag, so `en-GB` is `en`), or any page when the source
+/// lists none or the page declared none.
+const IN_LANGUAGE: &str = "(webcrawl_page.language IS NULL OR NOT EXISTS ( \
+    SELECT 1 FROM webcrawl_target t WHERE t.id = webcrawl_page.target_ref \
+       AND cardinality(t.languages) > 0 \
+       AND NOT (split_part(lower(webcrawl_page.language), '-', 1) = ANY(t.languages))))";
 
 /// The business event for an item a recrawl updated (`webcrawl.item_updated`)
 /// or retired (`webcrawl.item_retired`), beside the change's own entity
