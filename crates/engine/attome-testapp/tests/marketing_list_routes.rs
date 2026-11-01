@@ -130,6 +130,11 @@ fn refresh_returns_202() {
             return;
         };
         install(&app).await;
+        // The app registers the job at boot; this binary runs no worker.
+        let _ = attome_core::jobs::JOB_TYPES.register(
+            attome_jobs::JobType::new(attome_marketing::list_routes::REFRESH_JOB, 1),
+            |_state: attome_core::EngineState, _job| async { Ok(()) },
+        );
         let list = static_list(&app).await;
         let path = format!("/api/v1/marketing/lists/{list}/refresh");
 
