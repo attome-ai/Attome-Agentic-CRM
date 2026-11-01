@@ -31,7 +31,6 @@ use axum::{
     routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -151,7 +150,7 @@ async fn list_members(
     tag = "partner",
     params(("keyword" = String, Path, description = "The portal")),
     request_body = PartnerMemberInvite,
-    extensions(("x-audit" = json!(x_audit(&[(attome_audit::AuditCategory::Credential, AuditOperation::Create)])))),
+    extensions(("x-audit" = serde_json::json!(x_audit(&[(attome_audit::AuditCategory::Credential, AuditOperation::Create)])))),
     responses(
         (status = 201, description = "Invited", body = PartnerMember),
         (status = 401, description = "Not signed in to the portal", body = ErrorResponse),
@@ -307,7 +306,7 @@ async fn invite_member(
         ("keyword" = String, Path, description = "The portal"),
         ("id" = Uuid, Path, description = "The member"),
     ),
-    extensions(("x-audit" = json!(x_audit(&[(attome_audit::AuditCategory::Access, AuditOperation::AccountDisabled)])))),
+    extensions(("x-audit" = serde_json::json!(x_audit(&[(attome_audit::AuditCategory::Access, AuditOperation::AccountDisabled)])))),
     responses(
         (status = 200, description = "Disabled; every session ended", body = PartnerMember),
         (status = 401, description = "Not signed in to the portal", body = ErrorResponse),
