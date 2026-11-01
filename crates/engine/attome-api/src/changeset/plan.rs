@@ -543,10 +543,6 @@ pub fn unsupported(op: Op) -> Option<&'static str> {
         );
     }
     match op {
-        // Phase 2 ops whose executors land with the data-step lane.
-        Op::DataStep => {
-            Some("op_not_supported: this release has no executor for this Phase 2 operation yet")
-        }
         Op::UpsertWorkflow
         | Op::SetWorkflowDraft
         | Op::PublishWorkflow
@@ -1229,6 +1225,17 @@ impl<'a> Fold<'a> {
                 replace_or_push(&mut profile.fields, field, |f| {
                     (f.entity.clone(), f.field.clone())
                 });
+            }
+            // A22-T4: `split` is the data step this release runs (A1-T8's
+            // split, between the expand and the contract of its changeset).
+            Op::DataStep => {
+                if op.arg("kind").and_then(Value::as_str) != Some("split") {
+                    return Err(format!(
+                        "operation {} (data_step): op_not_supported: only kind `split` has an \
+                         executor in this release",
+                        op.seq
+                    ));
+                }
             }
             Op::UpsertRecord => {
                 let (key_fields, row) = record_parts(op)?;
@@ -2473,6 +2480,32 @@ mod tests {
                 .apply(&op(json!({ "columns": columns }), "Ghost"))
                 .is_err(),
             "a view that is neither live nor upserted earlier"
+        );
+    }
+
+    /// A22-T4: a data step plans when it is a split, and only then.
+    #[test]
+    fn a_data_step_plans_only_as_a_split() {
+        assert_eq!(unsupported(Op::DataStep), None, "an executor exists");
+        let step = |kind: &str| DocOp {
+            seq: 4,
+            op: Op::DataStep,
+            phase: ApplyPhase::Expand,
+            target: json!({ "entity": "contact" })
+                .as_object()
+                .cloned()
+                .unwrap_or_default(),
+            args: Some(json!({ "kind": kind, "source": "full_name",
+                "targets": [{ "field": "first_name", "expression": "word(full_name, 1)" }] })),
+        };
+        let live = empty_bundle();
+        assert!(Fold::new(&live).apply(&step("split")).is_ok());
+        let refused = Fold::new(&live).apply(&step("copy"));
+        assert!(
+            refused
+                .as_ref()
+                .is_err_and(|e| e.contains("only kind `split`")),
+            "{refused:?}"
         );
     }
 

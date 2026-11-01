@@ -53,6 +53,18 @@ selects or writes by the old name still works. Its response carries a `Deprecati
 a `Link` to the new name, so a client knows to move. After 90 days the alias is pruned and the
 old name is unknown.
 
+## A data step in a changeset
+
+A changeset may carry a `data_step` of kind `split` between its expand and contract operations:
+`{"op": "data_step", "target": {"entity": "contact"}, "args": {"kind": "split", "source":
+"full_name", "targets": [{"field": "first_name", "expression": "word(full_name, 1)"}]}}`.
+Applying it queues the same durable split run as `POST /api/v1/admin/entities/{id}/refactor`
+(source `apply`, tied to the operation, so applying it again queues nothing); the run's progress is
+at `/api/v1/admin/data-step-runs/{id}`. The other kinds (`copy`, `convert`, `map_values`,
+`set_default`) are refused at plan until they have an executor. To go back, plan a rollback to an
+earlier bundle version (`POST /api/v1/admin/metadata/bundles/{name}/rollback`, which shows its plan
+first) or preview and switch to an earlier metadata version on the versions screen.
+
 ## Old columns go only when every node has moved on
 
 Deleting a field, or finishing a large type change, no longer drops the old column at once. The

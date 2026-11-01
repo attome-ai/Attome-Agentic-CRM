@@ -14,6 +14,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Changesets run a `data_step` of kind `split` (A1-T8's attribute split) when applied (A22-T4).
 - Journey email step `marketing.send_email` with consent, suppression, sunset, quiet-hours and weekly
   cap checks, once per run and step, and a test mode; settings `marketing.weekly_message_cap` and
   `marketing.journey_quiet_hours` (E8-T6, migration 0365).

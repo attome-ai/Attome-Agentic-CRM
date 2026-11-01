@@ -412,7 +412,53 @@ pub(super) async fn queue_split(
     Path(entity_id): Path<Uuid>,
     Json(body): Json<SplitBody>,
 ) -> Result<impl IntoResponse, AppError> {
-    let plan = plan(&state, entity_id, &body)?;
+    let run_id = queue(&state, entity_id, &body, ctx.user_id, None).await?;
+    Ok((StatusCode::ACCEPTED, Json(SplitQueued { run_id })))
+}
+
+/// A22-T4: a changeset's `data_step` of kind `split` on `entity` (args
+/// `source` and `targets`, as the admin route takes them), queued as the
+/// same durable run, tied to its changeset operation; applying the
+/// operation again finds that run and queues nothing.
+pub(crate) async fn queue_split_from_changeset(
+    state: &EngineState,
+    actor: Uuid,
+    changeset_op: (Uuid, i32),
+    entity: &str,
+    args: Option<&Value>,
+) -> Result<Uuid, AppError> {
+    let body: SplitBody = serde_json::from_value(args.cloned().unwrap_or(Value::Null))
+        .map_err(|e| AppError::Validation(format!("data_step split: {e}")))?;
+    let entity_id = state
+        .entities
+        .load()
+        .get(entity)
+        .map(|meta| meta.entity_id)
+        .ok_or(AppError::NotFound)?;
+    let existing: Option<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM data_step_run WHERE changeset_id = $1 AND op_seq = $2 AND kind = 'split'",
+    )
+    .bind(changeset_op.0)
+    .bind(changeset_op.1)
+    .fetch_optional(&state.base.db_migrator)
+    .await
+    .map_err(AppError::internal)?;
+    if let Some(run_id) = existing {
+        return Ok(run_id);
+    }
+    queue(state, entity_id, &body, actor, Some(changeset_op)).await
+}
+
+/// Plans the split, writes the run (`admin`, or `apply` with its changeset
+/// operation), queues it and audits it, in one transaction; the run's id.
+async fn queue(
+    state: &EngineState,
+    entity_id: Uuid,
+    body: &SplitBody,
+    actor: Uuid,
+    changeset_op: Option<(Uuid, i32)>,
+) -> Result<Uuid, AppError> {
+    let plan = plan(state, entity_id, body)?;
     let spec = json!({
         "entity_id": entity_id,
         "source": plan.source,
@@ -423,12 +469,20 @@ pub(super) async fn queue_split(
     });
     let mut tx = attome_db::tx::begin(&state.base.db_migrator).await?;
     let run_id: Uuid = sqlx::query_scalar(
-        "INSERT INTO data_step_run (source, entity_logicalname, kind, spec, created_by) \
-         VALUES ('admin', $1, 'split', $2, $3) RETURNING id",
+        "INSERT INTO data_step_run \
+           (source, entity_logicalname, kind, spec, created_by, changeset_id, op_seq) \
+         VALUES ($1, $2, 'split', $3, $4, $5, $6) RETURNING id",
     )
+    .bind(if changeset_op.is_some() {
+        "apply"
+    } else {
+        "admin"
+    })
     .bind(&plan.entity)
     .bind(&spec)
-    .bind(ctx.user_id)
+    .bind(actor)
+    .bind(changeset_op.map(|(id, _)| id))
+    .bind(changeset_op.map(|(_, seq)| seq))
     .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -440,13 +494,13 @@ pub(super) async fn queue_split(
     .map_err(AppError::internal)?;
     attome_audit::write_business_event_in_tx(
         &mut tx,
-        &attome_audit::audit_service(&state),
+        &attome_audit::audit_service(state),
         attome_audit::BusinessEvent::new(
             "data_step_run",
             run_id,
             attome_audit::AuditOperation::Create,
             "entity.split",
-            ctx.user_id,
+            actor,
         )
         .comment(format!(
             "split {}.{} into {}",
@@ -461,7 +515,7 @@ pub(super) async fn queue_split(
     )
     .await?;
     attome_db::tx::commit(tx).await?;
-    Ok((StatusCode::ACCEPTED, Json(SplitQueued { run_id })))
+    Ok(run_id)
 }
 
 /// `RunDataStep` for a `split` run: batches from the run's cursor, each

@@ -3053,7 +3053,8 @@
                 "copy",
                 "convert",
                 "map_values",
-                "set_default"
+                "set_default",
+                "split"
               ]
             },
             "from": {
@@ -3154,6 +3155,38 @@
                 "boolean"
               ],
               "description": "set_default: the value written into empty rows."
+            },
+            "source": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "maxLength": 63,
+              "description": "split: the text attribute split; it is not changed."
+            },
+            "targets": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 8,
+              "description": "split: each text attribute filled and the rule expression over the source that fills it (word, word_count, split_part).",
+              "items": {
+                "type": "object",
+                "required": [
+                  "field",
+                  "expression"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "field": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]*$",
+                    "maxLength": 63
+                  },
+                  "expression": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  }
+                }
+              }
             }
           },
           "allOf": [
@@ -3254,6 +3287,28 @@
                     "field",
                     "value",
                     "only_empty"
+                  ]
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "split"
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "source",
+                  "targets"
+                ],
+                "propertyNames": {
+                  "enum": [
+                    "kind",
+                    "source",
+                    "targets"
                   ]
                 }
               }

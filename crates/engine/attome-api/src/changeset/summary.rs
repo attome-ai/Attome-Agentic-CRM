@@ -473,6 +473,20 @@ fn data_step_sentence(c: &Ctx<'_>) -> String {
     let f = |name: Option<&Value>| format!("\"{}.{}\"", js(c.t("entity")), js(name));
     const BYPASS: &str = "(runs without business rules or workflows)";
     match c.a("kind").and_then(Value::as_str) {
+        Some("split") => format!(
+            "Split {} into {} by rule expressions {BYPASS}.",
+            f(c.a("source")),
+            c.a("targets")
+                .and_then(Value::as_array)
+                .map(|targets| {
+                    targets
+                        .iter()
+                        .map(|t| f(t.get("field")))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                })
+                .unwrap_or_default()
+        ),
         Some("copy") => format!(
             "Copy {} into {}{} {BYPASS}.",
             f(c.a("from")),

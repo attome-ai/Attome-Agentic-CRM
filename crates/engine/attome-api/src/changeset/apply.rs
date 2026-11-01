@@ -1380,6 +1380,28 @@ impl Ctx<'_> {
                     ReconcileOutcome::Unchanged
                 }
             }
+            // A22-T4: a split queued as the same durable run the admin
+            // route queues, tied to this operation (a replay finds it).
+            Op::DataStep => {
+                if !self.registry_refreshed {
+                    // The split checks its source and targets against the
+                    // registry, which lacks fields this apply just added.
+                    let registry =
+                        attome_core::meta_registry::build_registry(&state.base.db).await?;
+                    state.entities.swap(registry);
+                    self.registry_refreshed = true;
+                }
+                let actor = self.actor.unwrap_or(Uuid::nil());
+                crate::admin::refactor::queue_split_from_changeset(
+                    state,
+                    actor,
+                    (self.doc.id, op.seq),
+                    op.t("entity"),
+                    op.args.as_ref(),
+                )
+                .await?;
+                ReconcileOutcome::Updated
+            }
             Op::UpsertRecord => {
                 if !self.registry_refreshed {
                     // The record path resolves lookups against the in-memory
