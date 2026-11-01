@@ -126,6 +126,8 @@ impl EngineModel for ActionModel {
             // dedicated route: they dispatch through the generic
             // `/actions/{id}/invoke` above like every other action.
             .merge(crate::session_admin::routes())
+            // AH7-T4 — the agent permission test on demand, and its runs.
+            .merge(crate::permission_test::routes())
             // M101 slice 2 — the MCP surface. Merged here rather than
             // mounted separately so it sits behind the identical
             // middleware stack and licence gate as every other action

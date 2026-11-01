@@ -237,6 +237,8 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     ));
     doc.merge(agent::openapi_fragment());
     doc.merge(session_admin::openapi_fragment());
+    // AH7-T4 — `/admin/ai/agents/{id}/permission-test(s)`.
+    doc.merge(permission_test::openapi_fragment());
     doc.merge(attome_server::openapi::tag_module(
         outcome::openapi_fragment(),
         "core",

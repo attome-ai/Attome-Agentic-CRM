@@ -31,13 +31,27 @@
 //! call that the gate stops is counted as over-restricted but is not a
 //! failure. The run is stored in `ai_permission_test_run` (migration 0219)
 //! against the definition's row version.
+//!
+//! AH7-T4: `POST /api/v1/admin/ai/agents/{id}/permission-test` runs it on
+//! demand and answers the report (at most [`MAX_REPORTED_FAILURES`]
+//! failures, flagged when cut; the stored run keeps them all), and
+//! `GET /api/v1/admin/ai/agents/{id}/permission-tests` lists past runs,
+//! newest first.
 
 use std::collections::BTreeSet;
 
+use attome_audit::AuditOperation;
 use attome_core::EngineState;
-use attome_types::AppError;
+use attome_server::authz::{Authorized, Privilege, area};
+use attome_types::{AppError, ErrorResponse, OnePageQuery, PageWindow, PaginatedResponse};
+use axum::{
+    Json, Router,
+    extract::{Path, Query, State},
+    routing::{get, post},
+};
 use serde::Serialize;
 use serde_json::Value;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::agent::AgentPolicy;
@@ -48,9 +62,11 @@ use crate::registry::ActionRegistry;
 
 /// The privilege that holds every other.
 const ADMIN: &str = "system.admin";
+/// The most failures one answer lists.
+pub const MAX_REPORTED_FAILURES: usize = 500;
 
 /// What the gate must do with a call.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Expect {
     Allowed,
@@ -188,7 +204,7 @@ pub fn positive_cases(g: &Governance<'_>, registry: &ActionRegistry) -> Vec<Case
 }
 
 /// What the gate did with a case.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Outcome {
     Allowed,
@@ -197,7 +213,7 @@ pub enum Outcome {
 }
 
 /// One case the gate got wrong.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
 pub struct Failure {
     pub action_id: String,
     pub entity: Option<String>,
@@ -207,15 +223,33 @@ pub struct Failure {
 }
 
 /// AH7-T2: one run's report.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct Report {
     pub run_id: Uuid,
     pub agent_ref: Uuid,
     pub passed: bool,
     pub cases: usize,
     pub failures: Vec<Failure>,
+    /// AH7-T4: whether `failures` was cut at 500 (the stored run keeps all).
+    pub failures_truncated: bool,
     /// Expected-allowed calls the gate stopped.
     pub over_restricted: usize,
+}
+
+/// AH7-T4: one stored run.
+#[derive(Debug, Clone, Serialize, ToSchema, sqlx::FromRow)]
+pub struct PermissionTestRun {
+    pub id: Uuid,
+    pub agent_ref: Uuid,
+    /// The agent definition's row version the run tested.
+    pub definition_row_version: i64,
+    pub passed: bool,
+    pub cases: i32,
+    /// The failing cases.
+    #[schema(value_type = Object)]
+    pub failures: Value,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub created_by: Uuid,
 }
 
 /// The outcome a gate decision means for a case.
@@ -366,13 +400,166 @@ pub async fn run(state: &EngineState, actor: Uuid, agent_ref: Uuid) -> Result<Re
         passed,
         cases,
         failures,
+        failures_truncated: false,
         over_restricted,
     })
+}
+
+/// The answer's failures cut at [`MAX_REPORTED_FAILURES`]. Pure.
+pub fn capped(mut report: Report) -> Report {
+    if report.failures.len() > MAX_REPORTED_FAILURES {
+        report.failures.truncate(MAX_REPORTED_FAILURES);
+        report.failures_truncated = true;
+    }
+    report
+}
+
+/// Run an agent's permission test
+///
+/// Runs the agent definition's permission test as the caller would start
+/// it, executing nothing, stores the run and answers its report (at most
+/// 500 failures, flagged when cut). Audited.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/ai/agents/{id}/permission-test",
+    tag = "action",
+    params(("id" = Uuid, Path, description = "The ai_agent definition")),
+    responses(
+        (status = 200, description = "The run's report", body = Report),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such agent definition the caller can read", body = ErrorResponse),
+        (status = 422, description = "The definition cannot start a session (no model or policy)", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[
+        (attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Create),
+    ])))),
+)]
+pub(crate) async fn post_permission_test(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<area::Ai>>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<Report>, AppError> {
+    let report = run(&state, ctx.user_id, id).await?;
+    attome_audit::write_business_event(
+        &state,
+        "ai_agent",
+        id,
+        AuditOperation::Create,
+        "ai_agent.permission_test",
+        ctx.user_id,
+        None,
+        None,
+        format!(
+            "permission test run {}: {} case(s), {} failure(s)",
+            report.run_id,
+            report.cases,
+            report.failures.len()
+        ),
+    )
+    .await;
+    Ok(Json(capped(report)))
+}
+
+/// List an agent's permission test runs
+///
+/// The agent definition's stored permission test runs, newest first.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/ai/agents/{id}/permission-tests",
+    tag = "action",
+    params(("id" = Uuid, Path, description = "The ai_agent definition"), OnePageQuery),
+    responses(
+        (status = 200, description = "The runs, newest first", body = PaginatedResponse<PermissionTestRun>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(crate) async fn list_permission_tests(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<area::Ai>>,
+    Path(id): Path<Uuid>,
+    Query(q): Query<OnePageQuery>,
+) -> Result<Json<PaginatedResponse<PermissionTestRun>>, AppError> {
+    let PageWindow {
+        page,
+        page_size,
+        offset,
+    } = q.window();
+    let items: Vec<PermissionTestRun> = sqlx::query_as(
+        "SELECT id, agent_ref, definition_row_version, passed, cases, failures, created_at, \
+                created_by \
+           FROM ai_permission_test_run WHERE agent_ref = $1 \
+          ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3",
+    )
+    .bind(id)
+    .bind(page_size)
+    .bind(offset)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let total: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM ai_permission_test_run WHERE agent_ref = $1")
+            .bind(id)
+            .fetch_one(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
+}
+
+/// AH7-T4's routes.
+pub fn routes() -> Router<EngineState> {
+    Router::new()
+        .route(
+            "/api/v1/admin/ai/agents/{id}/permission-test",
+            post(post_permission_test),
+        )
+        .route(
+            "/api/v1/admin/ai/agents/{id}/permission-tests",
+            get(list_permission_tests),
+        )
+}
+
+#[derive(utoipa::OpenApi)]
+#[openapi(paths(post_permission_test, list_permission_tests))]
+struct ApiDocFragment;
+
+/// AH7-T4's slice of the API document.
+pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
+    <ApiDocFragment as utoipa::OpenApi>::openapi()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_answer_cuts_failures_at_500_and_says_so() {
+        let failure = Failure {
+            action_id: "email.send".into(),
+            entity: None,
+            expect: Expect::Refused,
+            got: Outcome::Allowed,
+            reason: "outside the allow-list",
+        };
+        let report = |n: usize| Report {
+            run_id: Uuid::nil(),
+            agent_ref: Uuid::nil(),
+            passed: n == 0,
+            cases: n,
+            failures: vec![failure.clone(); n],
+            failures_truncated: false,
+            over_restricted: 0,
+        };
+        let cut = capped(report(501));
+        assert_eq!(cut.failures.len(), 500);
+        assert!(cut.failures_truncated);
+        let kept = capped(report(3));
+        assert_eq!(kept.failures.len(), 3);
+        assert!(!kept.failures_truncated);
+    }
 
     fn policy(ceiling: RiskTier, allowed: Option<&[&str]>) -> AgentPolicy {
         AgentPolicy {
