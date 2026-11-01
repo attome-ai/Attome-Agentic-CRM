@@ -1,0 +1,207 @@
+{
+  "author": "packs",
+  "checksum": "sha256:2180fcdb914115d576a901048f63b7e6b4804f6322227eeee7435718ced629e0",
+  "closed_at": "2026-11-01T00:00:00Z",
+  "description": "Starter segments (E7-T10): four stored queries over contacts (engaged in the last 90 days, new this month, unengaged for 6 months, customers with a won opportunity) and a daily segment list for each, naming its query as <entity>/<name>. A starter list refreshes once an owner is set (it runs with its owner's access).",
+  "format": "attome-changeset/v1",
+  "id": "01a19821-32ac-7a15-8768-eee979a5388b",
+  "layer": "product",
+  "name": "marketing-starter-segments",
+  "opened_at": "2026-11-01T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "contact",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Engaged in the last 90 days",
+          "required_privilege": "contact.read",
+          "sql": "SELECT c.id FROM \"contact\" c WHERE c.is_active = true AND c.last_marketing_engagement_at > now() - INTERVAL '90 days'",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "contact",
+        "query": "Engaged in the last 90 days"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "contact",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "New this month",
+          "required_privilege": "contact.read",
+          "sql": "SELECT c.id FROM \"contact\" c WHERE c.is_active = true AND c.created_at >= date_trunc('month', now())",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "contact",
+        "query": "New this month"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "contact",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Unengaged for 6 months",
+          "required_privilege": "contact.read",
+          "sql": "SELECT c.id FROM \"contact\" c WHERE c.is_active = true AND (c.last_marketing_engagement_at IS NULL OR c.last_marketing_engagement_at < now() - INTERVAL '6 months')",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "contact",
+        "query": "Unengaged for 6 months"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "contact",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Customers",
+          "required_privilege": "contact.read",
+          "sql": "SELECT c.id FROM \"contact\" c WHERE c.is_active = true AND EXISTS (SELECT 1 FROM \"opportunity\" o WHERE o.account_ref = c.account_ref AND o.stage = 'closed_won' AND o.is_active = true)",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "contact",
+        "query": "Customers"
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Starter segment. تفاعلوا خلال آخر 90 يومًا",
+          "kind": "segment",
+          "name": "Engaged in the last 90 days",
+          "query_id": "contact/Engaged in the last 90 days",
+          "refresh_interval": "daily",
+          "refresh_mode": "scheduled",
+          "target_entity": "contact"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "marketing_list",
+        "key": {
+          "name": "Engaged in the last 90 days"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Starter segment. جدد هذا الشهر",
+          "kind": "segment",
+          "name": "New this month",
+          "query_id": "contact/New this month",
+          "refresh_interval": "daily",
+          "refresh_mode": "scheduled",
+          "target_entity": "contact"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "marketing_list",
+        "key": {
+          "name": "New this month"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Starter segment. لم يتفاعلوا منذ 6 أشهر",
+          "kind": "segment",
+          "name": "Unengaged for 6 months",
+          "query_id": "contact/Unengaged for 6 months",
+          "refresh_interval": "daily",
+          "refresh_mode": "scheduled",
+          "target_entity": "contact"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "marketing_list",
+        "key": {
+          "name": "Unengaged for 6 months"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Starter segment. العملاء",
+          "kind": "segment",
+          "name": "Customers",
+          "query_id": "contact/Customers",
+          "refresh_interval": "daily",
+          "refresh_mode": "scheduled",
+          "target_entity": "contact"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "marketing_list",
+        "key": {
+          "name": "Customers"
+        }
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "marketing",
+  "seq": 15,
+  "title": "Pack: starter segments"
+}

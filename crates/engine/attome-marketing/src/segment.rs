@@ -107,8 +107,9 @@ pub fn evaluate<'a>(
         let (kind, target, expand, query, _) = load_list(state, list).await?;
         let mut people: HashSet<Uuid> = match (kind.as_str(), query.as_deref()) {
             ("segment", Some(query)) => {
-                let query_id = Uuid::parse_str(query.trim())
-                    .map_err(|_| AppError::Validation("segment.query_id_invalid".into()))?;
+                let query_id = resolve_query(&state.base.db, query)
+                    .await?
+                    .ok_or_else(|| AppError::Validation("segment.query_id_invalid".into()))?;
                 attome_records::query_exec::execute_stored_query_ids(
                     state,
                     ctx,
@@ -197,6 +198,33 @@ async fn expand_accounts(
         .map_err(AppError::internal)?
     };
     Ok(rows.into_iter().collect())
+}
+
+/// E7-T10: the stored query a list's `query_id` names: its id, or
+/// `<entity>/<name>`, the key a pack's `upsert_query` writes (so a pack can
+/// seed a segment whose query has a different id on every deployment).
+/// `None` when it names no live query.
+pub async fn resolve_query<'e, E: sqlx::PgExecutor<'e>>(
+    db: E,
+    raw: &str,
+) -> Result<Option<Uuid>, AppError> {
+    let raw = raw.trim();
+    if let Ok(id) = Uuid::parse_str(raw) {
+        return Ok(Some(id));
+    }
+    let Some((entity, name)) = raw.split_once('/') else {
+        return Ok(None);
+    };
+    sqlx::query_scalar(
+        "SELECT q.id FROM sql_query q JOIN entity_info e ON e.id = q.entity_logical_name \
+          WHERE e.logicalname = $1 AND q.record_no = $2 AND COALESCE(q.is_active, true) \
+          ORDER BY q.created_at DESC NULLS LAST, q.id DESC LIMIT 1",
+    )
+    .bind(entity)
+    .bind(name)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)
 }
 
 /// What a refresh changed.

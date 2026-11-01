@@ -165,6 +165,7 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     // E7-T6: live segments, a tick every five seconds.
     crate::jobs::spawn_segment_live_scheduler(db.clone(), std::time::Duration::from_secs(5));
     crate::jobs::spawn_journey_counts_scheduler(db.clone(), std::time::Duration::from_secs(30));
+    crate::jobs::spawn_list_pause_scheduler(db.clone(), std::time::Duration::from_secs(24 * 3600));
     // I6-T2: work order stock, a tick every minute.
     crate::jobs::spawn_stock_ledger_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // I1-T2: completed work orders invoiced, a tick every five minutes.

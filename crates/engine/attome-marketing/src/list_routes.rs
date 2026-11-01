@@ -74,6 +74,8 @@ async fn readable_list(
     if attome_records::entity_crud::referenced_record_visible(state, ctx, "marketing_list", list)
         .await?
     {
+        // E7-T10: reading or refreshing a list is a use of it.
+        crate::segment_housekeeping::touch(state, list).await;
         Ok(())
     } else {
         Err(AppError::NotFound)

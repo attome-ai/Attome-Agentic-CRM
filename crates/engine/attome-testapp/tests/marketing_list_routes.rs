@@ -322,3 +322,64 @@ fn in_use_list_change_conflicts() {
         assert_eq!(status, StatusCode::OK, "{body}");
     });
 }
+
+// feature: E7
+#[test]
+fn starter_segments_name_their_queries() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        install(&app).await;
+        let starters: Vec<(String, Option<String>)> = sqlx::query_as(
+            "SELECT name, query_id FROM marketing_list WHERE description LIKE 'Starter segment.%'",
+        )
+        .fetch_all(app.db())
+        .await
+        .unwrap();
+        assert_eq!(starters.len(), 4, "{starters:?}");
+        for (name, query) in starters {
+            let query = query.unwrap_or_default();
+            let resolved = attome_marketing::segment::resolve_query(app.db(), &query)
+                .await
+                .unwrap();
+            assert!(resolved.is_some(), "{name}: {query} names no stored query");
+        }
+        // An unused list stops refreshing.
+        let list = static_list(&app).await;
+        sqlx::query(
+            "UPDATE marketing_list SET refresh_mode = 'scheduled', \
+                 last_used_at = now() - INTERVAL '91 days' WHERE id = $1",
+        )
+        .bind(list)
+        .execute(app.db())
+        .await
+        .unwrap();
+        attome_marketing::segment_housekeeping::pause_unused(&app.state, chrono::Utc::now())
+            .await
+            .unwrap();
+        let paused: Option<bool> =
+            sqlx::query_scalar("SELECT is_paused FROM marketing_list WHERE id = $1")
+                .bind(list)
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        assert_eq!(paused, Some(true));
+        // Reading it resumes it.
+        let (status, body) = app
+            .request(
+                Method::GET,
+                &format!("/api/v1/marketing/lists/{list}/usage"),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let paused: Option<bool> =
+            sqlx::query_scalar("SELECT is_paused FROM marketing_list WHERE id = $1")
+                .bind(list)
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        assert_eq!(paused, Some(false));
+    });
+}

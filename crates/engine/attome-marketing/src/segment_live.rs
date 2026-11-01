@@ -130,8 +130,10 @@ impl RecordCheck for LiveCheck {
                 return Ok(None);
             }
             let target = pick("target_entity", target).unwrap_or_else(|| "contact".into());
-            let Some(query) = pick("query_id", query).and_then(|q| Uuid::parse_str(q.trim()).ok())
-            else {
+            let Some(raw) = pick("query_id", query) else {
+                return Ok(None);
+            };
+            let Some(query) = crate::segment::resolve_query(&mut *conn, &raw).await? else {
                 return Ok(None);
             };
             let relations: Option<Vec<String>> = sqlx::query_scalar(
@@ -172,7 +174,8 @@ pub async fn live_tick(state: &EngineState) -> Result<usize, AppError> {
     let lists: Vec<LiveList> = sqlx::query_as(
         "SELECT id, COALESCE(target_entity, 'contact'), query_id FROM marketing_list \
           WHERE refresh_mode = 'live' AND COALESCE(kind, 'static') = 'segment' \
-            AND (is_active IS NULL OR is_active = true) AND query_id IS NOT NULL",
+            AND (is_active IS NULL OR is_active = true) AND query_id IS NOT NULL \
+            AND COALESCE(is_paused, false) = false",
     )
     .fetch_all(&mut *conn)
     .await
@@ -185,8 +188,13 @@ pub async fn live_tick(state: &EngineState) -> Result<usize, AppError> {
     );
     let mut written = 0;
     for (list, target, query) in lists {
-        let Ok(query) = Uuid::parse_str(query.trim()) else {
-            continue;
+        let query = match crate::segment::resolve_query(&state.base.db, &query).await {
+            Ok(Some(query)) => query,
+            Ok(None) => continue,
+            Err(error) => {
+                tracing::warn!(%list, %error, "live segment: query not resolved");
+                continue;
+            }
         };
         match refresh_people(state, list, &target, query, &changed).await {
             Ok(n) => written += n,

@@ -23,6 +23,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   wide access (`wide_access_granted`, needs `marketing_list.grant_wide_access` and is an Access
   security event), as the marketing user the setting `marketing.segment_user` names; a wide list with
   none set is refused (`segment.no_marketing_role`). Marketing pack changeset 0014 adds the privilege.
+- Segment housekeeping (E7-T10): a scheduled or live marketing list unused for 90 days is paused
+  nightly (job `marketing_list_pause_unused`) and resumes when a list route reads it. Marketing pack
+  changeset 0015 seeds four starter segments over contacts (engaged in the last 90 days, new this
+  month, unengaged for 6 months, customers with a won opportunity); a list's `query_id` may now name
+  its stored query as `<entity>/<name>`. A starter list refreshes once it has an owner.
 - Journey insight (E8-T9): node counts (entered, waiting, passed, blocked, exited) are recomputed every
   30 seconds for versions with recent runs (job `marketing_journey_counts`); `counts` adds the goal
   conversion and `person_path` lists a person's nodes, blocks and exit, for callers with

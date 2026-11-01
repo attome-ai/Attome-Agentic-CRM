@@ -37,8 +37,9 @@ pub const SAMPLE_SIZE: usize = 20;
 
 type ListRow = (String, String, Option<String>, Option<i64>);
 
+/// The list, and (E7-T10) a use of it: every insight route reads it first.
 async fn list_info(state: &EngineState, list: Uuid) -> Result<ListRow, AppError> {
-    sqlx::query_as::<_, ListRow>(
+    let row = sqlx::query_as::<_, ListRow>(
         "SELECT COALESCE(kind, 'static'), COALESCE(target_entity, 'contact'), query_id, \
                 member_count::bigint \
          FROM marketing_list WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
@@ -47,7 +48,9 @@ async fn list_info(state: &EngineState, list: Uuid) -> Result<ListRow, AppError>
     .fetch_optional(&state.base.db)
     .await
     .map_err(AppError::internal)?
-    .ok_or(AppError::NotFound)
+    .ok_or(AppError::NotFound)?;
+    crate::segment_housekeeping::touch(state, list).await;
+    Ok(row)
 }
 
 /// The ids among `ids` of `entity` that `ctx` may read.
@@ -200,15 +203,16 @@ pub(crate) async fn get_marketing_list_count(
     let (count, basis) = match &people {
         Some(people) if q.exact => (people.len() as i64, "exact"),
         _ => {
-            let estimate = match (kind.as_str(), query.as_deref(), combinations) {
-                ("segment", Some(query), 0) => match Uuid::parse_str(query.trim()) {
-                    Ok(id) => {
-                        attome_records::query_exec::estimate_stored_query_rows(&state, &ctx, id)
-                            .await
-                            .unwrap_or(member_count.unwrap_or(0))
-                    }
-                    Err(_) => member_count.unwrap_or(0),
-                },
+            let resolved = match query.as_deref() {
+                Some(raw) => crate::segment::resolve_query(&state.base.db, raw).await?,
+                None => None,
+            };
+            let estimate = match (kind.as_str(), resolved, combinations) {
+                ("segment", Some(id), 0) => {
+                    attome_records::query_exec::estimate_stored_query_rows(&state, &ctx, id)
+                        .await
+                        .unwrap_or(member_count.unwrap_or(0))
+                }
                 _ => member_count.unwrap_or(0),
             };
             (estimate, "estimate")
@@ -326,8 +330,9 @@ pub(crate) async fn get_marketing_list_explain(
     }
     let base_holds = match (kind.as_str(), query.as_deref()) {
         ("segment", Some(query)) => {
-            let id = Uuid::parse_str(query.trim())
-                .map_err(|_| AppError::Validation("segment.query_id_invalid".into()))?;
+            let id = crate::segment::resolve_query(&state.base.db, query)
+                .await?
+                .ok_or_else(|| AppError::Validation("segment.query_id_invalid".into()))?;
             !attome_records::query_exec::execute_stored_query_ids(
                 &state,
                 &ctx,
