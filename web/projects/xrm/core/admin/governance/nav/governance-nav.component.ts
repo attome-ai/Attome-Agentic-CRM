@@ -33,5 +33,7 @@ export class GovernanceNavComponent {
     { path: '/xrm/admin/state-models', key: 'governance.nav.stateModels', icon: 'la-project-diagram' },
     { path: '/xrm/admin/lineage',      key: 'governance.nav.lineage',     icon: 'la-sitemap' },
     { path: '/xrm/admin/master-data',  key: 'governance.nav.masterData',  icon: 'la-fingerprint' },
+    { path: '/xrm/admin/governance-inbox',    key: 'governance.nav.inbox',    icon: 'la-inbox' },
+    { path: '/xrm/admin/governance-coverage', key: 'governance.nav.coverage', icon: 'la-clipboard-check' },
   ] as const;
 }

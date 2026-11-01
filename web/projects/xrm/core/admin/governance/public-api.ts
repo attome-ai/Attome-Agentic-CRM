@@ -22,3 +22,6 @@ export type { LineageLayout, PlacedEdge, PlacedNode } from './lineage/lineage-la
 // L1-T9 — the steward's master-data page (its components are the
 // `governance/master-data` entry point, which the record form loads too).
 export { MasterDataPageComponent }      from './master-data-page/master-data-page.component';
+// L3-T7 — the steward's inbox, and accountability coverage with domain scorecards.
+export { StewardInboxComponent }        from './steward-inbox/steward-inbox.component';
+export { GovernanceCoverageComponent }  from './coverage/governance-coverage.component';

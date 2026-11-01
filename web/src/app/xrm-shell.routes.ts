@@ -273,6 +273,18 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/governance').then(m => m.LineageComponent),
           },
           {
+            // L3-T7 — the steward's inbox (works at phone width).
+            path: 'governance-inbox',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/governance').then(m => m.StewardInboxComponent),
+          },
+          {
+            // L3-T7 — accountability coverage and domain scorecards.
+            path: 'governance-coverage',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/governance').then(m => m.GovernanceCoverageComponent),
+          },
+          {
             // L1-T9 — master data: the cross-reference search and the held queue.
             path: 'master-data',
             canActivate: [authGuard],
