@@ -12,6 +12,7 @@ pub mod escalation;
 pub mod graph;
 pub mod instance_admin;
 pub mod instance_control;
+pub mod journey_control;
 /// D4-T1: lead assignment rule sets.
 pub mod lead_assignment;
 /// L5-T2: a flow's lineage edges.
@@ -52,6 +53,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = admin::openapi_fragment();
     doc.merge(instance_admin::openapi_fragment());
     doc.merge(instance_control::openapi_fragment());
+    doc.merge(journey_control::openapi_fragment());
     doc.merge(dead_letter_admin::openapi_fragment());
     doc.merge(simulate::openapi_fragment());
     doc.merge(sequence::openapi_fragment());

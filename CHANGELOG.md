@@ -38,7 +38,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `GET .../people/{person_id}/path`, `GET .../enrolments` (reader-scoped, one person entity a page at
   a time), `POST .../enrolments` (up to 1,000 readable contacts or leads,
   through the journey's re-entry rule and cap; `is_test` for test runs) and
-  `DELETE .../enrolments/{enrolment_id}` (the enrolment ends as `removed`, its run is cancelled).
+  `DELETE .../enrolments/{enrolment_id}` (the enrolment ends as `removed`, its run is cancelled), and
+  `POST .../pause` and `.../resume` (the journey and every one of its runs pause and go on together;
+  Configuration security events).
 - Journey insight (E8-T9): node counts (entered, waiting, passed, blocked, exited) are recomputed every
   30 seconds for versions with recent runs (job `marketing_journey_counts`); `counts` adds the goal
   conversion and `person_path` lists a person's nodes, blocks and exit, for callers with

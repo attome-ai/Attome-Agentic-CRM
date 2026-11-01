@@ -45,6 +45,7 @@ impl EngineModel for WorkflowModel {
         crate::admin::routes()
             .merge(crate::instance_admin::routes())
             .merge(crate::instance_control::routes())
+            .merge(crate::journey_control::routes())
             .merge(crate::dead_letter_admin::routes())
             .merge(crate::simulate::routes())
             .merge(crate::sequence::routes())

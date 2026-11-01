@@ -438,3 +438,61 @@ fn journey_routes_count_cap_and_remove() {
         assert_eq!(run_status, "cancelled");
     });
 }
+
+// feature: E8
+#[test]
+fn pause_and_resume_a_journey() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        install_marketing(&app).await;
+        let j = journey(&app).await;
+        let logicalname: String =
+            sqlx::query_scalar("SELECT logicalname FROM workflow_definition WHERE id = $1")
+                .bind(j.definition)
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        let record: Uuid = sqlx::query_scalar(
+            "INSERT INTO marketing_journey (workflow_definition_logicalname, status, is_active, row_version) VALUES ($1, 'live', true, 0) RETURNING id",
+        )
+        .bind(&logicalname)
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        let instance = run(&app, &j, Uuid::now_v7(), &[("wait", "waiting")], "active").await;
+        let status = |table: &'static str, id: Uuid| {
+            let app = &app;
+            async move {
+                sqlx::query_scalar::<_, String>(&format!(
+                    "SELECT status FROM {table} WHERE id = $1"
+                ))
+                .bind(id)
+                .fetch_one(app.db())
+                .await
+                .unwrap()
+            }
+        };
+
+        let base = format!("/api/v1/marketing/journeys/{record}");
+        let (code, body) = app
+            .request(Method::POST, &format!("{base}/pause"), None)
+            .await;
+        assert_eq!(code, StatusCode::OK, "{body}");
+        assert_eq!(body["runs"], 1, "{body}");
+        assert_eq!(status("workflow_instance", instance).await, "paused");
+        assert_eq!(status("marketing_journey", record).await, "paused");
+        let (code, _) = app
+            .request(Method::POST, &format!("{base}/pause"), None)
+            .await;
+        assert_eq!(code, StatusCode::CONFLICT, "pausing twice");
+
+        let (code, body) = app
+            .request(Method::POST, &format!("{base}/resume"), None)
+            .await;
+        assert_eq!(code, StatusCode::OK, "{body}");
+        assert_eq!(status("workflow_instance", instance).await, "running");
+        assert_eq!(status("marketing_journey", record).await, "live");
+    });
+}

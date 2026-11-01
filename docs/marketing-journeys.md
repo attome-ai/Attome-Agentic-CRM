@@ -61,7 +61,12 @@ puts before them, moves; everyone else finishes on the old version.
 - `DELETE /api/v1/marketing/journeys/{id}/enrolments/{enrolment_id}` takes a person out: the enrolment
   ends as `removed` and the run is cancelled.
 
-Reading needs `marketing_journey.read`; enrolling and removing need `marketing_journey.update`.
+- `POST /api/v1/marketing/journeys/{id}/pause` stops a live journey: it takes no one new and every run
+  in it pauses where it is, whatever its next step; `POST .../resume` makes it live again and the runs go
+  on where they stopped.
+
+Reading needs `marketing_journey.read`; enrolling, removing, pausing and resuming need
+`marketing_journey.update`.
 
 ## Erasure
 
@@ -70,5 +75,5 @@ journey enrolments, blocks and message log, and cancels their running journeys, 
 
 ## Not built yet
 
-Publishing with a version choice, pausing and resuming a journey, and simulation have no journey routes
-yet; publish through the workflow routes.
+Publishing with a version choice and simulation have no journey routes yet; publish through the
+workflow routes.

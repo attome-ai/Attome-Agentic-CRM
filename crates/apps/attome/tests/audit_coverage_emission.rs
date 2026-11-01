@@ -66,6 +66,18 @@ const PASSWORD: &str = "audit-emission-password-1";
 /// cannot silently outlive its route.
 const UNDRIVABLE: &[(&str, &str)] = &[
     (
+        "POST /api/v1/marketing/journeys/{id}/pause",
+        "needs a journey (the marketing pack's marketing_journey) with a workflow definition and \
+         an active run; the pause writes its Configuration event through write_security_event in \
+         its transaction; attome-testapp's journey_insight.rs pause_and_resume_a_journey drives it",
+    ),
+    (
+        "POST /api/v1/marketing/journeys/{id}/resume",
+        "needs a paused journey with a paused run; the resume writes its Configuration event \
+         through write_security_event in its transaction; attome-testapp's journey_insight.rs \
+         pause_and_resume_a_journey drives it",
+    ),
+    (
         "POST /{keyword}/api/v1/partner/members",
         "needs a signed-in partner administrator on a portal with the partner packs installed; \
          the invitation writes its Credential event through SecurityTx, as \
