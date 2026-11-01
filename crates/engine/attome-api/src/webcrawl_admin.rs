@@ -559,6 +559,7 @@ fn if_match(headers: &HeaderMap) -> Result<i64, AppError> {
 #[utoipa::path(
     patch,
     path = "/api/v1/webcrawl/targets/{id}",
+    operation_id = "patch_webcrawl_target",
     tag = "admin-webcrawl",
     params(
         ("id" = Uuid, Path, description = "The source"),
@@ -607,6 +608,7 @@ async fn patch_target(
 #[utoipa::path(
     get,
     path = "/api/v1/webcrawl/targets/{id}/runs",
+    operation_id = "get_webcrawl_target_runs",
     tag = "admin-webcrawl",
     params(("id" = Uuid, Path, description = "The source"), OnePageQuery),
     responses(
@@ -636,6 +638,7 @@ async fn list_runs(
 #[utoipa::path(
     get,
     path = "/api/v1/webcrawl/targets/{id}/changes",
+    operation_id = "get_webcrawl_target_changes",
     tag = "admin-webcrawl",
     params(("id" = Uuid, Path, description = "The source"), OnePageQuery),
     responses(

@@ -23,6 +23,7 @@ use utoipa::ToSchema;
 #[utoipa::path(
     get,
     path = "/api/v1/bases/{base}/records",
+    operation_id = "get_base_records",
     tag = "entity",
     params(("base" = String, Path, description = "The base entity's logical name"), BaseRecordsQuery),
     responses(
@@ -58,6 +59,7 @@ pub struct ReindexQueued {
 #[utoipa::path(
     post,
     path = "/api/v1/admin/bases/{base}/reindex",
+    operation_id = "post_base_reindex",
     tag = "admin",
     params(("base" = String, Path, description = "The base entity's logical name")),
     responses(

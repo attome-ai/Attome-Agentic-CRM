@@ -363,6 +363,7 @@ fn if_match(headers: &HeaderMap) -> Result<i64, AppError> {
 #[utoipa::path(
     get,
     path = "/api/v1/admin/integrations/whatsapp/numbers",
+    operation_id = "get_whatsapp_numbers",
     tag = "admin",
     responses(
         (status = 200, description = "Success", body = PaginatedResponse<WhatsAppNumber>),
@@ -418,6 +419,7 @@ async fn list_numbers(
 #[utoipa::path(
     post,
     path = "/api/v1/admin/integrations/whatsapp/{id}/templates/sync",
+    operation_id = "post_whatsapp_template_sync",
     tag = "admin",
     params(("id" = Uuid, Path, description = "The WhatsApp system")),
     responses(
@@ -466,6 +468,7 @@ async fn post_sync(
 #[utoipa::path(
     get,
     path = "/api/v1/admin/integrations/whatsapp/{id}/templates",
+    operation_id = "get_whatsapp_templates",
     tag = "admin",
     params(("id" = Uuid, Path, description = "The WhatsApp system")),
     responses(
@@ -504,6 +507,7 @@ async fn list_templates(
 #[utoipa::path(
     put,
     path = "/api/v1/admin/integrations/whatsapp/templates/{template_id}/variables",
+    operation_id = "put_whatsapp_template_variables",
     tag = "admin",
     params(
         ("template_id" = Uuid, Path, description = "The template"),
