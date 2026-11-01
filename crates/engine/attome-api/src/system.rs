@@ -408,6 +408,9 @@ impl EngineSystem {
             // as `files::routes()` just above.
             .merge(crate::communication::routes())
             .merge(attome_notification::admin::routes())
+            // A1-T5: the base list reads each entity under the caller's own
+            // record security; the rebuild is a data-model admin route.
+            .merge(crate::base_index_routes::routes())
             .merge(
                 // D-365
                 crate::webcrawl_admin::routes().layer(middleware::from_fn_with_state(

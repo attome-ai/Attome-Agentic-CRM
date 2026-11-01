@@ -294,6 +294,8 @@ pub mod validation_simulation;
 pub mod validation_stats;
 pub mod view_admin;
 mod webcrawl_admin;
+// A1-T5: a base's records across its entities, and the index rebuild.
+mod base_index_routes;
 
 pub use approval_admin::{
     AutoExecution, KNOWN_ACTION_TYPES, PRODUCTION_MANDATORY_ACTIONS, execute_approved_request,

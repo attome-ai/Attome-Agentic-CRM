@@ -1703,6 +1703,13 @@ async fn dispatch_platform_job(
                 tracing::info!(queued, "contract review: comparisons queued");
             }
         }
+        // A1-T5: base indexes follow the records of their entities.
+        EngineJob::BaseIndexSweep => {
+            let touched = attome_records::base_index::run(&attome_state).await?;
+            if touched > 0 {
+                tracing::debug!(touched, "base index: records re-read");
+            }
+        }
         // W1-T3: counterparty match proposals, on demand.
         EngineJob::ContractCounterpartyMatch => {
             let run = attome_contract::counterparty::run_match(&db).await?;
@@ -3058,6 +3065,7 @@ const DEDUP_KEY_RECURRING_TASK_ROLL: &str = "recurring-task-roll";
 const DEDUP_KEY_CONTRACT_LINK_SWEEP: &str = "contract-link-sweep";
 const DEDUP_KEY_CONTRACT_SIGNATURE_SWEEP: &str = "contract-signature-sweep";
 const DEDUP_KEY_CONTRACT_REVIEW_SWEEP: &str = "contract-review-sweep";
+const DEDUP_KEY_BASE_INDEX_SWEEP: &str = "base-index-sweep";
 const DEDUP_KEY_GEOCODE_SWEEP: &str = "geocode-sweep";
 const DEDUP_KEY_BILLING_HANDOFF_SWEEP: &str = "billing-handoff-sweep";
 const DEDUP_KEY_BILLING_RENEWAL_SWEEP: &str = "billing-renewal-sweep";
@@ -3801,6 +3809,11 @@ pub const STATUS_PAGE_NOTIFY: attome_jobs::JobType =
 /// `attome_contract::compare::CompareJob`). Only enqueued.
 pub const CONTRACT_COMPARE: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_contract::compare::JOB, 1);
+
+/// A1-T5: one base's index rebuilt from its entities' tables (payload
+/// `attome_records::base_index::ReindexJob`). Only enqueued.
+pub const BASE_REINDEX: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_records::base_index::JOB, 1);
 
 /// D23-T10: one account's org chart drafts, written as the requester
 /// (payload `attome_sales::orgchart::drafts::DraftJob`). Only enqueued.
@@ -5716,6 +5729,19 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            BASE_REINDEX,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: attome_records::base_index::ReindexJob = job.payload()?;
+                let written = attome_records::base_index::reindex(&state, &payload.base)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(base = %payload.base, written, "base index rebuilt");
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             SALES_ORGCHART_DRAFT,
             |state: EngineState, job: attome_jobs::RegisteredJob| async move {
                 if !state.modules.load().has(attome_modules::MODULE_SALES) {
@@ -6109,6 +6135,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::ContractLinkSweep => DEDUP_KEY_CONTRACT_LINK_SWEEP,
         EngineJob::ContractSignatureSweep => DEDUP_KEY_CONTRACT_SIGNATURE_SWEEP,
         EngineJob::ContractReviewSweep => DEDUP_KEY_CONTRACT_REVIEW_SWEEP,
+        EngineJob::BaseIndexSweep => DEDUP_KEY_BASE_INDEX_SWEEP,
         EngineJob::GeocodeSweep => DEDUP_KEY_GEOCODE_SWEEP,
         EngineJob::BillingHandoffSweep => DEDUP_KEY_BILLING_HANDOFF_SWEEP,
         EngineJob::BillingRenewalSweep => DEDUP_KEY_BILLING_RENEWAL_SWEEP,
@@ -8958,6 +8985,17 @@ pub fn spawn_contract_review_scheduler(db: DbPool, interval: std::time::Duration
         EngineJob::ContractReviewSweep,
         DEDUP_KEY_CONTRACT_REVIEW_SWEEP,
         "contract review",
+    );
+}
+
+/// A1-T5: every minute, base indexes follow their entities' writes.
+pub fn spawn_base_index_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::BaseIndexSweep,
+        DEDUP_KEY_BASE_INDEX_SWEEP,
+        "base index",
     );
 }
 

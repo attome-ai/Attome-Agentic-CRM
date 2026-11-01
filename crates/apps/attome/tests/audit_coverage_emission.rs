@@ -2034,6 +2034,10 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
     let t = Some(fx.admin_token.as_str());
     const S: &str = "/api/v1/admin/security";
     let req = match key {
+        // ── A1-T5: a base's index rebuild, queued (Configuration Update) ─────
+        "POST /api/v1/admin/bases/{base}/reindex" => {
+            request("POST", "/api/v1/admin/bases/note/reindex", t, None)
+        }
         // ── attome-profiler ───────────────────────────────────────────────────
         // D-542 mandatory policy: the audited reset is a Configuration
         // HardDelete, so the emission test must drive it.
@@ -5829,12 +5833,7 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             )
             .await;
             let id = created["id"].as_str().expect("the rate's id");
-            request(
-                "DELETE",
-                &format!("/api/v1/exchange-rates/{id}"),
-                t,
-                None,
-            )
+            request("DELETE", &format!("/api/v1/exchange-rates/{id}"), t, None)
         }
         // A21-T4: replaying a removal writes its event too.
         "POST /api/v1/admin/model/apps/{app}/retire" => request(

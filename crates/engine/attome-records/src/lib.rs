@@ -36,6 +36,8 @@ pub mod approval_lock;
 /// Q19-T1: encryption of labelled attributes, blind indexes, and the
 /// refusal of sorts and range filters on them.
 pub mod attr_crypto;
+/// A1-T5: one index per base entity, kept from the change feed.
+pub mod base_index;
 pub mod bulk;
 /// B5-T1: `POST /api/v1/{entity}/bulk-edit`, per-attribute operations over
 /// many records, applied by the bulk engine.

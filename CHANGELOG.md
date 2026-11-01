@@ -14,6 +14,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- A base entity's records across every entity that extends it are one read (A1-T5):
+  `GET /api/v1/bases/{base}/records` lists them due first with their entity, owner, status and due time,
+  filtered by `owner=me` or a user and by `status`, each entity under the caller's own record security.
+  The index (`base_record_index`, migration 0355) takes `status` and `due_at` (or `due_date`) from the
+  base's own fields, which every child carries, and follows each write through the `BaseIndexSweep`
+  change-feed job; `POST /api/v1/admin/bases/{base}/reindex` rebuilds a base in the background.
 - Web crawling into knowledge is documented (K6-T14): `docs/web-crawling.md` covers who manages
   sources, every setting, a crawl and its safety rules, runs, imports and review, watch-only sources, the
   agent tools and the configuration. Routes: `/api/v1/webcrawl/targets` (GET, POST), `/{id}` (PATCH,
