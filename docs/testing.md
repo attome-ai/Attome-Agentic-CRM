@@ -130,6 +130,9 @@ runs them on any version and lists the nodes some case reached (`covered`) and t
 failed run on a record into a test in one step: it re-creates the record as it stands and expects
 the flow to complete on it, so it fails until the flow is fixed.
 
+A step's value `{"$ref": "<name>"}` is replaced by the id of the record the test named so earlier
+(a `given` record or a create's `ref`), so a step can point a lookup at it.
+
 An **acceptance script** is a customer test whose definition is only a checklist, for business users
 to try by hand: `{"checklist": ["Open a lead", "Convert it to an account"]}` (at most 100 steps of 1
 to 500 characters; no `given`, `when` or `expect` beside it). No automatic run picks it up (run all,

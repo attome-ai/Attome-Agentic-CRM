@@ -17,6 +17,14 @@ install: `@entity:account`, `@attribute:account.industry`, `@view:account/Active
 `@query:account/Open Pipeline` (`@query:/<name>` for a query of no entity) and
 `@<kind>:<app>/<name>` for another model object, this pack's own included (`@component:crm/kpi_tile`).
 
+A pack may also keep **golden workflows** in `golden/golden.json` (`attome-pack-golden/v1`): `packs`,
+the packs to install first, in order (itself included), and `tests`, customer tests (`name`,
+`description`, `definition`, as `docs/testing.md` describes them) over bilingual sample records. A
+value `{"$ref": "<name>"}` in a step points a lookup at a record the test named earlier. The
+attome-testapp test `pack_golden_workflows_pass` installs each pack's list and runs its tests, so they
+run in the release gate's `tests` step on every release; nothing a test does is kept. Boot never reads
+`golden/`.
+
 ## library-core
 
 The MENA base library other packs and agents build on (A1-T12): `party` (a person or an

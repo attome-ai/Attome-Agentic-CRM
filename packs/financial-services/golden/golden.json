@@ -1,0 +1,111 @@
+{
+  "format": "attome-pack-golden/v1",
+  "packs": ["crm", "financial-services"],
+  "tests": [
+    {
+      "name": "A murabaha home financing goes from intake to disbursement",
+      "description": "تمويل سكني بالمرابحة من الاستلام إلى الصرف. The application passes documents, credit review, approval, offer and acceptance, and keeps its structure.",
+      "definition": {
+        "given": [
+          { "entity": "account", "ref": "client", "record": { "name": "مؤسسة النور التجارية Al Noor Trading" } },
+          {
+            "entity": "fs_product",
+            "ref": "product",
+            "record": { "name": "Home Finance", "name_ar": "التمويل السكني", "category": "home_finance", "structure": "murabaha", "is_active": true }
+          }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "fs_financing_application",
+            "ref": "application",
+            "values": {
+              "reference": "FA-GOLDEN-0001",
+              "account_ref": { "$ref": "client" },
+              "product_ref": { "$ref": "product" },
+              "structure": "murabaha",
+              "amount": 750000,
+              "tenor_months": 240,
+              "channel": "branch",
+              "status": "intake"
+            }
+          },
+          { "op": "update", "entity": "fs_financing_application", "ref": "application", "values": { "status": "documents" } },
+          { "op": "update", "entity": "fs_financing_application", "ref": "application", "values": { "status": "credit_review" } },
+          { "op": "update", "entity": "fs_financing_application", "ref": "application", "values": { "status": "approval" } },
+          { "op": "update", "entity": "fs_financing_application", "ref": "application", "values": { "status": "offer" } },
+          { "op": "update", "entity": "fs_financing_application", "ref": "application", "values": { "status": "accepted" } },
+          { "op": "update", "entity": "fs_financing_application", "ref": "application", "values": { "status": "disbursed" } }
+        ],
+        "expect": [
+          { "entity": "fs_financing_application", "ref": "application", "attribute": "status", "equals": "disbursed" },
+          { "entity": "fs_financing_application", "ref": "application", "attribute": "structure", "equals": "murabaha" }
+        ]
+      }
+    },
+    {
+      "name": "A financing application cannot skip credit review",
+      "description": "لا يصل طلب التمويل إلى العرض دون مراجعة ائتمانية. Moving from intake straight to an offer is refused and the application stays in intake.",
+      "definition": {
+        "given": [
+          { "entity": "account", "ref": "client", "record": { "name": "شركة الريادة Al Riyada Co." } },
+          {
+            "entity": "fs_product",
+            "ref": "product",
+            "record": { "name": "Auto Finance", "name_ar": "تمويل السيارات", "category": "auto_finance", "structure": "ijara" }
+          }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "fs_financing_application",
+            "ref": "application",
+            "values": {
+              "reference": "FA-GOLDEN-0002",
+              "account_ref": { "$ref": "client" },
+              "product_ref": { "$ref": "product" },
+              "structure": "ijara",
+              "amount": 120000,
+              "status": "intake"
+            }
+          },
+          { "op": "update", "entity": "fs_financing_application", "ref": "application", "values": { "status": "offer" } }
+        ],
+        "expect": [
+          { "error": "validation" },
+          { "entity": "fs_financing_application", "ref": "application", "attribute": "status", "equals": "intake" }
+        ]
+      }
+    },
+    {
+      "name": "A regulated complaint keeps its regulator and outcome",
+      "description": "شكوى خاضعة للتنظيم لدى البنك المركزي. A complaint to SAMA is received, partly upheld with compensation, and keeps its regulator.",
+      "definition": {
+        "given": [
+          { "entity": "account", "ref": "client", "record": { "name": "مؤسسة الأمل Al Amal Est." } }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "fs_complaint",
+            "ref": "complaint",
+            "values": {
+              "reference": "CMP-GOLDEN-0001",
+              "account_ref": { "$ref": "client" },
+              "regulator": "sama",
+              "category": "رسوم غير متوقعة / unexpected fees",
+              "received_on": "2026-10-01T09:00:00Z",
+              "regulator_deadline": "2026-10-31T09:00:00Z",
+              "outcome": "open"
+            }
+          },
+          { "op": "update", "entity": "fs_complaint", "ref": "complaint", "values": { "outcome": "partly_upheld", "compensation": 250 } }
+        ],
+        "expect": [
+          { "entity": "fs_complaint", "ref": "complaint", "attribute": "outcome", "equals": "partly_upheld" },
+          { "entity": "fs_complaint", "ref": "complaint", "attribute": "regulator", "equals": "sama" }
+        ]
+      }
+    }
+  ]
+}

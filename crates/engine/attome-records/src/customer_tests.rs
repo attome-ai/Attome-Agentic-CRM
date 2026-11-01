@@ -294,6 +294,32 @@ struct Run<'a> {
     refs: HashMap<String, (String, Uuid)>,
 }
 
+/// X3-T2: `values` with every `{"$ref": "<name>"}` replaced by the id of
+/// the record the test named so, so a step can point a lookup at a record
+/// made earlier. An unknown name is a validation error. Pure.
+pub fn resolve_refs(
+    values: &Map<String, Value>,
+    refs: &HashMap<String, (String, Uuid)>,
+) -> Result<Map<String, Value>, AppError> {
+    values
+        .iter()
+        .map(|(key, value)| {
+            let resolved = match value
+                .as_object()
+                .filter(|o| o.len() == 1)
+                .and_then(|o| o.get("$ref"))
+            {
+                Some(Value::String(name)) => refs
+                    .get(name)
+                    .map(|(_, id)| Value::String(id.to_string()))
+                    .ok_or_else(|| AppError::Validation(format!("no record named {name}")))?,
+                _ => value.clone(),
+            };
+            Ok((key.clone(), resolved))
+        })
+        .collect()
+}
+
 impl Run<'_> {
     async fn create(
         &mut self,
@@ -304,6 +330,7 @@ impl Run<'_> {
         reference: Option<&str>,
     ) -> Result<Uuid, AppError> {
         ctx.require(entity, "create")?;
+        let values = &resolve_refs(values, &self.refs)?;
         let meta = self
             .state
             .entities
@@ -369,7 +396,8 @@ impl Run<'_> {
                     .get(&step.entity)
                     .cloned()
                     .ok_or(AppError::NotFound)?;
-                crate::entity_mutation::validate_body(&meta.attrs, &step.values, false)?;
+                let values = resolve_refs(&step.values, &self.refs)?;
+                crate::entity_mutation::validate_body(&meta.attrs, &values, false)?;
                 let version = read_row(tx, &step.entity, id)
                     .await?
                     .and_then(|row| row["row_version"].as_i64())
@@ -382,7 +410,7 @@ impl Run<'_> {
                     meta.entity_id,
                     id,
                     &meta.attrs,
-                    &step.values,
+                    &values,
                     ctx.user_id,
                     version,
                     MutationMode::Strict,
@@ -1619,6 +1647,20 @@ pub async fn import_tests(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_ref_value_points_at_a_record_named_earlier() {
+        let id = Uuid::now_v7();
+        let refs = HashMap::from([("acct".to_owned(), ("account".to_owned(), id))]);
+        let values = json!({ "account_ref": { "$ref": "acct" }, "amount": 5, "meta": { "a": 1 } });
+        let resolved =
+            resolve_refs(values.as_object().expect("an object"), &refs).expect("resolved");
+        assert_eq!(resolved["account_ref"], json!(id.to_string()));
+        assert_eq!(resolved["amount"], json!(5));
+        assert_eq!(resolved["meta"], json!({ "a": 1 }));
+        let unknown = json!({ "account_ref": { "$ref": "nobody" } });
+        assert!(resolve_refs(unknown.as_object().expect("an object"), &refs).is_err());
+    }
 
     #[test]
     fn an_acceptance_script_is_a_checklist_marked_step_by_step() {
