@@ -1770,6 +1770,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/bases/{base}/reindex": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rebuild a base's index
+         * @description Rebuilds the base's index from its entities' tables in the background.
+         *     The index follows every write by itself; this is for after a restore or
+         *     a change to which entities extend the base. Audited.
+         */
+        post: operations["post_base_reindex"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/bin-settings": {
         parameters: {
             query?: never;
@@ -3457,6 +3479,29 @@ export interface paths {
         get: operations["export_customer_tests"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/customer-tests/from-record": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * A customer test from a record
+         * @description Drafts and saves a test from one record the caller can read (T7-T4): it
+         *     re-creates the record and checks each copyable field still holds its
+         *     value once saved, so a rule, default or flow that would change it shows.
+         *     Edit it from there. Administrators only. Audited.
+         */
+        post: operations["create_customer_test_from_record"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6370,6 +6415,90 @@ export interface paths {
         get: operations["get_load_script"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/integrations/whatsapp/numbers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List WhatsApp numbers
+         * @description The deployment's WhatsApp numbers (integration systems with
+         *     `"social": "whatsapp"`), with their template counts.
+         */
+        get: operations["get_whatsapp_numbers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/integrations/whatsapp/templates/{template_id}/variables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Map a template's variables
+         * @description Sets which attribute fills each of the template's variables, under the
+         *     template's row version (`If-Match`). Audited.
+         */
+        put: operations["put_whatsapp_template_variables"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/integrations/whatsapp/{id}/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a number's templates
+         * @description The number's synced templates with their variables and variable maps.
+         */
+        get: operations["get_whatsapp_templates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/integrations/whatsapp/{id}/templates/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync a number's templates
+         * @description Reads the number's approved message templates from Meta and keeps them:
+         *     new ones added, changed ones updated (their variable maps kept where the
+         *     variable still exists), ones no longer approved removed. Audited.
+         */
+        post: operations["post_whatsapp_template_sync"];
         delete?: never;
         options?: never;
         head?: never;
@@ -16228,6 +16357,29 @@ export interface paths {
          *     necessarily logged in when clicking the emailed link.
          */
         post: operations["verify_email_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bases/{base}/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A base's records
+         * @description The records of every entity that extends the base, at any depth, that
+         *     the caller may read in their own entity: id, entity, owner, status and
+         *     due time, due first. `owner=me` keeps the caller's own. One-based pages,
+         *     at most 10,000 records deep.
+         */
+        get: operations["get_base_records"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -28533,7 +28685,7 @@ export interface paths {
          *     everything but the intranet host and the credential, which stay with
          *     administrators. Audited.
          */
-        patch: operations["patch_target"];
+        patch: operations["patch_webcrawl_target"];
         trace?: never;
     };
     "/api/v1/webcrawl/targets/{id}/changes": {
@@ -28549,7 +28701,7 @@ export interface paths {
          *     them: their text is kept and they wait for review (importing the page
          *     again takes the site's version).
          */
-        get: operations["list_changes"];
+        get: operations["get_webcrawl_target_changes"];
         put?: never;
         post?: never;
         delete?: never;
@@ -28652,7 +28804,7 @@ export interface paths {
          * @description Each crawl of the source, newest first: when it ran, how it ended, the
          *     pages it found and what it did to the source's knowledge items.
          */
-        get: operations["list_runs"];
+        get: operations["get_webcrawl_target_runs"];
         put?: never;
         post?: never;
         delete?: never;
@@ -33002,6 +33154,15 @@ export interface components {
             /** Format: uuid */
             from_ref: string;
         };
+        /** @description One test's result in a publish preview. */
+        AffectedTestResult: {
+            blocking: boolean;
+            failures: string[];
+            /** Format: uuid */
+            id: string;
+            name: string;
+            passed: boolean;
+        };
         /** @description One account's open amounts in one currency, by days past due. */
         AgeingRow: {
             /** Format: uuid */
@@ -34704,6 +34865,17 @@ export interface components {
             total_assets: string;
             total_equity: string;
             total_liabilities: string;
+        };
+        /** @description One record of a base, whichever entity holds it. */
+        BaseRecord: {
+            /** Format: date-time */
+            due_at?: string | null;
+            entity: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            owner?: string | null;
+            status?: string | null;
         };
         /** @description The baseline as the screen shows it. */
         BaselineView: {
@@ -39634,6 +39806,12 @@ export interface components {
             /** @description The given/when/expect definition. */
             definition: Record<string, never>;
             description?: string | null;
+            /**
+             * Format: date-time
+             * @description T7-T3: when its runs first both passed and failed on one test and
+             *     configuration version; cleared when the test is edited.
+             */
+            flaky_since?: string | null;
             /** Format: uuid */
             id: string;
             is_active: boolean;
@@ -39641,6 +39819,8 @@ export interface components {
             last_passed?: boolean | null;
             /** Format: date-time */
             last_run_at?: string | null;
+            /** @description T7-T3: run every night against the live configuration. */
+            live_safe: boolean;
             name: string;
             /** Format: int64 */
             row_version: number;
@@ -39652,6 +39832,8 @@ export interface components {
             blocking?: boolean;
             definition: Record<string, never>;
             description?: string | null;
+            /** @description T7-T3: run every night against the live configuration. */
+            live_safe?: boolean;
             name: string;
         };
         /**
@@ -39675,6 +39857,7 @@ export interface components {
             definition?: Record<string, never> | null;
             description?: string | null;
             is_active?: boolean | null;
+            live_safe?: boolean | null;
             name?: string | null;
         };
         /** @description One recorded run. */
@@ -43465,6 +43648,14 @@ export interface components {
             /** Format: uuid */
             list_id: string;
         };
+        /** @description What a test from a record starts from. */
+        FromRecordBody: {
+            entity: string;
+            /** @description The test's name; a name from the record when left out. */
+            name?: string | null;
+            /** Format: uuid */
+            record_id: string;
+        };
         FulfillErasureBody: {
             scopes: components["schemas"]["DsrScope"][];
         };
@@ -47131,6 +47322,11 @@ export interface components {
         };
         ModelValidateResponse: {
             issues: components["schemas"]["IssueView"][];
+            /**
+             * @description T7-T2: with `run_tests`, the customer tests the object can affect and
+             *     how they ran (blocking ones stop a publish while the guard is on).
+             */
+            tests: components["schemas"]["AffectedTestResult"][];
             valid: boolean;
             /**
              * @description B22-T2: accessibility findings with their fixes (a form's or a page's
@@ -48868,6 +49064,11 @@ export interface components {
             /** Format: uuid */
             imported_data_item_ref?: string | null;
             is_selected: boolean;
+            /**
+             * @description K6-T11: `ar`, `en` or another language the page declared; `None`
+             *     before it is crawled.
+             */
+            language?: string | null;
             parent_path?: string | null;
             /** Format: int32 */
             size_bytes?: number | null;
@@ -49881,6 +50082,30 @@ export interface components {
                 display_order: number;
                 name: string;
                 to_state: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_BaseRecord: {
+            items: {
+                /** Format: date-time */
+                due_at?: string | null;
+                entity: string;
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                owner?: string | null;
+                status?: string | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -51035,6 +51260,12 @@ export interface components {
                 /** @description The given/when/expect definition. */
                 definition: Record<string, never>;
                 description?: string | null;
+                /**
+                 * Format: date-time
+                 * @description T7-T3: when its runs first both passed and failed on one test and
+                 *     configuration version; cleared when the test is edited.
+                 */
+                flaky_since?: string | null;
                 /** Format: uuid */
                 id: string;
                 is_active: boolean;
@@ -51042,6 +51273,8 @@ export interface components {
                 last_passed?: boolean | null;
                 /** Format: date-time */
                 last_run_at?: string | null;
+                /** @description T7-T3: run every night against the live configuration. */
+                live_safe: boolean;
                 name: string;
                 /** Format: int64 */
                 row_version: number;
@@ -57808,6 +58041,60 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_WhatsAppNumber: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+                phone_number_id?: string | null;
+                /** Format: date-time */
+                synced_at?: string | null;
+                /** Format: int64 */
+                templates: number;
+                waba_id?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_WhatsAppTemplate: {
+            items: {
+                category: string;
+                components: Record<string, never>;
+                /** Format: uuid */
+                id: string;
+                language: string;
+                name: string;
+                /** Format: int64 */
+                row_version: number;
+                /** Format: date-time */
+                synced_at: string;
+                /** @description Variable to attribute, e.g. `{"body.1": "first_name"}`. */
+                variable_map: Record<string, never>;
+                variables: string[];
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_WorkItemRollupRow: {
             items: {
                 /** Format: date-time */
@@ -60985,6 +61272,10 @@ export interface components {
             is_required?: boolean | null;
             /** Format: int32 */
             max_length?: number | null;
+        };
+        /** @description The rebuild, queued. */
+        ReindexQueued: {
+            base: string;
         };
         /** @description An event left out, by its place in the batch. */
         RejectedEvent: {
@@ -66463,6 +66754,15 @@ export interface components {
             plan_id?: string | null;
             status: components["schemas"]["SyncStatus"];
         };
+        /** @description What a sync did. */
+        SyncResult: {
+            /** Format: int64 */
+            added: number;
+            /** Format: int64 */
+            removed: number;
+            /** Format: int64 */
+            updated: number;
+        };
         /**
          * @description What one [`sync`] call did.
          * @enum {string}
@@ -68244,6 +68544,8 @@ export interface components {
         ValidateRequest: {
             /** @description The document to check, as it would be saved. */
             doc: Record<string, never>;
+            /** @description T7-T2: also run the customer tests the object can affect. */
+            run_tests?: boolean;
         };
         ValidateResponse: {
             issues: components["schemas"]["RuleIssue"][];
@@ -68268,6 +68570,10 @@ export interface components {
         VapidKey: {
             /** @description The application server key for `PushManager.subscribe`, base64url. */
             public_key: string;
+        };
+        /** @description A variable map to set. */
+        VariableMapBody: {
+            variable_map: Record<string, never>;
         };
         /**
          * @description `GET /api/v1/process/case-defs/{id}/variants` — the latest computed
@@ -68792,6 +69098,34 @@ export interface components {
             service_level: (number | null)[];
             /** Format: int32 */
             under: number;
+        };
+        /** @description A WhatsApp number. */
+        WhatsAppNumber: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            phone_number_id?: string | null;
+            /** Format: date-time */
+            synced_at?: string | null;
+            /** Format: int64 */
+            templates: number;
+            waba_id?: string | null;
+        };
+        /** @description One template of a number. */
+        WhatsAppTemplate: {
+            category: string;
+            components: Record<string, never>;
+            /** Format: uuid */
+            id: string;
+            language: string;
+            name: string;
+            /** Format: int64 */
+            row_version: number;
+            /** Format: date-time */
+            synced_at: string;
+            /** @description Variable to attribute, e.g. `{"body.1": "first_name"}`. */
+            variable_map: Record<string, never>;
+            variables: string[];
         };
         /** @enum {string} */
         WidgetCategory: "chart" | "text" | "operational" | "engine_native" | "geospatial" | "custom" | "kpi";
@@ -73905,6 +74239,56 @@ export interface operations {
             };
             /** @description Caller is not an administrator */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_base_reindex: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The base entity's logical name */
+                base: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReindexQueued"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -80061,6 +80445,66 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_customer_test_from_record: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FromRecordBody"];
+            };
+        };
+        responses: {
+            /** @description The test */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerTest"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity or record the caller can read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A test with that name exists */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -89217,6 +89661,228 @@ export interface operations {
                 };
             };
             /** @description A missing or unusable stage, dataset or bucket */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_whatsapp_numbers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_WhatsAppNumber"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_whatsapp_template_variables: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The template's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The template */
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VariableMapBody"];
+            };
+        };
+        responses: {
+            /** @description The template as it now stands */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppTemplate"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such template */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description version_conflict: the template changed since it was read */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A bad If-Match, an unknown variable or a bad attribute name */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_whatsapp_templates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The WhatsApp system */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_WhatsAppTemplate"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such WhatsApp number */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_whatsapp_template_sync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The WhatsApp system */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Synced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such WhatsApp number */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The number names no waba_id or has no access token, or Meta refused the list */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -117636,6 +118302,61 @@ export interface operations {
                 content?: never;
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_base_records: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The base entity's logical name */
+                base: string;
+                /** @description `me`, or a user id. */
+                owner: string | null;
+                status: string | null;
+                page: number | null;
+                page_size: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_BaseRecord"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No entity extends this base */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A bad owner, or a page too deep */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -150699,7 +151420,7 @@ export interface operations {
             };
         };
     };
-    patch_target: {
+    patch_webcrawl_target: {
         parameters: {
             query?: never;
             header: {
@@ -150774,7 +151495,7 @@ export interface operations {
             };
         };
     };
-    list_changes: {
+    get_webcrawl_target_changes: {
         parameters: {
             query?: {
                 /**
@@ -151041,7 +151762,7 @@ export interface operations {
             };
         };
     };
-    list_runs: {
+    get_webcrawl_target_runs: {
         parameters: {
             query?: {
                 /**

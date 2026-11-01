@@ -1231,6 +1231,363 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/admin/integrations/whatsapp/numbers": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List WhatsApp numbers",
+        "description": "The deployment's WhatsApp numbers (integration systems with\n`\"social\": \"whatsapp\"`), with their template counts.",
+        "operationId": "get_whatsapp_numbers",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_WhatsAppNumber"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "integration",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/integrations/whatsapp/templates/{template_id}/variables": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Map a template's variables",
+        "description": "Sets which attribute fills each of the template's variables, under the\ntemplate's row version (`If-Match`). Audited.",
+        "operationId": "put_whatsapp_template_variables",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "description": "The template",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The template's row_version, quoted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VariableMapBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The template as it now stands",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsAppTemplate"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such template",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "version_conflict: the template changed since it was read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A bad If-Match, an unknown variable or a bad attribute name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "integration",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/integrations/whatsapp/{id}/templates": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List a number's templates",
+        "description": "The number's synced templates with their variables and variable maps.",
+        "operationId": "get_whatsapp_templates",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The WhatsApp system",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_WhatsAppTemplate"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such WhatsApp number",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "integration",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/integrations/whatsapp/{id}/templates/sync": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Sync a number's templates",
+        "description": "Reads the number's approved message templates from Meta and keeps them:\nnew ones added, changed ones updated (their variable maps kept where the\nvariable still exists), ones no longer approved removed. Audited.",
+        "operationId": "post_whatsapp_template_sync",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The WhatsApp system",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Synced",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such WhatsApp number",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The number names no waba_id or has no access token, or Meta refused the list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "integration",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/mail-connections/microsoft/admin-consent-url": {
       "get": {
         "tags": [
@@ -2653,6 +3010,166 @@
           }
         }
       },
+      "PaginatedResponse_WhatsAppNumber": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A WhatsApp number.",
+              "required": [
+                "id",
+                "name",
+                "templates"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "phone_number_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "synced_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "templates": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "waba_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_WhatsAppTemplate": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One template of a number.",
+              "required": [
+                "id",
+                "name",
+                "language",
+                "category",
+                "components",
+                "variables",
+                "variable_map",
+                "synced_at",
+                "row_version"
+              ],
+              "properties": {
+                "category": {
+                  "type": "string"
+                },
+                "components": {
+                  "type": "object"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "language": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "synced_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "variable_map": {
+                  "type": "object",
+                  "description": "Variable to attribute, e.g. `{\"body.1\": \"first_name\"}`."
+                },
+                "variables": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "QueuedDeliveries": {
         "type": "object",
         "description": "M13-T4: what a test send or a replay queued.",
@@ -2987,6 +3504,32 @@
           }
         }
       },
+      "SyncResult": {
+        "type": "object",
+        "description": "What a sync did.",
+        "required": [
+          "added",
+          "updated",
+          "removed"
+        ],
+        "properties": {
+          "added": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "removed": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "updated": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
       "SystemCreatedResponse": {
         "type": "object",
         "required": [
@@ -3139,6 +3682,18 @@
           }
         }
       },
+      "VariableMapBody": {
+        "type": "object",
+        "description": "A variable map to set.",
+        "required": [
+          "variable_map"
+        ],
+        "properties": {
+          "variable_map": {
+            "type": "object"
+          }
+        }
+      },
       "Warehouse": {
         "type": "string",
         "description": "The warehouse a script is for.",
@@ -3199,6 +3754,57 @@
           "accepted": {
             "type": "integer",
             "minimum": 0
+          }
+        }
+      },
+      "WhatsAppTemplate": {
+        "type": "object",
+        "description": "One template of a number.",
+        "required": [
+          "id",
+          "name",
+          "language",
+          "category",
+          "components",
+          "variables",
+          "variable_map",
+          "synced_at",
+          "row_version"
+        ],
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "components": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "language": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "synced_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "variable_map": {
+            "type": "object",
+            "description": "Variable to attribute, e.g. `{\"body.1\": \"first_name\"}`."
+          },
+          "variables": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       }

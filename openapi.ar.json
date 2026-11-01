@@ -7890,6 +7890,92 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/admin/bases/{base}/reindex": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Rebuild a base's index",
+        "description": "Rebuilds the base's index from its entities' tables in the background.\nThe index follows every write by itself; this is for after a restore or\na change to which entities extend the base. Audited.",
+        "operationId": "post_base_reindex",
+        "parameters": [
+          {
+            "name": "base",
+            "in": "path",
+            "description": "The base entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReindexQueued"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/bin-settings": {
       "get": {
         "tags": [
@@ -17738,6 +17824,101 @@
         "x-privilege": "admin",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/customer-tests/from-record": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A customer test from a record",
+        "description": "Drafts and saves a test from one record the caller can read (T7-T4): it\nre-creates the record and checks each copyable field still holds its\nvalue once saved, so a rule, default or flow that would change it shows.\nEdit it from there. Administrators only. Audited.",
+        "operationId": "create_customer_test_from_record",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FromRecordBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The test",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerTest"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity or record the caller can read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A test with that name exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/admin/customer-tests/import": {
@@ -32963,6 +33144,363 @@
         "x-privilege": "admin",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/integrations/whatsapp/numbers": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List WhatsApp numbers",
+        "description": "The deployment's WhatsApp numbers (integration systems with\n`\"social\": \"whatsapp\"`), with their template counts.",
+        "operationId": "get_whatsapp_numbers",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_WhatsAppNumber"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "integration",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/integrations/whatsapp/templates/{template_id}/variables": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Map a template's variables",
+        "description": "Sets which attribute fills each of the template's variables, under the\ntemplate's row version (`If-Match`). Audited.",
+        "operationId": "put_whatsapp_template_variables",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "description": "The template",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The template's row_version, quoted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VariableMapBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The template as it now stands",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsAppTemplate"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such template",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "version_conflict: the template changed since it was read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A bad If-Match, an unknown variable or a bad attribute name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "integration",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/integrations/whatsapp/{id}/templates": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List a number's templates",
+        "description": "The number's synced templates with their variables and variable maps.",
+        "operationId": "get_whatsapp_templates",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The WhatsApp system",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_WhatsAppTemplate"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such WhatsApp number",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "integration",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/integrations/whatsapp/{id}/templates/sync": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Sync a number's templates",
+        "description": "Reads the number's approved message templates from Meta and keeps them:\nnew ones added, changed ones updated (their variable maps kept where the\nvariable still exists), ones no longer approved removed. Audited.",
+        "operationId": "post_whatsapp_template_sync",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The WhatsApp system",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Synced",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such WhatsApp number",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The number names no waba_id or has no access token, or Meta refused the list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "integration",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/admin/jobs/dead-letter": {
@@ -79377,6 +79915,130 @@
         "x-privilege": "public",
         "x-rate-class": "password_reset",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/bases/{base}/records": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "A base's records",
+        "description": "The records of every entity that extends the base, at any depth, that\nthe caller may read in their own entity: id, entity, owner, status and\ndue time, due first. `owner=me` keeps the caller's own. One-based pages,\nat most 10,000 records deep.",
+        "operationId": "get_base_records",
+        "parameters": [
+          {
+            "name": "base",
+            "in": "path",
+            "description": "The base entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "`me`, or a user id.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_BaseRecord"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No entity extends this base",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A bad owner, or a page too deep",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/billing/accounts/{id}/apply-credit": {
@@ -133762,7 +134424,7 @@
         ],
         "summary": "Change a crawl source's settings",
         "description": "Changes a source's settings; each one left out keeps its value. Send the\nsource's `row_version` as `If-Match`. A knowledge manager may change\neverything but the intranet host and the credential, which stay with\nadministrators. Audited.",
-        "operationId": "patch_target",
+        "operationId": "patch_webcrawl_target",
         "parameters": [
           {
             "name": "id",
@@ -133888,7 +134550,7 @@
         ],
         "summary": "A crawl source's changes to review",
         "description": "The source's knowledge items a recrawl changed after an editor published\nthem: their text is kept and they wait for review (importing the page\nagain takes the site's version).",
-        "operationId": "list_changes",
+        "operationId": "get_webcrawl_target_changes",
         "parameters": [
           {
             "name": "id",
@@ -134342,7 +135004,7 @@
         ],
         "summary": "A crawl source's runs",
         "description": "Each crawl of the source, newest first: when it ran, how it ended, the\npages it found and what it did to the source's knowledge items.",
-        "operationId": "list_runs",
+        "operationId": "get_webcrawl_target_runs",
         "parameters": [
           {
             "name": "id",
@@ -155354,6 +156016,38 @@
           }
         }
       },
+      "AffectedTestResult": {
+        "type": "object",
+        "description": "One test's result in a publish preview.",
+        "required": [
+          "id",
+          "name",
+          "blocking",
+          "passed",
+          "failures"
+        ],
+        "properties": {
+          "blocking": {
+            "type": "boolean"
+          },
+          "failures": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "passed": {
+            "type": "boolean"
+          }
+        }
+      },
       "AgeingRow": {
         "type": "object",
         "description": "One account's open amounts in one currency, by days past due.",
@@ -159623,6 +160317,43 @@
           },
           "total_liabilities": {
             "type": "string"
+          }
+        }
+      },
+      "BaseRecord": {
+        "type": "object",
+        "description": "One record of a base, whichever entity holds it.",
+        "required": [
+          "id",
+          "entity"
+        ],
+        "properties": {
+          "due_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "owner": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -172184,7 +172915,8 @@
           "is_active",
           "row_version",
           "created_at",
-          "updated_at"
+          "updated_at",
+          "live_safe"
         ],
         "properties": {
           "blocking": {
@@ -172212,6 +172944,14 @@
               "null"
             ]
           },
+          "flaky_since": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "T7-T3: when its runs first both passed and failed on one test and\nconfiguration version; cleared when the test is edited."
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -172232,6 +172972,10 @@
               "null"
             ],
             "format": "date-time"
+          },
+          "live_safe": {
+            "type": "boolean",
+            "description": "T7-T3: run every night against the live configuration."
           },
           "name": {
             "type": "string"
@@ -172265,6 +173009,10 @@
               "string",
               "null"
             ]
+          },
+          "live_safe": {
+            "type": "boolean",
+            "description": "T7-T3: run every night against the live configuration."
           },
           "name": {
             "type": "string"
@@ -172333,6 +173081,12 @@
             ]
           },
           "is_active": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "live_safe": {
             "type": [
               "boolean",
               "null"
@@ -181621,6 +182375,30 @@
             "description": "Whether people without consent for the purpose are skipped."
           },
           "list_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "FromRecordBody": {
+        "type": "object",
+        "description": "What a test from a record starts from.",
+        "required": [
+          "entity",
+          "record_id"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The test's name; a name from the record when left out."
+          },
+          "record_id": {
             "type": "string",
             "format": "uuid"
           }
@@ -191269,7 +192047,8 @@
         "required": [
           "valid",
           "issues",
-          "warnings"
+          "warnings",
+          "tests"
         ],
         "properties": {
           "issues": {
@@ -191277,6 +192056,13 @@
             "items": {
               "$ref": "#/components/schemas/IssueView"
             }
+          },
+          "tests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AffectedTestResult"
+            },
+            "description": "T7-T2: with `run_tests`, the customer tests the object can affect and\nhow they ran (blocking ones stop a publish while the guard is on)."
           },
           "valid": {
             "type": "boolean"
@@ -195764,6 +196550,13 @@
           "is_selected": {
             "type": "boolean"
           },
+          "language": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "K6-T11: `ar`, `en` or another language the page declared; `None`\nbefore it is crawled."
+          },
           "parent_path": {
             "type": [
               "string",
@@ -198569,6 +199362,77 @@
                 },
                 "to_state": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_BaseRecord": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One record of a base, whichever entity holds it.",
+              "required": [
+                "id",
+                "entity"
+              ],
+              "properties": {
+                "due_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "entity": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "owner": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 }
               }
             }
@@ -201508,7 +202372,8 @@
                 "is_active",
                 "row_version",
                 "created_at",
-                "updated_at"
+                "updated_at",
+                "live_safe"
               ],
               "properties": {
                 "blocking": {
@@ -201536,6 +202401,14 @@
                     "null"
                   ]
                 },
+                "flaky_since": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "description": "T7-T3: when its runs first both passed and failed on one test and\nconfiguration version; cleared when the test is edited."
+                },
                 "id": {
                   "type": "string",
                   "format": "uuid"
@@ -201556,6 +202429,10 @@
                     "null"
                   ],
                   "format": "date-time"
+                },
+                "live_safe": {
+                  "type": "boolean",
+                  "description": "T7-T3: run every night against the live configuration."
                 },
                 "name": {
                   "type": "string"
@@ -219385,6 +220262,166 @@
           }
         }
       },
+      "PaginatedResponse_WhatsAppNumber": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A WhatsApp number.",
+              "required": [
+                "id",
+                "name",
+                "templates"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "phone_number_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "synced_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "templates": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "waba_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_WhatsAppTemplate": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One template of a number.",
+              "required": [
+                "id",
+                "name",
+                "language",
+                "category",
+                "components",
+                "variables",
+                "variable_map",
+                "synced_at",
+                "row_version"
+              ],
+              "properties": {
+                "category": {
+                  "type": "string"
+                },
+                "components": {
+                  "type": "object"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "language": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "synced_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "variable_map": {
+                  "type": "object",
+                  "description": "Variable to attribute, e.g. `{\"body.1\": \"first_name\"}`."
+                },
+                "variables": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_WorkItemRollupRow": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -227452,6 +228489,18 @@
           }
         },
         "additionalProperties": false
+      },
+      "ReindexQueued": {
+        "type": "object",
+        "description": "The rebuild, queued.",
+        "required": [
+          "base"
+        ],
+        "properties": {
+          "base": {
+            "type": "string"
+          }
+        }
       },
       "RejectedEvent": {
         "type": "object",
@@ -241706,6 +242755,32 @@
           }
         }
       },
+      "SyncResult": {
+        "type": "object",
+        "description": "What a sync did.",
+        "required": [
+          "added",
+          "updated",
+          "removed"
+        ],
+        "properties": {
+          "added": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "removed": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "updated": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
       "SyncStatus": {
         "type": "string",
         "description": "What one [`sync`] call did.",
@@ -246519,6 +247594,10 @@
           "doc": {
             "type": "object",
             "description": "The document to check, as it would be saved."
+          },
+          "run_tests": {
+            "type": "boolean",
+            "description": "T7-T2: also run the customer tests the object can affect."
           }
         }
       },
@@ -246602,6 +247681,18 @@
           "public_key": {
             "type": "string",
             "description": "The application server key for `PushManager.subscribe`, base64url."
+          }
+        }
+      },
+      "VariableMapBody": {
+        "type": "object",
+        "description": "A variable map to set.",
+        "required": [
+          "variable_map"
+        ],
+        "properties": {
+          "variable_map": {
+            "type": "object"
           }
         }
       },
@@ -247766,6 +248857,98 @@
             "type": "integer",
             "format": "int32",
             "minimum": 0
+          }
+        }
+      },
+      "WhatsAppNumber": {
+        "type": "object",
+        "description": "A WhatsApp number.",
+        "required": [
+          "id",
+          "name",
+          "templates"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone_number_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "synced_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "templates": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "waba_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "WhatsAppTemplate": {
+        "type": "object",
+        "description": "One template of a number.",
+        "required": [
+          "id",
+          "name",
+          "language",
+          "category",
+          "components",
+          "variables",
+          "variable_map",
+          "synced_at",
+          "row_version"
+        ],
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "components": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "language": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "synced_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "variable_map": {
+            "type": "object",
+            "description": "Variable to attribute, e.g. `{\"body.1\": \"first_name\"}`."
+          },
+          "variables": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -248943,7 +250126,6 @@
       "description": "فحوص السلامة والجاهزية والإصدار"
     }
   ],
-  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -248996,5 +250178,6 @@
       }
     }
   },
-  "x-version-adapters": []
+  "x-version-adapters": [],
+  "x-api-version": "2026-10"
 }

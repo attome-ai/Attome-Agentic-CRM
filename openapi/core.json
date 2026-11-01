@@ -2878,6 +2878,92 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/admin/bases/{base}/reindex": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Rebuild a base's index",
+        "description": "Rebuilds the base's index from its entities' tables in the background.\nThe index follows every write by itself; this is for after a restore or\na change to which entities extend the base. Audited.",
+        "operationId": "post_base_reindex",
+        "parameters": [
+          {
+            "name": "base",
+            "in": "path",
+            "description": "The base entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReindexQueued"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/bin-settings": {
       "get": {
         "tags": [
@@ -8331,6 +8417,101 @@
         "x-privilege": "admin",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/customer-tests/from-record": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A customer test from a record",
+        "description": "Drafts and saves a test from one record the caller can read (T7-T4): it\nre-creates the record and checks each copyable field still holds its\nvalue once saved, so a rule, default or flow that would change it shows.\nEdit it from there. Administrators only. Audited.",
+        "operationId": "create_customer_test_from_record",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FromRecordBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The test",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerTest"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity or record the caller can read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A test with that name exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/admin/customer-tests/import": {
@@ -56542,6 +56723,130 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/bases/{base}/records": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "A base's records",
+        "description": "The records of every entity that extends the base, at any depth, that\nthe caller may read in their own entity: id, entity, owner, status and\ndue time, due first. `owner=me` keeps the caller's own. One-based pages,\nat most 10,000 records deep.",
+        "operationId": "get_base_records",
+        "parameters": [
+          {
+            "name": "base",
+            "in": "path",
+            "description": "The base entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "owner",
+            "in": "path",
+            "description": "`me`, or a user id.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_BaseRecord"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No entity extends this base",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A bad owner, or a page too deep",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/bin/operations/{operation_id}/restore": {
       "post": {
         "tags": [
@@ -73691,7 +73996,7 @@
         ],
         "summary": "Change a crawl source's settings",
         "description": "Changes a source's settings; each one left out keeps its value. Send the\nsource's `row_version` as `If-Match`. A knowledge manager may change\neverything but the intranet host and the credential, which stay with\nadministrators. Audited.",
-        "operationId": "patch_target",
+        "operationId": "patch_webcrawl_target",
         "parameters": [
           {
             "name": "id",
@@ -73817,7 +74122,7 @@
         ],
         "summary": "A crawl source's changes to review",
         "description": "The source's knowledge items a recrawl changed after an editor published\nthem: their text is kept and they wait for review (importing the page\nagain takes the site's version).",
-        "operationId": "list_changes",
+        "operationId": "get_webcrawl_target_changes",
         "parameters": [
           {
             "name": "id",
@@ -74271,7 +74576,7 @@
         ],
         "summary": "A crawl source's runs",
         "description": "Each crawl of the source, newest first: when it ran, how it ended, the\npages it found and what it did to the source's knowledge items.",
-        "operationId": "list_runs",
+        "operationId": "get_webcrawl_target_runs",
         "parameters": [
           {
             "name": "id",
@@ -85667,6 +85972,38 @@
           }
         }
       },
+      "AffectedTestResult": {
+        "type": "object",
+        "description": "One test's result in a publish preview.",
+        "required": [
+          "id",
+          "name",
+          "blocking",
+          "passed",
+          "failures"
+        ],
+        "properties": {
+          "blocking": {
+            "type": "boolean"
+          },
+          "failures": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "passed": {
+            "type": "boolean"
+          }
+        }
+      },
       "AggregateResult": {
         "type": "object",
         "description": "An aggregate query's result.",
@@ -94754,7 +95091,8 @@
           "is_active",
           "row_version",
           "created_at",
-          "updated_at"
+          "updated_at",
+          "live_safe"
         ],
         "properties": {
           "blocking": {
@@ -94782,6 +95120,14 @@
               "null"
             ]
           },
+          "flaky_since": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "T7-T3: when its runs first both passed and failed on one test and\nconfiguration version; cleared when the test is edited."
+          },
           "id": {
             "type": "string",
             "format": "uuid"
@@ -94802,6 +95148,10 @@
               "null"
             ],
             "format": "date-time"
+          },
+          "live_safe": {
+            "type": "boolean",
+            "description": "T7-T3: run every night against the live configuration."
           },
           "name": {
             "type": "string"
@@ -94835,6 +95185,10 @@
               "string",
               "null"
             ]
+          },
+          "live_safe": {
+            "type": "boolean",
+            "description": "T7-T3: run every night against the live configuration."
           },
           "name": {
             "type": "string"
@@ -94903,6 +95257,12 @@
             ]
           },
           "is_active": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "live_safe": {
             "type": [
               "boolean",
               "null"
@@ -99247,6 +99607,30 @@
           }
         }
       },
+      "FromRecordBody": {
+        "type": "object",
+        "description": "What a test from a record starts from.",
+        "required": [
+          "entity",
+          "record_id"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The test's name; a name from the record when left out."
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "FulfillErasureBody": {
         "type": "object",
         "required": [
@@ -103421,7 +103805,8 @@
         "required": [
           "valid",
           "issues",
-          "warnings"
+          "warnings",
+          "tests"
         ],
         "properties": {
           "issues": {
@@ -103429,6 +103814,13 @@
             "items": {
               "$ref": "#/components/schemas/IssueView"
             }
+          },
+          "tests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AffectedTestResult"
+            },
+            "description": "T7-T2: with `run_tests`, the customer tests the object can affect and\nhow they ran (blocking ones stop a publish while the guard is on)."
           },
           "valid": {
             "type": "boolean"
@@ -104940,6 +105332,13 @@
           "is_selected": {
             "type": "boolean"
           },
+          "language": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "K6-T11: `ar`, `en` or another language the page declared; `None`\nbefore it is crawled."
+          },
           "parent_path": {
             "type": [
               "string",
@@ -106424,6 +106823,77 @@
                     "null"
                   ],
                   "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_BaseRecord": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One record of a base, whichever entity holds it.",
+              "required": [
+                "id",
+                "entity"
+              ],
+              "properties": {
+                "due_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "entity": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "owner": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 }
               }
             }
@@ -108648,7 +109118,8 @@
                 "is_active",
                 "row_version",
                 "created_at",
-                "updated_at"
+                "updated_at",
+                "live_safe"
               ],
               "properties": {
                 "blocking": {
@@ -108676,6 +109147,14 @@
                     "null"
                   ]
                 },
+                "flaky_since": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "description": "T7-T3: when its runs first both passed and failed on one test and\nconfiguration version; cleared when the test is edited."
+                },
                 "id": {
                   "type": "string",
                   "format": "uuid"
@@ -108696,6 +109175,10 @@
                     "null"
                   ],
                   "format": "date-time"
+                },
+                "live_safe": {
+                  "type": "boolean",
+                  "description": "T7-T3: run every night against the live configuration."
                 },
                 "name": {
                   "type": "string"
@@ -123629,6 +124112,18 @@
         },
         "additionalProperties": false
       },
+      "ReindexQueued": {
+        "type": "object",
+        "description": "The rebuild, queued.",
+        "required": [
+          "base"
+        ],
+        "properties": {
+          "base": {
+            "type": "string"
+          }
+        }
+      },
       "RejectionWord": {
         "type": "object",
         "required": [
@@ -131481,6 +131976,10 @@
           "doc": {
             "type": "object",
             "description": "The document to check, as it would be saved."
+          },
+          "run_tests": {
+            "type": "boolean",
+            "description": "T7-T2: also run the customer tests the object can affect."
           }
         }
       },
