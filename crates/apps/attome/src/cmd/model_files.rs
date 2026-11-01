@@ -159,7 +159,10 @@ pub(crate) fn client(url: &str) -> Result<attome_outbound::http::Outbound, Strin
         .map_err(|error| format!("build the HTTP client: {error}"))
 }
 
-pub(crate) fn authorised(request: reqwest::RequestBuilder, auth: Option<&str>) -> reqwest::RequestBuilder {
+pub(crate) fn authorised(
+    request: reqwest::RequestBuilder,
+    auth: Option<&str>,
+) -> reqwest::RequestBuilder {
     match auth {
         Some(value) => request.header("authorization", value),
         None => request,

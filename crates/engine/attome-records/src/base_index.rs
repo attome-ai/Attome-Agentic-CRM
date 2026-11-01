@@ -92,6 +92,9 @@ async fn descendants(db: &attome_db::DbPool, base: &str) -> Result<Vec<String>, 
 
 /// Re-reads `id` of `entity` and puts its rows under `bases` in line with
 /// it: upserted while it is live, removed when it is gone or inactive.
+/// The indexed fields of one record: base id, name and due date.
+type IndexedRow = (Option<Uuid>, Option<String>, Option<DateTime<Utc>>);
+
 async fn reindex_record(
     state: &EngineState,
     entity: &str,
@@ -99,7 +102,7 @@ async fn reindex_record(
     bases: &[String],
 ) -> Result<(), AppError> {
     let known = state.entities.load().get(entity).is_some();
-    let row: Option<(Option<Uuid>, Option<String>, Option<DateTime<Utc>>)> = if known {
+    let row: Option<IndexedRow> = if known {
         sqlx::query_as(&format!(
             "SELECT {PROJECTION} FROM (SELECT to_jsonb(t) AS j FROM {} t \
               WHERE t.id = $1 AND t.is_active IS NOT FALSE) s",
@@ -414,7 +417,7 @@ mod tests {
 
     #[test]
     fn due_first_then_undated_then_by_id() {
-        let mut rows = vec![
+        let mut rows = [
             record(3, None),
             record(2, Some(200)),
             record(1, Some(100)),

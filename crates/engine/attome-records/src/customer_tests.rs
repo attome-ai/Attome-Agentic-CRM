@@ -969,6 +969,14 @@ pub struct NightlyReport {
     pub flaky: Vec<String>,
 }
 
+/// A live-safe test: id, name, author, flaky since.
+type LiveSafeRow = (
+    Uuid,
+    String,
+    Option<Uuid>,
+    Option<chrono::DateTime<chrono::Utc>>,
+);
+
 /// T7-T3: every active live-safe test, run as the person who wrote it
 /// against the live configuration (a test never commits, so the check is
 /// read-only), recorded as a scheduled run. A test whose runs on one test
@@ -976,12 +984,7 @@ pub struct NightlyReport {
 /// flaky (`flaky_since`) until someone edits it. The caller alerts on the
 /// report.
 pub async fn run_live_safe(state: &EngineState) -> Result<NightlyReport, AppError> {
-    let tests: Vec<(
-        Uuid,
-        String,
-        Option<Uuid>,
-        Option<chrono::DateTime<chrono::Utc>>,
-    )> = sqlx::query_as(&format!(
+    let tests: Vec<LiveSafeRow> = sqlx::query_as(&format!(
         "SELECT id, name, created_by, flaky_since FROM customer_test \
               WHERE is_active AND live_safe AND {AUTOMATED} ORDER BY name, id LIMIT $1"
     ))
