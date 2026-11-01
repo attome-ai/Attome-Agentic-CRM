@@ -1,0 +1,93 @@
+{
+  "format": "attome-pack-golden/v1",
+  "packs": ["crm", "sales", "manufacturing"],
+  "tests": [
+    {
+      "name": "A customer quality complaint goes through the eight disciplines to closure",
+      "description": "شكوى جودة من العميل عبر مراحل 8D حتى الإغلاق. The team is formed, the problem described and contained, the root cause found, actions implemented and recurrence prevented.",
+      "definition": {
+        "given": [
+          { "entity": "account", "ref": "customer", "record": { "name": "مصنع الجزيرة للأغذية Al Jazira Foods Factory" } }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "mfg_quality_complaint",
+            "ref": "complaint",
+            "values": {
+              "reference": "QC-GOLDEN-0001",
+              "account_ref": { "$ref": "customer" },
+              "batch_number": "B-2026-1031",
+              "description": "Seal leaks on 2% of cartons / تسرب في الإغلاق في 2٪ من الكراتين",
+              "status": "d1_team"
+            }
+          },
+          { "op": "update", "entity": "mfg_quality_complaint", "ref": "complaint", "values": { "status": "d2_describe" } },
+          { "op": "update", "entity": "mfg_quality_complaint", "ref": "complaint", "values": { "status": "d3_contain", "containment": "Batch B-2026-1031 held / حجز الدفعة" } },
+          { "op": "update", "entity": "mfg_quality_complaint", "ref": "complaint", "values": { "status": "d4_root_cause", "root_cause": "Sealing temperature drift on line 3" } },
+          { "op": "update", "entity": "mfg_quality_complaint", "ref": "complaint", "values": { "status": "d5_actions", "corrective_action": "Recalibrate the sealer" } },
+          { "op": "update", "entity": "mfg_quality_complaint", "ref": "complaint", "values": { "status": "d6_implement" } },
+          { "op": "update", "entity": "mfg_quality_complaint", "ref": "complaint", "values": { "status": "d7_prevent", "preventive_action": "Daily temperature check" } },
+          { "op": "update", "entity": "mfg_quality_complaint", "ref": "complaint", "values": { "status": "d8_close" } }
+        ],
+        "expect": [
+          { "entity": "mfg_quality_complaint", "ref": "complaint", "attribute": "status", "equals": "d8_close" },
+          { "entity": "mfg_quality_complaint", "ref": "complaint", "attribute": "root_cause", "equals": "Sealing temperature drift on line 3" }
+        ]
+      }
+    },
+    {
+      "name": "A quality complaint cannot close before its root cause is found",
+      "description": "لا تُغلق شكوى الجودة قبل تحديد السبب الجذري. Jumping from containment to closure is refused.",
+      "definition": {
+        "given": [
+          { "entity": "account", "ref": "customer", "record": { "name": "شركة الصفا للتعبئة Al Safa Packaging" } }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "mfg_quality_complaint",
+            "ref": "complaint",
+            "values": { "reference": "QC-GOLDEN-0002", "account_ref": { "$ref": "customer" }, "description": "Wrong label language / لغة الملصق خاطئة", "status": "d1_team" }
+          },
+          { "op": "update", "entity": "mfg_quality_complaint", "ref": "complaint", "values": { "status": "d2_describe" } },
+          { "op": "update", "entity": "mfg_quality_complaint", "ref": "complaint", "values": { "status": "d3_contain" } },
+          { "op": "update", "entity": "mfg_quality_complaint", "ref": "complaint", "values": { "status": "d8_close" } }
+        ],
+        "expect": [
+          { "error": "validation" },
+          { "entity": "mfg_quality_complaint", "ref": "complaint", "attribute": "status", "equals": "d3_contain" }
+        ]
+      }
+    },
+    {
+      "name": "A volume rebate programme pays an approved payout",
+      "description": "برنامج خصم على الكميات يصرف دفعة معتمدة. The programme is active, a quarter's payout is proposed, approved and paid.",
+      "definition": {
+        "given": [
+          { "entity": "account", "ref": "distributor", "record": { "name": "موزعو الشرق Al Sharq Distributors" } },
+          {
+            "entity": "mfg_rebate_programme",
+            "ref": "programme",
+            "record": {
+              "name": "Volume rebate 2026 / خصم الكميات 2026",
+              "account_ref": { "$ref": "distributor" },
+              "basis": "volume",
+              "tiers": "2% above 10,000 units; 3% above 25,000",
+              "status": "active"
+            }
+          }
+        ],
+        "when": [
+          { "op": "create", "entity": "mfg_rebate_payout", "ref": "payout", "values": { "programme_ref": { "$ref": "programme" }, "period_label": "2026-Q3", "amount": 18500, "status": "proposed" } },
+          { "op": "update", "entity": "mfg_rebate_payout", "ref": "payout", "values": { "status": "approved" } },
+          { "op": "update", "entity": "mfg_rebate_payout", "ref": "payout", "values": { "status": "paid" } }
+        ],
+        "expect": [
+          { "entity": "mfg_rebate_payout", "ref": "payout", "attribute": "status", "equals": "paid" },
+          { "entity": "mfg_rebate_payout", "ref": "payout", "attribute": "period_label", "equals": "2026-Q3" }
+        ]
+      }
+    }
+  ]
+}
