@@ -368,7 +368,7 @@ async fn create_subscriber(
     tag = "ops",
     operation_id = "delete_ops_status_subscriber",
     params(("id" = Uuid, Path, description = "The subscriber")),
-    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Delete)])))),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::SoftDelete)])))),
     responses(
         (status = 204, description = "Ended"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -401,7 +401,7 @@ async fn delete_subscriber(
         attome_audit::BusinessEvent::new(
             "ops_status_subscriber",
             id,
-            attome_audit::AuditOperation::Delete,
+            attome_audit::AuditOperation::SoftDelete,
             "ops.status_subscriber_removed",
             ctx.user_id,
         ),
