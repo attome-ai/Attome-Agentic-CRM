@@ -1,7 +1,7 @@
 //! E7-T9: a marketing list's refresh, members and usage routes. A refresh
 //! is queued once and answers 202, members page the list as the caller
 //! reads it, usage names the sends and journeys that use the list, and an
-//! unknown list is a 404.
+//! unknown list is a 404; a live journey's list changes only when confirmed.
 
 #![recursion_limit = "512"]
 #![allow(
@@ -256,5 +256,69 @@ fn unknown_list_is_404() {
                 .await;
             assert_eq!(status, StatusCode::NOT_FOUND, "{route}: {body}");
         }
+    });
+}
+
+// feature: E7
+// negative: PATCH /api/v1/{entity}/{id}
+#[test]
+fn in_use_list_change_conflicts() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        install(&app).await;
+        let list = static_list(&app).await;
+        sqlx::query(
+            "INSERT INTO marketing_journey \
+               (workflow_definition_logicalname, entry_sources, status, is_active, row_version) \
+             VALUES ($1, $2, 'live', true, 0)",
+        )
+        .bind(format!("in_use_{}", Uuid::now_v7().simple()))
+        .bind(json!([{ "type": "segment_entered", "list_id": list }]).to_string())
+        .execute(app.db())
+        .await
+        .unwrap();
+        let path = format!("/api/v1/marketing_list/{list}");
+        let if_match =
+            |body: &Value| format!("\"{}\"", body["row_version"].to_string().trim_matches('"'));
+
+        let (_, current) = app.request(Method::GET, &path, None).await;
+        let (status, body) = app
+            .request_with(
+                Method::PATCH,
+                &path,
+                &[("if-match", if_match(&current).as_str())],
+                Some(json!({ "target_entity": "lead" })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::CONFLICT, "{body}");
+        assert!(body.to_string().contains("list.in_use"), "{body}");
+
+        // Confirmed, the change goes through.
+        let (status, body) = app
+            .request_with(
+                Method::PATCH,
+                &path,
+                &[
+                    ("if-match", if_match(&current).as_str()),
+                    ("attome-confirm", "list.in_use"),
+                ],
+                Some(json!({ "target_entity": "lead" })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+
+        // A change that leaves the members alone needs no confirmation.
+        let (_, current) = app.request(Method::GET, &path, None).await;
+        let (status, body) = app
+            .request_with(
+                Method::PATCH,
+                &path,
+                &[("if-match", if_match(&current).as_str())],
+                Some(json!({ "description": "renamed while live" })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
     });
 }

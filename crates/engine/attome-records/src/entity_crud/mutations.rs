@@ -1557,6 +1557,10 @@ pub(super) async fn update_record(
         .unwrap_or_default();
     let retry_body = merge.then(|| body.clone());
     let recording = Arc::new(recording.0);
+    // E7-T9: the risky saves the request confirmed.
+    let confirmations = attome_core::record_check::confirm_codes(
+        headers.get("attome-confirm").and_then(|v| v.to_str().ok()),
+    );
     // D-787 rule 7: see `create_record` (reference data only).
     let attempt = |version: i64, body: Value| {
         reference::scope(
@@ -1568,14 +1572,17 @@ pub(super) async fn update_record(
                     // M7-T1: why a stage move is made.
                     crate::stage_move::with_reason(
                         crate::stage_move::reason_header(&headers),
-                        update_record_for(
-                            &state,
-                            &ctx,
-                            claims.sub,
-                            &entity_input,
-                            record_id,
-                            version,
-                            body,
+                        attome_core::record_check::with_confirmations(
+                            confirmations.clone(),
+                            update_record_for(
+                                &state,
+                                &ctx,
+                                claims.sub,
+                                &entity_input,
+                                record_id,
+                                version,
+                                body,
+                            ),
                         ),
                     ),
                 ),

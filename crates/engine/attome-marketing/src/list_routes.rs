@@ -13,7 +13,13 @@
 //! - **Usage** (`GET .../usage`) names what uses the list: email and SMS
 //!   sends to it, nurture programmes whose audience it is, and journeys that
 //!   take entries from it. Read from those records, so nothing registers.
+//! - **In use** ([`InUseCheck`], the generic engine's save check): changing
+//!   what a list holds (its kind, query, target or account expansion, or
+//!   its combinations) while a live journey takes entries from it is
+//!   refused with 409 `list.in_use`, unless the request confirms it with
+//!   the header `Attome-Confirm: list.in_use`.
 
+use attome_core::record_check::{RecordCheck, RecordCheckFuture, RecordSave};
 use attome_core::{EngineState, quote_ident};
 use attome_security::{
     RLS_BIND_COUNT, RecordAction, bind_rls_predicate, bind_rls_predicate_as,
@@ -418,6 +424,87 @@ async fn get_usage(
     let total = items.len() as i64;
     let size = total.max(1);
     Ok(Json(PaginatedResponse::new(items, total, 1, size)))
+}
+
+// ── In use ───────────────────────────────────────────────────────────────────
+
+/// The code a change to an in-use list is refused with, and confirmed by.
+pub const IN_USE: &str = "list.in_use";
+/// The list fields that decide who is in it.
+const DEFINING: [&str; 4] = ["kind", "query_id", "target_entity", "account_expand"];
+
+/// The list a save of `entity` changes the membership of, if any. Pure for
+/// a list; a combination names its list, or keeps the stored one.
+fn changed_list(save: &RecordSave<'_>) -> Option<Uuid> {
+    match save.entity {
+        "marketing_list" => {
+            if DEFINING.iter().any(|f| save.body.contains_key(*f)) {
+                save.record_id
+            } else {
+                None
+            }
+        }
+        _ => save
+            .body
+            .get("list_ref")
+            .and_then(serde_json::Value::as_str)
+            .and_then(|s| Uuid::parse_str(s).ok()),
+    }
+}
+
+/// Refuses changing what a list used by a live journey holds, unless
+/// confirmed (E7-T9).
+#[derive(Debug)]
+pub struct InUseCheck;
+
+impl RecordCheck for InUseCheck {
+    fn check<'a>(
+        &'a self,
+        conn: &'a mut sqlx::PgConnection,
+        state: &'a EngineState,
+        save: RecordSave<'a>,
+    ) -> RecordCheckFuture<'a> {
+        Box::pin(async move {
+            if attome_core::record_check::confirmed(IN_USE)
+                || state.entities.load().get("marketing_journey").is_none()
+            {
+                return Ok(None);
+            }
+            let list = match changed_list(&save) {
+                Some(list) => Some(list),
+                // A combination updated without naming its list.
+                None if save.entity == "marketing_list_combination" => match save.record_id {
+                    Some(id) => sqlx::query_scalar::<_, Option<Uuid>>(
+                        "SELECT list_ref FROM marketing_list_combination WHERE id = $1",
+                    )
+                    .bind(id)
+                    .fetch_optional(&mut *conn)
+                    .await
+                    .map_err(AppError::internal)?
+                    .flatten(),
+                    None => None,
+                },
+                None => None,
+            };
+            let Some(list) = list else {
+                return Ok(None);
+            };
+            let in_use: bool = sqlx::query_scalar(
+                "SELECT EXISTS (SELECT 1 FROM marketing_journey \
+                  WHERE status = 'live' AND is_active IS NOT FALSE \
+                    AND strpos(entry_sources, $1::text) > 0)",
+            )
+            .bind(list)
+            .fetch_one(&mut *conn)
+            .await
+            .map_err(AppError::internal)?;
+            if in_use {
+                Err(AppError::Conflict(IN_USE))
+            } else {
+                Ok(None)
+            }
+        })
+    }
 }
 
 pub fn routes() -> Router<EngineState> {

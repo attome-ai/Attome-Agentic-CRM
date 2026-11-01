@@ -28,7 +28,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Marketing list routes (E7-T9): `POST /api/v1/marketing/lists/{id}/refresh` queues a refresh (202,
   one waiting per list, job `marketing_list_refresh`); `GET /api/v1/marketing/lists/{id}/members` pages
   the current members the caller may read; `GET /api/v1/marketing/lists/{id}/usage` names the email
-  and SMS sends, nurture programmes and live journeys that use the list.
+  and SMS sends, nurture programmes and live journeys that use the list. Changing what a list holds
+  (kind, query, target, account expansion or its combinations) while a live journey takes entries from
+  it answers `409 list.in_use` unless the `PATCH` carries `Attome-Confirm: list.in_use`; any record
+  check may ask for a confirmation code this way (`attome_core::record_check::confirmed`).
 - Partner pack changeset 0008 (F9-T8): the internal Channel Manager role reads and decides the
   registrations, tier proposals and MDF of the partners whose `partner_manager_ref` is the caller;
   `mdf_request` and `mdf_claim` gain `partner_account_ref`, always set from the fund, and the

@@ -44,6 +44,40 @@ pub struct RecordSave<'a> {
     pub body: &'a Map<String, Value>,
 }
 
+tokio::task_local! {
+    /// E7-T9: the codes the request confirmed (`Attome-Confirm`).
+    static CONFIRMED: Vec<String>;
+}
+
+/// Runs `work` with the codes the request confirmed: a check that refuses
+/// a risky save with a code (`list.in_use`) lets it through when the
+/// request sent that code in its `Attome-Confirm` header.
+pub async fn with_confirmations<F: Future>(codes: Vec<String>, work: F) -> F::Output {
+    CONFIRMED.scope(codes, work).await
+}
+
+/// Whether the request being served confirmed `code`.
+pub fn confirmed(code: &str) -> bool {
+    CONFIRMED
+        .try_with(|codes| codes.iter().any(|c| c == code))
+        .unwrap_or(false)
+}
+
+/// The codes of an `Attome-Confirm` header value: comma separated, at most
+/// eight. Pure.
+pub fn confirm_codes(header: Option<&str>) -> Vec<String> {
+    header
+        .map(|v| {
+            v.split(',')
+                .map(str::trim)
+                .filter(|c| !c.is_empty())
+                .take(8)
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 /// One engine's save-time check of one entity.
 pub trait RecordCheck: Send + Sync + 'static {
     fn check<'a>(
@@ -52,4 +86,22 @@ pub trait RecordCheck: Send + Sync + 'static {
         state: &'a EngineState,
         save: RecordSave<'a>,
     ) -> RecordCheckFuture<'a>;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn confirm_codes_split_and_trim() {
+        assert_eq!(
+            confirm_codes(Some(" list.in_use , ,other")),
+            vec!["list.in_use".to_owned(), "other".to_owned()]
+        );
+        assert!(confirm_codes(None).is_empty());
+        assert!(
+            !confirmed("list.in_use"),
+            "nothing confirmed outside a request"
+        );
+    }
 }

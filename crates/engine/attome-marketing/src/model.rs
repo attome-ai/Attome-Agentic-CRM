@@ -59,6 +59,7 @@ impl EngineModel for MarketingModel {
 
     /// E7-T6: a segment saved as live needs a query that may run live.
     /// E7-T8: only a holder of the grant privilege changes wide access.
+    /// E7-T9: a live journey's list changes only when confirmed.
     fn record_checks(
         &self,
     ) -> Vec<(
@@ -73,6 +74,15 @@ impl EngineModel for MarketingModel {
             (
                 "marketing_list",
                 std::sync::Arc::new(crate::segment_access::WideAccessCheck),
+            ),
+            // E7-T9: what a live journey's list holds changes only when confirmed.
+            (
+                "marketing_list",
+                std::sync::Arc::new(crate::list_routes::InUseCheck),
+            ),
+            (
+                "marketing_list_combination",
+                std::sync::Arc::new(crate::list_routes::InUseCheck),
             ),
         ]
     }
