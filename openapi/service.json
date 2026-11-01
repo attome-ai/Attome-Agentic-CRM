@@ -1663,6 +1663,152 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/service/oncall/pages": {
+      "get": {
+        "tags": [
+          "service"
+        ],
+        "summary": "My on-call pages",
+        "description": "H7-T2: the pages sent to the caller, newest first; an open page has no `acknowledged_at`.",
+        "operationId": "get_oncall_pages",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_OnCallPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "service",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/service/oncall/pages/{id}/acknowledge": {
+      "post": {
+        "tags": [
+          "service"
+        ],
+        "summary": "Acknowledge a page",
+        "description": "H7-T2: the paged person acknowledges one of their pages; acknowledging again answers the first\nacknowledgement. Anyone else gets a 404. Audited.",
+        "operationId": "post_oncall_page_acknowledge",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The page",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page, acknowledged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnCallPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such page sent to the caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "service",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/service/oncall/schedules/{id}/calendar": {
       "get": {
         "tags": [
@@ -5886,6 +6032,42 @@
           }
         }
       },
+      "OnCallPage": {
+        "type": "object",
+        "description": "One page sent to the caller.",
+        "required": [
+          "id",
+          "ticket_id",
+          "subject",
+          "paged_at"
+        ],
+        "properties": {
+          "acknowledged_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "None while the page is open."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "paged_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The ticket the page is about."
+          }
+        }
+      },
       "OpenRequest": {
         "type": "object",
         "description": "One of the requester's open requests, offered when they submit another.",
@@ -6284,6 +6466,76 @@
                 },
                 "name": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_OnCallPage": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One page sent to the caller.",
+              "required": [
+                "id",
+                "ticket_id",
+                "subject",
+                "paged_at"
+              ],
+              "properties": {
+                "acknowledged_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "description": "None while the page is open."
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "paged_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "subject": {
+                  "type": "string"
+                },
+                "ticket_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "The ticket the page is about."
                 }
               }
             }

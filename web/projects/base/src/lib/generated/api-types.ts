@@ -27433,6 +27433,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/service/oncall/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My on-call pages
+         * @description H7-T2: the pages sent to the caller, newest first; an open page has no `acknowledged_at`.
+         */
+        get: operations["get_oncall_pages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/service/oncall/pages/{id}/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Acknowledge a page
+         * @description H7-T2: the paged person acknowledges one of their pages; acknowledging again answers the first
+         *     acknowledgement. Anyone else gets a 404. Audited.
+         */
+        post: operations["post_oncall_page_acknowledge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/service/oncall/schedules/{id}/calendar": {
         parameters: {
             query?: never;
@@ -48705,6 +48746,24 @@ export interface components {
         OidcTestStart: {
             authorize_url: string;
         };
+        /** @description One page sent to the caller. */
+        OnCallPage: {
+            /**
+             * Format: date-time
+             * @description None while the page is open.
+             */
+            acknowledged_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            paged_at: string;
+            subject: string;
+            /**
+             * Format: uuid
+             * @description The ticket the page is about.
+             */
+            ticket_id: string;
+        };
         /** @description One stretch with one person on call. */
         OnCallStretchView: {
             /** Format: date-time */
@@ -54826,6 +54885,37 @@ export interface components {
                 secret_updated_at?: string | null;
                 tenant_allowlist: string[];
                 trusted_for_mfa: boolean;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_OnCallPage: {
+            items: {
+                /**
+                 * Format: date-time
+                 * @description None while the page is open.
+                 */
+                acknowledged_at?: string | null;
+                /** Format: uuid */
+                id: string;
+                /** Format: date-time */
+                paged_at: string;
+                subject: string;
+                /**
+                 * Format: uuid
+                 * @description The ticket the page is about.
+                 */
+                ticket_id: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -148706,6 +148796,87 @@ export interface operations {
             };
             /** @description Caller lacks service_ticket.read */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_oncall_pages: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_OnCallPage"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_oncall_page_acknowledge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The page */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The page, acknowledged */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnCallPage"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such page sent to the caller */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
