@@ -14,6 +14,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- `GET /api/v1/public/status`: the public status (public components, incidents and maintenance) for
+  anyone without signing in, while `ops.status.enabled` is on; 404 otherwise (AB11-T8).
 - A copy of the public status page hosted apart: English and Arabic HTML and `status.json`, with
   Gregorian and Hijri dates, written to a bucket (`ops.status.bucket`) and/or POSTed to a webhook
   (`ops.status.webhook_url`) within a minute of a change (AB11-T7, migration 0362).

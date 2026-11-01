@@ -71,6 +71,13 @@ announces a window from 24 hours before it starts. `GET /api/v1/ops/maintenance?
 windows in a range (any signed-in user; internal windows for `ops.read`) and is what SLA reports
 leave out.
 
+## The status for anyone
+
+With `ops.status.enabled` on (off by default), `GET /api/v1/public/status` answers the public
+status to anyone, signed in or not: public components, public incidents and public maintenance,
+cacheable for 30 seconds. The portal and your own customers' tools read it. Off, or without the ops
+module, it answers 404 either way.
+
 ## A copy hosted elsewhere
 
 So customers can read the status while the deployment itself is down, a copy of the public status

@@ -12,6 +12,13 @@
 //!   see: the most severe open incident, else maintenance starting within
 //!   24 hours, in the caller's language (`Accept-Language`); `204` when none.
 //!
+//! - `GET /api/v1/public/status` (AB11-T8): the public snapshot (public
+//!   components, public incidents, public maintenance) for anyone, signed in
+//!   or not: the portal and the customer's own customers. It answers 404
+//!   unless the ops module is on and `ops.status.enabled` is true, the same
+//!   answer either way, so an outside caller cannot tell which; it is
+//!   bypass-listed and mounted outside the licence gate for that reason.
+//!
 //! The snapshot is computed at most every 15 seconds per node and filtered
 //! per caller from the cached copy.
 
@@ -261,6 +268,12 @@ pub async fn status_for(
     Ok(visible_to(snapshot(state).await?, sees_internal(ctx)))
 }
 
+/// AB11-T8: the setting that publishes the status to anyone.
+pub const PUBLIC_SETTING: &str = "ops.status.enabled";
+
+/// How long a client may cache the public status.
+const PUBLIC_MAX_AGE: &str = "public, max-age=30";
+
 /// AB11-T7: the status with no internal detail, as anyone outside reads it
 /// (the hosted page).
 pub(crate) async fn public_snapshot(state: &EngineState) -> Result<StatusSnapshot, AppError> {
@@ -387,15 +400,56 @@ async fn get_banner(
     )
 }
 
+/// The public status
+///
+/// AB11-T8: public components, public incidents and public maintenance, for anyone and without
+/// signing in; nothing internal. 404 unless the deployment publishes its status
+/// (`ops.status.enabled`).
+#[utoipa::path(
+    get,
+    path = "/api/v1/public/status",
+    tag = "ops",
+    operation_id = "get_public_status",
+    responses(
+        (status = 200, description = "The public status", body = StatusSnapshot),
+        (status = 404, description = "This deployment does not publish its status", body = ErrorResponse),
+    ),
+)]
+async fn get_public_status(State(state): State<EngineState>) -> Result<Response, AppError> {
+    let on = state.modules.load().has(attome_modules::MODULE_OPS)
+        && attome_core::setting_registry()
+            .get(PUBLIC_SETTING)
+            .map(|d| state.settings.load().resolve(d, None, None).0)
+            .and_then(|v| v.as_bool())
+            == Some(true);
+    if !on {
+        return Err(AppError::NotFound);
+    }
+    let snapshot = public_snapshot(&state).await?;
+    let mut response = Json(snapshot).into_response();
+    response.headers_mut().insert(
+        axum::http::header::CACHE_CONTROL,
+        axum::http::HeaderValue::from_static(PUBLIC_MAX_AGE),
+    );
+    Ok(response)
+}
+
 pub(crate) fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/ops/status", get(get_status))
         .route("/api/v1/ops/status/banner", get(get_banner))
 }
 
+/// AB11-T8: the anonymous route, merged outside the licence gate (it checks
+/// the module itself and answers 404, as for a deployment that does not
+/// publish).
+pub fn public_routes() -> Router<EngineState> {
+    Router::new().route("/api/v1/public/status", get(get_public_status))
+}
+
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(get_status, get_banner),
+    paths(get_status, get_banner, get_public_status),
     components(schemas(
         StatusSnapshot,
         ComponentStatus,

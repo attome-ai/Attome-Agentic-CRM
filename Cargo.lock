@@ -724,6 +724,7 @@ dependencies = [
  "attome-model",
  "attome-modules",
  "attome-notification",
+ "attome-ops",
  "attome-outbound",
  "attome-procurement",
  "attome-profiler",

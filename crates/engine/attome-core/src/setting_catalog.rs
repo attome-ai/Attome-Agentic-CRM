@@ -1197,6 +1197,17 @@ fn ops_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(0),
         ),
+        // AB11-T8: the status for anyone.
+        SettingDescriptor::new(
+            "ops.status.enabled",
+            "While true, GET /api/v1/public/status answers the public status (public \
+             components, incidents and maintenance) to anyone without signing in, for the \
+             portal and the customer's own customers; false (the default) answers 404.",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
         // AB11-T7: the status page hosted apart.
         SettingDescriptor::new(
             "ops.status.bucket",

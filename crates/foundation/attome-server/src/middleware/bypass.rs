@@ -7,6 +7,9 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     "/api/v1/track/collect",
     // B13-T5: the published brand, for the sign-in page; no user data.
     "/api/v1/branding/public",
+    // AB11-T8: the public status (public components and incidents only),
+    // a GET answering 404 unless the deployment publishes it.
+    "/api/v1/public/status",
     // B13-T4: published logos, favicons and fonts, served inert; no user data.
     "/api/v1/branding/asset",
     // Q21-T2: browsers report CSP violations with no credential; counted
@@ -557,6 +560,14 @@ mod tests {
         // sweep the admin CRUD surface (a distinct, non-prefix path) into
         // bypass with it.
         assert!(!is_bypass("/api/v1/admin/content/pages"));
+    }
+
+    #[test]
+    fn the_public_status_is_bypassed_but_the_signed_in_status_is_not() {
+        assert!(is_bypass("/api/v1/public/status"));
+        assert!(!is_bypass("/api/v1/public/status/x"));
+        assert!(!is_bypass("/api/v1/ops/status"));
+        assert!(!is_bypass("/api/v1/ops/status/banner"));
     }
 
     #[test]
