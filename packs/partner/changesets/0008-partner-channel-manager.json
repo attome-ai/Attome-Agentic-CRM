@@ -1,0 +1,654 @@
+{
+  "author": "packs",
+  "checksum": "sha256:276e93c460690557b0f464eba079231404560bad715a8ff9b654a12769957d27",
+  "closed_at": "2026-11-01T00:00:00Z",
+  "description": "F9-T8: the internal Channel Manager role reads and decides the registrations, tier proposals and MDF of the partners they manage. MDF requests and claims carry their fund's partner, set by a rule from the fund, so a grant condition (staff or portal) can scope them; the partner manager becomes filterable for the one-hop condition.",
+  "format": "attome-changeset/v1",
+  "id": "01a197fe-f841-7f9e-9633-539ba94e4282",
+  "layer": "product",
+  "name": "partner-channel-manager",
+  "opened_at": "2026-11-01T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Partner Manager",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "partner_manager_ref",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "account",
+        "field": "partner_manager_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Partner",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "partner_account_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "mdf_request",
+        "field": "partner_account_ref"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الشريك"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "locale": "ar",
+        "object_key": "mdf_request.partner_account_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Partner",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "partner_account_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "mdf_claim",
+        "field": "partner_account_ref"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الشريك"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "locale": "ar",
+        "object_key": "mdf_claim.partner_account_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "applies_to": "all",
+          "condition": {
+            "all": []
+          },
+          "description": "A request's partner is always its fund's partner, whatever the writer sends.",
+          "display_name": "Partner comes from the fund",
+          "display_order": 0,
+          "entity_logicalname": "mdf_request",
+          "is_active": true,
+          "kind": "business",
+          "message": null,
+          "name": "mdf_request_partner_from_fund",
+          "policies": [
+            {
+              "expression": "fund_ref.partner_account_ref",
+              "field": "partner_account_ref",
+              "mode": "always",
+              "type": "set_value"
+            }
+          ],
+          "severity": "error",
+          "target_field": null
+        }
+      },
+      "op": "upsert_rule",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "mdf_request",
+        "rule": "mdf_request_partner_from_fund"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "applies_to": "all",
+          "condition": {
+            "all": []
+          },
+          "description": "A claim's partner is always the partner of its request's fund, whatever the writer sends.",
+          "display_name": "Partner comes from the request's fund",
+          "display_order": 0,
+          "entity_logicalname": "mdf_claim",
+          "is_active": true,
+          "kind": "business",
+          "message": null,
+          "name": "mdf_claim_partner_from_fund",
+          "policies": [
+            {
+              "expression": "request_ref.fund_ref.partner_account_ref",
+              "field": "partner_account_ref",
+              "mode": "always",
+              "type": "set_value"
+            }
+          ],
+          "severity": "error",
+          "target_field": null
+        }
+      },
+      "op": "upsert_rule",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "mdf_claim",
+        "rule": "mdf_claim_partner_from_fund"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Reads and decides the deal registrations, tier change proposals and MDF requests and claims of the partners they manage (partner_manager_ref), and reads those partners and their funds.",
+          "is_customized": false,
+          "name": "Channel Manager",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "role": "Channel Manager"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on account",
+          "key": "account.read",
+          "name": "account.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "privilege": "account.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on deal_registration",
+          "key": "deal_registration.read",
+          "name": "deal_registration.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "privilege": "deal_registration.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on deal_registration",
+          "key": "deal_registration.update",
+          "name": "deal_registration.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "privilege": "deal_registration.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on tier_change_proposal",
+          "key": "tier_change_proposal.read",
+          "name": "tier_change_proposal.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "privilege": "tier_change_proposal.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on tier_change_proposal",
+          "key": "tier_change_proposal.update",
+          "name": "tier_change_proposal.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "privilege": "tier_change_proposal.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on mdf_fund",
+          "key": "mdf_fund.read",
+          "name": "mdf_fund.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "privilege": "mdf_fund.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on mdf_request",
+          "key": "mdf_request.read",
+          "name": "mdf_request.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "privilege": "mdf_request.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on mdf_request",
+          "key": "mdf_request.update",
+          "name": "mdf_request.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "privilege": "mdf_request.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on mdf_claim",
+          "key": "mdf_claim.read",
+          "name": "mdf_claim.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "privilege": "mdf_claim.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on mdf_claim",
+          "key": "mdf_claim.update",
+          "name": "mdf_claim.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "privilege": "mdf_claim.update"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "privilege": "account.read",
+        "role": "Channel Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "privilege": "deal_registration.read",
+        "role": "Channel Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "privilege": "deal_registration.update",
+        "role": "Channel Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "privilege": "tier_change_proposal.read",
+        "role": "Channel Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "privilege": "tier_change_proposal.update",
+        "role": "Channel Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "privilege": "mdf_fund.read",
+        "role": "Channel Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "privilege": "mdf_request.read",
+        "role": "Channel Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "privilege": "mdf_request.update",
+        "role": "Channel Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "privilege": "mdf_claim.read",
+        "role": "Channel Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "privilege": "mdf_claim.update",
+        "role": "Channel Manager"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "field": "partner_manager_ref",
+          "operator": 0,
+          "value": "@me"
+        }
+      },
+      "op": "add_role_grant_condition",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "condition": "partner_manager_ref|0|\"@me\"",
+        "privilege": "account.read",
+        "role": "Channel Manager"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "field": "partner_account_ref.partner_manager_ref",
+          "operator": 0,
+          "value": "@me"
+        }
+      },
+      "op": "add_role_grant_condition",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "condition": "partner_account_ref.partner_manager_ref|0|\"@me\"",
+        "privilege": "deal_registration.read",
+        "role": "Channel Manager"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "field": "partner_account_ref.partner_manager_ref",
+          "operator": 0,
+          "value": "@me"
+        }
+      },
+      "op": "add_role_grant_condition",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "condition": "partner_account_ref.partner_manager_ref|0|\"@me\"",
+        "privilege": "deal_registration.update",
+        "role": "Channel Manager"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "field": "partner_account_ref.partner_manager_ref",
+          "operator": 0,
+          "value": "@me"
+        }
+      },
+      "op": "add_role_grant_condition",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "condition": "partner_account_ref.partner_manager_ref|0|\"@me\"",
+        "privilege": "tier_change_proposal.read",
+        "role": "Channel Manager"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "field": "partner_account_ref.partner_manager_ref",
+          "operator": 0,
+          "value": "@me"
+        }
+      },
+      "op": "add_role_grant_condition",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "condition": "partner_account_ref.partner_manager_ref|0|\"@me\"",
+        "privilege": "tier_change_proposal.update",
+        "role": "Channel Manager"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "field": "partner_account_ref.partner_manager_ref",
+          "operator": 0,
+          "value": "@me"
+        }
+      },
+      "op": "add_role_grant_condition",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "condition": "partner_account_ref.partner_manager_ref|0|\"@me\"",
+        "privilege": "mdf_fund.read",
+        "role": "Channel Manager"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "field": "partner_account_ref.partner_manager_ref",
+          "operator": 0,
+          "value": "@me"
+        }
+      },
+      "op": "add_role_grant_condition",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "condition": "partner_account_ref.partner_manager_ref|0|\"@me\"",
+        "privilege": "mdf_request.read",
+        "role": "Channel Manager"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "field": "partner_account_ref.partner_manager_ref",
+          "operator": 0,
+          "value": "@me"
+        }
+      },
+      "op": "add_role_grant_condition",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "condition": "partner_account_ref.partner_manager_ref|0|\"@me\"",
+        "privilege": "mdf_request.update",
+        "role": "Channel Manager"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "field": "partner_account_ref.partner_manager_ref",
+          "operator": 0,
+          "value": "@me"
+        }
+      },
+      "op": "add_role_grant_condition",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "condition": "partner_account_ref.partner_manager_ref|0|\"@me\"",
+        "privilege": "mdf_claim.read",
+        "role": "Channel Manager"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "field": "partner_account_ref.partner_manager_ref",
+          "operator": 0,
+          "value": "@me"
+        }
+      },
+      "op": "add_role_grant_condition",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "condition": "partner_account_ref.partner_manager_ref|0|\"@me\"",
+        "privilege": "mdf_claim.update",
+        "role": "Channel Manager"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "partner",
+  "seq": 8,
+  "title": "Pack: partner channel manager"
+}

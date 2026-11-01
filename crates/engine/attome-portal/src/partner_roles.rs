@@ -11,8 +11,9 @@
 //! contact or past the account's `partner_user_limit`.
 //!
 //! The grants read only. A partner writes through the partner routes, which
-//! take the account from the session. `mdf_request` and `mdf_claim` hold no
-//! partner field, so no row condition can scope them, and they have no grant.
+//! take the account from the session. `mdf_request` and `mdf_claim` carry
+//! their fund's `partner_account_ref`, set by a pack rule from the fund
+//! whatever the writer sends, so they are scoped like the rest.
 
 use attome_types::AppError;
 use serde_json::{Value, json};
@@ -104,6 +105,11 @@ pub fn role_grants() -> Vec<(&'static str, Vec<(&'static str, GrantSpec)>)> {
                 ("partner_certification", certifications()),
                 ("partner_resource", resources()),
                 ("mdf_fund", own(&["fiscal_year", "amount"])),
+                (
+                    "mdf_request",
+                    own(&["activity", "plan", "amount", "status", "decision_reason"]),
+                ),
+                ("mdf_claim", own(&["amount", "status", "decision_reason"])),
                 (
                     "partner_performance_snapshot",
                     own(&[
@@ -235,13 +241,13 @@ mod tests {
     }
 
     #[test]
-    fn mdf_requests_and_claims_are_not_granted() {
-        for (_, grants) in role_grants() {
-            assert!(
-                grants
-                    .iter()
-                    .all(|(entity, _)| !["mdf_request", "mdf_claim"].contains(entity))
-            );
+    fn only_the_partner_admin_sees_mdf_requests_and_claims() {
+        for (role, grants) in role_grants() {
+            let mdf = grants
+                .iter()
+                .filter(|(entity, _)| ["mdf_request", "mdf_claim"].contains(entity))
+                .count();
+            assert_eq!(mdf, if role == PARTNER_ADMIN { 2 } else { 0 }, "{role}");
         }
     }
 }

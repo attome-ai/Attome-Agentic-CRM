@@ -44,9 +44,10 @@ Every decision and lapse is written to the audit log as a business event.
 ## Market development funds
 
 A partner asks for part of its fund (`mdf_fund`) as an `mdf_request`, and claims its spend against
-an approved request as an `mdf_claim` with a proof file. Give the partner portal role access to
-`mdf_fund`, `mdf_request` and `mdf_claim` scoped to the partner's own account, so no partner sees
-another's amounts.
+an approved request as an `mdf_claim` with a proof file. A request and a claim carry
+`partner_account_ref`, which a rule always sets from the fund (a claim's through its request),
+whatever the writer sends. The `partner_admin` portal role reads `mdf_fund`, `mdf_request` and
+`mdf_claim` scoped to the partner's own account, so no partner sees another's amounts.
 
 **Check.** Every minute the server refuses, with the reason, a submitted request asking for more
 than is left of its fund — the fund's amount less the approved requests and the submitted ones made
@@ -113,6 +114,15 @@ once, and the credit has no owner, so sellers' record rules do not reach it. A p
 the partner's portal reads the partner's statement with
 `GET /{keyword}/api/v1/partner/statement?period_id=<id>`; a period with nothing for that partner
 answers 404.
+
+## Channel managers
+
+The partner pack's internal **Channel Manager** role reads and decides the deal registrations,
+tier change proposals and MDF requests and claims of the partners they manage, and reads those
+partners and their funds. Each grant carries the condition
+`partner_account_ref.partner_manager_ref eq @me` (on `account`, `partner_manager_ref eq @me`), so
+a channel manager reaches a partner only while its `partner_manager_ref` names them. Give a person
+the role; set the partner manager on the partner account.
 
 ## A partner's own members
 

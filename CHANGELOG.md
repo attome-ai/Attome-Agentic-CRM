@@ -23,6 +23,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   wide access (`wide_access_granted`, needs `marketing_list.grant_wide_access` and is an Access
   security event), as the marketing user the setting `marketing.segment_user` names; a wide list with
   none set is refused (`segment.no_marketing_role`). Marketing pack changeset 0014 adds the privilege.
+- Partner pack changeset 0008 (F9-T8): the internal Channel Manager role reads and decides the
+  registrations, tier proposals and MDF of the partners whose `partner_manager_ref` is the caller;
+  `mdf_request` and `mdf_claim` gain `partner_account_ref`, always set from the fund, and the
+  `partner_admin` portal role now reads its own partner's MDF requests and claims.
 - A partner administrator lists, invites and deactivates its own partner's portal members
   (`/{keyword}/api/v1/partner/members`, F9-T8).
 - Changesets run a `data_step` of kind `split` (A1-T8's attribute split), `copy`, `set_default`,

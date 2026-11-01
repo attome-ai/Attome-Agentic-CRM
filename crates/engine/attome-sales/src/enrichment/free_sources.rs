@@ -112,7 +112,8 @@ pub struct NationalAddressSource<'c> {
 
 impl std::fmt::Debug for NationalAddressSource<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("NationalAddressSource").finish_non_exhaustive()
+        f.debug_struct("NationalAddressSource")
+            .finish_non_exhaustive()
     }
 }
 
