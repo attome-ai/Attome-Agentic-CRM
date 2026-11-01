@@ -12,8 +12,8 @@
 
 use attome_audit::security::x_audit;
 use attome_audit::{AuditCategory, AuditOperation};
-use attome_core::EngineState;
 use attome_core::changeset::{Op, RecordingCtx};
+use attome_core::{EngineState, FieldType};
 use attome_server::authz::{Authorized, Privilege, area};
 use attome_server::security::ConditionOperator;
 use attome_types::AppError;
@@ -41,6 +41,57 @@ const CONDITION_SNAPSHOT: &str = "SELECT id, role_privilege_ref, field_logicalna
      FROM role_privilege_condition WHERE id = $1";
 use attome_types::ErrorResponse;
 use utoipa::ToSchema;
+
+/// V2-D1532 (2): a caller token (`@me` with eq, `@my_teams` with eq or in)
+/// compares a lookup; a one-hop condition's value is an id (or ids).
+fn check_value(
+    operator: ConditionOperator,
+    value: &serde_json::Value,
+    attr: &attome_core::AttrInfo,
+    hop: bool,
+) -> Result<(), AppError> {
+    let token = value.as_str().filter(|v| v.starts_with('@'));
+    if let Some(token) = token {
+        let allowed = match token {
+            crate::conditions::ME => operator == ConditionOperator::Eq,
+            crate::conditions::MY_TEAMS => {
+                matches!(operator, ConditionOperator::Eq | ConditionOperator::In)
+            }
+            _ => {
+                return Err(AppError::Validation(format!(
+                    "unknown condition value '{token}': use @me or @my_teams"
+                )));
+            }
+        };
+        if !allowed {
+            return Err(AppError::Validation(
+                "@me compares with eq, @my_teams with eq or in".into(),
+            ));
+        }
+        if attr.storage_type() != FieldType::Lookup {
+            return Err(AppError::Validation(
+                "@me and @my_teams compare a lookup field".into(),
+            ));
+        }
+        return Ok(());
+    }
+    if hop {
+        let is_id = |v: &serde_json::Value| v.as_str().is_some_and(|s| s.parse::<Uuid>().is_ok());
+        let ok = match value {
+            serde_json::Value::Array(items) => {
+                operator == ConditionOperator::In && items.iter().all(is_id)
+            }
+            v => operator != ConditionOperator::In && is_id(v),
+        };
+        if !ok {
+            return Err(AppError::Validation(
+                "a one-hop condition's value is an id (or, for in, a list of ids), @me or @my_teams"
+                    .into(),
+            ));
+        }
+    }
+    Ok(())
+}
 
 /// Live-row cap per `role_privilege_ref` — enforced under a row lock in
 /// [`create_condition`], not a DB constraint (D-369: "a product-level bound,
@@ -205,9 +256,9 @@ pub(super) async fn create_condition(
         .ok_or_else(|| {
             AppError::Validation("grant's privilege key has no entity segment".into())
         })?;
-    let attrs = state
-        .entities
-        .load()
+    // An owned snapshot: no guard is held across the awaits below.
+    let registry = std::sync::Arc::clone(&*state.entities.load());
+    let attrs = registry
         .get(entity_logicalname)
         .map(|meta| meta.attrs.clone())
         .unwrap_or_default();
@@ -223,15 +274,66 @@ pub(super) async fn create_condition(
             ));
         }
     } else {
-        eligible_condition_field(&attrs, &body.field_logicalname).map_err(|reason| {
-            AppError::Validation(format!(
-                "field '{}' is not eligible for a condition: {reason}",
-                body.field_logicalname
-            ))
-        })?;
+        // V2-D1532 (2): `lookup.field` follows one lookup; both ends must be
+        // eligible lookups, and the value is a caller token or an id.
+        let far_attr = match crate::conditions::split_hop(&body.field_logicalname) {
+            Some((lookup, far)) => {
+                let (near, _) = eligible_condition_field(&attrs, lookup).map_err(|reason| {
+                    AppError::Validation(format!(
+                        "field '{lookup}' is not eligible for a condition: {reason}"
+                    ))
+                })?;
+                if near.storage_type() != FieldType::Lookup {
+                    return Err(AppError::Validation(format!(
+                        "a one-hop condition starts at a lookup field; '{lookup}' is not one"
+                    )));
+                }
+                let target = near
+                    .lookup_entity_ref
+                    .and_then(|id| registry.get_by_id(id))
+                    .ok_or_else(|| {
+                        AppError::Validation(format!("'{lookup}' points at no live entity"))
+                    })?;
+                let (far_attr, _) =
+                    eligible_condition_field(&target.attrs, far).map_err(|reason| {
+                        AppError::Validation(format!(
+                            "field '{far}' of {} is not eligible for a condition: {reason}",
+                            target.logicalname
+                        ))
+                    })?;
+                if !matches!(
+                    operator,
+                    ConditionOperator::Eq | ConditionOperator::Ne | ConditionOperator::In
+                ) {
+                    return Err(AppError::Validation(
+                        "a one-hop condition compares with eq, ne or in".into(),
+                    ));
+                }
+                far_attr.clone()
+            }
+            None => eligible_condition_field(&attrs, &body.field_logicalname)
+                .map_err(|reason| {
+                    AppError::Validation(format!(
+                        "field '{}' is not eligible for a condition: {reason}",
+                        body.field_logicalname
+                    ))
+                })?
+                .0
+                .clone(),
+        };
+        check_value(
+            operator,
+            &body.value,
+            &far_attr,
+            body.field_logicalname.contains('.'),
+        )?;
     }
 
-    if operator == ConditionOperator::In {
+    let names_caller = matches!(
+        body.value.as_str(),
+        Some(crate::conditions::ME | crate::conditions::MY_TEAMS)
+    );
+    if operator == ConditionOperator::In && !names_caller {
         if !body.value.is_array() {
             return Err(AppError::Validation(
                 "an `in` condition's value must be a JSON array".into(),

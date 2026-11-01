@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
 use attome_db::DbPool;
-use attome_server::security::{AccessLevel, ConditionOperator, GrantCondition};
+use attome_server::security::{AccessLevel, ConditionHop, ConditionOperator, GrantCondition};
 use attome_types::AppError;
 use uuid::Uuid;
 
@@ -1211,7 +1211,15 @@ pub async fn resolve_condition_grants(
     // Pass 1: group by the individual (privilege_key, role_privilege_ref)
     // grant — an empty Vec means that specific grant is unconditional.
     let mut by_grant: HashMap<(String, Uuid), Vec<GrantCondition>> = HashMap::new();
+    // V2-D1532 (2): one-hop fields resolved once per (entity, field).
+    let mut hops: HashMap<(String, String), Option<ConditionHop>> = HashMap::new();
     for row in rows {
+        let entity = row
+            .privilege_key
+            .split('.')
+            .next()
+            .unwrap_or_default()
+            .to_owned();
         let entry = by_grant
             .entry((row.privilege_key, row.role_privilege_ref))
             .or_default();
@@ -1223,10 +1231,25 @@ pub async fn resolve_condition_grants(
             // panic resolution for every other grant — drop just this
             // condition, narrowing the grant rather than widening it.
             if let Some(operator) = ConditionOperator::from_i16(op) {
+                let hop = match crate::conditions::split_hop(&field_logicalname) {
+                    Some((lookup, far)) => {
+                        let key = (entity.clone(), field_logicalname.clone());
+                        match hops.get(&key) {
+                            Some(hop) => hop.clone(),
+                            None => {
+                                let hop = resolve_hop(db, &entity, lookup, far).await?;
+                                hops.insert(key, hop.clone());
+                                hop
+                            }
+                        }
+                    }
+                    None => None,
+                };
                 entry.push(GrantCondition {
                     field_logicalname,
                     operator,
                     value,
+                    hop,
                 });
             }
         }
@@ -1249,6 +1272,45 @@ pub async fn resolve_condition_grants(
     }
 
     Ok(by_key)
+}
+
+/// V2-D1532 (2): the far entity of the one-hop condition `lookup.far` on
+/// `entity`, from live metadata: `lookup` is a live lookup of `entity`, and
+/// `far` a live lookup of the entity it points to that a condition may
+/// target (filterable, not sensitive, not a gated confirmed label). `None`
+/// when any of that does not hold; the condition then renders as `FALSE`.
+async fn resolve_hop(
+    db: &DbPool,
+    entity: &str,
+    lookup: &str,
+    far: &str,
+) -> Result<Option<ConditionHop>, AppError> {
+    let far_entity: Option<String> = tokio::time::timeout(
+        QUERY_TIMEOUT,
+        sqlx::query_scalar(
+            "SELECT t.logicalname \
+               FROM entity_info e \
+               JOIN attribute_info a ON a.entity_ref = e.id AND a.logicalname = $2 \
+                    AND (a.is_active IS NULL OR a.is_active = true) AND COALESCE(a.\"type\", 3) = 11 \
+               JOIN entity_info t ON t.id = a.lookup_entity_ref \
+                    AND (t.is_active IS NULL OR t.is_active = true) \
+               JOIN attribute_info f ON f.entity_ref = t.id AND f.logicalname = $3 \
+                    AND (f.is_active IS NULL OR f.is_active = true) AND COALESCE(f.\"type\", 3) = 11 \
+                    AND COALESCE(f.is_filterable, false) AND NOT COALESCE(f.is_sensitive, false) \
+                    AND NOT (COALESCE(f.sensitivity_confirmed, false) \
+                             AND COALESCE(f.sensitivity, 'internal') IN ('personal', 'financial', 'health', 'secret')) \
+              WHERE e.logicalname = $1 AND (e.is_active IS NULL OR e.is_active = true) \
+              LIMIT 1",
+        )
+        .bind(entity)
+        .bind(lookup)
+        .bind(far)
+        .fetch_optional(db),
+    )
+    .await
+    .map_err(|_| AppError::internal("condition hop resolution query timed out"))?
+    .map_err(AppError::internal)?;
+    Ok(far_entity.map(|entity| ConditionHop { entity }))
 }
 
 /// Bulk variant of [`resolve_entity_access_level`] — resolves `user_id`'s

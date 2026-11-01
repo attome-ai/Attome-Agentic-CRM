@@ -116,8 +116,25 @@ pub struct GrantCondition {
     pub field_logicalname: String,
     pub operator: ConditionOperator,
     /// Scalar for every operator except `In`, where this is a JSON array,
-    /// and `Expression`, where it is the expression's text.
+    /// and `Expression`, where it is the expression's text. On a staff grant
+    /// the value may name the caller: `@me` (the user, `eq`) or `@my_teams`
+    /// (their teams, `eq` or `in`), filled in per request
+    /// (`xrm_security::conditions`, V2-D1532 (2)).
     pub value: serde_json::Value,
+    /// V2-D1532 (2): for a one-hop condition (`field_logicalname` is
+    /// `lookup.field`), the entity the lookup points to, resolved from live
+    /// metadata when the grant loads. `None` for a plain condition, and for
+    /// a hop that no longer resolves, which then renders as `FALSE`.
+    #[serde(default)]
+    pub hop: Option<ConditionHop>,
+}
+
+/// V2-D1532 (2): the far end of a one-hop grant condition. The far field is
+/// a lookup (a user, team or record id), so it compares as `uuid`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConditionHop {
+    /// The entity (and table) the lookup points to.
+    pub entity: String,
 }
 
 /// Resolved authorization decision for one request's `SessionClaims.sub`.

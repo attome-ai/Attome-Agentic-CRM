@@ -14,6 +14,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Role grant conditions can name the caller and follow one lookup (V2-D1532 (2)): the values `@me` and
+  `@my_teams` compare a lookup with the requesting user or their teams, and a field written
+  `lookup.field` (say `partner_account_ref.partner_manager_ref`) matches through the record the lookup
+  points at. Both ends are checked at save; a hop that stops resolving denies. See
+  `docs/access-model.md`.
 - Marketing segments run as the reader (E7-T8): a list refreshes as its owner, or, once granted
   wide access (`wide_access_granted`, needs `marketing_list.grant_wide_access` and is an Access
   security event), as the marketing user the setting `marketing.segment_user` names; a wide list with

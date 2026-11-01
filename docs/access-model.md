@@ -53,6 +53,15 @@ database as part of the filter; one the SQL translation cannot express (the cloc
 functions without a SQL meaning) is refused at save with 422 `untranslatable_condition`, and one that stops
 translating later (a field removed) denies rather than opens.
 
+A condition may name the caller: the value `@me` (operator `eq`) is the user making the request and
+`@my_teams` (`eq` or `in`) their teams, both on a lookup field, so `owner_ref eq @me` reaches the records
+someone owns without a role per person. It may also follow one lookup, written `lookup.field`: the record's
+`lookup` points at a row of another entity whose `field`, itself a lookup, matches the value, so
+`partner_account_ref.partner_manager_ref eq @me` on a deal registration reaches the registrations of the
+partners the caller manages. Both ends must be filterable, ungated lookups, checked at save; the far end is
+resolved from live metadata when the grant loads, and a hop that no longer resolves denies rather than
+opens. A hop compares with `eq`, `ne` or `in`, with an id, a list of ids, `@me` or `@my_teams`.
+
 ## Suggested roles
 
 Modules suggest roles (`GET /api/v1/admin/security/role-templates`, for the licensed modules): a sales

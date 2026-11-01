@@ -76,6 +76,7 @@ fn ctx_with(privilege: &str, expression: &str) -> SecurityContext {
                 field_logicalname: String::new(),
                 operator: ConditionOperator::Expression,
                 value: serde_json::json!(expression),
+                hop: None,
             }]],
         )]),
         role_ids: None,

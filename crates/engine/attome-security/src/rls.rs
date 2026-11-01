@@ -1707,6 +1707,7 @@ mod tests {
                 field_logicalname: "industry".to_owned(),
                 operator: attome_server::security::ConditionOperator::Eq,
                 value: serde_json::json!("Active"),
+                hop: None,
             },
         );
         let pred = rls_predicate_with_conditions(
@@ -1743,6 +1744,7 @@ mod tests {
                 field_logicalname: "industry".to_owned(),
                 operator: attome_server::security::ConditionOperator::Eq,
                 value: serde_json::json!("Active"),
+                hop: None,
             },
         );
         let c = SecurityContext {
@@ -1812,6 +1814,7 @@ mod tests {
                 field_logicalname: "industry".to_owned(),
                 operator: attome_server::security::ConditionOperator::Eq,
                 value: serde_json::json!("Active"),
+                hop: None,
             },
         );
         let pred = rls_predicate_with_conditions(

@@ -1243,6 +1243,7 @@ async fn portal_plan(system: &TestSystem, entity: &str, fields: &[&str], role: U
             field_logicalname: "portal_tag".to_owned(),
             operator: ConditionOperator::Eq,
             value: json!("p"),
+            hop: None,
         })],
         readable: names.clone(),
         writable: names.clone(),
@@ -1422,6 +1423,7 @@ fn portal_polymorphic_writes_stay_in_the_portal_scope() {
             field_logicalname: "portal_tag".to_owned(),
             operator: ConditionOperator::Eq,
             value: json!("p"),
+            hop: None,
         })];
         plan.polymorphic_scopes.insert(
             "record_id".to_owned(),

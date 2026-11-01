@@ -700,6 +700,7 @@ fn filter_condition(
         field_logicalname: field.to_owned(),
         operator: ConditionOperator::Eq,
         value: Value::String(value.to_owned()),
+        hop: None,
     })
 }
 
@@ -1438,6 +1439,7 @@ mod t37_property {
                     field_logicalname: f.to_owned(),
                     operator: ConditionOperator::from_i16(op).expect("0..=6 are operators"),
                     value,
+                    hop: None,
                 })
             }),
         ]
@@ -1987,6 +1989,7 @@ mod t37_property {
                     field_logicalname: "title".to_owned(),
                     operator: ConditionOperator::Eq,
                     value: Value::String("mine".to_owned()),
+                    hop: None,
                 })],
                 names(&["title", "account_ref"]),
                 names(&["title"]),
@@ -2000,6 +2003,7 @@ mod t37_property {
                             field_logicalname: "region".to_owned(),
                             operator: ConditionOperator::Eq,
                             value: Value::from(3),
+                            hop: None,
                         })],
                     },
                 )]),

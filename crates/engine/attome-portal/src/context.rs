@@ -464,6 +464,7 @@ fn render_conditions(
             field_logicalname: c.field.clone(),
             operator,
             value,
+            hop: None,
         };
         if condition_renders(&condition, attrs) {
             conditions.push(PlanCondition::Match(condition));
@@ -685,6 +686,7 @@ pub fn self_plan(
             field_logicalname: "id".to_owned(),
             operator: ConditionOperator::Eq,
             value: Value::String(principal.user_id.to_string()),
+            hop: None,
         })],
         readable: fields.clone(),
         writable: fields,

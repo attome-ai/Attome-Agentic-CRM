@@ -272,6 +272,7 @@ pub fn validate_grant(
             field_logicalname: c.field.clone(),
             operator: op,
             value: probe_value,
+            hop: None,
         };
         if c.value_ref.is_some() {
             // Only the field's eligibility matters for a reference.

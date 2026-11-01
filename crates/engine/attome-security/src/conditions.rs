@@ -18,18 +18,84 @@
 //! ([`check_expression`]), because a privilege condition must run in the
 //! database.
 //!
+//! V2-D1532 (2): a staff grant's condition may name the caller, `@me`
+//! (`eq`) or `@my_teams` (`eq` or `in`), filled in per request from the
+//! caller's context ([`with_caller`]); and it may follow one lookup,
+//! `lookup.field`, where `field` is a lookup on the entity `lookup` points
+//! to ([`split_hop`]): `t.lookup IN (SELECT h.id FROM far h WHERE h.field
+//! = $n::uuid)`. The far entity is resolved from live metadata when the
+//! grant loads (`GrantCondition::hop`); one that no longer resolves renders
+//! nothing, so its grant set fails closed to `FALSE`.
+//!
 //! C-16 (M01 §7): the field-type int<->PG-type map itself lives once, on
 //! `attome_core::FieldType` (already in scope for `AttrInfo` below) —
 //! [`pg_type_for_storage`] is only the condition-eligible *subset* of
 //! it (see its doc comment), not a second copy of the map.
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 use attome_core::rules_sql::SqlParam;
 use attome_core::{AttrInfo, FieldType};
+use attome_db::ident::quote_ident;
 use attome_server::security::{ConditionOperator, GrantCondition, SecurityContext};
 
 use crate::rls_fragment::text_array_literal;
+
+/// V2-D1532 (2): the condition value that names the calling user.
+pub const ME: &str = "@me";
+/// V2-D1532 (2): the condition value that names the calling user's teams.
+pub const MY_TEAMS: &str = "@my_teams";
+
+/// V2-D1532 (2): the two halves of a one-hop field, `lookup.field`, each a
+/// plain lowercase identifier. `None` for a plain field.
+pub fn split_hop(field: &str) -> Option<(&str, &str)> {
+    let (lookup, far) = field.split_once('.')?;
+    let ident = |s: &str| {
+        !s.is_empty()
+            && s.bytes()
+                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
+    };
+    (ident(lookup) && ident(far)).then_some((lookup, far))
+}
+
+/// V2-D1532 (2): `condition` as `ctx` reads it: `@me` becomes the caller's
+/// id and `@my_teams` an `in` over their team ids (none matches nothing).
+/// Any other value is returned as it is. `Err` for a token with an operator
+/// it does not take.
+pub fn with_caller<'a>(
+    condition: &'a GrantCondition,
+    ctx: &SecurityContext,
+) -> Result<Cow<'a, GrantCondition>, &'static str> {
+    match condition.value.as_str() {
+        Some(ME) => {
+            if condition.operator != ConditionOperator::Eq {
+                return Err("`@me` compares with eq");
+            }
+            let mut resolved = condition.clone();
+            resolved.value = serde_json::Value::String(ctx.user_id.to_string());
+            Ok(Cow::Owned(resolved))
+        }
+        Some(MY_TEAMS) => {
+            if !matches!(
+                condition.operator,
+                ConditionOperator::Eq | ConditionOperator::In
+            ) {
+                return Err("`@my_teams` compares with eq or in");
+            }
+            let mut resolved = condition.clone();
+            resolved.operator = ConditionOperator::In;
+            resolved.value = serde_json::Value::Array(
+                ctx.team_ids
+                    .iter()
+                    .map(|t| serde_json::Value::String(t.to_string()))
+                    .collect(),
+            );
+            Ok(Cow::Owned(resolved))
+        }
+        _ => Ok(Cow::Borrowed(condition)),
+    }
+}
 
 /// `field_type_int` -> Postgres scalar type, for the condition-eligible
 /// subset only. `choice` and `file` are excluded outright — both are
@@ -119,6 +185,9 @@ pub fn render_condition(
     if condition.operator == ConditionOperator::Expression {
         return Err("an expression condition renders through render_expression");
     }
+    if let Some((lookup, far)) = split_hop(&condition.field_logicalname) {
+        return render_hop(condition, (lookup, far), attrs, table_alias, placeholder);
+    }
     let (_attr, pg_type) = eligible_condition_field(attrs, &condition.field_logicalname)?;
     let col = if table_alias.is_empty() {
         condition.field_logicalname.clone()
@@ -147,6 +216,60 @@ pub fn render_condition(
             condition.operator.as_sql()
         ),
         bind_text: text,
+    })
+}
+
+/// V2-D1532 (2): a one-hop condition: the record's `lookup` points at a row
+/// of the far entity whose `far` lookup compares with the value, as `uuid`.
+/// The near field passes the same eligibility as a plain condition and must
+/// be a lookup; the far end was checked when the grant loaded.
+fn render_hop(
+    condition: &GrantCondition,
+    (lookup, far): (&str, &str),
+    attrs: &[AttrInfo],
+    table_alias: &str,
+    placeholder: usize,
+) -> Result<RenderedCondition, &'static str> {
+    let hop = condition
+        .hop
+        .as_ref()
+        .ok_or("a one-hop condition's far entity does not resolve")?;
+    let (attr, _) = eligible_condition_field(attrs, lookup)?;
+    if attr.storage_type() != FieldType::Lookup {
+        return Err("a one-hop condition starts at a lookup field");
+    }
+    let col = if table_alias.is_empty() {
+        quote_ident(lookup)
+    } else {
+        format!("{table_alias}.{}", quote_ident(lookup))
+    };
+    let far_col = format!("h.{}", quote_ident(far));
+    let (compare, bind_text) = match condition.operator {
+        ConditionOperator::In => {
+            let serde_json::Value::Array(items) = &condition.value else {
+                return Err("`in` condition value must be a JSON array");
+            };
+            let texts = items
+                .iter()
+                .map(json_scalar_to_text)
+                .collect::<Result<Vec<_>, _>>()?;
+            (
+                format!("{far_col} = ANY(${placeholder}::uuid[])"),
+                text_array_literal(&texts),
+            )
+        }
+        op @ (ConditionOperator::Eq | ConditionOperator::Ne) => (
+            format!("{far_col} {} ${placeholder}::uuid", op.as_sql()),
+            json_scalar_to_text(&condition.value)?,
+        ),
+        _ => return Err("a one-hop condition compares with eq, ne or in"),
+    };
+    Ok(RenderedCondition {
+        sql: format!(
+            "{col} IN (SELECT h.id FROM {} h WHERE h.is_active IS NOT FALSE AND {compare})",
+            quote_ident(&hop.entity)
+        ),
+        bind_text,
     })
 }
 
@@ -272,7 +395,12 @@ pub fn condition_predicate(
                 }
                 continue;
             }
-            match render_condition(condition, attrs, table_alias, placeholder) {
+            // V2-D1532 (2): `@me` and `@my_teams` are this caller's.
+            let Ok(condition) = with_caller(condition, ctx) else {
+                set_ok = false;
+                break;
+            };
+            match render_condition(&condition, attrs, table_alias, placeholder) {
                 Ok(rendered) => {
                     and_arms.push(rendered.sql);
                     set_binds.push(rendered.bind_text);
@@ -316,6 +444,7 @@ pub fn condition_predicate(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
     use std::collections::{HashMap, HashSet};
     use uuid::Uuid;
 
@@ -369,7 +498,108 @@ mod tests {
             field_logicalname: field.to_owned(),
             operator: op,
             value,
+            hop: None,
         }
+    }
+
+    fn hop_cond(op: ConditionOperator, value: serde_json::Value) -> GrantCondition {
+        GrantCondition {
+            hop: Some(attome_server::security::ConditionHop {
+                entity: "partner_account".to_owned(),
+            }),
+            ..cond("partner_account_ref.partner_manager_ref", op, value)
+        }
+    }
+
+    #[test]
+    fn split_hop_takes_one_plain_dot() {
+        assert_eq!(split_hop("a_ref.b_ref"), Some(("a_ref", "b_ref")));
+        assert_eq!(split_hop("plain"), None);
+        assert_eq!(split_hop("a.b.c"), None);
+        assert_eq!(split_hop("a.\"b\""), None);
+        assert_eq!(split_hop(".b"), None);
+    }
+
+    #[test]
+    fn me_and_my_teams_name_the_caller() {
+        let mut caller = ctx(HashMap::new());
+        let team = Uuid::now_v7();
+        caller.team_ids = vec![team];
+        let me = with_caller(
+            &cond("owner_ref", ConditionOperator::Eq, json!(ME)),
+            &caller,
+        )
+        .unwrap()
+        .into_owned();
+        assert_eq!(me.value, json!(caller.user_id.to_string()));
+        let teams = with_caller(
+            &cond("team_ref", ConditionOperator::Eq, json!(MY_TEAMS)),
+            &caller,
+        )
+        .unwrap()
+        .into_owned();
+        assert_eq!(teams.operator, ConditionOperator::In);
+        assert_eq!(teams.value, json!([team.to_string()]));
+        assert!(
+            with_caller(
+                &cond("owner_ref", ConditionOperator::Gt, json!(ME)),
+                &caller
+            )
+            .is_err()
+        );
+        let plain = cond("status", ConditionOperator::Eq, json!("open"));
+        assert!(matches!(
+            with_caller(&plain, &caller).unwrap(),
+            Cow::Borrowed(_)
+        ));
+    }
+
+    #[test]
+    fn a_hop_renders_a_subquery_on_the_far_entity() {
+        let attrs = vec![attr("partner_account_ref", 11, false, true)];
+        let id = Uuid::now_v7().to_string();
+        let rendered =
+            render_condition(&hop_cond(ConditionOperator::Eq, json!(id)), &attrs, "t", 4).unwrap();
+        assert_eq!(
+            rendered.sql,
+            "t.\"partner_account_ref\" IN (SELECT h.id FROM \"partner_account\" h              WHERE h.is_active IS NOT FALSE AND h.\"partner_manager_ref\" = $4::uuid)"
+        );
+        assert_eq!(rendered.bind_text, id);
+        let any = render_condition(
+            &hop_cond(ConditionOperator::In, json!([id])),
+            &attrs,
+            "t",
+            1,
+        )
+        .unwrap();
+        assert!(any.sql.contains("= ANY($1::uuid[])"), "{}", any.sql);
+    }
+
+    #[test]
+    fn a_hop_fails_closed() {
+        let attrs = vec![
+            attr("partner_account_ref", 11, false, true),
+            attr("name", 3, false, true),
+        ];
+        // Unresolved far end, a near field that is not a lookup, an operator
+        // a hop does not take.
+        let mut unresolved = hop_cond(ConditionOperator::Eq, json!("x"));
+        unresolved.hop = None;
+        assert!(render_condition(&unresolved, &attrs, "t", 1).is_err());
+        let mut not_lookup = hop_cond(ConditionOperator::Eq, json!("x"));
+        not_lookup.field_logicalname = "name.partner_manager_ref".to_owned();
+        assert!(render_condition(&not_lookup, &attrs, "t", 1).is_err());
+        assert!(
+            render_condition(&hop_cond(ConditionOperator::Gt, json!("x")), &attrs, "t", 1).is_err()
+        );
+        // Through the predicate, an unrenderable set denies.
+        let caller = ctx(HashMap::from([(
+            "partner_deal_registration.read".to_owned(),
+            vec![vec![unresolved]],
+        )]));
+        let predicate =
+            condition_predicate(&caller, "partner_deal_registration.read", &attrs, "t", 1).unwrap();
+        assert_eq!(predicate.sql, "FALSE");
     }
 
     #[test]
