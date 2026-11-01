@@ -72,6 +72,7 @@ pub mod retention_rules;
 pub mod rewrap_admin;
 /// Z1-T8 — the secret inventory: names, key ids and ages, never values.
 pub mod secret_inventory;
+pub mod steward_inbox;
 
 /// M23 Records Management (D-456) — this crate's own advisory-lock namespace
 /// (registry id 19, `crates/server/tests/advisory_lock_namespaces.rs`), for

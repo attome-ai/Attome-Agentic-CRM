@@ -538,6 +538,14 @@ impl EngineSystem {
                 ),
             )
             .merge(
+                // L3-T3: the steward inbox (read only, any signed-in user;
+                // it lists only the caller's own domains).
+                attome_compliance::steward_inbox::routes().layer(middleware::from_fn_with_state(
+                    self.state.clone(),
+                    attome_security::strict_authz::strict_authz,
+                )),
+            )
+            .merge(
                 // L3-T2: roles, policies, exceptions, certifications.
                 attome_compliance::governance_policy::routes().layer(
                     middleware::from_fn_with_state(

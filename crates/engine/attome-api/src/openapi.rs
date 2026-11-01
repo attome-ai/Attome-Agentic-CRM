@@ -125,6 +125,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         ),
         (
             attome_compliance::governance_policy::openapi_fragment(),
+            attome_compliance::steward_inbox::openapi_fragment(),
             "core",
         ),
         (attome_compliance::rewrap_admin::openapi_fragment(), "core"),

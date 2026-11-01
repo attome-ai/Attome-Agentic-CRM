@@ -114,3 +114,14 @@ All under `/api/v1/admin/data/quality`:
 | `POST /fixes/preview`, `POST /fixes/apply` | Bulk fixes. |
 
 Every rule and target change writes a configuration security event.
+
+## The steward inbox
+
+`GET /api/v1/governance/inbox` (any signed-in user, one-based pages) is a steward's one list of the
+work waiting on them: open duplicate pairs, open quality issues and active legal holds on the
+entities of the domains they steward or deputise, or own or steward under the domain's governance
+roles, oldest first. It is read only: each item names its source, record, detail and the `link` of
+the screen that handles it. An entity is listed only when the steward may read every record of it
+(its `read` privilege at the global level), so no item points at a record they cannot read and the
+total counts none; a steward who reads only part of an entity works its items from that screen.
+Held contributions, access reviews and data-subject request scopes join it once they name records.
