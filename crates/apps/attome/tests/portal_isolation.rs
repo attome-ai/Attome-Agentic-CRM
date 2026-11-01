@@ -412,6 +412,17 @@ async fn add_field_once(fx: &Fx, entity: Uuid, body: Value) {
 }
 
 async fn portal_user(fx: &Fx, p: &Portal, role: Uuid, company: Option<Uuid>) -> Session {
+    portal_user_with(fx, p, role, "company_ref", company).await
+}
+
+/// A logged-in portal user with `value` in the lookup `column`.
+async fn portal_user_with(
+    fx: &Fx,
+    p: &Portal,
+    role: Uuid,
+    column: &str,
+    value: Option<Uuid>,
+) -> Session {
     let email = format!("{}@example.com", Uuid::now_v7().simple());
     let mut tx = fx.base.db.begin().await.unwrap();
     let user = provision::create_user(
@@ -449,13 +460,15 @@ async fn portal_user(fx: &Fx, p: &Portal, role: Uuid, company: Option<Uuid>) -> 
     .await
     .unwrap()
     .unwrap();
-    if let Some(company) = company {
-        sqlx::query("UPDATE webportal_user SET company_ref = $2 WHERE id = $1")
-            .bind(user.id)
-            .bind(company)
-            .execute(&mut *tx)
-            .await
-            .unwrap();
+    if let Some(value) = value {
+        sqlx::query(&format!(
+            "UPDATE webportal_user SET {column} = $2 WHERE id = $1"
+        ))
+        .bind(user.id)
+        .bind(value)
+        .execute(&mut *tx)
+        .await
+        .unwrap();
     }
     tx.commit().await.unwrap();
     admin(
@@ -4163,4 +4176,215 @@ async fn u1_portal_upload_through_the_shared_pipeline() {
     .await;
     assert_eq!(status, StatusCode::OK, "{finalized}");
     assert_eq!(finalized["status"], "rejected");
+}
+
+// ── F9-T8: partner portal members ─────────────────────────────────────────────
+
+const PARTNER_PACKS: [&str; 9] = [
+    "crm",
+    "sales",
+    "finance",
+    "regions",
+    "vendor-supplier",
+    "contract-management",
+    "billing",
+    "commission",
+    "partner",
+];
+
+async fn install_partner_packs(fx: &Fx) {
+    // Boot seeds this entity; the packs upsert their document templates into it.
+    attome_api::changeset::boot::apply_platform_definition(&fx.xrm, "attome-docgen")
+        .await
+        .expect("apply the docgen platform definition");
+    for pack in PARTNER_PACKS {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../packs")
+            .join(pack)
+            .join("changesets");
+        let mut files: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| p.extension().is_some_and(|x| x == "json"))
+            .collect();
+        files.sort();
+        for file in &files {
+            let value: Value =
+                serde_json::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
+            attome_api::changeset::boot::apply_pack_document(&fx.xrm, &value)
+                .await
+                .unwrap_or_else(|e| panic!("{}: {e}", file.display()));
+        }
+    }
+    let registry = attome_core::build_registry(&fx.base.db).await.unwrap();
+    fx.xrm.entities.swap(registry);
+}
+
+/// A partner account, and a contact there with the given limit on the account.
+async fn partner_contact(fx: &Fx, limit: Option<i32>) -> (Uuid, Uuid) {
+    let account: Uuid = sqlx::query_scalar(
+        "INSERT INTO account (name, is_partner, partner_user_limit) \
+         VALUES ($1, true, $2::int) RETURNING id",
+    )
+    .bind(format!("partner-{}", short()))
+    .bind(limit)
+    .fetch_one(&fx.base.db)
+    .await
+    .unwrap();
+    (account, contact_at(fx, account).await)
+}
+
+async fn contact_at(fx: &Fx, account: Uuid) -> Uuid {
+    sqlx::query_scalar("INSERT INTO contact (full_name, account_ref) VALUES ($1, $2) RETURNING id")
+        .bind(short())
+        .bind(account)
+        .fetch_one(&fx.base.db)
+        .await
+        .unwrap()
+}
+
+/// The partner roles of `portal`, created through the admin API.
+async fn partner_roles(fx: &Fx, portal: Uuid) -> std::collections::HashMap<String, Uuid> {
+    let mut roles = std::collections::HashMap::new();
+    for (name, grants) in attome_portal::partner_roles::role_grants() {
+        let role = id_of(
+            &admin(
+                fx,
+                "POST",
+                &format!("/api/v1/admin/webportals/{portal}/roles"),
+                Some(attome_portal::partner_roles::role_body(name)),
+            )
+            .await,
+        );
+        for (entity, spec) in grants {
+            let (status, text) = admin_status(
+                fx,
+                "PUT",
+                &format!("/api/v1/admin/webportals/{portal}/roles/{role}/grants/{entity}"),
+                Some(serde_json::to_value(&spec).unwrap()),
+            )
+            .await;
+            assert!(status.is_success(), "{entity}: {status} {text}");
+        }
+        roles.insert(name.to_owned(), role);
+    }
+    roles
+}
+
+async fn registration(fx: &Fx, partner: Uuid, customer: &str) {
+    sqlx::query(
+        "INSERT INTO deal_registration (partner_account_ref, customer_name, status) \
+         VALUES ($1, $2, 'submitted')",
+    )
+    .bind(partner)
+    .bind(customer)
+    .execute(&fx.base.db)
+    .await
+    .unwrap();
+}
+
+async fn customers(w: &World, who: &Session, p: &Portal) -> Vec<String> {
+    let (status, list) = as_user(w, who, "GET", &records(p, "deal_registration"), None, None).await;
+    assert_eq!(status, StatusCode::OK, "{list}");
+    list["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|row| {
+            row["data"]["customer_name"]
+                .as_str()
+                .unwrap_or_default()
+                .to_owned()
+        })
+        .collect()
+}
+
+#[tokio::test]
+async fn partner_a_cannot_read_partner_b_and_seats_are_limited() {
+    let Some(w) = world().await else {
+        return;
+    };
+    install_partner_packs(&w.fx).await;
+    let roles = partner_roles(&w.fx, w.a.id).await;
+    let sales = roles[attome_portal::partner_roles::PARTNER_SALES];
+
+    let (a, a_contact) = partner_contact(&w.fx, Some(1)).await;
+    let (b, b_contact) = partner_contact(&w.fx, None).await;
+    registration(&w.fx, a, "Customer of A").await;
+    registration(&w.fx, b, "Customer of B").await;
+
+    let member_a = portal_user_with(&w.fx, &w.a, sales, "contact_ref", Some(a_contact)).await;
+    let member_b = portal_user_with(&w.fx, &w.a, sales, "contact_ref", Some(b_contact)).await;
+    assert_eq!(customers(&w, &member_a, &w.a).await, ["Customer of A"]);
+    assert_eq!(customers(&w, &member_b, &w.a).await, ["Customer of B"]);
+
+    // The account comes from the contact, whatever a client might send.
+    let bound: Option<Uuid> =
+        sqlx::query_scalar("SELECT partner_account_ref FROM webportal_user WHERE id = $1")
+            .bind(member_a.user)
+            .fetch_one(&w.fx.base.db)
+            .await
+            .unwrap();
+    assert_eq!(bound, Some(a));
+
+    // The limit of one is taken, and a refused person gets no role.
+    let second = contact_at(&w.fx, a).await;
+    let mut tx = w.fx.base.db.begin().await.unwrap();
+    let extra = provision::create_user(
+        &mut tx,
+        Uuid::now_v7(),
+        w.a.id,
+        NewPortalUser {
+            name: format!("user-{}", short()),
+            email: Some(format!("{}@example.com", Uuid::now_v7().simple())),
+            username: None,
+        },
+    )
+    .await
+    .unwrap();
+    sqlx::query("UPDATE webportal_user SET contact_ref = $2 WHERE id = $1")
+        .bind(extra.id)
+        .bind(second)
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+    let uri = format!(
+        "/api/v1/admin/webportals/{}/users/{}/role",
+        w.a.id, extra.id
+    );
+    let (status, text) = admin_status(&w.fx, "PUT", &uri, Some(json!({"role_id": sales}))).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{text}");
+    let held: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM webportal_user_role WHERE webportal_user_id = $1")
+            .bind(extra.id)
+            .fetch_one(&w.fx.base.db)
+            .await
+            .unwrap();
+    assert_eq!(held, 0, "a refused assignment rolls back");
+
+    // A person with no partner contact gets no partner role.
+    let (_, other) = portal_user_with_no_partner(&w, sales).await;
+    assert_eq!(other, StatusCode::UNPROCESSABLE_ENTITY);
+}
+
+async fn portal_user_with_no_partner(w: &World, role: Uuid) -> (Uuid, StatusCode) {
+    let mut tx = w.fx.base.db.begin().await.unwrap();
+    let user = provision::create_user(
+        &mut tx,
+        Uuid::now_v7(),
+        w.a.id,
+        NewPortalUser {
+            name: format!("user-{}", short()),
+            email: Some(format!("{}@example.com", Uuid::now_v7().simple())),
+            username: None,
+        },
+    )
+    .await
+    .unwrap();
+    tx.commit().await.unwrap();
+    let uri = format!("/api/v1/admin/webportals/{}/users/{}/role", w.a.id, user.id);
+    let (status, _) = admin_status(&w.fx, "PUT", &uri, Some(json!({"role_id": role}))).await;
+    (user.id, status)
 }

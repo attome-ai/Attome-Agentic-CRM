@@ -63,6 +63,8 @@ Usage:
   attome restore <archive|latest> --yes
                                 Put the database back to a backup (stop the server
                                 first; the current database is backed up before)
+  attome partner portal-roles --portal <id>
+                                Set up one portal's partner roles
   attome secrets generate|rotate <VAR> --env-file <path> | rewrap <domain>
                                 Fill the secrets an install generates, rotate a
                                 key ring (old key kept readable), start a rewrap
@@ -193,6 +195,10 @@ fn main() -> ExitCode {
         ["app", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             outcome(attome::cmd::app_cmd::run(&rest).map_err(Into::into))
+        }
+        ["partner", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            outcome(attome::cmd::partner_cmd::run(&rest).map_err(Into::into))
         }
         ["promote", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();

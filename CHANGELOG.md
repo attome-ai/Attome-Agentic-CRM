@@ -28,6 +28,16 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `options.encryption.mode` `randomised` or `deterministic`. Its values are sealed on write and opened
   on record reads and `query/execute`; `eq`, `neq` and `in` on a deterministic field go through a blind
   index. Audit records the change without the value; exports, reports, search and history hold the sealed value.
+- Encrypted attribute key rotation (Q19-T3): the `attributes` rewrap domain moves every encrypted
+  field and its blind index onto the active key, in resumable batches. `/api/v1/commission` routes are
+  described in the commission guide (F10-T17).
+- Partner portal roles (F9-T8): `partner_admin`, `partner_sales` and `partner_service` read only their
+  own account's rows. Assigning one binds the person to the partner of their contact and enforces
+  `partner_user_limit`.
+- Selective promotion (A22-T3): `attome promote --only <entity,...>` moves those entities and what they
+  need as a bundle marked `partial`, which leaves everything else on the target alone.
+- Version preview (A22-T4): `GET /api/v1/admin/metadata/versions/{version}/preview` shows what a switch
+  to that version would add, remove and change.
 - Partner performance (F9-T9): a `partner_performance_snapshot` per partner per day for the portal
   scorecard, written nightly, with internal stored reports and `lead.partner_offered_at` and
   `partner_responded_at`. `mdf_attributed_revenue` stays empty until funds link to deals.

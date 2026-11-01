@@ -43,7 +43,7 @@ use serde_json::Value;
 const USAGE: &str = "\
 usage: attome secrets generate --env-file <path> [--config <file>]
        attome secrets rotate <VAR> --env-file <path> [--config <file>]
-       attome secrets rewrap <mfa|s2s|erasure> [--url <base>] [--api-key <key>]";
+       attome secrets rewrap <mfa|s2s|erasure|attributes> [--url <base>] [--api-key <key>]";
 
 /// The secrets the platform issues itself: 32 random bytes as 64 hex
 /// characters suit each (the key rings' hex check included). Anything else
@@ -66,6 +66,7 @@ pub const GENERATED: &[&str] = &[
     "integration.credential_encryption_key",
     "metadata.recovery_archive_key_encryption_key",
     "s2s.key_encryption_key",
+    "storage.attribute_encryption_key",
 ];
 
 /// The key rings whose stored data a rewrap job moves onto the active key,
@@ -74,6 +75,7 @@ const REWRAP: &[(&str, &str)] = &[
     ("auth.mfa_encryption_key", "mfa"),
     ("s2s.key_encryption_key", "s2s"),
     ("audit.erasure_key_encryption_key", "erasure"),
+    ("storage.attribute_encryption_key", "attributes"),
 ];
 
 /// 32 random bytes as hex.

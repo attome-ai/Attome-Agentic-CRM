@@ -158,6 +158,10 @@ pub const DOCS: &[(&str, &str)] = &[
         include_str!("../../../../../docs/fulfilment-delivery.md"),
     ),
     (
+        "docs/high-volume-entities.md",
+        include_str!("../../../../../docs/high-volume-entities.md"),
+    ),
+    (
         "docs/hijri.md",
         include_str!("../../../../../docs/hijri.md"),
     ),
@@ -231,6 +235,18 @@ pub const DOCS: &[(&str, &str)] = &[
         include_str!("../../../../../docs/org-chart.md"),
     ),
     (
+        "docs/packages.md",
+        include_str!("../../../../../docs/packages.md"),
+    ),
+    (
+        "docs/pages.md",
+        include_str!("../../../../../docs/pages.md"),
+    ),
+    (
+        "docs/partners.md",
+        include_str!("../../../../../docs/partners.md"),
+    ),
+    (
         "docs/polymorphic-lookups.md",
         include_str!("../../../../../docs/polymorphic-lookups.md"),
     ),
@@ -284,6 +300,10 @@ pub const DOCS: &[(&str, &str)] = &[
         include_str!("../../../../../docs/solo-memory-backend.md"),
     ),
     (
+        "docs/sql-reports.md",
+        include_str!("../../../../../docs/sql-reports.md"),
+    ),
+    (
         "docs/state-models.md",
         include_str!("../../../../../docs/state-models.md"),
     ),
@@ -294,6 +314,10 @@ pub const DOCS: &[(&str, &str)] = &[
     (
         "docs/storage.md",
         include_str!("../../../../../docs/storage.md"),
+    ),
+    (
+        "docs/time-travel.md",
+        include_str!("../../../../../docs/time-travel.md"),
     ),
     (
         "docs/versions-and-support.md",

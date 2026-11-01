@@ -768,6 +768,7 @@ async fn assign_role(
     )
     .await?;
     crate::roles::assign_role(&mut tx, id, user_id, body.role_id).await?;
+    crate::partner_roles::bind_member(&mut tx, user_id, body.role_id).await?;
     tx.commit().await?;
     crate::cache::invalidate(&state).await;
     Ok(StatusCode::NO_CONTENT)

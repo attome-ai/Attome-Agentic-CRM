@@ -53,6 +53,15 @@ every key.
   applies the plan and saves the objects as drafts (publish them to make them live), and `attome
   config rollback <bundle> --to <version>` queues a rollback. Push and rollback need `--yes`, and on
   a production target `--confirm-target <name>`; retiring anything needs `--allow-retire`.
+- **Partner portal roles**: `attome partner portal-roles --portal <id>` sets up `partner_admin`,
+  `partner_sales` and `partner_service` on a portal. They read only the member's own partner account.
+  Assigning one binds the person to the partner of their contact, and refuses a person with no partner
+  contact or an account at its `partner_user_limit`.
+- **Rotating the attribute encryption key**: add the new key to `storage.attribute_encryption_key`, keep
+  the old one, make the new one active, then run `attome secrets rewrap attributes`. It moves every
+  encrypted field and its blind index in resumable batches.
+- **Going back to a metadata version**: `GET /api/v1/admin/metadata/versions/{version}/preview` shows
+  what would be added, removed and changed, and `POST .../{version}/switch` does it.
 - **Moving one app**: `attome app export <app> --out <folder>` writes the app's objects, and
   `attome app install --dir <folder>` shows what is new and changed on the target; `--yes` imports
   and publishes them, stopping at the first refusal. `attome app remove <app>` lists what the app
@@ -62,6 +71,8 @@ every key.
 - **Promoting configuration**: `attome promote --dir <folder> --to <target> --copy <target> --report
   <file> --yes` plans on the target, applies to its masked copy first, then applies to the target,
   which on production waits for a second administrator. `--at <time>` holds the apply until then.
+  `--only <entity,...>` promotes those entities with their fields, the entities their lookups need,
+  and their queries, views and relationships, and leaves everything else on the target alone.
 - **Applying an upgrade**: from the installed binary, `attome upgrade apply --manifest <file>
   --new-binary <path> --restart <command> --ready-url <url> --base-url <url> --admin-key-file
   <path> --no-role-key-file <path> --yes`. The restart command receives the binary to start in

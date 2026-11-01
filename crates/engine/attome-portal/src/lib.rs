@@ -42,6 +42,8 @@ pub mod mfa;
 pub mod model;
 pub mod oidc;
 pub mod onetime;
+/// F9-T8: the partner portal roles and member binding.
+pub mod partner_roles;
 pub mod policy;
 pub mod provision;
 pub mod recovery;

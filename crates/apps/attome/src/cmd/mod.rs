@@ -27,6 +27,8 @@ pub mod model_files;
 pub mod output;
 /// T8-T4: build, publish and install packages.
 pub mod package;
+/// F9-T8: `attome partner portal-roles`.
+pub mod partner_cmd;
 pub mod preflight;
 pub mod promote;
 pub mod runbook;

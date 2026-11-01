@@ -1,0 +1,88 @@
+{
+  "author": "packs",
+  "checksum": "sha256:644564960117096a3a30fbd5a164036781e747021172d3131eae6556a36c27e7",
+  "closed_at": "2026-11-01T00:00:00Z",
+  "description": "F9-T8: the partner account a portal member belongs to, set when a partner role is assigned, and the index the member's lead condition needs.",
+  "format": "attome-changeset/v1",
+  "id": "01a19421-7a86-7e24-b683-d28c5a110702",
+  "layer": "product",
+  "name": "partner-portal-members",
+  "opened_at": "2026-11-01T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Partner",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "partner_account_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "webportal_user",
+        "field": "partner_account_ref"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الشريك"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "locale": "ar",
+        "object_key": "webportal_user.partner_account_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Partner",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "partner_account_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "lead",
+        "field": "partner_account_ref"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "partner",
+  "seq": 7,
+  "title": "Pack: partner portal members"
+}

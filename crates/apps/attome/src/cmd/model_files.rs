@@ -152,21 +152,21 @@ pub fn run(args: &[String]) -> Result<(), String> {
 }
 
 /// Q21-T1: `url` is the operator's own server, named on the command line.
-fn client(url: &str) -> Result<attome_outbound::http::Outbound, String> {
+pub(crate) fn client(url: &str) -> Result<attome_outbound::http::Outbound, String> {
     let purpose =
         attome_outbound::http::Purpose::public("cli-model-files").with_private_urls([url]);
     attome_outbound::http::client(purpose, |b| b.timeout(std::time::Duration::from_secs(120)))
         .map_err(|error| format!("build the HTTP client: {error}"))
 }
 
-fn authorised(request: reqwest::RequestBuilder, auth: Option<&str>) -> reqwest::RequestBuilder {
+pub(crate) fn authorised(request: reqwest::RequestBuilder, auth: Option<&str>) -> reqwest::RequestBuilder {
     match auth {
         Some(value) => request.header("authorization", value),
         None => request,
     }
 }
 
-async fn answer(response: reqwest::Response) -> Result<Value, String> {
+pub(crate) async fn answer(response: reqwest::Response) -> Result<Value, String> {
     let status = response.status();
     let body: Value = response
         .json()

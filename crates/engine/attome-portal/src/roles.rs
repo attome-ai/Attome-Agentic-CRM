@@ -344,7 +344,7 @@ pub fn validate_grant(
     Ok(())
 }
 
-async fn lock(conn: &mut PgConnection, key: String) -> Result<(), AppError> {
+pub(crate) async fn lock(conn: &mut PgConnection, key: String) -> Result<(), AppError> {
     let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
         .bind(crate::ADVISORY_LOCK_NAMESPACE)
         .bind(key)
