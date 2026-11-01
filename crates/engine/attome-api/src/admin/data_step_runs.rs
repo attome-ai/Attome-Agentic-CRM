@@ -271,7 +271,7 @@ pub(super) async fn resume_data_step_run(
     tag = "admin",
     params(("id" = Uuid, Path, description = "The data step run")),
     responses(
-        (status = 200, description = "Stopped: an orphan scan is abandoned, a retype that has not swapped is undone at once (Y12-T7), any other field run is failed for its abandon route", body = DataStepRunStatus),
+        (status = 200, description = "Stopped: an orphan scan or a split is abandoned (a split keeps the rows it wrote), a retype that has not swapped is undone at once (Y12-T7), any other field run is failed for its abandon route", body = DataStepRunStatus),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks system.admin", body = ErrorResponse),
         (status = 404, description = "No such run", body = ErrorResponse),
@@ -291,7 +291,8 @@ pub(super) async fn cancel_data_step_run(
         super::attribute::cancel_retype_run(&state, ctx.user_id, id).await?;
         return load(&state, id).await.map(Json);
     }
-    let (to, error) = if run.kind == "orphan_scan" {
+    // A1-T8: a split has nothing to undo; the rows it wrote keep their values.
+    let (to, error) = if matches!(run.kind.as_str(), "orphan_scan" | "split") {
         ("abandoned", None)
     } else {
         ("failed", Some("cancelled by an administrator"))

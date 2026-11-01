@@ -1282,6 +1282,8 @@ pub async fn run_field_run(state: &EngineState, run_id: Uuid) -> Result<(), AppE
         "archive" => continue_delete(state, &run).await,
         "retype" => continue_retype(state, &run).await,
         "orphan_scan" => crate::admin::orphans::continue_scan(state, &run).await,
+        // A1-T8: a text attribute split into others.
+        "split" => crate::admin::refactor::continue_split(state, &run).await,
         other => Err(AppError::internal(format!(
             "field run {run_id}: kind {other} has no executor in this release"
         ))),

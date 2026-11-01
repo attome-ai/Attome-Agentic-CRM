@@ -440,6 +440,15 @@ const EXCLUDED: &[(&str, &str)] = &[
         "writes Angular files in a debug build; no metadata (§1.3)",
     ),
     (
+        "POST /api/v1/admin/entities/{entity_id}/refactor/preview",
+        "A1-T8: evaluates a split of a text attribute over the entity's rows; writes nothing",
+    ),
+    (
+        "POST /api/v1/admin/entities/{entity_id}/refactor",
+        "A1-T8: splits a text attribute's values into other attributes as a data step run: \
+         record data, no metadata (the targets are added, and recorded, by the field routes)",
+    ),
+    (
         "POST /api/v1/admin/entities/{entity_id}/change-plan",
         "classifies proposed structure changes (Y12-T3); writes nothing",
     ),

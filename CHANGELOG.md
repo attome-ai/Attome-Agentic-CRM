@@ -14,6 +14,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- A text attribute can be split into other text attributes, a full name into its parts:
+  `POST /api/v1/admin/entities/{entity_id}/refactor/preview` shows what each row would get and which
+  rows cannot be split, and `POST /api/v1/admin/entities/{entity_id}/refactor` runs the split as a
+  data step run that pauses, resumes and is cancelled like the others. Each target is a rule
+  expression over the source; the rule language gains `word`, `word_count` and `split_part` for it
+  (A1-T8).
 - Email campaigns can A/B test up to five versions: `variants` and `ab_test` on
   `POST /api/v1/marketing/lists/{id}/email/send` send each version, tracked, to its share of the
   recipients (1,000 each by default) and hold the rest; after the window (four hours by default)
