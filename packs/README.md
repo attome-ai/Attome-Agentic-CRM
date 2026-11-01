@@ -70,8 +70,8 @@ and sunset dates on `contact` and `lead` (from crm).
 with `sunset_enabled` on, a nightly job sends one re-engagement email (the design, as an E3 send
 under that consent purpose) to contacts and leads with no marketing engagement for `sunset_months`
 (12 when unset), and sunsets (`marketing_sunset_at`) those who still have not engaged 14 days later.
-Campaigns leave sunset people out. An open or click of a tracked email, or a form submission,
-brings a person back. Replies do not count yet.
+Campaigns leave sunset people out. An open or click of a tracked email, a form submission or a
+contact's reply to one of our emails (a shared mailbox, J2) brings a person back.
 
 **Journey email step** (E8-T6, `marketing.send_email`: `design_id`, `purpose`, `on_blocked` skip or
 wait, `send_time` now or best): before sending it checks consent for the purpose, the suppression
