@@ -346,6 +346,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_deal_coverage_scheduler(db.clone(), std::time::Duration::from_secs(10));
     // AB11-T4: the status watch, a tick every minute (it reads the setting).
     crate::jobs::spawn_ops_status_watch_scheduler(db.clone(), std::time::Duration::from_secs(60));
+    // E6-T9: the marketing sunset policy, once a day.
+    crate::jobs::spawn_marketing_sunset_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(86_400),
+    );
     // Y12-T9: retired columns that are due are dropped, once a day.
     crate::jobs::spawn_metadata_contract_scheduler(
         db.clone(),

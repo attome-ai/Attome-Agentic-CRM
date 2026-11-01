@@ -321,6 +321,10 @@ pub async fn submit(
         .await?;
     }
     attome_db::tx::commit(tx).await?;
+    // E6-T9: a submission brings the person back from a sunset.
+    if let Err(error) = attome_core::engagement::touch(state, &def.target, &[person]).await {
+        tracing::warn!(%error, %person, "form submission: engagement not recorded");
+    }
 
     let mut submission = json!({
         "form_ref": def.id.to_string(),

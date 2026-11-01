@@ -53,6 +53,8 @@ pub mod sms_campaign;
 pub mod social_publish;
 /// E7-T5: static list members by hand, view, form, flow and import.
 pub mod static_list;
+/// E6-T9: the nightly sunset policy.
+pub mod sunset;
 pub mod tracking;
 /// E14-T4: the website tracking script.
 pub mod tracking_script;

@@ -14,6 +14,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Marketing sunset policy: one re-engagement email after `sunset_months` without engagement, sunset
+  14 days later if still unengaged, back on an open, click or form submission (E6-T9).
 - Status subscribers: email and webhook subscriptions with consent and a confirmation link, one-click
   unsubscribe, an RSS feed, and notices of public incident updates and maintenance (AB11-T6,
   migration 0364).

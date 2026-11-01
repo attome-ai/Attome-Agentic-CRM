@@ -397,6 +397,29 @@ const PIXEL: &[u8] = &[
 )]
 /// Email open pixel
 ///
+/// E6-T9: the recipient of `token` engaged; failures are logged.
+async fn engaged(state: &EngineState, token: &str) {
+    let person: Option<(String, Uuid)> = match sqlx::query_as(
+        "SELECT subject_entity, subject_id FROM email_campaign_recipient \
+          WHERE unsubscribe_token = $1",
+    )
+    .bind(token)
+    .fetch_optional(&state.base.db)
+    .await
+    {
+        Ok(person) => person,
+        Err(error) => {
+            tracing::warn!(%error, "email campaign: engagement not recorded");
+            return;
+        }
+    };
+    if let Some((entity, id)) = person
+        && let Err(error) = attome_core::engagement::touch(state, &entity, &[id]).await
+    {
+        tracing::warn!(%error, "email campaign: engagement not recorded");
+    }
+}
+
 /// The image an A/B-tested campaign email carries: the first load records
 /// that the recipient opened it. Public; the token is the recipient's own,
 /// and an unknown one answers the same image.
@@ -416,6 +439,9 @@ pub(crate) async fn get_open(
         .await
     {
         tracing::warn!(error = %e, "email campaign: an open was not recorded");
+    }
+    if counts(&state, token, &headers).await {
+        engaged(&state, token).await;
     }
     (
         StatusCode::OK,
@@ -484,6 +510,9 @@ pub(crate) async fn get_click(
         .await
     {
         tracing::warn!(error = %e, "email campaign: a click was not recorded");
+    }
+    if counts(&state, token, &headers).await {
+        engaged(&state, token).await;
     }
     Ok((
         StatusCode::FOUND,

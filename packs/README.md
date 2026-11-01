@@ -66,6 +66,13 @@ roles hold, so search, reports and query execution mask pay for everyone else.
 Email deliverability (E6): the `marketing_deliverability_policy` and an email status with engagement
 and sunset dates on `contact` and `lead` (from crm).
 
+**Sunset** (E6-T9, `0013` adds the policy's `reengagement_design_ref` and `reengagement_purpose`):
+with `sunset_enabled` on, a nightly job sends one re-engagement email (the design, as an E3 send
+under that consent purpose) to contacts and leads with no marketing engagement for `sunset_months`
+(12 when unset), and sunsets (`marketing_sunset_at`) those who still have not engaged 14 days later.
+Campaigns leave sunset people out. An open or click of a tracked email, or a form submission,
+brings a person back. Replies do not count yet.
+
 ## offline
 
 Offline profiles (B18): `offline_profile` per role (storage and days-offline limits) and

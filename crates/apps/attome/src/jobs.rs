@@ -3385,6 +3385,8 @@ const DEDUP_KEY_SERVICE_ROUTER: &str = "service-router-tick";
 const DEDUP_KEY_OPS_STATUS_WATCH: &str = "ops-status-watch";
 /// Y12-T9: the daily contraction of retired columns (a registered job type).
 const DEDUP_KEY_METADATA_CONTRACT: &str = "metadata-contract";
+/// E6-T9: the nightly sunset policy (a registered job type).
+const DEDUP_KEY_MARKETING_SUNSET: &str = "marketing-sunset";
 /// Z12-T7: the yearly Hijri holiday review check (a registered job type).
 const DEDUP_KEY_CALENDAR_REVIEW: &str = "calendar-yearly-review";
 /// E23-T1: profile event retention (a registered job type).
@@ -3860,6 +3862,10 @@ pub const OPS_STATUS_WATCH: attome_jobs::JobType =
 /// Y12-T9: the daily contraction that drops retired columns.
 pub const METADATA_CONTRACT: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_metadata::provision::contract::JOB, 1);
+
+/// E6-T9: the nightly marketing sunset policy.
+pub const MARKETING_SUNSET: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_marketing::sunset::JOB, 1);
 
 /// Z12-T7: the check for December's Hijri holiday review reminder.
 pub const CALENDAR_YEARLY_REVIEW: attome_jobs::JobType =
@@ -5617,6 +5623,28 @@ pub fn register_job_types() {
         ) {
             tracing::error!(%error, "job type registration failed");
         }
+        // E6-T9: the sunset policy, nightly.
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            MARKETING_SUNSET,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_MARKETING) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let run = attome_marketing::sunset::run(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if run.invited > 0 || run.sunset > 0 {
+                    tracing::info!(
+                        invited = run.invited,
+                        sunset = run.sunset,
+                        "marketing sunset policy"
+                    );
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
         // Y12-T9: drop the retired columns that are due.
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             METADATA_CONTRACT,
@@ -6558,6 +6586,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         }
         EngineJob::Registered(job) if job.name == METADATA_CONTRACT.name => {
             DEDUP_KEY_METADATA_CONTRACT
+        }
+        EngineJob::Registered(job) if job.name == MARKETING_SUNSET.name => {
+            DEDUP_KEY_MARKETING_SUNSET
         }
         EngineJob::Registered(job) if job.name == CALENDAR_YEARLY_REVIEW.name => {
             DEDUP_KEY_CALENDAR_REVIEW
@@ -8410,6 +8441,21 @@ pub fn spawn_calendar_review_scheduler(db: DbPool, interval: std::time::Duration
             "calendar yearly review",
         ),
         Err(error) => tracing::error!(%error, "calendar yearly review: not scheduled"),
+    }
+}
+
+/// E6-T9: the sunset policy, once per interval (one pending at most).
+pub fn spawn_marketing_sunset_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(MARKETING_SUNSET.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_MARKETING_SUNSET,
+            "marketing sunset",
+        ),
+        Err(error) => tracing::error!(%error, "marketing sunset: not scheduled"),
     }
 }
 

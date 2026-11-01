@@ -1,0 +1,101 @@
+{
+  "author": "packs",
+  "checksum": "sha256:6e6f2605878fe47c73d0f3debe9c445200547a0e0f1e4223eeadf54144fac6b7",
+  "closed_at": "2026-11-01T00:00:00Z",
+  "description": "Sunset policy (E6-T9): the email design a person unengaged for the policy's months is sent once to invite them back, and the consent purpose it is sent under.",
+  "format": "attome-changeset/v1",
+  "id": "01a19774-538d-787c-9b0a-1550dc4d5e42",
+  "layer": "product",
+  "name": "marketing-sunset-reengagement",
+  "opened_at": "2026-11-01T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Re-engagement Email",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reengagement_design_ref",
+          "lookup_entity": "marketing_email_design",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "marketing_deliverability_policy",
+        "field": "reengagement_design_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Re-engagement Consent Purpose",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reengagement_purpose",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "marketing_deliverability_policy",
+        "field": "reengagement_purpose"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رسالة إعادة التفاعل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_deliverability_policy.reengagement_design_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "غرض الموافقة لإعادة التفاعل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_deliverability_policy.reengagement_purpose",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "marketing",
+  "seq": 13,
+  "title": "Pack: sunset re-engagement email"
+}

@@ -321,6 +321,18 @@ async fn record(state: &EngineState, tracked: &Tracked, event_type: &str) -> Res
     .execute(&state.base.db)
     .await
     .map_err(AppError::internal)?;
+    // E6-T9: the contacts and leads the email is linked to engaged.
+    let people: Vec<(String, Uuid)> = sqlx::query_as(
+        "SELECT entity_name, record_id FROM communication_link \
+          WHERE communication_id = $1 AND entity_name IN ('contact', 'lead')",
+    )
+    .bind(tracked.communication_id)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    for (entity, id) in people {
+        attome_core::engagement::touch(state, &entity, &[id]).await?;
+    }
     Ok(())
 }
 

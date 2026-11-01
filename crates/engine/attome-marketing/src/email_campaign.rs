@@ -186,9 +186,15 @@ async fn recipients(
     if people.is_empty() {
         return Ok((target, Vec::new()));
     }
+    // E6-T9: a sunset person is left out until they engage again.
+    let sunset = if attome_core::engagement::tracks(state, &target) {
+        "AND t.marketing_sunset_at IS NULL"
+    } else {
+        ""
+    };
     let sql = format!(
         "SELECT t.id, trim(t.email) FROM {} t \
-          WHERE t.id = ANY($1) AND position('@' IN COALESCE(t.email, '')) > 1 \
+          WHERE t.id = ANY($1) AND position('@' IN COALESCE(t.email, '')) > 1 {sunset} \
             AND EXISTS (SELECT 1 FROM consent_current c \
                  WHERE c.subject_entity = $3 AND c.subject_id = t.id AND c.purpose_key = $2 \
                    AND c.channel IN ('email', 'any') AND c.status = 'granted') \
