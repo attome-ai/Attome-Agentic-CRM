@@ -965,6 +965,21 @@ async fn publish_version(
     recording: RecordingCtx,
     Path((definition_id, version_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<VersionDetail>, AppError> {
+    publish_draft(&state, &ctx, &recording, definition_id, version_id).await?;
+    get_version(State(state), ctx, Path((definition_id, version_id))).await
+}
+
+/// Publishes draft `version_id` of `definition_id` as `ctx`, recorded through
+/// `recording`: the checks, the publish, the triggers, the lineage and the
+/// Configuration event in one transaction. The route above and the journey
+/// publish (E8-T10) call it.
+pub async fn publish_draft(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    recording: &attome_core::changeset::Recording,
+    definition_id: Uuid,
+    version_id: Uuid,
+) -> Result<(), AppError> {
     recording.preflight(&state.base.db).await?;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
 
@@ -1012,9 +1027,9 @@ async fn publish_version(
             .and_then(serde_json::Value::as_str)
             .and_then(|v| Uuid::parse_str(v).ok())
     {
-        attome_security::delegation::require_not_above(&state.base.db, &ctx, identity).await?;
+        attome_security::delegation::require_not_above(&state.base.db, ctx, identity).await?;
     }
-    crate::graph::validate_module_steps(&state, &graph)?;
+    crate::graph::validate_module_steps(state, &graph)?;
     // A30-T2: every `env.<name>` a condition reads must be readable here.
     attome_core::env_vars::check_publish(
         &state.base.db,
@@ -1075,7 +1090,7 @@ async fn publish_version(
     // M06 plan §4.2 (G3): an entry trigger's attome-rules `expression` must
     // compile against its entity before the version can go live. No I/O —
     // registry snapshot plus the in-process compile cache.
-    crate::entity_trigger::validate_entry_expressions(&state, version_id, &graph).await?;
+    crate::entity_trigger::validate_entry_expressions(state, version_id, &graph).await?;
 
     // M4-T2: the flow's saved test cases (and any other blocking test this
     // change can affect) run on the draft about to go live, each in its own
@@ -1092,7 +1107,7 @@ async fn publish_version(
         own_logicalname.clone(),
         graph_json.clone(),
     )]);
-    attome_records::customer_tests::publish_guard_on(&state, &ctx, &impact, &drafts).await?;
+    attome_records::customer_tests::publish_guard_on(state, ctx, &impact, &drafts).await?;
 
     // Only one published version at a time per definition — deprecate the
     // previous one (F094: existing running instances stay pinned to it by
@@ -1151,7 +1166,7 @@ async fn publish_version(
 
     attome_audit::security::write_security_event(
         &mut tx,
-        &attome_audit::audit_service(&state),
+        &attome_audit::audit_service(state),
         attome_audit::security::SecurityEvent::new(
             attome_audit::security::MandatoryCategory::Configuration,
             attome_audit::AuditOperation::Activated,
@@ -1171,8 +1186,7 @@ async fn publish_version(
         .await?;
 
     tx.commit().await.map_err(AppError::internal)?;
-
-    get_version(State(state), ctx, Path((definition_id, version_id))).await
+    Ok(())
 }
 
 /// Test coverage of a workflow version

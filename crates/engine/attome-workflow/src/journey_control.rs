@@ -10,6 +10,10 @@
 //!   enrolments already skip a journey that is not live.
 //! - `POST .../resume`: the journey is `live` again and its paused runs go
 //!   on where they stopped (a step still waiting keeps waiting).
+//! - `POST .../publish` (`{version_id, version_mode}`): the journey's
+//!   publish role when it names one, then the workflow's own publish
+//!   ([`crate::admin::publish_draft`]) and the move of the people already in
+//!   it (`finish_on_old` or `move_matching`); a draft journey becomes live.
 //! - `POST .../simulate`: the newest published version runs in memory for
 //!   up to [`MAX_SAMPLE`] sample people, each person's record as the
 //!   trigger, through the workflow simulation ([`crate::simulate`]), which
@@ -219,6 +223,114 @@ async fn post_resume(
         .map(Json)
 }
 
+#[derive(Debug, serde::Deserialize, ToSchema)]
+pub struct JourneyPublishBody {
+    /// The draft version to publish.
+    pub version_id: Uuid,
+    /// What happens to people already in the journey.
+    #[serde(default)]
+    pub version_mode: attome_marketing::journey::versions::VersionMode,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
+pub struct JourneyPublishResult {
+    pub journey_id: Uuid,
+    pub version_id: Uuid,
+    /// People moved to the new version.
+    pub moved: u64,
+    /// People who finish on the version they started.
+    pub kept: u64,
+}
+
+/// Publish a journey version
+///
+/// Publishes a draft of the journey's workflow with the workflow's own checks, then moves the people
+/// already in it as `version_mode` says; a draft journey becomes live. Needs the journey's
+/// publish role when it names one. Audited.
+#[utoipa::path(
+    post,
+    path = "/api/v1/marketing/journeys/{id}/publish",
+    operation_id = "publish_marketing_journey",
+    tag = "marketing",
+    params(("id" = Uuid, Path, description = "The journey")),
+    request_body = JourneyPublishBody,
+    responses(
+        (status = 200, description = "The version is live and the people are placed", body = JourneyPublishResult),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks marketing_journey.update or the journey's publish role", body = ErrorResponse),
+        (status = 404, description = "No such journey", body = ErrorResponse),
+        (status = 409, description = "Not a draft of this journey, or another publish in progress", body = ErrorResponse),
+        (status = 422, description = "The graph fails the publish checks", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Activated)])))),
+)]
+async fn post_publish(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<JourneyUpdate>>,
+    recording: attome_core::changeset::RecordingCtx,
+    Path(journey): Path<Uuid>,
+    Json(body): Json<JourneyPublishBody>,
+) -> Result<Json<JourneyPublishResult>, AppError> {
+    if !state.modules.load().has(attome_modules::MODULE_MARKETING) {
+        return Err(AppError::NotFound);
+    }
+    let found: Option<(Uuid, Option<String>)> = sqlx::query_as(
+        "SELECT d.id, j.publish_role FROM marketing_journey j \
+           JOIN workflow_definition d ON d.logicalname = j.workflow_definition_logicalname \
+          WHERE j.id = $1 AND j.is_active IS NOT FALSE AND d.kind = 'journey'",
+    )
+    .bind(journey)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some((definition, publish_role)) = found else {
+        return Err(AppError::NotFound);
+    };
+    if let Some(role) = publish_role
+        .as_deref()
+        .map(str::trim)
+        .filter(|r| !r.is_empty())
+        && !ctx.is_admin
+    {
+        let role_id: Option<Uuid> =
+            sqlx::query_scalar("SELECT id FROM role WHERE name = $1 AND is_deleted = false")
+                .bind(role)
+                .fetch_optional(&state.base.db)
+                .await
+                .map_err(AppError::internal)?;
+        let holds =
+            role_id.is_some_and(|id| ctx.role_ids.as_ref().is_some_and(|ids| ids.contains(&id)));
+        if !holds {
+            return Err(AppError::Forbidden);
+        }
+    }
+    crate::admin::publish_draft(&state, &ctx, &recording, definition, body.version_id).await?;
+    let moved = attome_marketing::journey::versions::move_to_version(
+        &state,
+        definition,
+        body.version_id,
+        body.version_mode,
+        ctx.user_id,
+    )
+    .await?;
+    sqlx::query(
+        "UPDATE marketing_journey SET status = 'live', modified_at = now(), \
+             row_version = row_version + 1 \
+          WHERE id = $1 AND status = 'draft'",
+    )
+    .bind(journey)
+    .execute(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(Json(JourneyPublishResult {
+        journey_id: journey,
+        version_id: body.version_id,
+        moved: moved.moved,
+        kept: moved.kept,
+    }))
+}
+
 /// Most sample people one simulation takes.
 pub const MAX_SAMPLE: usize = 20;
 
@@ -337,13 +449,19 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/marketing/journeys/{id}/simulate",
             post(post_simulate),
         )
+        .route(
+            "/api/v1/marketing/journeys/{id}/publish",
+            post(post_publish),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(post_pause, post_resume, post_simulate),
+    paths(post_pause, post_resume, post_simulate, post_publish),
     components(schemas(
         JourneyControlResult,
+        JourneyPublishBody,
+        JourneyPublishResult,
         JourneySimulateBody,
         JourneySimulatedRun,
         JourneySimulation

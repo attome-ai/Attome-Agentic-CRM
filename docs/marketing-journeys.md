@@ -77,5 +77,7 @@ journey enrolments, blocks and message log, and cancels their running journeys, 
 
 `POST /api/v1/marketing/journeys/{id}/simulate` runs the newest published version for up to 20 sample
 people, each person's record as the trigger, and returns every step of each run without waiting,
-sending or writing anything. Publishing with a version choice has no journey route yet; publish through
-the workflow routes.
+sending or writing anything. `POST /api/v1/marketing/journeys/{id}/publish` with `{"version_id", "version_mode"}` publishes a draft
+(the workflow's own publish checks run), places the people already in the journey (`finish_on_old` or
+`move_matching`, as above) and makes a draft journey live. When the journey names a `publish_role`, only
+its holders (and administrators) may publish.

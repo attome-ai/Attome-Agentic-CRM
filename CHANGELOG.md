@@ -40,7 +40,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   through the journey's re-entry rule and cap; `is_test` for test runs) and
   `DELETE .../enrolments/{enrolment_id}` (the enrolment ends as `removed`, its run is cancelled), and
   `POST .../pause` and `.../resume` (the journey and every one of its runs pause and go on together;
-  Configuration security events), and `POST .../simulate` (the published version for up to 20 sample
+  Configuration security events), `POST .../publish` (a draft goes live with the journey's
+  `publish_role`, people kept or moved by `version_mode`), and `POST .../simulate` (the published version for up to 20 sample
   people, nothing written or sent).
 - Journey insight (E8-T9): node counts (entered, waiting, passed, blocked, exited) are recomputed every
   30 seconds for versions with recent runs (job `marketing_journey_counts`); `counts` adds the goal
