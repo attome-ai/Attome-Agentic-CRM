@@ -698,6 +698,16 @@ struct Recipient {
     confirmed_at: DateTime<Utc>,
 }
 
+/// An upcoming public maintenance window: id, titles, components, start, end.
+type MaintenanceRow = (
+    Uuid,
+    String,
+    Option<String>,
+    Vec<String>,
+    DateTime<Utc>,
+    DateTime<Utc>,
+);
+
 /// A notice: its key, components and text.
 struct Notice {
     key: String,
@@ -748,14 +758,7 @@ pub async fn deliver_due(state: &EngineState) -> Result<u64, AppError> {
     .fetch_all(&state.base.db)
     .await
     .map_err(AppError::internal)?;
-    let maintenance: Vec<(
-        Uuid,
-        String,
-        Option<String>,
-        Vec<String>,
-        DateTime<Utc>,
-        DateTime<Utc>,
-    )> = sqlx::query_as(
+    let maintenance: Vec<MaintenanceRow> = sqlx::query_as(
         "SELECT id, title_en, title_ar, components, starts_at, ends_at FROM ops_maintenance \
               WHERE audience = 'public' AND cancelled_at IS NULL AND starts_at > now() \
               ORDER BY starts_at",

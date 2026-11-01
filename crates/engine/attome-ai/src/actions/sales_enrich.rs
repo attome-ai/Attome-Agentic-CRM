@@ -429,6 +429,10 @@ pub async fn suggest_after_enrichment(
     Ok(suggested)
 }
 
+/// An account as the Arabic names step reads it: id, Latin and Arabic
+/// legal names, the sources of its pending Arabic values.
+type NameRow = (Uuid, Option<String>, Option<String>, Vec<String>);
+
 struct SuggestArabicNames;
 
 impl Action for SuggestArabicNames {
@@ -474,7 +478,7 @@ impl Action for SuggestArabicNames {
             )
             .await?;
             let readable: Vec<Uuid> = ids.into_iter().filter(|id| readable.contains(id)).collect();
-            let rows: Vec<(Uuid, Option<String>, Option<String>, Vec<String>)> = sqlx::query_as(
+            let rows: Vec<NameRow> = sqlx::query_as(
                 "SELECT a.id, a.legal_name_en::text, a.legal_name_ar::text, \
                         COALESCE((SELECT array_agg(p.source) FROM enrichment_proposal p \
                                    WHERE p.entity_logicalname = 'account' AND p.record_id = a.id \

@@ -97,12 +97,15 @@ async fn policy(state: &EngineState) -> Result<Option<Policy>, AppError> {
     .map_err(AppError::internal)
 }
 
+/// A saved design as read: subject, locale, design JSON.
+type DesignRow = (Option<String>, Option<String>, Option<String>);
+
+/// A rendered email: subject, locale, HTML, text.
+type Rendered = (String, String, String, String);
+
 /// The rendered re-engagement email: subject, locale, HTML, text.
-async fn design(
-    state: &EngineState,
-    id: Uuid,
-) -> Result<Option<(String, String, String, String)>, AppError> {
-    let row: Option<(Option<String>, Option<String>, Option<String>)> = sqlx::query_as(
+async fn design(state: &EngineState, id: Uuid) -> Result<Option<Rendered>, AppError> {
+    let row: Option<DesignRow> = sqlx::query_as(
         "SELECT subject, locale, design FROM marketing_email_design \
           WHERE id = $1 AND is_active IS NOT FALSE",
     )
