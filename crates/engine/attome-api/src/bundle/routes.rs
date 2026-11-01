@@ -46,6 +46,7 @@ use uuid::Uuid;
 
 use super::canonical::{bundle_hash, canonical_json};
 use super::export::{PLATFORM_VERSION, export_bundle};
+use super::install_preview::InstallPreview;
 use super::ledger::{self, ACTION_BUNDLE_APPLY, MAX_LIST_LIMIT, PlanRow, PlanStatus};
 use super::model::{BUNDLE_FORMAT, Bundle};
 use super::plan::{BundlePlan, PlanAction, PlanEntry, PlanOptions, PlanSummary, plan_bundle};
@@ -282,7 +283,8 @@ async fn import(
             let bundle = body.bundle.ok_or_else(|| {
                 AppError::Validation("mode=plan requires a `bundle` in the body".to_owned())
             })?;
-            let response = plan_and_persist(&state, bundle, body.allow_retire, ctx.user_id).await?;
+            let (response, _) =
+                plan_and_persist(&state, bundle, body.allow_retire, ctx.user_id).await?;
             Ok((StatusCode::OK, Json(response)).into_response())
         }
         "apply" => {
@@ -303,7 +305,7 @@ async fn plan_and_persist(
     mut bundle: Bundle,
     allow_retire: bool,
     requested_by: Uuid,
-) -> Result<PlanResponse, AppError> {
+) -> Result<(PlanResponse, InstallPreview), AppError> {
     // Format gate first, on the declared string (the body already parsed as
     // this binary's model, but a bundle that says it is v2 is still refused).
     super::model::check_format(&bundle.format).map_err(|e| AppError::Validation(e.to_string()))?;
@@ -352,16 +354,114 @@ async fn plan_and_persist(
     );
 
     let applicable = plan.is_applicable();
-    Ok(PlanResponse {
-        plan_id,
-        basis_hash: plan.basis_hash,
-        bundle_hash: plan.bundle_hash,
-        summary: plan.summary,
-        entries: plan.entries,
-        retires: plan.retires,
-        blocked: plan.blocked,
-        applicable,
-    })
+    let preview = super::install_preview::install_preview(&plan);
+    Ok((
+        PlanResponse {
+            plan_id,
+            basis_hash: plan.basis_hash,
+            bundle_hash: plan.bundle_hash,
+            summary: plan.summary,
+            entries: plan.entries,
+            retires: plan.retires,
+            blocked: plan.blocked,
+            applicable,
+        },
+        preview,
+    ))
+}
+
+/// T8-T2: the setting naming the publishers whose packages this deployment
+/// installs, each with its Ed25519 public key (base64).
+pub const TRUSTED_PUBLISHERS_SETTING: &str = "packages.trusted_publishers";
+
+/// The trusted `(publisher, key)` pairs from [`TRUSTED_PUBLISHERS_SETTING`].
+fn trusted_publishers(state: &EngineState) -> Vec<(String, String)> {
+    let Some(descriptor) = attome_core::setting_registry().get(TRUSTED_PUBLISHERS_SETTING) else {
+        return Vec::new();
+    };
+    let (value, _) = state.settings.load().resolve(descriptor, None, None);
+    value
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|entry| {
+            Some((
+                entry.get("publisher")?.as_str()?.to_owned(),
+                entry.get("key")?.as_str()?.to_owned(),
+            ))
+        })
+        .collect()
+}
+
+/// A package to preview.
+#[derive(Debug, Deserialize, ToSchema)]
+pub(crate) struct PackagePreviewBody {
+    /// An `attome-package/v1` document.
+    #[schema(value_type = Object)]
+    package: serde_json::Value,
+}
+
+/// What installing a package would do, and the plan that installs it.
+#[derive(Serialize, ToSchema)]
+pub(crate) struct PackagePreviewResponse {
+    /// The package's manifest.
+    #[schema(value_type = Object)]
+    manifest: serde_json::Value,
+    /// The persisted plan: apply it with `POST /api/v1/admin/metadata/import?mode=apply`.
+    plan: PlanResponse,
+    preview: InstallPreview,
+}
+
+/// Preview a package install
+///
+/// T8-T2: checks an `attome-package/v1` document's signature against the deployment's trusted
+/// publishers (`packages.trusted_publishers`), its manifest and its namespace, then plans its bundle
+/// against live metadata and answers what installing it does: new and changed objects, the
+/// permissions it requests, the effects on existing records, what it removes and what is blocked.
+/// The plan is persisted like a metadata import plan; installing is applying it
+/// (`POST /api/v1/admin/metadata/import?mode=apply` with its `plan_id`). Administrators only.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/packages/preview",
+    operation_id = "preview_package_install",
+    tag = "admin-metadata",
+    request_body = PackagePreviewBody,
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(attome_audit::security::ExemptReason::Delegated, Some("EngineJob::ApplyMetadataBundle (bundle/apply.rs::audit_entity_change)"), "only computes and persists a proposal, as metadata import mode=plan does; installing applies that plan through mode=apply, whose job audits every schema change")))),
+    responses(
+        (status = 200, description = "The preview and the persisted plan", body = PackagePreviewResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "The package does not read, is not signed by a trusted publisher, or its manifest or namespace is wrong", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn preview_package(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Json(body): Json<PackagePreviewBody>,
+) -> Result<Json<PackagePreviewResponse>, AppError> {
+    let package: super::package::Package = serde_json::from_value(body.package)
+        .map_err(|e| AppError::Validation(format!("the package does not read: {e}")))?;
+    super::package::verify(&package, &trusted_publishers(&state)).map_err(AppError::Validation)?;
+    let mut problems = super::package::check_manifest(&package.manifest);
+    {
+        let entities = state.entities.load();
+        problems.extend(super::package::check_namespace(
+            &package.manifest,
+            &package.bundle,
+            &|name| entities.get(name).is_some(),
+        ));
+    }
+    if !problems.is_empty() {
+        return Err(AppError::Validation(problems.join("; ")));
+    }
+    let manifest = serde_json::to_value(&package.manifest).map_err(AppError::internal)?;
+    let (plan, preview) = plan_and_persist(&state, package.bundle, false, ctx.user_id).await?;
+    Ok(Json(PackagePreviewResponse {
+        manifest,
+        plan,
+        preview,
+    }))
 }
 
 /// Pre-flight shared by the gated and the approved path: the row exists, is
@@ -679,7 +779,8 @@ async fn rollback(
         ))
     })?;
 
-    let plan_response = plan_and_persist(&state, bundle, body.allow_retire, ctx.user_id).await?;
+    let (plan_response, _) =
+        plan_and_persist(&state, bundle, body.allow_retire, ctx.user_id).await?;
     if !plan_response.applicable {
         return Err(AppError::Validation(format!(
             "rollback plan has {} blocked entr{}; resolve them (allow_retire may help) and retry",
@@ -823,12 +924,23 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/metadata/bundles/{name}/rollback",
             post(rollback),
         )
+        .route("/api/v1/admin/packages/preview", post(preview_package))
 }
 
 /// This file's slice of the workspace OpenAPI document (P-api-contract
 /// Phase 1) — merged by `crate::openapi::openapi_document`.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(export, import, list_plans, get_plan, drift, sync, manifest, rollback))]
+#[openapi(paths(
+    export,
+    import,
+    list_plans,
+    get_plan,
+    drift,
+    sync,
+    manifest,
+    rollback,
+    preview_package
+))]
 struct ApiDocFragment;
 
 pub fn openapi_fragment() -> utoipa::openapi::OpenApi {

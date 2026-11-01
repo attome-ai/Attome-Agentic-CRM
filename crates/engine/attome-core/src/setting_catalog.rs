@@ -814,6 +814,17 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(false),
         ),
+        // T8-T2: the publishers whose signed packages may be installed.
+        SettingDescriptor::new(
+            "packages.trusted_publishers",
+            "The publishers whose signed packages this deployment installs, each `{publisher, key}` \
+             with the Ed25519 public key (base64) their packages are signed with. Empty: no package \
+             can be previewed or installed (T8-T2).",
+            || json!({"type": "array", "items": {"type": "object", "required": ["publisher", "key"], "properties": {"publisher": {"type": "string", "minLength": 1}, "key": {"type": "string", "minLength": 1}}}}),
+            &[SettingScope::Deployment],
+            false,
+            || json!([]),
+        ),
         // T1-T4: whether a form's or page's accessibility and performance
         // findings only warn at publish or refuse it.
         SettingDescriptor::new(

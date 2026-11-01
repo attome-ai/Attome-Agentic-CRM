@@ -51,3 +51,13 @@ target's plan: what it creates, updates and leaves unchanged. With `--yes` (and
 `--confirm-target` on a production target) it applies that plan through
 `POST /api/v1/admin/metadata/import`, under that route's permission, two-person approval gate and
 audit. `--json` prints the versioned result.
+
+A deployment can also check packages itself. List the publishers it trusts in the setting
+`packages.trusted_publishers` (`[{"publisher": "Example Co", "key": "<public key>"}]`; empty, the
+default, trusts none), then `POST /api/v1/admin/packages/preview` with `{"package": <the package
+document>}`. It checks the signature against those publishers, the manifest and the namespace, plans
+the bundle against live metadata and answers the install preview: new and changed objects, the
+permissions the package requests, its effects on records already there (records it writes, fields
+it adds to existing entities, field changes), what it removes and what is blocked, with the
+persisted plan. Installing is applying that plan (`POST /api/v1/admin/metadata/import?mode=apply`
+with its `plan_id`). Administrators only.

@@ -247,7 +247,8 @@ pub fn area(key: &str) -> &'static str {
         Some("approval" | "jobs" | "workforce") => "operations",
         Some("data_profile") => "data",
         Some("quality" | "master" | "lineage") => "data",
-        Some("revrec" | "fulfilment") => "sales",
+        Some("revrec" | "fulfilment" | "contract") => "sales",
+        Some("model" | "packages") => "data",
         Some("grc") => "security",
         _ => "other",
     }
@@ -489,6 +490,9 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
         }
         "omnichannel.web_chat_offline_message" => {
             "الرد التلقائي لزائر محادثة الويب خارج ساعات العمل."
+        }
+        "packages.trusted_publishers" => {
+            "الناشرون الذين تُثبَّت حزمهم الموقّعة في هذا النشر، لكل منهم الاسم والمفتاح العام Ed25519 الذي تُوقَّع به حزمه. إن كانت القائمة فارغة فلا تُعاين أي حزمة ولا تُثبَّت."
         }
         "model.publish.quality_gate" => {
             "ما تفعله ملاحظات إمكانية الوصول والأداء في نموذج أو صفحة عند النشر: warn تعرضها وتنشر، وblock ترفض النشر حتى تُصلح."
