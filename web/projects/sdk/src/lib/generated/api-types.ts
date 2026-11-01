@@ -7591,6 +7591,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/metadata/versions/{version}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Previews a switch to a metadata version (A22-T4).
+         * @description Shows what making a recorded metadata version current would add, remove and change, before `switch` does it. Changes nothing.
+         */
+        get: operations["preview_metadata_version"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/metadata/versions/{version}/switch": {
         parameters: {
             query?: never;
@@ -35205,6 +35225,11 @@ export interface components {
              *     key on.
              */
             name?: string | null;
+            /**
+             * @description A22-T3: a selection, not the whole configuration: what it leaves out
+             *     stays as it is rather than being retired.
+             */
+            partial?: boolean;
             /**
              * @description Q10-T5 — permission sets; their assignments are environment data and
              *     never travel.
@@ -67525,6 +67550,25 @@ export interface components {
             /** Format: int64 */
             version: number;
         };
+        /** @description What switching to a metadata version would change (A22-T4). */
+        VersionPreview: {
+            /** @description Artefacts it has and the current version does not. */
+            added: string[];
+            /** @description Artefacts both have, cooked differently. */
+            changed: string[];
+            /**
+             * Format: int64
+             * @description The version current now; `null` when none is.
+             */
+            from?: number | null;
+            /** @description Artefacts the current version has and it does not. */
+            removed: string[];
+            /**
+             * Format: int64
+             * @description The version previewed.
+             */
+            to: number;
+        };
         VersionSummary: {
             /** Format: uuid */
             id: string;
@@ -74072,6 +74116,53 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "country_code": "sa",
+                 *       "hours": {
+                 *         "mon": [
+                 *           {
+                 *             "end_minute": 960,
+                 *             "start_minute": 480
+                 *           }
+                 *         ],
+                 *         "sun": [
+                 *           {
+                 *             "end_minute": 960,
+                 *             "start_minute": 480
+                 *           }
+                 *         ],
+                 *         "thu": [
+                 *           {
+                 *             "end_minute": 960,
+                 *             "start_minute": 480
+                 *           }
+                 *         ],
+                 *         "tue": [
+                 *           {
+                 *             "end_minute": 960,
+                 *             "start_minute": 480
+                 *           }
+                 *         ],
+                 *         "wed": [
+                 *           {
+                 *             "end_minute": 960,
+                 *             "start_minute": 480
+                 *           }
+                 *         ]
+                 *       },
+                 *       "name": "z12t6-01a19466eb82755ca71a7cef7a82de15",
+                 *       "name_ar": "تقويم",
+                 *       "tz": "Asia/Riyadh",
+                 *       "working_days": [
+                 *         "sun",
+                 *         "mon",
+                 *         "tue",
+                 *         "wed",
+                 *         "thu"
+                 *       ]
+                 *     }
+                 */
                 "application/json": components["schemas"]["CalendarBody"];
             };
         };
@@ -74082,6 +74173,61 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "country_code": "SA",
+                     *       "current_version": 1,
+                     *       "description": null,
+                     *       "hours": {
+                     *         "mon": [
+                     *           {
+                     *             "end_minute": 960,
+                     *             "start_minute": 480
+                     *           }
+                     *         ],
+                     *         "sun": [
+                     *           {
+                     *             "end_minute": 960,
+                     *             "start_minute": 480
+                     *           }
+                     *         ],
+                     *         "thu": [
+                     *           {
+                     *             "end_minute": 960,
+                     *             "start_minute": 480
+                     *           }
+                     *         ],
+                     *         "tue": [
+                     *           {
+                     *             "end_minute": 960,
+                     *             "start_minute": 480
+                     *           }
+                     *         ],
+                     *         "wed": [
+                     *           {
+                     *             "end_minute": 960,
+                     *             "start_minute": 480
+                     *           }
+                     *         ]
+                     *       },
+                     *       "id": "01a19466-ebb1-74d9-a57d-3b41a265de2e",
+                     *       "is_active": true,
+                     *       "is_default": false,
+                     *       "name": "z12t6-01a19466eb82755ca71a7cef7a82de15",
+                     *       "name_ar": "تقويم",
+                     *       "owner_layer": "project",
+                     *       "parent": null,
+                     *       "parent_calendar_id": null,
+                     *       "tz": "Asia/Riyadh",
+                     *       "working_days": [
+                     *         "sun",
+                     *         "mon",
+                     *         "tue",
+                     *         "wed",
+                     *         "thu"
+                     *       ]
+                     *     }
+                     */
                     "application/json": components["schemas"]["CalendarDetail"];
                 };
             };
@@ -74129,6 +74275,63 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "code": "ae",
+                     *         "country_code": "AE",
+                     *         "holidays": [
+                     *           "New Year's Day",
+                     *           "Ramadan 30",
+                     *           "Eid al-Fitr",
+                     *           "Arafat Day",
+                     *           "Eid al-Adha",
+                     *           "Hijri New Year",
+                     *           "Prophet's Birthday",
+                     *           "National Day"
+                     *         ],
+                     *         "name": "United Arab Emirates",
+                     *         "name_ar": "الإمارات العربية المتحدة",
+                     *         "reviewed_for_year": 2026,
+                     *         "source_url": "https://u.ae/information-and-services/public-holidays-and-religious-affairs/public-holidays",
+                     *         "tz": "Asia/Dubai"
+                     *       },
+                     *       {
+                     *         "code": "om",
+                     *         "country_code": "OM",
+                     *         "holidays": [
+                     *           "Eid al-Fitr eve",
+                     *           "Eid al-Fitr",
+                     *           "Eid al-Adha",
+                     *           "Hijri New Year",
+                     *           "Prophet's Birthday",
+                     *           "Isra and Mi'raj",
+                     *           "National Day",
+                     *           "Accession Day"
+                     *         ],
+                     *         "name": "Oman",
+                     *         "name_ar": "سلطنة عُمان",
+                     *         "reviewed_for_year": 2026,
+                     *         "source_url": "https://decree.om/2022/rd20220088/",
+                     *         "tz": "Asia/Muscat"
+                     *       },
+                     *       {
+                     *         "code": "sa",
+                     *         "country_code": "SA",
+                     *         "holidays": [
+                     *           "Eid al-Fitr",
+                     *           "Eid al-Adha",
+                     *           "Founding Day",
+                     *           "National Day"
+                     *         ],
+                     *         "name": "Saudi Arabia",
+                     *         "name_ar": "المملكة العربية السعودية",
+                     *         "reviewed_for_year": 2026,
+                     *         "source_url": "https://www.hrsd.gov.sa/en/knowledge-centre/articles/322",
+                     *         "tz": "Asia/Riyadh"
+                     *       }
+                     *     ]
+                     */
                     "application/json": components["schemas"]["PackSummary"][];
                 };
             };
@@ -74170,6 +74373,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "calendar_id": "01a19466-e93e-7445-9118-e7aaa00da6ed",
+                     *       "created": true,
+                     *       "rules_changed": 4,
+                     *       "seasons_changed": 0
+                     *     }
+                     */
                     "application/json": components["schemas"]["AppliedPack"];
                 };
             };
@@ -74197,6 +74408,20 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "code": "not_found",
+                     *       "detail": "not found",
+                     *       "error": "not_found",
+                     *       "instance": "/api/v1/admin/calendars/packs/zz/apply",
+                     *       "message": "not found",
+                     *       "request_id": "3f54708f-1e49-44d7-b355-31f5f831daee",
+                     *       "retryable": false,
+                     *       "status": 404,
+                     *       "title": "The resource was not found.",
+                     *       "type": "about:blank"
+                     *     }
+                     */
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
@@ -74229,6 +74454,120 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "country_code": "SA",
+                     *       "current_version": 1,
+                     *       "description": "Official holidays (https://www.hrsd.gov.sa/en/knowledge-centre/articles/322)",
+                     *       "hours": {
+                     *         "mon": [
+                     *           {
+                     *             "end_minute": 960,
+                     *             "start_minute": 480
+                     *           }
+                     *         ],
+                     *         "sun": [
+                     *           {
+                     *             "end_minute": 960,
+                     *             "start_minute": 480
+                     *           }
+                     *         ],
+                     *         "thu": [
+                     *           {
+                     *             "end_minute": 960,
+                     *             "start_minute": 480
+                     *           }
+                     *         ],
+                     *         "tue": [
+                     *           {
+                     *             "end_minute": 960,
+                     *             "start_minute": 480
+                     *           }
+                     *         ],
+                     *         "wed": [
+                     *           {
+                     *             "end_minute": 960,
+                     *             "start_minute": 480
+                     *           }
+                     *         ]
+                     *       },
+                     *       "id": "01a19466-e93e-7445-9118-e7aaa00da6ed",
+                     *       "is_active": true,
+                     *       "is_default": false,
+                     *       "name": "Saudi Arabia",
+                     *       "name_ar": "المملكة العربية السعودية",
+                     *       "owner_layer": "project",
+                     *       "parent": null,
+                     *       "parent_calendar_id": null,
+                     *       "rules": [
+                     *         {
+                     *           "calendar_id": "01a19466-e93e-7445-9118-e7aaa00da6ed",
+                     *           "id": "01a19466-e950-74bf-a6f5-1da9f02c9405",
+                     *           "name": "Eid al-Adha",
+                     *           "name_ar": "عيد الأضحى",
+                     *           "needs_sighting": true,
+                     *           "owner_layer": "project",
+                     *           "rule": {
+                     *             "day": 9,
+                     *             "kind": "hijri",
+                     *             "month": 12,
+                     *             "span_days": 4
+                     *           }
+                     *         },
+                     *         {
+                     *           "calendar_id": "01a19466-e93e-7445-9118-e7aaa00da6ed",
+                     *           "id": "01a19466-e94b-72f7-aca2-b6329d44031e",
+                     *           "name": "Eid al-Fitr",
+                     *           "name_ar": "عيد الفطر",
+                     *           "needs_sighting": true,
+                     *           "owner_layer": "project",
+                     *           "rule": {
+                     *             "day": 30,
+                     *             "kind": "hijri",
+                     *             "month": 9,
+                     *             "span_days": 4
+                     *           }
+                     *         },
+                     *         {
+                     *           "calendar_id": "01a19466-e93e-7445-9118-e7aaa00da6ed",
+                     *           "id": "01a19466-e954-71d3-9f91-6ed56fe727df",
+                     *           "name": "Founding Day",
+                     *           "name_ar": "يوم التأسيس",
+                     *           "needs_sighting": false,
+                     *           "owner_layer": "project",
+                     *           "rule": {
+                     *             "day": 22,
+                     *             "kind": "fixed",
+                     *             "month": 2,
+                     *             "span_days": 1
+                     *           }
+                     *         },
+                     *         {
+                     *           "calendar_id": "01a19466-e93e-7445-9118-e7aaa00da6ed",
+                     *           "id": "01a19466-e956-7506-ba0b-383270c4297d",
+                     *           "name": "National Day",
+                     *           "name_ar": "اليوم الوطني",
+                     *           "needs_sighting": false,
+                     *           "owner_layer": "project",
+                     *           "rule": {
+                     *             "day": 23,
+                     *             "kind": "fixed",
+                     *             "month": 9,
+                     *             "span_days": 1
+                     *           }
+                     *         }
+                     *       ],
+                     *       "seasons": [],
+                     *       "tz": "Asia/Riyadh",
+                     *       "working_days": [
+                     *         "sun",
+                     *         "mon",
+                     *         "tue",
+                     *         "wed",
+                     *         "thu"
+                     *       ]
+                     *     }
+                     */
                     "application/json": components["schemas"]["CalendarFull"];
                 };
             };
@@ -74330,6 +74669,52 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "hours": {
+                 *         "mon": [
+                 *           {
+                 *             "end_minute": 960,
+                 *             "start_minute": 480
+                 *           }
+                 *         ],
+                 *         "sun": [
+                 *           {
+                 *             "end_minute": 960,
+                 *             "start_minute": 480
+                 *           }
+                 *         ],
+                 *         "thu": [
+                 *           {
+                 *             "end_minute": 960,
+                 *             "start_minute": 480
+                 *           }
+                 *         ],
+                 *         "tue": [
+                 *           {
+                 *             "end_minute": 960,
+                 *             "start_minute": 480
+                 *           }
+                 *         ],
+                 *         "wed": [
+                 *           {
+                 *             "end_minute": 960,
+                 *             "start_minute": 480
+                 *           }
+                 *         ]
+                 *       },
+                 *       "name": "z12t6-01a19466f39373cf8e56f20e91940505",
+                 *       "parent_calendar_id": "01a19466-f3ea-7579-b4e0-ac9a6c19e365",
+                 *       "tz": "Asia/Riyadh",
+                 *       "working_days": [
+                 *         "sun",
+                 *         "mon",
+                 *         "tue",
+                 *         "wed",
+                 *         "thu"
+                 *       ]
+                 *     }
+                 */
                 "application/json": components["schemas"]["CalendarBody"];
             };
         };
@@ -74367,6 +74752,20 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "code": "validation_error",
+                     *       "detail": "validation error: a calendar cannot inherit from itself, directly or through its parents",
+                     *       "error": "validation_error",
+                     *       "instance": "/api/v1/admin/calendars/01a19466-f3c2-72f0-915c-65626c631da9",
+                     *       "message": "validation error: a calendar cannot inherit from itself, directly or through its parents",
+                     *       "request_id": "dd172ef6-9b52-42cf-b2da-32a3c9885b6a",
+                     *       "retryable": false,
+                     *       "status": 422,
+                     *       "title": "Some values are not valid.",
+                     *       "type": "about:blank"
+                     *     }
+                     */
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
@@ -74547,6 +74946,17 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "name": "Eid al-Fitr",
+                 *       "rule": {
+                 *         "day": 1,
+                 *         "kind": "hijri",
+                 *         "month": 10,
+                 *         "span_days": 3
+                 *       }
+                 *     }
+                 */
                 "application/json": components["schemas"]["HolidayRuleDef"];
             };
         };
@@ -74557,6 +74967,22 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "calendar_id": "01a19466-f12e-7554-a752-ddeafec4c2c3",
+                     *       "id": "01a19466-f15a-7343-b148-5c8ef437bc6f",
+                     *       "name": "Eid al-Fitr",
+                     *       "name_ar": null,
+                     *       "needs_sighting": false,
+                     *       "owner_layer": "project",
+                     *       "rule": {
+                     *         "day": 1,
+                     *         "kind": "hijri",
+                     *         "month": 10,
+                     *         "span_days": 3
+                     *       }
+                     *     }
+                     */
                     "application/json": components["schemas"]["RuleDetail"];
                 };
             };
@@ -83166,6 +83592,12 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "logicalname": "u9_formula_01a19467ab95724ea8a23d844da241c2",
+                 *       "name": "U9 Field Types"
+                 *     }
+                 */
                 "application/json": components["schemas"]["CreateEntityBody"];
             };
         };
@@ -83176,6 +83608,23 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "attribute_count": 0,
+                     *       "business_key": null,
+                     *       "category": null,
+                     *       "extends_entity_id": null,
+                     *       "id": "01a19467-abea-73ae-8634-66c5d36489be",
+                     *       "is_active": true,
+                     *       "is_append_only": false,
+                     *       "is_reference_data": false,
+                     *       "logicalname": "u9_formula_01a19467ab95724ea8a23d844da241c2",
+                     *       "name": "U9 Field Types",
+                     *       "owner_layer": "project",
+                     *       "primary_name_attribute": null,
+                     *       "storage_mode": "standard"
+                     *     }
+                     */
                     "application/json": components["schemas"]["EntityMeta"];
                 };
             };
@@ -91189,6 +91638,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PaginatedResponse_NodeSwitchView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such published version */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_metadata_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A published metadata version */
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What would change */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionPreview"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -118464,6 +118963,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "calendar_id": "01a19466-ebb1-74d9-a57d-3b41a265de2e",
+                     *       "row_version": 0,
+                     *       "subject_id": "01a19466-ebd0-703a-86be-46b23795eddd",
+                     *       "subject_type": "user"
+                     *     }
+                     */
                     "application/json": components["schemas"]["AssignmentRow"];
                 };
             };
@@ -118519,6 +119026,11 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "calendar_id": "01a19466-ebb1-74d9-a57d-3b41a265de2e"
+                 *     }
+                 */
                 "application/json": components["schemas"]["AssignmentBody"];
             };
         };
@@ -118529,6 +119041,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "calendar_id": "01a19466-ebb1-74d9-a57d-3b41a265de2e",
+                     *       "row_version": 0,
+                     *       "subject_id": "01a19466-ebd0-703a-86be-46b23795eddd",
+                     *       "subject_type": "user"
+                     *     }
+                     */
                     "application/json": components["schemas"]["AssignmentRow"];
                 };
             };
@@ -118574,6 +119094,20 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "code": "validation_error",
+                     *       "detail": "validation error: subject_type is user or team",
+                     *       "error": "validation_error",
+                     *       "instance": "/api/v1/calendar-assignments/robot/01a19466-ebd0-703a-86be-46b23795eddd",
+                     *       "message": "validation error: subject_type is user or team",
+                     *       "request_id": "f6026526-eb88-4a63-a375-55cd8368df2e",
+                     *       "retryable": false,
+                     *       "status": 422,
+                     *       "title": "Some values are not valid.",
+                     *       "type": "about:blank"
+                     *     }
+                     */
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
@@ -118824,6 +119358,26 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "calendar_id": "01a19466-ee41-749a-892b-3415740efcf4",
+                     *         "confirmed_start": null,
+                     *         "expected_start": "2026-03-19",
+                     *         "hijri_year": 1447,
+                     *         "rule_id": "01a19466-ee4a-7005-bc5c-1ed88a2c7aed",
+                     *         "rule_name": "Eid al-Fitr"
+                     *       },
+                     *       {
+                     *         "calendar_id": "01a19466-ee41-749a-892b-3415740efcf4",
+                     *         "confirmed_start": null,
+                     *         "expected_start": "2026-05-26",
+                     *         "hijri_year": 1447,
+                     *         "rule_id": "01a19466-ee4f-745d-ad24-45f8aa50a34a",
+                     *         "rule_name": "Eid al-Adha"
+                     *       }
+                     *     ]
+                     */
                     "application/json": components["schemas"]["SightingRow"][];
                 };
             };
@@ -118856,6 +119410,13 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "confirmed_start": "2026-03-20",
+                 *       "hijri_year": 1447,
+                 *       "rule_id": "01a19466-ee4a-7005-bc5c-1ed88a2c7aed"
+                 *     }
+                 */
                 "application/json": components["schemas"]["SightingBody"];
             };
         };
@@ -118866,6 +119427,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "calendar_id": "01a19466-ee41-749a-892b-3415740efcf4",
+                     *       "confirmed_start": "2026-03-20",
+                     *       "expected_start": "2026-03-19",
+                     *       "hijri_year": 1447,
+                     *       "rule_id": "01a19466-ee4a-7005-bc5c-1ed88a2c7aed",
+                     *       "rule_name": "Eid al-Fitr"
+                     *     }
+                     */
                     "application/json": components["schemas"]["SightingRow"];
                 };
             };
@@ -118919,6 +119490,14 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "from": "2026-11-25T12:00:00Z",
+                 *       "minutes": 480,
+                 *       "op": "add",
+                 *       "user_id": "01a19466-edb3-70ea-b2ff-f24237b81862"
+                 *     }
+                 */
                 "application/json": components["schemas"]["CalculateRequest"];
             };
         };
@@ -118929,6 +119508,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "calendar_id": "01a19466-ee7f-7709-b58f-d684ae5b6f7a",
+                     *       "calendar_version": 1,
+                     *       "content_hash": "fd8c98d5a7791aa05f2970bf471a551f0f3a2ed81d270f96faa41278da33ed99",
+                     *       "result": "2026-11-29T08:00:00Z"
+                     *     }
+                     */
                     "application/json": components["schemas"]["CalculateResponse"];
                 };
             };
@@ -151592,6 +152179,14 @@ export interface operations {
         /** @description The record's field values by logical name; the fields depend on the deployment's metadata (`GET /api/v1/schema/{entity}`) */
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "quantity": 2,
+                 *       "rate": 0.5,
+                 *       "total": 999,
+                 *       "unit_price": 10
+                 *     }
+                 */
                 "application/json": Record<string, never>;
             };
         };
@@ -151602,6 +152197,26 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "created_at": "2026-10-31T23:59:50.270358+00:00",
+                     *       "data": {
+                     *         "attachment": null,
+                     *         "created_by": "01a19467-bcae-767b-b7ef-03dbdc348116",
+                     *         "is_active": true,
+                     *         "modified_by": "01a19467-bcae-767b-b7ef-03dbdc348116",
+                     *         "organization_ref": "00000000-0000-0000-0000-000000000000",
+                     *         "owner_ref": "01a19467-bcae-767b-b7ef-03dbdc348116",
+                     *         "owner_type": 0,
+                     *         "photo": null,
+                     *         "title": "has a photo"
+                     *       },
+                     *       "entity_id": "01a19467-bced-71ea-bec3-6e83d7c7bd1f",
+                     *       "id": "01a19467-c200-797f-a087-7ac5980ce5f4",
+                     *       "row_version": 0,
+                     *       "updated_at": "2026-10-31T23:59:50.270358+00:00"
+                     *     }
+                     */
                     "application/json": components["schemas"]["EntityRecordResponse"];
                 };
             };
@@ -151629,6 +152244,35 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "code": "validation_error",
+                     *       "detail": "validation error: total: is a formula field; its value is computed and cannot be written",
+                     *       "details": [
+                     *         {
+                     *           "code": "invalid",
+                     *           "field": "total",
+                     *           "message": "total: is a formula field; its value is computed and cannot be written"
+                     *         }
+                     *       ],
+                     *       "error": "validation_error",
+                     *       "errors": [
+                     *         {
+                     *           "attribute": "total",
+                     *           "fix": null,
+                     *           "message": "total: is a formula field; its value is computed and cannot be written",
+                     *           "rule": "invalid"
+                     *         }
+                     *       ],
+                     *       "instance": "/api/v1/u9_formula_01a19467ab95724ea8a23d844da241c2",
+                     *       "message": "validation error: total: is a formula field; its value is computed and cannot be written",
+                     *       "request_id": "2ee20a87-86c5-4947-a195-f68a9abb3477",
+                     *       "retryable": false,
+                     *       "status": 422,
+                     *       "title": "Some values are not valid.",
+                     *       "type": "about:blank"
+                     *     }
+                     */
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
@@ -151646,6 +152290,19 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "operation": "create",
+                 *       "records": [
+                 *         {
+                 *           "data": {
+                 *             "body": "<p onclick=\"steal()\">Hello <strong>team</strong></p><script>alert(document.cookie)</script><img src=x onerror=\"alert(1)\"><iframe src=\"https://evil.example\"></iframe><a href=\"javascript:alert(1)\">click</a><a href=\"https://ok.example\">ok</a><style>body{display:none}</style>",
+                 *             "title": "bulk"
+                 *           }
+                 *         }
+                 *       ]
+                 *     }
+                 */
                 "application/json": components["schemas"]["BulkRequestBody"];
             };
         };
@@ -152268,6 +152925,19 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "columns": [],
+                 *       "filter": [
+                 *         {
+                 *           "field": "total",
+                 *           "op": "gt",
+                 *           "value": "25"
+                 *         }
+                 *       ],
+                 *       "format": "json"
+                 *     }
+                 */
                 "application/json": components["schemas"]["ExportRequestBody"];
             };
         };
@@ -152278,6 +152948,13 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "id": "01a19467-b6af-7049-856f-312fd28e4ca4",
+                     *       "matching_rows": 1,
+                     *       "status": "pending"
+                     *     }
+                     */
                     "application/json": components["schemas"]["ExportEnqueueResponse"];
                 };
             };
@@ -155095,6 +155772,13 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "content_type": "application/pdf",
+                 *       "declared_size_bytes": 1024,
+                 *       "filename": "upload-attachment.bin"
+                 *     }
+                 */
                 "application/json": components["schemas"]["UploadSessionRequest"];
             };
         };
@@ -155105,6 +155789,13 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "expires_in_secs": 900,
+                     *       "session_id": "01a19467-c299-77e9-ad08-168054ff9605",
+                     *       "upload_url": "http://localhost:9100/attome-test/_quarantine/u9_image_01a19467bcb376bd82d4331d711171ac/01a19467-c200-797f-a087-7ac5980ce5f4/attachment/01a19467-c299-77e9-ad08-168054ff9605-upload-attachment.bin?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=attometest%2F20261031%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20261031T235950Z&X-Amz-Expires=900&X-Amz-SignedHeaders=host&X-Amz-Signature=f66c243a50118b65466951713b953dd2def20ce085771398e3d25feb52d34883"
+                     *     }
+                     */
                     "application/json": components["schemas"]["UploadSessionResponse"];
                 };
             };
@@ -155132,6 +155823,20 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "code": "validation_error",
+                     *       "detail": "validation error: photo is an image field; content_type must be one of: image/png, image/jpeg, image/gif, image/webp",
+                     *       "error": "validation_error",
+                     *       "instance": "/api/v1/u9_image_01a19467bcb376bd82d4331d711171ac/01a19467-c200-797f-a087-7ac5980ce5f4/files/photo/upload-session",
+                     *       "message": "validation error: photo is an image field; content_type must be one of: image/png, image/jpeg, image/gif, image/webp",
+                     *       "request_id": "ed246c68-0cd5-4b1a-8f5b-1a7e99606fa8",
+                     *       "retryable": false,
+                     *       "status": 422,
+                     *       "title": "Some values are not valid.",
+                     *       "type": "about:blank"
+                     *     }
+                     */
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
