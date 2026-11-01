@@ -738,6 +738,64 @@ async fn set_target_status(
     .execute(db)
     .await
     .map_err(AppError::internal)?;
+    // K6-T10: the run history follows the target's status.
+    match status {
+        "crawling" => open_run(db, target_id).await?,
+        "failed" => close_run(db, target_id, "failed", last_error, 0).await?,
+        _ => {}
+    }
+    Ok(())
+}
+
+/// K6-T10: opens the target's run record; a run left `running` by a
+/// crashed worker is closed as failed first.
+async fn open_run(db: &attome_db::DbPool, target_id: Uuid) -> Result<(), AppError> {
+    close_run(db, target_id, "failed", Some("interrupted"), 0).await?;
+    sqlx::query("INSERT INTO webcrawl_run (target_id) VALUES ($1)")
+        .bind(target_id)
+        .execute(db)
+        .await
+        .map_err(AppError::internal)?;
+    Ok(())
+}
+
+/// K6-T10: closes the target's running run with how it ended.
+async fn close_run(
+    db: &attome_db::DbPool,
+    target_id: Uuid,
+    status: &str,
+    error: Option<&str>,
+    pages_found: i32,
+) -> Result<(), AppError> {
+    sqlx::query(
+        "UPDATE webcrawl_run SET status = $2, error = $3, pages_found = $4, finished_at = NOW() WHERE target_id = $1 AND status = 'running'",
+    )
+    .bind(target_id)
+    .bind(status)
+    .bind(error)
+    .bind(pages_found)
+    .execute(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
+}
+
+/// K6-T10: what the sync after the target's latest run did to its items.
+async fn record_run_items(
+    db: &attome_db::DbPool,
+    target_id: Uuid,
+    stats: &crate::import::SyncStats,
+) -> Result<(), AppError> {
+    sqlx::query(
+        "UPDATE webcrawl_run SET items_imported = $2, items_updated = $3, items_flagged = $4 WHERE id = (SELECT id FROM webcrawl_run WHERE target_id = $1 ORDER BY started_at DESC, id DESC LIMIT 1)",
+    )
+    .bind(target_id)
+    .bind(i32::try_from(stats.imported).unwrap_or(i32::MAX))
+    .bind(i32::try_from(stats.updated).unwrap_or(i32::MAX))
+    .bind(i32::try_from(stats.flagged).unwrap_or(i32::MAX))
+    .execute(db)
+    .await
+    .map_err(AppError::internal)?;
     Ok(())
 }
 
@@ -971,11 +1029,12 @@ pub async fn run(state: &EngineState, target_id: Uuid) -> Result<(), AppError> {
     )
     .bind(target_id)
     .bind(status)
-    .bind(last_error)
+    .bind(last_error.as_deref())
     .bind(sink.recorded)
     .execute(db)
     .await
     .map_err(AppError::internal)?;
+    close_run(db, target_id, status, last_error.as_deref(), sink.recorded).await?;
 
     // K6-T4: changed imported pages update their items; an automatic
     // source imports its new pages.
@@ -1003,9 +1062,14 @@ pub async fn run(state: &EngineState, target_id: Uuid) -> Result<(), AppError> {
     }
     if status == "completed" {
         match crate::import::sync_after_crawl(state, target_id).await {
-            Ok(stats) => tracing::info!(%target_id, imported = stats.imported,
-                updated = stats.updated, flagged = stats.flagged, skipped = stats.skipped,
-                "webcrawl: knowledge items synced after the crawl"),
+            Ok(stats) => {
+                tracing::info!(%target_id, imported = stats.imported,
+                    updated = stats.updated, flagged = stats.flagged, skipped = stats.skipped,
+                    "webcrawl: knowledge items synced after the crawl");
+                if let Err(e) = record_run_items(db, target_id, &stats).await {
+                    tracing::warn!(%target_id, error = %e, "webcrawl: the run's item counts were not kept");
+                }
+            }
             Err(e) => tracing::warn!(%target_id, error = %e,
                 "webcrawl: knowledge items were not synced after the crawl"),
         }

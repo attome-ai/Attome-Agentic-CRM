@@ -44,15 +44,37 @@ impl EngineModel for SecurityModel {
     }
 
     /// Q10-T7: an auditor reads the audit trail and changes nothing.
+    /// K6-T10: a knowledge manager runs the knowledge sources, websites
+    /// included (`attome_webcrawl::admin::authorize`), and their items.
     fn role_templates(&self) -> &'static [attome_core::model::RoleTemplate] {
-        &[attome_core::model::RoleTemplate {
-            key: "auditor",
-            name: "Auditor",
-            name_ar: "مدقق",
-            description: "Reads the audit trail through the Audit administration area; changes nothing.",
-            entity_access: &[],
-            privileges: &["admin.audit"],
-        }]
+        &[
+            attome_core::model::RoleTemplate {
+                key: "auditor",
+                name: "Auditor",
+                name_ar: "مدقق",
+                description: "Reads the audit trail through the Audit administration area; changes nothing.",
+                entity_access: &[],
+                privileges: &["admin.audit"],
+            },
+            attome_core::model::RoleTemplate {
+                key: "knowledge_manager",
+                name: "Knowledge manager",
+                name_ar: "مدير المعرفة",
+                description: "Runs the knowledge sources, websites included, and reviews and publishes their items; cannot open intranet hosts or credentials to a crawl.",
+                entity_access: &[
+                    ("knowledge_data_source", [3, 3, 1]),
+                    ("knowledge_data_item", [3, 3, 1]),
+                ],
+                privileges: &[
+                    "knowledge_data_source.read",
+                    "knowledge_data_source.create",
+                    "knowledge_data_source.update",
+                    "knowledge_data_item.read",
+                    "knowledge_data_item.create",
+                    "knowledge_data_item.update",
+                ],
+            },
+        ]
     }
 
     fn routes(&self) -> Router<EngineState> {

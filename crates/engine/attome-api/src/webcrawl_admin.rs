@@ -12,8 +12,9 @@
 //! them for every other entity write (guidelines §9).
 
 use attome_core::EngineState;
-use attome_server::authz::{Authorized, Privilege, area};
+use attome_server::authz::{AdminArea, Authorized, SelfService};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PageWindow, PaginatedResponse};
+use attome_webcrawl::admin::{Access, ChangeItem, RunItem, UpdateTargetBody, authorize};
 use attome_webcrawl::model::{
     CreateTargetBody, ImportBody, ImportResult, PageListItem, SelectionBody, TARGET_COLUMNS,
     TargetListItem,
@@ -22,7 +23,7 @@ use attome_webcrawl::safety;
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode, header::IF_MATCH},
     routing::{delete, get, patch, post},
 };
 use uuid::Uuid;
@@ -54,9 +55,10 @@ fn require_enabled(state: &EngineState) -> Result<(), AppError> {
 )]
 async fn list_targets(
     State(state): State<EngineState>,
-    _ctx: Authorized<Privilege<area::Integrations>>,
+    ctx: Authorized<SelfService>,
     Query(q): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<TargetListItem>>, AppError> {
+    authorize(&ctx, Access::Read)?;
     let PageWindow {
         page,
         page_size,
@@ -106,9 +108,16 @@ async fn list_targets(
 )]
 async fn create_target(
     State(state): State<EngineState>,
-    ctx: Authorized<Privilege<area::Integrations>>,
+    ctx: Authorized<SelfService>,
     Json(body): Json<CreateTargetBody>,
 ) -> Result<(StatusCode, Json<TargetListItem>), AppError> {
+    authorize(&ctx, Access::Manage)?;
+    // K6-T10: an intranet host or a credential is an administrator's call.
+    if !AdminArea::Integrations.held_by(&ctx)
+        && (body.allow_host.is_some() || body.credential_ref.is_some())
+    {
+        return Err(AppError::Forbidden);
+    }
     require_enabled(&state)?;
 
     body.validate_settings().map_err(AppError::Validation)?;
@@ -297,9 +306,10 @@ async fn create_target(
 )]
 async fn recrawl_target(
     State(state): State<EngineState>,
-    ctx: Authorized<Privilege<area::Integrations>>,
+    ctx: Authorized<SelfService>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<TargetListItem>, AppError> {
+    authorize(&ctx, Access::Manage)?;
     require_enabled(&state)?;
 
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
@@ -359,9 +369,10 @@ async fn recrawl_target(
 )]
 async fn delete_target(
     State(state): State<EngineState>,
-    ctx: Authorized<Privilege<area::Integrations>>,
+    ctx: Authorized<SelfService>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
+    authorize(&ctx, Access::Manage)?;
     let result = sqlx::query(
         "UPDATE webcrawl_target SET is_deleted = TRUE, row_version = row_version + 1, updated_at = NOW() \
          WHERE id = $1 AND is_deleted = FALSE",
@@ -405,9 +416,10 @@ async fn delete_target(
 )]
 async fn list_target_pages(
     State(state): State<EngineState>,
-    _ctx: Authorized<Privilege<area::Integrations>>,
+    ctx: Authorized<SelfService>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Vec<PageListItem>>, AppError> {
+    authorize(&ctx, Access::Read)?;
     let items = sqlx::query_as::<_, PageListItem>(
         "SELECT id, url_path, parent_path, depth, size_bytes, status, is_selected, imported_data_item_ref \
          FROM webcrawl_page \
@@ -443,10 +455,11 @@ async fn list_target_pages(
 )]
 async fn update_selection(
     State(state): State<EngineState>,
-    ctx: Authorized<Privilege<area::Integrations>>,
+    ctx: Authorized<SelfService>,
     Path(id): Path<Uuid>,
     Json(body): Json<SelectionBody>,
 ) -> Result<StatusCode, AppError> {
+    authorize(&ctx, Access::Manage)?;
     if body.page_ids.is_empty() {
         return Err(AppError::Validation("page_ids must not be empty".into()));
     }
@@ -508,11 +521,138 @@ async fn update_selection(
 )]
 async fn import_pages(
     State(state): State<EngineState>,
-    ctx: Authorized<Privilege<area::Integrations>>,
+    ctx: Authorized<SelfService>,
     Path(id): Path<Uuid>,
     Json(body): Json<ImportBody>,
 ) -> Result<Json<ImportResult>, AppError> {
+    authorize(&ctx, Access::Manage)?;
     attome_webcrawl::import::import_pages(&state, &ctx, id, &body.page_ids)
+        .await
+        .map(Json)
+}
+
+// ── K6-T10: settings, run history and changes to review ────────────────────
+
+/// `If-Match: "<row_version>"`, required.
+fn if_match(headers: &HeaderMap) -> Result<i64, AppError> {
+    let raw = headers.get(IF_MATCH).ok_or_else(|| {
+        AppError::Validation("If-Match: \"<row_version>\" is required to change a source".into())
+    })?;
+    let value = raw
+        .to_str()
+        .map_err(|_| AppError::Validation("If-Match header must be ASCII".into()))?
+        .trim()
+        .trim_matches('"');
+    value.parse::<i64>().map_err(|_| {
+        AppError::Validation(format!(
+            "If-Match must be a row_version integer, got: {value}"
+        ))
+    })
+}
+
+/// Change a crawl source's settings
+///
+/// Changes a source's settings; each one left out keeps its value. Send the
+/// source's `row_version` as `If-Match`. A knowledge manager may change
+/// everything but the intranet host and the credential, which stay with
+/// administrators. Audited.
+#[utoipa::path(
+    patch,
+    path = "/api/v1/webcrawl/targets/{id}",
+    tag = "admin-webcrawl",
+    params(
+        ("id" = Uuid, Path, description = "The source"),
+        ("If-Match" = String, Header, description = "The source's row_version, quoted"),
+    ),
+    request_body = UpdateTargetBody,
+    responses(
+        (status = 200, description = "The source as it now stands", body = TargetListItem),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "The caller may not manage sources, or changed an administrator's setting", body = ErrorResponse),
+        (status = 404, description = "No such source", body = ErrorResponse),
+        (status = 409, description = "version_conflict: the source changed since it was read", body = ErrorResponse),
+        (status = 422, description = "A missing or malformed If-Match, or a setting outside its values", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[
+        (attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update),
+    ])))),
+)]
+async fn patch_target(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(id): Path<Uuid>,
+    headers: HeaderMap,
+    Json(body): Json<UpdateTargetBody>,
+) -> Result<Json<TargetListItem>, AppError> {
+    let expected = if_match(&headers)?;
+    let row =
+        attome_webcrawl::admin::update_target(&state.base.db, &ctx, id, expected, &body).await?;
+    write_business_event(
+        &state,
+        &ctx,
+        attome_audit::AuditOperation::Update,
+        "webcrawl_target_settings_changed",
+        Some(id),
+        &format!("settings of {} changed", row.url),
+    )
+    .await;
+    Ok(Json(row))
+}
+
+/// A crawl source's runs
+///
+/// Each crawl of the source, newest first: when it ran, how it ended, the
+/// pages it found and what it did to the source's knowledge items.
+#[utoipa::path(
+    get,
+    path = "/api/v1/webcrawl/targets/{id}/runs",
+    tag = "admin-webcrawl",
+    params(("id" = Uuid, Path, description = "The source"), OnePageQuery),
+    responses(
+        (status = 200, description = "Success", body = PaginatedResponse<RunItem>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "The caller may not read sources", body = ErrorResponse),
+        (status = 404, description = "No such source", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_runs(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(id): Path<Uuid>,
+    Query(q): Query<OnePageQuery>,
+) -> Result<Json<PaginatedResponse<RunItem>>, AppError> {
+    attome_webcrawl::admin::runs(&state.base.db, &ctx, id, &q)
+        .await
+        .map(Json)
+}
+
+/// A crawl source's changes to review
+///
+/// The source's knowledge items a recrawl changed after an editor published
+/// them: their text is kept and they wait for review (importing the page
+/// again takes the site's version).
+#[utoipa::path(
+    get,
+    path = "/api/v1/webcrawl/targets/{id}/changes",
+    tag = "admin-webcrawl",
+    params(("id" = Uuid, Path, description = "The source"), OnePageQuery),
+    responses(
+        (status = 200, description = "Success", body = PaginatedResponse<ChangeItem>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "The caller may not read sources", body = ErrorResponse),
+        (status = 404, description = "No such source", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_changes(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(id): Path<Uuid>,
+    Query(q): Query<OnePageQuery>,
+) -> Result<Json<PaginatedResponse<ChangeItem>>, AppError> {
+    attome_webcrawl::admin::changes(&state.base.db, &ctx, id, &q)
         .await
         .map(Json)
 }
@@ -567,7 +707,12 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/webcrawl/targets",
             get(list_targets).post(create_target),
         )
-        .route("/api/v1/webcrawl/targets/{id}", delete(delete_target))
+        .route(
+            "/api/v1/webcrawl/targets/{id}",
+            delete(delete_target).patch(patch_target),
+        )
+        .route("/api/v1/webcrawl/targets/{id}/runs", get(list_runs))
+        .route("/api/v1/webcrawl/targets/{id}/changes", get(list_changes))
         .route(
             "/api/v1/webcrawl/targets/{id}/recrawl",
             post(recrawl_target),
@@ -591,7 +736,10 @@ pub fn routes() -> Router<EngineState> {
     delete_target,
     list_target_pages,
     update_selection,
-    import_pages
+    import_pages,
+    patch_target,
+    list_runs,
+    list_changes
 ))]
 struct ApiDocFragment;
 

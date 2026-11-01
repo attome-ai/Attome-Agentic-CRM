@@ -13,6 +13,8 @@
 //! switch, matching the air-gap posture `P-knowledge-base.md` §5 documents
 //! for the platform's (separate, larger, not-yet-built) web-ingestion plan.
 
+/// K6-T10: who manages sources, settings under the row version, run history, changes to review.
+pub mod admin;
 pub mod crawl;
 /// K6-T6: linked PDF, Word and Excel documents through scan and text extraction.
 pub mod documents;

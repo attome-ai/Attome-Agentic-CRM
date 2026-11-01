@@ -38,12 +38,14 @@ pub struct TargetListItem {
     pub allow_host: String,
     /// K6-T1: reference to the credential the crawl signs in with.
     pub credential_ref: Option<String>,
+    /// K6-T10: send it back as `If-Match` to change the settings.
+    pub row_version: i64,
 }
 
 /// The `webcrawl_target` columns a [`TargetListItem`] reads, in its order.
 pub const TARGET_COLUMNS: &str = "id, url, status, max_depth, pages_found, pages_imported, \
      last_error, last_crawled_at, created_at, include_patterns, exclude_patterns, languages, \
-     audience, import_mode, schedule, sitemap_url, watch_only, allow_host, credential_ref";
+     audience, import_mode, schedule, sitemap_url, watch_only, allow_host, credential_ref, row_version";
 
 #[derive(Debug, Clone, sqlx::FromRow, Serialize, ToSchema)]
 pub struct PageListItem {

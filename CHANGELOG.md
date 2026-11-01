@@ -14,6 +14,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Knowledge managers run website sources: the new Knowledge Manager role template (knowledge data
+  sources and items) opens the webcrawl admin routes beside the Integrations administrators, except that
+  only an administrator sets an intranet host or a credential. `PATCH /api/v1/webcrawl/targets/{id}`
+  changes a source's settings with `If-Match` (stale is `409 version_conflict`; targets now carry
+  `row_version`), `GET /api/v1/webcrawl/targets/{id}/runs` lists each crawl with its pages and the items it
+  imported, updated or flagged (migration 0354), and `GET /api/v1/webcrawl/targets/{id}/changes` lists the
+  items a recrawl changed that wait for review (K6-T10).
 - The data model as a diagram (`/xrm/admin/data-model`): pick an entity to see what it looks up, its
   many-to-many links, the entity it extends and the entities extending it (dashed), mirrored in Arabic;
   the panel beside it lists the attributes with type, sensitivity and lookup target, and before a delete,
