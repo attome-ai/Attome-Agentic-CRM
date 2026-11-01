@@ -196,6 +196,10 @@ pub struct CrawlScope {
     /// By path.
     pub known: HashMap<String, KnownPage>,
     pub min_interval: Duration,
+    /// K6-T5: the block hashes the source's last crawl saw on most of its
+    /// pages (a repeated related-links panel, a newsletter box), left out of
+    /// every page's main content.
+    pub repeated: HashSet<u64>,
 }
 
 /// How a crawl ended.
@@ -203,6 +207,9 @@ pub struct CrawlScope {
 pub struct WalkOutcome {
     /// Why it stopped early, if it did.
     pub stopped: Option<String>,
+    /// K6-T5: the block hashes this walk saw on more than half of the HTML
+    /// pages it read (at least three), for the next crawl to leave out.
+    pub repeated: Vec<u64>,
     /// K6-T7: whether the walk went through every page in reach (no error
     /// stop, no page limit), so a page it did not see is really missing.
     pub complete: bool,
@@ -422,6 +429,9 @@ pub async fn walk_with<F: Fetcher, S: PageSink>(
     let mut visited = 0usize;
     let mut errors_in_a_row = 0usize;
     let mut limited = false;
+    // K6-T5: how many HTML pages each block was seen on.
+    let mut block_counts: HashMap<u64, u32> = HashMap::new();
+    let mut html_pages: u32 = 0;
     while let Some(url) = queue.pop_front() {
         if visited >= limits.max_pages {
             limited = true;
@@ -490,7 +500,12 @@ pub async fn walk_with<F: Fetcher, S: PageSink>(
                 // styles and noscript fallbacks are never content, owner
                 // decision 4), and the language it declares.
                 let (content, language): (Option<String>, Option<String>) = if is_html {
-                    let main = attome_html::main_content::extract_main(&page.body);
+                    html_pages += 1;
+                    for block in attome_html::main_content::block_hashes(&page.body) {
+                        *block_counts.entry(block).or_default() += 1;
+                    }
+                    let main =
+                        attome_html::main_content::extract_main_with(&page.body, &scope.repeated);
                     let text = if main.text_markdown.trim().is_empty() {
                         attome_html::html_to_text(&page.body)
                     } else {
@@ -554,6 +569,7 @@ pub async fn walk_with<F: Fetcher, S: PageSink>(
                         stopped: Some(format!(
                             "stopped after {MAX_CONSECUTIVE_ERRORS} errors in a row"
                         )),
+                        repeated: repeated_blocks(&block_counts, html_pages),
                         complete: false,
                     };
                 }
@@ -562,8 +578,24 @@ pub async fn walk_with<F: Fetcher, S: PageSink>(
     }
     WalkOutcome {
         stopped: None,
+        repeated: repeated_blocks(&block_counts, html_pages),
         complete: !limited,
     }
+}
+
+/// K6-T5: the blocks seen on more than half of `pages` HTML pages, when
+/// there were at least three, in order. Pure.
+pub fn repeated_blocks(counts: &HashMap<u64, u32>, pages: u32) -> Vec<u64> {
+    if pages < 3 {
+        return Vec::new();
+    }
+    let mut out: Vec<u64> = counts
+        .iter()
+        .filter(|(_, n)| **n * 2 > pages)
+        .map(|(h, _)| *h)
+        .collect();
+    out.sort_unstable();
+    out
 }
 
 // ── Production entrypoint ───────────────────────────────────────────────────
@@ -824,6 +856,7 @@ type TargetRow = (
     bool,
     String,
     Option<String>,
+    Vec<i64>,
 );
 
 /// K6-T8: the sign-in headers of the integration connection named `name`
@@ -895,7 +928,7 @@ pub async fn run(state: &EngineState, target_id: Uuid) -> Result<(), AppError> {
 
     let row: Option<TargetRow> = sqlx::query_as(
         "SELECT url, max_depth, include_patterns, exclude_patterns, sitemap_url, watch_only, \
-                allow_host, credential_ref \
+                allow_host, credential_ref, repeated_blocks \
          FROM webcrawl_target WHERE id = $1 AND is_deleted = FALSE",
     )
     .bind(target_id)
@@ -911,6 +944,7 @@ pub async fn run(state: &EngineState, target_id: Uuid) -> Result<(), AppError> {
         watch_only,
         allow_host,
         credential_ref,
+        repeated,
     )) = row
     else {
         tracing::info!(target_id = %target_id, "webcrawl: target no longer exists, skipping");
@@ -1010,6 +1044,7 @@ pub async fn run(state: &EngineState, target_id: Uuid) -> Result<(), AppError> {
         seeds,
         known,
         min_interval: DEFAULT_HOST_INTERVAL,
+        repeated: repeated.into_iter().map(|h| h as u64).collect(),
     };
     let limits = CrawlLimits {
         max_pages: cfg.max_pages as usize,
@@ -1051,6 +1086,16 @@ pub async fn run(state: &EngineState, target_id: Uuid) -> Result<(), AppError> {
     .await
     .map_err(AppError::internal)?;
     close_run(db, target_id, status, last_error.as_deref(), sink.recorded).await?;
+    // K6-T5: the blocks this crawl saw on most pages, for the next one.
+    if sink.recorded > 0 {
+        let repeated: Vec<i64> = outcome.repeated.iter().map(|h| *h as i64).collect();
+        sqlx::query("UPDATE webcrawl_target SET repeated_blocks = $2 WHERE id = $1")
+            .bind(target_id)
+            .bind(&repeated)
+            .execute(db)
+            .await
+            .map_err(AppError::internal)?;
+    }
 
     // K6-T4: changed imported pages update their items; an automatic
     // source imports its new pages.
@@ -1307,6 +1352,17 @@ mod tests {
                 ..FetchedPage::default()
             })
         }
+    }
+
+    #[test]
+    fn a_block_on_most_pages_is_repeated() {
+        let counts = HashMap::from([(1u64, 3u32), (2, 2), (3, 1)]);
+        assert_eq!(repeated_blocks(&counts, 4), vec![1]);
+        assert_eq!(repeated_blocks(&counts, 3), vec![1, 2]);
+        assert!(
+            repeated_blocks(&counts, 2).is_empty(),
+            "too few pages to tell"
+        );
     }
 
     #[tokio::test]

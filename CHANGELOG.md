@@ -256,6 +256,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   when `ATTOME_KMS` is set; the node does not start when it cannot unwrap. See `docs/secrets.md`.
 
 ### Fixed
+- A website's repeated blocks (a related-links panel, a newsletter box seen on most of its pages) are left
+  out of each page's main content: every crawl counts the blocks it sees and the next crawl drops those on
+  more than half the pages (migration 0358, K6-T5).
 - The crawler now keeps a page's main content (K6-T5's extraction: no navigation, header, footer, side
   panels or cookie banner) and records the language the page declares; a source's `languages` setting
   (K6-T1) now keeps pages in other languages out of imports. Until now the crawl stored the whole page's
