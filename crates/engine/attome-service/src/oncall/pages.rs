@@ -20,7 +20,6 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use serde_json::json;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -117,7 +116,7 @@ async fn list_pages(
     operation_id = "post_oncall_page_acknowledge",
     tag = "service",
     params(("id" = Uuid, Path, description = "The page")),
-    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
+    extensions(("x-audit" = serde_json::json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
     responses(
         (status = 200, description = "The page, acknowledged", body = OnCallPage),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
