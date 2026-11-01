@@ -176,18 +176,37 @@ impl attome_core::WorkflowSimulator for PublishedWorkflowSimulator {
                     "workflow {definition_logicalname:?} has no published, active version"
                 ))
             })?;
-            let graph = Graph::parse(&graph_json).map_err(AppError::internal)?;
-            let (status, trace) = run_simulation(state, &graph, payload, &HashMap::new());
-            Ok(attome_core::WorkflowSimulation {
-                status,
-                reached: trace
-                    .into_iter()
-                    .filter(|n| n.status != "skipped")
-                    .map(|n| n.node_id)
-                    .collect(),
-            })
+            simulated(state, &graph_json, payload)
         })
     }
+
+    fn simulate_graph<'a>(
+        &'a self,
+        state: &'a EngineState,
+        graph: &'a Value,
+        payload: Value,
+    ) -> attome_core::WorkflowSimulateFuture<'a> {
+        Box::pin(async move { simulated(state, graph, payload) })
+    }
+}
+
+/// T7-T1, M4-T2: `graph` simulated on `payload`: its status and the nodes it
+/// reached (skipped ones left out).
+fn simulated(
+    state: &EngineState,
+    graph_json: &Value,
+    payload: Value,
+) -> Result<attome_core::WorkflowSimulation, AppError> {
+    let graph = Graph::parse(graph_json).map_err(AppError::internal)?;
+    let (status, trace) = run_simulation(state, &graph, payload, &HashMap::new());
+    Ok(attome_core::WorkflowSimulation {
+        status,
+        reached: trace
+            .into_iter()
+            .filter(|n| n.status != "skipped")
+            .map(|n| n.node_id)
+            .collect(),
+    })
 }
 
 /// The trigger payload with the read record merged over it.

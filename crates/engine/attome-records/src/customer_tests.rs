@@ -160,7 +160,14 @@ pub fn flow_failures(
 pub struct TestOutcome {
     pub passed: bool,
     pub failures: Vec<String>,
+    /// M4-T2: per flow the test simulated, the nodes it reached.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub reached: std::collections::BTreeMap<String, std::collections::BTreeSet<String>>,
 }
+
+/// M4-T2: draft flow graphs by workflow logical name. A test that simulates
+/// one of these flows runs it on the draft, not on its published version.
+pub type DraftFlows = std::collections::BTreeMap<String, Value>;
 
 fn kind_of(error: &AppError) -> ErrorKind {
     match error {
@@ -397,13 +404,26 @@ pub async fn run_test(
     ctx: &SecurityContext,
     definition: &TestDefinition,
 ) -> TestOutcome {
+    run_test_on(state, ctx, definition, &DraftFlows::new()).await
+}
+
+/// [`run_test`], with the flows in `drafts` simulated on their draft graph.
+pub async fn run_test_on(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    definition: &TestDefinition,
+    drafts: &DraftFlows,
+) -> TestOutcome {
     let mut failures = Vec::new();
+    let mut reached =
+        std::collections::BTreeMap::<String, std::collections::BTreeSet<String>>::new();
     let mut tx = match attome_db::tx::begin(&state.base.db).await {
         Ok(tx) => tx,
         Err(e) => {
             return TestOutcome {
                 passed: false,
                 failures: vec![format!("could not start: {e}")],
+                ..TestOutcome::default()
             };
         }
     };
@@ -550,13 +570,23 @@ pub async fn run_test(
                             "record_id": id.to_string(),
                             "record": record,
                         });
-                        match simulator.simulate(state, flow, payload).await {
-                            Ok(simulated) => failures.extend(flow_failures(
-                                flow,
-                                status.as_deref(),
-                                reaches,
-                                &simulated,
-                            )),
+                        let simulated = match drafts.get(flow) {
+                            Some(graph) => simulator.simulate_graph(state, graph, payload).await,
+                            None => simulator.simulate(state, flow, payload).await,
+                        };
+                        match simulated {
+                            Ok(simulated) => {
+                                failures.extend(flow_failures(
+                                    flow,
+                                    status.as_deref(),
+                                    reaches,
+                                    &simulated,
+                                ));
+                                reached
+                                    .entry(flow.clone())
+                                    .or_default()
+                                    .extend(simulated.reached);
+                            }
                             Err(e) => failures.push(format!("flow {flow}: {e}")),
                         }
                     }
@@ -571,6 +601,7 @@ pub async fn run_test(
     TestOutcome {
         passed: failures.is_empty(),
         failures,
+        reached,
     }
 }
 
@@ -682,6 +713,7 @@ pub async fn run_affected(
             Err(e) => TestOutcome {
                 passed: false,
                 failures: vec![format!("the definition no longer reads: {e}")],
+                ..TestOutcome::default()
             },
         };
         out.push(AffectedTestResult {
@@ -702,6 +734,17 @@ pub async fn publish_guard_for(
     ctx: &SecurityContext,
     changed: &Impact,
 ) -> Result<(), AppError> {
+    publish_guard_on(state, ctx, changed, &DraftFlows::new()).await
+}
+
+/// M4-T2: [`publish_guard_for`], with the flows in `drafts` simulated on the
+/// draft about to go live.
+pub async fn publish_guard_on(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    changed: &Impact,
+    drafts: &DraftFlows,
+) -> Result<(), AppError> {
     if !require_pass(state) {
         return Ok(());
     }
@@ -709,7 +752,7 @@ pub async fn publish_guard_for(
     for (_, name, definition) in active_tests(&state.base.db, true).await? {
         let passed = match definition {
             Ok(definition) if touches(&definition).meets(changed) => {
-                run_test(state, ctx, &definition).await.passed
+                run_test_on(state, ctx, &definition, drafts).await.passed
             }
             Ok(_) => continue,
             Err(_) => false,
@@ -723,6 +766,68 @@ pub async fn publish_guard_for(
     } else {
         Err(AppError::CustomerTestsFailed(failed))
     }
+}
+
+/// M4-T2: a flow's saved test cases (every active test that simulates it)
+/// run on `graph`, and which of `nodes` they reached.
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
+pub struct FlowCoverage {
+    pub tests: Vec<AffectedTestResult>,
+    /// The nodes some test reached, in graph order.
+    pub covered: Vec<String>,
+    /// The nodes no test reached, in graph order: the paths still untested.
+    pub uncovered: Vec<String>,
+}
+
+/// M4-T2: runs `flow`'s test cases on `graph` (its draft or published
+/// graph), as `ctx`, nothing committed, and reports which of `nodes` (the
+/// graph's node ids) no case reached.
+pub async fn flow_coverage(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    flow: &str,
+    graph: &Value,
+    nodes: Vec<String>,
+) -> Result<FlowCoverage, AppError> {
+    let blocking: std::collections::HashSet<Uuid> = active_tests(&state.base.db, true)
+        .await?
+        .into_iter()
+        .map(|(id, _, _)| id)
+        .collect();
+    let drafts = DraftFlows::from([(flow.to_owned(), graph.clone())]);
+    let mut tests = Vec::new();
+    let mut reached = std::collections::BTreeSet::new();
+    for (id, name, definition) in active_tests(&state.base.db, false).await? {
+        let Ok(definition) = definition else { continue };
+        if !touches(&definition).flows.contains(flow) {
+            continue;
+        }
+        let mut outcome = run_test_on(state, ctx, &definition, &drafts).await;
+        if let Some(nodes) = outcome.reached.remove(flow) {
+            reached.extend(nodes);
+        }
+        tests.push(AffectedTestResult {
+            id,
+            blocking: blocking.contains(&id),
+            name,
+            passed: outcome.passed,
+            failures: outcome.failures,
+        });
+    }
+    let (covered, uncovered) = split_coverage(nodes, &reached);
+    Ok(FlowCoverage {
+        tests,
+        covered,
+        uncovered,
+    })
+}
+
+/// `nodes` split into those in `reached` and those not, order kept. Pure.
+pub fn split_coverage(
+    nodes: Vec<String>,
+    reached: &std::collections::BTreeSet<String>,
+) -> (Vec<String>, Vec<String>) {
+    nodes.into_iter().partition(|n| reached.contains(n))
 }
 
 /// T7-T4: a test drafted from one record the caller can read, as it stands:
@@ -1365,6 +1470,18 @@ mod tests {
         assert!(touched.meets(&by_entity));
         assert!(touched.meets(&by_flow));
         assert!(!touched.meets(&elsewhere));
+    }
+
+    #[test]
+    fn coverage_splits_the_nodes_no_test_reached() {
+        let reached: std::collections::BTreeSet<String> =
+            ["trigger".to_owned(), "approve".to_owned()].into();
+        let (covered, uncovered) = split_coverage(
+            vec!["trigger".into(), "reject".into(), "approve".into()],
+            &reached,
+        );
+        assert_eq!(covered, vec!["trigger", "approve"]);
+        assert_eq!(uncovered, vec!["reject"]);
     }
 
     #[test]

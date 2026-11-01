@@ -111,4 +111,13 @@ pub trait WorkflowSimulator: Send + Sync + 'static {
         definition_logicalname: &'a str,
         payload: serde_json::Value,
     ) -> WorkflowSimulateFuture<'a>;
+
+    /// M4-T2: [`Self::simulate`] over a graph not yet published (the draft a
+    /// publish is about to make live).
+    fn simulate_graph<'a>(
+        &'a self,
+        state: &'a EngineState,
+        graph: &'a serde_json::Value,
+        payload: serde_json::Value,
+    ) -> WorkflowSimulateFuture<'a>;
 }

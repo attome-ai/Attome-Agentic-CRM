@@ -375,6 +375,7 @@ async fn run_one(
         Err(e) => store::TestOutcome {
             passed: false,
             failures: vec![format!("the test does not read: {e}")],
+            ..store::TestOutcome::default()
         },
     };
     let mut tx = SecurityTx::begin(

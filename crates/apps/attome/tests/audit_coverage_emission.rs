@@ -66,6 +66,13 @@ const PASSWORD: &str = "audit-emission-password-1";
 /// cannot silently outlive its route.
 const UNDRIVABLE: &[(&str, &str)] = &[
     (
+        "POST /api/v1/workflow/instances/{id}/test",
+        "needs a failed workflow run that started on a record; the test is saved by the same \
+         insert_test and SecurityTx path as POST /api/v1/admin/customer-tests/from-record, whose \
+         driver audits the same Configuration event; attome-testapp's workflow_test_coverage.rs \
+         drives it end to end",
+    ),
+    (
         "POST /api/v1/admin/integrations/whatsapp/{id}/templates/sync",
         "reads the templates from Meta's Graph API with the number's access token, which this harness cannot reach; whatsapp_templates' unit tests cover the parsing and the map rules",
     ),
@@ -2219,7 +2226,9 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 "POST",
                 "/api/v1/admin/customer-tests/from-record",
                 t,
-                Some(json!({"entity": "note", "record_id": note, "name": format!("emission-{}", Uuid::now_v7())})),
+                Some(
+                    json!({"entity": "note", "record_id": note, "name": format!("emission-{}", Uuid::now_v7())}),
+                ),
             )
         }
         "PATCH /api/v1/admin/customer-tests/{id}" => {

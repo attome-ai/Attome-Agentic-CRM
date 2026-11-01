@@ -1077,6 +1077,23 @@ async fn publish_version(
     // registry snapshot plus the in-process compile cache.
     crate::entity_trigger::validate_entry_expressions(&state, version_id, &graph).await?;
 
+    // M4-T2: the flow's saved test cases (and any other blocking test this
+    // change can affect) run on the draft about to go live, each in its own
+    // rolled-back transaction; with `customer_tests.require_pass` on, a
+    // failure refuses the publish.
+    let impact = attome_records::customer_tests::publish_impact(
+        &state.base.db,
+        "workflow",
+        definition_id,
+        Some(own_logicalname.as_str()),
+    )
+    .await?;
+    let drafts = attome_records::customer_tests::DraftFlows::from([(
+        own_logicalname.clone(),
+        graph_json.clone(),
+    )]);
+    attome_records::customer_tests::publish_guard_on(&state, &ctx, &impact, &drafts).await?;
+
     // Only one published version at a time per definition — deprecate the
     // previous one (F094: existing running instances stay pinned to it by
     // definition_version_id, this never touches their reference).
@@ -1158,6 +1175,59 @@ async fn publish_version(
     get_version(State(state), ctx, Path((definition_id, version_id))).await
 }
 
+/// Test coverage of a workflow version
+///
+/// Runs the flow's saved test cases (every active customer test with a flow expectation on this
+/// workflow) on this version's graph, draft or published, each in a transaction that is rolled
+/// back, and lists the nodes some case reached and the nodes none did. Automation administrators
+/// only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/workflow/definitions/{id}/versions/{version_id}/coverage",
+    operation_id = "get_workflow_version_coverage",
+    tag = "workflow",
+    params(
+        ("id" = Uuid, Path, description = "The definition"),
+        ("version_id" = Uuid, Path, description = "The version"),
+    ),
+    responses(
+        (status = 200, description = "Success", body = attome_records::customer_tests::FlowCoverage),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such version", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn version_coverage(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<area::Automation>>,
+    Path((definition_id, version_id)): Path<(Uuid, Uuid)>,
+) -> Result<Json<attome_records::customer_tests::FlowCoverage>, AppError> {
+    let (logicalname, graph_json): (String, serde_json::Value) = sqlx::query_as(
+        "SELECT d.logicalname, v.graph FROM workflow_definition_version v \
+           JOIN workflow_definition d ON d.id = v.definition_id \
+          WHERE v.id = $1 AND v.definition_id = $2",
+    )
+    .bind(version_id)
+    .bind(definition_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::NotFound)?;
+    let graph = crate::graph::Graph::parse(&graph_json)
+        .map_err(|e| AppError::Validation(format!("graph did not parse: {e}")))?;
+    let nodes = graph.nodes.iter().map(|n| n.id.clone()).collect();
+    let coverage = attome_records::customer_tests::flow_coverage(
+        &state,
+        &ctx,
+        &logicalname,
+        &graph_json,
+        nodes,
+    )
+    .await?;
+    Ok(Json(coverage))
+}
+
 // ── DB helpers ───────────────────────────────────────────────────────────────
 
 async fn fetch_versions(
@@ -1217,6 +1287,10 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/workflow/definitions/{id}/versions/{version_id}/publish",
             post(publish_version),
         )
+        .route(
+            "/api/v1/workflow/definitions/{id}/versions/{version_id}/coverage",
+            get(version_coverage),
+        )
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI document. Separate per file
@@ -1233,7 +1307,8 @@ pub fn routes() -> Router<EngineState> {
     create_version,
     get_version,
     update_version_graph,
-    publish_version
+    publish_version,
+    version_coverage
 ))]
 struct ApiDocFragment;
 

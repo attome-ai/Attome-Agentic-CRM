@@ -284,6 +284,122 @@ async fn cancel_instance(
     ))
 }
 
+/// The test name, when the body names none.
+#[derive(Debug, Default, Deserialize, utoipa::ToSchema)]
+pub(crate) struct TestFromRunBody {
+    /// The test's name; one from the run when left out.
+    #[serde(default)]
+    name: Option<String>,
+}
+
+/// A customer test from a failed workflow run
+///
+/// M4-T2: drafts and saves a test from a failed run that started on a record: it re-creates the
+/// record as it stands now (as `POST /api/v1/admin/customer-tests/from-record` does) and expects
+/// the run's workflow, simulated on it, to complete. It fails until the flow is fixed; edit it from
+/// there. Deployment administrators only. Audited.
+#[utoipa::path(
+    post,
+    path = "/api/v1/workflow/instances/{id}/test",
+    operation_id = "create_customer_test_from_workflow_run",
+    tag = "workflow",
+    params(("id" = Uuid, Path, description = "The failed run")),
+    request_body = TestFromRunBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Create)])))),
+    responses(
+        (status = 201, description = "The test", body = attome_records::customer_tests::CustomerTest),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such run, or its record is gone", body = ErrorResponse),
+        (status = 409, description = "A test with that name exists", body = ErrorResponse),
+        (status = 422, description = "The run did not fail, or did not start on a record", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn test_from_run(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<area::Deployment>>,
+    Path(instance_id): Path<Uuid>,
+    body: Option<Json<TestFromRunBody>>,
+) -> Result<
+    (
+        StatusCode,
+        Json<attome_records::customer_tests::CustomerTest>,
+    ),
+    AppError,
+> {
+    use attome_records::customer_tests as store;
+    let body = body.map(|Json(b)| b).unwrap_or_default();
+    let (status, context, flow): (String, serde_json::Value, String) = sqlx::query_as(
+        "SELECT i.status, i.context, d.logicalname FROM workflow_instance i \
+           JOIN workflow_definition_version v ON v.id = i.definition_version_id \
+           JOIN workflow_definition d ON d.id = v.definition_id \
+          WHERE i.id = $1",
+    )
+    .bind(instance_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::NotFound)?;
+    if status != "failed" {
+        return Err(AppError::Validation(format!(
+            "the run {status}; a test is made from a failed run"
+        )));
+    }
+    let (entity, record_id) = run_record(&context)
+        .ok_or_else(|| AppError::Validation("the run did not start on a record".into()))?;
+    let (_, mut definition) = store::draft_from_record(&state, &ctx, &entity, record_id).await?;
+    if let Some(expect) = definition
+        .get_mut("expect")
+        .and_then(serde_json::Value::as_array_mut)
+    {
+        expect.push(serde_json::json!({
+            "flow": flow, "entity": entity, "ref": "record", "status": "completed"
+        }));
+    }
+    let test = store::CustomerTestBody {
+        name: body
+            .name
+            .filter(|n| !n.trim().is_empty())
+            .unwrap_or_else(|| format!("{flow} on {entity} {record_id}")),
+        description: Some(format!("From the failed run {instance_id}")),
+        definition,
+        blocking: false,
+        live_safe: false,
+    };
+    store::validate(&test.name, &test.definition)?;
+    let mut tx = attome_audit::security::SecurityTx::begin(
+        &state,
+        attome_audit::security::SecurityEvent::new(
+            attome_audit::security::MandatoryCategory::Configuration,
+            attome_audit::AuditOperation::Create,
+            ctx.user_id,
+            "customer_test",
+            None,
+        )
+        .named("customer_test.created"),
+    )
+    .await?;
+    let created = store::insert_test(&mut tx, &test, ctx.user_id).await?;
+    tx.event_mut().set_record_id(created.id);
+    tx.commit().await?;
+    Ok((StatusCode::CREATED, Json(created)))
+}
+
+/// The entity and record a run started on, from its context. Pure.
+fn run_record(context: &serde_json::Value) -> Option<(String, Uuid)> {
+    let entity = context
+        .get("entity_logicalname")
+        .or_else(|| context.get("entity"))
+        .and_then(serde_json::Value::as_str)
+        .filter(|e| !e.is_empty())?;
+    let record = context
+        .get("record_id")
+        .and_then(serde_json::Value::as_str)
+        .and_then(|v| Uuid::parse_str(v).ok())?;
+    Some((entity.to_owned(), record))
+}
+
 /// Start a workflow run
 ///
 /// Starts the published, active version of the workflow named, with the context given and
@@ -915,6 +1031,7 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/workflow/instances/{id}/cancel",
             post(cancel_instance),
         )
+        .route("/api/v1/workflow/instances/{id}/test", post(test_from_run))
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI document. Separate per file
@@ -922,9 +1039,36 @@ pub fn routes() -> Router<EngineState> {
 /// own visibility, and these handlers are module-private — the crate's
 /// `openapi()` merges every fragment back into one document.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list_instances, get_instance, cancel_instance, start_manual))]
+#[openapi(paths(
+    list_instances,
+    get_instance,
+    cancel_instance,
+    start_manual,
+    test_from_run
+))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+#[cfg(test)]
+mod run_record_tests {
+    use super::run_record;
+    use serde_json::json;
+    use uuid::Uuid;
+
+    #[test]
+    fn a_run_names_its_record_by_entity_and_id() {
+        let id = Uuid::now_v7();
+        assert_eq!(
+            run_record(&json!({ "entity_logicalname": "lead", "record_id": id.to_string() })),
+            Some(("lead".to_owned(), id))
+        );
+        assert_eq!(run_record(&json!({ "record_id": id.to_string() })), None);
+        assert_eq!(
+            run_record(&json!({ "entity_logicalname": "lead", "record_id": "x" })),
+            None
+        );
+    }
 }

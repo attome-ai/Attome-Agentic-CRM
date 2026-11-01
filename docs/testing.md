@@ -116,6 +116,14 @@ the entity or workflow itself) against the entities and flows each test touches.
 `POST /api/v1/admin/model/{kind}/{id}/validate` with `run_tests: true`, runs every affected test and
 returns the results; the page designer shows them beside Publish.
 
+A workflow's **test cases** are the tests with a flow expectation on it. Publishing a workflow
+version runs them (and every other blocking test the flow can affect) on the draft about to go
+live, under the same setting. `GET /api/v1/workflow/definitions/{id}/versions/{version_id}/coverage`
+runs them on any version and lists the nodes some case reached (`covered`) and the nodes none did
+(`uncovered`): the branches still untested. `POST /api/v1/workflow/instances/{id}/test` turns a
+failed run on a record into a test in one step: it re-creates the record as it stands and expects
+the flow to complete on it, so it fails until the flow is fixed.
+
 Mark a test **live safe** and it runs every night against the live configuration, as its author;
 failures alert the administrators, and a test whose runs on the same test and configuration
 version both passed and failed is marked **flaky** until someone edits it.
