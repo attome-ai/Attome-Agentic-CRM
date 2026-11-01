@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- A crawled page's links to PDF, Word and Excel files in scope are fetched by their own background
+  job (up to 20 MB, conditional on the file's ETag), stored as a document on the source's Data Source
+  through the upload pipeline's virus scan, and once clean their extracted text is imported like a
+  page's (K6-T6).
 - A crawled page with the same text as an imported page of the source becomes its alias instead of
   a second knowledge item, and a page missing from two complete crawls in a row has its item retired
   (`expired`, so answers stop citing it; the item and its history stay). The import's answer gains

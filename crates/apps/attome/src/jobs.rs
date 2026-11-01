@@ -933,6 +933,10 @@ async fn dispatch_platform_job(
         EngineJob::CrawlWebsite { target_id } => {
             attome_webcrawl::crawl::run(&attome_state, target_id).await?;
         }
+        // K6-T6: one linked document into the file pipeline.
+        EngineJob::CrawlDocument { page_id } => {
+            attome_webcrawl::documents::fetch_document(&attome_state, page_id).await?;
+        }
         // F10-T9: one period's recalculation previews.
         EngineJob::CommissionRecalcPreview { period_id } => {
             let written =

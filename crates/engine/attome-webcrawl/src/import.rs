@@ -440,13 +440,15 @@ pub async fn import_pages(
 
     let data_source_id = ensure_data_source_for_target(state, ctx, target_id).await?;
     ctx.require(ITEM, "create")?;
+    // K6-T6: documents whose text is ready become importable pages first.
+    crate::documents::absorb_documents(state, ctx, target_id).await?;
     let fields = item_fields(state);
     let published = target.import_mode == AUTOMATIC;
 
     let candidates = sqlx::query_as::<_, Candidate>(
         "SELECT id, url_path, content, content_hash, imported_data_item_ref FROM webcrawl_page \
          WHERE target_ref = $1 AND id = ANY($2) AND is_deleted = FALSE \
-           AND status = 'crawled' AND content IS NOT NULL \
+           AND status IN ('crawled', 'document') AND content IS NOT NULL \
            AND ((imported_data_item_ref IS NULL AND alias_of IS NULL) \
                 OR (imported_data_item_ref <> $3 \
                     AND content_hash IS DISTINCT FROM imported_content_hash))",
@@ -531,6 +533,11 @@ pub async fn sync_after_crawl(state: &EngineState, target_id: Uuid) -> Result<Sy
     };
     let fields = item_fields(state);
 
+    // K6-T6: documents whose text is ready become pages like any other.
+    if let Err(e) = crate::documents::absorb_documents(state, &ctx, target_id).await {
+        tracing::warn!(%target_id, error = %e, "webcrawl: linked documents were not taken up");
+    }
+
     // K6-T7: an alias whose text now differs from its page's stops being one.
     sqlx::query(
         "UPDATE webcrawl_page p SET alias_of = NULL, updated_at = NOW() \
@@ -546,7 +553,7 @@ pub async fn sync_after_crawl(state: &EngineState, target_id: Uuid) -> Result<Sy
     if ctx.require(ITEM, "update").is_ok() {
         let changed = sqlx::query_as::<_, Candidate>(
             "SELECT id, url_path, content, content_hash, imported_data_item_ref FROM webcrawl_page \
-             WHERE target_ref = $1 AND is_deleted = FALSE AND status = 'crawled' \
+             WHERE target_ref = $1 AND is_deleted = FALSE AND status IN ('crawled', 'document') \
                AND content IS NOT NULL AND imported_data_item_ref IS NOT NULL \
                AND imported_data_item_ref <> $2 \
                AND content_hash IS DISTINCT FROM imported_content_hash \
@@ -581,7 +588,7 @@ pub async fn sync_after_crawl(state: &EngineState, target_id: Uuid) -> Result<Sy
     if target.import_mode == AUTOMATIC && ctx.require(ITEM, "create").is_ok() {
         let fresh = sqlx::query_as::<_, Candidate>(
             "SELECT id, url_path, content, content_hash, imported_data_item_ref FROM webcrawl_page \
-             WHERE target_ref = $1 AND is_deleted = FALSE AND status = 'crawled' \
+             WHERE target_ref = $1 AND is_deleted = FALSE AND status IN ('crawled', 'document') \
                AND content IS NOT NULL AND imported_data_item_ref IS NULL \
                AND alias_of IS NULL \
              ORDER BY id LIMIT $2",

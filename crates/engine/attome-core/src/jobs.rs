@@ -334,6 +334,10 @@ pub enum EngineJob {
     /// `POST /api/v1/webcrawl/targets` and `.../recrawl`, both
     /// `Authorized<Admin>`-gated.
     CrawlWebsite { target_id: Uuid },
+    /// K6-T6: fetches one linked document of a crawled source and hands it
+    /// to the file pipeline (scan, then text). Queued after a completed
+    /// crawl by `attome_webcrawl::documents::queue_documents`.
+    CrawlDocument { page_id: Uuid },
     /// D7-T3: adds an owner's default team to their open deals that miss a
     /// member, in batches. Enqueued by `POST /api/v1/sales/default-team/apply`.
     SalesDefaultTeamApply { owner_id: Uuid },
@@ -1072,6 +1076,7 @@ impl EngineJob {
             | Self::ApplyChangesets { .. }
             | Self::RunDataStep { .. }
             | Self::CrawlWebsite { .. }
+            | Self::CrawlDocument { .. }
             | Self::SalesDefaultTeamApply { .. }
             | Self::QualityRescan { .. }
             | Self::MasterRebuild { .. }
@@ -1259,6 +1264,7 @@ impl EngineJob {
             EngineJob::WorkflowSlaSweep => "WorkflowSlaSweep",
             EngineJob::WorkflowEntityTriggerDispatch => "WorkflowEntityTriggerDispatch",
             EngineJob::CrawlWebsite { .. } => "CrawlWebsite",
+            EngineJob::CrawlDocument { .. } => "CrawlDocument",
             EngineJob::SalesDefaultTeamApply { .. } => "SalesDefaultTeamApply",
             EngineJob::QualityRescan { .. } => "QualityRescan",
             EngineJob::MasterRebuild { .. } => "MasterRebuild",
@@ -1525,6 +1531,7 @@ impl EngineJob {
             // maintenance.
             Self::RewrapSecrets { .. }
             | Self::CrawlWebsite { .. }
+            | Self::CrawlDocument { .. }
             | Self::SalesDefaultTeamApply { .. }
             | Self::QualityRescan { .. }
             | Self::MasterRebuild { .. }
@@ -1712,6 +1719,7 @@ impl EngineJob {
             | Self::ReportScheduleFire { .. }
             | Self::ValidationCleanupScan { .. }
             | Self::CrawlWebsite { .. }
+            | Self::CrawlDocument { .. }
             | Self::SalesDefaultTeamApply { .. }
             | Self::QualityRescan { .. }
             | Self::MasterRebuild { .. }
@@ -2470,6 +2478,13 @@ mod tests {
     fn commission_run_round_trips() {
         assert_round_trips(EngineJob::CommissionRun {
             run_id: Uuid::now_v7(),
+        });
+    }
+
+    #[test]
+    fn crawl_document_round_trips() {
+        assert_round_trips(EngineJob::CrawlDocument {
+            page_id: Uuid::now_v7(),
         });
     }
 

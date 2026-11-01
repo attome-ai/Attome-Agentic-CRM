@@ -253,3 +253,96 @@ async fn item_of_opt(app: &TestApp, page: Uuid) -> Option<Uuid> {
         .await
         .unwrap()
 }
+
+// feature: K6
+#[test]
+fn linked_pdf_becomes_scanned_document_and_item() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        definitions(&app).await;
+        let admin = app.state.base.security.resolve(app.admin.id).await.unwrap();
+        let target = source(&app, "review").await;
+        let data_source =
+            attome_webcrawl::import::ensure_data_source_for_target(&app.state, &admin, target)
+                .await
+                .unwrap();
+        // What the document job and the file pipeline leave behind: a
+        // document record, its upload scanned clean, and its text.
+        let (document, _) = attome_records::entity_crud::create_record_for(
+            &app.state,
+            &admin,
+            app.admin.id,
+            "attome_document",
+            serde_json::json!({
+                "name": "prices.pdf",
+                "entity_name": "knowledge_data_source",
+                "record_id": data_source.to_string(),
+                "folder": "Web crawl",
+            }),
+        )
+        .await
+        .unwrap();
+        let session = Uuid::now_v7();
+        let key = attome_document::files::final_key(
+            "attome_document",
+            document,
+            "file",
+            session,
+            "prices.pdf",
+        );
+        sqlx::query(
+            "INSERT INTO upload_session \
+               (id, entity_logicalname, record_id, field_logicalname, owner_user_ref, \
+                quarantine_key, final_key, declared_filename, declared_content_type, \
+                declared_max_size_bytes, actual_size_bytes, actual_content_type, status) \
+             VALUES ($1, 'attome_document', $2, 'file', $3, $4, $4, 'prices.pdf', \
+                     'application/pdf', 100, 100, 'application/pdf', 'clean')",
+        )
+        .bind(session)
+        .bind(document)
+        .bind(app.admin.id)
+        .bind(&key)
+        .execute(app.db())
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO document_text (file_key, format, content_text) VALUES ($1, 'pdf', $2)",
+        )
+        .bind(&key)
+        .bind("Price list 2027")
+        .execute(app.db())
+        .await
+        .unwrap();
+        let page: Uuid = sqlx::query_scalar(
+            "INSERT INTO webcrawl_page (target_ref, url_path, status, document_ref, \
+                document_session_id) \
+             VALUES ($1, '/files/prices.pdf', 'document', $2, $3) RETURNING id",
+        )
+        .bind(target)
+        .bind(document)
+        .bind(session)
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+
+        let result = attome_webcrawl::import::import_pages(&app.state, &admin, target, &[page])
+            .await
+            .unwrap();
+        assert_eq!(result.imported_count, 1);
+        let (text, _, _) = item(&app, item_of(&app, page).await).await;
+        assert_eq!(text.as_deref(), Some("Price list 2027"));
+        let file: Option<String> =
+            sqlx::query_scalar("SELECT file::text FROM attome_document WHERE id = $1")
+                .bind(document)
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        assert_eq!(
+            file.as_deref(),
+            Some(key.as_str()),
+            "the clean file is attached"
+        );
+    });
+}

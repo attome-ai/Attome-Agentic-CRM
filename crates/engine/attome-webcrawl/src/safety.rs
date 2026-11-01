@@ -226,6 +226,46 @@ pub async fn fetch_conditional(
     last_modified: Option<&str>,
     access: &SourceAccess,
 ) -> Result<FetchedPage, FetchError> {
+    let raw = fetch_bytes(
+        client,
+        url,
+        max_bytes,
+        user_agent,
+        etag,
+        last_modified,
+        access,
+    )
+    .await?;
+    Ok(FetchedPage {
+        content_type: raw.content_type,
+        body: String::from_utf8_lossy(&raw.body).into_owned(),
+        etag: raw.etag,
+        last_modified: raw.last_modified,
+        not_modified: raw.not_modified,
+    })
+}
+
+/// K6-T6: what [`fetch_bytes`] read: the body as bytes, for a document.
+#[derive(Debug, Clone, Default)]
+pub struct RawFetch {
+    pub content_type: String,
+    pub body: Vec<u8>,
+    pub etag: Option<String>,
+    pub last_modified: Option<String>,
+    pub not_modified: bool,
+}
+
+/// [`fetch_conditional`] keeping the body as bytes (a linked document),
+/// under the same SSRF-safe contract.
+pub async fn fetch_bytes(
+    client: &ssrf_guard::GuardedClient,
+    url: &Url,
+    max_bytes: usize,
+    user_agent: &str,
+    etag: Option<&str>,
+    last_modified: Option<&str>,
+    access: &SourceAccess,
+) -> Result<RawFetch, FetchError> {
     let mut current = url.clone();
     for _ in 0..=MAX_REDIRECTS {
         validate_url_for(&current, access).await?;
@@ -247,11 +287,11 @@ pub async fn fetch_conditional(
         let resp = request.send().await?;
 
         if resp.status() == reqwest::StatusCode::NOT_MODIFIED {
-            return Ok(FetchedPage {
+            return Ok(RawFetch {
                 not_modified: true,
                 etag: etag.map(str::to_owned),
                 last_modified: last_modified.map(str::to_owned),
-                ..FetchedPage::default()
+                ..RawFetch::default()
             });
         }
 
@@ -285,7 +325,7 @@ pub async fn fetch_conditional(
         let etag = header(reqwest::header::ETAG);
         let last_modified = header(reqwest::header::LAST_MODIFIED);
         let body = read_capped_body(resp, max_bytes).await?;
-        return Ok(FetchedPage {
+        return Ok(RawFetch {
             content_type,
             body,
             etag,
@@ -296,7 +336,10 @@ pub async fn fetch_conditional(
     Err(FetchError::TooManyRedirects)
 }
 
-async fn read_capped_body(resp: reqwest::Response, max_bytes: usize) -> Result<String, FetchError> {
+async fn read_capped_body(
+    resp: reqwest::Response,
+    max_bytes: usize,
+) -> Result<Vec<u8>, FetchError> {
     use futures_util::StreamExt;
 
     let mut buf = Vec::new();
@@ -308,7 +351,7 @@ async fn read_capped_body(resp: reqwest::Response, max_bytes: usize) -> Result<S
         }
         buf.extend_from_slice(&chunk);
     }
-    Ok(String::from_utf8_lossy(&buf).into_owned())
+    Ok(buf)
 }
 
 /// Builds the client every crawl uses: `attome_server::ssrf_guard::GuardedClient`

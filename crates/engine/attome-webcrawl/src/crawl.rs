@@ -360,7 +360,7 @@ pub fn text_diff(old: &str, new: &str) -> (Vec<String>, Vec<String>) {
     (added, removed)
 }
 
-fn text_hash(text: &str) -> String {
+pub(crate) fn text_hash(text: &str) -> String {
     use sha2::{Digest, Sha256};
     let digest = Sha256::digest(text.as_bytes());
     digest.iter().map(|b| format!("{b:02x}")).collect()
@@ -436,6 +436,12 @@ pub async fn walk_with<F: Fetcher, S: PageSink>(
         if visited > 0 && !in_scope(&path, &scope.include, &scope.exclude) {
             continue;
         }
+        // K6-T6: a linked document is recorded here and fetched by its own
+        // job (`crate::documents`), so a large file never slows the walk.
+        if visited > 0 && crate::documents::is_document_path(&path) {
+            sink.record(document_page(&path, depth)).await;
+            continue;
+        }
         if visited > 0 && !interval.is_zero() {
             tokio::time::sleep(interval).await;
         }
@@ -465,6 +471,10 @@ pub async fn walk_with<F: Fetcher, S: PageSink>(
                     unchanged: true,
                 })
                 .await;
+            }
+            Ok(page) if crate::documents::is_document_type(&page.content_type) => {
+                errors_in_a_row = 0;
+                sink.record(document_page(&path, depth)).await;
             }
             Ok(page) => {
                 errors_in_a_row = 0;
@@ -546,7 +556,24 @@ pub async fn walk_with<F: Fetcher, S: PageSink>(
 // ── Production entrypoint ───────────────────────────────────────────────────
 
 /// K6-T2: the crawler names itself and its version.
-fn user_agent() -> String {
+/// K6-T6: a linked document as the walk records it: no content of its own
+/// here (its text comes from the document's extraction).
+fn document_page(path: &str, depth: i32) -> DiscoveredPage {
+    DiscoveredPage {
+        url_path: path.to_owned(),
+        parent_path: parent_of(path),
+        depth,
+        status: "document",
+        size_bytes: None,
+        content: None,
+        etag: None,
+        last_modified: None,
+        content_hash: None,
+        unchanged: false,
+    }
+}
+
+pub(crate) fn user_agent() -> String {
     format!(
         "AttomeCrawler/{} (+contact the site's Attome administrator)",
         env!("CARGO_PKG_VERSION")
@@ -655,10 +682,12 @@ impl PageSink for DbPageSink<'_> {
                    depth = EXCLUDED.depth,
                    size_bytes = EXCLUDED.size_bytes,
                    status = EXCLUDED.status,
-                   content = EXCLUDED.content,
+                   content = CASE WHEN EXCLUDED.status = 'document'
+                                  THEN webcrawl_page.content ELSE EXCLUDED.content END,
                    etag = EXCLUDED.etag,
                    last_modified = EXCLUDED.last_modified,
-                   content_hash = EXCLUDED.content_hash,
+                   content_hash = CASE WHEN EXCLUDED.status = 'document'
+                                       THEN webcrawl_page.content_hash ELSE EXCLUDED.content_hash END,
                    missing_count = 0,
                    row_version = webcrawl_page.row_version + 1,
                    updated_at = NOW()"#,
@@ -726,6 +755,25 @@ type TargetRow = (
 /// K6-T8: the sign-in headers of the integration connection named `name`
 /// (its stored credential: basic, header, bearer or OAuth), computed once for
 /// the crawl. A body-signed (`hmac`) connection cannot sign a crawl.
+/// K6-T6: the access a source's requests get: its intranet host and, for
+/// its own host, its sign-in headers.
+pub(crate) async fn source_access(
+    state: &EngineState,
+    root: &Url,
+    allow_host: &str,
+    credential_ref: Option<&str>,
+) -> Result<safety::SourceAccess, AppError> {
+    let headers = match credential_ref.filter(|r| !r.trim().is_empty()) {
+        Some(name) => source_headers(state, name, root).await?,
+        None => Vec::new(),
+    };
+    Ok(safety::SourceAccess {
+        allow_host: Some(allow_host.to_owned()).filter(|h| !h.is_empty()),
+        headers,
+        credential_host: root.host_str().map(str::to_owned),
+    })
+}
+
 async fn source_headers(
     state: &EngineState,
     name: &str,
@@ -940,6 +988,17 @@ pub async fn run(state: &EngineState, target_id: Uuid) -> Result<(), AppError> {
             Ok(_) => {}
             Err(e) => tracing::warn!(%target_id, error = %e,
                 "webcrawl: missing pages were not counted"),
+        }
+    }
+    // K6-T6: each linked document is fetched by its own job.
+    if status == "completed" && !watch_only {
+        match crate::documents::queue_documents(state, target_id).await {
+            Ok(queued) if queued > 0 => {
+                tracing::info!(%target_id, queued, "webcrawl: linked documents queued");
+            }
+            Ok(_) => {}
+            Err(e) => tracing::warn!(%target_id, error = %e,
+                "webcrawl: linked documents were not queued"),
         }
     }
     if status == "completed" {

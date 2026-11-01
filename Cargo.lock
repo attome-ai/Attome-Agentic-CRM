@@ -2638,6 +2638,7 @@ dependencies = [
  "attome-audit",
  "attome-core",
  "attome-db",
+ "attome-document",
  "attome-html",
  "attome-integration",
  "attome-jobs",

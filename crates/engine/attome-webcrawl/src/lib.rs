@@ -14,6 +14,8 @@
 //! for the platform's (separate, larger, not-yet-built) web-ingestion plan.
 
 pub mod crawl;
+/// K6-T6: linked PDF, Word and Excel documents through scan and text extraction.
+pub mod documents;
 /// K6-T4: crawled pages into knowledge items, and changed pages into new versions.
 pub mod import;
 pub mod model;
