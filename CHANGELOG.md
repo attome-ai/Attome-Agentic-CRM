@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Agents gain two read-only website-source tools: `webcrawl.propose_scope` proposes include and exclude
+  path patterns from the pages a crawl found (main sections in; tags, search, sign-in and feeds out) for a
+  person to put on the source, and `webcrawl.summarise_changes` says in a few lines what one run changed
+  (one model call; none when nothing changed). Crawling and intranet hosts stay with administrators (K6-T12).
 - Knowledge managers run website sources: the new Knowledge Manager role template (knowledge data
   sources and items) opens the webcrawl admin routes beside the Integrations administrators, except that
   only an administrator sets an intranet host or a credential. `PATCH /api/v1/webcrawl/targets/{id}`

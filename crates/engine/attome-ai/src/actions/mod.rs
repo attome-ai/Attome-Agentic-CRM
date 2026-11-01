@@ -41,6 +41,8 @@ pub mod collections;
 pub mod commission;
 /// W1-T12: contract.review_against_playbook, contract.summarise, contract.answer.
 pub mod contract;
+/// K6-T12: webcrawl.propose_scope, webcrawl.summarise_changes (read only).
+pub mod webcrawl;
 pub mod partner;
 /// P7-T10: a dashboard number explained in words.
 pub mod dashboard_explain;
@@ -227,6 +229,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(commission::descriptors());
     all.extend(partner::descriptors());
     all.extend(contract::descriptors());
+    all.extend(webcrawl::descriptors());
     all.extend(sales_lines::descriptors());
     all.extend(sales_competitors::descriptors());
     all.extend(billing::descriptors());
@@ -337,6 +340,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(commission::executors());
     all.extend(partner::executors());
     all.extend(contract::executors());
+    all.extend(webcrawl::executors());
     all.extend(sales_lines::executors());
     all.extend(sales_competitors::executors());
     all.extend(billing::executors());

@@ -667,6 +667,7 @@ dependencies = [
  "attome-storage",
  "attome-testkit",
  "attome-types",
+ "attome-webcrawl",
  "attome-workforce",
  "axum",
  "base64 0.23.1",
