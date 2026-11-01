@@ -23,6 +23,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   wide access (`wide_access_granted`, needs `marketing_list.grant_wide_access` and is an Access
   security event), as the marketing user the setting `marketing.segment_user` names; a wide list with
   none set is refused (`segment.no_marketing_role`). Marketing pack changeset 0014 adds the privilege.
+- Marketing email deliverability is documented in `docs/marketing-deliverability.md` (E6-T15): the
+  dashboard and send figures, the pre-send check, alerts, sunset, blocklists, reputation and DMARC report
+  upload, with what is off by default and how to switch each on.
 - Segment housekeeping (E7-T10): a scheduled or live marketing list unused for 90 days is paused
   nightly (job `marketing_list_pause_unused`) and resumes when a list route reads it. Marketing pack
   changeset 0015 seeds four starter segments over contacts (engaged in the last 90 days, new this
