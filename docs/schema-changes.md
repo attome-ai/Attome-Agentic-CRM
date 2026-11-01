@@ -65,7 +65,9 @@ at `/api/v1/admin/data-step-runs/{id}`. Two more kinds run the same way: `copy` 
 unless `only_empty` is `false`), and `set_default` `{"field", "value"}` fills the empty rows of a
 field, and `map_values` `{"field", "to", "map", "on_unmapped"}` replaces each stored value the map
 names (in `field`, or in `to`), leaving the others as they are and, with `"on_unmapped": "report"`,
-counting them on the run. `convert` is refused at plan until it has an executor. To go back, plan a rollback to an
+counting them on the run. `convert` `{"from", "to", "from_type", "to_type", ...}` fills one
+attribute from another of a different type with the same conversion a field's type change uses; a
+value that does not convert leaves the target empty and is counted on the run. To go back, plan a rollback to an
 earlier bundle version (`POST /api/v1/admin/metadata/bundles/{name}/rollback`, which shows its plan
 first) or preview and switch to an earlier metadata version on the versions screen.
 

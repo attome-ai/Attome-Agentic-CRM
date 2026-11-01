@@ -1,11 +1,16 @@
-//! A22-T4: the changeset data steps `copy`, `set_default` and
-//! `map_values`, beside `split` ([`super::refactor`]).
+//! A22-T4: the changeset data steps `copy`, `set_default`, `map_values`
+//! and `convert`, beside `split` ([`super::refactor`]).
 //!
 //! - `copy` `{from, to, only_empty}`: the value of one attribute into
 //!   another of the same type, in rows where the source has a value; only
 //!   where the target is empty unless `only_empty` is `false`.
 //! - `set_default` `{field, value}`: a value into the rows where the field
 //!   is empty (always only the empty ones).
+//! - `convert` `{from, to, from_type, to_type, format, true_values,
+//!   false_values, map, only_empty}`: one attribute converted into another
+//!   of the type named, by the same conversion a field's type change uses
+//!   (`field_change::Conversion`); a value that does not convert leaves the
+//!   target empty and is counted as the run's `rows_nulled`.
 //! - `map_values` `{field, to, map, on_unmapped}`: each stored value of
 //!   `field` named in `map` is replaced by its mapping, in `field` itself or
 //!   in `to`; a value not in the map is left as it is, and with
@@ -41,6 +46,8 @@ pub struct FillPlan {
     pub map: Vec<(String, String)>,
     /// `map_values`: count the rows whose value is not in the map.
     pub report_unmapped: bool,
+    /// `convert`: the conversion, checked.
+    pub conversion: Option<fc::Conversion>,
 }
 
 /// The most entries one map holds.
@@ -97,6 +104,7 @@ pub fn plan(state: &EngineState, entity: &str, args: &Value) -> Result<FillPlan,
                 only_empty: args.get("only_empty").and_then(Value::as_bool) != Some(false),
                 map: Vec::new(),
                 report_unmapped: false,
+                conversion: None,
             })
         }
         "set_default" => {
@@ -118,6 +126,7 @@ pub fn plan(state: &EngineState, entity: &str, args: &Value) -> Result<FillPlan,
                 only_empty: true,
                 map: Vec::new(),
                 report_unmapped: false,
+                conversion: None,
             })
         }
         "map_values" => {
@@ -156,10 +165,42 @@ pub fn plan(state: &EngineState, entity: &str, args: &Value) -> Result<FillPlan,
                 only_empty: false,
                 map,
                 report_unmapped: text("on_unmapped") == Some("report"),
+                conversion: None,
+            })
+        }
+        "convert" => {
+            let (from, to) = (
+                text("from").unwrap_or_default(),
+                text("to").unwrap_or_default(),
+            );
+            let (Some(from_type), Some(to_type)) = (attr_type(from), attr_type(to)) else {
+                return Err(AppError::Validation(format!(
+                    "convert: from and to name attributes of {entity}"
+                )));
+            };
+            let conversion: fc::Conversion = serde_json::from_value(args.clone())
+                .map_err(|e| AppError::Validation(format!("convert: {e}")))?;
+            if conversion.from_type != from_type.as_str() || conversion.to_type != to_type.as_str()
+            {
+                return Err(AppError::Validation(
+                    "convert: from_type and to_type are the types of from and to".into(),
+                ));
+            }
+            conversion.check()?;
+            Ok(FillPlan {
+                entity: entity.to_owned(),
+                kind: kind.to_owned(),
+                target: to.to_owned(),
+                source: Some(from.to_owned()),
+                value: None,
+                only_empty: args.get("only_empty").and_then(Value::as_bool) != Some(false),
+                map: Vec::new(),
+                report_unmapped: false,
+                conversion: Some(conversion),
             })
         }
         other => Err(AppError::Validation(format!(
-            "data_step kind {other:?} is not copy, set_default or map_values"
+            "data_step kind {other:?} is not copy, set_default, map_values or convert"
         ))),
     }
 }
@@ -179,6 +220,16 @@ fn spec_of(plan: &FillPlan) -> Value {
                 .collect::<serde_json::Map<String, Value>>(),
             "on_unmapped": if plan.report_unmapped { "report" } else { "keep" },
         }),
+        ("convert", Some(from)) => {
+            let mut spec = serde_json::to_value(&plan.conversion).unwrap_or(Value::Null);
+            if let Some(object) = spec.as_object_mut() {
+                object.insert("kind".into(), json!(plan.kind));
+                object.insert("from".into(), json!(from));
+                object.insert("to".into(), json!(plan.target));
+                object.insert("only_empty".into(), json!(plan.only_empty));
+            }
+            spec
+        }
         (_, Some(from)) => json!({
             "kind": plan.kind, "from": from, "to": plan.target, "only_empty": plan.only_empty,
         }),
@@ -251,7 +302,7 @@ pub(crate) async fn queue_from_changeset(
     Ok(run_id)
 }
 
-/// `RunDataStep` for a `copy`, `set_default` or `map_values` run.
+/// `RunDataStep` for a `copy`, `set_default`, `map_values` or `convert` run.
 pub(crate) async fn continue_fill(state: &EngineState, run: &fc::RunRow) -> Result<(), AppError> {
     let db = &state.base.db_migrator;
     let args = run.spec.clone();
@@ -275,7 +326,28 @@ pub(crate) async fn continue_fill(state: &EngineState, run: &fc::RunRow) -> Resu
     };
     // Identifiers from validated metadata, quoted; the type from the
     // catalogue; values bound.
+    // `convert`: the conversion's expression over the source column.
+    let converted = match (&plan.conversion, &plan.source) {
+        (Some(conversion), Some(source)) => {
+            let mut conn = db.acquire().await.map_err(AppError::internal)?;
+            Some(
+                conversion
+                    .expression(&mut conn, &format!("t.{}", quote_ident(source)))
+                    .await?,
+            )
+        }
+        _ => None,
+    };
     let update = match &plan.source {
+        Some(source) if plan.kind == "convert" => {
+            let source = quote_ident(source);
+            let expression = converted.as_deref().unwrap_or("NULL");
+            format!(
+                "UPDATE {table} AS t SET {target} = {expression}, modified_at = now(), \
+                        row_version = t.row_version + 1 \
+                  WHERE t.id = ANY($1) AND t.{source} IS NOT NULL {empty_only}"
+            )
+        }
         Some(source) if plan.kind == "map_values" => {
             let source = quote_ident(source);
             format!(
@@ -304,6 +376,13 @@ pub(crate) async fn continue_fill(state: &EngineState, run: &fc::RunRow) -> Resu
     // `map_values` with `on_unmapped: report`: the rows of a batch whose
     // value is set and not in the map.
     let unmapped_sql = match &plan.source {
+        // `convert`: the rows whose value does not convert.
+        Some(source) if plan.kind == "convert" => Some(format!(
+            "SELECT count(*) FROM {table} AS t WHERE t.id = ANY($1) \
+               AND t.{source} IS NOT NULL AND ({expression}) IS NULL AND $2::text[] IS NOT NULL",
+            source = quote_ident(source),
+            expression = converted.as_deref().unwrap_or("NULL"),
+        )),
         Some(source) if plan.kind == "map_values" && plan.report_unmapped => Some(format!(
             "SELECT count(*) FROM {table} AS t WHERE t.id = ANY($1) \
                AND t.{source} IS NOT NULL AND NOT (t.{source}::text = ANY($2))",

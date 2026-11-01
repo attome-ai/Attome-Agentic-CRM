@@ -1226,17 +1226,16 @@ impl<'a> Fold<'a> {
                     (f.entity.clone(), f.field.clone())
                 });
             }
-            // A22-T4: the data steps this release runs: `split` (A1-T8),
-            // `copy`, `set_default` and `map_values`; `convert` has no
-            // executor yet.
+            // A22-T4: every data step kind runs: `split` (A1-T8), `copy`,
+            // `set_default`, `map_values` and `convert`.
             Op::DataStep => {
                 if !matches!(
                     op.arg("kind").and_then(Value::as_str),
-                    Some("split" | "copy" | "set_default" | "map_values")
+                    Some("split" | "copy" | "set_default" | "map_values" | "convert")
                 ) {
                     return Err(format!(
-                        "operation {} (data_step): op_not_supported: kinds `split`, `copy`, `set_default` and \
-                         `map_values` have an executor in this release",
+                        "operation {} (data_step): op_not_supported: the data step kinds are `split`, `copy`, `set_default`, \
+                         `map_values` and `convert`",
                         op.seq
                     ));
                 }
@@ -2502,10 +2501,10 @@ mod tests {
             args: Some(json!({ "kind": kind })),
         };
         let live = empty_bundle();
-        for kind in ["split", "copy", "set_default", "map_values"] {
+        for kind in ["split", "copy", "set_default", "map_values", "convert"] {
             assert!(Fold::new(&live).apply(&step(kind)).is_ok(), "{kind}");
         }
-        let refused = Fold::new(&live).apply(&step("convert"));
+        let refused = Fold::new(&live).apply(&step("shuffle"));
         assert!(
             refused
                 .as_ref()
