@@ -9,6 +9,17 @@
   overflow: hidden;
 }
 .sidebar.collapsed { width: var(--sidebar-collapsed); min-width: var(--sidebar-collapsed); }
+
+/* A phone keeps the rail in the layout; the open sidebar lies over the page. */
+@media (max-width: 767px) {
+  .sidebar:not(.collapsed) {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    z-index: 100;
+    box-shadow: 0 0 24px var(--color-card-shadow);
+  }
+}
 .sidebar.rail { --sidebar-collapsed: 62px; }
 
 .sidebar-header {

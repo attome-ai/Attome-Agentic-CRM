@@ -59,6 +59,13 @@
   flex: 1; overflow-y: auto; background: var(--color-bg);
   padding: 24px; color: var(--color-text-primary);
 }
+@media (max-width: 767px) {
+  .xrm-main { padding: 12px; }
+  .xrm-nav { padding: 0 8px; gap: 8px; }
+  .header-left { display: none; }
+  .header-right { flex: 1; min-width: 0; justify-content: flex-end; gap: 4px; }
+  .qs-trigger kbd { display: none; }
+}
 .xrm-main:has(xrm-page-editor) {
   padding: 0;
   overflow: hidden;

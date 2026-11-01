@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { AuthService, LangService } from '@attome/base';
 import { describe, expect, it } from 'vitest';
 import { SidebarItem, SidebarPreferencesService } from '@attome/xrm/core/admin/data';
@@ -123,5 +123,28 @@ describe('ShellSidebarComponent auto-expand', () => {
 
     expect(component.isExpanded('sales')).toBe(true);
     expect(component.isExpanded('ops')).toBe(true);
+  });
+});
+
+describe('ShellSidebarComponent on a phone', () => {
+  const screen = (matches: boolean) => {
+    window.matchMedia = ((query: string) => ({ matches, media: query })) as unknown as typeof window.matchMedia;
+  };
+
+  it('starts on the icon rail on a phone, open elsewhere', () => {
+    screen(true);
+    expect(mount().componentInstance.isCollapsed()).toBe(true);
+    TestBed.resetTestingModule();
+    screen(false);
+    expect(mount().componentInstance.isCollapsed()).toBe(false);
+  });
+
+  it('closes after a navigation on a phone, not elsewhere', async () => {
+    screen(true);
+    const fixture = mount();
+    fixture.detectChanges();
+    fixture.componentInstance.isCollapsed.set(false);
+    await TestBed.inject(Router).navigateByUrl('/');
+    expect(fixture.componentInstance.isCollapsed()).toBe(true);
   });
 });

@@ -9,6 +9,12 @@ import { filter } from 'rxjs/operators';
 import { AuthService, LangService, TranslatePipe } from '@attome/base';
 import { SidebarItem, SidebarPreferencesService } from '@attome/xrm/core/admin/data';
 
+const NARROW_SCREEN = '(max-width: 767px)';
+
+function isNarrowScreen(): boolean {
+  return window.matchMedia?.(NARROW_SCREEN).matches ?? false;
+}
+
 /**
  * The XRM shell's left navigation — the collapsible sidebar and, in `rail`
  * style, the fly-out panel that lists a group's children (D-315).
@@ -49,7 +55,8 @@ export class ShellSidebarComponent implements OnInit, OnDestroy {
   readonly entitySearch = signal('');
   readonly expandedIds  = signal<Set<string>>(new Set());
   readonly currentUrl   = signal(this.router.url.split('?')[0]);
-  readonly isCollapsed  = signal(false);
+  /** A phone starts on the icon rail: the open sidebar would take most of the screen. */
+  readonly isCollapsed  = signal(isNarrowScreen());
   readonly railGroupId  = signal<string | null>(null);
   readonly railSearch   = signal('');
 
@@ -103,7 +110,11 @@ export class ShellSidebarComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.navSub = this.router.events
       .pipe(filter(e => e instanceof NavigationEnd))
-      .subscribe(() => this.currentUrl.set(this.router.url.split('?')[0]));
+      .subscribe(() => {
+        this.currentUrl.set(this.router.url.split('?')[0]);
+        // The open sidebar lies over the page a phone just navigated to.
+        if (isNarrowScreen()) this.isCollapsed.set(true);
+      });
   }
 
   ngOnDestroy(): void {

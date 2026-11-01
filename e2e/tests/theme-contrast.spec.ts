@@ -7,8 +7,7 @@ const SCREENS = ['/xrm/login', '/register', '/forgot-password', '/xrm/dashboard'
 
 for (const theme of ['light', 'dark']) {
   for (const path of SCREENS) {
-    test(`${path} is readable in the ${theme} theme`, async ({ page }, testInfo) => {
-      test.skip(testInfo.project.name === 'phone-ar', 'the shell has no phone layout yet');
+    test(`${path} is readable in the ${theme} theme`, async ({ page }) => {
       await page.addInitScript(mode => localStorage.setItem('xrm-theme-mode', mode), theme);
       await mockApi(page);
       await page.goto(path);
