@@ -1226,13 +1226,17 @@ impl<'a> Fold<'a> {
                     (f.entity.clone(), f.field.clone())
                 });
             }
-            // A22-T4: `split` is the data step this release runs (A1-T8's
-            // split, between the expand and the contract of its changeset).
+            // A22-T4: the data steps this release runs: `split` (A1-T8),
+            // `copy` and `set_default`; `convert` and `map_values` have no
+            // executor yet.
             Op::DataStep => {
-                if op.arg("kind").and_then(Value::as_str) != Some("split") {
+                if !matches!(
+                    op.arg("kind").and_then(Value::as_str),
+                    Some("split" | "copy" | "set_default")
+                ) {
                     return Err(format!(
-                        "operation {} (data_step): op_not_supported: only kind `split` has an \
-                         executor in this release",
+                        "operation {} (data_step): op_not_supported: kinds `split`, `copy` and \
+                         `set_default` have an executor in this release",
                         op.seq
                     ));
                 }
@@ -2483,9 +2487,9 @@ mod tests {
         );
     }
 
-    /// A22-T4: a data step plans when it is a split, and only then.
+    /// A22-T4: a data step plans when its kind has an executor.
     #[test]
-    fn a_data_step_plans_only_as_a_split() {
+    fn a_data_step_plans_only_with_an_executor() {
         assert_eq!(unsupported(Op::DataStep), None, "an executor exists");
         let step = |kind: &str| DocOp {
             seq: 4,
@@ -2495,16 +2499,17 @@ mod tests {
                 .as_object()
                 .cloned()
                 .unwrap_or_default(),
-            args: Some(json!({ "kind": kind, "source": "full_name",
-                "targets": [{ "field": "first_name", "expression": "word(full_name, 1)" }] })),
+            args: Some(json!({ "kind": kind })),
         };
         let live = empty_bundle();
-        assert!(Fold::new(&live).apply(&step("split")).is_ok());
-        let refused = Fold::new(&live).apply(&step("copy"));
+        for kind in ["split", "copy", "set_default"] {
+            assert!(Fold::new(&live).apply(&step(kind)).is_ok(), "{kind}");
+        }
+        let refused = Fold::new(&live).apply(&step("convert"));
         assert!(
             refused
                 .as_ref()
-                .is_err_and(|e| e.contains("only kind `split`")),
+                .is_err_and(|e| e.contains("op_not_supported")),
             "{refused:?}"
         );
     }

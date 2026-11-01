@@ -24,6 +24,8 @@ mod ddl_log;
 #[cfg(debug_assertions)]
 mod dev_scaffold;
 mod entity;
+/// A22-T4: the `copy` and `set_default` changeset data steps.
+pub(crate) mod fill_steps;
 /// Y2-T10: index proposals from slow statements.
 mod index_proposals;
 /// A1-T4: entity inheritance by copy-down.

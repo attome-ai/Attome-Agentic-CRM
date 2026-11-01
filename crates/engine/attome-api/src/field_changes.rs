@@ -1284,6 +1284,8 @@ pub async fn run_field_run(state: &EngineState, run_id: Uuid) -> Result<(), AppE
         "orphan_scan" => crate::admin::orphans::continue_scan(state, &run).await,
         // A1-T8: a text attribute split into others.
         "split" => crate::admin::refactor::continue_split(state, &run).await,
+        // A22-T4: the changeset data steps that fill a column.
+        "copy" | "set_default" => crate::admin::fill_steps::continue_fill(state, &run).await,
         other => Err(AppError::internal(format!(
             "field run {run_id}: kind {other} has no executor in this release"
         ))),

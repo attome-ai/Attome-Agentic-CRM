@@ -1392,14 +1392,25 @@ impl Ctx<'_> {
                     self.registry_refreshed = true;
                 }
                 let actor = self.actor.unwrap_or(Uuid::nil());
-                crate::admin::refactor::queue_split_from_changeset(
-                    state,
-                    actor,
-                    (self.doc.id, op.seq),
-                    op.t("entity"),
-                    op.args.as_ref(),
-                )
-                .await?;
+                if op.arg("kind").and_then(Value::as_str) == Some("split") {
+                    crate::admin::refactor::queue_split_from_changeset(
+                        state,
+                        actor,
+                        (self.doc.id, op.seq),
+                        op.t("entity"),
+                        op.args.as_ref(),
+                    )
+                    .await?;
+                } else {
+                    crate::admin::fill_steps::queue_from_changeset(
+                        state,
+                        actor,
+                        (self.doc.id, op.seq),
+                        op.t("entity"),
+                        op.args.as_ref(),
+                    )
+                    .await?;
+                }
                 ReconcileOutcome::Updated
             }
             Op::UpsertRecord => {

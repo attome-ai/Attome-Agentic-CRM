@@ -60,8 +60,10 @@ A changeset may carry a `data_step` of kind `split` between its expand and contr
 "full_name", "targets": [{"field": "first_name", "expression": "word(full_name, 1)"}]}}`.
 Applying it queues the same durable split run as `POST /api/v1/admin/entities/{id}/refactor`
 (source `apply`, tied to the operation, so applying it again queues nothing); the run's progress is
-at `/api/v1/admin/data-step-runs/{id}`. The other kinds (`copy`, `convert`, `map_values`,
-`set_default`) are refused at plan until they have an executor. To go back, plan a rollback to an
+at `/api/v1/admin/data-step-runs/{id}`. Two more kinds run the same way: `copy` `{"from", "to",
+"only_empty"}` copies an attribute into another of the same type (only where the target is empty
+unless `only_empty` is `false`), and `set_default` `{"field", "value"}` fills the empty rows of a
+field. `convert` and `map_values` are refused at plan until they have an executor. To go back, plan a rollback to an
 earlier bundle version (`POST /api/v1/admin/metadata/bundles/{name}/rollback`, which shows its plan
 first) or preview and switch to an earlier metadata version on the versions screen.
 

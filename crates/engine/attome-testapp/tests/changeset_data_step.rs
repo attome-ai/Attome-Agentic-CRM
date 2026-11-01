@@ -128,3 +128,73 @@ fn a_split_data_step_runs_once_per_operation() {
         assert_eq!(last.as_deref(), Some("Qahtani"));
     });
 }
+
+// feature: A22
+#[test]
+fn copy_and_set_default_fill_the_empty_rows() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let (table, _) = entity(&app).await;
+        let registry = attome_core::build_registry(app.db()).await.unwrap();
+        app.state.entities.swap(registry);
+        let mut ids = Vec::new();
+        for full_name in [Some("Omar Saleh"), None] {
+            let (code, created) = app
+                .request(
+                    Method::POST,
+                    &format!("/api/v1/{table}"),
+                    Some(json!({ "full_name": full_name })),
+                )
+                .await;
+            assert_eq!(code, StatusCode::CREATED, "{created}");
+            ids.push(created["id"].as_str().unwrap().parse::<Uuid>().unwrap());
+        }
+
+        let mut doc = split_changeset(&table);
+        doc["name"] = json!("fill-names");
+        doc["operations"] = json!([
+            { "op": "data_step", "phase": "expand", "seq": 1, "target": { "entity": table },
+              "args": { "kind": "copy", "from": "full_name", "to": "first_name" } },
+            { "op": "data_step", "phase": "expand", "seq": 2, "target": { "entity": table },
+              "args": { "kind": "set_default", "field": "first_name", "value": "Unknown" } }
+        ]);
+        doc["checksum"] = json!(format!("sha256:{}", "0".repeat(64)));
+        let checksum = attome_api::changeset::jcs::document_checksum(&doc).expect("checksum");
+        doc["checksum"] = json!(checksum);
+        let changeset: Uuid = doc["id"].as_str().unwrap().parse().unwrap();
+        attome_api::changeset::boot::apply_pack_document(&app.state, &doc)
+            .await
+            .expect("the changeset applies");
+        let runs: Vec<Uuid> = sqlx::query_scalar(
+            "SELECT id FROM data_step_run WHERE changeset_id = $1 ORDER BY op_seq",
+        )
+        .bind(changeset)
+        .fetch_all(app.db())
+        .await
+        .unwrap();
+        assert_eq!(runs.len(), 2);
+        for run in runs {
+            attome_api::field_changes::run_field_run(&app.state, run)
+                .await
+                .expect("the run");
+        }
+        let first: Vec<Option<String>> = sqlx::query_scalar(&format!(
+            "SELECT first_name::text FROM \"{table}\" WHERE id = ANY($1) ORDER BY id"
+        ))
+        .bind(&ids)
+        .fetch_all(app.db())
+        .await
+        .unwrap();
+        let mut ordered = ids.clone();
+        ordered.sort();
+        let named = ordered.iter().position(|id| *id == ids[0]).unwrap();
+        assert_eq!(first[named].as_deref(), Some("Omar Saleh"), "copied");
+        assert_eq!(
+            first[1 - named].as_deref(),
+            Some("Unknown"),
+            "the default fills the rest"
+        );
+    });
+}
