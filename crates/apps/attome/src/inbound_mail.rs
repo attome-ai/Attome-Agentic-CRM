@@ -158,8 +158,11 @@ async fn email_imports(
         .chain(&message.cc)
         .map(|a| a.address.trim().to_lowercase())
         .collect();
+    let Some(sender) = message.from.as_ref().map(|f| f.address.as_str()) else {
+        return Ok(0);
+    };
     let templates =
-        attome_document::import_jobs::email_templates(&state.base.db, &recipients).await?;
+        attome_document::import_jobs::email_templates(&state.base.db, &recipients, sender).await?;
     if templates.is_empty() {
         return Ok(0);
     }

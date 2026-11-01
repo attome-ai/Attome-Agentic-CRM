@@ -93,8 +93,10 @@ encrypted credential store, never in the job. The server runs the machine's Open
 limit and 50 MiB cap, and the temporary key file is removed after each fetch. Paths, hosts and
 users with quotes, control characters or a leading dash are refused.
 
-An email source is `{"kind": "email", "address": "imports@example.com"}` (no `cron`: mail starts
-it). When a mailbox integration (`kind = "mailbox"`, read every two minutes) reads a message sent
+An email source is `{"kind": "email", "address": "imports@example.com", "senders": ["@partner.sa"]}`
+(no `cron`: mail starts it). `senders` is required: the addresses, or `@domain` for any address
+there, whose mail may start the import; mail from anyone else starts nothing. A sender address can
+be forged, so use an import address only your partners know. When a mailbox integration (`kind = "mailbox"`, read every two minutes) reads a message sent
 or copied to that address, the message's first CSV or Excel attachment (by name or content type)
 is fetched from the mail provider (IMAP, Microsoft 365 or Gmail) and starts a job with the
 template's mapping and options, as a due schedule does; the same file twice starts nothing. The

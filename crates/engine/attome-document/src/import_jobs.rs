@@ -281,9 +281,15 @@ pub enum Source {
     /// host key given.
     Sftp(attome_integration::import_source::SftpSource),
     /// A23-T12: mail to `address` read by a mailbox integration: the first
-    /// CSV or Excel attachment of each message starts an import. Started
-    /// by the mail, so the schedule's `cron` is not used.
-    Email { address: String },
+    /// CSV or Excel attachment of each message from one of `senders` (an
+    /// address, or `@domain` for any address there) starts an import.
+    /// Started by the mail, so the schedule's `cron` is not used; mail from
+    /// anyone else starts nothing.
+    Email {
+        address: String,
+        #[serde(default)]
+        senders: Vec<String>,
+    },
 }
 
 /// A template job's `counts.schedule`.
@@ -309,15 +315,25 @@ pub fn due_slot(
     created_at: DateTime<Utc>,
     now: DateTime<Utc>,
 ) -> Result<Option<DateTime<Utc>>, AppError> {
-    if let Source::Email { address } = &schedule.source {
+    if let Source::Email { address, senders } = &schedule.source {
         // Mail starts it; the clock never does.
-        return if address.contains('@') && !address.trim().is_empty() {
-            Ok(None)
-        } else {
-            Err(AppError::Validation(
+        if !address.contains('@') || address.trim().is_empty() {
+            return Err(AppError::Validation(
                 "schedule: an email source names an address".into(),
-            ))
-        };
+            ));
+        }
+        if senders.is_empty()
+            || senders
+                .iter()
+                .any(|s| !s.contains('@') || s.trim().is_empty())
+        {
+            return Err(AppError::Validation(
+                "schedule: an email source names the senders it takes files from \
+                 (addresses, or @domain)"
+                    .into(),
+            ));
+        }
+        return Ok(None);
     }
     let tz = schedule
         .time_zone
@@ -409,7 +425,7 @@ async fn run_template(
     let location = match &schedule.source {
         Source::Storage { location } | Source::Https { location } => location,
         Source::Sftp(source) => &source.location,
-        Source::Email { address } => address,
+        Source::Email { address, .. } => address,
     };
     start_from_bytes(state, template, &file_name_of(location), bytes).await
 }
@@ -474,13 +490,21 @@ pub async fn start_from_bytes(
 }
 
 /// A23-T12: the templates whose email source is one of `recipients`
-/// (lowercase addresses).
-pub async fn email_templates(db: &DbPool, recipients: &[String]) -> Result<Vec<Uuid>, AppError> {
+/// (lowercase addresses) and takes files from `sender`.
+pub async fn email_templates(
+    db: &DbPool,
+    recipients: &[String],
+    sender: &str,
+) -> Result<Vec<Uuid>, AppError> {
     if recipients.is_empty() {
         return Ok(Vec::new());
     }
-    sqlx::query_scalar(
-        "SELECT id FROM import_job \
+    let rows: Vec<(Uuid, Vec<String>)> = sqlx::query_as(
+        "SELECT id, COALESCE(ARRAY(SELECT jsonb_array_elements_text( \
+                    CASE WHEN jsonb_typeof(counts->'schedule'->'source'->'senders') = 'array' \
+                         THEN counts->'schedule'->'source'->'senders' ELSE '[]'::jsonb END)), \
+                ARRAY[]::text[]) \
+           FROM import_job \
           WHERE counts ? 'schedule' AND status <> 'cancelled' \
             AND counts->'schedule'->'source'->>'kind' = 'email' \
             AND lower(counts->'schedule'->'source'->>'address') = ANY($1) \
@@ -489,7 +513,29 @@ pub async fn email_templates(db: &DbPool, recipients: &[String]) -> Result<Vec<U
     .bind(recipients)
     .fetch_all(db)
     .await
-    .map_err(AppError::internal)
+    .map_err(AppError::internal)?;
+    Ok(rows
+        .into_iter()
+        .filter(|(_, senders)| sender_allowed(sender, senders))
+        .map(|(id, _)| id)
+        .collect())
+}
+
+/// A23-T12: whether mail from `from` may start an import whose senders are
+/// `senders`: the same address, or `@domain` naming its domain; case is
+/// ignored. Pure.
+pub fn sender_allowed(from: &str, senders: &[String]) -> bool {
+    let from = from.trim().to_ascii_lowercase();
+    let Some((_, domain)) = from.rsplit_once('@') else {
+        return false;
+    };
+    senders.iter().any(|s| {
+        let s = s.trim().to_ascii_lowercase();
+        match s.strip_prefix('@') {
+            Some(d) => d == domain,
+            None => s == from,
+        }
+    })
 }
 
 /// A23-T12: whether an attachment is a file an import reads (CSV or Excel),
@@ -612,6 +658,7 @@ mod tests {
             time_zone: None,
             source: Source::Email {
                 address: "imports@us.sa".into(),
+                senders: vec!["@partner.sa".into()],
             },
             last_run: None,
         };
@@ -620,16 +667,33 @@ mod tests {
         let bad = RecurringSchedule {
             source: Source::Email {
                 address: "nobody".into(),
+                senders: vec!["@partner.sa".into()],
+            },
+            ..schedule.clone()
+        };
+        assert!(due_slot(&bad, None, now, now).is_err());
+        let anyone = RecurringSchedule {
+            source: Source::Email {
+                address: "imports@us.sa".into(),
+                senders: Vec::new(),
             },
             ..schedule
         };
-        assert!(due_slot(&bad, None, now, now).is_err());
+        assert!(
+            due_slot(&anyone, None, now, now).is_err(),
+            "senders are required"
+        );
+        let senders = vec!["@partner.sa".to_owned(), "ops@other.sa".to_owned()];
+        assert!(sender_allowed("Feeds@Partner.sa", &senders));
+        assert!(sender_allowed("ops@other.sa", &senders));
+        assert!(!sender_allowed("someone@other.sa", &senders));
+        assert!(!sender_allowed("evil@partner.sa.example", &senders));
         assert!(is_import_file(Some("Customers.CSV"), None));
         assert!(is_import_file(Some("list"), Some("text/csv")));
         assert!(is_import_file(Some("leads.xlsx"), None));
         assert!(!is_import_file(Some("logo.png"), Some("image/png")));
         let parsed: RecurringSchedule = serde_json::from_value(serde_json::json!({
-            "source": { "kind": "email", "address": "imports@us.sa" }
+            "source": { "kind": "email", "address": "imports@us.sa", "senders": ["@partner.sa"] }
         }))
         .expect("an email schedule needs no cron");
         assert_eq!(parsed.cron, "");
