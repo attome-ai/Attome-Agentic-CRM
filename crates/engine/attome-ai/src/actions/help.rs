@@ -137,6 +137,10 @@ pub const DOCS: &[(&str, &str)] = &[
         include_str!("../../../../../docs/delta-tokens.md"),
     ),
     (
+        "docs/device-sign-in.md",
+        include_str!("../../../../../docs/device-sign-in.md"),
+    ),
+    (
         "docs/dialer.md",
         include_str!("../../../../../docs/dialer.md"),
     ),
