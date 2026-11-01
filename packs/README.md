@@ -134,6 +134,14 @@ reservations, serial numbers and lots; returns (I11) with lines, reasons, the re
 inspection and disposition. Its `0010` adds device rules (I7) and a `device_id` on the
 asset-management pack's asset and meter reading, so it needs that pack installed first.
 
+The **technician app** (I4-T1) is the model object `model/navigation/field-service/technician.json`:
+Today (my work orders scheduled for today, those completed today) and Job (open tasks, parts lines),
+over the views `0011` adds; a work order's signature (`customer_signature`, `signed_by`) and its
+completion are on the work order itself. `model/entity_settings/field-service/` marks the work order,
+its tasks, lines and time entries offline (B18). What a device takes offline is the technician role's
+offline profile (the offline pack's `offline_profile`, with these entities): roles differ per
+deployment, so the administrator creates it.
+
 The human-resources pack's `0002` adds positions, leave types and balances and labelled HR documents
 (a health document is special-category data); the customer-service pack's `0002` adds entitlements
 and their usage ledger (G10), and its `0003` links a case to its entitlement and the entitlement to

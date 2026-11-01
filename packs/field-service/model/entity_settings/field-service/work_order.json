@@ -1,0 +1,13 @@
+{
+  "app": "field-service",
+  "doc": {
+    "entity": "@entity:work_order",
+    "preset": "standard",
+    "switches": {
+      "offline": true
+    }
+  },
+  "kind": "entity_settings",
+  "name": "work_order",
+  "schema_version": 1
+}

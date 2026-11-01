@@ -1,0 +1,223 @@
+{
+  "author": "packs",
+  "checksum": "sha256:05535b8dad38896fb3888c57bb1221afa874364bceca3772514c1e5ec4c89f7c",
+  "closed_at": "2026-11-01T00:00:00Z",
+  "description": "Technician app views (I4-T1): the technician's work orders scheduled for today and those completed today (assigned to the caller), the open tasks and the parts lines, which the pack's technician app (model/navigation/field-service/technician.json) opens.",
+  "format": "attome-changeset/v1",
+  "id": "01a19764-13c2-7ad2-bbd5-882ec54fdfee",
+  "layer": "product",
+  "name": "field-service-technician-views",
+  "opened_at": "2026-11-01T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "work_order",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": false,
+          "name": "Work Orders: My Today",
+          "required_privilege": "work_order.read",
+          "sql": "SELECT id, work_order_number, title, site_address, scheduled_start, priority, status FROM work_order WHERE is_active IS NOT FALSE AND status IN ('scheduled', 'dispatched', 'in_progress', 'on_hold') AND scheduled_start >= date_trunc('day', now()) AND scheduled_start < date_trunc('day', now()) + interval '1 day'",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "work_order",
+        "query": "Work Orders: My Today"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "work_order",
+          "icon": "las la-calendar-day",
+          "is_customized": true,
+          "is_default": false,
+          "kind": "list",
+          "name": "Work Orders: My Today",
+          "query": {
+            "entity": "work_order",
+            "name": "Work Orders: My Today"
+          },
+          "table_definition": [],
+          "view_metadata": {
+            "filters": [
+              {
+                "field": "assigned_to",
+                "op": "eq",
+                "value": "@me"
+              }
+            ]
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "work_order",
+        "view": "Work Orders: My Today"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "work_order",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": false,
+          "name": "Work Orders: My Completed Today",
+          "required_privilege": "work_order.read",
+          "sql": "SELECT id, work_order_number, title, site_address, completed_at, signed_by FROM work_order WHERE is_active IS NOT FALSE AND status = 'completed' AND completed_at >= date_trunc('day', now())",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "work_order",
+        "query": "Work Orders: My Completed Today"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "work_order",
+          "icon": "las la-check-circle",
+          "is_customized": true,
+          "is_default": false,
+          "kind": "list",
+          "name": "Work Orders: My Completed Today",
+          "query": {
+            "entity": "work_order",
+            "name": "Work Orders: My Completed Today"
+          },
+          "table_definition": [],
+          "view_metadata": {
+            "filters": [
+              {
+                "field": "assigned_to",
+                "op": "eq",
+                "value": "@me"
+              }
+            ]
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "work_order",
+        "view": "Work Orders: My Completed Today"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "work_order_task",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": false,
+          "name": "Work Order Tasks: Open",
+          "required_privilege": "work_order_task.read",
+          "sql": "SELECT id, title, work_order_ref, step_order, estimated_minutes, status FROM work_order_task WHERE is_active IS NOT FALSE AND status = 'open'",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "work_order_task",
+        "query": "Work Order Tasks: Open"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "work_order_task",
+          "icon": "las la-tasks",
+          "is_customized": true,
+          "is_default": false,
+          "kind": "list",
+          "name": "Work Order Tasks: Open",
+          "query": {
+            "entity": "work_order_task",
+            "name": "Work Order Tasks: Open"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "work_order_task",
+        "view": "Work Order Tasks: Open"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "work_order_line",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": false,
+          "name": "Work Order Lines: Parts",
+          "required_privilege": "work_order_line.read",
+          "sql": "SELECT id, work_order_ref, product_ref, quantity, location_code FROM work_order_line WHERE is_active IS NOT FALSE AND line_kind = 'part'",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "work_order_line",
+        "query": "Work Order Lines: Parts"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "work_order_line",
+          "icon": "las la-boxes",
+          "is_customized": true,
+          "is_default": false,
+          "kind": "list",
+          "name": "Work Order Lines: Parts",
+          "query": {
+            "entity": "work_order_line",
+            "name": "Work Order Lines: Parts"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "work_order_line",
+        "view": "Work Order Lines: Parts"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "field-service",
+  "seq": 11,
+  "title": "Pack: technician app views"
+}

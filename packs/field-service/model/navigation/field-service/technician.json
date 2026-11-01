@@ -1,0 +1,49 @@
+{
+  "app": "field-service",
+  "doc": {
+    "groups": [
+      {
+        "items": [
+          {
+            "kind": "view",
+            "label": "My jobs today",
+            "target": "@view:work_order/Work Orders: My Today"
+          },
+          {
+            "kind": "view",
+            "label": "Completed today",
+            "target": "@view:work_order/Work Orders: My Completed Today"
+          }
+        ],
+        "label": "Today"
+      },
+      {
+        "items": [
+          {
+            "kind": "view",
+            "label": "Tasks",
+            "target": "@view:work_order_task/Work Order Tasks: Open"
+          },
+          {
+            "kind": "view",
+            "label": "Parts",
+            "target": "@view:work_order_line/Work Order Lines: Parts"
+          }
+        ],
+        "label": "Job"
+      }
+    ],
+    "settings": {
+      "icon": "las la-tools",
+      "languages": [
+        "en",
+        "ar"
+      ],
+      "name": "Technician",
+      "simple": true
+    }
+  },
+  "kind": "navigation",
+  "name": "technician",
+  "schema_version": 1
+}

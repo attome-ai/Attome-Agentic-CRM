@@ -14,6 +14,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Field service pack: the technician app (Today and Job menus over four new views) and work orders,
+  tasks, lines and time entries marked offline (I4-T1).
 - Deleting a field or finishing a large type change retires the old column (renamed, values intact)
   instead of dropping it; a daily job drops it after `records.contract_period_hours` (a week) once
   every node has switched (Y12-T9, migration 0363).
