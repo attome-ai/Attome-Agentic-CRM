@@ -7,7 +7,7 @@ import { CanvasComponent, valueAt } from '@attome/xrm/canvas';
 import type { EditCommand } from '@attome/xrm/canvas';
 import { PageRuntimeComponent } from '@attome/xrm/core/page-runtime';
 import type { Device, PageBinding, PageDoc, PageEvent, PageNode, PageNodeType } from '@attome/xrm/core/page-runtime';
-import { ModelService } from '@attome/xrm/model';
+import { ModelService, ModelTestsPreviewComponent } from '@attome/xrm/model';
 import type { ModelCommand } from '@attome/xrm/model';
 
 /** The component palette (`attome_model::kinds::page::NODE_TYPES`). */
@@ -69,7 +69,7 @@ type BindingKind = '' | 'view' | 'query' | 'record';
   selector: 'xrm-page-designer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, TranslatePipe, CanvasComponent, PageRuntimeComponent],
+  imports: [FormsModule, TranslatePipe, CanvasComponent, PageRuntimeComponent, ModelTestsPreviewComponent],
   template: `
     <section class="pd" data-testid="page-designer">
       <header class="pd-head">
@@ -80,6 +80,7 @@ type BindingKind = '' | 'view' | 'query' | 'record';
         </div>
       </header>
       @if (error(); as e) { <p class="pd-error" role="alert">{{ e }}</p> }
+      @if (hash()) { <xrm-model-tests-preview kind="page" [objectId]="id()" [doc]="current()" /> }
 
       @if (initial(); as doc) {
         <div class="pd-layout">

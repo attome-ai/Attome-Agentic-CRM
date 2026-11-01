@@ -2,8 +2,10 @@ export { ModelService } from './model.service';
 export type {
   FormPlan, FormPlanField, FormPlanSection, RecordView,
   Page, KindView, ObjectSummary, VersionSummary, ObjectVersion, PatchOp,
-  ModelCommand, ModelIssue, DraftSaved, ActionSummary, AgentUsage, MenuItem, MenuView,
+  ModelCommand, ModelIssue, DraftSaved, ActionSummary, AgentUsage, MenuItem, MenuView, AffectedTest,
 } from './model.service';
+// T7-T2: the customer tests a publish can affect, run before publishing.
+export { ModelTestsPreviewComponent } from './tests-preview/model-tests-preview.component';
 export { FormRendererComponent, controlFor } from './form-renderer/form-renderer.component';
 export type { FieldControl } from './form-renderer/form-renderer.component';
 export { MetadataExplorerComponent } from './explorer/metadata-explorer.component';

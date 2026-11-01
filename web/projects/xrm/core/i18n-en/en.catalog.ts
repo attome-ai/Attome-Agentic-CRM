@@ -3657,6 +3657,10 @@ export const xrmEn = {
     templatesOf: 'Templates of {name}', noVariables: 'This template takes no variables.',
     attribute: 'Field name, e.g. first_name', saveMap: 'Save fields', noTemplates: 'No approved templates. Sync to read them from Meta.',
   },
+  modelTests: {
+    run: 'Run the tests this change can affect', none: 'No customer test touches what this changes.',
+    passed: 'passed', failed: 'failed', blocking: 'blocks publishing',
+  },
   webhooksPage: {
     title: 'Webhooks',
     intro: 'Send record changes and business events to other systems. Every delivery is signed; the secret is shown once, when the subscription is created.',

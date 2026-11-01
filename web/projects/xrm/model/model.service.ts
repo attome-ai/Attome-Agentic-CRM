@@ -164,6 +164,15 @@ export interface ActionSummary {
   risk:        string;
 }
 
+/** T7-T2: one customer test a publish can affect, as it ran. */
+export interface AffectedTest {
+  id: string;
+  name: string;
+  blocking: boolean;
+  passed: boolean;
+  failures: string[];
+}
+
 /** The published metadata model, as the renderer reads it (roadmap Y14). */
 @Injectable({ providedIn: 'root' })
 export class ModelService {
@@ -262,6 +271,14 @@ export class ModelService {
       `/api/v1/admin/model/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/commands`,
       { base_hash: baseHash, name, commands },
     );
+  }
+
+  /** T7-T2: runs the customer tests a publish of the object can affect (the preview). */
+  previewTests(kind: string, id: string, doc: unknown): Observable<AffectedTest[]> {
+    return this.api.post<{ tests?: AffectedTest[] }>(
+      `/api/v1/admin/model/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/validate`,
+      { doc, run_tests: true },
+    ).pipe(map(r => r.tests ?? []));
   }
 
   publish(kind: string, id: string): Observable<{ id: string; version_no: number }> {
