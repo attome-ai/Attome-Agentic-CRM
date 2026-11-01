@@ -12,12 +12,12 @@ const TESTS: CustomerTest[] = [
   {
     id: 't1', name: 'Discount needs approval', description: null, definition: {}, blocking: true,
     is_active: true, row_version: 1, created_at: '2026-10-18T08:00:00Z', updated_at: '2026-10-18T08:00:00Z',
-    created_by: null, last_passed: false, last_run_at: '2026-10-18T09:00:00Z',
+    created_by: null, last_passed: false, last_run_at: '2026-10-18T09:00:00Z', live_safe: false,
   },
   {
     id: 't2', name: 'Lead gets an owner', description: 'routing', definition: {}, blocking: false,
     is_active: true, row_version: 3, created_at: '2026-10-18T08:00:00Z', updated_at: '2026-10-18T08:00:00Z',
-    created_by: null, last_passed: null, last_run_at: null,
+    created_by: null, last_passed: null, last_run_at: null, live_safe: false,
   },
 ];
 
