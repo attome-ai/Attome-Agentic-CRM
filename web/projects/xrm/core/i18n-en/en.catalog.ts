@@ -320,6 +320,16 @@ export const xrmEn = {
     minAgreement: 'Agreement needed (%)', goLive: 'Go live', needMore: 'Needs more compared steps',
     live: 'The agent is live.',
   },
+  aiPermissions: {
+    tab: 'Permissions',
+    title: 'Permission test',
+    intro: 'Checks, without running anything, that this agent is stopped from every call it must not make and waits for a person where it must. It also runs when the agent is made active.',
+    run: 'Run the test', lastRun: 'Last run', neverRun: 'Not run yet',
+    passed: 'Passed', failed: 'Failed', cases: 'Cases',
+    failures: 'Failures', truncated: 'Only the first 500 failures are shown.',
+    cannotDo: 'What this agent cannot do', cannotRead: 'Read', nothing: 'Nothing.',
+    needsApproval: 'What waits for a person’s approval',
+  },
   aiAutonomy: {
     tab: 'Autonomy',
     proposals: {

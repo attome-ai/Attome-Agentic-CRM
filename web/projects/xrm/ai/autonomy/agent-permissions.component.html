@@ -1,0 +1,66 @@
+<section class="au">
+  <h2>{{ 'aiPermissions.title' | translate }}</h2>
+  <p class="au-muted">{{ 'aiPermissions.intro' | translate }}</p>
+  @if (error(); as message) {
+    <p class="au-error" role="alert">{{ message }}</p>
+  }
+  <div class="au-actions">
+    <button type="button" (click)="run()" [disabled]="busy()">{{ 'aiPermissions.run' | translate }}</button>
+    @if (lastRun(); as last) {
+      <span class="au-muted" data-last-run>
+        {{ 'aiPermissions.lastRun' | translate }} {{ last.created_at | localDate }} ·
+        {{ (last.passed ? 'aiPermissions.passed' : 'aiPermissions.failed') | translate }}
+      </span>
+    } @else {
+      <span class="au-muted">{{ 'aiPermissions.neverRun' | translate }}</span>
+    }
+  </div>
+
+  @if (report(); as r) {
+    <p class="au-figures" role="status">
+      <strong>{{ (r.passed ? 'aiPermissions.passed' : 'aiPermissions.failed') | translate }}</strong>
+      · {{ 'aiPermissions.cases' | translate }} {{ r.cases }}
+    </p>
+
+    @if (r.failures.length > 0) {
+      <h3 class="au-error">{{ 'aiPermissions.failures' | translate }}</h3>
+      <ul class="au-list" data-failures>
+        @for (f of r.failures; track $index) {
+          <li class="au-item au-pending">
+            <span class="au-action"><code dir="ltr">{{ f.action_id }}</code></span>
+            @if (f.entity) { <code dir="ltr">{{ f.entity }}</code> }
+            <span class="au-error">{{ f.reason }}</span>
+          </li>
+        }
+      </ul>
+      @if (r.failures_truncated) {
+        <p class="au-muted">{{ 'aiPermissions.truncated' | translate }}</p>
+      }
+    }
+
+    <h3>{{ 'aiPermissions.cannotDo' | translate }}</h3>
+    @if (r.summary.cannot_do.length === 0 && r.summary.unreadable_entities.length === 0) {
+      <p class="au-muted">{{ 'aiPermissions.nothing' | translate }}</p>
+    } @else {
+      <ul class="au-list" data-cannot>
+        @for (a of r.summary.cannot_do; track a) {
+          <li class="au-item"><code dir="ltr">{{ a }}</code></li>
+        }
+        @for (e of r.summary.unreadable_entities; track e) {
+          <li class="au-item">{{ 'aiPermissions.cannotRead' | translate }} <code dir="ltr">{{ e }}</code></li>
+        }
+      </ul>
+    }
+
+    <h3>{{ 'aiPermissions.needsApproval' | translate }}</h3>
+    @if (r.summary.needs_approval.length === 0) {
+      <p class="au-muted">{{ 'aiPermissions.nothing' | translate }}</p>
+    } @else {
+      <ul class="au-list" data-approval>
+        @for (a of r.summary.needs_approval; track a) {
+          <li class="au-item"><code dir="ltr">{{ a }}</code></li>
+        }
+      </ul>
+    }
+  }
+</section>

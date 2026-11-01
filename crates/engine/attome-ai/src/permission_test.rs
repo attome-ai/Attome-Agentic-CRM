@@ -234,6 +234,8 @@ pub struct Report {
     pub failures_truncated: bool,
     /// Expected-allowed calls the gate stopped.
     pub over_restricted: usize,
+    /// AH7-T5: what the agent cannot do, in words.
+    pub summary: CaseSummary,
 }
 
 /// AH7-T4: one stored run.
@@ -278,6 +280,48 @@ pub struct Judged {
     pub failures: Vec<Failure>,
     /// Expected-allowed calls the gate stopped.
     pub over_restricted: usize,
+    /// AH7-T5: what the agent cannot do (shown on its form).
+    pub summary: CaseSummary,
+}
+
+/// AH7-T5: the cases in words for a person: the actions the agent may not
+/// call, the entities it may not read, and the actions that wait for a
+/// person's approval. Each list sorted, at most [`MAX_LISTED`].
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, ToSchema)]
+pub struct CaseSummary {
+    pub cannot_do: Vec<String>,
+    pub unreadable_entities: Vec<String>,
+    pub needs_approval: Vec<String>,
+}
+
+/// The most items one summary list holds.
+pub const MAX_LISTED: usize = 200;
+
+/// The summary of `cases`. Pure.
+pub fn summarise(cases: &[Case]) -> CaseSummary {
+    let mut cannot = BTreeSet::new();
+    let mut entities = BTreeSet::new();
+    let mut approval = BTreeSet::new();
+    for case in cases {
+        match (case.expect, &case.entity) {
+            (Expect::Refused, None) => {
+                cannot.insert(case.action_id.clone());
+            }
+            (Expect::Refused, Some(entity)) => {
+                entities.insert(entity.clone());
+            }
+            (Expect::NeedsApproval, _) => {
+                approval.insert(case.action_id.clone());
+            }
+            (Expect::Allowed, _) => {}
+        }
+    }
+    let take = |set: BTreeSet<String>| set.into_iter().take(MAX_LISTED).collect();
+    CaseSummary {
+        cannot_do: take(cannot),
+        unreadable_entities: take(entities),
+        needs_approval: take(approval),
+    }
 }
 
 /// Puts every case for an agent whose owner is `security` and whose
@@ -350,6 +394,7 @@ pub fn judge(
 
     Judged {
         cases: cases.len(),
+        summary: summarise(&cases),
         failures,
         over_restricted,
     }
@@ -375,6 +420,7 @@ pub async fn run(state: &EngineState, actor: Uuid, agent_ref: Uuid) -> Result<Re
         cases,
         failures,
         over_restricted,
+        summary,
     } = judge(state, &security, &resolved.effective);
 
     let run_id = Uuid::now_v7();
@@ -402,6 +448,7 @@ pub async fn run(state: &EngineState, actor: Uuid, agent_ref: Uuid) -> Result<Re
         failures,
         failures_truncated: false,
         over_restricted,
+        summary,
     })
 }
 
@@ -536,6 +583,26 @@ mod tests {
     use super::*;
 
     #[test]
+    fn the_summary_lists_what_the_agent_cannot_do() {
+        let case = |action: &str, entity: Option<&str>, expect: Expect| Case {
+            action_id: action.into(),
+            entity: entity.map(str::to_owned),
+            expect,
+            reason: "test",
+        };
+        let summary = summarise(&[
+            case("email.send", None, Expect::Refused),
+            case("record.get", Some("salary"), Expect::Refused),
+            case("record.delete", None, Expect::NeedsApproval),
+            case("record.get", None, Expect::Allowed),
+            case("email.send", None, Expect::Refused),
+        ]);
+        assert_eq!(summary.cannot_do, vec!["email.send".to_owned()]);
+        assert_eq!(summary.unreadable_entities, vec!["salary".to_owned()]);
+        assert_eq!(summary.needs_approval, vec!["record.delete".to_owned()]);
+    }
+
+    #[test]
     fn the_answer_cuts_failures_at_500_and_says_so() {
         let failure = Failure {
             action_id: "email.send".into(),
@@ -552,6 +619,7 @@ mod tests {
             failures: vec![failure.clone(); n],
             failures_truncated: false,
             over_restricted: 0,
+            summary: CaseSummary::default(),
         };
         let cut = capped(report(501));
         assert_eq!(cut.failures.len(), 500);
