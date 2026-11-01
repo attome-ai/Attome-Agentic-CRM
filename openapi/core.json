@@ -73684,6 +73684,229 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "high"
+      },
+      "patch": {
+        "tags": [
+          "admin-webcrawl"
+        ],
+        "summary": "Change a crawl source's settings",
+        "description": "Changes a source's settings; each one left out keeps its value. Send the\nsource's `row_version` as `If-Match`. A knowledge manager may change\neverything but the intranet host and the credential, which stay with\nadministrators. Audited.",
+        "operationId": "patch_target",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The source",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The source's row_version, quoted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTargetBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The source as it now stands",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TargetListItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not manage sources, or changed an administrator's setting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "version_conflict: the source changed since it was read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A missing or malformed If-Match, or a setting outside its values",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/webcrawl/targets/{id}/changes": {
+      "get": {
+        "tags": [
+          "admin-webcrawl"
+        ],
+        "summary": "A crawl source's changes to review",
+        "description": "The source's knowledge items a recrawl changed after an editor published\nthem: their text is kept and they wait for review (importing the page\nagain takes the site's version).",
+        "operationId": "list_changes",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The source",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ChangeItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not read sources",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/webcrawl/targets/{id}/import": {
@@ -74039,6 +74262,105 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/webcrawl/targets/{id}/runs": {
+      "get": {
+        "tags": [
+          "admin-webcrawl"
+        ],
+        "summary": "A crawl source's runs",
+        "description": "Each crawl of the source, newest first: when it ran, how it ended, the\npages it found and what it did to the source's knowledge items.",
+        "operationId": "list_runs",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The source",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_RunItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not read sources",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/{entity}": {
@@ -100391,9 +100713,15 @@
         "required": [
           "data_source_ref",
           "imported_count",
-          "updated_count"
+          "updated_count",
+          "aliased_count"
         ],
         "properties": {
+          "aliased_count": {
+            "type": "integer",
+            "format": "int64",
+            "description": "K6-T7: new pages with the same text as an imported page, kept as its\nalias instead of a second item."
+          },
           "data_source_ref": {
             "type": "string",
             "format": "uuid"
@@ -107080,6 +107408,80 @@
                 "updated_at": {
                   "type": "string",
                   "format": "date-time"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_ChangeItem": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A knowledge item a recrawl changed under its editor, waiting for review.",
+              "required": [
+                "page_id",
+                "url_path",
+                "item_id",
+                "changed_at"
+              ],
+              "properties": {
+                "changed_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "item_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "page_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "title": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "url_path": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int32"
                 }
               }
             }
@@ -117021,6 +117423,97 @@
           }
         }
       },
+      "PaginatedResponse_RunItem": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One crawl of a source.",
+              "required": [
+                "id",
+                "started_at",
+                "status",
+                "pages_found",
+                "items_imported",
+                "items_updated",
+                "items_flagged"
+              ],
+              "properties": {
+                "error": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "finished_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "items_flagged": {
+                  "type": "integer",
+                  "format": "int32",
+                  "description": "Items an editor published that the site changed, waiting for review."
+                },
+                "items_imported": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "items_updated": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "pages_found": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "started_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`running | completed | failed`."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_SandboxRequest": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -118696,7 +119189,8 @@
                 "import_mode",
                 "schedule",
                 "watch_only",
-                "allow_host"
+                "allow_host",
+                "row_version"
               ],
               "properties": {
                 "allow_host": {
@@ -118765,6 +119259,11 @@
                 "pages_imported": {
                   "type": "integer",
                   "format": "int32"
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "K6-T10: send it back as `If-Match` to change the settings."
                 },
                 "schedule": {
                   "type": "string",
@@ -129103,7 +129602,8 @@
           "import_mode",
           "schedule",
           "watch_only",
-          "allow_host"
+          "allow_host",
+          "row_version"
         ],
         "properties": {
           "allow_host": {
@@ -129172,6 +129672,11 @@
           "pages_imported": {
             "type": "integer",
             "format": "int32"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64",
+            "description": "K6-T10: send it back as `If-Match` to change the settings."
           },
           "schedule": {
             "type": "string",
@@ -130662,6 +131167,84 @@
               "null"
             ],
             "format": "double"
+          }
+        }
+      },
+      "UpdateTargetBody": {
+        "type": "object",
+        "description": "A source's settings to change; each one left out keeps its value.",
+        "properties": {
+          "allow_host": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Administrators only."
+          },
+          "audience": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "credential_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Administrators only."
+          },
+          "exclude_patterns": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "import_mode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "include_patterns": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "languages": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "max_depth": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "schedule": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sitemap_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "watch_only": {
+            "type": [
+              "boolean",
+              "null"
+            ]
           }
         }
       },

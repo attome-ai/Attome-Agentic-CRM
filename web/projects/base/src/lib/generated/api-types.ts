@@ -422,6 +422,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/ai/agents/{id}/permission-test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run an agent's permission test
+         * @description Runs the agent definition's permission test as the caller would start
+         *     it, executing nothing, stores the run and answers its report (at most
+         *     500 failures, flagged when cut). Audited.
+         */
+        post: operations["post_permission_test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/agents/{id}/permission-tests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List an agent's permission test runs
+         * @description The agent definition's stored permission test runs, newest first.
+         */
+        get: operations["list_permission_tests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/ai/agents/{id}/rollback": {
         parameters: {
             query?: never;
@@ -18517,6 +18559,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/contract/contracts/{id}/send-for-signature": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a contract for signature
+         * @description Sends an approved contract's latest version to its signers through an
+         *     electronic signature envelope, in their order. When everyone has signed
+         *     the signed file becomes a `signed` version and the contract becomes
+         *     active. The caller needs to update the contract.
+         */
+        post: operations["post_contract_send_for_signature"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contract/contracts/{id}/share-for-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Share a contract for counterparty review
+         * @description Opens the contract's next negotiation round: emails the counterparty a
+         *     link, valid for `contract.review_link_days` (14 by default), to read the
+         *     current version, comment and send back their own version. Opening a
+         *     round closes the link of the round before. The caller needs to update
+         *     the contract.
+         */
+        post: operations["post_contract_share_for_review"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/contract/counterparty-match/run": {
         parameters: {
             query?: never;
@@ -18553,6 +18642,79 @@ export interface paths {
          * @description Confirms the proposed account on the contract, or rejects the proposal. Audited.
          */
         post: operations["post_decide"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contract/imports/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept a reviewed contract import
+         * @description Creates the contract and its obligations from the proposal as a person
+         *     reviewed it, and marks the import accepted. The caller needs to create
+         *     contracts (and obligations, when it sends any).
+         */
+        post: operations["post_contract_import_accept"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contract/imports/{id}/propose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Propose a contract from an import's file
+         * @description Reads the import's file text and stores a proposed contract: its fields
+         *     with a confidence each, the obligations the text states, and the fields
+         *     a person must check. Local rules; no model call. The caller needs to
+         *     create contract imports.
+         */
+        post: operations["post_contract_import_propose"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contract/review/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Open a contract review link
+         * @description What the counterparty reviews: the contract's title, its current version
+         *     and what they sent through this link. No session; the link's signed
+         *     token is the credential.
+         */
+        get: operations["get_contract_review"];
+        put?: never;
+        /**
+         * Comment or send a version through a review link
+         * @description The counterparty comments, sends back their version (PDF or Word, at most
+         *     7 MB, virus-scanned before anyone sees it), or both. A version ends the
+         *     round. No session; the link's signed token is the credential.
+         */
+        post: operations["post_contract_review"];
         delete?: never;
         options?: never;
         head?: never;
@@ -28364,6 +28526,35 @@ export interface paths {
         delete: operations["delete_target"];
         options?: never;
         head?: never;
+        /**
+         * Change a crawl source's settings
+         * @description Changes a source's settings; each one left out keeps its value. Send the
+         *     source's `row_version` as `If-Match`. A knowledge manager may change
+         *     everything but the intranet host and the credential, which stay with
+         *     administrators. Audited.
+         */
+        patch: operations["patch_target"];
+        trace?: never;
+    };
+    "/api/v1/webcrawl/targets/{id}/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A crawl source's changes to review
+         * @description The source's knowledge items a recrawl changed after an editor published
+         *     them: their text is kept and they wait for review (importing the page
+         *     again takes the site's version).
+         */
+        get: operations["list_changes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
         patch?: never;
         trace?: never;
     };
@@ -28443,6 +28634,27 @@ export interface paths {
          * @description Recrawl a target. Administrators only. Audited.
          */
         post: operations["recrawl_target"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/webcrawl/targets/{id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A crawl source's runs
+         * @description Each crawl of the source, newest first: when it ran, how it ended, the
+         *     pages it found and what it did to the source's knowledge items.
+         */
+        get: operations["list_runs"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -36040,6 +36252,16 @@ export interface components {
             name?: string | null;
             safety?: boolean;
         };
+        /**
+         * @description AH7-T5: the cases in words for a person: the actions the agent may not
+         *     call, the entities it may not read, and the actions that wait for a
+         *     person's approval. Each list sorted, at most [`MAX_LISTED`].
+         */
+        CaseSummary: {
+            cannot_do: string[];
+            needs_approval: string[];
+            unreadable_entities: string[];
+        };
         /** @description Decides an access request. */
         CatalogAccessDecisionBody: {
             /** @description `true` grants the role; `false` refuses. */
@@ -36307,6 +36529,19 @@ export interface components {
             /** Format: date-time */
             occurred_at: string;
             reference: string;
+        };
+        /** @description A knowledge item a recrawl changed under its editor, waiting for review. */
+        ChangeItem: {
+            /** Format: date-time */
+            changed_at: string;
+            /** Format: uuid */
+            item_id: string;
+            /** Format: uuid */
+            page_id: string;
+            title?: string | null;
+            url_path: string;
+            /** Format: int32 */
+            version?: number | null;
         };
         /**
          * @description One source this feed aggregates. The wire value (`kind` filter and each
@@ -42386,6 +42621,11 @@ export interface components {
             /** Format: int32 */
             years: number;
         };
+        /**
+         * @description What the gate must do with a call.
+         * @enum {string}
+         */
+        Expect: "allowed" | "refused" | "needs_approval";
         /** @description T6-T1: a flag past its expiry date, for the expiry report. */
         ExpiredFlag: {
             /** Format: date */
@@ -42591,6 +42831,14 @@ export interface components {
             timeline?: number | null;
             /** Format: int64 */
             writes_lost?: number | null;
+        };
+        /** @description One case the gate got wrong. */
+        Failure: {
+            action_id: string;
+            entity?: string | null;
+            expect: components["schemas"]["Expect"];
+            got: components["schemas"]["Outcome"];
+            reason: string;
         };
         /** @description One kept item, as the caller may see it now. */
         FavouriteItem: {
@@ -44107,6 +44355,23 @@ export interface components {
             /** Format: uuid */
             subject_id: string;
         };
+        /**
+         * @description What a person accepts: the contract's fields and its obligations, as
+         *     reviewed.
+         */
+        ImportAcceptBody: {
+            /**
+             * @description The contract's fields (title, counterparty, description,
+             *     contract_value, currency, start_date, end_date, renewal_date,
+             *     auto_renew, renewal_term_months, notice_period_days).
+             */
+            contract: Record<string, never>;
+            /**
+             * @description Each obligation's title, due_date and owed_by (`us` or
+             *     `counterparty`).
+             */
+            obligations?: Record<string, never>[];
+        };
         /** @description A queued phase. */
         ImportAccepted: {
             /**
@@ -44225,6 +44490,12 @@ export interface components {
             masked: string[];
             rows: components["schemas"]["PreviewRow"][];
         };
+        /** @description A stored proposal. */
+        ImportProposal: {
+            /** Format: uuid */
+            import_id: string;
+            proposal: Record<string, never>;
+        };
         ImportResponse: {
             /** @description The drafts saved, in file order. */
             drafts: components["schemas"]["CommandsResponse"][];
@@ -44236,6 +44507,12 @@ export interface components {
             unchanged: string[];
         };
         ImportResult: {
+            /**
+             * Format: int64
+             * @description K6-T7: new pages with the same text as an imported page, kept as its
+             *     alias instead of a second item.
+             */
+            aliased_count: number;
             /** Format: uuid */
             data_source_ref: string;
             /** Format: int64 */
@@ -48349,6 +48626,11 @@ export interface components {
             /** Format: uuid */
             delegation_id: string;
         };
+        /**
+         * @description What the gate did with a case.
+         * @enum {string}
+         */
+        Outcome: "allowed" | "needs_approval" | "refused";
         OutcomeKindSummary: {
             /** Format: double */
             avg_effectiveness?: number | null;
@@ -50082,6 +50364,32 @@ export interface components {
                 id: string;
                 name: string;
                 requires_approval: boolean;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_ChangeItem: {
+            items: {
+                /** Format: date-time */
+                changed_at: string;
+                /** Format: uuid */
+                item_id: string;
+                /** Format: uuid */
+                page_id: string;
+                title?: string | null;
+                url_path: string;
+                /** Format: int32 */
+                version?: number | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -54307,6 +54615,40 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_PermissionTestRun: {
+            items: {
+                /** Format: uuid */
+                agent_ref: string;
+                /** Format: int32 */
+                cases: number;
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                created_by: string;
+                /**
+                 * Format: int64
+                 * @description The agent definition's row version the run tested.
+                 */
+                definition_row_version: number;
+                /** @description The failing cases. */
+                failures: Record<string, never>;
+                /** Format: uuid */
+                id: string;
+                passed: boolean;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_PersonalDataItem: {
             items: {
                 attribute: string;
@@ -55604,6 +55946,42 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_RunItem: {
+            items: {
+                error?: string | null;
+                /** Format: date-time */
+                finished_at?: string | null;
+                /** Format: uuid */
+                id: string;
+                /**
+                 * Format: int32
+                 * @description Items an editor published that the site changed, waiting for review.
+                 */
+                items_flagged: number;
+                /** Format: int32 */
+                items_imported: number;
+                /** Format: int32 */
+                items_updated: number;
+                /** Format: int32 */
+                pages_found: number;
+                /** Format: date-time */
+                started_at: string;
+                /** @description `running | completed | failed`. */
+                status: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_SalesBattlecard: {
             items: {
                 /** @description The knowledge article holding the battle card, when one is set. */
@@ -56771,6 +57149,11 @@ export interface components {
                 pages_found: number;
                 /** Format: int32 */
                 pages_imported: number;
+                /**
+                 * Format: int64
+                 * @description K6-T10: send it back as `If-Match` to change the settings.
+                 */
+                row_version: number;
                 /** @description K6-T1: `manual | daily | weekly`. */
                 schedule: string;
                 sitemap_url?: string | null;
@@ -57881,6 +58264,27 @@ export interface components {
              * @description Send back as `If-Match` on the next `PATCH`.
              */
             row_version: number;
+        };
+        /** @description AH7-T4: one stored run. */
+        PermissionTestRun: {
+            /** Format: uuid */
+            agent_ref: string;
+            /** Format: int32 */
+            cases: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            created_by: string;
+            /**
+             * Format: int64
+             * @description The agent definition's row version the run tested.
+             */
+            definition_row_version: number;
+            /** @description The failing cases. */
+            failures: Record<string, never>;
+            /** Format: uuid */
+            id: string;
+            passed: boolean;
         };
         /** @description An attribute labelled personal, financial or health, and what reads it. */
         PersonalDataItem: {
@@ -60914,6 +61318,22 @@ export interface components {
             /** Format: uuid */
             record_id: string;
         };
+        /** @description AH7-T2: one run's report. */
+        Report: {
+            /** Format: uuid */
+            agent_ref: string;
+            cases: number;
+            failures: components["schemas"]["Failure"][];
+            /** @description AH7-T4: whether `failures` was cut at 500 (the stored run keeps all). */
+            failures_truncated: boolean;
+            /** @description Expected-allowed calls the gate stopped. */
+            over_restricted: number;
+            passed: boolean;
+            /** Format: uuid */
+            run_id: string;
+            /** @description AH7-T5: what the agent cannot do, in words. */
+            summary: components["schemas"]["CaseSummary"];
+        };
         /** @description One report item, without its sealed values. */
         ReportItem: {
             actionable: boolean;
@@ -61338,6 +61758,25 @@ export interface components {
         ReverseRequest: {
             reason: string;
         };
+        /** @description A comment, a version, or both. */
+        ReviewAction: {
+            comment?: string | null;
+            /** @description The file, base64; at most 7 MB decoded. */
+            content_base64?: string | null;
+            /** @description `application/pdf` or the Word (DOCX) type. */
+            content_type?: string | null;
+            file_name?: string | null;
+        };
+        /** @description What the action did. */
+        ReviewActionDone: {
+            /** Format: int32 */
+            round: number;
+            /**
+             * Format: uuid
+             * @description The new version, when a file was sent; it is compared once scanned.
+             */
+            version_id?: string | null;
+        };
         /**
          * @description Full replace, `null` clears — same convention as `SchedulePageBody`
          *     (D-452's `review_by`, a plain `Option<NaiveDate>` full-replace, has no
@@ -61361,6 +61800,41 @@ export interface components {
              *     before they run, cancellable; omit to run them now.
              */
             undo_window_seconds?: number | null;
+        };
+        /** @description Something the counterparty sent through this link. */
+        ReviewEntry: {
+            body?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            file_name?: string | null;
+            /** @description `comment` or `upload`. */
+            kind: string;
+        };
+        /** @description The round opened. */
+        ReviewShared: {
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: uuid */
+            link_id: string;
+            /** Format: int32 */
+            round: number;
+        };
+        /** @description The version the counterparty reviews. */
+        ReviewVersion: {
+            /** @description Valid for 15 minutes. */
+            download_url?: string | null;
+            /** Format: int64 */
+            version_no?: number | null;
+        };
+        /** @description What the link shows. */
+        ReviewView: {
+            contract_title: string;
+            entries: components["schemas"]["ReviewEntry"][];
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: int32 */
+            round: number;
+            version?: null | components["schemas"]["ReviewVersion"];
         };
         RevokeSessionBody: {
             /**
@@ -62121,6 +62595,29 @@ export interface components {
             period_start: string;
             /** Format: double */
             total: number;
+        };
+        /** @description One crawl of a source. */
+        RunItem: {
+            error?: string | null;
+            /** Format: date-time */
+            finished_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: int32
+             * @description Items an editor published that the site changed, waiting for review.
+             */
+            items_flagged: number;
+            /** Format: int32 */
+            items_imported: number;
+            /** Format: int32 */
+            items_updated: number;
+            /** Format: int32 */
+            pages_found: number;
+            /** Format: date-time */
+            started_at: string;
+            /** @description `running | completed | failed`. */
+            status: string;
         };
         RunQueued: {
             /** @description False when a run was already queued. */
@@ -63413,6 +63910,15 @@ export interface components {
              */
             template_id: string;
         };
+        /** @description Who signs, and how. */
+        SendForSignatureBody: {
+            /**
+             * @description `k4` (the default): email codes through K4. `nafath` and `uae_pass`
+             *     are refused until their connectors exist.
+             */
+            method?: string | null;
+            signers: components["schemas"]["NewSigner"][];
+        };
         /** @description One frame. */
         SendFrame: {
             kind: string;
@@ -63940,6 +64446,13 @@ export interface components {
             /** Format: uuid */
             record_id: string;
         };
+        /** @description Who reviews this round. */
+        ShareForReviewBody: {
+            email: string;
+            /** @description A line for the email. */
+            message?: string | null;
+            name?: string | null;
+        };
         /** @description One link of a field, as its owner sees it (never the token). */
         ShareLinkSummary: {
             /** Format: date-time */
@@ -64114,6 +64627,13 @@ export interface components {
         };
         SignInUrl: {
             url: string;
+        };
+        /** @description A signing started. */
+        SignatureSent: {
+            /** Format: uuid */
+            document_id: string;
+            /** Format: uuid */
+            envelope_id: string;
         };
         /** @description Evidence with its signature. */
         SignedEvidence: {
@@ -66087,6 +66607,11 @@ export interface components {
             pages_found: number;
             /** Format: int32 */
             pages_imported: number;
+            /**
+             * Format: int64
+             * @description K6-T10: send it back as `If-Match` to change the settings.
+             */
+            row_version: number;
             /** @description K6-T1: `manual | daily | weekly`. */
             schedule: string;
             sitemap_url?: string | null;
@@ -67455,6 +67980,23 @@ export interface components {
             target_auth_header?: string | null;
             target_auth_value?: string | null;
             target_url?: string | null;
+        };
+        /** @description A source's settings to change; each one left out keeps its value. */
+        UpdateTargetBody: {
+            /** @description Administrators only. */
+            allow_host?: string | null;
+            audience?: string | null;
+            /** @description Administrators only. */
+            credential_ref?: string | null;
+            exclude_patterns?: string | null;
+            import_mode?: string | null;
+            include_patterns?: string | null;
+            languages?: string[] | null;
+            /** Format: int32 */
+            max_depth?: number | null;
+            schedule?: string | null;
+            sitemap_url?: string | null;
+            watch_only?: boolean | null;
         };
         UpdateTemplateBody: {
             blocks?: components["schemas"]["Block"][] | null;
@@ -69699,6 +70241,117 @@ export interface operations {
             };
             /** @description A reversed or over-long range */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_permission_test: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ai_agent definition */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The run's report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Report"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such agent definition the caller can read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The definition cannot start a session (no model or policy) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_permission_tests: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The ai_agent definition */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The runs, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_PermissionTestRun"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -123562,6 +124215,150 @@ export interface operations {
             };
         };
     };
+    post_contract_send_for_signature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The contract's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendForSignatureBody"];
+            };
+        };
+        responses: {
+            /** @description The envelope is sent */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignatureSent"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not update the contract or file documents */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such contract the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The contract is not approved, or is already out for signature */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No version with a file, bad signers, or a signing method not available */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_contract_share_for_review: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The contract's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShareForReviewBody"];
+            };
+        };
+        responses: {
+            /** @description The round is open and the link emailed */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewShared"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not update the contract */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such contract the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The contract is in force, or a round is being opened */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A bad email, or no version with a file */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_run: {
         parameters: {
             query?: never;
@@ -123654,6 +124451,223 @@ export interface operations {
             };
             /** @description The proposal was already decided */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_contract_import_accept: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The contract_import's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportAcceptBody"];
+            };
+        };
+        responses: {
+            /** @description The contract created */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportAccepted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not create contracts or obligations */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such import the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The import is not proposed, or another accept took it */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No title, or a field the contract refuses */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_contract_import_propose: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The contract_import's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stored proposal */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportProposal"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not import contracts */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such import the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already accepted, or the file's text is not ready yet */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The import has no file */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_contract_review: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The review link's token */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the counterparty reviews */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewView"];
+                };
+            };
+            /** @description An unknown, expired or closed link */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_contract_review: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The review link's token */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewAction"];
+            };
+        };
+        responses: {
+            /** @description Received */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewActionDone"];
+                };
+            };
+            /** @description An unknown, expired or closed link */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Nothing sent, a comment too long, or a file of the wrong type or size */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -149685,6 +150699,142 @@ export interface operations {
             };
         };
     };
+    patch_target: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The source's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The source */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTargetBody"];
+            };
+        };
+        responses: {
+            /** @description The source as it now stands */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TargetListItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not manage sources, or changed an administrator's setting */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such source */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description version_conflict: the source changed since it was read */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A missing or malformed If-Match, or a setting outside its values */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_changes: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The source */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ChangeItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not read sources */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such source */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     import_pages: {
         parameters: {
             query?: never;
@@ -149881,6 +151031,67 @@ export interface operations {
                 };
             };
             /** @description Target not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_runs: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The source */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_RunItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not read sources */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such source */
             404: {
                 headers: {
                     [name: string]: unknown;

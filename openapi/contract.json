@@ -228,6 +228,240 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/contract/contracts/{id}/send-for-signature": {
+      "post": {
+        "tags": [
+          "contract"
+        ],
+        "summary": "Send a contract for signature",
+        "description": "Sends an approved contract's latest version to its signers through an\nelectronic signature envelope, in their order. When everyone has signed\nthe signed file becomes a `signed` version and the contract becomes\nactive. The caller needs to update the contract.",
+        "operationId": "post_contract_send_for_signature",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The contract's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendForSignatureBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The envelope is sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignatureSent"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not update the contract or file documents",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such contract the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The contract is not approved, or is already out for signature",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No version with a file, bad signers, or a signing method not available",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "contract",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/contract/contracts/{id}/share-for-review": {
+      "post": {
+        "tags": [
+          "contract"
+        ],
+        "summary": "Share a contract for counterparty review",
+        "description": "Opens the contract's next negotiation round: emails the counterparty a\nlink, valid for `contract.review_link_days` (14 by default), to read the\ncurrent version, comment and send back their own version. Opening a\nround closes the link of the round before. The caller needs to update\nthe contract.",
+        "operationId": "post_contract_share_for_review",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The contract's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareForReviewBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The round is open and the link emailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewShared"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not update the contract",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such contract the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The contract is in force, or a round is being opened",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A bad email, or no version with a file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "access",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "contract",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/contract/counterparty-match/run": {
       "post": {
         "tags": [
@@ -396,6 +630,361 @@
         "x-idempotent": "key",
         "x-module": "contract",
         "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/contract/imports/{id}/accept": {
+      "post": {
+        "tags": [
+          "contract"
+        ],
+        "summary": "Accept a reviewed contract import",
+        "description": "Creates the contract and its obligations from the proposal as a person\nreviewed it, and marks the import accepted. The caller needs to create\ncontracts (and obligations, when it sends any).",
+        "operationId": "post_contract_import_accept",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The contract_import's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportAcceptBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The contract created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportAccepted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not create contracts or obligations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such import the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The import is not proposed, or another accept took it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No title, or a field the contract refuses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "contract",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/contract/imports/{id}/propose": {
+      "post": {
+        "tags": [
+          "contract"
+        ],
+        "summary": "Propose a contract from an import's file",
+        "description": "Reads the import's file text and stores a proposed contract: its fields\nwith a confidence each, the obligations the text states, and the fields\na person must check. Local rules; no model call. The caller needs to\ncreate contract imports.",
+        "operationId": "post_contract_import_propose",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The contract_import's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The stored proposal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportProposal"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not import contracts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such import the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already accepted, or the file's text is not ready yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The import has no file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "contract",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/contract/review/{token}": {
+      "get": {
+        "tags": [
+          "contract"
+        ],
+        "summary": "Open a contract review link",
+        "description": "What the counterparty reviews: the contract's title, its current version\nand what they sent through this link. No session; the link's signed\ntoken is the credential.",
+        "operationId": "get_contract_review",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "description": "The review link's token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What the counterparty reviews",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "An unknown, expired or closed link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "contract",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "contract"
+        ],
+        "summary": "Comment or send a version through a review link",
+        "description": "The counterparty comments, sends back their version (PDF or Word, at most\n7 MB, virus-scanned before anyone sees it), or both. A version ends the\nround. No session; the link's signed token is the credential.",
+        "operationId": "post_contract_review",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "description": "The review link's token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewAction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Received",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewActionDone"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "An unknown, expired or closed link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Nothing sent, a comment too long, or a file of the wrong type or size",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "contract",
+        "x-privilege": "public",
         "x-rate-class": "api",
         "x-risk": "medium"
       }
@@ -714,6 +1303,68 @@
           }
         }
       },
+      "ImportAcceptBody": {
+        "type": "object",
+        "description": "What a person accepts: the contract's fields and its obligations, as\nreviewed.",
+        "required": [
+          "contract"
+        ],
+        "properties": {
+          "contract": {
+            "type": "object",
+            "description": "The contract's fields (title, counterparty, description,\ncontract_value, currency, start_date, end_date, renewal_date,\nauto_renew, renewal_term_months, notice_period_days)."
+          },
+          "obligations": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Each obligation's title, due_date and owed_by (`us` or\n`counterparty`)."
+          }
+        }
+      },
+      "ImportAccepted": {
+        "type": "object",
+        "description": "A queued phase.",
+        "required": [
+          "job_id",
+          "status"
+        ],
+        "properties": {
+          "approval_request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "When the apply waits for approval: the request."
+          },
+          "job_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "ImportProposal": {
+        "type": "object",
+        "description": "A stored proposal.",
+        "required": [
+          "import_id",
+          "proposal"
+        ],
+        "properties": {
+          "import_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "proposal": {
+            "type": "object"
+          }
+        }
+      },
       "LockedField": {
         "type": "object",
         "description": "One field a business rule locks for the writer (D-789 §3.5): `effect` is\n`hidden` or `disabled`. No value is ever echoed.",
@@ -736,6 +1387,202 @@
           },
           "rule_name": {
             "type": "string"
+          }
+        }
+      },
+      "NewSigner": {
+        "type": "object",
+        "description": "A signer to add.",
+        "required": [
+          "name",
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "order": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Signing position, 1 first; equal positions sign in any order."
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`signer` (the default), `approver` or `witness`."
+          }
+        }
+      },
+      "ReviewAction": {
+        "type": "object",
+        "description": "A comment, a version, or both.",
+        "properties": {
+          "comment": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "content_base64": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The file, base64; at most 7 MB decoded."
+          },
+          "content_type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`application/pdf` or the Word (DOCX) type."
+          },
+          "file_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "ReviewActionDone": {
+        "type": "object",
+        "description": "What the action did.",
+        "required": [
+          "round"
+        ],
+        "properties": {
+          "round": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "version_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The new version, when a file was sent; it is compared once scanned."
+          }
+        }
+      },
+      "ReviewEntry": {
+        "type": "object",
+        "description": "Something the counterparty sent through this link.",
+        "required": [
+          "kind",
+          "created_at"
+        ],
+        "properties": {
+          "body": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "file_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "description": "`comment` or `upload`."
+          }
+        }
+      },
+      "ReviewShared": {
+        "type": "object",
+        "description": "The round opened.",
+        "required": [
+          "link_id",
+          "round",
+          "expires_at"
+        ],
+        "properties": {
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "link_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "round": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "ReviewVersion": {
+        "type": "object",
+        "description": "The version the counterparty reviews.",
+        "properties": {
+          "download_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Valid for 15 minutes."
+          },
+          "version_no": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "ReviewView": {
+        "type": "object",
+        "description": "What the link shows.",
+        "required": [
+          "contract_title",
+          "round",
+          "expires_at",
+          "entries"
+        ],
+        "properties": {
+          "contract_title": {
+            "type": "string"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReviewEntry"
+            }
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "round": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "version": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewVersion"
+              }
+            ]
           }
         }
       },
@@ -798,6 +1645,71 @@
           "queued": {
             "type": "boolean",
             "description": "False when a run was already queued."
+          }
+        }
+      },
+      "SendForSignatureBody": {
+        "type": "object",
+        "description": "Who signs, and how.",
+        "required": [
+          "signers"
+        ],
+        "properties": {
+          "method": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`k4` (the default): email codes through K4. `nafath` and `uae_pass`\nare refused until their connectors exist."
+          },
+          "signers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NewSigner"
+            }
+          }
+        }
+      },
+      "ShareForReviewBody": {
+        "type": "object",
+        "description": "Who reviews this round.",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A line for the email."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "SignatureSent": {
+        "type": "object",
+        "description": "A signing started.",
+        "required": [
+          "envelope_id",
+          "document_id"
+        ],
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "envelope_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       }

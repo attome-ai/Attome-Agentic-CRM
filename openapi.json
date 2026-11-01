@@ -1690,6 +1690,192 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/admin/ai/agents/{id}/permission-test": {
+      "post": {
+        "tags": [
+          "action"
+        ],
+        "summary": "Run an agent's permission test",
+        "description": "Runs the agent definition's permission test as the caller would start\nit, executing nothing, stores the run and answers its report (at most\n500 failures, flagged when cut). Audited.",
+        "operationId": "post_permission_test",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ai_agent definition",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The run's report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Report"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such agent definition the caller can read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The definition cannot start a session (no model or policy)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ai",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/ai/agents/{id}/permission-tests": {
+      "get": {
+        "tags": [
+          "action"
+        ],
+        "summary": "List an agent's permission test runs",
+        "description": "The agent definition's stored permission test runs, newest first.",
+        "operationId": "list_permission_tests",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ai_agent definition",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The runs, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PermissionTestRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ai",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/ai/agents/{id}/rollback": {
       "post": {
         "tags": [
@@ -89815,6 +90001,240 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/contract/contracts/{id}/send-for-signature": {
+      "post": {
+        "tags": [
+          "contract"
+        ],
+        "summary": "Send a contract for signature",
+        "description": "Sends an approved contract's latest version to its signers through an\nelectronic signature envelope, in their order. When everyone has signed\nthe signed file becomes a `signed` version and the contract becomes\nactive. The caller needs to update the contract.",
+        "operationId": "post_contract_send_for_signature",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The contract's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendForSignatureBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The envelope is sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignatureSent"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not update the contract or file documents",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such contract the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The contract is not approved, or is already out for signature",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No version with a file, bad signers, or a signing method not available",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "contract",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/contract/contracts/{id}/share-for-review": {
+      "post": {
+        "tags": [
+          "contract"
+        ],
+        "summary": "Share a contract for counterparty review",
+        "description": "Opens the contract's next negotiation round: emails the counterparty a\nlink, valid for `contract.review_link_days` (14 by default), to read the\ncurrent version, comment and send back their own version. Opening a\nround closes the link of the round before. The caller needs to update\nthe contract.",
+        "operationId": "post_contract_share_for_review",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The contract's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareForReviewBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The round is open and the link emailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewShared"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not update the contract",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such contract the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The contract is in force, or a round is being opened",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A bad email, or no version with a file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "access",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "contract",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/contract/counterparty-match/run": {
       "post": {
         "tags": [
@@ -89983,6 +90403,361 @@
         "x-idempotent": "key",
         "x-module": "contract",
         "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/contract/imports/{id}/accept": {
+      "post": {
+        "tags": [
+          "contract"
+        ],
+        "summary": "Accept a reviewed contract import",
+        "description": "Creates the contract and its obligations from the proposal as a person\nreviewed it, and marks the import accepted. The caller needs to create\ncontracts (and obligations, when it sends any).",
+        "operationId": "post_contract_import_accept",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The contract_import's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportAcceptBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The contract created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportAccepted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not create contracts or obligations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such import the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The import is not proposed, or another accept took it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No title, or a field the contract refuses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "contract",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/contract/imports/{id}/propose": {
+      "post": {
+        "tags": [
+          "contract"
+        ],
+        "summary": "Propose a contract from an import's file",
+        "description": "Reads the import's file text and stores a proposed contract: its fields\nwith a confidence each, the obligations the text states, and the fields\na person must check. Local rules; no model call. The caller needs to\ncreate contract imports.",
+        "operationId": "post_contract_import_propose",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The contract_import's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The stored proposal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportProposal"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not import contracts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such import the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already accepted, or the file's text is not ready yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The import has no file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "contract",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/contract/review/{token}": {
+      "get": {
+        "tags": [
+          "contract"
+        ],
+        "summary": "Open a contract review link",
+        "description": "What the counterparty reviews: the contract's title, its current version\nand what they sent through this link. No session; the link's signed\ntoken is the credential.",
+        "operationId": "get_contract_review",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "description": "The review link's token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What the counterparty reviews",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "An unknown, expired or closed link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "contract",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "contract"
+        ],
+        "summary": "Comment or send a version through a review link",
+        "description": "The counterparty comments, sends back their version (PDF or Word, at most\n7 MB, virus-scanned before anyone sees it), or both. A version ends the\nround. No session; the link's signed token is the credential.",
+        "operationId": "post_contract_review",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "description": "The review link's token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewAction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Received",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewActionDone"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "An unknown, expired or closed link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Nothing sent, a comment too long, or a file of the wrong type or size",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "contract",
+        "x-privilege": "public",
         "x-rate-class": "api",
         "x-risk": "medium"
       }
@@ -132980,6 +133755,229 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "high"
+      },
+      "patch": {
+        "tags": [
+          "admin-webcrawl"
+        ],
+        "summary": "Change a crawl source's settings",
+        "description": "Changes a source's settings; each one left out keeps its value. Send the\nsource's `row_version` as `If-Match`. A knowledge manager may change\neverything but the intranet host and the credential, which stay with\nadministrators. Audited.",
+        "operationId": "patch_target",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The source",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The source's row_version, quoted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTargetBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The source as it now stands",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TargetListItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not manage sources, or changed an administrator's setting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "version_conflict: the source changed since it was read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A missing or malformed If-Match, or a setting outside its values",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/webcrawl/targets/{id}/changes": {
+      "get": {
+        "tags": [
+          "admin-webcrawl"
+        ],
+        "summary": "A crawl source's changes to review",
+        "description": "The source's knowledge items a recrawl changed after an editor published\nthem: their text is kept and they wait for review (importing the page\nagain takes the site's version).",
+        "operationId": "list_changes",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The source",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ChangeItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not read sources",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/webcrawl/targets/{id}/import": {
@@ -133335,6 +134333,105 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/webcrawl/targets/{id}/runs": {
+      "get": {
+        "tags": [
+          "admin-webcrawl"
+        ],
+        "summary": "A crawl source's runs",
+        "description": "Each crawl of the source, newest first: when it ran, how it ended, the\npages it found and what it did to the source's knowledge items.",
+        "operationId": "list_runs",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The source",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_RunItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not read sources",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/whatsapp/{key}": {
@@ -162444,6 +163541,35 @@
         },
         "additionalProperties": false
       },
+      "CaseSummary": {
+        "type": "object",
+        "description": "AH7-T5: the cases in words for a person: the actions the agent may not\ncall, the entities it may not read, and the actions that wait for a\nperson's approval. Each list sorted, at most [`MAX_LISTED`].",
+        "required": [
+          "cannot_do",
+          "unreadable_entities",
+          "needs_approval"
+        ],
+        "properties": {
+          "cannot_do": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "needs_approval": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "unreadable_entities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "CatalogAccessDecisionBody": {
         "type": "object",
         "description": "Decides an access request.",
@@ -163270,6 +164396,46 @@
           },
           "reference": {
             "type": "string"
+          }
+        }
+      },
+      "ChangeItem": {
+        "type": "object",
+        "description": "A knowledge item a recrawl changed under its editor, waiting for review.",
+        "required": [
+          "page_id",
+          "url_path",
+          "item_id",
+          "changed_at"
+        ],
+        "properties": {
+          "changed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "page_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "url_path": {
+            "type": "string"
+          },
+          "version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -178367,6 +179533,15 @@
           }
         }
       },
+      "Expect": {
+        "type": "string",
+        "description": "What the gate must do with a call.",
+        "enum": [
+          "allowed",
+          "refused",
+          "needs_approval"
+        ]
+      },
       "ExpiredFlag": {
         "type": "object",
         "description": "T6-T1: a flag past its expiry date, for the expiry report.",
@@ -179001,6 +180176,36 @@
               "null"
             ],
             "format": "int64"
+          }
+        }
+      },
+      "Failure": {
+        "type": "object",
+        "description": "One case the gate got wrong.",
+        "required": [
+          "action_id",
+          "expect",
+          "got",
+          "reason"
+        ],
+        "properties": {
+          "action_id": {
+            "type": "string"
+          },
+          "entity": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expect": {
+            "$ref": "#/components/schemas/Expect"
+          },
+          "got": {
+            "$ref": "#/components/schemas/Outcome"
+          },
+          "reason": {
+            "type": "string"
           }
         }
       },
@@ -182664,6 +183869,26 @@
           }
         }
       },
+      "ImportAcceptBody": {
+        "type": "object",
+        "description": "What a person accepts: the contract's fields and its obligations, as\nreviewed.",
+        "required": [
+          "contract"
+        ],
+        "properties": {
+          "contract": {
+            "type": "object",
+            "description": "The contract's fields (title, counterparty, description,\ncontract_value, currency, start_date, end_date, renewal_date,\nauto_renew, renewal_term_months, notice_period_days)."
+          },
+          "obligations": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Each obligation's title, due_date and owed_by (`us` or\n`counterparty`)."
+          }
+        }
+      },
       "ImportAccepted": {
         "type": "object",
         "description": "A queued phase.",
@@ -183005,6 +184230,23 @@
           }
         }
       },
+      "ImportProposal": {
+        "type": "object",
+        "description": "A stored proposal.",
+        "required": [
+          "import_id",
+          "proposal"
+        ],
+        "properties": {
+          "import_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "proposal": {
+            "type": "object"
+          }
+        }
+      },
       "ImportResponse": {
         "type": "object",
         "required": [
@@ -183033,9 +184275,15 @@
         "required": [
           "data_source_ref",
           "imported_count",
-          "updated_count"
+          "updated_count",
+          "aliased_count"
         ],
         "properties": {
+          "aliased_count": {
+            "type": "integer",
+            "format": "int64",
+            "description": "K6-T7: new pages with the same text as an imported page, kept as its\nalias instead of a second item."
+          },
           "data_source_ref": {
             "type": "string",
             "format": "uuid"
@@ -193839,6 +195087,15 @@
           }
         }
       },
+      "Outcome": {
+        "type": "string",
+        "description": "What the gate did with a case.",
+        "enum": [
+          "allowed",
+          "needs_approval",
+          "refused"
+        ]
+      },
       "OutcomeKindSummary": {
         "type": "object",
         "required": [
@@ -198541,6 +199798,80 @@
                 },
                 "requires_approval": {
                   "type": "boolean"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_ChangeItem": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A knowledge item a recrawl changed under its editor, waiting for review.",
+              "required": [
+                "page_id",
+                "url_path",
+                "item_id",
+                "changed_at"
+              ],
+              "properties": {
+                "changed_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "item_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "page_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "title": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "url_path": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int32"
                 }
               }
             }
@@ -209615,6 +210946,88 @@
           }
         }
       },
+      "PaginatedResponse_PermissionTestRun": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "AH7-T4: one stored run.",
+              "required": [
+                "id",
+                "agent_ref",
+                "definition_row_version",
+                "passed",
+                "cases",
+                "failures",
+                "created_at",
+                "created_by"
+              ],
+              "properties": {
+                "agent_ref": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "cases": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "created_by": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "definition_row_version": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "The agent definition's row version the run tested."
+                },
+                "failures": {
+                  "type": "object",
+                  "description": "The failing cases."
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "passed": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_PersonalDataItem": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -213033,6 +214446,97 @@
           }
         }
       },
+      "PaginatedResponse_RunItem": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One crawl of a source.",
+              "required": [
+                "id",
+                "started_at",
+                "status",
+                "pages_found",
+                "items_imported",
+                "items_updated",
+                "items_flagged"
+              ],
+              "properties": {
+                "error": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "finished_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "items_flagged": {
+                  "type": "integer",
+                  "format": "int32",
+                  "description": "Items an editor published that the site changed, waiting for review."
+                },
+                "items_imported": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "items_updated": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "pages_found": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "started_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`running | completed | failed`."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_SalesBattlecard": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -216101,7 +217605,8 @@
                 "import_mode",
                 "schedule",
                 "watch_only",
-                "allow_host"
+                "allow_host",
+                "row_version"
               ],
               "properties": {
                 "allow_host": {
@@ -216170,6 +217675,11 @@
                 "pages_imported": {
                   "type": "integer",
                   "format": "int32"
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "K6-T10: send it back as `If-Match` to change the settings."
                 },
                 "schedule": {
                   "type": "string",
@@ -219091,6 +220601,54 @@
             "type": "integer",
             "format": "int64",
             "description": "Send back as `If-Match` on the next `PATCH`."
+          }
+        }
+      },
+      "PermissionTestRun": {
+        "type": "object",
+        "description": "AH7-T4: one stored run.",
+        "required": [
+          "id",
+          "agent_ref",
+          "definition_row_version",
+          "passed",
+          "cases",
+          "failures",
+          "created_at",
+          "created_by"
+        ],
+        "properties": {
+          "agent_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cases": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "definition_row_version": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The agent definition's row version the run tested."
+          },
+          "failures": {
+            "type": "object",
+            "description": "The failing cases."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "passed": {
+            "type": "boolean"
           }
         }
       },
@@ -226699,6 +228257,56 @@
           }
         }
       },
+      "Report": {
+        "type": "object",
+        "description": "AH7-T2: one run's report.",
+        "required": [
+          "run_id",
+          "agent_ref",
+          "passed",
+          "cases",
+          "failures",
+          "failures_truncated",
+          "over_restricted",
+          "summary"
+        ],
+        "properties": {
+          "agent_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cases": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Failure"
+            }
+          },
+          "failures_truncated": {
+            "type": "boolean",
+            "description": "AH7-T4: whether `failures` was cut at 500 (the stored run keeps all)."
+          },
+          "over_restricted": {
+            "type": "integer",
+            "description": "Expected-allowed calls the gate stopped.",
+            "minimum": 0
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "run_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/CaseSummary",
+            "description": "AH7-T5: what the agent cannot do, in words."
+          }
+        }
+      },
       "ReportItem": {
         "type": "object",
         "description": "One report item, without its sealed values.",
@@ -227812,6 +229420,59 @@
           }
         }
       },
+      "ReviewAction": {
+        "type": "object",
+        "description": "A comment, a version, or both.",
+        "properties": {
+          "comment": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "content_base64": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The file, base64; at most 7 MB decoded."
+          },
+          "content_type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`application/pdf` or the Word (DOCX) type."
+          },
+          "file_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "ReviewActionDone": {
+        "type": "object",
+        "description": "What the action did.",
+        "required": [
+          "round"
+        ],
+        "properties": {
+          "round": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "version_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The new version, when a file was sent; it is compared once scanned."
+          }
+        }
+      },
       "ReviewByBody": {
         "type": "object",
         "description": "Full replace, `null` clears — same convention as `SchedulePageBody`\n(D-452's `review_by`, a plain `Option<NaiveDate>` full-replace, has no\nempty-string-vs-null ambiguity to resolve).",
@@ -227857,6 +229518,118 @@
           }
         },
         "additionalProperties": false
+      },
+      "ReviewEntry": {
+        "type": "object",
+        "description": "Something the counterparty sent through this link.",
+        "required": [
+          "kind",
+          "created_at"
+        ],
+        "properties": {
+          "body": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "file_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "description": "`comment` or `upload`."
+          }
+        }
+      },
+      "ReviewShared": {
+        "type": "object",
+        "description": "The round opened.",
+        "required": [
+          "link_id",
+          "round",
+          "expires_at"
+        ],
+        "properties": {
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "link_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "round": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "ReviewVersion": {
+        "type": "object",
+        "description": "The version the counterparty reviews.",
+        "properties": {
+          "download_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Valid for 15 minutes."
+          },
+          "version_no": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "ReviewView": {
+        "type": "object",
+        "description": "What the link shows.",
+        "required": [
+          "contract_title",
+          "round",
+          "expires_at",
+          "entries"
+        ],
+        "properties": {
+          "contract_title": {
+            "type": "string"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReviewEntry"
+            }
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "round": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "version": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReviewVersion"
+              }
+            ]
+          }
+        }
       },
       "RevokeSessionBody": {
         "type": "object",
@@ -229650,6 +231423,63 @@
           "total": {
             "type": "number",
             "format": "double"
+          }
+        }
+      },
+      "RunItem": {
+        "type": "object",
+        "description": "One crawl of a source.",
+        "required": [
+          "id",
+          "started_at",
+          "status",
+          "pages_found",
+          "items_imported",
+          "items_updated",
+          "items_flagged"
+        ],
+        "properties": {
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "items_flagged": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Items an editor published that the site changed, waiting for review."
+          },
+          "items_imported": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "items_updated": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pages_found": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "description": "`running | completed | failed`."
           }
         }
       },
@@ -233281,6 +235111,28 @@
           }
         }
       },
+      "SendForSignatureBody": {
+        "type": "object",
+        "description": "Who signs, and how.",
+        "required": [
+          "signers"
+        ],
+        "properties": {
+          "method": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`k4` (the default): email codes through K4. `nafath` and `uae_pass`\nare refused until their connectors exist."
+          },
+          "signers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NewSigner"
+            }
+          }
+        }
+      },
       "SendFrame": {
         "type": "object",
         "description": "One frame.",
@@ -234478,6 +236330,31 @@
           }
         }
       },
+      "ShareForReviewBody": {
+        "type": "object",
+        "description": "Who reviews this round.",
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A line for the email."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "ShareLinkSummary": {
         "type": "object",
         "description": "One link of a field, as its owner sees it (never the token).",
@@ -234992,6 +236869,24 @@
         "properties": {
           "url": {
             "type": "string"
+          }
+        }
+      },
+      "SignatureSent": {
+        "type": "object",
+        "description": "A signing started.",
+        "required": [
+          "envelope_id",
+          "document_id"
+        ],
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "envelope_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -240132,7 +242027,8 @@
           "import_mode",
           "schedule",
           "watch_only",
-          "allow_host"
+          "allow_host",
+          "row_version"
         ],
         "properties": {
           "allow_host": {
@@ -240201,6 +242097,11 @@
           "pages_imported": {
             "type": "integer",
             "format": "int32"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64",
+            "description": "K6-T10: send it back as `If-Match` to change the settings."
           },
           "schedule": {
             "type": "string",
@@ -243893,6 +245794,84 @@
           }
         }
       },
+      "UpdateTargetBody": {
+        "type": "object",
+        "description": "A source's settings to change; each one left out keeps its value.",
+        "properties": {
+          "allow_host": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Administrators only."
+          },
+          "audience": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "credential_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Administrators only."
+          },
+          "exclude_patterns": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "import_mode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "include_patterns": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "languages": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "max_depth": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "schedule": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sitemap_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "watch_only": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        }
+      },
       "UpdateTemplateBody": {
         "type": "object",
         "properties": {
@@ -246964,6 +248943,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -247016,6 +248996,5 @@
       }
     }
   },
-  "x-version-adapters": [],
-  "x-api-version": "2026-10"
+  "x-version-adapters": []
 }

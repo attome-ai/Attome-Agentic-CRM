@@ -1664,6 +1664,192 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/admin/ai/agents/{id}/permission-test": {
+      "post": {
+        "tags": [
+          "action"
+        ],
+        "summary": "Run an agent's permission test",
+        "description": "Runs the agent definition's permission test as the caller would start\nit, executing nothing, stores the run and answers its report (at most\n500 failures, flagged when cut). Audited.",
+        "operationId": "post_permission_test",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ai_agent definition",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The run's report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Report"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such agent definition the caller can read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The definition cannot start a session (no model or policy)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ai",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/ai/agents/{id}/permission-tests": {
+      "get": {
+        "tags": [
+          "action"
+        ],
+        "summary": "List an agent's permission test runs",
+        "description": "The agent definition's stored permission test runs, newest first.",
+        "operationId": "list_permission_tests",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ai_agent definition",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The runs, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PermissionTestRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ai",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/ai/agents/{id}/rollback": {
       "post": {
         "tags": [
@@ -9105,6 +9291,35 @@
         },
         "additionalProperties": false
       },
+      "CaseSummary": {
+        "type": "object",
+        "description": "AH7-T5: the cases in words for a person: the actions the agent may not\ncall, the entities it may not read, and the actions that wait for a\nperson's approval. Each list sorted, at most [`MAX_LISTED`].",
+        "required": [
+          "cannot_do",
+          "unreadable_entities",
+          "needs_approval"
+        ],
+        "properties": {
+          "cannot_do": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "needs_approval": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "unreadable_entities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "CitationView": {
         "type": "object",
         "description": "One citation, projected from `attome_search::KnowledgeCitation` — every field\nexcept `passage`, whose text is already in the turn's tool message. An\nexplicit shape, never the stored JSON passed through.",
@@ -10299,6 +10514,45 @@
           }
         }
       },
+      "Expect": {
+        "type": "string",
+        "description": "What the gate must do with a call.",
+        "enum": [
+          "allowed",
+          "refused",
+          "needs_approval"
+        ]
+      },
+      "Failure": {
+        "type": "object",
+        "description": "One case the gate got wrong.",
+        "required": [
+          "action_id",
+          "expect",
+          "got",
+          "reason"
+        ],
+        "properties": {
+          "action_id": {
+            "type": "string"
+          },
+          "entity": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expect": {
+            "$ref": "#/components/schemas/Expect"
+          },
+          "got": {
+            "$ref": "#/components/schemas/Outcome"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
       "FeedbackRequest": {
         "type": "object",
         "description": "Body of `PUT …/messages/{message_id}/feedback`.",
@@ -11091,6 +11345,15 @@
             "type": "string"
           }
         }
+      },
+      "Outcome": {
+        "type": "string",
+        "description": "What the gate did with a case.",
+        "enum": [
+          "allowed",
+          "needs_approval",
+          "refused"
+        ]
       },
       "PaginatedResponse_AgentCard": {
         "type": "object",
@@ -12344,6 +12607,88 @@
           }
         }
       },
+      "PaginatedResponse_PermissionTestRun": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "AH7-T4: one stored run.",
+              "required": [
+                "id",
+                "agent_ref",
+                "definition_row_version",
+                "passed",
+                "cases",
+                "failures",
+                "created_at",
+                "created_by"
+              ],
+              "properties": {
+                "agent_ref": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "cases": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "created_by": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "definition_row_version": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "The agent definition's row version the run tested."
+                },
+                "failures": {
+                  "type": "object",
+                  "description": "The failing cases."
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "passed": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_ProcessShare": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -13386,6 +13731,56 @@
           "record_id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "Report": {
+        "type": "object",
+        "description": "AH7-T2: one run's report.",
+        "required": [
+          "run_id",
+          "agent_ref",
+          "passed",
+          "cases",
+          "failures",
+          "failures_truncated",
+          "over_restricted",
+          "summary"
+        ],
+        "properties": {
+          "agent_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cases": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Failure"
+            }
+          },
+          "failures_truncated": {
+            "type": "boolean",
+            "description": "AH7-T4: whether `failures` was cut at 500 (the stored run keeps all)."
+          },
+          "over_restricted": {
+            "type": "integer",
+            "description": "Expected-allowed calls the gate stopped.",
+            "minimum": 0
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "run_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/CaseSummary",
+            "description": "AH7-T5: what the agent cannot do, in words."
           }
         }
       },
