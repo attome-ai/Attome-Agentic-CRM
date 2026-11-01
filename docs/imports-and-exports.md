@@ -93,6 +93,13 @@ encrypted credential store, never in the job. The server runs the machine's Open
 limit and 50 MiB cap, and the temporary key file is removed after each fetch. Paths, hosts and
 users with quotes, control characters or a leading dash are refused.
 
+An email source is `{"kind": "email", "address": "imports@example.com"}` (no `cron`: mail starts
+it). When a mailbox integration (`kind = "mailbox"`, read every two minutes) reads a message sent
+or copied to that address, the message's first CSV or Excel attachment (by name or content type)
+is fetched from the mail provider (IMAP, Microsoft 365 or Gmail) and starts a job with the
+template's mapping and options, as a due schedule does; the same file twice starts nothing. The
+message is also routed by the mailbox's own rules, so give imports an address of their own.
+
 ## Agents
 
 `import.propose_mapping` proposes a field, transform and confidence for each column from five

@@ -137,6 +137,79 @@ fn connector() -> Result<TlsConnector, AppError> {
     Ok(TlsConnector::from(Arc::new(config)))
 }
 
+/// A23-T12: attachment `part` (its index among the message's attachments)
+/// of the message with UID `uid`, read again from the configured folder.
+pub(super) async fn fetch_attachment(
+    system: &IntegrationSystem,
+    cfg: &Value,
+    password: &str,
+    uid: &str,
+    part: &str,
+) -> Result<Vec<u8>, AppError> {
+    let uid: u32 = uid
+        .parse()
+        .map_err(|_| AppError::Validation("not an IMAP attachment reference".into()))?;
+    let part: usize = part
+        .parse()
+        .map_err(|_| AppError::Validation("not an IMAP attachment reference".into()))?;
+    let host = required(cfg, system, "host")?.to_owned();
+    let user = required(cfg, system, "username")?.to_owned();
+    let port = cfg
+        .get("port")
+        .and_then(Value::as_u64)
+        .and_then(|p| u16::try_from(p).ok())
+        .unwrap_or(993);
+    let folder = cfg
+        .get("folder")
+        .and_then(Value::as_str)
+        .filter(|f| !f.is_empty())
+        .unwrap_or("INBOX")
+        .to_owned();
+    let read = async move {
+        let server = ServerName::try_from(host.clone())
+            .map_err(|_| AppError::Validation("host: not a server name".into()))?;
+        let tcp = TcpStream::connect((host.as_str(), port))
+            .await
+            .map_err(AppError::internal)?;
+        let tls = connector()?
+            .connect(server, tcp)
+            .await
+            .map_err(AppError::internal)?;
+        let client = async_imap::Client::new(tls);
+        let mut session = client.login(&user, password).await.map_err(|(e, _)| {
+            AppError::Validation(format!("the IMAP server refused the login: {e}"))
+        })?;
+        session.select(&folder).await.map_err(AppError::internal)?;
+        let mut bytes = None;
+        {
+            let mut fetches = session
+                .uid_fetch(uid.to_string(), "(UID BODY.PEEK[])")
+                .await
+                .map_err(AppError::internal)?;
+            while let Some(fetch) = fetches.next().await {
+                let fetch = fetch.map_err(AppError::internal)?;
+                if fetch.uid != Some(uid) {
+                    continue;
+                }
+                bytes = fetch
+                    .body()
+                    .and_then(|raw| MessageParser::default().parse(raw))
+                    .and_then(|message| {
+                        message
+                            .attachments()
+                            .nth(part)
+                            .map(|a| a.contents().to_vec())
+                    });
+            }
+        }
+        let _ = session.logout().await;
+        bytes.ok_or(AppError::NotFound)
+    };
+    tokio::time::timeout(TIMEOUT, read)
+        .await
+        .map_err(|_| AppError::Validation("the IMAP server did not answer in time".into()))?
+}
+
 pub(super) async fn pull(
     system: &IntegrationSystem,
     cfg: &Value,

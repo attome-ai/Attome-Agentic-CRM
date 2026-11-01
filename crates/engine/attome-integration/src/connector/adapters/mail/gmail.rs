@@ -265,6 +265,42 @@ async fn get_json(
     Ok((status, res.text().await.unwrap_or_default()))
 }
 
+/// A23-T12: one attachment's bytes (`messages.attachments.get`, whose
+/// `data` is base64url), by the message and attachment ids its reference
+/// names.
+pub(super) async fn fetch_attachment(
+    system: &IntegrationSystem,
+    cfg: &Value,
+    credential: &str,
+    message: &str,
+    attachment: &str,
+) -> Result<Vec<u8>, AppError> {
+    let token = access_token(cfg, system, credential).await?;
+    let enc = |v: &str| url::form_urlencoded::byte_serialize(v.as_bytes()).collect::<String>();
+    let (status, body) = get_json(
+        &client()?,
+        &token,
+        &format!(
+            "{API}/messages/{}/attachments/{}",
+            enc(message),
+            enc(attachment)
+        ),
+    )
+    .await?;
+    if !(200..300).contains(&status) {
+        return Err(AppError::Validation(format!(
+            "Gmail refused the attachment ({status})"
+        )));
+    }
+    let data = serde_json::from_str::<Value>(&body)
+        .ok()
+        .and_then(|v| v.get("data").and_then(Value::as_str).map(str::to_owned))
+        .ok_or_else(|| AppError::Validation("Gmail answered an attachment without data".into()))?;
+    URL_SAFE_NO_PAD
+        .decode(data.trim_end_matches('='))
+        .map_err(|_| AppError::Validation("Gmail answered unreadable attachment data".into()))
+}
+
 pub(super) async fn pull(
     system: &IntegrationSystem,
     cfg: &Value,

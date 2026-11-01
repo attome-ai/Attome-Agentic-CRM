@@ -92,6 +92,11 @@ async fn run_system(
     let ctx = state.base.security.resolve(principal).await?;
 
     for message in &messages {
+        // A23-T12: mail to a recurring import's address starts that import
+        // from its first CSV or Excel attachment, whatever the routing does.
+        if let Err(error) = email_imports(state, &system, credential.as_ref(), message).await {
+            tracing::warn!(%system_id, %error, "inbound mail: the attachment import did not start");
+        }
         match route_message(state, &ctx, principal, system_id, &routing, message).await {
             Ok(Outcome::Routed) => summary.routed += 1,
             Ok(Outcome::Skipped) => summary.skipped += 1,
@@ -130,6 +135,57 @@ async fn run_system(
 enum Outcome {
     Routed,
     Skipped,
+}
+
+/// A23-T12: starts each recurring import whose email source is one of
+/// `message`'s recipients from the message's first CSV or Excel
+/// attachment. The same file twice starts nothing (the import's file
+/// check). Answers how many imports started.
+async fn email_imports(
+    state: &EngineState,
+    system: &attome_integration::system::IntegrationSystem,
+    credential: Option<&attome_integration::credential::Credential>,
+    message: &MailMessage,
+) -> Result<u32, AppError> {
+    let Some(attachment) = message.attachments.iter().find(|a| {
+        attome_document::import_jobs::is_import_file(a.name.as_deref(), a.content_type.as_deref())
+    }) else {
+        return Ok(0);
+    };
+    let recipients: Vec<String> = message
+        .to
+        .iter()
+        .chain(&message.cc)
+        .map(|a| a.address.trim().to_lowercase())
+        .collect();
+    let templates =
+        attome_document::import_jobs::email_templates(&state.base.db, &recipients).await?;
+    if templates.is_empty() {
+        return Ok(0);
+    }
+    let bytes = mail::fetch_attachment(
+        system,
+        credential,
+        &attachment.reference,
+        attome_document::import_jobs::MAX_FETCH_BYTES,
+    )
+    .await?;
+    let file_name = attachment.name.as_deref().unwrap_or("import.csv");
+    let mut started = 0;
+    for template in templates {
+        if let Some(job) = attome_document::import_jobs::start_from_bytes(
+            state,
+            template,
+            file_name,
+            bytes.clone(),
+        )
+        .await?
+        {
+            tracing::info!(%template, %job, "recurring import started from mail");
+            started += 1;
+        }
+    }
+    Ok(started)
 }
 
 async fn route_message(

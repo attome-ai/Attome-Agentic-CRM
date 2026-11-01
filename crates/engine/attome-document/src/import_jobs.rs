@@ -280,11 +280,17 @@ pub enum Source {
     /// connection's key (the credential store, never this row) against the
     /// host key given.
     Sftp(attome_integration::import_source::SftpSource),
+    /// A23-T12: mail to `address` read by a mailbox integration: the first
+    /// CSV or Excel attachment of each message starts an import. Started
+    /// by the mail, so the schedule's `cron` is not used.
+    Email { address: String },
 }
 
 /// A template job's `counts.schedule`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RecurringSchedule {
+    /// Empty for an email source.
+    #[serde(default)]
     pub cron: String,
     /// The schedule's time zone; the deployment's when absent.
     #[serde(default)]
@@ -303,6 +309,16 @@ pub fn due_slot(
     created_at: DateTime<Utc>,
     now: DateTime<Utc>,
 ) -> Result<Option<DateTime<Utc>>, AppError> {
+    if let Source::Email { address } = &schedule.source {
+        // Mail starts it; the clock never does.
+        return if address.contains('@') && !address.trim().is_empty() {
+            Ok(None)
+        } else {
+            Err(AppError::Validation(
+                "schedule: an email source names an address".into(),
+            ))
+        };
+    }
     let tz = schedule
         .time_zone
         .as_deref()
@@ -384,12 +400,34 @@ async fn run_template(
                 .await
                 .map_err(|reason| AppError::Validation(format!("source: {reason}")))?
         }
+        Source::Email { .. } => {
+            return Err(AppError::Validation(
+                "source: an email source is started by its mail".into(),
+            ));
+        }
     };
     let location = match &schedule.source {
         Source::Storage { location } | Source::Https { location } => location,
         Source::Sftp(source) => &source.location,
+        Source::Email { address } => address,
     };
-    let file_name = file_name_of(location);
+    start_from_bytes(state, template, &file_name_of(location), bytes).await
+}
+
+/// A23-T12: stores `bytes` as `file_name` and creates and stages a job from
+/// template `template`, as a due schedule does. `None` when the same file
+/// was imported before.
+pub async fn start_from_bytes(
+    state: &EngineState,
+    template: Uuid,
+    file_name: &str,
+    bytes: Vec<u8>,
+) -> Result<Option<Uuid>, AppError> {
+    let file_name: String = file_name
+        .chars()
+        .map(|c| if matches!(c, '/' | '\\') { '_' } else { c })
+        .take(200)
+        .collect();
     let sha = hex::encode(Sha256::digest(&bytes));
     let id = Uuid::now_v7();
     let key = format!("imports/{id}/{file_name}");
@@ -410,7 +448,7 @@ async fn run_template(
     )
     .bind(id)
     .bind(&key)
-    .bind(&file_name)
+    .bind(file_name.as_str())
     .bind(&sha)
     .bind(template)
     .fetch_optional(&state.base.db)
@@ -433,6 +471,36 @@ async fn run_template(
     )
     .await?;
     Ok(Some(created))
+}
+
+/// A23-T12: the templates whose email source is one of `recipients`
+/// (lowercase addresses).
+pub async fn email_templates(db: &DbPool, recipients: &[String]) -> Result<Vec<Uuid>, AppError> {
+    if recipients.is_empty() {
+        return Ok(Vec::new());
+    }
+    sqlx::query_scalar(
+        "SELECT id FROM import_job \
+          WHERE counts ? 'schedule' AND status <> 'cancelled' \
+            AND counts->'schedule'->'source'->>'kind' = 'email' \
+            AND lower(counts->'schedule'->'source'->>'address') = ANY($1) \
+          ORDER BY created_at, id LIMIT 20",
+    )
+    .bind(recipients)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// A23-T12: whether an attachment is a file an import reads (CSV or Excel),
+/// by its name or its content type. Pure.
+pub fn is_import_file(name: Option<&str>, content_type: Option<&str>) -> bool {
+    let name = name.unwrap_or("").to_ascii_lowercase();
+    let ctype = content_type.unwrap_or("").to_ascii_lowercase();
+    name.ends_with(".csv")
+        || name.ends_with(".xlsx")
+        || ctype == "text/csv"
+        || ctype == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 }
 
 /// The minute tick: runs every recurring import that is due. Answers how
@@ -535,6 +603,36 @@ mod tests {
             ..schedule
         };
         assert_eq!(due_slot(&ran, None, created, after).unwrap(), None);
+    }
+
+    #[test]
+    fn an_email_source_is_never_due_and_takes_csv_or_excel() {
+        let schedule = RecurringSchedule {
+            cron: String::new(),
+            time_zone: None,
+            source: Source::Email {
+                address: "imports@us.sa".into(),
+            },
+            last_run: None,
+        };
+        let now = Utc::now();
+        assert_eq!(due_slot(&schedule, None, now, now).unwrap(), None);
+        let bad = RecurringSchedule {
+            source: Source::Email {
+                address: "nobody".into(),
+            },
+            ..schedule
+        };
+        assert!(due_slot(&bad, None, now, now).is_err());
+        assert!(is_import_file(Some("Customers.CSV"), None));
+        assert!(is_import_file(Some("list"), Some("text/csv")));
+        assert!(is_import_file(Some("leads.xlsx"), None));
+        assert!(!is_import_file(Some("logo.png"), Some("image/png")));
+        let parsed: RecurringSchedule = serde_json::from_value(serde_json::json!({
+            "source": { "kind": "email", "address": "imports@us.sa" }
+        }))
+        .expect("an email schedule needs no cron");
+        assert_eq!(parsed.cron, "");
     }
 
     #[test]

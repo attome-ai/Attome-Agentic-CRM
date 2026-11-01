@@ -149,6 +149,43 @@ pub async fn read(
     }
 }
 
+/// A23-T12: one listed attachment's bytes, fetched with the system's
+/// reader by its `reference` (`imap:`, `graph:` or `gmail:`), at most
+/// `max_bytes`.
+pub async fn fetch_attachment(
+    system: &IntegrationSystem,
+    credential: Option<&crate::credential::Credential>,
+    reference: &str,
+    max_bytes: usize,
+) -> Result<Vec<u8>, AppError> {
+    let cfg = config(system);
+    let credential = zeroize::Zeroizing::new(
+        credential
+            .ok_or_else(|| AppError::Validation(format!("{}: no credential set", system.name)))?
+            .with_value(str::to_owned),
+    );
+    let credential = credential.as_str();
+    let (provider, rest) = reference
+        .split_once(':')
+        .ok_or_else(|| AppError::Validation("not an attachment reference".into()))?;
+    let (message, part) = rest
+        .rsplit_once('/')
+        .ok_or_else(|| AppError::Validation("not an attachment reference".into()))?;
+    let bytes = match provider {
+        "imap" => imap::fetch_attachment(system, &cfg, credential, message, part).await?,
+        "graph" => graph::fetch_attachment(system, &cfg, credential, message, part).await?,
+        "gmail" => gmail::fetch_attachment(system, &cfg, credential, message, part).await?,
+        _ => return Err(AppError::Validation("not an attachment reference".into())),
+    };
+    if bytes.len() > max_bytes {
+        return Err(AppError::Validation(format!(
+            "the attachment is larger than {} MiB",
+            max_bytes / (1024 * 1024)
+        )));
+    }
+    Ok(bytes)
+}
+
 /// Reads the messages after `cursor` with the system's reader.
 pub async fn pull(
     system: &IntegrationSystem,

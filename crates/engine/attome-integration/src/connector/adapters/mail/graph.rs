@@ -185,6 +185,38 @@ pub(super) async fn pull(
     read(&token, &path, "inbox", cursor).await
 }
 
+/// A23-T12: one attachment's bytes (`$value`), by the message and
+/// attachment ids its reference names.
+pub(super) async fn fetch_attachment(
+    system: &IntegrationSystem,
+    cfg: &Value,
+    secret: &str,
+    message: &str,
+    attachment: &str,
+) -> Result<Vec<u8>, AppError> {
+    let mailbox = required(cfg, system, "mailbox")?;
+    let token = app_token(cfg, system, secret).await?;
+    let enc = |v: &str| url::form_urlencoded::byte_serialize(v.as_bytes()).collect::<String>();
+    let res = client()?
+        .get(format!(
+            "{GRAPH}/users/{}/messages/{}/attachments/{}/$value",
+            enc(mailbox),
+            enc(message),
+            enc(attachment)
+        ))
+        .bearer_auth(&token)
+        .send()
+        .await
+        .map_err(AppError::internal)?;
+    let status = res.status().as_u16();
+    if !(200..300).contains(&status) {
+        return Err(AppError::Validation(format!(
+            "Graph refused the attachment ({status})"
+        )));
+    }
+    Ok(res.bytes().await.map_err(AppError::internal)?.to_vec())
+}
+
 /// Reads one folder (`inbox`, `sentitems`) of a mailbox from `cursor` with
 /// `token`: `mailbox_path` is `me` for the person the token belongs to
 /// (D15-T2), or `users/{address}` for an app reading a shared mailbox.
