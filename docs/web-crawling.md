@@ -21,7 +21,7 @@ host a source may reach and the credential it signs in with.
 | Setting | Values | What it does |
 |---|---|---|
 | `include_patterns`, `exclude_patterns` | one path pattern per line, `*` any text, `?` one character | Which paths are crawled; empty includes everything. |
-| `languages` | `ar`, `en` | Pages in other languages are kept out; empty keeps every language. |
+| `languages` | `ar`, `en` | Pages declaring another language are not imported; empty keeps every language, and a page that declares none is kept. |
 | `audience` | `internal`, `partner`, `customer` | Who may read what the source imports. |
 | `import_mode` | `review`, `automatic` | A person picks pages to import, or every new page is imported after each crawl. |
 | `schedule` | `manual`, `daily`, `weekly` | Recrawl by hand or on a schedule. |
@@ -39,8 +39,10 @@ changes waiting for review, in Arabic and English.
 A crawl follows only the source's own site and its patterns, honours `robots.txt` and its crawl
 delay, waits between requests to a host, and asks for each known page conditionally (ETag,
 Last-Modified), so an unchanged page costs one short request; a page whose text hash did not change
-is not touched. It keeps a page's main content: navigation, headers, footers, cookie banners and
-blocks repeated across pages are removed, and headings, lists, tables and Arabic text are kept.
+is not touched. It keeps a page's main content: the `<main>` or `<article>` block, or the block
+holding the most text, without navigation, headers, footers, side panels and cookie banners, with
+headings, lists, tables and Arabic text kept; a page with no such block keeps its visible text. The
+page's declared language is recorded and shown on the page list.
 
 Every fetch is checked against private addresses: a private, loopback, link-local or metadata
 address is refused before the request and again at connection time, redirects are never followed

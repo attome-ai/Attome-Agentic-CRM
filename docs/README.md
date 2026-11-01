@@ -53,6 +53,7 @@
 - [Sales sequences](sequences.md): the sequence kind, exits on reply, meeting or stage change, the sending window in the contact's time zone, and enrolling contacts.
 - [Deal teams and splits](deal-teams.md): team members, revenue and overlay splits, won deals and leavers.
 - [Opportunity lines](opportunity-lines.md): lines and the product picker, pricing order, the deal's amount, schedules, quote sync, undo and the feature flags.
+- [Web crawling into knowledge](web-crawling.md): website sources, their settings, crawls and runs, imports and review, watch-only sources and the safety rules.
 - [Contracts](contracts.md): the repository, renewal reminders, drafting, the playbook, approval, negotiation and signature.
 - [Procurement](procurement.md): requisitions, orders, receipts, vendor bills, budget checks and scorecards.
 - [Invoicing](invoicing.md): drafts, issue and numbering, notes, the invoice document, statements, ageing and write-offs.

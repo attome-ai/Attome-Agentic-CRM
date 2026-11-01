@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Web crawling into knowledge is documented (K6-T14): `docs/web-crawling.md` covers who manages
+  sources, every setting, a crawl and its safety rules, runs, imports and review, watch-only sources, the
+  agent tools and the configuration. Routes: `/api/v1/webcrawl/targets` (GET, POST), `/{id}` (PATCH,
+  DELETE), `/{id}/recrawl`, `/{id}/pages`, `/{id}/pages/selection`, `/{id}/import`, `/{id}/runs`, `/{id}/changes`.
 - The website page list gains the source's own panel: its settings (paths to crawl and skip, languages,
   audience, import mode, schedule, sitemap, depth, watch only) saved under the row version, its runs, and
   the items a recrawl changed with Take the site's version or Keep ours; pages show their language and an
