@@ -9131,7 +9131,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Stopped: an orphan scan is abandoned, a retype that has not swapped is undone at once (Y12-T7), any other field run is failed for its abandon route",
+            "description": "Stopped: an orphan scan or a split is abandoned (a split keeps the rows it wrote), a retype that has not swapped is undone at once (Y12-T7), any other field run is failed for its abandon route",
             "content": {
               "application/json": {
                 "schema": {
@@ -18099,6 +18099,319 @@
         "x-privilege": "admin",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/entities/{entity_id}/refactor": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Split a text attribute",
+        "description": "Queues the split of a text attribute into other text attributes as a\ndurable run (`/api/v1/admin/data-step-runs/{id}` shows, pauses and\ncancels it). Administrators only. Audited.",
+        "operationId": "queue_split",
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SplitBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The split is queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SplitQueued"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a text source, a bad target or an expression that does not compile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/entities/{entity_id}/refactor/option-set-preview": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Preview a text attribute as an option set",
+        "description": "Groups a text attribute's stored values into options (trimmed,\ncase-folded, Arabic letters normalised, plus a merge map) and answers the\noptions with their row counts and the map for the field's type change to\n`choice`. Writes nothing. Administrators only.",
+        "operationId": "preview_option_set",
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OptionSetBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The options and the conversion map",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OptionSetPreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a text attribute",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "groups a text attribute's stored values into options; writes nothing",
+          "reason": "dry_run",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/entities/{entity_id}/refactor/preview": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Preview a split",
+        "description": "What splitting a text attribute into others would write, over up to\n10,000 rows, with examples. Writes nothing. Administrators only.",
+        "operationId": "preview_split",
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SplitBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "What the split would write",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SplitPreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a text source, a bad target or an expression that does not compile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "evaluates the split over the entity's rows and answers counts and examples; writes nothing",
+          "reason": "dry_run",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/admin/entities/{entity_id}/rehearse": {
@@ -103929,6 +104242,92 @@
           }
         }
       },
+      "OptionGroup": {
+        "type": "object",
+        "description": "One option and the stored spellings that become it.",
+        "required": [
+          "value",
+          "rows",
+          "spellings"
+        ],
+        "properties": {
+          "rows": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "spellings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Up to 20 of its stored spellings."
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "OptionSetBody": {
+        "type": "object",
+        "description": "A text attribute to turn into an option set.",
+        "required": [
+          "source"
+        ],
+        "properties": {
+          "merge_map": {
+            "type": "object",
+            "description": "Further spellings to join: a spelling (compared in its normal form)\nto the option it belongs to.",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "source": {
+            "type": "string",
+            "description": "The text attribute."
+          }
+        }
+      },
+      "OptionSetPreview": {
+        "type": "object",
+        "description": "What turning a text attribute into an option set would give.",
+        "required": [
+          "values_read",
+          "more_values",
+          "groups",
+          "rows_unconvertible",
+          "map"
+        ],
+        "properties": {
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OptionGroup"
+            },
+            "description": "The options, most rows first."
+          },
+          "map": {
+            "type": "object",
+            "description": "Every stored spelling to its option: the `conversion.map` for the\nfield's type change to `choice`."
+          },
+          "more_values": {
+            "type": "boolean",
+            "description": "Whether the attribute has more distinct values than were read."
+          },
+          "rows_unconvertible": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Rows whose value would become no value: longer than 100 characters\nonce normalised, or only spaces."
+          },
+          "values_read": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Distinct stored values read (at most 5,000)."
+          }
+        }
+      },
       "OrganizationMemberItem": {
         "type": "object",
         "required": [
@@ -127446,6 +127845,117 @@
           },
           "name": {
             "type": "string"
+          }
+        }
+      },
+      "SplitBody": {
+        "type": "object",
+        "description": "A split of one text attribute into several.",
+        "required": [
+          "source",
+          "targets"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "description": "The text attribute to split; it is not changed."
+          },
+          "targets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SplitTarget"
+            }
+          }
+        }
+      },
+      "SplitExample": {
+        "type": "object",
+        "description": "One row as a split would write it.",
+        "required": [
+          "id",
+          "source",
+          "values"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source": {
+            "type": "string"
+          },
+          "values": {
+            "type": "object",
+            "description": "Each target and its value; `null` for no value."
+          }
+        }
+      },
+      "SplitPreview": {
+        "type": "object",
+        "description": "What a split would do.",
+        "required": [
+          "rows_read",
+          "rows_changed",
+          "rows_unconvertible",
+          "more_rows",
+          "examples"
+        ],
+        "properties": {
+          "examples": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SplitExample"
+            }
+          },
+          "more_rows": {
+            "type": "boolean",
+            "description": "Whether the entity has more rows than were read."
+          },
+          "rows_changed": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Rows the split would write."
+          },
+          "rows_read": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Rows read (at most 10,000)."
+          },
+          "rows_unconvertible": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Rows an expression fails on; they are left as they are."
+          }
+        }
+      },
+      "SplitQueued": {
+        "type": "object",
+        "description": "A queued split.",
+        "required": [
+          "run_id"
+        ],
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "SplitTarget": {
+        "type": "object",
+        "description": "One attribute a split fills, and how.",
+        "required": [
+          "field",
+          "expression"
+        ],
+        "properties": {
+          "expression": {
+            "type": "string",
+            "description": "A rule expression over the source attribute, for example\n`word(full_name, 1)`."
+          },
+          "field": {
+            "type": "string",
+            "description": "An existing text attribute of the entity."
           }
         }
       },

@@ -5387,6 +5387,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/entities/{entity_id}/refactor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Split a text attribute
+         * @description Queues the split of a text attribute into other text attributes as a
+         *     durable run (`/api/v1/admin/data-step-runs/{id}` shows, pauses and
+         *     cancels it). Administrators only. Audited.
+         */
+        post: operations["queue_split"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/entities/{entity_id}/refactor/option-set-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview a text attribute as an option set
+         * @description Groups a text attribute's stored values into options (trimmed,
+         *     case-folded, Arabic letters normalised, plus a merge map) and answers the
+         *     options with their row counts and the map for the field's type change to
+         *     `choice`. Writes nothing. Administrators only.
+         */
+        post: operations["preview_option_set"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/entities/{entity_id}/refactor/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview a split
+         * @description What splitting a text attribute into others would write, over up to
+         *     10,000 rows, with examples. Writes nothing. Administrators only.
+         */
+        post: operations["preview_split"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/entities/{entity_id}/rehearse": {
         parameters: {
             query?: never;
@@ -48058,6 +48124,49 @@ export interface components {
             node: string;
             version?: string | null;
         };
+        /** @description One option and the stored spellings that become it. */
+        OptionGroup: {
+            /** Format: int64 */
+            rows: number;
+            /** @description Up to 20 of its stored spellings. */
+            spellings: string[];
+            value: string;
+        };
+        /** @description A text attribute to turn into an option set. */
+        OptionSetBody: {
+            /**
+             * @description Further spellings to join: a spelling (compared in its normal form)
+             *     to the option it belongs to.
+             */
+            merge_map?: {
+                [key: string]: string;
+            };
+            /** @description The text attribute. */
+            source: string;
+        };
+        /** @description What turning a text attribute into an option set would give. */
+        OptionSetPreview: {
+            /** @description The options, most rows first. */
+            groups: components["schemas"]["OptionGroup"][];
+            /**
+             * @description Every stored spelling to its option: the `conversion.map` for the
+             *     field's type change to `choice`.
+             */
+            map: Record<string, never>;
+            /** @description Whether the attribute has more distinct values than were read. */
+            more_values: boolean;
+            /**
+             * Format: int64
+             * @description Rows whose value would become no value: longer than 100 characters
+             *     once normalised, or only spaces.
+             */
+            rows_unconvertible: number;
+            /**
+             * Format: int64
+             * @description Distinct stored values read (at most 5,000).
+             */
+            values_read: number;
+        };
         /** @description What to order. */
         OrderBody: {
             /**
@@ -64732,6 +64841,20 @@ export interface components {
              */
             window_days: number;
         };
+        /** @description A split of one text attribute into several. */
+        SplitBody: {
+            /** @description The text attribute to split; it is not changed. */
+            source: string;
+            targets: components["schemas"]["SplitTarget"][];
+        };
+        /** @description One row as a split would write it. */
+        SplitExample: {
+            /** Format: uuid */
+            id: string;
+            source: string;
+            /** @description Each target and its value; `null` for no value. */
+            values: Record<string, never>;
+        };
         /** @description One split as a caller gives it. */
         SplitInput: {
             /**
@@ -64748,6 +64871,42 @@ export interface components {
             percent: string;
             /** Format: uuid */
             split_type_id: string;
+        };
+        /** @description What a split would do. */
+        SplitPreview: {
+            examples: components["schemas"]["SplitExample"][];
+            /** @description Whether the entity has more rows than were read. */
+            more_rows: boolean;
+            /**
+             * Format: int64
+             * @description Rows the split would write.
+             */
+            rows_changed: number;
+            /**
+             * Format: int64
+             * @description Rows read (at most 10,000).
+             */
+            rows_read: number;
+            /**
+             * Format: int64
+             * @description Rows an expression fails on; they are left as they are.
+             */
+            rows_unconvertible: number;
+        };
+        /** @description A queued split. */
+        SplitQueued: {
+            /** Format: uuid */
+            run_id: string;
+        };
+        /** @description One attribute a split fills, and how. */
+        SplitTarget: {
+            /**
+             * @description A rule expression over the source attribute, for example
+             *     `word(full_name, 1)`.
+             */
+            expression: string;
+            /** @description An existing text attribute of the entity. */
+            field: string;
         };
         /** @description A spread to make. */
         SpreadBody: {
@@ -79919,7 +80078,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Stopped: an orphan scan is abandoned, a retype that has not swapped is undone at once (Y12-T7), any other field run is failed for its abandon route */
+            /** @description Stopped: an orphan scan or a split is abandoned (a split keeps the rows it wrote), a retype that has not swapped is undone at once (Y12-T7), any other field run is failed for its abandon route */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -85281,6 +85440,195 @@ export interface operations {
             };
             /** @description orphan_scan_required: the table is over the inline limit and no scan has finished; POST /api/v1/admin/data-step-runs/orphan-scans */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    queue_split: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SplitBody"];
+            };
+        };
+        responses: {
+            /** @description The split is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SplitQueued"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a text source, a bad target or an expression that does not compile */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_option_set: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OptionSetBody"];
+            };
+        };
+        responses: {
+            /** @description The options and the conversion map */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OptionSetPreview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a text attribute */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_split: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SplitBody"];
+            };
+        };
+        responses: {
+            /** @description What the split would write */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SplitPreview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a text source, a bad target or an expression that does not compile */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
