@@ -1,0 +1,313 @@
+{
+  "author": "packs",
+  "checksum": "sha256:c607cdbc5eaf387586f7ddca15569ad631e7f47738cc963024ba71b12808da38",
+  "closed_at": "2026-11-01T00:00:00Z",
+  "description": "Contract approvals (W1-T9): submitting a draft for approval holds it in review under an approval plan: a contract manager approves, Legal too when the playbook check marked a deviation that needs legal, and Legal again above a value of 1,000,000; a rejection returns it to draft. The manual review transitions give way to the plan, and submit, activate and terminate each need their privilege.",
+  "format": "attome-changeset/v1",
+  "id": "01a19678-3c5d-7a70-bf21-3b71f9954fa5",
+  "layer": "product",
+  "name": "contract-management-approvals",
+  "opened_at": "2026-11-01T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Submit a contract for approval",
+          "key": "contract.submit",
+          "name": "contract.submit"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "contract.submit"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Approve a contract",
+          "key": "contract.approve",
+          "name": "contract.approve"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "privilege": "contract.approve"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Activate an approved contract",
+          "key": "contract.activate",
+          "name": "contract.activate"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "privilege": "contract.activate"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Terminate an active contract",
+          "key": "contract.terminate",
+          "name": "contract.terminate"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "privilege": "contract.terminate"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "privilege": "contract.submit",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "privilege": "contract.approve",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "privilege": "contract.activate",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "privilege": "contract.terminate",
+        "role": "Contract Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "privilege": "contract.submit",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "privilege": "contract.approve",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "privilege": "contract.activate",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "privilege": "contract.terminate",
+        "role": "Legal"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "privilege": "contract.submit",
+        "role": "Contract Requester"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "approval_plan": {
+            "steps": [
+              {
+                "approvers": [
+                  "role_name:Contract Manager"
+                ],
+                "mode": "any",
+                "on_timeout": "escalate",
+                "sla_minutes": null
+              },
+              {
+                "approvers": [
+                  "role_name:Legal"
+                ],
+                "mode": "any",
+                "on_timeout": "escalate",
+                "skip_unless": "contains(coalesce(playbook_deviations, \"\"), \"needs_legal\")",
+                "sla_minutes": null
+              },
+              {
+                "approvers": [
+                  "role_name:Legal"
+                ],
+                "mode": "any",
+                "on_timeout": "escalate",
+                "skip_unless": "coalesce(contract_value, 0) > 1000000",
+                "sla_minutes": null
+              }
+            ]
+          },
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "draft",
+          "guard_expression": null,
+          "name": "Submit for Approval",
+          "on_reject_state": "draft",
+          "pending_state": "review",
+          "required_privilege": "contract.submit",
+          "to_state": "approved"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "contract",
+        "transition": "draft->approved"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "approved",
+          "guard_expression": null,
+          "name": "Activate",
+          "required_privilege": "contract.activate",
+          "to_state": "active"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "contract",
+        "transition": "approved->active"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "active",
+          "guard_expression": null,
+          "name": "Terminate",
+          "required_privilege": "contract.terminate",
+          "to_state": "terminated"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "contract",
+        "transition": "active->terminated"
+      }
+    },
+    {
+      "op": "retire_state_transition",
+      "phase": "contract",
+      "seq": 17,
+      "target": {
+        "entity": "contract",
+        "transition": "draft->review"
+      }
+    },
+    {
+      "op": "retire_state_transition",
+      "phase": "contract",
+      "seq": 18,
+      "target": {
+        "entity": "contract",
+        "transition": "review->approved"
+      }
+    },
+    {
+      "op": "retire_state_transition",
+      "phase": "contract",
+      "seq": 19,
+      "target": {
+        "entity": "contract",
+        "transition": "review->draft"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "contract-management",
+  "seq": 7,
+  "title": "Pack: contract approvals"
+}

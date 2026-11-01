@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Contracts are approved under a plan (contract-management pack 0007): submitting a draft holds it in
+  review until a contract manager approves, Legal too when the playbook check marked a deviation that
+  needs legal, and Legal again above a value of 1,000,000; a rejection returns it to draft. Submit,
+  activate and terminate each need their own privilege (W1-T9).
 - An approval step can name its approvers by role name (`role_name:Legal`), so a pack's approval
   plan can name a role it ships. A state transition held for approval now judges each step's
   `skip_unless` against the record itself (every field, null when empty); a step whose condition
