@@ -1,0 +1,118 @@
+{
+  "method": "GET",
+  "request": null,
+  "response": {
+    "country_code": "SA",
+    "current_version": 1,
+    "description": "Official holidays (https://www.hrsd.gov.sa/en/knowledge-centre/articles/322)",
+    "hours": {
+      "mon": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "sun": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "thu": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "tue": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "wed": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ]
+    },
+    "id": "01a19466-ee41-749a-892b-3415740efcf4",
+    "is_active": true,
+    "is_default": false,
+    "name": "Saudi Arabia",
+    "name_ar": "المملكة العربية السعودية",
+    "owner_layer": "project",
+    "parent": null,
+    "parent_calendar_id": null,
+    "rules": [
+      {
+        "calendar_id": "01a19466-ee41-749a-892b-3415740efcf4",
+        "id": "01a19466-ee4f-745d-ad24-45f8aa50a34a",
+        "name": "Eid al-Adha",
+        "name_ar": "عيد الأضحى",
+        "needs_sighting": true,
+        "owner_layer": "project",
+        "rule": {
+          "day": 9,
+          "kind": "hijri",
+          "month": 12,
+          "span_days": 4
+        }
+      },
+      {
+        "calendar_id": "01a19466-ee41-749a-892b-3415740efcf4",
+        "id": "01a19466-ee4a-7005-bc5c-1ed88a2c7aed",
+        "name": "Eid al-Fitr",
+        "name_ar": "عيد الفطر",
+        "needs_sighting": true,
+        "owner_layer": "project",
+        "rule": {
+          "day": 30,
+          "kind": "hijri",
+          "month": 9,
+          "span_days": 4
+        }
+      },
+      {
+        "calendar_id": "01a19466-ee41-749a-892b-3415740efcf4",
+        "id": "01a19466-ee52-72a2-95e1-a1e72066a76a",
+        "name": "Founding Day",
+        "name_ar": "يوم التأسيس",
+        "needs_sighting": false,
+        "owner_layer": "project",
+        "rule": {
+          "day": 22,
+          "kind": "fixed",
+          "month": 2,
+          "span_days": 1
+        }
+      },
+      {
+        "calendar_id": "01a19466-ee41-749a-892b-3415740efcf4",
+        "id": "01a19466-ee56-7558-a523-913d84324911",
+        "name": "National Day",
+        "name_ar": "اليوم الوطني",
+        "needs_sighting": false,
+        "owner_layer": "project",
+        "rule": {
+          "day": 23,
+          "kind": "fixed",
+          "month": 9,
+          "span_days": 1
+        }
+      }
+    ],
+    "seasons": [],
+    "tz": "Asia/Riyadh",
+    "working_days": [
+      "sun",
+      "mon",
+      "tue",
+      "wed",
+      "thu"
+    ]
+  },
+  "status": 200,
+  "uri": "/api/v1/admin/calendars/01a19466-ee41-749a-892b-3415740efcf4"
+}

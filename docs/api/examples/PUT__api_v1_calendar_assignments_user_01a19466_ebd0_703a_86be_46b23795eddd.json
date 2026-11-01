@@ -1,0 +1,14 @@
+{
+  "method": "PUT",
+  "request": {
+    "calendar_id": "01a19466-ebb1-74d9-a57d-3b41a265de2e"
+  },
+  "response": {
+    "calendar_id": "01a19466-ebb1-74d9-a57d-3b41a265de2e",
+    "row_version": 0,
+    "subject_id": "01a19466-ebd0-703a-86be-46b23795eddd",
+    "subject_type": "user"
+  },
+  "status": 200,
+  "uri": "/api/v1/calendar-assignments/user/01a19466-ebd0-703a-86be-46b23795eddd"
+}

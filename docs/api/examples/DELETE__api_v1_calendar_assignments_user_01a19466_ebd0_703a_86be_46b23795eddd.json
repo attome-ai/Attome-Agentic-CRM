@@ -1,0 +1,7 @@
+{
+  "method": "DELETE",
+  "request": null,
+  "response": null,
+  "status": 204,
+  "uri": "/api/v1/calendar-assignments/user/01a19466-ebd0-703a-86be-46b23795eddd"
+}

@@ -1,0 +1,26 @@
+{
+  "method": "POST",
+  "request": {
+    "title": "has a photo"
+  },
+  "response": {
+    "created_at": "2026-10-31T23:59:50.270358+00:00",
+    "data": {
+      "attachment": null,
+      "created_by": "01a19467-bcae-767b-b7ef-03dbdc348116",
+      "is_active": true,
+      "modified_by": "01a19467-bcae-767b-b7ef-03dbdc348116",
+      "organization_ref": "00000000-0000-0000-0000-000000000000",
+      "owner_ref": "01a19467-bcae-767b-b7ef-03dbdc348116",
+      "owner_type": 0,
+      "photo": null,
+      "title": "has a photo"
+    },
+    "entity_id": "01a19467-bced-71ea-bec3-6e83d7c7bd1f",
+    "id": "01a19467-c200-797f-a087-7ac5980ce5f4",
+    "row_version": 0,
+    "updated_at": "2026-10-31T23:59:50.270358+00:00"
+  },
+  "status": 201,
+  "uri": "/api/v1/u9_image_01a19467bcb376bd82d4331d711171ac"
+}

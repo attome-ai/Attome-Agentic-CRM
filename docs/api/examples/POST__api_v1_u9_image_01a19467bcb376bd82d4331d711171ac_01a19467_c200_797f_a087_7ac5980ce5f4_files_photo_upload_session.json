@@ -1,0 +1,22 @@
+{
+  "method": "POST",
+  "request": {
+    "content_type": "application/pdf",
+    "declared_size_bytes": 1024,
+    "filename": "upload-photo.bin"
+  },
+  "response": {
+    "code": "validation_error",
+    "detail": "validation error: photo is an image field; content_type must be one of: image/png, image/jpeg, image/gif, image/webp",
+    "error": "validation_error",
+    "instance": "/api/v1/u9_image_01a19467bcb376bd82d4331d711171ac/01a19467-c200-797f-a087-7ac5980ce5f4/files/photo/upload-session",
+    "message": "validation error: photo is an image field; content_type must be one of: image/png, image/jpeg, image/gif, image/webp",
+    "request_id": "ed246c68-0cd5-4b1a-8f5b-1a7e99606fa8",
+    "retryable": false,
+    "status": 422,
+    "title": "Some values are not valid.",
+    "type": "about:blank"
+  },
+  "status": 422,
+  "uri": "/api/v1/u9_image_01a19467bcb376bd82d4331d711171ac/01a19467-c200-797f-a087-7ac5980ce5f4/files/photo/upload-session"
+}

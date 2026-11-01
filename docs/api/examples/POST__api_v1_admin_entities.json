@@ -1,0 +1,24 @@
+{
+  "method": "POST",
+  "request": {
+    "logicalname": "u9_formula_01a19467ab95724ea8a23d844da241c2",
+    "name": "U9 Field Types"
+  },
+  "response": {
+    "attribute_count": 0,
+    "business_key": null,
+    "category": null,
+    "extends_entity_id": null,
+    "id": "01a19467-abea-73ae-8634-66c5d36489be",
+    "is_active": true,
+    "is_append_only": false,
+    "is_reference_data": false,
+    "logicalname": "u9_formula_01a19467ab95724ea8a23d844da241c2",
+    "name": "U9 Field Types",
+    "owner_layer": "project",
+    "primary_name_attribute": null,
+    "storage_mode": "standard"
+  },
+  "status": 201,
+  "uri": "/api/v1/admin/entities"
+}

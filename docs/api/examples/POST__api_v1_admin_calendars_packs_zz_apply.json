@@ -1,0 +1,18 @@
+{
+  "method": "POST",
+  "request": null,
+  "response": {
+    "code": "not_found",
+    "detail": "not found",
+    "error": "not_found",
+    "instance": "/api/v1/admin/calendars/packs/zz/apply",
+    "message": "not found",
+    "request_id": "3f54708f-1e49-44d7-b355-31f5f831daee",
+    "retryable": false,
+    "status": 404,
+    "title": "The resource was not found.",
+    "type": "about:blank"
+  },
+  "status": 404,
+  "uri": "/api/v1/admin/calendars/packs/zz/apply"
+}

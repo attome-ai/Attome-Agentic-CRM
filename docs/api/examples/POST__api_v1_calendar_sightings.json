@@ -1,0 +1,18 @@
+{
+  "method": "POST",
+  "request": {
+    "confirmed_start": "2026-03-20",
+    "hijri_year": 1447,
+    "rule_id": "01a19466-ee4a-7005-bc5c-1ed88a2c7aed"
+  },
+  "response": {
+    "calendar_id": "01a19466-ee41-749a-892b-3415740efcf4",
+    "confirmed_start": "2026-03-20",
+    "expected_start": "2026-03-19",
+    "hijri_year": 1447,
+    "rule_id": "01a19466-ee4a-7005-bc5c-1ed88a2c7aed",
+    "rule_name": "Eid al-Fitr"
+  },
+  "status": 200,
+  "uri": "/api/v1/calendar-sightings"
+}

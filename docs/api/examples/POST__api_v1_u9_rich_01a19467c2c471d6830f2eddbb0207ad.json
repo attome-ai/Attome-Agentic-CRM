@@ -1,0 +1,26 @@
+{
+  "method": "POST",
+  "request": {
+    "body": "<p onclick=\"steal()\">Hello <strong>team</strong></p><script>alert(document.cookie)</script><img src=x onerror=\"alert(1)\"><iframe src=\"https://evil.example\"></iframe><a href=\"javascript:alert(1)\">click</a><a href=\"https://ok.example\">ok</a><style>body{display:none}</style>",
+    "title": "created"
+  },
+  "response": {
+    "created_at": "2026-10-31T23:59:51.476836+00:00",
+    "data": {
+      "body": "<p>Hello <strong>team</strong></p><a rel=\"noopener noreferrer nofollow\">click</a><a href=\"https://ok.example\" rel=\"noopener noreferrer nofollow\">ok</a>",
+      "created_by": "01a19467-c2be-7615-aa54-e1643c99a7ab",
+      "is_active": true,
+      "modified_by": "01a19467-c2be-7615-aa54-e1643c99a7ab",
+      "organization_ref": "00000000-0000-0000-0000-000000000000",
+      "owner_ref": "01a19467-c2be-7615-aa54-e1643c99a7ab",
+      "owner_type": 0,
+      "title": "created"
+    },
+    "entity_id": "01a19467-c301-7178-bce6-108d223c6d74",
+    "id": "01a19467-c6b7-76d0-8c3d-98227e8e5c94",
+    "row_version": 0,
+    "updated_at": "2026-10-31T23:59:51.476836+00:00"
+  },
+  "status": 201,
+  "uri": "/api/v1/u9_rich_01a19467c2c471d6830f2eddbb0207ad"
+}

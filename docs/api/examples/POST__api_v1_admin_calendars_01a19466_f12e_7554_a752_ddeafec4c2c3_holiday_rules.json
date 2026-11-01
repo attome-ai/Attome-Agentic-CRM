@@ -1,0 +1,28 @@
+{
+  "method": "POST",
+  "request": {
+    "name": "Eid al-Fitr",
+    "rule": {
+      "day": 1,
+      "kind": "hijri",
+      "month": 10,
+      "span_days": 3
+    }
+  },
+  "response": {
+    "calendar_id": "01a19466-f12e-7554-a752-ddeafec4c2c3",
+    "id": "01a19466-f15a-7343-b148-5c8ef437bc6f",
+    "name": "Eid al-Fitr",
+    "name_ar": null,
+    "needs_sighting": false,
+    "owner_layer": "project",
+    "rule": {
+      "day": 1,
+      "kind": "hijri",
+      "month": 10,
+      "span_days": 3
+    }
+  },
+  "status": 201,
+  "uri": "/api/v1/admin/calendars/01a19466-f12e-7554-a752-ddeafec4c2c3/holiday-rules"
+}

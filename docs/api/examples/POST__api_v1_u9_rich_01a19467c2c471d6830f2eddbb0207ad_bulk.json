@@ -1,0 +1,21 @@
+{
+  "method": "POST",
+  "request": {
+    "operation": "create",
+    "records": [
+      {
+        "data": {
+          "body": "<p onclick=\"steal()\">Hello <strong>team</strong></p><script>alert(document.cookie)</script><img src=x onerror=\"alert(1)\"><iframe src=\"https://evil.example\"></iframe><a href=\"javascript:alert(1)\">click</a><a href=\"https://ok.example\">ok</a><style>body{display:none}</style>",
+          "title": "bulk"
+        }
+      }
+    ]
+  },
+  "response": {
+    "id": "01a19467-c6f3-727b-9846-4270bc74157d",
+    "status": "pending",
+    "total": 1
+  },
+  "status": 202,
+  "uri": "/api/v1/u9_rich_01a19467c2c471d6830f2eddbb0207ad/bulk"
+}

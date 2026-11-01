@@ -1,0 +1,34 @@
+{
+  "method": "POST",
+  "request": {
+    "field_type": "text",
+    "logicalname": "title",
+    "name": "Title"
+  },
+  "response": {
+    "data_classification": "general",
+    "entity_id": "01a19467-bced-71ea-bec3-6e83d7c7bd1f",
+    "field_type": "text",
+    "id": "01a19467-be45-71e2-a71c-773f4fe55fc1",
+    "is_active": true,
+    "is_filterable": false,
+    "is_required": false,
+    "is_sensitive": false,
+    "is_sortable": false,
+    "is_write_restricted": false,
+    "logicalname": "title",
+    "lookup_entity_name": null,
+    "lookup_entity_ref": null,
+    "max_length": null,
+    "name": "Title",
+    "on_target_delete": "orphan",
+    "options": null,
+    "owner_layer": "project",
+    "purpose": null,
+    "sensitivity": "internal",
+    "sensitivity_confirmed": false,
+    "sort_order": 0
+  },
+  "status": 201,
+  "uri": "/api/v1/admin/entities/01a19467-bced-71ea-bec3-6e83d7c7bd1f/fields"
+}

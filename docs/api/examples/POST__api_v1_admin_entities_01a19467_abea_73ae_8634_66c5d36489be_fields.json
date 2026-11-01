@@ -1,0 +1,34 @@
+{
+  "method": "POST",
+  "request": {
+    "field_type": "number",
+    "logicalname": "quantity",
+    "name": "Quantity"
+  },
+  "response": {
+    "data_classification": "general",
+    "entity_id": "01a19467-abea-73ae-8634-66c5d36489be",
+    "field_type": "number",
+    "id": "01a19467-ad49-75ff-ac1f-69cfd4272141",
+    "is_active": true,
+    "is_filterable": false,
+    "is_required": false,
+    "is_sensitive": false,
+    "is_sortable": false,
+    "is_write_restricted": false,
+    "logicalname": "quantity",
+    "lookup_entity_name": null,
+    "lookup_entity_ref": null,
+    "max_length": null,
+    "name": "Quantity",
+    "on_target_delete": "orphan",
+    "options": null,
+    "owner_layer": "project",
+    "purpose": null,
+    "sensitivity": "internal",
+    "sensitivity_confirmed": false,
+    "sort_order": 0
+  },
+  "status": 201,
+  "uri": "/api/v1/admin/entities/01a19467-abea-73ae-8634-66c5d36489be/fields"
+}

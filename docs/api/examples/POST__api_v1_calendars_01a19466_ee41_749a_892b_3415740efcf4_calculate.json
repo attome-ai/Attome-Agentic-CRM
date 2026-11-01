@@ -1,0 +1,17 @@
+{
+  "method": "POST",
+  "request": {
+    "from": "2026-11-25T12:00:00Z",
+    "minutes": 480,
+    "op": "add",
+    "user_id": "01a19466-edb3-70ea-b2ff-f24237b81862"
+  },
+  "response": {
+    "calendar_id": "01a19466-ee7f-7709-b58f-d684ae5b6f7a",
+    "calendar_version": 1,
+    "content_hash": "fd8c98d5a7791aa05f2970bf471a551f0f3a2ed81d270f96faa41278da33ed99",
+    "result": "2026-11-29T08:00:00Z"
+  },
+  "status": 200,
+  "uri": "/api/v1/calendars/01a19466-ee41-749a-892b-3415740efcf4/calculate"
+}

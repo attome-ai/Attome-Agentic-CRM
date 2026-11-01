@@ -1,0 +1,21 @@
+{
+  "method": "POST",
+  "request": {
+    "columns": [],
+    "filter": [
+      {
+        "field": "total",
+        "op": "gt",
+        "value": "25"
+      }
+    ],
+    "format": "json"
+  },
+  "response": {
+    "id": "01a19467-b6af-7049-856f-312fd28e4ca4",
+    "matching_rows": 1,
+    "status": "pending"
+  },
+  "status": 202,
+  "uri": "/api/v1/u9_formula_01a19467ab95724ea8a23d844da241c2/export"
+}

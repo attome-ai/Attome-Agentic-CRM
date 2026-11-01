@@ -1,0 +1,103 @@
+{
+  "method": "POST",
+  "request": {
+    "country_code": "sa",
+    "hours": {
+      "mon": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "sun": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "thu": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "tue": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "wed": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ]
+    },
+    "name": "z12t6-01a19466eb82755ca71a7cef7a82de15",
+    "name_ar": "تقويم",
+    "tz": "Asia/Riyadh",
+    "working_days": [
+      "sun",
+      "mon",
+      "tue",
+      "wed",
+      "thu"
+    ]
+  },
+  "response": {
+    "country_code": "SA",
+    "current_version": 1,
+    "description": null,
+    "hours": {
+      "mon": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "sun": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "thu": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "tue": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "wed": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ]
+    },
+    "id": "01a19466-ebb1-74d9-a57d-3b41a265de2e",
+    "is_active": true,
+    "is_default": false,
+    "name": "z12t6-01a19466eb82755ca71a7cef7a82de15",
+    "name_ar": "تقويم",
+    "owner_layer": "project",
+    "parent": null,
+    "parent_calendar_id": null,
+    "tz": "Asia/Riyadh",
+    "working_days": [
+      "sun",
+      "mon",
+      "tue",
+      "wed",
+      "thu"
+    ]
+  },
+  "status": 201,
+  "uri": "/api/v1/admin/calendars"
+}

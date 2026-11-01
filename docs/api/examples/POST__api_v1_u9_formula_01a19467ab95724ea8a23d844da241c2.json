@@ -1,0 +1,38 @@
+{
+  "method": "POST",
+  "request": {
+    "quantity": 2,
+    "rate": 0.5,
+    "total": 999,
+    "unit_price": 10
+  },
+  "response": {
+    "code": "validation_error",
+    "detail": "validation error: total: is a formula field; its value is computed and cannot be written",
+    "details": [
+      {
+        "code": "invalid",
+        "field": "total",
+        "message": "total: is a formula field; its value is computed and cannot be written"
+      }
+    ],
+    "error": "validation_error",
+    "errors": [
+      {
+        "attribute": "total",
+        "fix": null,
+        "message": "total: is a formula field; its value is computed and cannot be written",
+        "rule": "invalid"
+      }
+    ],
+    "instance": "/api/v1/u9_formula_01a19467ab95724ea8a23d844da241c2",
+    "message": "validation error: total: is a formula field; its value is computed and cannot be written",
+    "request_id": "2ee20a87-86c5-4947-a195-f68a9abb3477",
+    "retryable": false,
+    "status": 422,
+    "title": "Some values are not valid.",
+    "type": "about:blank"
+  },
+  "status": 422,
+  "uri": "/api/v1/u9_formula_01a19467ab95724ea8a23d844da241c2"
+}

@@ -1,0 +1,15 @@
+{
+  "method": "POST",
+  "request": {
+    "content_type": "application/pdf",
+    "declared_size_bytes": 1024,
+    "filename": "upload-attachment.bin"
+  },
+  "response": {
+    "expires_in_secs": 900,
+    "session_id": "01a19467-c299-77e9-ad08-168054ff9605",
+    "upload_url": "http://localhost:9100/attome-test/_quarantine/u9_image_01a19467bcb376bd82d4331d711171ac/01a19467-c200-797f-a087-7ac5980ce5f4/attachment/01a19467-c299-77e9-ad08-168054ff9605-upload-attachment.bin?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=attometest%2F20261031%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20261031T235950Z&X-Amz-Expires=900&X-Amz-SignedHeaders=host&X-Amz-Signature=f66c243a50118b65466951713b953dd2def20ce085771398e3d25feb52d34883"
+  },
+  "status": 200,
+  "uri": "/api/v1/u9_image_01a19467bcb376bd82d4331d711171ac/01a19467-c200-797f-a087-7ac5980ce5f4/files/attachment/upload-session"
+}

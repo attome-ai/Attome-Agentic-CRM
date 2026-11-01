@@ -1,0 +1,28 @@
+{
+  "method": "GET",
+  "request": null,
+  "response": {
+    "created_at": "2026-10-31T23:59:47.057488+00:00",
+    "data": {
+      "created_by": "01a19467-ab8f-70da-9ec1-6a474e7bf625",
+      "is_active": true,
+      "label": "abc",
+      "modified_by": "01a19467-b5c9-7350-b0ba-f31acb17a3cf",
+      "organization_ref": "00000000-0000-0000-0000-000000000000",
+      "owner_ref": "01a19467-ab8f-70da-9ec1-6a474e7bf625",
+      "owner_type": 0,
+      "quantity": 6,
+      "rate": 0.5,
+      "shout": "ABC",
+      "total": 30.0,
+      "unit_price": 10.0,
+      "unit_price_currency": "USD"
+    },
+    "entity_id": "01a19467-abea-73ae-8634-66c5d36489be",
+    "id": "01a19467-b577-7070-a41f-5ec0b25b6703",
+    "row_version": 2,
+    "updated_at": "2026-10-31T23:59:47.277802+00:00"
+  },
+  "status": 200,
+  "uri": "/api/v1/u9_formula_01a19467ab95724ea8a23d844da241c2/01a19467-b577-7070-a41f-5ec0b25b6703"
+}

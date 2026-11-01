@@ -1,0 +1,76 @@
+{
+  "method": "GET",
+  "request": null,
+  "response": {
+    "country_code": "SA",
+    "current_version": 2,
+    "description": null,
+    "hours": {
+      "mon": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "sun": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "thu": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "tue": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "wed": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ]
+    },
+    "id": "01a19466-f12e-7554-a752-ddeafec4c2c3",
+    "is_active": true,
+    "is_default": false,
+    "name": "z12t6-01a19466f100747da20591c792adb167",
+    "name_ar": "تقويم",
+    "owner_layer": "project",
+    "parent": null,
+    "parent_calendar_id": null,
+    "rules": [
+      {
+        "calendar_id": "01a19466-f12e-7554-a752-ddeafec4c2c3",
+        "id": "01a19466-f15a-7343-b148-5c8ef437bc6f",
+        "name": "Eid al-Fitr",
+        "name_ar": null,
+        "needs_sighting": false,
+        "owner_layer": "project",
+        "rule": {
+          "day": 1,
+          "kind": "hijri",
+          "month": 10,
+          "span_days": 3
+        }
+      }
+    ],
+    "seasons": [],
+    "tz": "Asia/Riyadh",
+    "working_days": [
+      "sun",
+      "mon",
+      "tue",
+      "wed",
+      "thu"
+    ]
+  },
+  "status": 200,
+  "uri": "/api/v1/admin/calendars/01a19466-f12e-7554-a752-ddeafec4c2c3"
+}

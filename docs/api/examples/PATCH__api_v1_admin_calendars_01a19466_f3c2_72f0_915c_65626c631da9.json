@@ -1,0 +1,61 @@
+{
+  "method": "PATCH",
+  "request": {
+    "hours": {
+      "mon": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "sun": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "thu": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "tue": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "wed": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ]
+    },
+    "name": "z12t6-01a19466f39373cf8e56f20e91940505",
+    "parent_calendar_id": "01a19466-f3ea-7579-b4e0-ac9a6c19e365",
+    "tz": "Asia/Riyadh",
+    "working_days": [
+      "sun",
+      "mon",
+      "tue",
+      "wed",
+      "thu"
+    ]
+  },
+  "response": {
+    "code": "validation_error",
+    "detail": "validation error: a calendar cannot inherit from itself, directly or through its parents",
+    "error": "validation_error",
+    "instance": "/api/v1/admin/calendars/01a19466-f3c2-72f0-915c-65626c631da9",
+    "message": "validation error: a calendar cannot inherit from itself, directly or through its parents",
+    "request_id": "dd172ef6-9b52-42cf-b2da-32a3c9885b6a",
+    "retryable": false,
+    "status": 422,
+    "title": "Some values are not valid.",
+    "type": "about:blank"
+  },
+  "status": 422,
+  "uri": "/api/v1/admin/calendars/01a19466-f3c2-72f0-915c-65626c631da9"
+}

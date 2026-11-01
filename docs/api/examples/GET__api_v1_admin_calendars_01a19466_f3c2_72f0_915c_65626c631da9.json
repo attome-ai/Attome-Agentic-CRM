@@ -1,0 +1,61 @@
+{
+  "method": "GET",
+  "request": null,
+  "response": {
+    "country_code": "SA",
+    "current_version": 1,
+    "description": null,
+    "hours": {
+      "mon": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "sun": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "thu": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "tue": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ],
+      "wed": [
+        {
+          "end_minute": 960,
+          "start_minute": 480
+        }
+      ]
+    },
+    "id": "01a19466-f3c2-72f0-915c-65626c631da9",
+    "is_active": true,
+    "is_default": false,
+    "name": "z12t6-01a19466f39373cf8e56f20e91940505",
+    "name_ar": "تقويم",
+    "owner_layer": "project",
+    "parent": null,
+    "parent_calendar_id": null,
+    "rules": [],
+    "seasons": [],
+    "tz": "Asia/Riyadh",
+    "working_days": [
+      "sun",
+      "mon",
+      "tue",
+      "wed",
+      "thu"
+    ]
+  },
+  "status": 200,
+  "uri": "/api/v1/admin/calendars/01a19466-f3c2-72f0-915c-65626c631da9"
+}

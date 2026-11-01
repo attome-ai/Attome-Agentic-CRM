@@ -1,0 +1,24 @@
+{
+  "method": "GET",
+  "request": null,
+  "response": [
+    {
+      "calendar_id": "01a19466-ee41-749a-892b-3415740efcf4",
+      "confirmed_start": null,
+      "expected_start": "2026-03-19",
+      "hijri_year": 1447,
+      "rule_id": "01a19466-ee4a-7005-bc5c-1ed88a2c7aed",
+      "rule_name": "Eid al-Fitr"
+    },
+    {
+      "calendar_id": "01a19466-ee41-749a-892b-3415740efcf4",
+      "confirmed_start": null,
+      "expected_start": "2026-05-26",
+      "hijri_year": 1447,
+      "rule_id": "01a19466-ee4f-745d-ad24-45f8aa50a34a",
+      "rule_name": "Eid al-Adha"
+    }
+  ],
+  "status": 200,
+  "uri": "/api/v1/calendar-sightings?year=2026"
+}

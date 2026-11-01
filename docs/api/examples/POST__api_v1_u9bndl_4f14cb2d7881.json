@@ -1,0 +1,41 @@
+{
+  "method": "POST",
+  "request": {
+    "billing_city": "Riyadh",
+    "name": "n",
+    "notes": "<b>ok</b><script>x()</script>",
+    "quantity": 3,
+    "unit_price": 2.5
+  },
+  "response": {
+    "created_at": "2026-10-31T23:59:44.272616+00:00",
+    "data": {
+      "billing_city": "Riyadh",
+      "billing_country": null,
+      "billing_latitude": null,
+      "billing_longitude": null,
+      "billing_postal_code": null,
+      "billing_region": null,
+      "billing_street": null,
+      "created_by": "01a19467-9edb-704b-ba77-b94efc04bcf6",
+      "is_active": true,
+      "line_total": 7.5,
+      "modified_by": "01a19467-9edb-704b-ba77-b94efc04bcf6",
+      "name": "n",
+      "notes": "<b>ok</b>",
+      "organization_ref": "00000000-0000-0000-0000-000000000000",
+      "owner_ref": "01a19467-9edb-704b-ba77-b94efc04bcf6",
+      "owner_type": 0,
+      "photo": null,
+      "quantity": 3,
+      "unit_price": 2.5,
+      "unit_price_currency": "USD"
+    },
+    "entity_id": "40416e6e-e8cc-50a1-95c5-4e7154879bc7",
+    "id": "01a19467-aa97-71f2-ab6b-323b14c2f4ff",
+    "row_version": 0,
+    "updated_at": "2026-10-31T23:59:44.272616+00:00"
+  },
+  "status": 201,
+  "uri": "/api/v1/u9bndl_4f14cb2d7881"
+}

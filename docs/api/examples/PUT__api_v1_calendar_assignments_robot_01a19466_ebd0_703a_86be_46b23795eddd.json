@@ -1,0 +1,20 @@
+{
+  "method": "PUT",
+  "request": {
+    "calendar_id": "01a19466-ebb1-74d9-a57d-3b41a265de2e"
+  },
+  "response": {
+    "code": "validation_error",
+    "detail": "validation error: subject_type is user or team",
+    "error": "validation_error",
+    "instance": "/api/v1/calendar-assignments/robot/01a19466-ebd0-703a-86be-46b23795eddd",
+    "message": "validation error: subject_type is user or team",
+    "request_id": "f6026526-eb88-4a63-a375-55cd8368df2e",
+    "retryable": false,
+    "status": 422,
+    "title": "Some values are not valid.",
+    "type": "about:blank"
+  },
+  "status": 422,
+  "uri": "/api/v1/calendar-assignments/robot/01a19466-ebd0-703a-86be-46b23795eddd"
+}

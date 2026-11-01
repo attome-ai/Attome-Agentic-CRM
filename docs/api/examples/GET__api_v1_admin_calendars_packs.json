@@ -1,0 +1,61 @@
+{
+  "method": "GET",
+  "request": null,
+  "response": [
+    {
+      "code": "ae",
+      "country_code": "AE",
+      "holidays": [
+        "New Year's Day",
+        "Ramadan 30",
+        "Eid al-Fitr",
+        "Arafat Day",
+        "Eid al-Adha",
+        "Hijri New Year",
+        "Prophet's Birthday",
+        "National Day"
+      ],
+      "name": "United Arab Emirates",
+      "name_ar": "الإمارات العربية المتحدة",
+      "reviewed_for_year": 2026,
+      "source_url": "https://u.ae/information-and-services/public-holidays-and-religious-affairs/public-holidays",
+      "tz": "Asia/Dubai"
+    },
+    {
+      "code": "om",
+      "country_code": "OM",
+      "holidays": [
+        "Eid al-Fitr eve",
+        "Eid al-Fitr",
+        "Eid al-Adha",
+        "Hijri New Year",
+        "Prophet's Birthday",
+        "Isra and Mi'raj",
+        "National Day",
+        "Accession Day"
+      ],
+      "name": "Oman",
+      "name_ar": "سلطنة عُمان",
+      "reviewed_for_year": 2026,
+      "source_url": "https://decree.om/2022/rd20220088/",
+      "tz": "Asia/Muscat"
+    },
+    {
+      "code": "sa",
+      "country_code": "SA",
+      "holidays": [
+        "Eid al-Fitr",
+        "Eid al-Adha",
+        "Founding Day",
+        "National Day"
+      ],
+      "name": "Saudi Arabia",
+      "name_ar": "المملكة العربية السعودية",
+      "reviewed_for_year": 2026,
+      "source_url": "https://www.hrsd.gov.sa/en/knowledge-centre/articles/322",
+      "tz": "Asia/Riyadh"
+    }
+  ],
+  "status": 200,
+  "uri": "/api/v1/admin/calendars/packs"
+}

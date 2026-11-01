@@ -1,0 +1,12 @@
+{
+  "method": "POST",
+  "request": null,
+  "response": {
+    "calendar_id": "01a19466-e93e-7445-9118-e7aaa00da6ed",
+    "created": true,
+    "rules_changed": 4,
+    "seasons_changed": 0
+  },
+  "status": 200,
+  "uri": "/api/v1/admin/calendars/packs/sa/apply"
+}
