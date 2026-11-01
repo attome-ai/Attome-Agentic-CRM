@@ -385,18 +385,6 @@ const PIXEL: &[u8] = &[
     0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44, 0x01, 0x00, 0x3b,
 ];
 
-#[utoipa::path(
-    get,
-    path = "/api/v1/marketing/o/{token}",
-    operation_id = "email_campaign_open",
-    tag = "marketing",
-    params(("token" = String, Path, description = "The token from the email's tracking image")),
-    responses(
-        (status = 200, description = "A transparent one-pixel image (the same for any token)", content_type = "image/gif", body = Vec<u8>),
-    ),
-)]
-/// Email open pixel
-///
 /// E6-T9: the recipient of `token` engaged; failures are logged.
 async fn engaged(state: &EngineState, token: &str) {
     let person: Option<(String, Uuid)> = match sqlx::query_as(
@@ -420,6 +408,18 @@ async fn engaged(state: &EngineState, token: &str) {
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/marketing/o/{token}",
+    operation_id = "email_campaign_open",
+    tag = "marketing",
+    params(("token" = String, Path, description = "The token from the email's tracking image")),
+    responses(
+        (status = 200, description = "A transparent one-pixel image (the same for any token)", content_type = "image/gif", body = Vec<u8>),
+    ),
+)]
+/// Email open pixel
+///
 /// The image an A/B-tested campaign email carries: the first load records
 /// that the recipient opened it. Public; the token is the recipient's own,
 /// and an unknown one answers the same image.
@@ -429,7 +429,8 @@ pub(crate) async fn get_open(
     headers: HeaderMap,
 ) -> Response {
     let token = token.trim();
-    if counts(&state, token, &headers).await
+    let counted = counts(&state, token, &headers).await;
+    if counted
         && let Err(e) = sqlx::query(
             "UPDATE email_campaign_recipient SET opened_at = now() \
               WHERE unsubscribe_token = $1 AND opened_at IS NULL",
@@ -440,7 +441,7 @@ pub(crate) async fn get_open(
     {
         tracing::warn!(error = %e, "email campaign: an open was not recorded");
     }
-    if counts(&state, token, &headers).await {
+    if counted {
         engaged(&state, token).await;
     }
     (
@@ -499,7 +500,8 @@ pub(crate) async fn get_click(
     else {
         return Err(AppError::NotFound);
     };
-    if counts(&state, token, &headers).await
+    let counted = counts(&state, token, &headers).await;
+    if counted
         && let Err(e) = sqlx::query(
             "UPDATE email_campaign_recipient \
             SET clicked_at = COALESCE(clicked_at, now()), opened_at = COALESCE(opened_at, now()) \
@@ -511,7 +513,7 @@ pub(crate) async fn get_click(
     {
         tracing::warn!(error = %e, "email campaign: a click was not recorded");
     }
-    if counts(&state, token, &headers).await {
+    if counted {
         engaged(&state, token).await;
     }
     Ok((
