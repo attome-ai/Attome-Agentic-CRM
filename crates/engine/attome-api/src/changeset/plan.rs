@@ -1227,16 +1227,16 @@ impl<'a> Fold<'a> {
                 });
             }
             // A22-T4: the data steps this release runs: `split` (A1-T8),
-            // `copy` and `set_default`; `convert` and `map_values` have no
+            // `copy`, `set_default` and `map_values`; `convert` has no
             // executor yet.
             Op::DataStep => {
                 if !matches!(
                     op.arg("kind").and_then(Value::as_str),
-                    Some("split" | "copy" | "set_default")
+                    Some("split" | "copy" | "set_default" | "map_values")
                 ) {
                     return Err(format!(
-                        "operation {} (data_step): op_not_supported: kinds `split`, `copy` and \
-                         `set_default` have an executor in this release",
+                        "operation {} (data_step): op_not_supported: kinds `split`, `copy`, `set_default` and \
+                         `map_values` have an executor in this release",
                         op.seq
                     ));
                 }
@@ -2502,7 +2502,7 @@ mod tests {
             args: Some(json!({ "kind": kind })),
         };
         let live = empty_bundle();
-        for kind in ["split", "copy", "set_default"] {
+        for kind in ["split", "copy", "set_default", "map_values"] {
             assert!(Fold::new(&live).apply(&step(kind)).is_ok(), "{kind}");
         }
         let refused = Fold::new(&live).apply(&step("convert"));

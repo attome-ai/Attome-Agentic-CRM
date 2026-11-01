@@ -63,7 +63,9 @@ Applying it queues the same durable split run as `POST /api/v1/admin/entities/{i
 at `/api/v1/admin/data-step-runs/{id}`. Two more kinds run the same way: `copy` `{"from", "to",
 "only_empty"}` copies an attribute into another of the same type (only where the target is empty
 unless `only_empty` is `false`), and `set_default` `{"field", "value"}` fills the empty rows of a
-field. `convert` and `map_values` are refused at plan until they have an executor. To go back, plan a rollback to an
+field, and `map_values` `{"field", "to", "map", "on_unmapped"}` replaces each stored value the map
+names (in `field`, or in `to`), leaving the others as they are and, with `"on_unmapped": "report"`,
+counting them on the run. `convert` is refused at plan until it has an executor. To go back, plan a rollback to an
 earlier bundle version (`POST /api/v1/admin/metadata/bundles/{name}/rollback`, which shows its plan
 first) or preview and switch to an earlier metadata version on the versions screen.
 
