@@ -31,6 +31,14 @@ import type { CustomerTest, CustomerTestRunAll, CustomerTestRunResult } from './
             {{ 'customerTestsPage.runAll' | translate }}
           </button>
         </div>
+        <form class="ct-toolbar" data-testid="ct-from-record" (submit)="$event.preventDefault(); fromRecord(entityInput.value, recordInput.value)">
+          <span>{{ 'customerTestsPage.fromRecord' | translate }}</span>
+          <input #entityInput dir="ltr" [attr.aria-label]="'customerTestsPage.fromRecordEntity' | translate"
+                 [placeholder]="'customerTestsPage.fromRecordEntity' | translate" />
+          <input #recordInput dir="ltr" [attr.aria-label]="'customerTestsPage.fromRecordId' | translate"
+                 [placeholder]="'customerTestsPage.fromRecordId' | translate" />
+          <button type="submit" [disabled]="busy()">{{ 'customerTestsPage.fromRecordCreate' | translate }}</button>
+        </form>
 
         @if (summary(); as s) {
           <p class="ct-summary" role="status">
@@ -57,6 +65,8 @@ import type { CustomerTest, CustomerTestRunAll, CustomerTestRunResult } from './
                     {{ t.name }}
                     @if (t.blocking) { <span class="ct-badge">{{ 'customerTestsPage.blocking' | translate }}</span> }
                     @if (!t.is_active) { <span class="ct-badge">{{ 'customerTestsPage.inactive' | translate }}</span> }
+                    @if (flags(t).live_safe) { <span class="ct-badge" data-live-safe>{{ 'customerTestsPage.liveSafe' | translate }}</span> }
+                    @if (flags(t).flaky_since) { <span class="ct-badge ct-fail" data-flaky>{{ 'customerTestsPage.flaky' | translate }}</span> }
                     @if (t.description) { <div class="ct-muted">{{ t.description }}</div> }
                   </td>
                   <td>
@@ -173,6 +183,24 @@ export class CustomerTestListComponent implements OnInit {
     this.busy.set(true);
     this.api.delete(`/api/v1/admin/customer-tests/${test.id}`).subscribe({
       next: () => { this.busy.set(false); this.load(); },
+      error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
+    });
+  }
+
+  /** T7-T3: the nightly and flaky flags, before the generated type has them. */
+  flags(t: CustomerTest): { live_safe?: boolean; flaky_since?: string | null } {
+    return t as CustomerTest & { live_safe?: boolean; flaky_since?: string | null };
+  }
+
+  /** T7-T4: a test drafted from one record, opened in the editor. */
+  fromRecord(entity: string, recordId: string): void {
+    if (!entity.trim() || !recordId.trim()) return;
+    this.busy.set(true);
+    this.error.set(null);
+    this.api.post<CustomerTest>('/api/v1/admin/customer-tests/from-record', {
+      entity: entity.trim(), record_id: recordId.trim(),
+    }).subscribe({
+      next: test => { this.busy.set(false); this.load(); this.editing.set(test); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });
   }

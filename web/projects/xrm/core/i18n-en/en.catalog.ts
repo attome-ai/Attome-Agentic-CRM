@@ -698,6 +698,8 @@ export const xrmEn = {
     new: 'New test', runAll: 'Run all', run: 'Run', edit: 'Edit', delete: 'Delete', save: 'Save', cancel: 'Cancel',
     name: 'Name', description: 'Description', asRole: 'Run the steps as role', blocking: 'Blocking',
     inactive: 'Inactive', lastResult: 'Latest result', lastRun: 'Last run', actions: 'Actions',
+    liveSafe: 'Nightly', flaky: 'Flaky', fromRecord: 'From a record', fromRecordEntity: 'Entity',
+    fromRecordId: 'Record id', fromRecordCreate: 'Create test',
     passed: 'Passed', failed: 'Failed', notRun: 'Not run yet',
     summary: '{passed} passed, {failed} failed',
     given: 'Given', when: 'When', expect: 'Expect',

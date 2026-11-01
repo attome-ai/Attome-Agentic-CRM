@@ -68,4 +68,19 @@ describe('CustomerTestListComponent (Z15-T15)', () => {
     expect(fixture.componentInstance.summary()?.failed).toBe(1);
     expect(fixture.nativeElement.querySelector('.ct-summary')).not.toBeNull();
   });
+
+  it('drafts a test from a record (T7-T4)', () => {
+    const { fixture, post } = create();
+    fixture.componentInstance.fromRecord(' contact ', ' c1 ');
+    expect(post).toHaveBeenCalledWith('/api/v1/admin/customer-tests/from-record', { entity: 'contact', record_id: 'c1' });
+  });
+
+  it('flags nightly and flaky tests (T7-T3)', () => {
+    const { fixture } = create();
+    fixture.componentInstance.tests.set([{ ...TESTS[0], live_safe: true, flaky_since: '2026-11-01T00:00:00Z' } as CustomerTest]);
+    fixture.detectChanges();
+    const row = fixture.nativeElement.querySelector('tr[data-test]') as HTMLElement;
+    expect(row.querySelector('[data-live-safe]')).not.toBeNull();
+    expect(row.querySelector('[data-flaky]')).not.toBeNull();
+  });
 });

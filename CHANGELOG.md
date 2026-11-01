@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- A customer test from a record in one step (T7-T4): `POST /api/v1/admin/customer-tests/from-record`
+  re-creates a record the caller can read from its copyable fields and checks each still holds its value
+  once saved, so a rule, default or flow that changes it shows; the customer tests screen drafts one from an
+  entity and record id and opens it in the editor, and marks nightly and flaky tests.
 - Publishing a metadata object runs only the customer tests it can affect (T7-T2): the entities its L5
   references name (and the entity or workflow itself) against the entities and flows each test touches.
   `POST /api/v1/admin/model/{kind}/{id}/validate` with `run_tests: true` runs those tests and returns their

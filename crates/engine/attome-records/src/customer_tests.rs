@@ -725,6 +725,53 @@ pub async fn publish_guard_for(
     }
 }
 
+/// T7-T4: a test drafted from one record the caller can read, as it stands:
+/// `given` re-creates it from its copyable fields (as a copy would: no
+/// system, numbered, file, computed or engine-set field), and `expect`
+/// checks each of those fields still holds its value once saved, so a rule,
+/// default or flow that would change it shows. The builder edits it from
+/// there. Its suggested name, and the definition.
+pub async fn draft_from_record(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity: &str,
+    record_id: Uuid,
+) -> Result<(String, Value), AppError> {
+    let record = crate::entity_crud::read_record(state, ctx, entity, record_id).await?;
+    let data = record.data().as_object().cloned().unwrap_or_default();
+    let attrs = state
+        .entities
+        .load()
+        .get(entity)
+        .map(|m| m.attrs.clone())
+        .ok_or(AppError::NotFound)?;
+    let (body, _) =
+        crate::entity_crud::clone::copyable(state, entity, &attrs, &data, &Map::new()).await?;
+    let expect: Vec<Value> = body
+        .iter()
+        .filter(|(_, value)| !value.is_null())
+        .map(|(attribute, value)| {
+            serde_json::json!({
+                "entity": entity, "ref": "record", "attribute": attribute, "equals": value
+            })
+        })
+        .collect();
+    let definition = serde_json::json!({
+        "given": [{ "entity": entity, "ref": "record", "record": body }],
+        "expect": expect,
+    });
+    let label = data
+        .get("name")
+        .or_else(|| data.get("title"))
+        .and_then(Value::as_str)
+        .map_or_else(|| record_id.to_string(), str::to_owned);
+    let name: String = format!("{entity}: {label} as saved")
+        .chars()
+        .take(200)
+        .collect();
+    Ok((name, definition))
+}
+
 /// Runs a stored test and records the run; the outcome and the run's id.
 pub async fn run_and_record(
     state: &EngineState,

@@ -2205,6 +2205,23 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             t,
             Some(json!({"name": format!("emission-{}", Uuid::now_v7()), "definition": {}})),
         ),
+        "POST /api/v1/admin/customer-tests/from-record" => {
+            let note = Uuid::now_v7();
+            sqlx::query(
+                "INSERT INTO note (id, entity_name, record_id, note_text, is_customer_visible)                  VALUES ($1, 'note', $2, 'emission test', false)",
+            )
+            .bind(note)
+            .bind(note.to_string())
+            .execute(&fx.base.db)
+            .await
+            .expect("seed a note");
+            request(
+                "POST",
+                "/api/v1/admin/customer-tests/from-record",
+                t,
+                Some(json!({"entity": "note", "record_id": note, "name": format!("emission-{}", Uuid::now_v7())})),
+            )
+        }
         "PATCH /api/v1/admin/customer-tests/{id}" => {
             let id = customer_test(fx).await;
             with_if_match(

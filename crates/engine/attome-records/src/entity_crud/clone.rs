@@ -432,7 +432,7 @@ pub async fn undo_clone(
 }
 
 /// The body a copy of `data` (a record of `entity`) is created from.
-async fn copyable(
+pub(crate) async fn copyable(
     state: &EngineState,
     entity: &str,
     attrs: &[attome_core::AttrInfo],

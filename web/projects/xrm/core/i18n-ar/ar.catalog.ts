@@ -622,6 +622,8 @@ export const xrmAr = {
     new: 'اختبار جديد', runAll: 'تشغيل الكل', run: 'تشغيل', edit: 'تعديل', delete: 'حذف', save: 'حفظ', cancel: 'إلغاء',
     name: 'الاسم', description: 'الوصف', asRole: 'تنفيذ الخطوات بصلاحيات الدور', blocking: 'مانع',
     inactive: 'غير نشط', lastResult: 'آخر نتيجة', lastRun: 'آخر تشغيل', actions: 'الإجراءات',
+    liveSafe: 'ليلي', flaky: 'متقلب', fromRecord: 'من سجل', fromRecordEntity: 'الكيان',
+    fromRecordId: 'معرّف السجل', fromRecordCreate: 'أنشئ الاختبار',
     passed: 'نجح', failed: 'فشل', notRun: 'لم يُشغَّل بعد',
     summary: 'نجح {passed}، فشل {failed}',
     given: 'المعطيات', when: 'الخطوات', expect: 'المتوقع',

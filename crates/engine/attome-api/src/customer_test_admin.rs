@@ -156,6 +156,73 @@ async fn create_test(
     Ok((StatusCode::CREATED, Json(test)))
 }
 
+/// What a test from a record starts from.
+#[derive(Debug, serde::Deserialize, ToSchema)]
+pub(crate) struct FromRecordBody {
+    entity: String,
+    record_id: Uuid,
+    /// The test's name; a name from the record when left out.
+    #[serde(default)]
+    name: Option<String>,
+}
+
+/// A customer test from a record
+///
+/// Drafts and saves a test from one record the caller can read (T7-T4): it
+/// re-creates the record and checks each copyable field still holds its
+/// value once saved, so a rule, default or flow that would change it shows.
+/// Edit it from there. Administrators only. Audited.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/customer-tests/from-record",
+    tag = "admin",
+    operation_id = "create_customer_test_from_record",
+    request_body = FromRecordBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Create)])))),
+    responses(
+        (status = 201, description = "The test", body = CustomerTest),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such entity or record the caller can read", body = ErrorResponse),
+        (status = 409, description = "A test with that name exists", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn create_from_record(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<area::Deployment>>,
+    Json(body): Json<FromRecordBody>,
+) -> Result<(StatusCode, Json<CustomerTest>), AppError> {
+    let (suggested, definition) =
+        store::draft_from_record(&state, &ctx, &body.entity, body.record_id).await?;
+    let test = CustomerTestBody {
+        name: body
+            .name
+            .filter(|n| !n.trim().is_empty())
+            .unwrap_or(suggested),
+        description: Some(format!("From {} {}", body.entity, body.record_id)),
+        definition,
+        blocking: false,
+        live_safe: false,
+    };
+    store::validate(&test.name, &test.definition)?;
+    let mut tx = SecurityTx::begin(
+        &state,
+        event(
+            AuditOperation::Create,
+            ctx.user_id,
+            "customer_test",
+            None,
+            "customer_test.created",
+        ),
+    )
+    .await?;
+    let created = store::insert_test(&mut tx, &test, ctx.user_id).await?;
+    tx.event_mut().set_record_id(created.id);
+    tx.commit().await?;
+    Ok((StatusCode::CREATED, Json(created)))
+}
+
 /// One customer test
 ///
 /// One customer test. Administrators only.
@@ -473,6 +540,10 @@ pub(crate) fn routes() -> Router<EngineState> {
             get(list_tests).post(create_test),
         )
         .route("/api/v1/admin/customer-tests/run-all", post(run_all))
+        .route(
+            "/api/v1/admin/customer-tests/from-record",
+            post(create_from_record),
+        )
         .route("/api/v1/admin/customer-tests/export", get(export_tests))
         .route("/api/v1/admin/customer-tests/import", post(import_tests))
         .route(
@@ -487,6 +558,7 @@ pub(crate) fn routes() -> Router<EngineState> {
 #[openapi(
     paths(
         list_tests,
+        create_from_record,
         create_test,
         get_test,
         update_test,
