@@ -38,3 +38,11 @@ records; an agent always asks a person first, and the answer carries the estimat
 `sales.account.brief`, a short brief of an account in which every line cites its source: the
 account record (`record:account/<id>`), the registry (`registry:CR <number>`) or the website's
 address, with when an enrichment value was fetched. The brief changes nothing and calls no model.
+
+## Arabic names
+
+`sales.suggest_arabic_names` (up to 100 accounts) asks the model for the Arabic form of each
+account's Latin legal name, 20 names a call, and files each as a `review` proposal from the source
+`model`: a suggestion a person accepts, never a fill. Sources rank as the registry, then any other
+provider, then the model: an account whose Arabic legal name is filled, or has a pending value
+from the registry or another provider, gets no suggestion.

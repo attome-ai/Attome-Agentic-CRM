@@ -6,5 +6,7 @@ pub mod domain;
 /// D24-T5: the free sources: the commercial register, the National Address
 /// and the company's own website.
 pub mod free_sources;
+/// D24-T8: Arabic forms of Latin names as suggestions, ranked below the registry.
+pub mod arabic_names;
 /// L9's queue: a set of records enriched by one provider in the background.
 pub mod queue;

@@ -12,7 +12,14 @@
 //!   enrichment source (the registry's CR, the website's URL) with the time
 //!   it was fetched. Read only, and no model call: the lines are the facts.
 //!
-//! All three need the caller to read the entity (the account for the
+//! - `sales.suggest_arabic_names` (D24-T8) asks the model for the Arabic
+//!   form of accounts' Latin legal names, 20 a call, and files each as a
+//!   `review` proposal from the source `model`: a suggestion a person
+//!   accepts, never a fill. An account whose Arabic name is filled, or has a
+//!   pending registry (or other provider) value, gets none: the registry
+//!   outranks the model (`attome_sales::enrichment::arabic_names`).
+//!
+//! All of them need the caller to read the entity (the account for the
 //! brief, through the record engine, so record-level access applies).
 
 use std::future::Future;
@@ -20,6 +27,7 @@ use std::pin::Pin;
 
 use attome_core::EngineState;
 use attome_modules::MODULE_AI;
+use attome_security::SecurityContextExt;
 use attome_types::AppError;
 use serde_json::{Value, json};
 use uuid::Uuid;
@@ -31,6 +39,12 @@ use crate::execute::{Action, ActionResult};
 pub const ENRICH_RECORD: &str = "sales.enrich.record";
 pub const ENRICH_LIST: &str = "sales.enrich.list";
 pub const ACCOUNT_BRIEF: &str = "sales.account.brief";
+pub const SUGGEST_ARABIC_NAMES: &str = "sales.suggest_arabic_names";
+
+const ARABIC_PROMPT_VERSION: &str = "sales.suggest_arabic_names/v1";
+
+/// Accounts one call may ask about.
+const MAX_ARABIC_ACCOUNTS: usize = 100;
 
 const RECORD_INPUT: &str = r#"{
   "type": "object",
@@ -51,6 +65,15 @@ const LIST_INPUT: &str = r#"{
     "provider": { "type": "string", "enum": ["registry", "national_address", "website"] }
   },
   "required": ["entity", "ids", "provider"],
+  "additionalProperties": false
+}"#;
+
+const ARABIC_INPUT: &str = r#"{
+  "type": "object",
+  "properties": {
+    "account_ids": { "type": "array", "items": { "type": "string", "format": "uuid" }, "minItems": 1, "maxItems": 100 }
+  },
+  "required": ["account_ids"],
   "additionalProperties": false
 }"#;
 
@@ -102,6 +125,17 @@ pub fn descriptors() -> Vec<ActionDescriptor> {
             &[],
         )
         .input_schema(BRIEF_INPUT),
+        ActionDescriptor::new(
+            SUGGEST_ARABIC_NAMES,
+            "Suggest the Arabic form of accounts' Latin legal names, as proposals a person \
+             accepts. An account whose Arabic name is filled or has a registry value gets none.",
+            RiskTier::Reversible,
+            Effect::Write,
+            RetryClass::Idempotent,
+            MODULE_AI,
+            &[],
+        )
+        .input_schema(ARABIC_INPUT),
     ]
 }
 
@@ -110,6 +144,7 @@ pub(crate) fn executors() -> Vec<Box<dyn Action>> {
         Box::new(EnrichRecord),
         Box::new(EnrichList),
         Box::new(AccountBrief),
+        Box::new(SuggestArabicNames),
     ]
 }
 
@@ -326,6 +361,154 @@ impl Action for AccountBrief {
                     .map(|l| json!({ "statement": l.statement, "source": l.source }))
                     .collect::<Vec<_>>(),
             })))
+        })
+    }
+}
+
+fn arabic_system_prompt() -> String {
+    "You give the Arabic form a Saudi company would use for its registered name. Each \
+     passage is one company's Latin name. Reply with only a JSON array of strings, one per \
+     passage, in the same order: the Arabic form of that name, transliterated where it is a \
+     proper name and translated where it is a common word (Company, Foods, Trading). Do not \
+     add or drop entries."
+        .to_owned()
+}
+
+struct SuggestArabicNames;
+
+impl Action for SuggestArabicNames {
+    fn id(&self) -> ActionId {
+        ActionId(SUGGEST_ARABIC_NAMES)
+    }
+
+    fn execute<'a>(
+        &'a self,
+        state: &'a EngineState,
+        ctx: &'a ActionContext,
+        args: &'a Value,
+    ) -> Pin<Box<dyn Future<Output = Result<ActionResult, AppError>> + Send + 'a>> {
+        Box::pin(async move {
+            use attome_sales::enrichment::arabic_names::{
+                BATCH, MODEL_SOURCE, needs_suggestion, parse_reply,
+            };
+            let ids = args
+                .get("account_ids")
+                .and_then(Value::as_array)
+                .ok_or_else(|| AppError::Validation("account_ids is required".into()))?
+                .iter()
+                .map(|v| uuid_of(v, "account_ids"))
+                .collect::<Result<Vec<Uuid>, AppError>>()?;
+            if ids.is_empty() || ids.len() > MAX_ARABIC_ACCOUNTS {
+                return Err(AppError::Validation(format!(
+                    "between 1 and {MAX_ARABIC_ACCOUNTS} accounts"
+                )));
+            }
+            ctx.security.require("account", "update")?;
+            let entity_id = state
+                .entities
+                .load()
+                .get("account")
+                .map(|m| m.entity_id)
+                .ok_or(AppError::NotFound)?;
+            let readable = attome_records::changes::readable_ids(
+                state,
+                &ctx.security,
+                entity_id,
+                "account",
+                &ids,
+            )
+            .await?;
+            let readable: Vec<Uuid> = ids.into_iter().filter(|id| readable.contains(id)).collect();
+            let rows: Vec<(Uuid, Option<String>, Option<String>, Vec<String>)> = sqlx::query_as(
+                "SELECT a.id, a.legal_name_en::text, a.legal_name_ar::text, \
+                        COALESCE((SELECT array_agg(p.source) FROM enrichment_proposal p \
+                                   WHERE p.entity_logicalname = 'account' AND p.record_id = a.id \
+                                     AND p.field = 'legal_name_ar' AND p.status = 'pending'), \
+                                 ARRAY[]::text[]) \
+                   FROM account a WHERE a.id = ANY($1)",
+            )
+            .bind(&readable)
+            .fetch_all(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+            let candidates: Vec<(Uuid, String, Option<String>)> = rows
+                .into_iter()
+                .filter(|(_, latin, arabic, pending)| {
+                    let pending: Vec<&str> = pending.iter().map(String::as_str).collect();
+                    let arabic = arabic.clone().map(Value::String);
+                    needs_suggestion(latin.as_deref(), arabic.as_ref(), &pending)
+                })
+                .filter_map(|(id, latin, arabic, _)| latin.map(|l| (id, l, arabic)))
+                .collect();
+            if candidates.is_empty() {
+                return Ok(ActionResult::plain(json!({ "suggested": 0, "asked": 0 })));
+            }
+            let client = crate::inference_client::client_for(state, SUGGEST_ARABIC_NAMES).await?;
+            crate::model_registry::require_approved_model(
+                &state.base.db,
+                client.model_id(),
+                SUGGEST_ARABIC_NAMES,
+            )
+            .await?;
+            let mut suggested = 0usize;
+            let mut model_id = String::new();
+            for batch in candidates.chunks(BATCH) {
+                let mut segments = vec![crate::prompt::Segment::trusted(arabic_system_prompt())];
+                for (index, (_, latin, _)) in batch.iter().enumerate() {
+                    segments.push(crate::prompt::Segment::untrusted(
+                        format!("N{}", index + 1),
+                        latin.clone(),
+                    ));
+                }
+                let mut request =
+                    attome_inference::GenerationRequest::new(crate::prompt::assemble(&segments));
+                request.temperature = 0.0;
+                let grant = crate::budget_guard::admit(
+                    state,
+                    ctx,
+                    attome_inference::budget::Priority::Chat,
+                    SUGGEST_ARABIC_NAMES,
+                    &mut request,
+                )
+                .await?;
+                let generated = client.generate(request).await.map_err(|e| {
+                    tracing::warn!(error = %e, "sales.suggest_arabic_names generation failed");
+                    AppError::internal("suggestion generation failed")
+                })?;
+                grant.settle(state, &generated.usage).await;
+                model_id.clone_from(&generated.usage.model_id);
+                for ((id, _, current), form) in
+                    batch.iter().zip(parse_reply(&generated.text, batch.len()))
+                {
+                    let Some(form) = form else { continue };
+                    sqlx::query(
+                        "INSERT INTO enrichment_proposal \
+                             (entity_logicalname, record_id, field, current_value, proposed_value, \
+                              kind, source, fetched_at) \
+                         VALUES ('account', $1, 'legal_name_ar', $2, $3, 'review', $4, now()) \
+                         ON CONFLICT (entity_logicalname, record_id, field, source) \
+                             WHERE status = 'pending' \
+                         DO UPDATE SET proposed_value = EXCLUDED.proposed_value, \
+                                       fetched_at = EXCLUDED.fetched_at",
+                    )
+                    .bind(id)
+                    .bind(current.as_ref().map_or(Value::Null, |c| json!(c)))
+                    .bind(json!(form))
+                    .bind(MODEL_SOURCE)
+                    .execute(&state.base.db)
+                    .await
+                    .map_err(AppError::internal)?;
+                    suggested += 1;
+                }
+            }
+            Ok(ActionResult {
+                value: json!({ "suggested": suggested, "asked": candidates.len() }),
+                provenance: Some(crate::execute::Provenance {
+                    model_id,
+                    prompt_version: ARABIC_PROMPT_VERSION.to_owned(),
+                    suggestion_id: None,
+                }),
+            })
         })
     }
 }
