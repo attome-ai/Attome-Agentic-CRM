@@ -1,5 +1,6 @@
 <section class="oc">
   <h2>{{ 'oncallCalendar.title' | translate }}</h2>
+  <xrm-oncall-pages [focus]="page()" />
   @if (error(); as message) { <p class="oc-error" role="alert">{{ message }}</p> }
 
   <div class="oc-bar" role="toolbar" [attr.aria-label]="'oncallCalendar.actions' | translate">

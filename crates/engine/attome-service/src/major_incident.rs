@@ -332,6 +332,8 @@ pub(crate) async fn load_schedule(
 
 async fn page(state: &EngineState, users: &[Uuid], ticket: Uuid, subject: &str) {
     for user in users {
+        // H7-T2: stored first, so the paged person can acknowledge it.
+        let page_id = crate::oncall::pages::record(state, *user, ticket, subject).await;
         let req = attome_notification::dispatch::DispatchRequest {
             template_key: None,
             locale: "en".to_string(),
@@ -344,7 +346,10 @@ async fn page(state: &EngineState, users: &[Uuid], ticket: Uuid, subject: &str) 
             body_text: Some(format!(
                 "A major incident was declared: {subject}. Join the bridge on the ticket."
             )),
-            route: Some(format!("/xrm/entity/{TICKET}/{ticket}")),
+            route: Some(match page_id {
+                Some(id) => format!("/xrm/service/oncall?page={id}"),
+                None => format!("/xrm/entity/{TICKET}/{ticket}"),
+            }),
             variables: HashMap::new(),
             priority: "high".to_string(),
             escalate_after_minutes: None,

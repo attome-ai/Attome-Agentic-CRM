@@ -37,7 +37,7 @@ describe('on-call calendar (H7-T2)', () => {
 
   function create() {
     const list = vi.fn(() => of({ data: [{ id: 's1', data: { name: 'Network' } }], meta: { total: 1 } }));
-    const get = vi.fn(() => of({
+    const get = vi.fn((path: string, _params?: unknown) => path.endsWith('/oncall/pages') ? of({ items: [], total: 0, page: 1, page_size: 20 }) : of({
       items: [
         stretch('2026-11-02T09:00:00Z', '2026-11-02T18:00:00Z', 'u1'),
         stretch('2026-11-02T18:00:00Z', '2026-11-03T06:00:00Z', 'u9', 'override', null),

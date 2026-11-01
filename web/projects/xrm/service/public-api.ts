@@ -30,6 +30,8 @@ export type { ServiceHandoff } from './handoff/service-handoff.service';
 export { MyQueuesComponent } from './queues/my-queues.component';
 // H7-T2: the on-call calendar ('service/oncall').
 export { OncallCalendarComponent } from './oncall/oncall-calendar.component';
+export { OncallPagesComponent } from './oncall/oncall-pages.component';
+export type { OnCallPage } from './oncall/oncall-pages.component';
 export { OncallCalendarService, byDay, weekStart } from './oncall/oncall-calendar.service';
 export type { OncallScheduleRef, OnCallStretch, CalendarDay } from './oncall/oncall-calendar.service';
 export { MyQueuesService, STARTER_SETS, groupByQueue, missingStarters } from './queues/my-queues.service';

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ApiError, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 import { logicalToUrlPath } from '@attome/xrm/core/entity';
@@ -6,6 +6,7 @@ import { logicalToUrlPath } from '@attome/xrm/core/entity';
 import {
   CalendarDay, OnCallStretch, OncallCalendarService, OncallScheduleRef, byDay, weekStart,
 } from './oncall-calendar.service';
+import { OncallPagesComponent } from './oncall-pages.component';
 
 const WEEK_DAYS = 7;
 const DAY_MS = 86_400_000;
@@ -20,13 +21,16 @@ const DAY_MS = 86_400_000;
   selector: 'xrm-oncall-calendar',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LocalDatePipe, RouterLink, TranslatePipe],
+  imports: [LocalDatePipe, RouterLink, TranslatePipe, OncallPagesComponent],
   templateUrl: './oncall-calendar.component.html',
   styleUrl: './oncall-calendar.component.css',
 })
 export class OncallCalendarComponent implements OnInit {
   private readonly service = inject(OncallCalendarService);
   private readonly lang = inject(LangService);
+
+  /** H7-T2: the page a notification opened (`?page=<id>`). */
+  readonly page = input<string | null>(null);
 
   readonly schedules = signal<OncallScheduleRef[]>([]);
   readonly schedule = signal('');

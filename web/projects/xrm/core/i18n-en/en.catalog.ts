@@ -1069,6 +1069,10 @@ export const xrmEn = {
   // AI7-T6 — ticket hand-offs between agents and people.
   // G4-T3 — my queues.
   oncallCalendar: {
+    pages: {
+      title: 'My pages', none: 'Nobody has paged you.', open: 'not acknowledged',
+      acknowledged: 'acknowledged', acknowledge: 'Acknowledge',
+    },
     title: 'On-call calendar', actions: 'On-call calendar actions', schedule: 'Schedule',
     previous: 'Previous week', thisWeek: 'This week', next: 'Next week',
     layers: 'Rotation layers', overrides: 'Overrides', override: 'Override', layer: 'Layer {n}',

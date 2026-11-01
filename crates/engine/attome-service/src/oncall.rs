@@ -21,6 +21,8 @@ use uuid::Uuid;
 
 /// H7-T2: the on-call calendar route over stored schedules.
 pub mod calendar;
+/// H7-T2: pages, and their acknowledgement by the paged person.
+pub mod pages;
 
 /// One rotation layer.
 #[derive(Debug, Clone, PartialEq, Eq)]
