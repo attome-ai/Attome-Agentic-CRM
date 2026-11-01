@@ -14,6 +14,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Every AI agent has a generated permission test: for each action its policy allows, the cases its
+  owner may not do must be refused and the consequential ones must need approval. It runs when an
+  agent is made active or an active agent's policy changes, and a failure refuses the save; the agent
+  form's Permissions tab runs it on demand and shows past runs, through
+  `POST /api/v1/admin/ai/agents/{id}/permission-test` and `GET /api/v1/admin/ai/agents/{id}/permission-tests`.
+  Every seeded agent passes it (AH7-T7).
 - An approved contract can be sent for signature (`POST /api/v1/contract/contracts/{id}/send-for-signature`,
   migration 0352): its latest drafted file is filed as a document and sent to the signers in order through
   an electronic signature envelope. When everyone has signed, the `ContractSignatureSweep` job adds a
