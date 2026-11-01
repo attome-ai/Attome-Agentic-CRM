@@ -18,6 +18,7 @@ attome-core.workspace     = true
 attome-db.workspace       = true
 attome-email.workspace    = true
 attome-inference.workspace = true
+attome-integration.workspace = true
 attome-jobs.workspace     = true
 attome-modules.workspace  = true
 attome-notification.workspace = true

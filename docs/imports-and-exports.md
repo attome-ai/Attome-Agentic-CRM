@@ -84,6 +84,15 @@ the server checks the templates that are due, fetches the file (`{"kind": "stora
 the SSRF guard with a 60-second limit and a 50 MiB cap) and starts a new job with the
 template's mapping and options. A file identical to one imported before starts nothing.
 
+An SFTP source is `{"kind": "sftp", "connection": "<integration connection>", "host": "...",
+"port": 22, "user": "...", "location": "/outbox/customers.csv", "host_key": "ssh-ed25519 AAAA..."}`.
+The private key (OpenSSH format) is the named integration connection's credential, kept in the
+encrypted credential store, never in the job. The server runs the machine's OpenSSH `sftp` client
+(Linux, macOS and Windows 10+ ship it) with that key and a `known_hosts` holding exactly
+`host_key`, so a server presenting any other key is refused; the fetch has the same 60-second
+limit and 50 MiB cap, and the temporary key file is removed after each fetch. Paths, hosts and
+users with quotes, control characters or a leading dash are refused.
+
 ## Agents
 
 `import.propose_mapping` proposes a field, transform and confidence for each column from five

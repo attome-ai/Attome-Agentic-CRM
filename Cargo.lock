@@ -1291,6 +1291,7 @@ dependencies = [
  "attome-db",
  "attome-email",
  "attome-inference",
+ "attome-integration",
  "attome-jobs",
  "attome-modules",
  "attome-notification",

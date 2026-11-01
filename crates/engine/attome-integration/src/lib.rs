@@ -22,6 +22,8 @@ mod crypto;
 /// L9-T1: the enrichment runner: proposals with provenance, per-provider budgets.
 pub mod enrich;
 pub mod guard;
+/// A23-T12: the SFTP source of recurring imports, over the OpenSSH client.
+pub mod import_source;
 /// M14-T1: checks a builder-defined inbound hook's call passes.
 pub mod inbound;
 /// M14-T4: inbound hook handlers: event-type routes and upsert by key.

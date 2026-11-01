@@ -20,7 +20,9 @@
 //! past it does nothing; anything else is the queue's to retry.
 //!
 //! **Recurring imports.** A job whose `counts.schedule` holds
-//! `{cron, time_zone?, source: {kind: "storage" | "https", location}}` is a
+//! `{cron, time_zone?, source: {kind: "storage" | "https", location}}` (or,
+//! A23-T12, `{kind: "sftp", connection, host, port?, user, location,
+//! host_key}`, fetched by `attome_integration::import_source`) is a
 //! template: the minute tick ([`run_schedules`]) finds each template that
 //! is due, claims the slot by moving `counts.schedule.last_run`, fetches the
 //! file (an object in storage, or an `https` URL through the SSRF-guarded
@@ -274,6 +276,10 @@ pub enum Source {
     Storage { location: String },
     /// A public `https` URL.
     Https { location: String },
+    /// A23-T12: a file on an SFTP server, fetched with the named integration
+    /// connection's key (the credential store, never this row) against the
+    /// host key given.
+    Sftp(attome_integration::import_source::SftpSource),
 }
 
 /// A template job's `counts.schedule`.
@@ -373,9 +379,15 @@ async fn run_template(
         Source::Https { location } => fetch_https(location)
             .await
             .map_err(|reason| AppError::Validation(format!("source: {reason}")))?,
+        Source::Sftp(source) => {
+            attome_integration::import_source::fetch_sftp(state, source, MAX_FETCH_BYTES)
+                .await
+                .map_err(|reason| AppError::Validation(format!("source: {reason}")))?
+        }
     };
     let location = match &schedule.source {
         Source::Storage { location } | Source::Https { location } => location,
+        Source::Sftp(source) => &source.location,
     };
     let file_name = file_name_of(location);
     let sha = hex::encode(Sha256::digest(&bytes));
