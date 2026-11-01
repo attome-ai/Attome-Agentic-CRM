@@ -40,6 +40,8 @@ pub mod recovery_targets;
 pub mod release_manifest;
 /// AB2-T9: promoting the standby region.
 pub mod standby;
+/// AB11-T7: the status page hosted apart (bucket and webhook).
+pub mod static_page;
 /// AB2-T7: the cluster's status and failover history routes.
 pub mod status;
 /// AB11-T4: draft incidents for components that stay down.

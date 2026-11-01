@@ -5628,6 +5628,15 @@ pub fn register_job_types() {
                         "status watch: automatic incidents"
                     );
                 }
+                // AB11-T7: the hosted copy follows within the minute. A
+                // failed target is tried again on the next run.
+                match attome_ops::static_page::publish_if_changed(&state).await {
+                    Ok(true) => tracing::info!("status page: the hosted copy was updated"),
+                    Ok(false) => {}
+                    Err(error) => {
+                        tracing::warn!(%error, "status page: the hosted copy was not updated")
+                    }
+                }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {

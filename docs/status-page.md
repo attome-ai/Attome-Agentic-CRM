@@ -71,8 +71,26 @@ announces a window from 24 hours before it starts. `GET /api/v1/ops/maintenance?
 windows in a range (any signed-in user; internal windows for `ops.read`) and is what SLA reports
 leave out.
 
+## A copy hosted elsewhere
+
+So customers can read the status while the deployment itself is down, a copy of the public status
+can live outside it. Every minute (with the status watch job; `ops.status_watch` need not be on),
+the public status is rendered as three files: `index.html` in English, `ar/index.html` in Arabic
+(right to left) and `status.json`, with dates in Gregorian and Hijri. Only what anyone may read
+goes in: public components, public incidents with their published updates, public maintenance.
+When it changed since the last copy:
+
+- `ops.status.bucket` (endpoint, region, bucket, optional folder) set: the three files are written
+  to that bucket with `Cache-Control: max-age=60`. Its keys come from the JSON file named by
+  `ops.status.bucket_credentials_file` (`{"access_key": "...", "secret_key": "..."}`), which stays
+  on the server and out of the database. Point a static website or CDN at the bucket.
+- `ops.status.webhook_url` set: `status.json` is POSTed there (public addresses only, 10-second
+  timeout, three tries), for a status tool of your own.
+
+A target that fails is logged (`status page: the hosted copy was not updated`) and tried again the
+next minute.
+
 ## Not built yet
 
 - Subscriptions (email, webhook, RSS) and the 24-hour and 1-hour maintenance reminders.
-- Publishing public incidents and maintenance to the public status page, and hosting a copy of the
-  page elsewhere.
+- Publishing public incidents and maintenance to the public status page.

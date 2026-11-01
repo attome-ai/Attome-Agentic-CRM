@@ -261,6 +261,12 @@ pub async fn status_for(
     Ok(visible_to(snapshot(state).await?, sees_internal(ctx)))
 }
 
+/// AB11-T7: the status with no internal detail, as anyone outside reads it
+/// (the hosted page).
+pub(crate) async fn public_snapshot(state: &EngineState) -> Result<StatusSnapshot, AppError> {
+    Ok(visible_to(snapshot(state).await?, false))
+}
+
 /// Whether `ctx` sees internal incidents, maintenance and components.
 fn sees_internal(ctx: &SecurityContext) -> bool {
     ctx.is_admin || ctx.privileges.contains(OpsRead::KEY)

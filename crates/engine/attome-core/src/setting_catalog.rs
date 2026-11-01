@@ -1197,6 +1197,44 @@ fn ops_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(0),
         ),
+        // AB11-T7: the status page hosted apart.
+        SettingDescriptor::new(
+            "ops.status.bucket",
+            "The bucket the public status page is copied to every minute it changes \
+             (index.html, ar/index.html, status.json, cached 60 s): S3 endpoint (empty for AWS), \
+             region, bucket and an optional folder. Null (the default) copies nothing.",
+            || {
+                json!({"type": ["object", "null"], "required": ["bucket"],
+                    "additionalProperties": false,
+                    "properties": {
+                        "endpoint": {"type": "string", "maxLength": 500},
+                        "region": {"type": "string", "maxLength": 100},
+                        "bucket": {"type": "string", "minLength": 1, "maxLength": 200},
+                        "prefix": {"type": "string", "maxLength": 200}}})
+            },
+            &[SettingScope::Deployment],
+            false,
+            || json!(null),
+        ),
+        SettingDescriptor::new(
+            "ops.status.bucket_credentials_file",
+            "A JSON file on the server holding the status bucket's own access_key and \
+             secret_key, kept out of the database.",
+            || json!({"type": "string", "maxLength": 1000}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(""),
+        ),
+        SettingDescriptor::new(
+            "ops.status.webhook_url",
+            "A status tool's webhook that receives status.json (POST, public addresses only, \
+             10 s timeout, three tries) every minute the public status changes; empty (the \
+             default) sends nothing.",
+            || json!({"type": "string", "maxLength": 2000}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(""),
+        ),
     ]
 }
 

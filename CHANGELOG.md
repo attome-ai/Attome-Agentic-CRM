@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- A copy of the public status page hosted apart: English and Arabic HTML and `status.json`, with
+  Gregorian and Hijri dates, written to a bucket (`ops.status.bucket`) and/or POSTed to a webhook
+  (`ops.status.webhook_url`) within a minute of a change (AB11-T7, migration 0362).
 - An account enrichment run ends by suggesting Arabic forms of the Latin legal names it left without
   one, made and charged as the person who queued the run (D24-T8).
 - CRM pack `0012`: the Global Account Manager role reads and updates the accounts, contacts and
