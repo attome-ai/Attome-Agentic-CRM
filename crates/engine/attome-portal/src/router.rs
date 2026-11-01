@@ -69,6 +69,8 @@ mod metadata;
 mod oidc;
 /// G12-T1: the pages a portal shows.
 mod pages;
+/// F9-T8: a partner administrator's own members.
+mod partner_members;
 pub(crate) mod trusted;
 mod uploads;
 
@@ -2016,6 +2018,7 @@ pub fn routes() -> Router<EngineState> {
         .merge(account::routes())
         .merge(metadata::routes())
         .merge(pages::routes())
+        .merge(partner_members::routes())
         .merge(uploads::routes())
         .merge(oidc::routes())
 }
@@ -2048,6 +2051,7 @@ pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
     doc.merge(<account::AccountApiDoc as utoipa::OpenApi>::openapi());
     doc.merge(<metadata::MetadataApiDoc as utoipa::OpenApi>::openapi());
     doc.merge(<pages::PagesApiDoc as utoipa::OpenApi>::openapi());
+    doc.merge(<partner_members::PartnerMembersApiDoc as utoipa::OpenApi>::openapi());
     doc.merge(<uploads::UploadsApiDoc as utoipa::OpenApi>::openapi());
     doc.merge(<oidc::OidcApiDoc as utoipa::OpenApi>::openapi());
     doc.merge(trusted::openapi_fragment());

@@ -113,3 +113,19 @@ once, and the credit has no owner, so sellers' record rules do not reach it. A p
 the partner's portal reads the partner's statement with
 `GET /{keyword}/api/v1/partner/statement?period_id=<id>`; a period with nothing for that partner
 answers 404.
+
+## A partner's own members
+
+A portal member who holds the `partner_admin` role, and whose contact is at a partner account,
+manages that partner's people on the portal (`attome partner portal-roles` creates the roles):
+
+- `GET /{keyword}/api/v1/partner/members` lists them, with their role and status.
+- `POST /{keyword}/api/v1/partner/members` `{"contact_id": ..., "role": "partner_sales"}` invites a
+  contact at the partner's own account who has an email address and no portal account yet, as
+  `partner_admin`, `partner_sales` or `partner_service`. The invitation is refused once the account's
+  `partner_user_limit` is reached.
+- `POST /{keyword}/api/v1/partner/members/{id}/deactivate` disables another member of the same
+  partner; their sessions end at once.
+
+Anyone else gets 403, and another partner's member answers 404. Each change is audited with the
+partner administrator as the actor.

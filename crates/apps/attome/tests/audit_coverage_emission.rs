@@ -66,6 +66,20 @@ const PASSWORD: &str = "audit-emission-password-1";
 /// cannot silently outlive its route.
 const UNDRIVABLE: &[(&str, &str)] = &[
     (
+        "POST /{keyword}/api/v1/partner/members",
+        "needs a signed-in partner administrator on a portal with the partner packs installed; \
+         the invitation writes its Credential event through SecurityTx, as \
+         POST /api/v1/admin/webportals/{id}/users does; portal_isolation.rs \
+         partner_admin_manages_only_its_own_members drives it",
+    ),
+    (
+        "POST /{keyword}/api/v1/partner/members/{id}/deactivate",
+        "needs a signed-in partner administrator and a member of the same partner; the \
+         deactivation writes its Access event through SecurityTx and provision::set_user_enabled, \
+         as POST /api/v1/admin/webportals/{id}/users/{user_id}/disable does; portal_isolation.rs \
+         partner_admin_manages_only_its_own_members drives it",
+    ),
+    (
         "POST /api/v1/workflow/instances/{id}/test",
         "needs a failed workflow run that started on a record; the test is saved by the same \
          insert_test and SecurityTx path as POST /api/v1/admin/customer-tests/from-record, whose \

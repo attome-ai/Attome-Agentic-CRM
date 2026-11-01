@@ -14,6 +14,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- A partner administrator lists, invites and deactivates its own partner's portal members
+  (`/{keyword}/api/v1/partner/members`, F9-T8).
 - Changesets run a `data_step` of kind `split` (A1-T8's attribute split) when applied (A22-T4).
 - Journey email step `marketing.send_email` with consent, suppression, sunset, quiet-hours and weekly
   cap checks, once per run and step, and a test mode; settings `marketing.weekly_message_cap` and

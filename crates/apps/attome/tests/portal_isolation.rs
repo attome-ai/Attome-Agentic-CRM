@@ -4388,3 +4388,113 @@ async fn portal_user_with_no_partner(w: &World, role: Uuid) -> (Uuid, StatusCode
     let (status, _) = admin_status(&w.fx, "PUT", &uri, Some(json!({"role_id": role}))).await;
     (user.id, status)
 }
+
+/// F9-T8: a partner administrator lists, invites and deactivates the
+/// members of its own partner only; a member without the role is refused.
+#[tokio::test]
+async fn partner_admin_manages_only_its_own_members() {
+    let Some(w) = world().await else {
+        return;
+    };
+    install_partner_packs(&w.fx).await;
+    let roles = partner_roles(&w.fx, w.a.id).await;
+    let admin_role = roles[attome_portal::partner_roles::PARTNER_ADMIN];
+    let sales = roles[attome_portal::partner_roles::PARTNER_SALES];
+    let (a, a_admin_contact) = partner_contact(&w.fx, Some(3)).await;
+    let (_, b_contact) = partner_contact(&w.fx, None).await;
+    let a_member_contact = contact_at(&w.fx, a).await;
+    let admin_a = portal_user_with(
+        &w.fx,
+        &w.a,
+        admin_role,
+        "contact_ref",
+        Some(a_admin_contact),
+    )
+    .await;
+    let member_a =
+        portal_user_with(&w.fx, &w.a, sales, "contact_ref", Some(a_member_contact)).await;
+    let member_b = portal_user_with(&w.fx, &w.a, sales, "contact_ref", Some(b_contact)).await;
+    let members = format!("/{}/api/v1/partner/members", w.a.keyword);
+
+    let (status, list) = as_user(&w, &admin_a, "GET", &members, None, None).await;
+    assert_eq!(status, StatusCode::OK, "{list}");
+    let ids: Vec<&str> = list
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|m| m["id"].as_str())
+        .collect();
+    assert!(ids.contains(&admin_a.user.to_string().as_str()), "{list}");
+    assert!(ids.contains(&member_a.user.to_string().as_str()), "{list}");
+    assert!(
+        !ids.contains(&member_b.user.to_string().as_str()),
+        "another partner's member: {list}"
+    );
+
+    // A member without the administrator role is refused.
+    let (status, _) = as_user(&w, &member_a, "GET", &members, None, None).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+
+    // Another partner's member cannot be deactivated, nor oneself.
+    let deactivate = |user: Uuid| format!("{members}/{user}/deactivate");
+    let (status, _) = as_user(&w, &admin_a, "POST", &deactivate(member_b.user), None, None).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    let (status, _) = as_user(&w, &admin_a, "POST", &deactivate(admin_a.user), None, None).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    let (status, done) =
+        as_user(&w, &admin_a, "POST", &deactivate(member_a.user), None, None).await;
+    assert_eq!(status, StatusCode::OK, "{done}");
+    assert_eq!(done["status"], "disabled");
+    let (status, _) = as_user(
+        &w,
+        &member_a,
+        "GET",
+        &records(&w.a, "deal_registration"),
+        None,
+        None,
+    )
+    .await;
+    assert!(
+        !status.is_success(),
+        "a deactivated member's session ends: {status}"
+    );
+
+    // Inviting: a contact at another partner is not found; one at the
+    // partner's own account with an email address is invited and bound.
+    let (status, _) = as_user(
+        &w,
+        &admin_a,
+        "POST",
+        &members,
+        Some(json!({ "contact_id": b_contact, "role": "partner_sales" })),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    let invitee = contact_at(&w.fx, a).await;
+    sqlx::query("UPDATE contact SET email = $2 WHERE id = $1")
+        .bind(invitee)
+        .bind(format!("{}@example.com", Uuid::now_v7().simple()))
+        .execute(&w.fx.base.db)
+        .await
+        .unwrap();
+    let (status, invited) = as_user(
+        &w,
+        &admin_a,
+        "POST",
+        &members,
+        Some(json!({ "contact_id": invitee, "role": "partner_sales" })),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{invited}");
+    assert_eq!(invited["role"], "partner_sales");
+    assert_eq!(invited["status"], "invited");
+    let bound: Option<Uuid> =
+        sqlx::query_scalar("SELECT partner_account_ref FROM webportal_user WHERE id = $1::uuid")
+            .bind(invited["id"].as_str().unwrap())
+            .fetch_one(&w.fx.base.db)
+            .await
+            .unwrap();
+    assert_eq!(bound, Some(a));
+}
