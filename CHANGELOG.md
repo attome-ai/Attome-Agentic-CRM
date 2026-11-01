@@ -23,6 +23,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   wide access (`wide_access_granted`, needs `marketing_list.grant_wide_access` and is an Access
   security event), as the marketing user the setting `marketing.segment_user` names; a wide list with
   none set is refused (`segment.no_marketing_role`). Marketing pack changeset 0014 adds the privilege.
+- Marketing list routes (E7-T9): `POST /api/v1/marketing/lists/{id}/refresh` queues a refresh (202,
+  one waiting per list, job `marketing_list_refresh`); `GET /api/v1/marketing/lists/{id}/members` pages
+  the current members the caller may read; `GET /api/v1/marketing/lists/{id}/usage` names the email
+  and SMS sends, nurture programmes and live journeys that use the list.
 - Partner pack changeset 0008 (F9-T8): the internal Channel Manager role reads and decides the
   registrations, tier proposals and MDF of the partners whose `partner_manager_ref` is the caller;
   `mdf_request` and `mdf_claim` gain `partner_account_ref`, always set from the fund, and the

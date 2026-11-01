@@ -34,6 +34,7 @@ pub mod handoff_sla;
 pub mod identity;
 pub mod journey;
 pub mod landing;
+pub mod list_routes;
 pub mod loyalty;
 pub mod model;
 pub mod nurture_tracks;
@@ -77,6 +78,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<email_campaign::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<deliverability::routes::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<static_list::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<list_routes::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<campaign::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<profile::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<identity::ApiDocFragment as utoipa::OpenApi>::openapi());

@@ -778,7 +778,10 @@ async fn post_undo(
 
 pub fn routes() -> Router<EngineState> {
     Router::new()
-        .route("/api/v1/marketing/lists/{id}/members", post(post_members))
+        .route(
+            "/api/v1/marketing/lists/{id}/members",
+            post(post_members).get(crate::list_routes::get_members),
+        )
         .route(
             "/api/v1/marketing/lists/{id}/members/remove",
             post(post_members_remove),
