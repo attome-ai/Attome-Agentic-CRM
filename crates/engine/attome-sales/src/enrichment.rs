@@ -3,3 +3,6 @@
 /// D24-T4: a lead or account matched to an existing account by its work
 /// email's domain, before any provider is called.
 pub mod domain;
+/// D24-T5: the free sources: the commercial register, the National Address
+/// and the company's own website.
+pub mod free_sources;
