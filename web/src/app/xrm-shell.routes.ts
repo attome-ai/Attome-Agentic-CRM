@@ -273,6 +273,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/governance').then(m => m.LineageComponent),
           },
           {
+            // L3-T7 — the domain tree, its roles and its policy register.
+            path: 'governance-domains',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/governance').then(m => m.GovernanceDomainsComponent),
+          },
+          {
             // L3-T7 — the steward's inbox (works at phone width).
             path: 'governance-inbox',
             canActivate: [authGuard],

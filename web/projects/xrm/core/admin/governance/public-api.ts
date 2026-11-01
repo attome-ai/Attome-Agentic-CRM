@@ -25,3 +25,4 @@ export { MasterDataPageComponent }      from './master-data-page/master-data-pag
 // L3-T7 — the steward's inbox, and accountability coverage with domain scorecards.
 export { StewardInboxComponent }        from './steward-inbox/steward-inbox.component';
 export { GovernanceCoverageComponent }  from './coverage/governance-coverage.component';
+export { GovernanceDomainsComponent, domainTree } from './domains/governance-domains.component';

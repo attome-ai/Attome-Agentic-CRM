@@ -63,6 +63,8 @@ struct DataDomainSummary {
     description: Option<String>,
     steward_ref: Option<Uuid>,
     deputy_ref: Option<Uuid>,
+    /// L3-T1: the domain this one is a sub-domain of, if any.
+    parent_ref: Option<Uuid>,
     created_by: Option<Uuid>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
@@ -73,7 +75,7 @@ struct DataDomainSummary {
 }
 
 /// The enumerated columns of a [`DataDomainSummary`].
-const DOMAIN_COLUMNS: &str = "id, name, description, steward_ref, deputy_ref, created_by, \
+const DOMAIN_COLUMNS: &str = "id, name, description, steward_ref, deputy_ref, parent_ref, created_by, \
      created_at, updated_at, row_version, owner_layer";
 
 fn parse_layer(value: &str) -> Result<Layer, AppError> {
