@@ -57,6 +57,19 @@ impl EngineModel for MarketingModel {
         ]
     }
 
+    /// E7-T6: a segment saved as live needs a query that may run live.
+    fn record_checks(
+        &self,
+    ) -> Vec<(
+        &'static str,
+        std::sync::Arc<dyn attome_core::record_check::RecordCheck>,
+    )> {
+        vec![(
+            "marketing_list",
+            std::sync::Arc::new(crate::segment_live::LiveCheck),
+        )]
+    }
+
     fn routes(&self) -> Router<EngineState> {
         Router::new()
             .route(

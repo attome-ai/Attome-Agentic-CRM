@@ -7,10 +7,12 @@
 //! (so "contacts in Riyadh" or "contacts of accounts in retail" stay cheap
 //! to re-check). What a query reads is its published version's
 //! `relations` (the relations its plan touched); a version without them
-//! (a bundle-published query) is not eligible. A record validator cannot
-//! read the database, so eligibility is enforced here: a live list whose
-//! query is not eligible is skipped with a warning, and the scheduled
-//! refresh keeps it current instead.
+//! (a bundle-published query) is not eligible. Saving a segment as live
+//! with a query that is not eligible is refused with a 422 ([`LiveCheck`],
+//! the generic engine's save check). A query republished later may read
+//! more, so the tick checks again: a live list whose query is no longer
+//! eligible is skipped with a warning, and the scheduled refresh keeps it
+//! current instead.
 //!
 //! **The tick** ([`live_tick`], the `marketing_segment_live` job) reads a
 //! batch of the entity change feed as consumer [`CONSUMER`], maps changed
@@ -24,6 +26,7 @@
 use std::collections::{BTreeMap, HashSet};
 
 use attome_core::EngineState;
+use attome_core::record_check::{RecordCheck, RecordCheckFuture, RecordSave};
 use attome_types::AppError;
 use serde_json::json;
 use uuid::Uuid;
@@ -75,6 +78,85 @@ fn lookups(state: &EngineState, target: &str) -> Vec<(String, String)> {
             Some((to.logicalname.clone(), a.logicalname.clone()))
         })
         .collect()
+}
+
+/// The fields of `marketing_list` that decide whether it runs live.
+const LIVE_FIELDS: [&str; 4] = ["refresh_mode", "query_id", "target_entity", "kind"];
+
+type StoredList = (
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+);
+
+/// The save check on `marketing_list` (registered by `MarketingModel`): a
+/// segment saved to refresh live, or a live segment given another query,
+/// target or kind, needs a query that may run live.
+#[derive(Debug)]
+pub struct LiveCheck;
+
+impl RecordCheck for LiveCheck {
+    fn check<'a>(
+        &'a self,
+        conn: &'a mut sqlx::PgConnection,
+        state: &'a EngineState,
+        save: RecordSave<'a>,
+    ) -> RecordCheckFuture<'a> {
+        Box::pin(async move {
+            if !LIVE_FIELDS.iter().any(|f| save.body.contains_key(*f)) {
+                return Ok(None);
+            }
+            let stored: StoredList = match save.record_id {
+                Some(id) => sqlx::query_as(
+                    "SELECT refresh_mode::text, query_id::text, target_entity::text, kind::text \
+                       FROM marketing_list WHERE id = $1",
+                )
+                .bind(id)
+                .fetch_optional(&mut *conn)
+                .await
+                .map_err(AppError::internal)?
+                .unwrap_or_default(),
+                None => (None, None, None, None),
+            };
+            let (mode, query, target, kind) = stored;
+            let pick = |field: &str, stored: Option<String>| match save.body.get(field) {
+                Some(value) => value.as_str().map(str::to_owned),
+                None => stored,
+            };
+            let mode = pick("refresh_mode", mode);
+            let kind = pick("kind", kind);
+            if mode.as_deref() != Some("live") || kind.as_deref().unwrap_or("static") != "segment" {
+                return Ok(None);
+            }
+            let target = pick("target_entity", target).unwrap_or_else(|| "contact".into());
+            let Some(query) = pick("query_id", query).and_then(|q| Uuid::parse_str(q.trim()).ok())
+            else {
+                return Ok(None);
+            };
+            let relations: Option<Vec<String>> = sqlx::query_scalar(
+                "SELECT relations FROM sql_query_version WHERE query_id = $1 ORDER BY id DESC LIMIT 1",
+            )
+            .bind(query)
+            .fetch_optional(&mut *conn)
+            .await
+            .map_err(AppError::internal)?
+            .flatten();
+            let away: Vec<String> = lookups(state, &target)
+                .into_iter()
+                .map(|(e, _)| e)
+                .collect();
+            if is_live_eligible(&relations.unwrap_or_default(), &target, &away) {
+                Ok(None)
+            } else {
+                Err(AppError::Validation(
+                    "a live segment's query may read only its target, the consent state and \
+                     records one lookup away from the target; refresh this segment on a schedule"
+                        .into(),
+                ))
+            }
+        })
+    }
 }
 
 type LiveList = (Uuid, String, String, Option<Uuid>);
