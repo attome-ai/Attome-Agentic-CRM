@@ -494,6 +494,13 @@ export interface SimulateResponse {
   trace:  SimulateNodeTrace[];
 }
 
+/** M4-T2: a flow's test cases on one version and the nodes they reached. */
+export interface FlowCoverage {
+  tests: { id: string; name: string; blocking: boolean; passed: boolean; failures: string[] }[];
+  covered: string[];
+  uncovered: string[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class WorkflowAdminService {
   private readonly api = inject(ApiService);
@@ -545,6 +552,13 @@ export class WorkflowAdminService {
   simulateVersion(definitionId: string, versionId: string, body: SimulateRequestBody = {}): Observable<SimulateResponse> {
     return this.api.post<SimulateResponse>(
       `/api/v1/workflow/definitions/${definitionId}/versions/${versionId}/simulate`, body,
+    );
+  }
+
+  /** M4-T2: the flow's saved test cases run on this version, and the nodes none reached. */
+  versionCoverage(definitionId: string, versionId: string): Observable<FlowCoverage> {
+    return this.api.get<FlowCoverage>(
+      `/api/v1/workflow/definitions/${definitionId}/versions/${versionId}/coverage`,
     );
   }
 

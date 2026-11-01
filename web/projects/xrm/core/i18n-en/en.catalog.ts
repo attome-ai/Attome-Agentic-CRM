@@ -691,6 +691,13 @@ export const xrmEn = {
     agentDeclined: 'The agent could not make a proposal for this conflict.',
     useProposal: 'Use this proposal',
   },
+  workflowCoverage: {
+    run: 'Test coverage', title: 'Test cases and coverage', close: 'Close',
+    none: 'No customer test simulates this workflow yet; make one from a failed run or on the customer tests screen.',
+    passed: 'passed', failed: 'failed',
+    summary: '{covered} of {total} steps reached by a test case',
+    uncovered: 'Steps no test case reaches:',
+  },
   workflowRunTest: {
     make: 'Make a test from this run', saving: 'Saving…',
     saved: 'Test “{name}” saved.', open: 'Open customer tests',

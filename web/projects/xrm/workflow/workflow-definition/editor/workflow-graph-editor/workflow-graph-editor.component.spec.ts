@@ -30,6 +30,11 @@ function editor(graph: Graph, status = 'draft') {
         useValue: {
           getVersion:      vi.fn(() => of(version(graph, status))),
           listDefinitions: vi.fn(() => of([{ logicalname: 'onboarding' }])),
+          versionCoverage: vi.fn(() => of({
+            tests: [{ id: 't1', name: 'Welcome reaches send', blocking: false, passed: true, failures: [] }],
+            covered: ['t', 'send'],
+            uncovered: ['escalate'],
+          })),
         },
       },
       { provide: AdminService, useValue: { listEntities: vi.fn(() => of([{ logicalname: 'account' }])) } },
@@ -53,6 +58,13 @@ function configOf(c: WorkflowGraphEditorComponent, id: string) {
 
 describe('WorkflowGraphEditorComponent config form', () => {
   beforeEach(() => TestBed.resetTestingModule());
+
+  it('M4-T2: shows the test cases and the steps none reaches', () => {
+    const c = editor({ nodes: [node('t', 'trigger')], edges: [] });
+    c.loadCoverage();
+    expect(c.coverage()?.uncovered).toEqual(['escalate']);
+    expect(c.coverage()?.tests[0].passed).toBe(true);
+  });
 
   it('offers each node type only its own fields', () => {
     const c = editor({ nodes: [node('w1', 'webhook'), node('c1', 'condition')], edges: [] });

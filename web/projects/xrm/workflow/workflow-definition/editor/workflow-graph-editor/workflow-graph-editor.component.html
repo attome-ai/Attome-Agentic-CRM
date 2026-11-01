@@ -31,11 +31,41 @@
           {{ simulating() ? 'Testing…' : 'Test' }}
         </button>
       }
+      <button class="btn-ghost" data-testid="wf-coverage" (click)="loadCoverage()" [disabled]="coverageBusy() || dirty()">
+        {{ 'workflowCoverage.run' | translate }}
+      </button>
     </div>
   </div>
 
   @if (saveError()) { <div class="validation-errors">{{ saveError() }}</div> }
   @if (simulateError()) { <div class="validation-errors">{{ simulateError() }}</div> }
+
+  @if (coverageError()) { <div class="validation-errors">{{ coverageError() }}</div> }
+  @if (coverage(); as c) {
+    <div class="simulate-panel" data-testid="wf-coverage-panel">
+      <div class="simulate-panel-header">
+        <h4>{{ 'workflowCoverage.title' | translate }}</h4>
+        <button type="button" class="btn-ghost" (click)="coverage.set(null)">{{ 'workflowCoverage.close' | translate }}</button>
+      </div>
+      @if (c.tests.length === 0) {
+        <p class="hint">{{ 'workflowCoverage.none' | translate }}</p>
+      } @else {
+        <ul>
+          @for (t of c.tests; track t.id) {
+            <li [class.trace-failed]="!t.passed">
+              {{ t.name }} — {{ (t.passed ? 'workflowCoverage.passed' : 'workflowCoverage.failed') | translate }}
+              @for (f of t.failures; track $index) { <div class="error-msg" dir="auto">{{ f }}</div> }
+            </li>
+          }
+        </ul>
+      }
+      <p>{{ 'workflowCoverage.summary' | translate: { covered: c.covered.length, total: c.covered.length + c.uncovered.length } }}</p>
+      @if (c.uncovered.length) {
+        <p class="hint">{{ 'workflowCoverage.uncovered' | translate }}</p>
+        <ul data-testid="wf-uncovered">@for (n of c.uncovered; track n) { <li dir="ltr">{{ n }}</li> }</ul>
+      }
+    </div>
+  }
 
   @if (simulateResult(); as result) {
     <div class="simulate-panel">

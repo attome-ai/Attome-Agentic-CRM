@@ -9,7 +9,7 @@ import { AdminService } from '@attome/xrm/core/admin/data';
 import { entityFormRoute } from '@attome/xrm/core/entity';
 
 import {
-  Graph, GraphEdge, GraphNode, NODE_TYPES, NodeConfigField, NodeTypeSpec, SimulateResponse,
+  FlowCoverage, Graph, GraphEdge, GraphNode, NODE_TYPES, NodeConfigField, NodeTypeSpec, SimulateResponse,
   VersionDetail, WorkflowAdminService, nodeConfigFields, nodeTypeSpec,
 } from '../../../services/workflow-admin.service';
 
@@ -133,6 +133,10 @@ export class WorkflowGraphEditorComponent implements OnInit {
   readonly simulating   = signal(false);
   readonly simulateError = signal<string | null>(null);
   readonly simulateResult = signal<SimulateResponse | null>(null);
+  /** M4-T2: the flow's test cases on this version and the nodes none reached. */
+  readonly coverage = signal<FlowCoverage | null>(null);
+  readonly coverageBusy = signal(false);
+  readonly coverageError = signal<string | null>(null);
 
   readonly selectedNodeId = signal<string | null>(null);
   readonly pendingEdge    = signal<PendingEdge | null>(null);
@@ -834,5 +838,17 @@ export class WorkflowGraphEditorComponent implements OnInit {
 
   closeSimulateResult(): void {
     this.simulateResult.set(null);
+  }
+
+  /** M4-T2: runs the flow's saved test cases on this version and shows coverage. */
+  loadCoverage(): void {
+    const v = this.version();
+    if (!v) return;
+    this.coverageBusy.set(true);
+    this.coverageError.set(null);
+    this.svc.versionCoverage(this.definitionId(), v.id).subscribe({
+      next: c => { this.coverage.set(c); this.coverageBusy.set(false); },
+      error: (e: ApiError) => { this.coverageError.set(e.message); this.coverageBusy.set(false); },
+    });
   }
 }
