@@ -691,6 +691,10 @@ export const xrmEn = {
     agentDeclined: 'The agent could not make a proposal for this conflict.',
     useProposal: 'Use this proposal',
   },
+  workflowRunTest: {
+    make: 'Make a test from this run', saving: 'Saving…',
+    saved: 'Test “{name}” saved.', open: 'Open customer tests',
+  },
   acceptanceScripts: {
     title: 'Acceptance scripts',
     intro: 'Checklists your builders wrote for you to try. Open one, do each step in the app, mark it passed or failed and record the run.',

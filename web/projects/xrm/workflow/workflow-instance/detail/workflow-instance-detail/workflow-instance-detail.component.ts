@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
 import { DatePipe, JsonPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { ApiError } from '@attome/base';
+import { ApiError, TranslatePipe } from '@attome/base';
 
 import { InstanceDetail, WorkflowAdminService } from '../../../services/workflow-admin.service';
 
@@ -9,7 +9,7 @@ import { InstanceDetail, WorkflowAdminService } from '../../../services/workflow
   selector:   'attome-workflow-instance-detail',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports:    [RouterLink, DatePipe, JsonPipe],
+  imports:    [RouterLink, DatePipe, JsonPipe, TranslatePipe],
   styleUrls:  ['../../../../styles/admin-page.css', './workflow-instance-detail.component.css'],
   templateUrl: './workflow-instance-detail.component.html',
 })
