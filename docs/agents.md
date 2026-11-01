@@ -210,6 +210,9 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   open and complaint rates by mailbox provider and send; `deliverability.propose_segment` drafts a
   segment of people engaged recently and not sunset, saving nothing. Neither lifts a suppression or
   changes DNS or the policy.
+- Segments (reads only, marketing): `segment.explain_change` explains why a marketing list's size
+  changed between two dates, with the people who entered and left grouped by reason (a refresh, a
+  manual change, an import, a form or a flow); counts only, for a list the caller may read.
 - Org charts (sales; no manager is set): `sales.orgchart.read` reads an account's chart,
   `sales.committee.read` a deal's buying committee (influence and attitude only through the Deal
   Attitude profile) and `sales.coverage.gaps` just its gaps; `sales.orgchart.propose` queues

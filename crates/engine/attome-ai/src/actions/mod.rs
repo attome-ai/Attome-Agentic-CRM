@@ -122,6 +122,8 @@ pub mod scan;
 pub mod search_ask;
 pub mod search_records;
 pub mod secrets_list;
+/// E7-T11: why a marketing list's size changed.
+pub mod segment;
 /// AH8 — `email.send`: sends now, or after an undo window.
 pub mod send_email;
 pub mod sentiment;
@@ -239,6 +241,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(billing_payment::descriptors());
     all.extend(billing_subscription::descriptors());
     all.extend(deliverability::descriptors());
+    all.extend(segment::descriptors());
     all.extend(sales_dialer::descriptors());
     all.extend(sales_orgchart::descriptors());
     all.extend(sales_team::descriptors());
@@ -351,6 +354,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(billing_payment::executors());
     all.extend(billing_subscription::executors());
     all.extend(deliverability::executors());
+    all.extend(segment::executors());
     all.extend(sales_dialer::executors());
     all.extend(sales_orgchart::executors());
     all.extend(sales_team::executors());
