@@ -15,6 +15,12 @@ The specs under `tests/mobile` run only in the `phone` project (a Pixel 7): the 
 a swipe that completes a task, and the Arabic phone layout right to left, with axe on the cards
 (`npx playwright test --project=phone`).
 
+`tests/rtl-screens.spec.ts` compares the built-in screens, in English and in Arabic, with their
+screenshot baselines (`tests/rtl-screens.spec.ts-snapshots/`, one per desktop project). The first
+run, or a change meant to move a screen, makes them: `npx playwright test rtl-screens.spec.ts
+--update-snapshots`; commit the images. After that a screen that moves by more than 1% of its
+pixels fails.
+
 ## Core Web Vitals
 
 `npx playwright test -c perf.config.ts` opens the record list, a record form and a dashboard over a
