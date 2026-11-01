@@ -255,3 +255,79 @@ fn map_values_replaces_only_the_mapped_values() {
         }
     });
 }
+
+// feature: A22
+#[test]
+fn convert_fills_a_number_from_text_and_counts_what_does_not_convert() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let (table, id) = entity(&app).await;
+        let (code, body) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/admin/entities/{id}/fields"),
+                Some(json!({ "logicalname": "amount", "name": "Amount", "field_type": "number" })),
+            )
+            .await;
+        assert_eq!(code, StatusCode::CREATED, "{body}");
+        let registry = attome_core::build_registry(app.db()).await.unwrap();
+        app.state.entities.swap(registry);
+        let mut ids = Vec::new();
+        for text in ["42.5", "not a number"] {
+            let (code, created) = app
+                .request(
+                    Method::POST,
+                    &format!("/api/v1/{table}"),
+                    Some(json!({ "last_name": text })),
+                )
+                .await;
+            assert_eq!(code, StatusCode::CREATED, "{created}");
+            ids.push(created["id"].as_str().unwrap().parse::<Uuid>().unwrap());
+        }
+        let mut doc = split_changeset(&table);
+        doc["name"] = json!("convert-amounts");
+        doc["operations"] = json!([
+            { "op": "data_step", "phase": "expand", "seq": 1, "target": { "entity": table },
+              "args": { "kind": "convert", "from": "last_name", "to": "amount",
+                        "from_type": "text", "to_type": "number" } }
+        ]);
+        doc["checksum"] = json!(format!("sha256:{}", "0".repeat(64)));
+        let checksum = attome_api::changeset::jcs::document_checksum(&doc).expect("checksum");
+        doc["checksum"] = json!(checksum);
+        let changeset: Uuid = doc["id"].as_str().unwrap().parse().unwrap();
+        attome_api::changeset::boot::apply_pack_document(&app.state, &doc)
+            .await
+            .expect("the changeset applies");
+        let run: Uuid = sqlx::query_scalar("SELECT id FROM data_step_run WHERE changeset_id = $1")
+            .bind(changeset)
+            .fetch_one(app.db())
+            .await
+            .unwrap();
+        attome_api::field_changes::run_field_run(&app.state, run)
+            .await
+            .expect("the run");
+        let amounts: Vec<Option<String>> = sqlx::query_scalar(&format!(
+            "SELECT amount::text FROM \"{table}\" WHERE id = ANY($1) ORDER BY id"
+        ))
+        .bind(&ids)
+        .fetch_all(app.db())
+        .await
+        .unwrap();
+        let mut sorted = ids.clone();
+        sorted.sort();
+        let converted = sorted.iter().position(|i| *i == ids[0]).unwrap();
+        assert_eq!(
+            amounts[converted]
+                .as_deref()
+                .and_then(|a| a.parse::<f64>().ok()),
+            Some(42.5)
+        );
+        assert_eq!(
+            amounts[1 - converted],
+            None,
+            "a value that does not convert"
+        );
+    });
+}
