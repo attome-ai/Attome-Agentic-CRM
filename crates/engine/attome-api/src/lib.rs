@@ -1,6 +1,8 @@
 // Deep async call graphs (an agent turn runs actions that run turns)
 // overflow the default query depth.
 #![recursion_limit = "512"]
+/// T7-T4 — `/api/v1/acceptance-scripts`.
+mod acceptance_scripts;
 mod admin;
 /// The changeset-recorder helpers the UI metadata admin files share (D-785).
 mod admin_hooks;

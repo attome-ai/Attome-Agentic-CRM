@@ -50,7 +50,27 @@ pub struct TestDefinition {
     pub when: Vec<Step>,
     #[serde(default)]
     pub expect: Vec<Expectation>,
+    /// T7-T4: an acceptance script's steps, which a person runs and marks
+    /// passed or failed. A test with a checklist has no given, when or
+    /// expect, and no automatic run picks it up.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub checklist: Vec<String>,
 }
+
+impl TestDefinition {
+    /// T7-T4: whether a person runs it (it has a checklist).
+    pub fn is_acceptance_script(&self) -> bool {
+        !self.checklist.is_empty()
+    }
+}
+
+/// T7-T4: the most steps an acceptance script has.
+pub const MAX_CHECKLIST_STEPS: usize = 100;
+
+/// T7-T4: a SQL condition true for a `customer_test` row that runs by
+/// itself (no checklist), for every automatic runner.
+pub const AUTOMATED: &str = "CASE WHEN jsonb_typeof(definition->'checklist') = 'array' \
+     THEN jsonb_array_length(definition->'checklist') = 0 ELSE true END";
 
 /// A record the test starts from.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -414,6 +434,16 @@ pub async fn run_test_on(
     definition: &TestDefinition,
     drafts: &DraftFlows,
 ) -> TestOutcome {
+    if definition.is_acceptance_script() {
+        return TestOutcome {
+            passed: false,
+            failures: vec![
+                "an acceptance script is run by a person, from the acceptance scripts screen"
+                    .to_owned(),
+            ],
+            ..TestOutcome::default()
+        };
+    }
     let mut failures = Vec::new();
     let mut reached =
         std::collections::BTreeMap::<String, std::collections::BTreeSet<String>>::new();
@@ -919,10 +949,10 @@ pub async fn run_live_safe(state: &EngineState) -> Result<NightlyReport, AppErro
         String,
         Option<Uuid>,
         Option<chrono::DateTime<chrono::Utc>>,
-    )> = sqlx::query_as(
+    )> = sqlx::query_as(&format!(
         "SELECT id, name, created_by, flaky_since FROM customer_test \
-              WHERE is_active AND live_safe ORDER BY name, id LIMIT $1",
-    )
+              WHERE is_active AND live_safe AND {AUTOMATED} ORDER BY name, id LIMIT $1"
+    ))
     .bind(NIGHTLY_LIMIT)
     .fetch_all(&state.base.db)
     .await
@@ -1112,8 +1142,170 @@ pub fn validate(name: &str, definition: &Value) -> Result<TestDefinition, AppErr
             "a customer test needs a name of 1 to 200 characters".into(),
         ));
     }
-    serde_json::from_value(definition.clone())
-        .map_err(|e| AppError::Validation(format!("the test definition does not read: {e}")))
+    let read: TestDefinition = serde_json::from_value(definition.clone())
+        .map_err(|e| AppError::Validation(format!("the test definition does not read: {e}")))?;
+    checklist_problem(&read).map_or(Ok(read), |problem| Err(AppError::Validation(problem)))
+}
+
+/// T7-T4: what is wrong with an acceptance script's checklist, if anything.
+/// Pure.
+pub fn checklist_problem(definition: &TestDefinition) -> Option<String> {
+    if !definition.is_acceptance_script() {
+        return None;
+    }
+    if !definition.given.is_empty() || !definition.when.is_empty() || !definition.expect.is_empty()
+    {
+        return Some(
+            "an acceptance script has a checklist only, no given, when or expect".to_owned(),
+        );
+    }
+    if definition.checklist.len() > MAX_CHECKLIST_STEPS {
+        return Some(format!(
+            "an acceptance script has at most {MAX_CHECKLIST_STEPS} steps"
+        ));
+    }
+    definition
+        .checklist
+        .iter()
+        .position(|step| step.trim().is_empty() || step.chars().count() > 500)
+        .map(|n| format!("checklist step {} needs 1 to 500 characters", n + 1))
+}
+
+/// T7-T4: one step's mark in a person's run of an acceptance script.
+#[derive(Debug, Clone, Deserialize, utoipa::ToSchema)]
+pub struct StepMark {
+    pub passed: bool,
+    /// What went wrong, for a failed step.
+    #[serde(default)]
+    pub note: Option<String>,
+}
+
+/// T7-T4: a person's marks as a run's outcome: passed when every step did,
+/// with one failure line per failed step (its number, text and note).
+/// Refuses marks that do not match the steps one for one. Pure.
+pub fn checklist_outcome(steps: &[String], marks: &[StepMark]) -> Result<TestOutcome, AppError> {
+    if steps.len() != marks.len() {
+        return Err(AppError::Validation(format!(
+            "the script has {} steps; mark each once",
+            steps.len()
+        )));
+    }
+    let failures: Vec<String> = steps
+        .iter()
+        .zip(marks)
+        .enumerate()
+        .filter(|(_, (_, mark))| !mark.passed)
+        .map(|(n, (step, mark))| {
+            let note: String = mark
+                .note
+                .as_deref()
+                .map(str::trim)
+                .unwrap_or("")
+                .chars()
+                .take(1000)
+                .collect();
+            if note.is_empty() {
+                format!("step {}: {step}", n + 1)
+            } else {
+                format!("step {}: {step}: {note}", n + 1)
+            }
+        })
+        .collect();
+    Ok(TestOutcome {
+        passed: failures.is_empty(),
+        failures,
+        ..TestOutcome::default()
+    })
+}
+
+/// T7-T4: one acceptance script as a person sees it.
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
+pub struct AcceptanceScript {
+    pub id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    pub steps: Vec<String>,
+    /// The last run's result and time, by anyone.
+    pub last_passed: Option<bool>,
+    pub last_run_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+type ScriptRow = (
+    Uuid,
+    String,
+    Option<String>,
+    Value,
+    Option<bool>,
+    Option<chrono::DateTime<chrono::Utc>>,
+    i64,
+);
+
+/// T7-T4: the active acceptance scripts, by name, a page and the total.
+pub async fn list_acceptance_scripts(
+    db: &attome_db::DbPool,
+    limit: i64,
+    offset: i64,
+) -> Result<(Vec<AcceptanceScript>, i64), AppError> {
+    let rows: Vec<ScriptRow> = sqlx::query_as(&format!(
+        "SELECT t.id, t.name, t.description, t.definition, r.passed, r.started_at, \
+                count(*) OVER () \
+           FROM customer_test t {LAST_RUN} \
+          WHERE t.is_active AND NOT ({AUTOMATED}) \
+          ORDER BY t.name, t.id LIMIT $1 OFFSET $2",
+        AUTOMATED = AUTOMATED.replace("definition", "t.definition")
+    ))
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(db)
+    .await
+    .map_err(attome_db::classify)?;
+    let total = rows.first().map_or(0, |r| r.6);
+    let scripts = rows
+        .into_iter()
+        .map(
+            |(id, name, description, definition, last_passed, last_run_at, _)| AcceptanceScript {
+                id,
+                name,
+                description,
+                steps: serde_json::from_value::<TestDefinition>(definition)
+                    .map(|d| d.checklist)
+                    .unwrap_or_default(),
+                last_passed,
+                last_run_at,
+            },
+        )
+        .collect();
+    Ok((scripts, total))
+}
+
+/// T7-T4: records a person's run of acceptance script `test_id` (active),
+/// marked step by step, as `by`. The run's id and outcome.
+pub async fn record_checklist_run(
+    conn: &mut sqlx::PgConnection,
+    test_id: Uuid,
+    by: Uuid,
+    marks: &[StepMark],
+) -> Result<(Uuid, TestOutcome), AppError> {
+    let definition: Value = sqlx::query_scalar(&format!(
+        "SELECT definition FROM customer_test WHERE id = $1 AND is_active AND NOT ({AUTOMATED})"
+    ))
+    .bind(test_id)
+    .fetch_optional(&mut *conn)
+    .await
+    .map_err(attome_db::classify)?
+    .ok_or(AppError::NotFound)?;
+    let definition: TestDefinition = serde_json::from_value(definition)
+        .map_err(|e| AppError::Validation(format!("the script does not read: {e}")))?;
+    let outcome = checklist_outcome(&definition.checklist, marks)?;
+    let started = chrono::Utc::now();
+    let run = insert_run(&mut *conn, test_id, started, &outcome).await?;
+    sqlx::query("UPDATE customer_test_run SET run_by = $2 WHERE id = $1")
+        .bind(run)
+        .bind(by)
+        .execute(&mut *conn)
+        .await
+        .map_err(attome_db::classify)?;
+    Ok((run, outcome))
 }
 
 const TEST_COLUMNS: &str = "t.id, t.name, t.description, t.definition, t.blocking, t.is_active, \
@@ -1294,10 +1486,10 @@ pub async fn active_tests(
     db: &attome_db::DbPool,
     blocking_only: bool,
 ) -> Result<Vec<(Uuid, String, Result<TestDefinition, String>)>, AppError> {
-    let rows: Vec<(Uuid, String, Value)> = sqlx::query_as(
+    let rows: Vec<(Uuid, String, Value)> = sqlx::query_as(&format!(
         "SELECT id, name, definition FROM customer_test \
-          WHERE is_active = true AND (blocking OR NOT $1) ORDER BY name, id",
-    )
+          WHERE is_active = true AND (blocking OR NOT $1) AND {AUTOMATED} ORDER BY name, id"
+    ))
     .bind(blocking_only)
     .fetch_all(db)
     .await
@@ -1427,6 +1619,48 @@ pub async fn import_tests(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_acceptance_script_is_a_checklist_marked_step_by_step() {
+        let script = validate(
+            "Convert a lead",
+            &json!({ "checklist": ["Open a lead", "Convert it"] }),
+        )
+        .expect("a checklist reads");
+        assert!(script.is_acceptance_script());
+        assert!(
+            validate(
+                "Mixed",
+                &json!({ "checklist": ["a"], "given": [{ "entity": "lead", "record": {} }] })
+            )
+            .is_err()
+        );
+        assert!(validate("Blank", &json!({ "checklist": ["  "] })).is_err());
+
+        let mark = |passed: bool, note: Option<&str>| StepMark {
+            passed,
+            note: note.map(str::to_owned),
+        };
+        let outcome = checklist_outcome(
+            &script.checklist,
+            &[mark(true, None), mark(false, Some("no Convert button"))],
+        )
+        .expect("one mark per step");
+        assert!(!outcome.passed);
+        assert_eq!(
+            outcome.failures,
+            vec!["step 2: Convert it: no Convert button"]
+        );
+        assert!(
+            checklist_outcome(&script.checklist, &[mark(true, None)]).is_err(),
+            "a mark per step"
+        );
+        assert!(
+            checklist_outcome(&script.checklist, &[mark(true, None), mark(true, None)])
+                .expect("marked")
+                .passed
+        );
+    }
 
     #[test]
     fn access_and_flow_expectations_read_from_json() {

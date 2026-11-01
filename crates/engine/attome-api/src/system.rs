@@ -199,6 +199,8 @@ impl EngineSystem {
             .merge(crate::record_template_routes::routes())
             // Z15-T13: customer tests.
             .merge(crate::customer_test_admin::routes())
+            // T7-T4: acceptance scripts, for any signed-in user.
+            .merge(crate::acceptance_scripts::routes())
             .merge(crate::business_rule_admin::routes())
             .merge(crate::expression_admin::routes())
             .merge(crate::metadata_label_admin::routes())

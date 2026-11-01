@@ -691,6 +691,15 @@ export const xrmEn = {
     agentDeclined: 'The agent could not make a proposal for this conflict.',
     useProposal: 'Use this proposal',
   },
+  acceptanceScripts: {
+    title: 'Acceptance scripts',
+    intro: 'Checklists your builders wrote for you to try. Open one, do each step in the app, mark it passed or failed and record the run.',
+    none: 'No acceptance script is written yet.',
+    stepCount: '{n, plural, one {# step} other {# steps}}',
+    markStep: 'Step {n}', pass: 'Passed', fail: 'Failed', note: 'What went wrong',
+    record: 'Record the run', back: 'Back to the list',
+    passed: 'passed', failed: 'failed',
+  },
   customerTestsPage: {
     title: 'Customer tests',
     intro: 'Your own checks of your configuration: start from some records, make writes, and say what must hold. A run never keeps what it did.',

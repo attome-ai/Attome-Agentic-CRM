@@ -2261,6 +2261,22 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 None,
             )
         }
+        "POST /api/v1/acceptance-scripts/{id}/runs" => {
+            let id = Uuid::now_v7();
+            sqlx::query("INSERT INTO customer_test (id, name, definition) VALUES ($1, $2, $3)")
+                .bind(id)
+                .bind(format!("emission-{id}"))
+                .bind(json!({"checklist": ["Open a lead"]}))
+                .execute(&fx.base.db)
+                .await
+                .expect("seed an acceptance script");
+            request(
+                "POST",
+                &format!("/api/v1/acceptance-scripts/{id}/runs"),
+                t,
+                Some(json!({"steps": [{"passed": true}]})),
+            )
+        }
         "POST /api/v1/admin/customer-tests/run-all" => {
             customer_test(fx).await;
             request("POST", "/api/v1/admin/customer-tests/run-all", t, None)

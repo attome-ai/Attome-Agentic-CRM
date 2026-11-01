@@ -130,6 +130,14 @@ runs them on any version and lists the nodes some case reached (`covered`) and t
 failed run on a record into a test in one step: it re-creates the record as it stands and expects
 the flow to complete on it, so it fails until the flow is fixed.
 
+An **acceptance script** is a customer test whose definition is only a checklist, for business users
+to try by hand: `{"checklist": ["Open a lead", "Convert it to an account"]}` (at most 100 steps of 1
+to 500 characters; no `given`, `when` or `expect` beside it). No automatic run picks it up (run all,
+publish guards, nightly). Any signed-in user lists the scripts on **Acceptance scripts**
+(`/xrm/acceptance-scripts`, `GET /api/v1/acceptance-scripts`), marks each step passed or failed with a
+note, and records the run (`POST /api/v1/acceptance-scripts/{id}/runs`, one mark per step in
+order); the run is stored with who ran it and shows on the customer tests screen like any other.
+
 Mark a test **live safe** and it runs every night against the live configuration, as its author;
 failures alert the administrators, and a test whose runs on the same test and configuration
 version both passed and failed is marked **flaky** until someone edits it.

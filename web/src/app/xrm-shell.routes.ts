@@ -925,6 +925,14 @@ export const xrmShellRoutes: Routes = [
               import('@attome/xrm/core/approvals').then(m => m.MyApprovalsPageComponent),
           },
           {
+            // T7-T4 — acceptance scripts any signed-in user runs. Literal
+            // segment, ahead of the entity wildcard below.
+            path: 'acceptance-scripts',
+            canActivate: [authGuard],
+            loadComponent: () =>
+              import('@attome/xrm/core/admin/customer-tests').then(m => m.AcceptanceScriptsComponent),
+          },
+          {
             // A18-T9 — an entity's recycle bin. Literal segment, ahead of the
             // entity wildcard below.
             path: 'bin/:entity',
