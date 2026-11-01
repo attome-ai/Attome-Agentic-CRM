@@ -1,0 +1,105 @@
+{
+  "format": "attome-pack-golden/v1",
+  "packs": ["crm", "government"],
+  "tests": [
+    {
+      "name": "A commercial licence is issued after a passed inspection and a paid fee",
+      "description": "رخصة تجارية تصدر بعد تفتيش ناجح وسداد الرسوم. The application is reviewed, inspected, approved and issued; its fee is paid.",
+      "definition": {
+        "given": [
+          {
+            "entity": "gov_licence_type",
+            "ref": "commercial",
+            "record": { "name": "Commercial Activity Licence", "name_ar": "رخصة نشاط تجاري", "kind": "commercial", "validity_months": 12, "fee_amount": 1500, "requires_inspection": true }
+          }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "gov_licence",
+            "ref": "licence",
+            "values": {
+              "licence_number": "LIC-GOLDEN-1448-0001",
+              "licence_type_ref": { "$ref": "commercial" },
+              "applicant_name": "مؤسسة الواحة للتجارة Al Waha Trading Est.",
+              "cr_number": "1010123456",
+              "channel": "portal",
+              "identity_verified_by": "nafath",
+              "registry_checked": true,
+              "site_address": "حي العليا، الرياض Olaya, Riyadh",
+              "status": "submitted"
+            }
+          },
+          { "op": "create", "entity": "gov_fee", "ref": "fee", "values": { "licence_ref": { "$ref": "licence" }, "description": "رسوم الإصدار Issue fee", "amount": 1500, "status": "due" } },
+          { "op": "update", "entity": "gov_licence", "ref": "licence", "values": { "status": "under_review" } },
+          { "op": "update", "entity": "gov_licence", "ref": "licence", "values": { "status": "inspection" } },
+          {
+            "op": "create",
+            "entity": "gov_inspection",
+            "ref": "inspection",
+            "values": { "reference": "INS-GOLDEN-0001", "licence_ref": { "$ref": "licence" }, "site_address": "حي العليا، الرياض Olaya, Riyadh", "result": "pass", "findings": "Site meets the requirements / الموقع مستوفٍ للاشتراطات" }
+          },
+          { "op": "update", "entity": "gov_licence", "ref": "licence", "values": { "status": "under_review" } },
+          { "op": "update", "entity": "gov_licence", "ref": "licence", "values": { "status": "approved" } },
+          { "op": "update", "entity": "gov_fee", "ref": "fee", "values": { "status": "paid", "payment_reference": "SADAD-0001" } },
+          { "op": "update", "entity": "gov_licence", "ref": "licence", "values": { "status": "issued" } }
+        ],
+        "expect": [
+          { "entity": "gov_licence", "ref": "licence", "attribute": "status", "equals": "issued" },
+          { "entity": "gov_inspection", "ref": "inspection", "attribute": "result", "equals": "pass" },
+          { "entity": "gov_fee", "ref": "fee", "attribute": "status", "equals": "paid" }
+        ]
+      }
+    },
+    {
+      "name": "A licence is not issued before it is approved",
+      "description": "لا تصدر الرخصة قبل اعتمادها. A licence under review cannot go straight to issued.",
+      "definition": {
+        "given": [
+          { "entity": "gov_licence_type", "ref": "trade", "record": { "name": "Trade Licence", "name_ar": "رخصة تجارية", "kind": "commercial" } }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "gov_licence",
+            "ref": "licence",
+            "values": { "licence_number": "LIC-GOLDEN-2026-0002", "licence_type_ref": { "$ref": "trade" }, "applicant_name": "شركة الخليج Gulf Co. LLC", "channel": "counter", "identity_verified_by": "uae_pass", "status": "submitted" }
+          },
+          { "op": "update", "entity": "gov_licence", "ref": "licence", "values": { "status": "under_review" } },
+          { "op": "update", "entity": "gov_licence", "ref": "licence", "values": { "status": "issued" } }
+        ],
+        "expect": [
+          { "error": "validation" },
+          { "entity": "gov_licence", "ref": "licence", "attribute": "status", "equals": "under_review" }
+        ]
+      }
+    },
+    {
+      "name": "An outgoing letter is numbered in the Hijri year",
+      "description": "خطاب صادر مرقّم بالسنة الهجرية. An outgoing, internal-classified letter keeps its Hijri numbering.",
+      "definition": {
+        "when": [
+          {
+            "op": "create",
+            "entity": "gov_correspondence",
+            "ref": "letter",
+            "values": {
+              "reference_number": "1448/OUT/0001",
+              "direction": "outgoing",
+              "numbering_calendar": "hijri",
+              "numbering_year": 1448,
+              "subject": "إشعار بإصدار الرخصة Licence issue notice",
+              "from_party": "Licensing Department / إدارة التراخيص",
+              "to_party": "Al Waha Trading Est. / مؤسسة الواحة للتجارة",
+              "classification": "internal"
+            }
+          }
+        ],
+        "expect": [
+          { "entity": "gov_correspondence", "ref": "letter", "attribute": "numbering_calendar", "equals": "hijri" },
+          { "entity": "gov_correspondence", "ref": "letter", "attribute": "direction", "equals": "outgoing" }
+        ]
+      }
+    }
+  ]
+}

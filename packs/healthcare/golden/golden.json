@@ -1,0 +1,104 @@
+{
+  "format": "attome-pack-golden/v1",
+  "packs": ["crm", "healthcare"],
+  "tests": [
+    {
+      "name": "An urgent incoming referral goes from triage to a completed visit",
+      "description": "إحالة عاجلة واردة من الفرز إلى الإنجاز. The referral is triaged, accepted, scheduled and completed.",
+      "definition": {
+        "given": [
+          {
+            "entity": "hc_patient",
+            "ref": "patient",
+            "record": { "full_name": "فاطمة الزهراني Fatimah Alzahrani", "gender": "female", "preferred_language": "ar", "outreach_consent": true }
+          },
+          { "entity": "hc_provider", "ref": "cardiology", "record": { "name": "Dr. Sami Haddad", "name_ar": "د. سامي حداد", "specialty": "Cardiology" } }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "hc_referral",
+            "ref": "referral",
+            "values": {
+              "reference": "REF-GOLDEN-0001",
+              "patient_ref": { "$ref": "patient" },
+              "direction": "incoming",
+              "from_party": "مستشفى الملك فهد King Fahd Hospital",
+              "to_provider_ref": { "$ref": "cardiology" },
+              "specialty": "Cardiology",
+              "urgency": "urgent",
+              "status": "received"
+            }
+          },
+          { "op": "update", "entity": "hc_referral", "ref": "referral", "values": { "status": "triage" } },
+          { "op": "update", "entity": "hc_referral", "ref": "referral", "values": { "status": "accepted" } },
+          { "op": "update", "entity": "hc_referral", "ref": "referral", "values": { "status": "scheduled" } },
+          { "op": "update", "entity": "hc_referral", "ref": "referral", "values": { "status": "completed" } }
+        ],
+        "expect": [
+          { "entity": "hc_referral", "ref": "referral", "attribute": "status", "equals": "completed" },
+          { "entity": "hc_referral", "ref": "referral", "attribute": "urgency", "equals": "urgent" }
+        ]
+      }
+    },
+    {
+      "name": "A referral is not scheduled before it is accepted",
+      "description": "لا تُجدول الإحالة قبل قبولها. Moving a received referral straight to scheduled is refused.",
+      "definition": {
+        "given": [
+          { "entity": "hc_patient", "ref": "patient", "record": { "full_name": "محمد العتيبي Mohammed Alotaibi", "gender": "male", "preferred_language": "en" } }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "hc_referral",
+            "ref": "referral",
+            "values": { "reference": "REF-GOLDEN-0002", "patient_ref": { "$ref": "patient" }, "direction": "incoming", "urgency": "routine", "status": "received" }
+          },
+          { "op": "update", "entity": "hc_referral", "ref": "referral", "values": { "status": "scheduled" } }
+        ],
+        "expect": [
+          { "error": "validation" },
+          { "entity": "hc_referral", "ref": "referral", "attribute": "status", "equals": "received" }
+        ]
+      }
+    },
+    {
+      "name": "An appointment booked on WhatsApp is completed with its visit",
+      "description": "موعد محجوز عبر واتساب ينتهي بزيارة. The patient arrives, the visit is recorded against the appointment, and the appointment is completed.",
+      "definition": {
+        "given": [
+          { "entity": "hc_patient", "ref": "patient", "record": { "full_name": "نورة القحطاني Noura Alqahtani", "gender": "female", "preferred_language": "ar" } },
+          { "entity": "hc_location", "ref": "clinic", "record": { "name": "Olaya Clinic", "name_ar": "عيادة العليا", "city": "Riyadh" } }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "hc_appointment",
+            "ref": "appointment",
+            "values": {
+              "patient_ref": { "$ref": "patient" },
+              "location_ref": { "$ref": "clinic" },
+              "starts_at": "2026-11-02T08:30:00Z",
+              "ends_at": "2026-11-02T09:00:00Z",
+              "booked_via": "whatsapp",
+              "status": "booked"
+            }
+          },
+          { "op": "update", "entity": "hc_appointment", "ref": "appointment", "values": { "status": "arrived" } },
+          {
+            "op": "create",
+            "entity": "hc_visit",
+            "ref": "visit",
+            "values": { "patient_ref": { "$ref": "patient" }, "appointment_ref": { "$ref": "appointment" }, "visit_date": "2026-11-02T08:35:00Z" }
+          },
+          { "op": "update", "entity": "hc_appointment", "ref": "appointment", "values": { "status": "completed" } }
+        ],
+        "expect": [
+          { "entity": "hc_appointment", "ref": "appointment", "attribute": "status", "equals": "completed" },
+          { "entity": "hc_appointment", "ref": "appointment", "attribute": "booked_via", "equals": "whatsapp" }
+        ]
+      }
+    }
+  ]
+}
