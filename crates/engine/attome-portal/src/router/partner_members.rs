@@ -261,7 +261,7 @@ async fn invite_member(
     );
     let (subject, text_body, html_body) = crate::email::invitation(&portal.name, &link);
     attome_jobs::enqueue_in_tx(
-        &mut tx,
+        tx.tx(),
         attome_core::jobs::EngineJob::SendEmail(Box::new(attome_email::EmailMessage {
             to,
             subject,
