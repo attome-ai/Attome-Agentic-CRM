@@ -289,6 +289,14 @@ async fn route_message(
         Some(from) => sender_match(state, ctx, from).await?,
         None => SenderMatch::default(),
     };
+    // E6-T9: a contact's reply to one of our emails is marketing
+    // engagement; it brings them back from a sunset.
+    if message.in_reply_to.is_some()
+        && let Some(contact) = matched.contact
+        && let Err(error) = attome_core::engagement::touch(state, "contact", &[contact]).await
+    {
+        tracing::warn!(%error, %contact, "inbound mail: engagement not recorded");
+    }
 
     let (entity, record_id) = match decide(routing, thread, matched) {
         Route::JoinCase(case) => ("service_ticket", case),
