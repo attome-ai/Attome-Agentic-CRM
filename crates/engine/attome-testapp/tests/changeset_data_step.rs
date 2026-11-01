@@ -198,3 +198,60 @@ fn copy_and_set_default_fill_the_empty_rows() {
         );
     });
 }
+
+// feature: A22
+#[test]
+fn map_values_replaces_only_the_mapped_values() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let (table, _) = entity(&app).await;
+        let registry = attome_core::build_registry(app.db()).await.unwrap();
+        app.state.entities.swap(registry);
+        let mut ids = Vec::new();
+        for first_name in ["omar", "sara"] {
+            let (code, created) = app
+                .request(
+                    Method::POST,
+                    &format!("/api/v1/{table}"),
+                    Some(json!({ "first_name": first_name })),
+                )
+                .await;
+            assert_eq!(code, StatusCode::CREATED, "{created}");
+            ids.push(created["id"].as_str().unwrap().parse::<Uuid>().unwrap());
+        }
+        let mut doc = split_changeset(&table);
+        doc["name"] = json!("map-names");
+        doc["operations"] = json!([
+            { "op": "data_step", "phase": "expand", "seq": 1, "target": { "entity": table },
+              "args": { "kind": "map_values", "field": "first_name",
+                        "map": { "omar": "Omar" }, "on_unmapped": "report" } }
+        ]);
+        doc["checksum"] = json!(format!("sha256:{}", "0".repeat(64)));
+        let checksum = attome_api::changeset::jcs::document_checksum(&doc).expect("checksum");
+        doc["checksum"] = json!(checksum);
+        let changeset: Uuid = doc["id"].as_str().unwrap().parse().unwrap();
+        attome_api::changeset::boot::apply_pack_document(&app.state, &doc)
+            .await
+            .expect("the changeset applies");
+        let run: Uuid = sqlx::query_scalar("SELECT id FROM data_step_run WHERE changeset_id = $1")
+            .bind(changeset)
+            .fetch_one(app.db())
+            .await
+            .unwrap();
+        attome_api::field_changes::run_field_run(&app.state, run)
+            .await
+            .expect("the run");
+        for (id, want) in ids.iter().zip(["Omar", "sara"]) {
+            let got: Option<String> = sqlx::query_scalar(&format!(
+                "SELECT first_name::text FROM \"{table}\" WHERE id = $1"
+            ))
+            .bind(id)
+            .fetch_one(app.db())
+            .await
+            .unwrap();
+            assert_eq!(got.as_deref(), Some(want));
+        }
+    });
+}
