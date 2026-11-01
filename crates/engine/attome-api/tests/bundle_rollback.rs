@@ -359,6 +359,7 @@ fn rollback_finds_and_reapplies_the_prior_succeeded_version() {
         v1.name = Some(bundle_name.clone());
         v1.version = Some("1.0.0".to_owned());
         v1.entities.push(EntityDef {
+            extends: None,
             logicalname: entity.clone(),
             display_name: "Rollback Test".to_owned(),
             primary_name_attribute: Some("a".to_owned()),

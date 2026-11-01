@@ -178,8 +178,12 @@ pub async fn snapshot(tx: &mut Tx<'_>, kind: ObjectKind, id: Uuid) -> Result<Val
              || CASE WHEN e.storage_mode = 'high_volume' \
                      THEN jsonb_build_object('storage_mode', 'high_volume') \
                      ELSE '{}'::jsonb END \
+             || CASE WHEN b.logicalname IS NOT NULL \
+                     THEN jsonb_build_object('extends', b.logicalname) \
+                     ELSE '{}'::jsonb END \
              FROM entity_info e \
              LEFT JOIN data_domain d ON d.id = e.domain_ref \
+             LEFT JOIN entity_info b ON b.id = e.extends_entity_id \
              WHERE e.id = $1"
         }
         ObjectKind::Attribute => {

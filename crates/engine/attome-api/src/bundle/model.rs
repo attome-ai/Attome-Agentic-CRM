@@ -276,6 +276,10 @@ pub struct EntityDef {
     /// one (so a standard entity's bundle reads as before).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub storage_mode: Option<String>,
+    /// G1-T1: the base entity it extends, by logical name (A1-T4's
+    /// copy-down inheritance); absent when it extends none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extends: Option<String>,
     #[serde(default)]
     pub attributes: Vec<AttributeDef>,
 }

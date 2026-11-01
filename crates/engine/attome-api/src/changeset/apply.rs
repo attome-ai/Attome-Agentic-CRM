@@ -1024,7 +1024,17 @@ impl Ctx<'_> {
                 // and the unique index that enforces the key.
                 let declared =
                     crate::changeset::business_key::apply_declaration(state, id, op).await?;
-                if declared && outcome == ReconcileOutcome::Unchanged {
+                // G1-T1: the base it extends (A1-T4), adopted on a live
+                // entity too; a second apply changes nothing more.
+                let mut adopted = false;
+                if let Some(base) = e.extends.as_deref() {
+                    let base_id = self.entity_id(base).await?;
+                    let before = inheritance_of(self.migrator(), id).await?;
+                    let actor = self.actor.unwrap_or(Uuid::nil());
+                    crate::admin::adopt_base(state, id, base_id, actor, None).await?;
+                    adopted = before != Some(base_id);
+                }
+                if (declared || adopted) && outcome == ReconcileOutcome::Unchanged {
                     ReconcileOutcome::Updated
                 } else {
                     outcome
@@ -1796,6 +1806,16 @@ fn attribute_desc(a: &AttributeDef) -> AttributeDesc {
         data_classification: Some(a.data_classification.clone()),
         purpose: a.purpose.clone(),
     }
+}
+
+/// G1-T1: the base an entity extends now, if any.
+async fn inheritance_of(db: &attome_db::DbPool, entity_id: Uuid) -> Result<Option<Uuid>, AppError> {
+    sqlx::query_scalar::<_, Option<Uuid>>("SELECT extends_entity_id FROM entity_info WHERE id = $1")
+        .bind(entity_id)
+        .fetch_optional(db)
+        .await
+        .map(Option::flatten)
+        .map_err(AppError::internal)
 }
 
 #[cfg(test)]

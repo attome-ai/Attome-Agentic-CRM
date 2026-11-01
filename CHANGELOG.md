@@ -14,6 +14,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- A live entity can be made to extend a base (G1-T1's prerequisite): `PATCH /api/v1/admin/entities/{id}`
+  takes `extends_entity_id`; a field of the same name becomes the base field's copy (its type must match),
+  the base's other fields are copied in, an entity extends one base at most (409) and never loops. The
+  re-base is recorded as an `update_entity` operation, and changesets carry `extends` (the base's logical
+  name) on `create_entity` and `update_entity`; bundles export it too.
 - A customer test from a record in one step (T7-T4): `POST /api/v1/admin/customer-tests/from-record`
   re-creates a record the caller can read from its copyable fields and checks each still holds its value
   once saved, so a rule, default or flow that changes it shows; the customer tests screen drafts one from an

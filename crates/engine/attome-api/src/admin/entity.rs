@@ -193,6 +193,12 @@ pub(super) struct UpdateEntityBody {
     /// needs the entity to be in a data domain (422 naming `is_master`).
     /// Absent leaves them unchanged.
     master_data: Option<attome_compliance::governance_admin::MasterData>,
+    /// G1-T1: make this live entity extend a base (A1-T4's copy-down): a
+    /// field of the same name becomes the base field's copy (its type must
+    /// match), the base's other fields are copied in. An entity extends one
+    /// base at most (409); absent leaves it unchanged.
+    #[serde(default)]
+    extends_entity_id: Option<Uuid>,
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -890,6 +896,41 @@ pub(super) async fn update_entity(
                 }
             },
         );
+    }
+
+    // G1-T1: re-based onto a base, recorded as the entity's update with
+    // its `extends`, so a changeset replays it.
+    if let Some(base_id) = body.extends_entity_id
+        && inheritance::extends_of(&state.base.db_migrator, entity_id).await? != Some(base_id)
+    {
+        recording.preflight(&state.base.db_migrator).await?;
+        super::adopt_base(&state, entity_id, base_id, ctx.user_id, Some(&*recording)).await?;
+        let mut tx = attome_db::tx::begin(&state.base.db_migrator).await?;
+        let snapshot = provision::changeset::snapshot(
+            &mut tx,
+            provision::changeset::ObjectKind::Entity,
+            entity_id,
+        )
+        .await?;
+        let logicalname = snapshot
+            .get("logicalname")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or(old_logical.as_str())
+            .to_owned();
+        recording
+            .record(
+                &mut tx,
+                RecordedOp {
+                    op: Op::UpdateEntity,
+                    object_kind: "entity",
+                    object_ref: Some(entity_id),
+                    target: provision::changeset::entity_target(&logicalname),
+                    snapshot,
+                    changed: vec!["extends"],
+                },
+            )
+            .await?;
+        attome_db::tx::commit(tx).await?;
     }
 
     notify_metadata_change(&state.base.redis).await;

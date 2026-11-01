@@ -395,6 +395,7 @@ impl Graph {
     fn bundle_on(&self, base: &Bundle) -> Bundle {
         let mut b = base.clone();
         b.entities.push(EntityDef {
+            extends: None,
             logicalname: self.entity.clone(),
             display_name: "Bundle Apply Test".to_owned(),
             primary_name_attribute: Some("name".to_owned()),

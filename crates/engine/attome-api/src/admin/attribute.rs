@@ -675,6 +675,80 @@ pub(crate) async fn inherit_from(
     Ok(copied)
 }
 
+/// G1-T1: makes the live entity `entity_id` extend `base_id`, adopting
+/// what it already has: a field of the same name as a base field becomes
+/// that field's copy (its type must be the base's), and every base field it
+/// lacks is copied in, as A1-T4's create does. Refuses a cycle (the base
+/// extends the entity, at any depth) and a second base (`409`). Running it
+/// again for the same base changes nothing more. Returns the fields copied in.
+pub(crate) async fn adopt_base(
+    state: &EngineState,
+    entity_id: Uuid,
+    base_id: Uuid,
+    user_id: Uuid,
+    recording: Option<&Recording>,
+) -> Result<i64, AppError> {
+    let db = &state.base.db_migrator;
+    if entity_id == base_id {
+        return Err(AppError::Validation(
+            "an entity cannot extend itself".into(),
+        ));
+    }
+    if !inheritance::base_is_live(db, base_id).await? {
+        return Err(AppError::Validation(
+            "extends_entity_id names no live entity".into(),
+        ));
+    }
+    match inheritance::extends_of(db, entity_id).await? {
+        Some(current) if current != base_id => {
+            return Err(AppError::Conflict(
+                "the entity already extends another base; it extends one at most",
+            ));
+        }
+        _ => {}
+    }
+    let cycle: bool = sqlx::query_scalar(
+        "WITH RECURSIVE up AS ( \
+             SELECT extends_entity_id AS id, 1 AS depth FROM entity_info WHERE id = $1 \
+             UNION ALL \
+             SELECT e.extends_entity_id, up.depth + 1 FROM entity_info e JOIN up ON e.id = up.id \
+              WHERE up.depth < 20 \
+         ) SELECT EXISTS (SELECT 1 FROM up WHERE id = $2)",
+    )
+    .bind(base_id)
+    .bind(entity_id)
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)?;
+    if cycle {
+        return Err(AppError::Validation(
+            "the base extends this entity already; inheritance cannot loop".into(),
+        ));
+    }
+    let own: std::collections::BTreeMap<String, String> = fetch_attributes(db, entity_id)
+        .await?
+        .into_iter()
+        .map(|a| (a.logicalname, a.field_type))
+        .collect();
+    let base = fetch_attributes(db, base_id).await?;
+    for base_attr in &base {
+        if let Some(own_type) = own.get(&base_attr.logicalname)
+            && *own_type != base_attr.field_type
+        {
+            return Err(AppError::Validation(format!(
+                "{} is a {} here and a {} on the base; change its type first",
+                base_attr.logicalname, own_type, base_attr.field_type
+            )));
+        }
+    }
+    for base_attr in &base {
+        if own.contains_key(&base_attr.logicalname) {
+            inheritance::mark_copy(db, entity_id, &base_attr.logicalname, base_attr.id).await?;
+        }
+    }
+    inherit_from(state, entity_id, base_id, user_id, recording).await
+}
+
 /// The create body that makes a copy of field `a`.
 fn body_from_meta(a: &AttributeMeta) -> CreateAttributeBody {
     CreateAttributeBody {

@@ -119,6 +119,7 @@ mod tests {
 
     fn entity(name: &str, attrs: Vec<AttributeDef>) -> EntityDef {
         EntityDef {
+            extends: None,
             logicalname: name.to_owned(),
             display_name: name.to_uppercase(),
             primary_name_attribute: None,

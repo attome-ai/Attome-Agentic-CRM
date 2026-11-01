@@ -91,6 +91,10 @@ pub(crate) struct EntityRow {
     #[serde(default)]
     #[sqlx(default)]
     pub(crate) storage_mode: Option<String>,
+    /// The base entity's logical name, when it extends one (G1-T1).
+    #[serde(default)]
+    #[sqlx(default)]
+    pub(crate) extends: Option<String>,
 }
 
 /// `entity_info` row -> [`EntityDef`] without attributes; `None`
@@ -106,6 +110,7 @@ pub(crate) fn entity_def(r: EntityRow) -> Option<EntityDef> {
         category: r.category,
         is_customized: r.is_customized,
         storage_mode: r.storage_mode.filter(|m| m == "high_volume"),
+        extends: r.extends.filter(|b| !b.is_empty()),
         attributes: Vec::new(),
     })
 }
@@ -352,10 +357,12 @@ async fn export_entities(
     bundle: &mut Bundle,
 ) -> Result<HashMap<Uuid, String>, AppError> {
     let rows: Vec<EntityRow> = sqlx::query_as(
-        "SELECT id, logicalname, name, primary_name_attribute, is_append_only, is_audited,
-                category, is_customized, storage_mode::text AS storage_mode
-         FROM entity_info
-         WHERE COALESCE(is_active, true) = true",
+        "SELECT e.id, e.logicalname, e.name, e.primary_name_attribute, e.is_append_only,
+                e.is_audited, e.category, e.is_customized, e.storage_mode::text AS storage_mode,
+                b.logicalname AS extends
+         FROM entity_info e
+         LEFT JOIN entity_info b ON b.id = e.extends_entity_id
+         WHERE COALESCE(e.is_active, true) = true",
     )
     .fetch_all(db)
     .await
