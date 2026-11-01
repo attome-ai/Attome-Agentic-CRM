@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { AuthService, LangService } from '@attome/base';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { SidebarItem, SidebarPreferencesService } from '@attome/xrm/core/admin/data';
 import { ShellSidebarComponent } from './shell-sidebar.component';
 
@@ -127,8 +127,19 @@ describe('ShellSidebarComponent auto-expand', () => {
 });
 
 describe('ShellSidebarComponent on a phone', () => {
+  // The stub is put back after each test: specs share the worker's window,
+  // and a later component listens on the query it returns.
+  const original = window.matchMedia;
+  afterEach(() => {
+    window.matchMedia = original;
+  });
   const screen = (matches: boolean) => {
-    window.matchMedia = ((query: string) => ({ matches, media: query })) as unknown as typeof window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches,
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    })) as unknown as typeof window.matchMedia;
   };
 
   it('starts on the icon rail on a phone, open elsewhere', () => {
