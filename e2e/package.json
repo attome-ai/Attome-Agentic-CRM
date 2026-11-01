@@ -1,0 +1,13 @@
+{
+  "name": "attome-e2e",
+  "version": "1.0.0",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.10.2",
+    "@playwright/test": "1.56.1"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://localhost:4199",
+      "localStorage": [
+        {
+          "name": "xrm-lang",
+          "value": "ar"
+        }
+      ]
+    }
+  ]
+}
