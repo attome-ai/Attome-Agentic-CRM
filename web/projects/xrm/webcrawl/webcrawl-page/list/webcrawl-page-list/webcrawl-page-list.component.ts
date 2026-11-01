@@ -4,9 +4,10 @@ import {
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
-import { ApiError } from '@attome/base';
+import { ApiError, TranslatePipe } from '@attome/base';
 
 import { PageListItem, TargetListItem, WebcrawlAdminService } from '../../../services/webcrawl-admin.service';
+import { WebcrawlSourcePanelComponent } from '../../../webcrawl-source/webcrawl-source-panel.component';
 
 type SelectionMode = 'single' | 'multiple';
 
@@ -29,7 +30,7 @@ const RUNNING_STATUSES = ['pending', 'crawling'];
   selector:   'attome-webcrawl-page-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports:    [FormsModule, RouterLink],
+  imports:    [FormsModule, RouterLink, TranslatePipe, WebcrawlSourcePanelComponent],
   styleUrls:  ['../../../../styles/admin-page.css', '../../../webcrawl.css', './webcrawl-page-list.component.css'],
   templateUrl: './webcrawl-page-list.component.html',
 })
@@ -227,5 +228,15 @@ export class WebcrawlPageListComponent implements OnInit, OnDestroy {
       clearTimeout(this.pollTimer);
       this.pollTimer = null;
     }
+  }
+
+  /** K6-T11: the source as its settings panel saved it (a new row version). */
+  onSourceSaved(t: TargetListItem): void {
+    this.targets.update(ts => ts.map(x => x.id === t.id ? { ...x, ...t } : x));
+  }
+
+  /** K6-T11: a page in Arabic reads right to left. */
+  dirOf(p: PageListItem): 'rtl' | 'auto' {
+    return p.language === 'ar' ? 'rtl' : 'auto';
   }
 }

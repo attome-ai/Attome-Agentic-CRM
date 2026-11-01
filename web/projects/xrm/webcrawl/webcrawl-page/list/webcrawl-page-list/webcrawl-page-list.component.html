@@ -56,6 +56,7 @@
     }
     @if (isRunning()) { <div class="crawl-progress"><span></span></div> }
   </div>
+  <attome-webcrawl-source-panel [target]="t" (targetSaved)="onSourceSaved($event)" />
 }
 
 @if (loading()) {
@@ -86,6 +87,7 @@
           <th>Page URL</th>
           <th>Size</th>
           <th>Status</th>
+          <th>{{ 'webcrawl.source.language' | translate }}</th>
         </tr>
       </thead>
       <tbody>
@@ -100,14 +102,15 @@
               />
             </td>
             <td>
-              <span class="page-tree-cell" [style.paddingLeft.px]="p.depth * 20">
+              <span class="page-tree-cell" [style.padding-inline-start.px]="p.depth * 20">
                 <i class="las la-file page-tree-icon"></i>
-                {{ p.url_path }}
+                <bdi [attr.dir]="dirOf(p)">{{ p.url_path }}</bdi>
                 @if (p.imported_data_item_ref) { <span class="cell-muted">(imported)</span> }
               </span>
             </td>
             <td class="cell-muted">{{ formatSize(p.size_bytes) }}</td>
             <td><span class="badge" [class]="'status-' + p.status">{{ p.status }}</span></td>
+            <td class="cell-muted">{{ p.language ?? '' }}</td>
           </tr>
         }
       </tbody>

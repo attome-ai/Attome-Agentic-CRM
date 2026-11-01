@@ -58,6 +58,9 @@ pub struct PageListItem {
     pub status: String,
     pub is_selected: bool,
     pub imported_data_item_ref: Option<Uuid>,
+    /// K6-T11: `ar`, `en` or another language the page declared; `None`
+    /// before it is crawled.
+    pub language: Option<String>,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]

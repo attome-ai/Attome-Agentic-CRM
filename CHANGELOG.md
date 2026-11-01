@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- The website page list gains the source's own panel: its settings (paths to crawl and skip, languages,
+  audience, import mode, schedule, sitemap, depth, watch only) saved under the row version, its runs, and
+  the items a recrawl changed with Take the site's version or Keep ours; pages show their language and an
+  Arabic page reads right to left. The page list API gains `language` (K6-T11).
 - Agents gain two read-only website-source tools: `webcrawl.propose_scope` proposes include and exclude
   path patterns from the pages a crawl found (main sections in; tags, search, sign-in and feeds out) for a
   person to put on the source, and `webcrawl.summarise_changes` says in a few lines what one run changed

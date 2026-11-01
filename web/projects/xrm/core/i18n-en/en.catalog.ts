@@ -1927,6 +1927,23 @@ export const xrmEn = {
     emptyHint: 'Enter a valid URL and specify the depth above to begin the data extraction process.',
     colUrl: 'Website URL', colStatus: 'Status', colLastCrawled: 'Last Crawled', colAction: 'Action',
     recrawl: 'Recrawl', delete: 'Delete',
+    source: {
+      tab_settings: 'Source settings', tab_runs: 'Runs', tab_changes: 'Changes to review',
+      include: 'Crawl these paths', exclude: 'Skip these paths',
+      patternHelp: 'One pattern per line, for example /docs/*',
+      languages: 'Languages to keep', arabic: 'Arabic', english: 'English',
+      audience: 'Who may read what it imports', audience_internal: 'Staff',
+      audience_partner: 'Partners', audience_customer: 'Customers',
+      importMode: 'Import', mode_review: 'A person picks the pages', mode_automatic: 'Every new page',
+      schedule: 'Crawl', schedule_manual: 'By hand', schedule_daily: 'Daily', schedule_weekly: 'Weekly',
+      sitemap: 'Sitemap address', watchOnly: 'Watch for changes only (import nothing)',
+      save: 'Save settings', saved: 'Saved.',
+      noRuns: 'This source has not been crawled yet.', started: 'Started', pages: 'Pages',
+      imported: 'Imported', updated: 'Updated', flagged: 'To review',
+      noChanges: 'Nothing waits for review.',
+      takeSite: "Take the site's version", keepOurs: 'Keep ours',
+      language: 'Language',
+    },
   },
   // Workflow definition form + create page; the graph editor's own chrome is
   // `workflowGraph`. Shared form chrome (Back/Saving…/Saved/Update) reuses `xrmForm`.

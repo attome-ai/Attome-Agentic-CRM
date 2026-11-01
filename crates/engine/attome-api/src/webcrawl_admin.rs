@@ -421,7 +421,7 @@ async fn list_target_pages(
 ) -> Result<Json<Vec<PageListItem>>, AppError> {
     authorize(&ctx, Access::Read)?;
     let items = sqlx::query_as::<_, PageListItem>(
-        "SELECT id, url_path, parent_path, depth, size_bytes, status, is_selected, imported_data_item_ref \
+        "SELECT id, url_path, parent_path, depth, size_bytes, status, is_selected, imported_data_item_ref, language \
          FROM webcrawl_page \
          WHERE target_ref = $1 AND is_deleted = FALSE \
          ORDER BY url_path ASC",
