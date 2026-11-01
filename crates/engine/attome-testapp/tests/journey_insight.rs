@@ -477,6 +477,14 @@ fn pause_and_resume_a_journey() {
 
         let base = format!("/api/v1/marketing/journeys/{record}");
         let (code, body) = app
+            .request(
+                Method::POST,
+                &format!("{base}/simulate"),
+                Some(json!({ "sample_people": [] })),
+            )
+            .await;
+        assert_eq!(code, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+        let (code, body) = app
             .request(Method::POST, &format!("{base}/pause"), None)
             .await;
         assert_eq!(code, StatusCode::OK, "{body}");
