@@ -225842,6 +225842,21 @@
           "chart_area",
           "chart_donut",
           "chart_funnel",
+          "chart_stacked_bar",
+          "chart_combo",
+          "chart_waterfall",
+          "chart_treemap",
+          "chart_sunburst",
+          "chart_sankey",
+          "chart_radar",
+          "chart_polar",
+          "chart_heatmap",
+          "chart_calendar_heatmap",
+          "chart_pareto",
+          "chart_control",
+          "chart_scatter",
+          "chart_bubble",
+          "chart_range_area",
           "scalar",
           "table",
           "declarative",
@@ -246256,6 +246271,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-api-version": "2026-10",
   "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
@@ -246308,6 +246324,5 @@
         ]
       }
     }
-  },
-  "x-api-version": "2026-10"
+  }
 }
