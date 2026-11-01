@@ -8,6 +8,9 @@
 //!   `manual`), only people the caller may read, through the same admission
 //!   rules as every entry ([`super::enrol::enrol`]); `is_test` enrols test
 //!   runs, which a draft journey takes too;
+//! - `GET .../enrolments`: the enrolments of one person entity, a page at a
+//!   time, only of people the caller may read (the record predicate in the
+//!   SQL, so the total counts only them);
 //! - `DELETE .../enrolments/{enrolment_id}`: take a person out: the
 //!   enrolment ends as `removed` and its run is cancelled.
 //!
@@ -290,6 +293,142 @@ async fn delete_enrolment(
     Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
+#[derive(Debug, Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct EnrolmentsQuery {
+    /// The people's entity: `contact` (default) or `lead`.
+    pub person_entity: Option<String>,
+    /// One-based: page 1 is the first page.
+    #[param(minimum = 1)]
+    pub page: Option<i64>,
+    /// Rows per page.
+    pub page_size: Option<i64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema, sqlx::FromRow)]
+pub struct JourneyEnrolment {
+    pub id: Uuid,
+    pub person_id: Uuid,
+    pub person_entity: String,
+    /// `active`, `completed`, `exited` or `removed`.
+    pub status: String,
+    pub entry_source: String,
+    pub entered_at: chrono::DateTime<chrono::Utc>,
+    pub ended_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub end_reason: Option<String>,
+    pub is_test: bool,
+}
+
+/// List a journey's enrolments
+///
+/// The journey's enrolments of one person entity, newest first, only of people the caller may
+/// read.
+#[utoipa::path(
+    get,
+    path = "/api/v1/marketing/journeys/{id}/enrolments",
+    operation_id = "list_marketing_journey_enrolments",
+    tag = "marketing",
+    params(("id" = Uuid, Path, description = "The journey"), EnrolmentsQuery),
+    responses(
+        (status = 200, description = "One page of enrolments of people the caller may read", body = PaginatedResponse<JourneyEnrolment>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks marketing_journey.read", body = ErrorResponse),
+        (status = 404, description = "No such journey", body = ErrorResponse),
+        (status = 422, description = "A person entity other than contact or lead", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn get_enrolments(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<JourneyRead>>,
+    Path(journey): Path<Uuid>,
+    axum::extract::Query(q): axum::extract::Query<EnrolmentsQuery>,
+) -> Result<Json<PaginatedResponse<JourneyEnrolment>>, AppError> {
+    let definition = definition_of(&state, journey).await?;
+    let entity = q.person_entity.unwrap_or_else(|| "contact".to_owned());
+    if !matches!(entity.as_str(), "contact" | "lead") {
+        return Err(AppError::Validation(
+            "person_entity is contact or lead".into(),
+        ));
+    }
+    let window = attome_types::OnePageQuery {
+        page: q.page,
+        page_size: q.page_size,
+    }
+    .window();
+    let Some(entity_id) = state.entities.load().get(&entity).map(|m| m.entity_id) else {
+        return Ok(Json(PaginatedResponse::new(
+            Vec::new(),
+            0,
+            window.page,
+            window.page_size,
+        )));
+    };
+    let level = attome_security::resolve_entity_access_level(
+        &state.base.db,
+        ctx.user_id,
+        entity_id,
+        &entity,
+        attome_security::RecordAction::Read,
+    )
+    .await?;
+    // $1 the definition, $2 the entity name; the predicate's binds from $3.
+    let pred = attome_security::rls_predicate(
+        &ctx,
+        entity_id,
+        "p",
+        level,
+        attome_security::RecordAction::Read.share_capability(),
+        3,
+    );
+    let from = format!(
+        "FROM marketing_journey_enrolment e JOIN {} p ON p.id = e.person_id \
+         WHERE e.definition_id = $1 AND e.person_entity = $2 {}",
+        attome_core::quote_ident(&entity),
+        pred.as_ref().map_or("", |p| p.sql.as_str())
+    );
+    let next = 3 + if pred.is_some() {
+        attome_security::RLS_BIND_COUNT
+    } else {
+        0
+    };
+    let count_sql = format!("SELECT COUNT(*) {from}");
+    let mut count = sqlx::query_scalar::<_, i64>(&count_sql)
+        .bind(definition)
+        .bind(&entity);
+    if let Some(p) = &pred {
+        count = attome_security::bind_rls_predicate(count, &p.binds);
+    }
+    let total = count
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+    let page_sql = format!(
+        "SELECT e.id, e.person_id, e.person_entity, e.status, e.entry_source, e.entered_at, \
+                e.ended_at, e.end_reason, e.is_test {from} \
+         ORDER BY e.entered_at DESC, e.id LIMIT ${next} OFFSET ${}",
+        next + 1
+    );
+    let mut rows = sqlx::query_as::<_, JourneyEnrolment>(&page_sql)
+        .bind(definition)
+        .bind(&entity);
+    if let Some(p) = &pred {
+        rows = attome_security::bind_rls_predicate_as(rows, &p.binds);
+    }
+    let items = rows
+        .bind(window.page_size)
+        .bind(window.offset)
+        .fetch_all(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+    Ok(Json(PaginatedResponse::new(
+        items,
+        total,
+        window.page,
+        window.page_size,
+    )))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/marketing/journeys/{id}/counts", get(get_counts))
@@ -299,7 +438,7 @@ pub fn routes() -> Router<EngineState> {
         )
         .route(
             "/api/v1/marketing/journeys/{id}/enrolments",
-            post(post_enrolments),
+            post(post_enrolments).get(get_enrolments),
         )
         .route(
             "/api/v1/marketing/journeys/{id}/enrolments/{enrolment_id}",
@@ -309,8 +448,15 @@ pub fn routes() -> Router<EngineState> {
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(get_counts, get_person_path, post_enrolments, delete_enrolment),
+    paths(
+        get_counts,
+        get_person_path,
+        post_enrolments,
+        get_enrolments,
+        delete_enrolment
+    ),
     components(schemas(
+        JourneyEnrolment,
         JourneyCounts,
         PersonRun,
         ManualEnrolBody,

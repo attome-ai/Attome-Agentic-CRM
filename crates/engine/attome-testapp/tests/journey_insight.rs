@@ -400,6 +400,13 @@ fn journey_routes_count_cap_and_remove() {
             .await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
 
+        // The list joins the people's records: this person has no contact row,
+        // so the reader-scoped list holds nobody.
+        let (status, body) = app
+            .request(Method::GET, &format!("{base}/enrolments"), None)
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["total"], 0, "{body}");
         let enrolment: Uuid =
             sqlx::query_scalar("SELECT id FROM marketing_journey_enrolment WHERE instance_id = $1")
                 .bind(instance)
