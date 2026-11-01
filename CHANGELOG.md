@@ -14,6 +14,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Contract management is complete (W1-T17): the guide `docs/contracts.md` covers the smallest setup
+  (repository and renewal reminders), drafting, the playbook, approval, negotiation and signature, with
+  every setting and job. Its routes: `POST /api/v1/contract/contracts/{id}/draft`, `.../compare`,
+  `.../share-for-review` and `.../send-for-signature`; `GET`/`POST /api/v1/contract/review/{token}`;
+  `POST /api/v1/contract/imports/{id}/propose` and `.../accept`;
+  `POST /api/v1/contract/counterparty-match/run` and `/api/v1/contract/counterparty-proposals/{id}/decide`.
 - Agents gain `contract.answer`: a question about contract terms answered only from the clauses of
   contracts the caller may read, each clause and its contract read as the caller before a model sees
   it, with citations to the clauses used; it declines when they do not answer it, and a confidential
