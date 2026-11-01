@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- The data model as a diagram (`/xrm/admin/data-model`): pick an entity to see what it looks up, its
+  many-to-many links, the entity it extends and the entities extending it (dashed), mirrored in Arabic;
+  the panel beside it lists the attributes with type, sensitivity and lookup target, and before a delete,
+  rename or type change shows what uses the entity or field and what would break (A1-T14, read only).
 - Contract management is complete (W1-T17): the guide `docs/contracts.md` covers the smallest setup
   (repository and renewal reminders), drafting, the playbook, approval, negotiation and signature, with
   every setting and job. Its routes: `POST /api/v1/contract/contracts/{id}/draft`, `.../compare`,

@@ -43,3 +43,7 @@ export { RulesManagerComponent }      from './rules-manager/rules-manager.compon
 export { businessRulesAr, businessRulesEn } from './rules-manager.i18n';
 // Y14-T4: this screen's own catalogue.
 export { duplicatesManagerAr, duplicatesManagerEn } from './duplicates-manager.i18n';
+// A1-T14: the data model as a diagram, with what uses a field before a change.
+export { DataModelDiagramComponent, layoutDiagram } from './entity-metadata/diagram/data-model-diagram.component';
+export type { Diagram, DiagramEdge, DiagramNode, DiagramRole } from './entity-metadata/diagram/data-model-diagram.component';
+export { dataModelAr, dataModelEn } from './entity-metadata/diagram/data-model.i18n';

@@ -198,6 +198,16 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/migration').then(m => m.MappingComponent),
           },
           {
+            // A1-T14 — the data model as a diagram.
+            path: 'data-model',
+            providers: [provideLayerCatalog(
+              () => import('@attome/xrm/core/admin').then(m => m.dataModelEn),
+              () => import('@attome/xrm/core/admin').then(m => m.dataModelAr),
+            )],
+            canActivate: [authGuard, layerCatalogsReady],
+            loadComponent: () => import('@attome/xrm/core/admin').then(m => m.DataModelDiagramComponent),
+          },
+          {
             // D-432 / M13 — the duplicate-candidate steward queue.
             path: 'duplicates',
             providers: [provideLayerCatalog(
