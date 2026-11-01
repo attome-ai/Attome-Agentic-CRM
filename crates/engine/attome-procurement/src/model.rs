@@ -33,6 +33,16 @@ impl EngineModel for ProcurementModel {
         &[]
     }
 
+    /// W3-T4: a bid needs its RFQ open and before its deadline.
+    fn record_checks(
+        &self,
+    ) -> Vec<(
+        &'static str,
+        std::sync::Arc<dyn attome_core::record_check::RecordCheck>,
+    )> {
+        vec![("rfq_bid", std::sync::Arc::new(crate::rfq::BidCheck))]
+    }
+
     fn routes(&self) -> Router<EngineState> {
         crate::po::routes().merge(crate::rfq::routes())
     }

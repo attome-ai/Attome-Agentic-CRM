@@ -12,6 +12,11 @@
 //! marks a bid made after the deadline `late`, and closes the RFQ. Run
 //! twice, it opens nothing twice.
 //!
+//! **Late bids** are refused at write ([`BidCheck`], the generic engine's
+//! save check): a bid on an RFQ that is not open or whose deadline has
+//! passed, or a change to a bid's offer after it, is a 422. The `late` mark
+//! stays for a bid whose save raced the deadline.
+//!
 //! **Award** (`POST /api/v1/procurement/rfqs/{id}/award`): only a closed
 //! (opened) RFQ, only one of its own bids that was on time, and only with a
 //! reason; the award, its reason and time are written with an audit event.
@@ -20,6 +25,7 @@
 //! the seal holds against every other staff member.
 
 use attome_core::EngineState;
+use attome_core::record_check::{RecordCheck, RecordCheckFuture, RecordSave};
 use attome_server::authz::{Authorized, Privilege, PrivilegeKey};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
@@ -52,6 +58,80 @@ pub fn sealed(deadline: Option<DateTime<Utc>>, now: DateTime<Utc>) -> bool {
 /// Whether a bid made at `made` is late for `deadline`. Pure.
 pub fn late(made: DateTime<Utc>, deadline: DateTime<Utc>) -> bool {
     made > deadline
+}
+
+/// The bid fields that make its offer.
+pub const OFFER_FIELDS: [&str; 3] = ["amount", "lead_time_days", "notes"];
+
+/// Why a bid, or a change to its offer, is refused on an RFQ in `status`
+/// with `deadline` at `now`, if it is. Pure.
+pub fn bid_refusal(
+    status: Option<&str>,
+    deadline: Option<DateTime<Utc>>,
+    now: DateTime<Utc>,
+) -> Option<&'static str> {
+    if status != Some("open") {
+        Some("this request for quotation is not open for bids")
+    } else if !sealed(deadline, now) {
+        Some("the deadline for bids on this request for quotation has passed")
+    } else {
+        None
+    }
+}
+
+/// The save check on `rfq_bid` (registered by `ProcurementModel`): a new
+/// bid, or a change to a bid's offer or RFQ, needs its RFQ open and before
+/// its deadline.
+#[derive(Debug)]
+pub struct BidCheck;
+
+impl RecordCheck for BidCheck {
+    fn check<'a>(
+        &'a self,
+        conn: &'a mut sqlx::PgConnection,
+        _state: &'a EngineState,
+        save: RecordSave<'a>,
+    ) -> RecordCheckFuture<'a> {
+        Box::pin(async move {
+            let touches_offer = save.record_id.is_none()
+                || save.body.contains_key("rfq_ref")
+                || OFFER_FIELDS.iter().any(|f| save.body.contains_key(*f));
+            if !touches_offer {
+                return Ok(None);
+            }
+            let rfq = match save.body.get("rfq_ref") {
+                Some(value) => value.as_str().and_then(|s| Uuid::parse_str(s.trim()).ok()),
+                None => match save.record_id {
+                    Some(id) => sqlx::query_scalar::<_, Option<Uuid>>(
+                        "SELECT rfq_ref FROM rfq_bid WHERE id = $1",
+                    )
+                    .bind(id)
+                    .fetch_optional(&mut *conn)
+                    .await
+                    .map_err(AppError::internal)?
+                    .flatten(),
+                    None => None,
+                },
+            };
+            let Some(rfq) = rfq else {
+                return Ok(None);
+            };
+            let found: Option<(Option<String>, Option<DateTime<Utc>>)> = sqlx::query_as(
+                "SELECT status::text, deadline_at::timestamptz FROM rfq WHERE id = $1",
+            )
+            .bind(rfq)
+            .fetch_optional(&mut *conn)
+            .await
+            .map_err(AppError::internal)?;
+            let Some((status, deadline)) = found else {
+                return Ok(None);
+            };
+            match bid_refusal(status.as_deref(), deadline, Utc::now()) {
+                Some(reason) => Err(AppError::Validation(reason.into())),
+                None => Ok(None),
+            }
+        })
+    }
 }
 
 /// Why an award is refused, if it is. Pure.
@@ -300,6 +380,16 @@ mod rfq_sealing {
         assert!(sealed(Some(at(12)), at(11)));
         assert!(!sealed(Some(at(12)), at(12)), "opened at the deadline");
         assert!(sealed(None, at(23)), "no deadline: never opened");
+    }
+
+    #[test]
+    fn a_bid_needs_an_open_rfq_before_its_deadline() {
+        assert_eq!(bid_refusal(Some("open"), Some(at(12)), at(11)), None);
+        assert_eq!(bid_refusal(Some("open"), None, at(23)), None);
+        assert!(bid_refusal(Some("open"), Some(at(12)), at(12)).is_some());
+        assert!(bid_refusal(Some("closed"), Some(at(12)), at(11)).is_some());
+        assert!(bid_refusal(Some("draft"), None, at(11)).is_some());
+        assert!(bid_refusal(None, None, at(11)).is_some());
     }
 
     #[test]
