@@ -522,6 +522,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(5 * 60),
     );
+    // T7-T3: live-safe customer tests, nightly.
+    crate::jobs::spawn_customer_test_nightly_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
     // A1-T5: base indexes follow their entities' writes.
     crate::jobs::spawn_base_index_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // W1-T8: scanned counterparty versions compared.

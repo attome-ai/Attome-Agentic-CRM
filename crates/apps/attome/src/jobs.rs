@@ -1710,6 +1710,44 @@ async fn dispatch_platform_job(
                 tracing::debug!(touched, "base index: records re-read");
             }
         }
+        // T7-T3: live-safe customer tests, nightly; failures and newly
+        // flaky tests alert the administrators.
+        EngineJob::CustomerTestNightly => {
+            let report = attome_records::customer_tests::run_live_safe(&attome_state).await?;
+            tracing::info!(
+                ran = report.ran,
+                failed = report.failed.len(),
+                flaky = report.flaky.len(),
+                "customer tests: nightly run finished"
+            );
+            if !report.failed.is_empty() || !report.flaky.is_empty() {
+                let mut body = String::new();
+                if !report.failed.is_empty() {
+                    body.push_str(&format!(
+                        "Failed against the live configuration: {}.\n",
+                        report.failed.join(", ")
+                    ));
+                }
+                if !report.flaky.is_empty() {
+                    body.push_str(&format!(
+                        "Both passed and failed on the same version (flaky): {}.\n",
+                        report.flaky.join(", ")
+                    ));
+                }
+                attome_notification::dispatch::alert_admins(
+                    &db,
+                    &config.notification,
+                    format!(
+                        "Nightly customer tests: {} failed, {} flaky",
+                        report.failed.len(),
+                        report.flaky.len()
+                    ),
+                    body,
+                    "/xrm/admin/customer-tests",
+                )
+                .await;
+            }
+        }
         // W1-T3: counterparty match proposals, on demand.
         EngineJob::ContractCounterpartyMatch => {
             let run = attome_contract::counterparty::run_match(&db).await?;
@@ -3066,6 +3104,7 @@ const DEDUP_KEY_CONTRACT_LINK_SWEEP: &str = "contract-link-sweep";
 const DEDUP_KEY_CONTRACT_SIGNATURE_SWEEP: &str = "contract-signature-sweep";
 const DEDUP_KEY_CONTRACT_REVIEW_SWEEP: &str = "contract-review-sweep";
 const DEDUP_KEY_BASE_INDEX_SWEEP: &str = "base-index-sweep";
+const DEDUP_KEY_CUSTOMER_TEST_NIGHTLY: &str = "customer-test-nightly";
 const DEDUP_KEY_GEOCODE_SWEEP: &str = "geocode-sweep";
 const DEDUP_KEY_BILLING_HANDOFF_SWEEP: &str = "billing-handoff-sweep";
 const DEDUP_KEY_BILLING_RENEWAL_SWEEP: &str = "billing-renewal-sweep";
@@ -6136,6 +6175,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::ContractSignatureSweep => DEDUP_KEY_CONTRACT_SIGNATURE_SWEEP,
         EngineJob::ContractReviewSweep => DEDUP_KEY_CONTRACT_REVIEW_SWEEP,
         EngineJob::BaseIndexSweep => DEDUP_KEY_BASE_INDEX_SWEEP,
+        EngineJob::CustomerTestNightly => DEDUP_KEY_CUSTOMER_TEST_NIGHTLY,
         EngineJob::GeocodeSweep => DEDUP_KEY_GEOCODE_SWEEP,
         EngineJob::BillingHandoffSweep => DEDUP_KEY_BILLING_HANDOFF_SWEEP,
         EngineJob::BillingRenewalSweep => DEDUP_KEY_BILLING_RENEWAL_SWEEP,
@@ -8996,6 +9036,17 @@ pub fn spawn_base_index_scheduler(db: DbPool, interval: std::time::Duration) {
         EngineJob::BaseIndexSweep,
         DEDUP_KEY_BASE_INDEX_SWEEP,
         "base index",
+    );
+}
+
+/// T7-T3: once a day, the live-safe customer tests.
+pub fn spawn_customer_test_nightly_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::CustomerTestNightly,
+        DEDUP_KEY_CUSTOMER_TEST_NIGHTLY,
+        "customer tests",
     );
 }
 

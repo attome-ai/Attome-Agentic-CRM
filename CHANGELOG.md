@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Customer tests marked `live_safe` run every night against the live configuration (a test always rolls
+  back, so the check is read-only), as their author; failures alert the administrators, and a test whose
+  runs on one test and configuration version both passed and failed is flagged flaky (`flaky_since`) until
+  it is edited. Each run keeps `test_version` and `config_version` (migration 0357) (T7-T3).
 - Customer tests state permissions and flow outcomes (T7-T1): an expectation `{"entity", "action", "allowed"}`
   checks whether the acting role or caller holds the entity privilege, and `{"flow", "entity", "ref", "status",
   "reaches"}` simulates the published workflow on the record the test left (nothing it would do happens) and

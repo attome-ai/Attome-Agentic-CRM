@@ -492,6 +492,9 @@ pub enum EngineJob {
     /// A1-T5: keeps each base entity's record index current off the
     /// change feed. Bare unit variant.
     BaseIndexSweep,
+    /// T7-T3: the nightly run of live-safe customer tests. Bare unit
+    /// variant.
+    CustomerTestNightly,
     /// B15-T1: geocodes changed addresses off the change feed. Bare unit
     /// variant.
     GeocodeSweep,
@@ -1148,6 +1151,7 @@ impl EngineJob {
             | Self::ContractSignatureSweep
             | Self::ContractReviewSweep
             | Self::BaseIndexSweep
+            | Self::CustomerTestNightly
             | Self::GeocodeSweep
             | Self::BillingRenewalSweep
             | Self::BillingGenerateCharges
@@ -1308,6 +1312,7 @@ impl EngineJob {
             EngineJob::ContractSignatureSweep => "ContractSignatureSweep",
             EngineJob::ContractReviewSweep => "ContractReviewSweep",
             EngineJob::BaseIndexSweep => "BaseIndexSweep",
+            EngineJob::CustomerTestNightly => "CustomerTestNightly",
             EngineJob::GeocodeSweep => "GeocodeSweep",
             EngineJob::BillingHandoffSweep => "BillingHandoffSweep",
             EngineJob::BillingRenewalSweep => "BillingRenewalSweep",
@@ -1472,6 +1477,7 @@ impl EngineJob {
             | Self::ContractSignatureSweep
             | Self::ContractReviewSweep
             | Self::BaseIndexSweep
+            | Self::CustomerTestNightly
             | Self::GeocodeSweep
             | Self::BillingRenewalSweep
             | Self::BillingGenerateCharges
@@ -1650,6 +1656,7 @@ impl EngineJob {
             | Self::ContractSignatureSweep
             | Self::ContractReviewSweep
             | Self::BaseIndexSweep
+            | Self::CustomerTestNightly
             | Self::GeocodeSweep
             | Self::BillingRenewalSweep
             | Self::BillingGenerateCharges
@@ -2109,6 +2116,7 @@ mod tests {
         assert_round_trips(EngineJob::ContractSignatureSweep);
         assert_round_trips(EngineJob::ContractReviewSweep);
         assert_round_trips(EngineJob::BaseIndexSweep);
+        assert_round_trips(EngineJob::CustomerTestNightly);
         assert_round_trips(EngineJob::GeocodeSweep);
         assert_round_trips(EngineJob::BillingHandoffSweep);
         assert_round_trips(EngineJob::BillingRenewalSweep);

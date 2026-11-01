@@ -589,6 +589,95 @@ pub async fn run_and_record(
     Ok((run, outcome))
 }
 
+// ── Nightly checks (roadmap T7-T3) ──────────────────────────────────────────
+
+/// The live-safe tests one night runs at most.
+const NIGHTLY_LIMIT: i64 = 500;
+
+/// What one night's run of the live-safe tests found.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+pub struct NightlyReport {
+    pub ran: usize,
+    /// The tests that failed, by name.
+    pub failed: Vec<String>,
+    /// The tests newly flagged flaky, by name.
+    pub flaky: Vec<String>,
+}
+
+/// T7-T3: every active live-safe test, run as the person who wrote it
+/// against the live configuration (a test never commits, so the check is
+/// read-only), recorded as a scheduled run. A test whose runs on one test
+/// version and one configuration version both passed and failed is flagged
+/// flaky (`flaky_since`) until someone edits it. The caller alerts on the
+/// report.
+pub async fn run_live_safe(state: &EngineState) -> Result<NightlyReport, AppError> {
+    let tests: Vec<(
+        Uuid,
+        String,
+        Option<Uuid>,
+        Option<chrono::DateTime<chrono::Utc>>,
+    )> = sqlx::query_as(
+        "SELECT id, name, created_by, flaky_since FROM customer_test \
+              WHERE is_active AND live_safe ORDER BY name, id LIMIT $1",
+    )
+    .bind(NIGHTLY_LIMIT)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(attome_db::classify)?;
+    let mut report = NightlyReport::default();
+    for (id, name, author, flaky_since) in tests {
+        let Some(author) = author else {
+            tracing::warn!(test = %id, "customer test: a live-safe test has no author to run as");
+            continue;
+        };
+        let ctx = match attome_security::resolve_uncached(&state.base.db, author).await {
+            Ok(ctx) => ctx,
+            Err(e) => {
+                tracing::warn!(test = %id, error = %e, "customer test: its author cannot run it");
+                continue;
+            }
+        };
+        let (run, outcome) = run_and_record(state, &ctx, id).await?;
+        sqlx::query("UPDATE customer_test_run SET scheduled = true WHERE id = $1")
+            .bind(run)
+            .execute(&state.base.db)
+            .await
+            .map_err(attome_db::classify)?;
+        report.ran += 1;
+        if !outcome.passed {
+            report.failed.push(name.clone());
+        }
+        if flaky_since.is_none() && is_flaky(&state.base.db, id, run).await? {
+            sqlx::query(
+                "UPDATE customer_test SET flaky_since = now() WHERE id = $1 AND flaky_since IS NULL",
+            )
+            .bind(id)
+            .execute(&state.base.db)
+            .await
+            .map_err(attome_db::classify)?;
+            report.flaky.push(name);
+        }
+    }
+    Ok(report)
+}
+
+/// Whether the runs of `test` on the same test and configuration version as
+/// `run` both passed and failed.
+async fn is_flaky(db: &attome_db::DbPool, test: Uuid, run: Uuid) -> Result<bool, AppError> {
+    sqlx::query_scalar(
+        "SELECT COALESCE(bool_or(r.passed) AND NOT bool_and(r.passed), false) \
+           FROM customer_test_run r \
+           JOIN customer_test_run this ON this.id = $2 \
+          WHERE r.test_id = $1 AND r.passed IS NOT NULL \
+            AND r.test_version = this.test_version AND r.config_version = this.config_version",
+    )
+    .bind(test)
+    .bind(run)
+    .fetch_one(db)
+    .await
+    .map_err(attome_db::classify)
+}
+
 // ── The publish guard (roadmap Z15-T14) ────────────────────────────────────
 
 /// The deployment setting that turns the publish guard on (off by default).
@@ -646,6 +735,11 @@ pub struct CustomerTest {
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
     pub created_by: Option<Uuid>,
+    /// T7-T3: run every night against the live configuration.
+    pub live_safe: bool,
+    /// T7-T3: when its runs first both passed and failed on one test and
+    /// configuration version; cleared when the test is edited.
+    pub flaky_since: Option<chrono::DateTime<chrono::Utc>>,
     /// The latest run's result, when the test has run.
     pub last_passed: Option<bool>,
     pub last_run_at: Option<chrono::DateTime<chrono::Utc>>,
@@ -661,6 +755,9 @@ pub struct CustomerTestBody {
     pub definition: Value,
     #[serde(default)]
     pub blocking: bool,
+    /// T7-T3: run every night against the live configuration.
+    #[serde(default)]
+    pub live_safe: bool,
 }
 
 /// The fields a PATCH may change; an absent field keeps its value.
@@ -672,6 +769,8 @@ pub struct CustomerTestPatch {
     pub definition: Option<Value>,
     pub blocking: Option<bool>,
     pub is_active: Option<bool>,
+    #[serde(default)]
+    pub live_safe: Option<bool>,
 }
 
 /// One recorded run.
@@ -715,7 +814,7 @@ pub fn validate(name: &str, definition: &Value) -> Result<TestDefinition, AppErr
 }
 
 const TEST_COLUMNS: &str = "t.id, t.name, t.description, t.definition, t.blocking, t.is_active, \
-     t.row_version, t.created_at, t.updated_at, t.created_by, \
+     t.row_version, t.created_at, t.updated_at, t.created_by, t.live_safe, t.flaky_since, \
      r.passed AS last_passed, r.started_at AS last_run_at";
 
 const LAST_RUN: &str = "LEFT JOIN LATERAL (SELECT passed, started_at FROM customer_test_run \
@@ -788,8 +887,8 @@ pub async fn insert_test(
     validate(&body.name, &body.definition)?;
     let id = Uuid::now_v7();
     sqlx::query(
-        "INSERT INTO customer_test (id, name, description, definition, blocking, created_by) \
-         VALUES ($1, $2, $3, $4, $5, $6)",
+        "INSERT INTO customer_test (id, name, description, definition, blocking, created_by, live_safe) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7)",
     )
     .bind(id)
     .bind(body.name.trim())
@@ -797,6 +896,7 @@ pub async fn insert_test(
     .bind(&body.definition)
     .bind(body.blocking)
     .bind(by)
+    .bind(body.live_safe)
     .execute(&mut *conn)
     .await
     .map_err(attome_db::classify)?;
@@ -816,7 +916,8 @@ pub async fn update_test(
     validate(name, definition)?;
     let updated = sqlx::query(
         "UPDATE customer_test SET name = $3, description = $4, definition = $5, blocking = $6, \
-                is_active = $7, row_version = row_version + 1, updated_at = now() \
+                is_active = $7, live_safe = $8, flaky_since = NULL, \
+                row_version = row_version + 1, updated_at = now() \
           WHERE id = $1 AND row_version = $2",
     )
     .bind(id)
@@ -826,6 +927,7 @@ pub async fn update_test(
     .bind(definition)
     .bind(patch.blocking.unwrap_or(current.blocking))
     .bind(patch.is_active.unwrap_or(current.is_active))
+    .bind(patch.live_safe.unwrap_or(current.live_safe))
     .execute(&mut *conn)
     .await
     .map_err(attome_db::classify)?;
@@ -915,8 +1017,11 @@ pub async fn insert_run(
 ) -> Result<Uuid, AppError> {
     let run = Uuid::now_v7();
     sqlx::query(
-        "INSERT INTO customer_test_run (id, test_id, started_at, finished_at, passed, failures) \
-         VALUES ($1, $2, $3, now(), $4, $5)",
+        "INSERT INTO customer_test_run \
+             (id, test_id, started_at, finished_at, passed, failures, test_version, config_version) \
+         VALUES ($1, $2, $3, now(), $4, $5, \
+                 (SELECT row_version FROM customer_test WHERE id = $2), \
+                 (SELECT COALESCE(MAX(id), 0) FROM metadata_change_log))",
     )
     .bind(run)
     .bind(test_id)
@@ -947,6 +1052,7 @@ pub async fn export_tests(db: &attome_db::DbPool) -> Result<CustomerTestExport, 
                     description,
                     definition,
                     blocking,
+                    live_safe: false,
                 },
             )
             .collect(),
