@@ -70,7 +70,7 @@ export interface ApprovalLinkView {
     </main>
   `,
   styles: [`
-    :host { display: block; }
+    :host { display: block; min-block-size: 100vh; background: var(--color-bg); color: var(--color-text-primary); }
     .al { max-inline-size: 40rem; margin-inline: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
     .al h1 { font-size: 1.25rem; margin-block: 0; }
     .al h2 { font-size: 1.0625rem; margin-block: 0.5rem 0; }

@@ -87,6 +87,7 @@ export function codeComplete(code: string): boolean {
     </main>
   `,
   styles: [`
+    :host { display: block; min-block-size: 100vh; background: var(--color-bg); color: var(--color-text-primary); }
     .es { max-inline-size: 40rem; margin-inline: auto; padding: var(--space-4, 1rem); display: grid; gap: var(--space-3, .75rem); }
     .es-docs { padding-inline-start: 1.25rem; }
     .es-hash { color: var(--color-text-secondary, #666); margin-inline-start: .5rem; }

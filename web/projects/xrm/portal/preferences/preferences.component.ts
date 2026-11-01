@@ -116,6 +116,7 @@ export function toggledPreferences(
     </main>
   `,
   styles: [`
+    :host { display: block; min-block-size: 100vh; background: var(--color-bg); }
     .pp { max-inline-size: 640px; margin-inline: auto; padding-block: 32px; padding-inline: 16px;
           display: grid; gap: 16px; color: var(--color-text-primary); }
     .pp-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
