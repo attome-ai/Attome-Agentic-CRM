@@ -31,6 +31,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   changeset 0015 seeds four starter segments over contacts (engaged in the last 90 days, new this
   month, unengaged for 6 months, customers with a won opportunity); a list's `query_id` may now name
   its stored query as `<entity>/<name>`. A starter list refreshes once it has an owner.
+- Journey routes, part one (E8-T10): `GET /api/v1/marketing/journeys/{id}/counts`,
+  `GET .../people/{person_id}/path`, `POST .../enrolments` (up to 1,000 readable contacts or leads,
+  through the journey's re-entry rule and cap; `is_test` for test runs) and
+  `DELETE .../enrolments/{enrolment_id}` (the enrolment ends as `removed`, its run is cancelled).
 - Journey insight (E8-T9): node counts (entered, waiting, passed, blocked, exited) are recomputed every
   30 seconds for versions with recent runs (job `marketing_journey_counts`); `counts` adds the goal
   conversion and `person_path` lists a person's nodes, blocks and exit, for callers with

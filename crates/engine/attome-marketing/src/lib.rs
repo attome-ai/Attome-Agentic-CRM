@@ -80,6 +80,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<deliverability::routes::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<static_list::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<list_routes::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<journey::routes::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<campaign::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<profile::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<identity::ApiDocFragment as utoipa::OpenApi>::openapi());

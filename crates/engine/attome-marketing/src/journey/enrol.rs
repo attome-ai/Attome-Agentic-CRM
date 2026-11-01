@@ -34,7 +34,7 @@ pub const JOB: &str = "marketing_journey_enrol";
 pub const CHUNK: usize = attome_core::workflow_start::MAX_BATCH_START;
 
 /// A person to enrol: a contact or a lead.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct PersonRef {
     pub id: Uuid,
     /// `contact` or `lead`.
@@ -69,7 +69,7 @@ pub struct Prior {
 }
 
 /// What one enrolment did.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct EnrolOutcome {
     pub enrolled: u64,
     pub skipped_active: u64,

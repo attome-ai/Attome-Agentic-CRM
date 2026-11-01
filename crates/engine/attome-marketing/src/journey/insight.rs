@@ -112,7 +112,7 @@ fn require_read(ctx: &SecurityContext) -> Result<(), AppError> {
 }
 
 /// One node's counts.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, sqlx::FromRow)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct NodeCount {
     pub definition_version_id: Uuid,
     pub node_id: String,
@@ -124,7 +124,7 @@ pub struct NodeCount {
 }
 
 /// A journey's counts and goal conversion.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, utoipa::ToSchema)]
 pub struct JourneyCounts {
     pub definition_id: Uuid,
     pub nodes: Vec<NodeCount>,
@@ -183,7 +183,7 @@ pub async fn counts(
 }
 
 /// One node a run reached.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, sqlx::FromRow)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct PathStep {
     pub node_id: String,
     pub status: String,
@@ -192,7 +192,7 @@ pub struct PathStep {
 }
 
 /// One block a guard or step recorded.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, sqlx::FromRow)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, sqlx::FromRow, utoipa::ToSchema)]
 pub struct PathBlock {
     pub node_id: String,
     pub reason: String,
@@ -200,7 +200,7 @@ pub struct PathBlock {
 }
 
 /// One of a person's runs of a journey.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, utoipa::ToSchema)]
 pub struct PersonRun {
     pub enrolment_id: Uuid,
     pub status: String,

@@ -12,6 +12,7 @@ pub mod guard;
 pub mod insight;
 /// E8-T6: the message steps and the rules they check.
 pub mod message_step;
+pub mod routes;
 pub mod rules;
 pub mod versions;
 

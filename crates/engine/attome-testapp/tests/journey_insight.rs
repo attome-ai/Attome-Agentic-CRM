@@ -16,6 +16,7 @@ use attome_core::erasure_hook::ErasureHook;
 use attome_marketing::journey::insight::{JourneyErasure, counts, person_path, recount};
 use attome_testapp::TestApp;
 use attome_types::AppError;
+use axum::http::{Method, StatusCode};
 use serde_json::{Value, json};
 use uuid::Uuid;
 
@@ -319,5 +320,114 @@ fn erasure_removes_journey_rows() {
         .await
         .unwrap();
         assert_eq!(others, 1, "another person's run is untouched");
+    });
+}
+
+async fn install_marketing(app: &TestApp) {
+    for pack in ["crm", "marketing"] {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../packs")
+            .join(pack)
+            .join("changesets");
+        let mut files: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.path())
+            .collect();
+        files.sort();
+        for file in &files {
+            let value: Value =
+                serde_json::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
+            attome_api::changeset::boot::apply_pack_document(&app.state, &value)
+                .await
+                .unwrap_or_else(|e| panic!("{}: {e}", file.display()));
+        }
+    }
+    let registry = attome_core::build_registry(app.db()).await.unwrap();
+    app.state.entities.swap(registry);
+}
+
+// feature: E8
+// negative: DELETE /api/v1/marketing/journeys/{id}/enrolments/{enrolment_id}
+#[test]
+fn journey_routes_count_cap_and_remove() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        install_marketing(&app).await;
+        let j = journey(&app).await;
+        let logicalname: String =
+            sqlx::query_scalar("SELECT logicalname FROM workflow_definition WHERE id = $1")
+                .bind(j.definition)
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        let record: Uuid = sqlx::query_scalar(
+            "INSERT INTO marketing_journey (workflow_definition_logicalname, status, is_active, row_version) VALUES ($1, 'live', true, 0) RETURNING id",
+        )
+        .bind(&logicalname)
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        let person = Uuid::now_v7();
+        let instance = run(
+            &app,
+            &j,
+            person,
+            &[("start", "succeeded"), ("wait", "waiting")],
+            "active",
+        )
+        .await;
+        recount(app.db(), &[j.version]).await.unwrap();
+
+        let base = format!("/api/v1/marketing/journeys/{record}");
+        let (status, body) = app
+            .request(Method::GET, &format!("{base}/counts"), None)
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert!(body.to_string().contains("\"wait\""), "{body}");
+
+        let too_many: Vec<Value> = (0..1001)
+            .map(|_| json!({ "id": Uuid::now_v7(), "entity": "contact" }))
+            .collect();
+        let (status, body) = app
+            .request(
+                Method::POST,
+                &format!("{base}/enrolments"),
+                Some(json!({ "people": too_many })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+
+        let enrolment: Uuid =
+            sqlx::query_scalar("SELECT id FROM marketing_journey_enrolment WHERE instance_id = $1")
+                .bind(instance)
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        let (status, body) = app
+            .request(
+                Method::DELETE,
+                &format!("{base}/enrolments/{enrolment}"),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::NO_CONTENT, "{body}");
+        let (status, _) = app
+            .request(
+                Method::DELETE,
+                &format!("{base}/enrolments/{enrolment}"),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "removed once");
+        let run_status: String =
+            sqlx::query_scalar("SELECT status FROM workflow_instance WHERE id = $1")
+                .bind(instance)
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        assert_eq!(run_status, "cancelled");
     });
 }

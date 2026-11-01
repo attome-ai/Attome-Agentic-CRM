@@ -137,6 +137,7 @@ impl EngineModel for MarketingModel {
             .merge(crate::deliverability::routes::routes())
             .merge(crate::static_list::routes())
             .merge(crate::list_routes::routes())
+            .merge(crate::journey::routes::routes())
             .merge(crate::campaign::routes())
             .merge(crate::profile::routes())
             .merge(crate::identity::routes())
