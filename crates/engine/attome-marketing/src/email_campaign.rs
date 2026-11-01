@@ -375,7 +375,7 @@ pub async fn start(
     })
 }
 
-fn weekly_cap(state: &EngineState) -> i64 {
+pub(crate) fn weekly_cap(state: &EngineState) -> i64 {
     let store = state.settings.load();
     attome_core::setting_registry()
         .get(CAP_SETTING)

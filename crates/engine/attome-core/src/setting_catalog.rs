@@ -92,6 +92,34 @@ fn marketing_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(13),
         ),
+        // E8-T6: the cap every marketing sender honours, and a journey's
+        // quiet hours.
+        SettingDescriptor::new(
+            "marketing.weekly_message_cap",
+            "Marketing messages one person may get in seven days, campaign emails, campaign SMS \
+             and journey messages together; 3 by default.",
+            || json!({"type": "integer", "minimum": 1, "maximum": 100}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(3),
+        ),
+        SettingDescriptor::new(
+            "marketing.journey_quiet_hours",
+            "When journeys hold their messages, in the deployment's time zone: a window \
+             {\"start\": \"21:00\", \"end\": \"08:00\"} and weekend days (0 Monday to 6 \
+             Sunday), e.g. {\"start\": \"21:00\", \"end\": \"08:00\", \"weekend_days\": [4]}. \
+             Null (the default) holds nothing.",
+            || {
+                json!({"type": ["object", "null"], "additionalProperties": false, "properties": {
+                    "start": {"type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"},
+                    "end": {"type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"},
+                    "weekend_days": {"type": "array", "items": {"type": "integer", "minimum": 0, "maximum": 6}}
+                }})
+            },
+            &[SettingScope::Deployment],
+            false,
+            || json!(null),
+        ),
         SettingDescriptor::new(
             "marketing.sms_quiet_hours",
             "Hours (HH:MM, recipient's local time) when campaign SMS are held, \

@@ -8,10 +8,44 @@
 //! gets the campaign's default hour. A hold-out share of contacts always gets
 //! the default hour, so the gain can be measured; who is held out is decided
 //! from the contact id, so it is stable between runs.
+//!
+//! [`best_moment`] (E8-T6) is the one reader: a journey step's moment from
+//! the person's campaign email opens, in the deployment's time zone.
 
+use attome_core::EngineState;
+use attome_types::AppError;
 use chrono::{DateTime, Duration, NaiveTime, TimeZone, Timelike, Utc};
 use chrono_tz::Tz;
 use uuid::Uuid;
+
+/// E8-T6: the moment within the next day at `person`'s best hour, from the
+/// opens of the campaign emails they were sent (the default hour without
+/// enough of them), in the deployment's time zone.
+pub async fn best_moment(
+    state: &EngineState,
+    entity: &str,
+    person: Uuid,
+) -> Result<DateTime<Utc>, AppError> {
+    let opens: Vec<DateTime<Utc>> = sqlx::query_scalar(
+        "SELECT opened_at FROM email_campaign_recipient \
+          WHERE subject_entity = $1 AND subject_id = $2 AND opened_at IS NOT NULL \
+          ORDER BY opened_at DESC LIMIT 200",
+    )
+    .bind(entity)
+    .bind(person)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let tz = crate::sms_campaign::deployment_zone(state);
+    let now = Utc::now();
+    let best = best_hour(person, &opens, tz, now, &SendTimePolicy::default());
+    Ok(schedule_in_window(
+        best.hour,
+        tz,
+        now,
+        now + Duration::days(1),
+    ))
+}
 
 /// Settings of one campaign's optimisation.
 #[derive(Debug, Clone)]

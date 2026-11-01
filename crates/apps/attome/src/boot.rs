@@ -1910,6 +1910,34 @@ pub fn register_engines(
             add: false,
         })
         .register_workflow_step_handler(attome_marketing::journey::action_step::CampaignMembership)
+        // E8-T6: the message steps; the channels with no sender yet are
+        // declared so a journey naming them is refused at publish.
+        .register_workflow_step_handler(attome_marketing::journey::message_step::SendEmail)
+        .register_workflow_step_handler(
+            attome_marketing::journey::message_step::ChannelUnavailable {
+                key: attome_marketing::journey::message_step::UNAVAILABLE_CHANNELS[0],
+            },
+        )
+        .register_workflow_step_handler(
+            attome_marketing::journey::message_step::ChannelUnavailable {
+                key: attome_marketing::journey::message_step::UNAVAILABLE_CHANNELS[1],
+            },
+        )
+        .register_workflow_step_handler(
+            attome_marketing::journey::message_step::ChannelUnavailable {
+                key: attome_marketing::journey::message_step::UNAVAILABLE_CHANNELS[2],
+            },
+        )
+        .register_workflow_step_handler(
+            attome_marketing::journey::message_step::ChannelUnavailable {
+                key: attome_marketing::journey::message_step::UNAVAILABLE_CHANNELS[3],
+            },
+        )
+        .register_workflow_step_handler(
+            attome_marketing::journey::message_step::ChannelUnavailable {
+                key: attome_marketing::journey::message_step::UNAVAILABLE_CHANNELS[4],
+            },
+        )
         .register_workflow_step_handler(attome_marketing::journey::action_step::Unavailable {
             key: attome_marketing::journey::action_step::UNAVAILABLE[0],
         })

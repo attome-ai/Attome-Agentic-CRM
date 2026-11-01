@@ -165,7 +165,7 @@ fn setting(state: &EngineState, key: &str) -> Value {
         .unwrap_or(Value::Null)
 }
 
-fn deployment_zone(state: &EngineState) -> chrono_tz::Tz {
+pub(crate) fn deployment_zone(state: &EngineState) -> chrono_tz::Tz {
     state
         .base
         .config
