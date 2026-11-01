@@ -200,6 +200,9 @@ pub struct CrawlScope {
 pub struct WalkOutcome {
     /// Why it stopped early, if it did.
     pub stopped: Option<String>,
+    /// K6-T7: whether the walk went through every page in reach (no error
+    /// stop, no page limit), so a page it did not see is really missing.
+    pub complete: bool,
 }
 
 /// Splits a stored pattern list (one per line or comma separated).
@@ -415,8 +418,10 @@ pub async fn walk_with<F: Fetcher, S: PageSink>(
 
     let mut visited = 0usize;
     let mut errors_in_a_row = 0usize;
+    let mut limited = false;
     while let Some(url) = queue.pop_front() {
         if visited >= limits.max_pages {
+            limited = true;
             break;
         }
         let path = normalize_path(&url);
@@ -526,12 +531,16 @@ pub async fn walk_with<F: Fetcher, S: PageSink>(
                         stopped: Some(format!(
                             "stopped after {MAX_CONSECUTIVE_ERRORS} errors in a row"
                         )),
+                        complete: false,
                     };
                 }
             }
         }
     }
-    WalkOutcome::default()
+    WalkOutcome {
+        stopped: None,
+        complete: !limited,
+    }
 }
 
 // ── Production entrypoint ───────────────────────────────────────────────────
@@ -891,6 +900,11 @@ pub async fn run(state: &EngineState, target_id: Uuid) -> Result<(), AppError> {
         recorded: 0,
         watch_only,
     };
+    // K6-T7: pages this run touches get a later `updated_at` than this.
+    let started: chrono::DateTime<chrono::Utc> = sqlx::query_scalar("SELECT now()")
+        .fetch_one(db)
+        .await
+        .map_err(AppError::internal)?;
     let outcome = walk_with(&fetcher, &root, &limits, &robots, &scope, &mut sink).await;
 
     let (status, last_error) = if sink.recorded == 0 {
@@ -917,6 +931,17 @@ pub async fn run(state: &EngineState, target_id: Uuid) -> Result<(), AppError> {
 
     // K6-T4: changed imported pages update their items; an automatic
     // source imports its new pages.
+    // K6-T7: only a complete walk counts the pages it did not see.
+    if status == "completed" && outcome.complete && !watch_only {
+        match crate::import::retire_missing(state, target_id, started).await {
+            Ok(retired) if retired > 0 => {
+                tracing::info!(%target_id, retired, "webcrawl: items of pages missing twice retired");
+            }
+            Ok(_) => {}
+            Err(e) => tracing::warn!(%target_id, error = %e,
+                "webcrawl: missing pages were not counted"),
+        }
+    }
     if status == "completed" {
         match crate::import::sync_after_crawl(state, target_id).await {
             Ok(stats) => tracing::info!(%target_id, imported = stats.imported,

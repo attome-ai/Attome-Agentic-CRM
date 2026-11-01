@@ -23,6 +23,15 @@
 //! someone changed meanwhile is skipped and taken up by the next crawl. An
 //! `automatic` source also imports its new pages, published, on every crawl.
 //! The sync acts as the person who created the source.
+//!
+//! K6-T7: a page whose text is the same as an imported page of the source
+//! (same `content_hash`) is not imported again: it becomes that page's
+//! alias (`alias_of`), and stops being one when its text changes. After a
+//! complete crawl (no error stop, no page limit), every page in scope that
+//! the crawl did not see has its `missing_count` raised ([`retire_missing`]);
+//! at two in a row its item is retired: set `expired`, so the knowledge
+//! index drops its chunks while the item and its history stay, with a
+//! `webcrawl.item_retired` event.
 
 use attome_core::EngineState;
 use attome_security::SecurityContextExt;
@@ -41,6 +50,7 @@ pub const MAX_SYNC_PAGES: i64 = 500;
 const ITEM: &str = "knowledge_data_item";
 const SOURCE: &str = "knowledge_data_source";
 const PUBLISHED: &str = "published";
+const EXPIRED: &str = "expired";
 const AUTOMATIC: &str = "automatic";
 
 /// What a changed page does to its item.
@@ -72,10 +82,15 @@ pub fn change_for(
     }
 }
 
+/// Recrawls in a row a page may be missing before its item is retired.
+pub const MISSING_TO_RETIRE: i32 = 2;
+
 /// What one sync did.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct SyncStats {
     pub imported: i64,
+    /// K6-T7: new pages that became an imported page's alias.
+    pub aliased: i64,
     pub updated: i64,
     pub flagged: i64,
     pub skipped: i64,
@@ -204,10 +219,33 @@ async fn create_item(
     data_source: Uuid,
     published: bool,
     page: &Candidate,
-) -> Result<bool, AppError> {
+) -> Result<Created, AppError> {
+    // K6-T7: the same text as an imported page of the source makes this an
+    // alias of it, not a second item.
+    if page.content_hash.is_some() {
+        let aliased = sqlx::query(
+            "UPDATE webcrawl_page p SET alias_of = o.id, updated_at = NOW() \
+               FROM (SELECT id FROM webcrawl_page \
+                      WHERE target_ref = (SELECT target_ref FROM webcrawl_page WHERE id = $1) \
+                        AND id <> $1 AND content_hash = $2 AND is_deleted = FALSE \
+                        AND alias_of IS NULL AND imported_data_item_ref IS NOT NULL \
+                        AND imported_data_item_ref <> $3 \
+                      ORDER BY id LIMIT 1) o \
+              WHERE p.id = $1 AND p.imported_data_item_ref IS NULL",
+        )
+        .bind(page.id)
+        .bind(&page.content_hash)
+        .bind(NIL_CLAIM)
+        .execute(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+        if aliased.rows_affected() > 0 {
+            return Ok(Created::Aliased);
+        }
+    }
     let claim = sqlx::query(
         "UPDATE webcrawl_page SET imported_data_item_ref = $2 \
-         WHERE id = $1 AND imported_data_item_ref IS NULL",
+         WHERE id = $1 AND imported_data_item_ref IS NULL AND alias_of IS NULL",
     )
     .bind(page.id)
     .bind(NIL_CLAIM)
@@ -215,7 +253,7 @@ async fn create_item(
     .await
     .map_err(AppError::internal)?;
     if claim.rows_affected() == 0 {
-        return Ok(false);
+        return Ok(Created::Taken);
     }
 
     let mut body = Map::new();
@@ -249,7 +287,7 @@ async fn create_item(
             .execute(&state.base.db)
             .await
             .map_err(AppError::internal)?;
-            Ok(true)
+            Ok(Created::Item)
         }
         Err(e) => {
             // Release the claim so a retry can pick this page up again.
@@ -268,6 +306,17 @@ async fn create_item(
             Err(e)
         }
     }
+}
+
+/// What importing one new page did.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Created {
+    /// A new item.
+    Item,
+    /// K6-T7: an alias of an imported page with the same text.
+    Aliased,
+    /// Another import took the page first.
+    Taken,
 }
 
 type ItemRow = (i64, Option<String>, Option<bool>, Option<f64>);
@@ -356,7 +405,14 @@ async fn update_item(
         .execute(&state.base.db)
         .await
         .map_err(AppError::internal)?;
-        audit_item_updated(state, ctx.user_id, item, &page.url_path).await;
+        audit_item(
+            state,
+            ctx.user_id,
+            item,
+            "webcrawl.item_updated",
+            format!("updated from {}", page.url_path),
+        )
+        .await;
     }
     Ok(change)
 }
@@ -391,7 +447,7 @@ pub async fn import_pages(
         "SELECT id, url_path, content, content_hash, imported_data_item_ref FROM webcrawl_page \
          WHERE target_ref = $1 AND id = ANY($2) AND is_deleted = FALSE \
            AND status = 'crawled' AND content IS NOT NULL \
-           AND (imported_data_item_ref IS NULL \
+           AND ((imported_data_item_ref IS NULL AND alias_of IS NULL) \
                 OR (imported_data_item_ref <> $3 \
                     AND content_hash IS DISTINCT FROM imported_content_hash))",
     )
@@ -404,11 +460,14 @@ pub async fn import_pages(
 
     let mut imported = 0i64;
     let mut updated = 0i64;
+    let mut aliased = 0i64;
     for candidate in &candidates {
         match candidate.imported_data_item_ref {
             None => {
-                if create_item(state, ctx, fields, data_source_id, published, candidate).await? {
-                    imported += 1;
+                match create_item(state, ctx, fields, data_source_id, published, candidate).await? {
+                    Created::Item => imported += 1,
+                    Created::Aliased => aliased += 1,
+                    Created::Taken => {}
                 }
             }
             Some(item) => {
@@ -446,6 +505,7 @@ pub async fn import_pages(
         data_source_ref: data_source_id,
         imported_count: imported,
         updated_count: updated,
+        aliased_count: aliased,
     })
 }
 
@@ -470,6 +530,18 @@ pub async fn sync_after_crawl(state: &EngineState, target_id: Uuid) -> Result<Sy
         }
     };
     let fields = item_fields(state);
+
+    // K6-T7: an alias whose text now differs from its page's stops being one.
+    sqlx::query(
+        "UPDATE webcrawl_page p SET alias_of = NULL, updated_at = NOW() \
+           FROM webcrawl_page o \
+          WHERE p.alias_of = o.id AND p.target_ref = $1 \
+            AND p.content_hash IS DISTINCT FROM o.content_hash",
+    )
+    .bind(target_id)
+    .execute(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
 
     if ctx.require(ITEM, "update").is_ok() {
         let changed = sqlx::query_as::<_, Candidate>(
@@ -511,6 +583,7 @@ pub async fn sync_after_crawl(state: &EngineState, target_id: Uuid) -> Result<Sy
             "SELECT id, url_path, content, content_hash, imported_data_item_ref FROM webcrawl_page \
              WHERE target_ref = $1 AND is_deleted = FALSE AND status = 'crawled' \
                AND content IS NOT NULL AND imported_data_item_ref IS NULL \
+               AND alias_of IS NULL \
              ORDER BY id LIMIT $2",
         )
         .bind(target_id)
@@ -522,8 +595,9 @@ pub async fn sync_after_crawl(state: &EngineState, target_id: Uuid) -> Result<Sy
             let data_source = ensure_data_source_for_target(state, &ctx, target_id).await?;
             for page in &fresh {
                 match create_item(state, &ctx, fields, data_source, true, page).await {
-                    Ok(true) => stats.imported += 1,
-                    Ok(false) => {}
+                    Ok(Created::Item) => stats.imported += 1,
+                    Ok(Created::Aliased) => stats.aliased += 1,
+                    Ok(Created::Taken) => {}
                     Err(e) => {
                         tracing::warn!(%target_id, page = %page.id, error = %e,
                             "webcrawl: a new page of an automatic source was not imported");
@@ -548,10 +622,126 @@ pub async fn sync_after_crawl(state: &EngineState, target_id: Uuid) -> Result<Sy
     Ok(stats)
 }
 
-/// The business event for an item a recrawl updated (`webcrawl.item_updated`),
-/// beside the update's own entity audit row. Best effort, as the source's
-/// other business events.
-async fn audit_item_updated(state: &EngineState, user_id: Uuid, item: Uuid, url_path: &str) {
+/// K6-T7: after a complete crawl that started at `seen_since`, raises the
+/// `missing_count` of every page in the source's scope the crawl did not
+/// touch, and retires the item of each page now missing
+/// [`MISSING_TO_RETIRE`] times in a row (set `expired`, so its chunks leave
+/// the knowledge index; the item and its history stay). Acts as the
+/// source's creator. Answers how many items it retired.
+pub async fn retire_missing(
+    state: &EngineState,
+    target_id: Uuid,
+    seen_since: chrono::DateTime<chrono::Utc>,
+) -> Result<i64, AppError> {
+    let scope: Option<(String, String, Uuid)> = sqlx::query_as(
+        "SELECT include_patterns, exclude_patterns, created_by FROM webcrawl_target \
+          WHERE id = $1 AND is_deleted = FALSE",
+    )
+    .bind(target_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some((include, exclude, creator)) = scope else {
+        return Ok(0);
+    };
+    let include = crate::crawl::parse_patterns(&include);
+    let exclude = crate::crawl::parse_patterns(&exclude);
+    let unseen: Vec<(Uuid, String)> = sqlx::query_as(
+        "SELECT id, url_path FROM webcrawl_page \
+          WHERE target_ref = $1 AND is_deleted = FALSE AND updated_at < $2",
+    )
+    .bind(target_id)
+    .bind(seen_since)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let ids: Vec<Uuid> = unseen
+        .into_iter()
+        .filter(|(_, path)| crate::crawl::in_scope(path, &include, &exclude))
+        .map(|(id, _)| id)
+        .collect();
+    if ids.is_empty() {
+        return Ok(0);
+    }
+    let due: Vec<(Uuid, String, Option<Uuid>)> = sqlx::query_as(
+        "UPDATE webcrawl_page SET missing_count = missing_count + 1 \
+          WHERE id = ANY($1) \
+          RETURNING id, url_path, CASE WHEN missing_count >= $2 THEN imported_data_item_ref END",
+    )
+    .bind(&ids)
+    .bind(MISSING_TO_RETIRE)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let items: Vec<(String, Uuid)> = due
+        .into_iter()
+        .filter_map(|(_, path, item)| item.filter(|i| *i != NIL_CLAIM).map(|i| (path, i)))
+        .collect();
+    if items.is_empty() {
+        return Ok(0);
+    }
+    let ctx = match state.base.security.resolve(creator).await {
+        Ok(ctx) => ctx,
+        Err(e) => {
+            tracing::warn!(%target_id, error = %e,
+                "webcrawl: the source's creator cannot be resolved; missing pages keep their items");
+            return Ok(0);
+        }
+    };
+    if ctx.require(ITEM, "update").is_err() {
+        return Ok(0);
+    }
+    let mut retired = 0;
+    for (path, item) in items {
+        let row: Option<(i64, Option<String>)> = sqlx::query_as(
+            "SELECT row_version, lifecycle::text FROM knowledge_data_item \
+              WHERE id = $1 AND is_active IS DISTINCT FROM false",
+        )
+        .bind(item)
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+        let Some((row_version, lifecycle)) = row else {
+            continue;
+        };
+        if lifecycle.as_deref() == Some(EXPIRED) {
+            continue;
+        }
+        match attome_records::entity_crud::update_record_for(
+            state,
+            &ctx,
+            ctx.user_id,
+            ITEM,
+            item,
+            row_version,
+            json!({ "lifecycle": EXPIRED }),
+        )
+        .await
+        {
+            Ok(_) => {
+                retired += 1;
+                audit_item(
+                    state,
+                    ctx.user_id,
+                    item,
+                    "webcrawl.item_retired",
+                    format!("{path} was missing from {MISSING_TO_RETIRE} crawls in a row"),
+                )
+                .await;
+            }
+            Err(AppError::Conflict(_) | AppError::NotFound) => {}
+            Err(e) => {
+                tracing::warn!(%target_id, %item, error = %e, "webcrawl: an item was not retired");
+            }
+        }
+    }
+    Ok(retired)
+}
+
+/// The business event for an item a recrawl updated (`webcrawl.item_updated`)
+/// or retired (`webcrawl.item_retired`), beside the change's own entity
+/// audit row. Best effort, as the source's other business events.
+async fn audit_item(state: &EngineState, user_id: Uuid, item: Uuid, event: &str, comment: String) {
     let (user_ctx, org_ref) = attome_records::entity_crud::fetch_audit_ctx(state, user_id).await;
     let event = attome_audit::AuditEvent {
         organization_ref: org_ref,
@@ -567,8 +757,8 @@ async fn audit_item_updated(state: &EngineState, user_id: Uuid, item: Uuid, url_
         request_context: attome_audit::AuditRequestContext::default(),
         correlation_id: None,
         batch_id: None,
-        event_name: Some("webcrawl.item_updated".to_string()),
-        event_comment: Some(format!("updated from {url_path}")),
+        event_name: Some(event.to_string()),
+        event_comment: Some(comment),
         changed_fields: vec![],
         snapshot_json: None,
     };
@@ -578,7 +768,7 @@ async fn audit_item_updated(state: &EngineState, user_id: Uuid, item: Uuid, url_
             .with_chainer_enabled(state.base.config.audit.chainer_enabled)
             .with_erasure_key(state.audit_erasure_key.clone());
     if let Err(e) = audit_service.write(event).await {
-        tracing::warn!(error = %e, "webcrawl: item-updated audit write failed");
+        tracing::warn!(error = %e, event, "webcrawl: item audit write failed");
     }
 }
 

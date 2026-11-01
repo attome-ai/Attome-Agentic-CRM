@@ -192,3 +192,64 @@ fn an_automatic_source_imports_its_new_pages_published() {
         assert_eq!(lifecycle.as_deref(), Some("published"));
     });
 }
+
+// feature: K6
+#[test]
+fn missing_twice_unpublishes_and_duplicate_becomes_alias() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        definitions(&app).await;
+
+        // Two pages with the same text in an automatic source: one item, one alias.
+        let target = source(&app, "automatic").await;
+        let first = page(&app, target, "/a", "Same words").await;
+        let second = page(&app, target, "/b", "Same words").await;
+        let stats = attome_webcrawl::import::sync_after_crawl(&app.state, target)
+            .await
+            .unwrap();
+        assert_eq!((stats.imported, stats.aliased), (1, 1), "{stats:?}");
+        let (aliased, original) = if item_of_opt(&app, first).await.is_some() {
+            (second, first)
+        } else {
+            (first, second)
+        };
+        let alias_of: Option<Uuid> =
+            sqlx::query_scalar("SELECT alias_of FROM webcrawl_page WHERE id = $1")
+                .bind(aliased)
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        assert_eq!(alias_of, Some(original));
+
+        // The imported page goes missing from two complete crawls in a row.
+        let item = item_of(&app, original).await;
+        for (round, retired) in [(1, 0), (2, 1)] {
+            let after: chrono::DateTime<chrono::Utc> =
+                sqlx::query_scalar("SELECT now() + interval '1 second'")
+                    .fetch_one(app.db())
+                    .await
+                    .unwrap();
+            let got = attome_webcrawl::import::retire_missing(&app.state, target, after)
+                .await
+                .unwrap();
+            assert_eq!(got, retired, "round {round}");
+        }
+        let lifecycle: Option<String> =
+            sqlx::query_scalar("SELECT lifecycle::text FROM knowledge_data_item WHERE id = $1")
+                .bind(item)
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        assert_eq!(lifecycle.as_deref(), Some("expired"), "retired, and kept");
+    });
+}
+
+async fn item_of_opt(app: &TestApp, page: Uuid) -> Option<Uuid> {
+    sqlx::query_scalar("SELECT imported_data_item_ref FROM webcrawl_page WHERE id = $1")
+        .bind(page)
+        .fetch_one(app.db())
+        .await
+        .unwrap()
+}

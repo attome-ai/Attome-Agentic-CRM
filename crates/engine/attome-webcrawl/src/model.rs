@@ -204,4 +204,7 @@ pub struct ImportResult {
     /// K6-T4: imported pages whose changed text replaced their item's, as
     /// its next version.
     pub updated_count: i64,
+    /// K6-T7: new pages with the same text as an imported page, kept as its
+    /// alias instead of a second item.
+    pub aliased_count: i64,
 }
