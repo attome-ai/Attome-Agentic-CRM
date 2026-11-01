@@ -1233,6 +1233,19 @@ impl Ctx<'_> {
             }
             Op::UpsertRule => {
                 let r: RuleDef = op.definition().map_err(def_err)?;
+                // A value read through a lookup (`fund_ref.partner_account_ref`)
+                // is checked against the registry, which lacks the entities
+                // and fields this apply (or this boot's earlier packs) added.
+                let reads_related = r
+                    .policies
+                    .iter()
+                    .any(|p| p.expression.as_deref().is_some_and(|e| e.contains('.')));
+                if reads_related && !self.registry_refreshed {
+                    let registry =
+                        attome_core::meta_registry::build_registry(&state.base.db).await?;
+                    state.entities.swap(registry);
+                    self.registry_refreshed = true;
+                }
                 let pol = self.policy(false);
                 let (_, outcome) =
                     with_lock_retry!(crate::rule_admin::reconcile_rule(state, &r, pol).await)?;
