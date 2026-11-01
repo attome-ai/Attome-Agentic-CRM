@@ -124,6 +124,12 @@ partners and their funds. Each grant carries the condition
 a channel manager reaches a partner only while its `partner_manager_ref` names them. Give a person
 the role; set the partner manager on the partner account.
 
+The **Partners** menu opens partner accounts, deal registrations, tier proposals and MDF requests and
+claims, each shown to people who may read it. Their queues are views: *Registrations to decide*
+(submitted or in conflict), *Tier proposals to decide*, *MDF requests to decide* and *MDF claims to
+decide*. Every view runs with the reader's record access, so a channel manager's queue holds only the
+partners they manage.
+
 ## A partner's own members
 
 A portal member who holds the `partner_admin` role, and whose contact is at a partner account,

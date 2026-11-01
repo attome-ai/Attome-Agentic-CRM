@@ -51,6 +51,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   (kind, query, target, account expansion or its combinations) while a live journey takes entries from
   it answers `409 list.in_use` unless the `PATCH` carries `Attome-Confirm: list.in_use`; any record
   check may ask for a confirmation code this way (`attome_core::record_check::confirmed`).
+- Partner pack changeset 0009 (F9-T11, internal part): a Partners menu and the channel manager's
+  queues as views (registrations, tier proposals, MDF requests and claims waiting for a decision), and
+  Arabic labels for the partner statuses.
 - Partner pack changeset 0008 (F9-T8): the internal Channel Manager role reads and decides the
   registrations, tier proposals and MDF of the partners whose `partner_manager_ref` is the caller;
   `mdf_request` and `mdf_claim` gain `partner_account_ref`, always set from the fund, and the

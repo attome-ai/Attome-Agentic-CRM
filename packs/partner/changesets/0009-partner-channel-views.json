@@ -1,0 +1,619 @@
+{
+  "author": "packs",
+  "checksum": "sha256:5bc3c3b7330efec0ea9718ff55dbc689244e61e16d833495086595d1a44b37ad",
+  "closed_at": "2026-11-01T00:00:00Z",
+  "description": "F9-T11 (internal part): the channel manager's queues as views over stored queries (registrations, tier proposals, MDF requests and claims waiting for a decision; each runs with the reader's record access, so a channel manager sees only the partners they manage), a Partners menu, and Arabic labels for the partner statuses.",
+  "format": "attome-changeset/v1",
+  "id": "01a19828-c546-7e49-8288-56fd2c843cab",
+  "layer": "product",
+  "name": "partner-channel-views",
+  "opened_at": "2026-11-01T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "deal_registration",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Registrations to decide",
+          "required_privilege": "deal_registration.read",
+          "sql": "SELECT id, customer_name, amount, expected_close, status FROM \"deal_registration\" WHERE is_active = true AND status IN ('submitted', 'conflict')",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "deal_registration",
+        "query": "Registrations to decide"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "deal_registration",
+          "icon": "las la-tasks",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Registrations to decide",
+          "query": {
+            "entity": "deal_registration",
+            "name": "Registrations to decide"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "deal_registration",
+        "view": "Registrations to decide"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "tier_change_proposal",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Tier proposals to decide",
+          "required_privilege": "tier_change_proposal.read",
+          "sql": "SELECT id, status FROM \"tier_change_proposal\" WHERE is_active = true AND status IN ('proposed')",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "tier_change_proposal",
+        "query": "Tier proposals to decide"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "tier_change_proposal",
+          "icon": "las la-tasks",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Tier proposals to decide",
+          "query": {
+            "entity": "tier_change_proposal",
+            "name": "Tier proposals to decide"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "tier_change_proposal",
+        "view": "Tier proposals to decide"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "mdf_request",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "MDF requests to decide",
+          "required_privilege": "mdf_request.read",
+          "sql": "SELECT id, activity, amount, status FROM \"mdf_request\" WHERE is_active = true AND status IN ('submitted')",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "mdf_request",
+        "query": "MDF requests to decide"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "mdf_request",
+          "icon": "las la-tasks",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "MDF requests to decide",
+          "query": {
+            "entity": "mdf_request",
+            "name": "MDF requests to decide"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "mdf_request",
+        "view": "MDF requests to decide"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "mdf_claim",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "MDF claims to decide",
+          "required_privilege": "mdf_claim.read",
+          "sql": "SELECT id, amount, status FROM \"mdf_claim\" WHERE is_active = true AND status IN ('submitted')",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "mdf_claim",
+        "query": "MDF claims to decide"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "mdf_claim",
+          "icon": "las la-tasks",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "MDF claims to decide",
+          "query": {
+            "entity": "mdf_claim",
+            "name": "MDF claims to decide"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "mdf_claim",
+        "view": "MDF claims to decide"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 60,
+          "entity": null,
+          "icon": "la-handshake",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Partners"
+          ],
+          "privileges": [],
+          "route": null
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "path": "Partners"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 1,
+          "entity": null,
+          "icon": "la-building",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Partners",
+            "Partner accounts"
+          ],
+          "privileges": [
+            "account.read"
+          ],
+          "route": "/xrm/entity/account/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "path": "Partners/Partner accounts"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 2,
+          "entity": null,
+          "icon": "la-file-signature",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Partners",
+            "Deal registrations"
+          ],
+          "privileges": [
+            "deal_registration.read"
+          ],
+          "route": "/xrm/entity/deal_registration/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "path": "Partners/Deal registrations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 3,
+          "entity": null,
+          "icon": "la-layer-group",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Partners",
+            "Tier proposals"
+          ],
+          "privileges": [
+            "tier_change_proposal.read"
+          ],
+          "route": "/xrm/entity/tier_change_proposal/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "path": "Partners/Tier proposals"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 4,
+          "entity": null,
+          "icon": "la-hand-holding-usd",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Partners",
+            "MDF requests"
+          ],
+          "privileges": [
+            "mdf_request.read"
+          ],
+          "route": "/xrm/entity/mdf_request/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "path": "Partners/MDF requests"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 5,
+          "entity": null,
+          "icon": "la-receipt",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Partners",
+            "MDF claims"
+          ],
+          "privileges": [
+            "mdf_claim.read"
+          ],
+          "route": "/xrm/entity/mdf_claim/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "path": "Partners/MDF claims"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مقدَّم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "locale": "ar",
+        "object_key": "deal_registration.status.submitted",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "متعارض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "locale": "ar",
+        "object_key": "deal_registration.status.conflict",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "معتمد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "locale": "ar",
+        "object_key": "deal_registration.status.approved",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مرفوض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "locale": "ar",
+        "object_key": "deal_registration.status.rejected",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "منتهي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "locale": "ar",
+        "object_key": "deal_registration.status.lapsed",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مقدَّم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "locale": "ar",
+        "object_key": "partner_application.status.submitted",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "معتمد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "locale": "ar",
+        "object_key": "partner_application.status.approved",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مرفوض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "locale": "ar",
+        "object_key": "partner_application.status.rejected",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مسودة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "locale": "ar",
+        "object_key": "mdf_request.status.draft",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مقدَّم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "locale": "ar",
+        "object_key": "mdf_request.status.submitted",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "معتمد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "locale": "ar",
+        "object_key": "mdf_request.status.approved",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مرفوض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "locale": "ar",
+        "object_key": "mdf_request.status.rejected",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مقدَّم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "locale": "ar",
+        "object_key": "mdf_claim.status.submitted",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "معتمد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "locale": "ar",
+        "object_key": "mdf_claim.status.approved",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مرفوض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "locale": "ar",
+        "object_key": "mdf_claim.status.rejected",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مدفوع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "locale": "ar",
+        "object_key": "mdf_claim.status.paid",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مقترح"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "locale": "ar",
+        "object_key": "tier_change_proposal.status.proposed",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مؤكد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "locale": "ar",
+        "object_key": "tier_change_proposal.status.confirmed",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مستبعد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "locale": "ar",
+        "object_key": "tier_change_proposal.status.dismissed",
+        "object_kind": "choice_option"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "partner",
+  "seq": 9,
+  "title": "Pack: partner channel views"
+}
