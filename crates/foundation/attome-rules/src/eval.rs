@@ -641,6 +641,38 @@ impl Evaluator<'_> {
                     (other, _, _) => Err(eval_type_err(name, "(text, number, number)", other)),
                 }
             }
+            "split_part" => {
+                let v = self.eval_only(args, 3, name, trace)?;
+                if let Some(e) = null_operand_if_any(name, &v) {
+                    return Err(e);
+                }
+                match (&v[0], &v[1], &v[2]) {
+                    (Value::Text(s), Value::Text(sep), Value::Number(n)) => {
+                        mk_text(split_part(s, sep, *n), self.budgets)
+                    }
+                    (other, _, _) => Err(eval_type_err(name, "(text, text, number)", other)),
+                }
+            }
+            "word" => {
+                let v = self.eval_only(args, 2, name, trace)?;
+                if let Some(e) = null_operand_if_any(name, &v) {
+                    return Err(e);
+                }
+                match (&v[0], &v[1]) {
+                    (Value::Text(s), Value::Number(n)) => mk_text(word(s, *n), self.budgets),
+                    (other, _) => Err(eval_type_err(name, "(text, number)", other)),
+                }
+            }
+            "word_count" => {
+                let v = self.eval_only(args, 1, name, trace)?;
+                if let Some(e) = null_operand_if_any(name, &v) {
+                    return Err(e);
+                }
+                match &v[0] {
+                    Value::Text(s) => Ok(Value::Number(s.split_whitespace().count() as f64)),
+                    other => Err(eval_type_err(name, "text", other)),
+                }
+            }
             "replace" => {
                 let v = self.eval_only(args, 3, name, trace)?;
                 if let Some(e) = null_operand_if_any(name, &v) {
@@ -1088,6 +1120,36 @@ fn substr(s: &str, start: f64, len: f64) -> String {
     let start = start.max(0.0).floor() as usize;
     let len = len.floor() as usize;
     s.chars().skip(start).take(len).collect()
+}
+
+/// The `n`th of `pieces`, counting from 1, or from the end when `n` is
+/// negative; empty when there is no such piece.
+fn nth_piece(pieces: &[&str], n: f64) -> String {
+    if !n.is_finite() || n.trunc() == 0.0 {
+        return String::new();
+    }
+    let len = pieces.len() as i64;
+    let n = n.trunc() as i64;
+    let at = if n > 0 { n - 1 } else { len + n };
+    usize::try_from(at)
+        .ok()
+        .and_then(|at| pieces.get(at))
+        .map(|p| (*p).to_owned())
+        .unwrap_or_default()
+}
+
+/// A1-T8: the `n`th piece of `s` split at `sep` (all of `s` is the only
+/// piece when `sep` is empty).
+fn split_part(s: &str, sep: &str, n: f64) -> String {
+    if sep.is_empty() {
+        return nth_piece(&[s], n);
+    }
+    nth_piece(&s.split(sep).collect::<Vec<_>>(), n)
+}
+
+/// A1-T8: the `n`th word of `s`, words being runs of non-whitespace.
+fn word(s: &str, n: f64) -> String {
+    nth_piece(&s.split_whitespace().collect::<Vec<_>>(), n)
 }
 
 fn mk_text(s: String, budgets: &Budgets) -> Result<Value, RulesError> {

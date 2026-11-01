@@ -446,6 +446,25 @@ fn typecheck_call(
             }
             Ok(Type::Text)
         }
+        // A1-T8.
+        "split_part" => {
+            arity(name, args.len(), 3, 3)?;
+            require(&arg_types[0], &Type::Text, "split_part's text")?;
+            require(&arg_types[1], &Type::Text, "split_part's separator")?;
+            require(&arg_types[2], &Type::Number, "split_part's position")?;
+            Ok(Type::Text)
+        }
+        "word" => {
+            arity(name, args.len(), 2, 2)?;
+            require(&arg_types[0], &Type::Text, "word's text")?;
+            require(&arg_types[1], &Type::Number, "word's position")?;
+            Ok(Type::Text)
+        }
+        "word_count" => {
+            arity(name, args.len(), 1, 1)?;
+            require(&arg_types[0], &Type::Text, name)?;
+            Ok(Type::Number)
+        }
         "abs" | "floor" | "ceil" => {
             arity(name, args.len(), 1, 1)?;
             require(&arg_types[0], &Type::Number, name)?;
@@ -675,6 +694,9 @@ fn rejects_null_call(name: &str) -> bool {
             | "concat"
             | "substr"
             | "replace"
+            | "split_part"
+            | "word"
+            | "word_count"
             | "abs"
             | "floor"
             | "ceil"

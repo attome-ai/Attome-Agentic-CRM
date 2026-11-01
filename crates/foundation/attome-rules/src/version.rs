@@ -41,6 +41,10 @@ const ADDED: &[(&str, LanguageVersion)] = &[
     ("concat", LanguageVersion::V2),
     ("substr", LanguageVersion::V2),
     ("replace", LanguageVersion::V2),
+    // A1-T8: words and pieces of a text, to split one attribute into several.
+    ("split_part", LanguageVersion::V2),
+    ("word", LanguageVersion::V2),
+    ("word_count", LanguageVersion::V2),
     ("abs", LanguageVersion::V2),
     ("floor", LanguageVersion::V2),
     ("ceil", LanguageVersion::V2),

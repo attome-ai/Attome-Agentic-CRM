@@ -65,6 +65,64 @@ fn substr_out_of_range_is_empty() {
     );
 }
 
+/// A1-T8: a full name into its four parts, a missing middle left empty.
+#[test]
+fn words_split_a_full_name_into_four_parts() {
+    let named = |name: &str| {
+        Context::new(chrono::Utc::now())
+            .with_field("name", Value::Text(name.into()))
+            .with_field("amount", Value::Number(0.0))
+    };
+    let parts = |name: &str| -> Vec<Value> {
+        [
+            "word(name, 1)",
+            "if(word_count(name) >= 3, word(name, 2), \"\")",
+            "if(word_count(name) >= 4, word(name, 3), \"\")",
+            "if(word_count(name) >= 2, word(name, -1), \"\")",
+        ]
+        .iter()
+        .map(|src| eval_with(src, &named(name), Budgets::default()).unwrap())
+        .collect()
+    };
+    let text = |s: &str| Value::Text(s.into());
+    assert_eq!(
+        parts("محمد  عبدالله سالم الأحمد"),
+        vec![text("محمد"), text("عبدالله"), text("سالم"), text("الأحمد")]
+    );
+    assert_eq!(
+        parts("Sara Ali"),
+        vec![text("Sara"), text(""), text(""), text("Ali")]
+    );
+    assert_eq!(
+        eval_with("word_count(name)", &named("  "), Budgets::default()).unwrap(),
+        Value::Number(0.0)
+    );
+}
+
+#[test]
+fn split_part_counts_from_one_and_from_the_end() {
+    assert_eq!(
+        eval(r#"split_part("a@b.example", "@", 2)"#).unwrap(),
+        Value::Text("b.example".into())
+    );
+    assert_eq!(
+        eval(r#"split_part("x-y-z", "-", -1)"#).unwrap(),
+        Value::Text("z".into())
+    );
+    assert_eq!(
+        eval(r#"split_part("x-y-z", "-", 4)"#).unwrap(),
+        Value::Text(String::new())
+    );
+    assert_eq!(
+        eval(r#"split_part("x-y-z", "-", 0)"#).unwrap(),
+        Value::Text(String::new())
+    );
+    assert_eq!(
+        eval(r#"split_part("abc", "", 1)"#).unwrap(),
+        Value::Text("abc".into())
+    );
+}
+
 #[test]
 fn power_rejects_large_exponent() {
     assert_eq!(eval("power(2, 10)").unwrap(), Value::Number(1024.0));
