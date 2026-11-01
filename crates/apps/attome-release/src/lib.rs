@@ -89,6 +89,9 @@ pub struct Options {
     /// AC5-T11: the opted-in customers' folder the upgrade rehearsal runs
     /// customer tests from (`--customer-tests <dir>`).
     pub customer_tests: Option<PathBuf>,
+    /// AA14-T6: also run the Core Web Vitals check on three key screens
+    /// (`--web-vitals`; needs `e2e/node_modules` and its browsers).
+    pub web_vitals: bool,
 }
 
 /// One override: the step and why its failure may be accepted.
@@ -182,6 +185,9 @@ pub fn check_with(options: &Options) -> ExitCode {
     }
     if options.reproducible {
         steps.push(("reproducible", repro::step as Step));
+    }
+    if options.web_vitals {
+        steps.push(("web_vitals", web_vitals as Step));
     }
     if options.slo_evidence {
         steps.push(("slo_evidence", slo_evidence as Step));
@@ -482,6 +488,7 @@ pub fn dispatch(args: &[String]) -> Option<ExitCode> {
                     "--slo-evidence" => options.slo_evidence = true,
                     "--reproducible" => options.reproducible = true,
                     "--perf" => options.perf = true,
+                    "--web-vitals" => options.web_vitals = true,
                     "--by" => options.by = Some(rest.next()?.clone()),
                     "--skip" => options.skip.push(rest.next()?.clone()),
                     "--customer-tests" => {
@@ -891,6 +898,31 @@ fn contract_step(root: &Path) -> Result<(), String> {
 
 /// The web app's gate: every build, lint and unit-test script, in order.
 /// Every script runs, so one run reports every failure.
+/// AA14-T6: the Core Web Vitals check (`e2e/perf`): the record list, a
+/// record form and a dashboard over a throttled link must paint their
+/// largest content within 2.5 s and answer an interaction within 200 ms.
+/// The numbers are kept as `target/release-gate/web-vitals.json`.
+fn web_vitals(root: &Path) -> Result<(), String> {
+    let e2e = root.join("e2e");
+    if !e2e.join("node_modules").is_dir() {
+        return Err("e2e/node_modules is missing: run `npm ci` and `npx playwright install chromium` in e2e/ first".to_owned());
+    }
+    let mut command = Command::new(npm_program("npx"));
+    command.args(["playwright", "test", "-c", "perf.config.ts"]);
+    let outcome = run(&mut command, &e2e, "playwright web vitals");
+    let results = e2e.join("perf").join("results.json");
+    if results.is_file() {
+        let kept = gate_dir(root).join("web-vitals.json");
+        if let Err(error) = std::fs::copy(&results, &kept) {
+            eprintln!(
+                "    web_vitals: could not keep {}: {error}",
+                results.display()
+            );
+        }
+    }
+    outcome
+}
+
 fn web(root: &Path) -> Result<(), String> {
     let web = root.join("web");
     if !web.join("node_modules").is_dir() {
@@ -1370,6 +1402,7 @@ mod tests {
             perf: false,
             skip: Vec::new(),
             customer_tests: None,
+            web_vitals: false,
             overrides: overrides
                 .iter()
                 .map(|(step, reason)| Override {
