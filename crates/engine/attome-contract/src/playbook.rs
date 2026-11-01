@@ -515,6 +515,53 @@ async fn on_clause(
     Ok(None)
 }
 
+/// W1-T12: a contract's deviations from the playbook as `security` reads
+/// it (the contract through the caller's read, its clauses once the caller
+/// may read clauses), each with the fallback clauses the library offers for
+/// its clause key. Writes nothing.
+pub async fn review(
+    state: &EngineState,
+    security: &attome_server::security::SecurityContext,
+    contract_id: Uuid,
+) -> Result<Value, AppError> {
+    use attome_security::SecurityContextExt;
+    let shape = shape(state);
+    if !shape.complete {
+        return Err(AppError::NotFound);
+    }
+    let record =
+        attome_records::entity_crud::read_record(state, security, "contract", contract_id).await?;
+    let contract = attribute_values(record.data().clone(), &shape.contract_fields);
+    let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
+    let clauses = if security.require("contract_clause", "read").is_ok() {
+        load_clauses(&mut conn, contract_id, &shape.clause_fields).await?
+    } else {
+        Vec::new()
+    };
+    let rules = load_rules(&mut conn).await?;
+    let deviations = check(&contract, &clauses, &rules, &shape.known());
+    let mut out = Vec::with_capacity(deviations.len());
+    for deviation in deviations {
+        let fallbacks: Vec<String> = match deviation.clause_key.as_deref() {
+            Some(key) if security.require("clause", "read").is_ok() => sqlx::query_scalar(
+                "SELECT f.title FROM clause f JOIN clause c ON f.fallback_of_ref = c.id \
+                  WHERE c.clause_key = $1 AND f.title IS NOT NULL \
+                    AND f.is_active IS DISTINCT FROM false AND c.is_active IS DISTINCT FROM false \
+                  ORDER BY f.title LIMIT 10",
+            )
+            .bind(key)
+            .fetch_all(&mut *conn)
+            .await
+            .map_err(AppError::internal)?,
+            _ => Vec::new(),
+        };
+        let mut value = serde_json::to_value(&deviation).map_err(AppError::internal)?;
+        value["fallbacks"] = serde_json::json!(fallbacks);
+        out.push(value);
+    }
+    Ok(serde_json::json!({ "contract_id": contract_id, "deviations": out }))
+}
+
 /// The save-time playbook check, registered for `contract` and
 /// `contract_clause` by `ContractModel::record_checks`.
 #[derive(Debug)]

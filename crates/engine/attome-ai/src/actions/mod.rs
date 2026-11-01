@@ -39,6 +39,8 @@ pub mod claim_check;
 pub mod classify;
 pub mod collections;
 pub mod commission;
+/// W1-T12: contract.review_against_playbook, contract.summarise.
+pub mod contract;
 pub mod partner;
 /// P7-T10: a dashboard number explained in words.
 pub mod dashboard_explain;
@@ -224,6 +226,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(followup::descriptors());
     all.extend(commission::descriptors());
     all.extend(partner::descriptors());
+    all.extend(contract::descriptors());
     all.extend(sales_lines::descriptors());
     all.extend(sales_competitors::descriptors());
     all.extend(billing::descriptors());
@@ -333,6 +336,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(followup::executors());
     all.extend(commission::executors());
     all.extend(partner::executors());
+    all.extend(contract::executors());
     all.extend(sales_lines::executors());
     all.extend(sales_competitors::executors());
     all.extend(billing::executors());

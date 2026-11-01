@@ -82,5 +82,14 @@ impl EngineModel for ContractModel {
                 "/api/v1/contract/contracts/{id}/compare",
                 post(crate::compare::post_compare),
             )
+            // W1-T12: propose from an old contract's text; a person accepts.
+            .route(
+                "/api/v1/contract/imports/{id}/propose",
+                post(crate::import::post_propose),
+            )
+            .route(
+                "/api/v1/contract/imports/{id}/accept",
+                post(crate::import::post_accept),
+            )
     }
 }

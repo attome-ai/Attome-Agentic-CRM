@@ -28,6 +28,7 @@ attome-server.workspace = true
 attome-types.workspace = true
 axum.workspace = true
 chrono.workspace = true
+regex.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sqlx.workspace = true

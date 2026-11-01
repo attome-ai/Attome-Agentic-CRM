@@ -14,6 +14,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Old contracts come in through their text: `POST /api/v1/contract/imports/{id}/propose` proposes a
+  contract import's fields (counterparty, dates, value and currency, renewal and notice terms) and
+  obligations with a confidence each, and `POST /api/v1/contract/imports/{id}/accept` creates the
+  contract and obligations from the proposal a person reviewed. Agents gain the read-only
+  `contract.review_against_playbook` and `contract.summarise` (W1-T12).
 - A crawled page's links to PDF, Word and Excel files in scope are fetched by their own background
   job (up to 20 MB, conditional on the file's ETag), stored as a document on the source's Data Source
   through the upload pipeline's virus scan, and once clean their extracted text is imported like a

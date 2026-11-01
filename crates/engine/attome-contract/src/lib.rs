@@ -10,6 +10,8 @@ pub mod compare;
 pub mod counterparty;
 pub mod dates;
 pub mod draft;
+/// W1-T12: old contracts in through their text, accepted by a person.
+pub mod import;
 pub mod links;
 pub mod model;
 pub mod playbook;
@@ -27,5 +29,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = <counterparty::ApiDocFragment as utoipa::OpenApi>::openapi();
     doc.merge(<draft::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<compare::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<import::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }
