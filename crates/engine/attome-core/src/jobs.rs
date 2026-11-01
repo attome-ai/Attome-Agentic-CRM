@@ -483,6 +483,9 @@ pub enum EngineJob {
     /// W1-T13: drafts contracts from accepted quotes, confirmed orders and
     /// contract intake requests, off the change feed. Bare unit variant.
     ContractLinkSweep,
+    /// W1-T10: activates contracts whose signature envelopes completed,
+    /// and ends declined or voided signings. Bare unit variant.
+    ContractSignatureSweep,
     /// B15-T1: geocodes changed addresses off the change feed. Bare unit
     /// variant.
     GeocodeSweep,
@@ -1136,6 +1139,7 @@ impl EngineJob {
             | Self::ContractCounterpartyMatch
             | Self::RecurringTaskRoll
             | Self::ContractLinkSweep
+            | Self::ContractSignatureSweep
             | Self::GeocodeSweep
             | Self::BillingRenewalSweep
             | Self::BillingGenerateCharges
@@ -1293,6 +1297,7 @@ impl EngineJob {
             EngineJob::ContractCounterpartyMatch => "ContractCounterpartyMatch",
             EngineJob::RecurringTaskRoll => "RecurringTaskRoll",
             EngineJob::ContractLinkSweep => "ContractLinkSweep",
+            EngineJob::ContractSignatureSweep => "ContractSignatureSweep",
             EngineJob::GeocodeSweep => "GeocodeSweep",
             EngineJob::BillingHandoffSweep => "BillingHandoffSweep",
             EngineJob::BillingRenewalSweep => "BillingRenewalSweep",
@@ -1454,6 +1459,7 @@ impl EngineJob {
             | Self::ContractCounterpartyMatch
             | Self::RecurringTaskRoll
             | Self::ContractLinkSweep
+            | Self::ContractSignatureSweep
             | Self::GeocodeSweep
             | Self::BillingRenewalSweep
             | Self::BillingGenerateCharges
@@ -1629,6 +1635,7 @@ impl EngineJob {
             | Self::ContractCounterpartyMatch
             | Self::RecurringTaskRoll
             | Self::ContractLinkSweep
+            | Self::ContractSignatureSweep
             | Self::GeocodeSweep
             | Self::BillingRenewalSweep
             | Self::BillingGenerateCharges
@@ -2085,6 +2092,7 @@ mod tests {
         assert_round_trips(EngineJob::ContractCounterpartyMatch);
         assert_round_trips(EngineJob::RecurringTaskRoll);
         assert_round_trips(EngineJob::ContractLinkSweep);
+        assert_round_trips(EngineJob::ContractSignatureSweep);
         assert_round_trips(EngineJob::GeocodeSweep);
         assert_round_trips(EngineJob::BillingHandoffSweep);
         assert_round_trips(EngineJob::BillingRenewalSweep);

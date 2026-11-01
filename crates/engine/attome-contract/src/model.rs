@@ -79,6 +79,10 @@ impl EngineModel for ContractModel {
                 post(crate::draft::post_draft),
             )
             .route(
+                "/api/v1/contract/contracts/{id}/send-for-signature",
+                post(crate::signature::post_send),
+            )
+            .route(
                 "/api/v1/contract/contracts/{id}/compare",
                 post(crate::compare::post_compare),
             )

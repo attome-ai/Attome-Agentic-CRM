@@ -1689,6 +1689,13 @@ async fn dispatch_platform_job(
                 );
             }
         }
+        // W1-T10: signed contracts become active.
+        EngineJob::ContractSignatureSweep => {
+            let activated = attome_contract::signature::tick(&attome_state).await?;
+            if activated > 0 {
+                tracing::info!(activated, "contract signatures: run finished");
+            }
+        }
         // W1-T3: counterparty match proposals, on demand.
         EngineJob::ContractCounterpartyMatch => {
             let run = attome_contract::counterparty::run_match(&db).await?;
@@ -3042,6 +3049,7 @@ const DEDUP_KEY_TAG_EXPIRY: &str = "tag-expiry";
 const DEDUP_KEY_CONTRACT_KEY_DATES: &str = "contract-key-dates";
 const DEDUP_KEY_RECURRING_TASK_ROLL: &str = "recurring-task-roll";
 const DEDUP_KEY_CONTRACT_LINK_SWEEP: &str = "contract-link-sweep";
+const DEDUP_KEY_CONTRACT_SIGNATURE_SWEEP: &str = "contract-signature-sweep";
 const DEDUP_KEY_GEOCODE_SWEEP: &str = "geocode-sweep";
 const DEDUP_KEY_BILLING_HANDOFF_SWEEP: &str = "billing-handoff-sweep";
 const DEDUP_KEY_BILLING_RENEWAL_SWEEP: &str = "billing-renewal-sweep";
@@ -6091,6 +6099,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::ContractKeyDates => DEDUP_KEY_CONTRACT_KEY_DATES,
         EngineJob::RecurringTaskRoll => DEDUP_KEY_RECURRING_TASK_ROLL,
         EngineJob::ContractLinkSweep => DEDUP_KEY_CONTRACT_LINK_SWEEP,
+        EngineJob::ContractSignatureSweep => DEDUP_KEY_CONTRACT_SIGNATURE_SWEEP,
         EngineJob::GeocodeSweep => DEDUP_KEY_GEOCODE_SWEEP,
         EngineJob::BillingHandoffSweep => DEDUP_KEY_BILLING_HANDOFF_SWEEP,
         EngineJob::BillingRenewalSweep => DEDUP_KEY_BILLING_RENEWAL_SWEEP,
@@ -8918,6 +8927,17 @@ pub fn spawn_contract_link_scheduler(db: DbPool, interval: std::time::Duration) 
         EngineJob::ContractLinkSweep,
         DEDUP_KEY_CONTRACT_LINK_SWEEP,
         "contract links",
+    );
+}
+
+/// W1-T10: every five minutes, signed contracts become active.
+pub fn spawn_contract_signature_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::ContractSignatureSweep,
+        DEDUP_KEY_CONTRACT_SIGNATURE_SWEEP,
+        "contract signatures",
     );
 }
 

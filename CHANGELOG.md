@@ -14,6 +14,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- An approved contract can be sent for signature (`POST /api/v1/contract/contracts/{id}/send-for-signature`,
+  migration 0352): its latest drafted file is filed as a document and sent to the signers in order through
+  an electronic signature envelope. When everyone has signed, the `ContractSignatureSweep` job adds a
+  `signed` version holding the file and moves the contract to active as the person who sent it; a declined
+  or voided envelope ends the signing with the contract still approved. National identity signing (Nafath,
+  UAE Pass) is refused until its connectors exist.
 - Contracts are approved under a plan (contract-management pack 0007): submitting a draft holds it in
   review until a contract manager approves, Legal too when the playbook check marked a deviation that
   needs legal, and Legal again above a value of 1,000,000; a rejection returns it to draft. Submit,
