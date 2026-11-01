@@ -1,0 +1,48 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=0.1.0",
+    "schema_version": 1,
+    "modules": [
+      "core"
+    ]
+  },
+  "attribute_patches": [
+    {
+      "entity": "knowledge_data_item",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Version",
+        "field_type": "number",
+        "is_customized": false,
+        "is_filterable": false,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "version",
+        "lookup_entity": null,
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    },
+    {
+      "entity": "knowledge_data_item",
+      "attribute": {
+        "data_classification": "general",
+        "display_name": "Needs Review",
+        "field_type": "bool",
+        "is_customized": false,
+        "is_filterable": true,
+        "is_required": false,
+        "is_sensitive": false,
+        "is_sortable": false,
+        "logicalname": "needs_review",
+        "lookup_entity": null,
+        "max_length": null,
+        "on_target_delete": "orphan",
+        "options": null
+      }
+    }
+  ]
+}

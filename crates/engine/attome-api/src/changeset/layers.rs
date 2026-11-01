@@ -347,6 +347,10 @@ pub const PLATFORM_BUNDLES: &[(&str, &str)] = &[
         include_str!("../../../../../platform-bundles/attome-webcrawl.json"),
     ),
     (
+        "attome-webcrawl-item-versions",
+        include_str!("../../../../../platform-bundles/attome-webcrawl-item-versions.json"),
+    ),
+    (
         "attome-workflow",
         include_str!("../../../../../platform-bundles/attome-workflow.json"),
     ),

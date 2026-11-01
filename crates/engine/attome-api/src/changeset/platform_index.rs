@@ -491,6 +491,13 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
             "../../../../../changesets/platform/0083-attome-default-list-views.json"
         ),
     },
+    PlatformChangeset {
+        file: "0084-attome-webcrawl-item-versions.json",
+        name: "attome-webcrawl-item-versions",
+        json: include_str!(
+            "../../../../../changesets/platform/0084-attome-webcrawl-item-versions.json"
+        ),
+    },
 ];
 
 #[cfg(test)]

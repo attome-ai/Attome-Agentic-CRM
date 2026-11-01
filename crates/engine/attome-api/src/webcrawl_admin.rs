@@ -12,7 +12,6 @@
 //! them for every other entity write (guidelines §9).
 
 use attome_core::EngineState;
-use attome_security::SecurityContextExt;
 use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PageWindow, PaginatedResponse};
 use attome_webcrawl::model::{
@@ -484,90 +483,11 @@ async fn update_selection(
 
 // ── Import ──────────────────────────────────────────────────────────────────
 
-const NIL_CLAIM: Uuid = Uuid::nil();
-
-#[derive(sqlx::FromRow)]
-struct ImportCandidate {
-    id: Uuid,
-    url_path: String,
-    content: Option<String>,
-}
-
-async fn ensure_data_source_for_target(
-    state: &EngineState,
-    ctx: &attome_server::security::SecurityContext,
-    target_id: Uuid,
-) -> Result<Uuid, AppError> {
-    let existing: Option<Uuid> =
-        sqlx::query_scalar("SELECT data_source_ref FROM webcrawl_target WHERE id = $1")
-            .bind(target_id)
-            .fetch_optional(&state.base.db)
-            .await
-            .map_err(AppError::internal)?
-            .flatten();
-    if let Some(id) = existing {
-        return Ok(id);
-    }
-
-    ctx.require("knowledge_data_source", "create")?;
-
-    let url: String = sqlx::query_scalar("SELECT url FROM webcrawl_target WHERE id = $1")
-        .bind(target_id)
-        .fetch_optional(&state.base.db)
-        .await
-        .map_err(AppError::internal)?
-        .ok_or(AppError::NotFound)?;
-    let host = reqwest::Url::parse(&url)
-        .ok()
-        .and_then(|u| u.host_str().map(str::to_string))
-        .unwrap_or_else(|| url.clone());
-
-    let body = serde_json::json!({
-        "name": host,
-        "description": format!("Web crawl of {url}"),
-    });
-    let (new_id, _) = attome_records::entity_crud::create_record_for(
-        state,
-        ctx,
-        ctx.user_id,
-        "knowledge_data_source",
-        body,
-    )
-    .await?;
-
-    // Compare-and-swap: only the first caller to claim a still-NULL
-    // `data_source_ref` wins. A concurrent loser's freshly-created Data
-    // Source is simply left unreferenced here — harmless orphan metadata
-    // (an admin can delete it), not a correctness issue; see this
-    // function's doc.
-    let claimed: Option<Uuid> = sqlx::query_scalar(
-        "UPDATE webcrawl_target SET data_source_ref = $2, row_version = row_version + 1, updated_at = NOW() \
-         WHERE id = $1 AND data_source_ref IS NULL \
-         RETURNING data_source_ref",
-    )
-    .bind(target_id)
-    .bind(new_id)
-    .fetch_optional(&state.base.db)
-    .await
-    .map_err(AppError::internal)?;
-
-    match claimed {
-        Some(id) => Ok(id),
-        None => sqlx::query_scalar("SELECT data_source_ref FROM webcrawl_target WHERE id = $1")
-            .bind(target_id)
-            .fetch_optional(&state.base.db)
-            .await
-            .map_err(AppError::internal)?
-            .flatten()
-            .ok_or_else(|| {
-                AppError::internal("target lost its data_source_ref between check and use")
-            }),
-    }
-}
-
 /// Import crawled pages
 ///
-/// Import crawled pages. Administrators only. Audited.
+/// Import crawled pages. A page imported before whose text changed on a
+/// recrawl replaces its item's text as the next version (K6-T4).
+/// Administrators only. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/webcrawl/targets/{id}/import",
@@ -575,7 +495,7 @@ async fn ensure_data_source_for_target(
     params(("id" = Uuid, Path, description = "The target")),
     request_body = ImportBody,
     responses(
-        (status = 200, description = "Success", body = ImportResult),
+        (status = 200, description = "New pages imported, and changed imported pages updated as new versions", body = ImportResult),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
         (status = 404, description = "Target not found", body = ErrorResponse),
@@ -592,112 +512,9 @@ async fn import_pages(
     Path(id): Path<Uuid>,
     Json(body): Json<ImportBody>,
 ) -> Result<Json<ImportResult>, AppError> {
-    if body.page_ids.is_empty() {
-        return Err(AppError::Validation("page_ids must not be empty".into()));
-    }
-    let ctx_ref: &attome_server::security::SecurityContext = &ctx;
-
-    // K6-T9: a watch-only source reports changes and imports nothing.
-    let watch_only: Option<bool> = sqlx::query_scalar(
-        "SELECT watch_only FROM webcrawl_target WHERE id = $1 AND is_deleted = FALSE",
-    )
-    .bind(id)
-    .fetch_optional(&state.base.db)
-    .await
-    .map_err(AppError::internal)?;
-    if watch_only == Some(true) {
-        return Err(AppError::Validation(
-            "this source only watches for changes; it imports nothing".into(),
-        ));
-    }
-
-    let data_source_id = ensure_data_source_for_target(&state, ctx_ref, id).await?;
-    ctx_ref.require("knowledge_data_item", "create")?;
-
-    let candidates = sqlx::query_as::<_, ImportCandidate>(
-        "SELECT id, url_path, content FROM webcrawl_page \
-         WHERE target_ref = $1 AND id = ANY($2) AND is_deleted = FALSE \
-           AND status = 'crawled' AND content IS NOT NULL AND imported_data_item_ref IS NULL",
-    )
-    .bind(id)
-    .bind(&body.page_ids)
-    .fetch_all(&state.base.db)
-    .await
-    .map_err(AppError::internal)?;
-
-    let mut imported = 0i64;
-    for candidate in candidates {
-        let claim = sqlx::query(
-            "UPDATE webcrawl_page SET imported_data_item_ref = $2 \
-             WHERE id = $1 AND imported_data_item_ref IS NULL",
-        )
-        .bind(candidate.id)
-        .bind(NIL_CLAIM)
-        .execute(&state.base.db)
+    attome_webcrawl::import::import_pages(&state, &ctx, id, &body.page_ids)
         .await
-        .map_err(AppError::internal)?;
-        if claim.rows_affected() == 0 {
-            // Claimed by a concurrent import request between our SELECT and here.
-            continue;
-        }
-
-        let item_body = serde_json::json!({
-            "title": candidate.url_path,
-            "text": candidate.content,
-            "data_source_ref": data_source_id,
-        });
-        match attome_records::entity_crud::create_record_for(
-            &state,
-            ctx_ref,
-            ctx.user_id,
-            "knowledge_data_item",
-            item_body,
-        )
-        .await
-        {
-            Ok((record_id, _)) => {
-                sqlx::query(
-                    "UPDATE webcrawl_page SET imported_data_item_ref = $2, row_version = row_version + 1, updated_at = NOW() \
-                     WHERE id = $1",
-                )
-                .bind(candidate.id)
-                .bind(record_id)
-                .execute(&state.base.db)
-                .await
-                .map_err(AppError::internal)?;
-                imported += 1;
-            }
-            Err(e) => {
-                // Release the claim so a retry can pick this page up again.
-                let _ = sqlx::query(
-                    "UPDATE webcrawl_page SET imported_data_item_ref = NULL \
-                     WHERE id = $1 AND imported_data_item_ref = $2",
-                )
-                .bind(candidate.id)
-                .bind(NIL_CLAIM)
-                .execute(&state.base.db)
-                .await;
-                return Err(e);
-            }
-        }
-    }
-
-    if imported > 0 {
-        sqlx::query(
-            "UPDATE webcrawl_target SET pages_imported = pages_imported + $2, row_version = row_version + 1, updated_at = NOW() \
-             WHERE id = $1",
-        )
-        .bind(id)
-        .bind(imported as i32)
-        .execute(&state.base.db)
-        .await
-        .map_err(AppError::internal)?;
-    }
-
-    Ok(Json(ImportResult {
-        data_source_ref: data_source_id,
-        imported_count: imported,
-    }))
+        .map(Json)
 }
 
 /// A crawl target being created is a business event, not entity CRUD (D-363's

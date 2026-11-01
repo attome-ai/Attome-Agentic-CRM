@@ -11,6 +11,7 @@ homepage.workspace     = true
 publish.workspace      = true
 
 [dependencies]
+attome-ai.workspace       = true
 attome-api.workspace      = true
 attome-audit.workspace    = true
 attome-auth.workspace     = true
@@ -65,6 +66,8 @@ attome-marketing.workspace = true
 attome-metadata.workspace = true
 attome-metric.workspace = true
 attome-service.workspace = true
+# K6-T4: the crawled-item import and update.
+attome-webcrawl.workspace = true
 # D4-T1: the lead assignment sweep test.
 attome-workflow.workspace = true
 rust_decimal.workspace = true

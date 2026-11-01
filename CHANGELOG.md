@@ -14,6 +14,15 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- A recrawl that changes an imported page updates its knowledge item as the item's next `version`;
+  an item someone published from a `review` source keeps its text and is marked `needs_review`, and
+  importing the page again replaces it. An `automatic` source imports its new pages, published, after
+  every crawl. The import's answer gains `updated_count` (K6-T4).
+- Contract playbook rules are checked on every save of a contract or one of its clauses: deviations
+  are kept in the contract's `playbook_deviations`, and a `block` rule refuses the save with a 422
+  naming the clause (W1-T5).
+- Making an AI agent active, or changing an active agent's policy, runs the agent's permission test
+  in the save and refuses it with a 422 listing what failed (AH7-T3).
 - Dashboards and chart views draw 15 more chart types: stacked bar, combo, waterfall, treemap, sunburst,
   sankey, radar, polar, heat map, calendar heat map, Pareto, control, scatter, bubble and range area,
   in both reading directions and with a table of their values. ECharts draws them and loads only on a

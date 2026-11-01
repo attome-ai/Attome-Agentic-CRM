@@ -11,6 +11,7 @@ homepage.workspace     = true
 publish.workspace      = true
 
 [dependencies]
+attome-audit.workspace    = true
 attome-core.workspace     = true
 attome-db.workspace       = true
 attome-html.workspace     = true
@@ -18,6 +19,8 @@ attome-integration.workspace = true
 attome-jobs.workspace     = true
 attome-metadata.workspace = true
 attome-outbound.workspace = true
+attome-records.workspace  = true
+attome-security.workspace = true
 attome-server.workspace   = true
 attome-types.workspace    = true
 chrono.workspace          = true

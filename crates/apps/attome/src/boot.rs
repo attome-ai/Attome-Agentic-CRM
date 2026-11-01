@@ -1273,6 +1273,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-document-polymorphic",
         // Default list views for the entities created without one.
         "attome-default-list-views",
+        // K6-T4: a crawled knowledge item's version and needs-review flag.
+        "attome-webcrawl-item-versions",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

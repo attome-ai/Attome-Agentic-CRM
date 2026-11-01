@@ -1,0 +1,100 @@
+{
+  "author": "attome-webcrawl (K6-T4)",
+  "checksum": "sha256:86eab2d4a7e583c9fe850777b30a8c3355a3edc7d4daecbd622ae143b419a035",
+  "closed_at": "2026-11-01T00:00:00Z",
+  "description": "K6-T4: a knowledge item imported from a crawled page carries its version, raised each time a recrawl brings changed text, and a needs-review flag set instead of replacing text a person already published.",
+  "format": "attome-changeset/v1",
+  "id": "01a19617-08c5-7e80-a2ed-2edcae29bc84",
+  "layer": "platform",
+  "name": "attome-webcrawl-item-versions",
+  "opened_at": "2026-11-01T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Needs Review",
+          "field_type": "bool",
+          "is_customized": false,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "needs_review",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "knowledge_data_item",
+        "field": "needs_review"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Version",
+          "field_type": "number",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "version",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "knowledge_data_item",
+        "field": "version"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بحاجة إلى مراجعة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "locale": "ar",
+        "object_key": "knowledge_data_item.needs_review",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الإصدار"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "knowledge_data_item.version",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "platform",
+  "seq": 84,
+  "title": "Platform definitions: attome-webcrawl-item-versions"
+}

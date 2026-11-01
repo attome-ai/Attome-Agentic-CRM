@@ -915,6 +915,18 @@ pub async fn run(state: &EngineState, target_id: Uuid) -> Result<(), AppError> {
     .await
     .map_err(AppError::internal)?;
 
+    // K6-T4: changed imported pages update their items; an automatic
+    // source imports its new pages.
+    if status == "completed" {
+        match crate::import::sync_after_crawl(state, target_id).await {
+            Ok(stats) => tracing::info!(%target_id, imported = stats.imported,
+                updated = stats.updated, flagged = stats.flagged, skipped = stats.skipped,
+                "webcrawl: knowledge items synced after the crawl"),
+            Err(e) => tracing::warn!(%target_id, error = %e,
+                "webcrawl: knowledge items were not synced after the crawl"),
+        }
+    }
+
     Ok(())
 }
 

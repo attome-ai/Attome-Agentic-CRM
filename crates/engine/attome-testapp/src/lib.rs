@@ -268,6 +268,10 @@ async fn build_with(config: AppConfig) -> Option<TestApp> {
         .register(attome_search::SearchModel)
         // F10: the payroll hand-off the commission scenario ends on.
         .register(attome_hr::HrModel)
+        // W1-T5: the contract playbook check; W1-T6: the draft route.
+        .register(attome_contract::ContractModel)
+        // AH7-T3: the agent activation check, and the action routes.
+        .register(attome_ai::ActionModel)
         .build()
         .await
         .expect("build the engine system");

@@ -2535,6 +2535,7 @@ dependencies = [
 name = "attome-testapp"
 version = "0.1.0"
 dependencies = [
+ "attome-ai",
  "attome-api",
  "attome-audit",
  "attome-auth",
@@ -2574,6 +2575,7 @@ dependencies = [
  "attome-storage",
  "attome-testkit",
  "attome-types",
+ "attome-webcrawl",
  "attome-workflow",
  "attome-workforce",
  "axum",
@@ -2633,6 +2635,7 @@ dependencies = [
 name = "attome-webcrawl"
 version = "0.1.0"
 dependencies = [
+ "attome-audit",
  "attome-core",
  "attome-db",
  "attome-html",
@@ -2640,6 +2643,8 @@ dependencies = [
  "attome-jobs",
  "attome-metadata",
  "attome-outbound",
+ "attome-records",
+ "attome-security",
  "attome-server",
  "attome-testkit",
  "attome-types",

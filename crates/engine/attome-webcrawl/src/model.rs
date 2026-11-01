@@ -201,4 +201,7 @@ pub struct ImportBody {
 pub struct ImportResult {
     pub data_source_ref: Uuid,
     pub imported_count: i64,
+    /// K6-T4: imported pages whose changed text replaced their item's, as
+    /// its next version.
+    pub updated_count: i64,
 }
