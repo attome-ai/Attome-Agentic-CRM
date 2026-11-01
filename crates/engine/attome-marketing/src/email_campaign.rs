@@ -67,6 +67,13 @@ pub struct EmailCampaignBody {
     /// `en` (default) or `ar`: how values are formatted.
     #[serde(default)]
     pub locale: Option<String>,
+    /// E4-T1: more versions to test against this one (which is `A`), up to
+    /// four; with any, the campaign is an A/B test.
+    #[serde(default)]
+    pub variants: Vec<crate::email_ab::EmailVariantBody>,
+    /// E4-T1: how the test picks its winner; defaults when absent.
+    #[serde(default)]
+    pub ab_test: Option<crate::email_ab::AbTestBody>,
 }
 
 /// A campaign started.
@@ -77,11 +84,30 @@ pub struct EmailCampaignStarted {
     pub recipients: i64,
 }
 
-fn check_body(body: &EmailCampaignBody) -> Result<String, AppError> {
-    let subject = body.subject.trim();
+fn check_subject(subject: &str) -> Result<(), AppError> {
+    let subject = subject.trim();
     if subject.is_empty() || subject.chars().count() > 200 {
         return Err(AppError::Validation(
             "subject is 1 to 200 characters".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn check_body(body: &EmailCampaignBody) -> Result<String, AppError> {
+    check_subject(&body.subject)?;
+    for variant in &body.variants {
+        check_subject(&variant.subject)?;
+    }
+    if body.variants.len() + 1 > crate::email_ab::MAX_VARIANTS {
+        return Err(AppError::Validation(format!(
+            "an A/B test has at most {} variants",
+            crate::email_ab::MAX_VARIANTS
+        )));
+    }
+    if body.variants.is_empty() && body.ab_test.is_some() {
+        return Err(AppError::Validation(
+            "an A/B test needs at least one more variant".into(),
         ));
     }
     if body.purpose_key.trim().is_empty() {
@@ -193,6 +219,35 @@ pub async fn start(
         .map_err(|e| AppError::Validation(format!("design: {e}")))?;
     let rendered = crate::email_render::render(&design)
         .map_err(|e| AppError::Validation(format!("design: {e}")))?;
+    // E4-T1: every version as (name, subject, rendered), `A` first.
+    let mut versions = vec![(
+        crate::email_ab::variant_name(0),
+        body.subject.trim().to_owned(),
+        rendered.clone(),
+    )];
+    for (i, variant) in body.variants.iter().enumerate() {
+        let design: EmailDesign = serde_json::from_value(variant.design.clone())
+            .map_err(|e| AppError::Validation(format!("variants[{i}].design: {e}")))?;
+        let rendered = crate::email_render::render(&design)
+            .map_err(|e| AppError::Validation(format!("variants[{i}].design: {e}")))?;
+        versions.push((
+            crate::email_ab::variant_name(i + 1),
+            variant.subject.trim().to_owned(),
+            rendered,
+        ));
+    }
+    let ab = if body.variants.is_empty() {
+        None
+    } else {
+        if !attome_notification::tracking::enabled(state) {
+            return Err(AppError::Validation(
+                "an A/B test counts opens and clicks: turn on email tracking \
+                 (email.tracking.enabled) first"
+                    .into(),
+            ));
+        }
+        Some(crate::email_ab::settings(body.ab_test.as_ref())?)
+    };
     let (target, people) = recipients(state, ctx, list, purpose).await?;
     if people.is_empty() {
         return Err(AppError::Validation(
@@ -202,8 +257,9 @@ pub async fn start(
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let send_id: Uuid = sqlx::query_scalar(
         "INSERT INTO email_campaign_send \
-           (list_id, subject, html_body, text_body, purpose_key, locale, created_by) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
+           (list_id, subject, html_body, text_body, purpose_key, locale, created_by, \
+            ab_metric, ab_window_minutes, ab_fallback) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id",
     )
     .bind(list)
     .bind(body.subject.trim())
@@ -212,20 +268,66 @@ pub async fn start(
     .bind(purpose)
     .bind(&locale)
     .bind(ctx.user_id)
+    .bind(ab.as_ref().map(|a| a.metric))
+    .bind(ab.as_ref().map(|a| a.window_minutes as i32))
+    .bind(ab.as_ref().map(|a| a.fallback))
     .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
-    let ids: Vec<Uuid> = people.iter().map(|(id, _)| *id).collect();
-    let emails: Vec<String> = people.iter().map(|(_, e)| e.clone()).collect();
-    let tokens: Vec<String> = people
-        .iter()
-        .map(|_| format!("{}{}", Uuid::new_v4().simple(), Uuid::new_v4().simple()))
+    // The recipients in a random order: their random tokens.
+    let mut people: Vec<(Uuid, String, String)> = people
+        .into_iter()
+        .map(|(id, email)| {
+            let token = format!("{}{}", Uuid::new_v4().simple(), Uuid::new_v4().simple());
+            (id, email, token)
+        })
         .collect();
+    let mut variant_of: Vec<Option<String>> = vec![None; people.len()];
+    let mut status_of: Vec<&str> = vec!["pending"; people.len()];
+    let mut tracked_of: Vec<bool> = vec![false; people.len()];
+    if let Some(ab) = &ab {
+        people.sort_by(|a, b| a.2.cmp(&b.2));
+        let base = state.base.config.frontend_url();
+        for (name, subject, version) in &versions {
+            let (html, links) = crate::email_ab::track_body(&version.html, &base);
+            sqlx::query(
+                "INSERT INTO email_campaign_variant \
+                   (send_id, name, subject, html_body, text_body, tracked_html, links) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)",
+            )
+            .bind(send_id)
+            .bind(name)
+            .bind(subject)
+            .bind(&version.html)
+            .bind(&version.text)
+            .bind(&html)
+            .bind(serde_json::json!(links))
+            .execute(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+        }
+        let picks = crate::email_ab::assign(people.len(), versions.len(), ab.per_variant as usize);
+        for (i, pick) in picks.into_iter().enumerate() {
+            match pick {
+                Some(v) => {
+                    variant_of[i] = Some(versions[v].0.clone());
+                    tracked_of[i] = true;
+                }
+                None => status_of[i] = "held",
+            }
+        }
+    }
+    let ids: Vec<Uuid> = people.iter().map(|(id, _, _)| *id).collect();
+    let emails: Vec<String> = people.iter().map(|(_, e, _)| e.clone()).collect();
+    let tokens: Vec<String> = people.iter().map(|(_, _, t)| t.clone()).collect();
     sqlx::query(
         "INSERT INTO email_campaign_recipient \
-           (send_id, subject_entity, subject_id, email, unsubscribe_token) \
-         SELECT $1, $2, u.id, u.email, u.token \
-           FROM unnest($3::uuid[], $4::text[], $5::text[]) AS u(id, email, token) \
+           (send_id, subject_entity, subject_id, email, unsubscribe_token, variant, status, \
+            tracked) \
+         SELECT $1, $2, u.id, u.email, u.token, u.variant, u.status, u.tracked \
+           FROM unnest($3::uuid[], $4::text[], $5::text[], $6::text[], $7::text[], \
+                       $8::boolean[]) \
+                AS u(id, email, token, variant, status, tracked) \
          ON CONFLICT DO NOTHING",
     )
     .bind(send_id)
@@ -233,6 +335,9 @@ pub async fn start(
     .bind(&ids)
     .bind(&emails)
     .bind(&tokens)
+    .bind(&variant_of)
+    .bind(&status_of)
+    .bind(&tracked_of)
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -247,8 +352,13 @@ pub async fn start(
             ctx.user_id,
         )
         .comment(format!(
-            "email campaign {send_id}: {} recipients",
-            people.len()
+            "email campaign {send_id}: {} recipients{}",
+            people.len(),
+            if versions.len() > 1 {
+                format!(", A/B test of {} variants", versions.len())
+            } else {
+                String::new()
+            }
         )),
     )
     .await?;
@@ -269,11 +379,35 @@ fn weekly_cap(state: &EngineState) -> i64 {
         .unwrap_or(DEFAULT_WEEKLY_CAP)
 }
 
+/// A send the sweep works on: id, subject, bodies, purpose, locale, and
+/// its A/B test (metric, window, fallback, decided, started).
+type SendRow = (
+    Uuid,
+    String,
+    String,
+    String,
+    String,
+    String,
+    Option<String>,
+    Option<i32>,
+    Option<String>,
+    bool,
+    chrono::DateTime<Utc>,
+);
+
+/// A pending recipient: entity, id, email, token, variant, tracked, consent.
+type PendingRow = (String, Uuid, String, String, Option<String>, bool, bool);
+
+/// A test's version: subject, untracked and tracked bodies.
+type Version = (String, RenderedEmail, RenderedEmail);
+
 /// One run of the `email_campaign` job; answers the messages queued.
 pub async fn sweep(state: &EngineState) -> Result<u32, AppError> {
     let db = &state.base.db;
-    let sends: Vec<(Uuid, String, String, String, String, String)> = sqlx::query_as(
-        "SELECT id, subject, html_body, text_body, purpose_key, locale FROM email_campaign_send \
+    let sends: Vec<SendRow> = sqlx::query_as(
+        "SELECT id, subject, html_body, text_body, purpose_key, locale, \
+                ab_metric, ab_window_minutes, ab_fallback, ab_decided_at IS NOT NULL, created_at \
+           FROM email_campaign_send \
           WHERE status = 'sending' ORDER BY created_at LIMIT 10",
     )
     .fetch_all(db)
@@ -283,9 +417,45 @@ pub async fn sweep(state: &EngineState) -> Result<u32, AppError> {
     let base = state.base.config.frontend_url();
     let base = base.trim_end_matches('/');
     let mut queued = 0;
-    for (send_id, subject, html, text, purpose, locale) in sends {
-        let pending: Vec<(String, Uuid, String, String, bool)> = sqlx::query_as(
-            "SELECT r.subject_entity, r.subject_id, r.email, r.unsubscribe_token, \
+    for (
+        send_id,
+        subject,
+        html,
+        text,
+        purpose,
+        locale,
+        ab_metric,
+        ab_window,
+        ab_fallback,
+        ab_decided,
+        started_at,
+    ) in sends
+    {
+        // E4-T1: an A/B test's versions, by name.
+        let versions: HashMap<String, Version> = if ab_metric.is_some() {
+            sqlx::query_as::<_, (String, String, String, String, String)>(
+                "SELECT name, subject, html_body, text_body, tracked_html \
+                   FROM email_campaign_variant WHERE send_id = $1",
+            )
+            .bind(send_id)
+            .fetch_all(db)
+            .await
+            .map_err(AppError::internal)?
+            .into_iter()
+            .map(|(name, subject, html, text, tracked_html)| {
+                let tracked = RenderedEmail {
+                    html: tracked_html,
+                    text: text.clone(),
+                };
+                (name, (subject, RenderedEmail { html, text }, tracked))
+            })
+            .collect()
+        } else {
+            HashMap::new()
+        };
+        let pending: Vec<PendingRow> = sqlx::query_as(
+            "SELECT r.subject_entity, r.subject_id, r.email, r.unsubscribe_token, r.variant, \
+                    r.tracked, \
                     EXISTS (SELECT 1 FROM consent_current c \
                       WHERE c.subject_entity = r.subject_entity AND c.subject_id = r.subject_id \
                         AND c.purpose_key = $2 AND c.channel IN ('email', 'any') \
@@ -301,6 +471,22 @@ pub async fn sweep(state: &EngineState) -> Result<u32, AppError> {
         .await
         .map_err(AppError::internal)?;
         if pending.is_empty() {
+            // E4-T1: a test with recipients held for the winner is done only
+            // once they have been released and sent.
+            if let Some(metric) = ab_metric.as_deref()
+                && !ab_decided
+            {
+                crate::email_ab::decide(
+                    state,
+                    send_id,
+                    started_at,
+                    metric,
+                    ab_window.unwrap_or(crate::email_ab::DEFAULT_WINDOW_MINUTES as i32),
+                    ab_fallback.as_deref().unwrap_or("leader"),
+                )
+                .await?;
+                continue;
+            }
             sqlx::query(
                 "UPDATE email_campaign_send SET status = 'done', finished_at = now() \
                   WHERE id = $1 AND status = 'sending'",
@@ -338,7 +524,23 @@ pub async fn sweep(state: &EngineState) -> Result<u32, AppError> {
             }
         }
         let snapshot = RenderedEmail { html, text };
-        for (entity, subject_id, email, token, consent) in pending {
+        for (entity, subject_id, email, token, variant, tracked, consent) in pending {
+            // E4-T1: a test recipient gets the tracked copy, unless they
+            // withdrew tracking; then they are not counted.
+            let tracked = tracked
+                && consent
+                && !attome_notification::tracking::opted_out(
+                    &mut *db.acquire().await.map_err(AppError::internal)?,
+                    &entity,
+                    subject_id,
+                )
+                .await?;
+            let (subject, snapshot) = match variant.as_deref().and_then(|v| versions.get(v)) {
+                Some((subject, plain, with_tracking)) => {
+                    (subject, if tracked { with_tracking } else { plain })
+                }
+                None => (&subject, &snapshot),
+            };
             let status = if !consent {
                 "skipped"
             } else {
@@ -361,9 +563,12 @@ pub async fn sweep(state: &EngineState) -> Result<u32, AppError> {
                     let url = format!("{base}/api/v1/marketing/unsubscribe/{token}");
                     let (schema, values) = record_context(
                         rows.get(&subject_id).unwrap_or(&Map::new()),
-                        &[("unsubscribe_url", url.clone())],
+                        &[
+                            ("unsubscribe_url", url.clone()),
+                            ("tracking_token", token.clone()),
+                        ],
                     );
-                    match crate::email_render::personalise(&snapshot, &schema, values, &locale) {
+                    match crate::email_render::personalise(snapshot, &schema, values, &locale) {
                         Ok(mail) => {
                             let job = attome_core::jobs::EngineJob::SendEmail(Box::new(
                                 attome_email::EmailMessage {
@@ -387,11 +592,13 @@ pub async fn sweep(state: &EngineState) -> Result<u32, AppError> {
                                 .await
                                 .map_err(AppError::internal)?;
                             sqlx::query(
-                                "UPDATE email_campaign_recipient SET status = 'sent', attempted_at = now() \
+                                "UPDATE email_campaign_recipient SET status = 'sent', attempted_at = now(), \
+                                        tracked = $3 \
                                   WHERE send_id = $1 AND subject_id = $2 AND status = 'pending'",
                             )
                             .bind(send_id)
                             .bind(subject_id)
+                            .bind(tracked)
                             .execute(&mut *tx)
                             .await
                             .map_err(AppError::internal)?;
@@ -558,16 +765,37 @@ pub(crate) async fn post_unsubscribe(
 
 /// The public unsubscribe routes, mounted outside the authenticated set.
 pub fn public_routes() -> Router<EngineState> {
-    Router::new().route(
-        "/api/v1/marketing/unsubscribe/{token}",
-        get(get_unsubscribe).post(post_unsubscribe),
-    )
+    Router::new()
+        .route(
+            "/api/v1/marketing/unsubscribe/{token}",
+            get(get_unsubscribe).post(post_unsubscribe),
+        )
+        // E4-T1: an A/B-tested email's open pixel and tracked links.
+        .route(
+            "/api/v1/marketing/o/{token}",
+            get(crate::email_ab::get_open),
+        )
+        .route(
+            "/api/v1/marketing/c/{token}/{n}",
+            get(crate::email_ab::get_click),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(post_email_send, get_unsubscribe, post_unsubscribe),
-    components(schemas(EmailCampaignBody, EmailCampaignStarted))
+    paths(
+        post_email_send,
+        get_unsubscribe,
+        post_unsubscribe,
+        crate::email_ab::get_open,
+        crate::email_ab::get_click
+    ),
+    components(schemas(
+        EmailCampaignBody,
+        EmailCampaignStarted,
+        crate::email_ab::EmailVariantBody,
+        crate::email_ab::AbTestBody
+    ))
 )]
 pub(crate) struct ApiDocFragment;
 
@@ -626,6 +854,8 @@ mod tests {
             design: json!({ "blocks": [] }),
             purpose_key: purpose.into(),
             locale: locale.map(str::to_owned),
+            variants: Vec::new(),
+            ab_test: None,
         };
         assert_eq!(
             check_body(&body("Offer", "promotions", None)).unwrap(),

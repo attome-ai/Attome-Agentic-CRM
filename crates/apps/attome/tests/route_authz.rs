@@ -169,6 +169,16 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
         "E3-T1: the random per-recipient token from a campaign email is the credential and only stops bulk mail to that one address; an unknown token answers the same page. Bypass-listed by its one-segment shape.",
     ),
     (
+        "GET",
+        "/api/v1/marketing/o/{token}",
+        "E4-T1: an A/B-tested campaign email's open pixel; the random per-recipient token is the key, it only marks that recipient's email opened, and any token answers the same image. Bypass-listed by its one-segment shape.",
+    ),
+    (
+        "GET",
+        "/api/v1/marketing/c/{token}/{n}",
+        "E4-T1: a tracked link in an A/B-tested campaign email; it marks that recipient's click and redirects only to the email's own link at that position, so nobody can be sent elsewhere. Bypass-listed by its two-segment shape.",
+    ),
+    (
         "POST",
         "/api/v1/email/webhooks/{provider}",
         "Z8-T5: a sending provider's event webhook; the provider's own signature (an SNS certificate from an amazonaws.com address for a configured topic, or SendGrid's ECDSA key from config) is the credential, checked before anything is read, and it only adds suppressions. Bypass-listed by its two exact provider paths.",

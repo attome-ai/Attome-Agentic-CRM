@@ -19,6 +19,8 @@ pub mod deliverability;
 pub mod dmarc;
 /// E25-T1: dynamic blocks chosen per recipient.
 pub mod dynamic_blocks;
+/// E4-T1: A/B tests of email campaigns, with their own open and click counts.
+pub mod email_ab;
 /// E16-T1: SMS campaigns with consent, an estimate and quiet hours.
 /// E3-T1: email campaigns on the bulk stream, with one-click unsubscribe.
 pub mod email_campaign;

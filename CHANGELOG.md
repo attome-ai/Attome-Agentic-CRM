@@ -14,6 +14,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Email campaigns can A/B test up to five versions: `variants` and `ab_test` on
+  `POST /api/v1/marketing/lists/{id}/email/send` send each version, tracked, to its share of the
+  recipients (1,000 each by default) and hold the rest; after the window (four hours by default)
+  the version with the better open or click rate, or the leader when none is clearly better, goes to
+  the held recipients. Needs `email.tracking.enabled`; people who withdrew `email_tracking` are not
+  tracked. Opens and clicks come through `GET /api/v1/marketing/o/{token}` and
+  `GET /api/v1/marketing/c/{token}/{n}` (E4-T1).
 - A recrawl that changes an imported page updates its knowledge item as the item's next `version`;
   an item someone published from a `review` source keeps its text and is marked `needs_review`, and
   importing the page again replaces it. An `automatic` source imports its new pages, published, after

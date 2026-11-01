@@ -352,6 +352,24 @@ fn is_marketing_unsubscribe_path(path: &str) -> bool {
         .is_some_and(|token| !token.is_empty() && !token.contains('/'))
 }
 
+/// E4-T1: an A/B-tested campaign email's open pixel and tracked links,
+/// `/api/v1/marketing/o/{token}` (one segment) and
+/// `/api/v1/marketing/c/{token}/{n}` (two), nothing after. The handlers
+/// (`attome_marketing::email_ab`) take the random recipient token as the
+/// key and redirect only to the email's own link at that position.
+fn is_marketing_ab_tracking_path(path: &str) -> bool {
+    if let Some(token) = path.strip_prefix("/api/v1/marketing/o/") {
+        return !token.is_empty() && !token.contains('/');
+    }
+    let Some(rest) = path.strip_prefix("/api/v1/marketing/c/") else {
+        return false;
+    };
+    let mut segments = rest.split('/');
+    let token = segments.next().unwrap_or("");
+    let n = segments.next().unwrap_or("");
+    !token.is_empty() && !n.is_empty() && segments.next().is_none()
+}
+
 /// E10-T1: a marketing form submission,
 /// `/api/v1/marketing/forms/{id}/submit`: one id segment, the literal
 /// `submit`, nothing after. The handler
@@ -418,6 +436,7 @@ pub fn is_bypass(path: &str) -> bool {
         || is_service_intake_path(path)
         || is_marketing_form_path(path)
         || is_marketing_unsubscribe_path(path)
+        || is_marketing_ab_tracking_path(path)
         || is_email_tracking_path(path)
         || is_sms_receipt_path(path)
         || is_booking_path(path)
@@ -472,6 +491,18 @@ pub(crate) fn is_csrf_exempt(path: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn campaign_tracking_paths_are_public_in_their_exact_shape() {
+        assert!(is_bypass("/api/v1/marketing/o/0123abcd"));
+        assert!(is_bypass("/api/v1/marketing/o/{token}"));
+        assert!(is_bypass("/api/v1/marketing/c/0123abcd/3"));
+        assert!(is_bypass("/api/v1/marketing/c/{token}/{n}"));
+        assert!(!is_bypass("/api/v1/marketing/o/"));
+        assert!(!is_bypass("/api/v1/marketing/o/a/b"));
+        assert!(!is_bypass("/api/v1/marketing/c/0123abcd"));
+        assert!(!is_bypass("/api/v1/marketing/c/a/1/x"));
+    }
 
     #[test]
     fn only_one_segment_marketing_unsubscribe_paths_are_public() {
