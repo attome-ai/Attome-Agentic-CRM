@@ -45,6 +45,8 @@ pub mod profile_events;
 pub mod referral;
 pub mod reputation;
 pub mod segment;
+/// E7-T8: whose access a segment refresh runs with; the wide-access grant.
+pub mod segment_access;
 pub mod segment_insight;
 /// E7-T6: live segments re-checked from the change feed.
 pub mod segment_live;

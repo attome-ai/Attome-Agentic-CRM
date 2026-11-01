@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Marketing segments run as the reader (E7-T8): a list refreshes as its owner, or, once granted
+  wide access (`wide_access_granted`, needs `marketing_list.grant_wide_access` and is an Access
+  security event), as the marketing user the setting `marketing.segment_user` names; a wide list with
+  none set is refused (`segment.no_marketing_role`). Marketing pack changeset 0014 adds the privilege.
 - A partner administrator lists, invites and deactivates its own partner's portal members
   (`/{keyword}/api/v1/partner/members`, F9-T8).
 - Changesets run a `data_step` of kind `split` (A1-T8's attribute split), `copy`, `set_default`,

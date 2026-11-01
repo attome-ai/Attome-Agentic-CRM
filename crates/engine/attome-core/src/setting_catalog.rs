@@ -104,6 +104,16 @@ fn marketing_settings() -> Vec<SettingDescriptor> {
             || json!(3),
         ),
         SettingDescriptor::new(
+            "marketing.segment_user",
+            "The user (id) a marketing list granted wide access refreshes as, standing in for \
+             the marketing role; a list without the grant refreshes as its owner. Empty (the \
+             default): a list with wide access is refused rather than run as anyone else.",
+            || json!({"type": "string", "maxLength": 36}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(""),
+        ),
+        SettingDescriptor::new(
             "marketing.journey_calendar_ref",
             "The calendar whose working time journeys send their messages in (weekends and \
              holidays included); a message due outside it waits for the next working time. \

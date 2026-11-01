@@ -17,7 +17,7 @@
 //! **The tick** ([`live_tick`], the `marketing_segment_live` job) reads a
 //! batch of the entity change feed as consumer [`CONSUMER`], maps changed
 //! records to people (the record itself, or the target records whose
-//! lookup points at it), runs each live list's query as its owner
+//! lookup points at it), runs each live list's query as its owner (or the marketing user, E7-T8)
 //! restricted to those people, and writes the differences with one
 //! membership event each (reason `live`) under the list's lock. The
 //! cursor moves only after every list's writes commit; a crash re-reads
@@ -159,7 +159,7 @@ impl RecordCheck for LiveCheck {
     }
 }
 
-type LiveList = (Uuid, String, String, Option<Uuid>);
+type LiveList = (Uuid, String, String);
 
 /// One tick. Returns the membership changes written.
 pub async fn live_tick(state: &EngineState) -> Result<usize, AppError> {
@@ -170,7 +170,7 @@ pub async fn live_tick(state: &EngineState) -> Result<usize, AppError> {
         return Ok(0);
     };
     let lists: Vec<LiveList> = sqlx::query_as(
-        "SELECT id, COALESCE(target_entity, 'contact'), query_id, owner_ref FROM marketing_list \
+        "SELECT id, COALESCE(target_entity, 'contact'), query_id FROM marketing_list \
           WHERE refresh_mode = 'live' AND COALESCE(kind, 'static') = 'segment' \
             AND (is_active IS NULL OR is_active = true) AND query_id IS NOT NULL",
     )
@@ -184,11 +184,11 @@ pub async fn live_tick(state: &EngineState) -> Result<usize, AppError> {
             .collect::<Vec<_>>(),
     );
     let mut written = 0;
-    for (list, target, query, owner) in lists {
-        let (Ok(query), Some(owner)) = (Uuid::parse_str(query.trim()), owner) else {
+    for (list, target, query) in lists {
+        let Ok(query) = Uuid::parse_str(query.trim()) else {
             continue;
         };
-        match refresh_people(state, list, &target, query, owner, &changed).await {
+        match refresh_people(state, list, &target, query, &changed).await {
             Ok(n) => written += n,
             Err(error) => {
                 // Not advancing past a failed list: the batch is read again.
@@ -206,7 +206,6 @@ async fn refresh_people(
     list: Uuid,
     target: &str,
     query: Uuid,
-    owner: Uuid,
     changed: &BTreeMap<String, Vec<Uuid>>,
 ) -> Result<usize, AppError> {
     let db = &state.base.db;
@@ -251,8 +250,9 @@ async fn refresh_people(
     }
     let people: Vec<Uuid> = people.into_iter().collect();
 
-    // Who of them the query returns now, as the list's owner.
-    let ctx = attome_security::resolve_uncached(db, owner).await?;
+    // Who of them the query returns now, as the list's owner (or the
+    // marketing user, for a list with wide access: E7-T8).
+    let ctx = crate::segment_access::refresh_context(state, list).await?;
     let mut matching: HashSet<Uuid> = HashSet::new();
     for chunk in people.chunks(CHECK_CHUNK) {
         let ids: Vec<String> = chunk.iter().map(Uuid::to_string).collect();

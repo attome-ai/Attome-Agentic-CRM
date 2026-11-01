@@ -207,16 +207,16 @@ pub struct RefreshResult {
     pub members: usize,
 }
 
-/// Refreshes a list's members as its owner sees them.
+/// Refreshes a list's members as its owner sees them, or as the marketing
+/// user when the list has wide access (E7-T8, [`crate::segment_access`]).
 pub async fn refresh(
     state: &EngineState,
     list: Uuid,
     reason: &str,
     now: DateTime<Utc>,
 ) -> Result<RefreshResult, AppError> {
-    let (_, target, expand, _, owner) = load_list(state, list).await?;
-    let owner = owner.ok_or_else(|| AppError::Validation("segment.owner_missing".into()))?;
-    let ctx = attome_security::resolve_uncached(&state.base.db, owner).await?;
+    let (_, target, expand, _, _) = load_list(state, list).await?;
+    let ctx = crate::segment_access::refresh_context(state, list).await?;
     let wanted = evaluate(state, &ctx, list, Vec::new()).await?;
     let person_entity = if target == "account" && expand != "none" {
         "contact".to_owned()

@@ -58,16 +58,23 @@ impl EngineModel for MarketingModel {
     }
 
     /// E7-T6: a segment saved as live needs a query that may run live.
+    /// E7-T8: only a holder of the grant privilege changes wide access.
     fn record_checks(
         &self,
     ) -> Vec<(
         &'static str,
         std::sync::Arc<dyn attome_core::record_check::RecordCheck>,
     )> {
-        vec![(
-            "marketing_list",
-            std::sync::Arc::new(crate::segment_live::LiveCheck),
-        )]
+        vec![
+            (
+                "marketing_list",
+                std::sync::Arc::new(crate::segment_live::LiveCheck),
+            ),
+            (
+                "marketing_list",
+                std::sync::Arc::new(crate::segment_access::WideAccessCheck),
+            ),
+        ]
     }
 
     fn routes(&self) -> Router<EngineState> {

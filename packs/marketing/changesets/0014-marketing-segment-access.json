@@ -1,0 +1,37 @@
+{
+  "author": "packs",
+  "checksum": "sha256:398cd730508df0d339436baabf82018a7552c9fd73dec46e9160188b8d71dc77",
+  "closed_at": "2026-11-01T00:00:00Z",
+  "description": "Segment access (E7-T8): the privilege that grants a marketing list wide access, so its refreshes run as the deployment's marketing user instead of the list's owner.",
+  "format": "attome-changeset/v1",
+  "id": "01a197bb-6810-7142-a1c8-5e51a75c4835",
+  "layer": "product",
+  "name": "marketing-segment-access",
+  "opened_at": "2026-11-01T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Grant or remove a marketing list's wide access (E7-T8)",
+          "key": "marketing_list.grant_wide_access",
+          "name": "marketing_list.grant_wide_access"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "marketing_list.grant_wide_access"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "marketing",
+  "seq": 14,
+  "title": "Pack: segment wide-access privilege"
+}
