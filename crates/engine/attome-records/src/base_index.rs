@@ -326,15 +326,16 @@ pub async fn list(
                AND ($4::text IS NULL OR i.status = $4) AND t.is_active IS NOT FALSE {rls}",
             quote_ident(child)
         );
-        let mut select = sqlx::query_as::<_, BaseRecord>(&format!(
+        let select_sql = format!(
             "SELECT i.id, i.entity, i.owner, i.status, i.due_at {from} \
              ORDER BY i.due_at NULLS LAST, i.id LIMIT $5"
-        ))
-        .bind(base)
-        .bind(child)
-        .bind(owner)
-        .bind(status)
-        .bind(window);
+        );
+        let mut select = sqlx::query_as::<_, BaseRecord>(&select_sql)
+            .bind(base)
+            .bind(child)
+            .bind(owner)
+            .bind(status)
+            .bind(window);
         // The count has no limit: its predicate binds start one earlier.
         let count_pred = rls_predicate_with_conditions(
             ctx,
@@ -354,7 +355,8 @@ pub async fn list(
                AND ($4::text IS NULL OR i.status = $4) AND t.is_active IS NOT FALSE {count_rls}",
             quote_ident(child)
         );
-        let mut count = sqlx::query_scalar::<_, i64>(&format!("SELECT COUNT(*) {count_from}"))
+        let count_sql = format!("SELECT COUNT(*) {count_from}");
+        let mut count = sqlx::query_scalar::<_, i64>(&count_sql)
             .bind(base)
             .bind(child)
             .bind(owner)
