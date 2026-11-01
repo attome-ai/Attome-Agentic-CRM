@@ -100,3 +100,23 @@ fn coverage_lists_unowned_domain() {
         );
     });
 }
+
+// feature: L3
+#[test]
+fn coverage_and_evidence_refuse_a_user_without_compliance() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let stranger = attome_testapp::seed_user(app.db(), "coverage-stranger").await;
+        for path in [
+            "/api/v1/admin/governance/coverage",
+            "/api/v1/admin/governance/evidence",
+        ] {
+            let (code, body) = app
+                .request_as(&stranger.cookie, Method::GET, path, None)
+                .await;
+            assert_eq!(code, StatusCode::FORBIDDEN, "{path}: {body}");
+        }
+    });
+}
