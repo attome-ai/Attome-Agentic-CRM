@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Agents gain `contract.answer`: a question about contract terms answered only from the clauses of
+  contracts the caller may read, each clause and its contract read as the caller before a model sees
+  it, with citations to the clauses used; it declines when they do not answer it, and a confidential
+  contract a viewer may not read is never evidence (W1-T12).
 - Contracts are negotiated in rounds (migration 0353): `POST /api/v1/contract/contracts/{id}/share-for-review`
   emails the counterparty a link valid for `contract.review_link_days` (14 by default) and closes the
   round before. Through the public `GET`/`POST /api/v1/contract/review/{token}` the counterparty reads

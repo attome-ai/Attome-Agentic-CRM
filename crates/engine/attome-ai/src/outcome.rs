@@ -693,6 +693,7 @@ mod tests {
             crate::actions::ai_field::RECORD_AI_FIELD,
             crate::actions::classify::RECORD_CLASSIFY,
             crate::actions::knowledge_answer::KNOWLEDGE_ANSWER,
+            crate::actions::contract::ANSWER,
             crate::actions::route_classify::ROUTE_CLASSIFY,
             crate::meeting::brief::MEETING_BRIEF,
             crate::meeting::notes::MEETING_NOTES,

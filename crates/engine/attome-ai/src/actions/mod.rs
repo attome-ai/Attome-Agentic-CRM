@@ -39,7 +39,7 @@ pub mod claim_check;
 pub mod classify;
 pub mod collections;
 pub mod commission;
-/// W1-T12: contract.review_against_playbook, contract.summarise.
+/// W1-T12: contract.review_against_playbook, contract.summarise, contract.answer.
 pub mod contract;
 pub mod partner;
 /// P7-T10: a dashboard number explained in words.
