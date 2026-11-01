@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- An approval step can name its approvers by role name (`role_name:Legal`), so a pack's approval
+  plan can name a role it ships. A state transition held for approval now judges each step's
+  `skip_unless` against the record itself (every field, null when empty); a step whose condition
+  cannot be judged still runs, and when every step would be skipped a person still decides.
 - Old contracts come in through their text: `POST /api/v1/contract/imports/{id}/propose` proposes a
   contract import's fields (counterparty, dates, value and currency, renewal and notice terms) and
   obligations with a confidence each, and `POST /api/v1/contract/imports/{id}/accept` creates the

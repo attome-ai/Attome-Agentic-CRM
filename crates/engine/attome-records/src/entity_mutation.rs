@@ -3225,6 +3225,62 @@ async fn evaluate_transition_guard(
 /// write's transaction, with its `Submitted` security event (D-062/D-545:
 /// the request and the event that names who asked commit together, and both
 /// commit with the record's move into the pending state or none of them do).
+/// The steps of a transition's approval plan whose `skip_unless` is false
+/// for the record as it stands in the pending state: every field the entity
+/// declares, typed by its metadata, null when empty. A condition that does
+/// not compile or evaluate keeps its step (fail closed, as for approval
+/// policies). When every step would be skipped none is, so a person still
+/// decides the move.
+async fn transition_skipped_steps(
+    tx: &mut Transaction<'_, Postgres>,
+    state: &EngineState,
+    entity: &str,
+    record_id: Uuid,
+    plan: &attome_approval::ApprovalPlan,
+) -> Result<Vec<i32>, AppError> {
+    if plan.steps.iter().all(|s| s.extras.skip_unless.is_none()) {
+        return Ok(Vec::new());
+    }
+    let attrs = {
+        let registry = state.entities.load();
+        registry.get(entity).map(|m| m.attrs.clone())
+    };
+    let Some(attrs) = attrs else {
+        return Ok(Vec::new());
+    };
+    // Identifier from validated metadata, quoted; the id bound.
+    let row: Option<Value> = sqlx::query_scalar(&format!(
+        "SELECT to_jsonb(t) FROM {} t WHERE t.id = $1",
+        quote_ident(entity)
+    ))
+    .bind(record_id)
+    .fetch_optional(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(Value::Object(obj)) = row else {
+        return Ok(Vec::new());
+    };
+    let schema = crate::rule_engine::schema_for_entity(&attrs);
+    let ctx = crate::rule_engine::context_for_record(chrono::Utc::now(), &attrs, &obj);
+    let skipped: Vec<i32> = plan
+        .steps
+        .iter()
+        .enumerate()
+        .filter(|(_, step)| {
+            step.extras.skip_unless.as_deref().is_some_and(|condition| {
+                attome_rules::compile(condition, &schema).is_ok_and(|compiled| {
+                    matches!(compiled.eval(&ctx), Ok(attome_rules::Value::Bool(false)))
+                })
+            })
+        })
+        .filter_map(|(i, _)| i32::try_from(i).ok())
+        .collect();
+    if skipped.len() == plan.steps.len() {
+        return Ok(Vec::new());
+    }
+    Ok(skipped)
+}
+
 async fn submit_transition_approval(
     tx: &mut Transaction<'_, Postgres>,
     state: &EngineState,
@@ -3240,15 +3296,20 @@ async fn submit_transition_approval(
     payload.row_version = new_row_version;
     let backstop_ttl = attome_audit::approval::plan_backstop_ttl(&plan);
     let payload_json = serde_json::to_value(&payload).map_err(AppError::internal)?;
-    let request = attome_approval::submit_with_plan_regarding_in_tx(
+    let skipped = transition_skipped_steps(tx, state, &payload.entity, record_id, &plan).await?;
+    let request = attome_approval::submit_with_plan_skipping_in_tx(
         tx,
         attome_core::ACTION_STATE_TRANSITION,
         payload_json,
         requested_by,
         plan,
         backstop_ttl,
-        None,
+        attome_approval::PolicyRef {
+            id: None,
+            version: None,
+        },
         Some((payload.entity.as_str(), record_id)),
+        &skipped,
     )
     .await?;
     attome_audit::security::write_security_event(

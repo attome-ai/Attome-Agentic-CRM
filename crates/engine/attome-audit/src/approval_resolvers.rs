@@ -5,6 +5,9 @@
 //!
 //! - `user:<uuid>`, `role:<uuid>`, `team:<uuid>`: that user, or every active
 //!   member of the role or team.
+//! - `role_name:<name>`: every active member of the live role with that
+//!   name, so a pack's approval plan can name a role it ships, whose id it
+//!   cannot know.
 //! - `position:manager_of_requester`: whoever holds the parent position of a
 //!   position the requester holds.
 //! - `owner`: the owner of the record the request is about.
@@ -87,6 +90,7 @@ impl ResolverRegistry {
         registry.register(Arc::new(UserResolver));
         registry.register(Arc::new(MembershipResolver::ROLE));
         registry.register(Arc::new(MembershipResolver::TEAM));
+        registry.register(Arc::new(RoleNameResolver));
         registry.register(Arc::new(PositionResolver));
         registry.register(Arc::new(OwnerResolver));
         registry.register(Arc::new(OwnerManagerResolver));
@@ -182,6 +186,47 @@ impl ApproverResolver for UserResolver {
         _ctx: &'a ResolveCtx<'a>,
     ) -> ResolveFuture<'a> {
         Box::pin(async move { Ok(Uuid::parse_str(rest).into_iter().collect()) })
+    }
+}
+
+/// The longest role name a `role_name:` token takes.
+const MAX_ROLE_NAME: usize = 200;
+
+/// `role_name:<name>`: every active member of the live role named so.
+struct RoleNameResolver;
+
+impl ApproverResolver for RoleNameResolver {
+    fn prefix(&self) -> &'static str {
+        "role_name"
+    }
+    fn validate(&self, rest: &str) -> Result<(), AppError> {
+        if rest.trim().is_empty() || rest.chars().count() > MAX_ROLE_NAME {
+            return Err(AppError::Validation(format!(
+                "invalid approver token \"role_name:{rest}\": role_name: must be followed by a role's name"
+            )));
+        }
+        Ok(())
+    }
+    fn resolve<'a>(
+        &'a self,
+        state: &'a EngineState,
+        rest: &'a str,
+        _ctx: &'a ResolveCtx<'a>,
+    ) -> ResolveFuture<'a> {
+        Box::pin(async move {
+            let rows: Vec<(Uuid,)> = sqlx::query_as(
+                "SELECT DISTINCT ur.user_ref FROM user_account_mm_role ur \
+                   JOIN role r ON r.id = ur.role_ref \
+                   JOIN user_account u ON u.id = ur.user_ref \
+                  WHERE r.name = $1 AND r.is_deleted = false AND ur.is_deleted = false \
+                    AND (u.is_active IS NULL OR u.is_active = TRUE)",
+            )
+            .bind(rest.trim())
+            .fetch_all(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+            Ok(rows.into_iter().map(|(id,)| id).collect())
+        })
     }
 }
 
@@ -474,6 +519,16 @@ impl ApproverResolver for AttributeResolver {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_role_name_token_needs_a_name() {
+        let registry = ResolverRegistry::builtin();
+        let (resolver, rest) = registry.lookup("role_name:Legal").unwrap();
+        assert_eq!(resolver.prefix(), "role_name");
+        assert!(resolver.validate(rest).is_ok());
+        let (resolver, rest) = registry.lookup("role_name:").unwrap();
+        assert!(resolver.validate(rest).is_err());
+    }
 
     #[test]
     fn lookup_splits_on_the_first_colon() {
