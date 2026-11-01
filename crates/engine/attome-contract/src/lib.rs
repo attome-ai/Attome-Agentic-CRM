@@ -12,6 +12,7 @@ pub mod dates;
 pub mod draft;
 pub mod links;
 pub mod model;
+pub mod playbook;
 pub mod retention;
 
 pub use model::ContractModel;

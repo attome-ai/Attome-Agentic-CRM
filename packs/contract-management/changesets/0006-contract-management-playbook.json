@@ -1,0 +1,61 @@
+{
+  "author": "packs",
+  "checksum": "sha256:1b040810616a5e63ea5072d22a283e7148a4619d60dcb30ccc3bf5edbb3adcb6",
+  "closed_at": "2026-11-01T00:00:00Z",
+  "description": "Contract playbook checks (W1-T5): playbook_deviations on the contract, the JSON list of the playbook rules the contract and its clauses depart from, written by the contract engine on every save of the contract or one of its clauses and engine-managed (no caller writes it).",
+  "format": "attome-changeset/v1",
+  "id": "01a1960b-fa46-73fb-8adc-9b5bfc0163bb",
+  "layer": "product",
+  "name": "contract-management-playbook",
+  "opened_at": "2026-11-01T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Playbook deviations",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "playbook_deviations",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "contract",
+        "field": "playbook_deviations"
+      }
+    },
+    {
+      "args": {
+        "display_name": "انحرافات دليل التفاوض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "locale": "ar",
+        "object_key": "contract.playbook_deviations",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "contract-management",
+  "seq": 6,
+  "title": "Pack: contract playbook checks"
+}

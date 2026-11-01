@@ -124,6 +124,20 @@ pub trait EngineModel: Send + Sync + 'static {
         &[]
     }
 
+    /// W1-T5: `(entity_logicalname, check)` pairs this model runs on every
+    /// generic create and update of that entity, inside the save's
+    /// transaction, for a check that must read related records
+    /// (`crate::record_check`). Collected into `EngineState::record_checks`
+    /// at boot like `record_validators`, and run after them.
+    fn record_checks(
+        &self,
+    ) -> Vec<(
+        &'static str,
+        std::sync::Arc<dyn crate::record_check::RecordCheck>,
+    )> {
+        Vec::new()
+    }
+
     /// Y4-T1: the engine's version, platform range and module dependencies.
     /// Every registered engine declares one; `ModelRegistry::manifests`
     /// refuses a registry with an engine that does not, so boot stops.

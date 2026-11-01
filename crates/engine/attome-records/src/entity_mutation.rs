@@ -713,6 +713,38 @@ pub fn validate_model_record_validators(
     Ok(())
 }
 
+/// W1-T5 — runs every save-time check a model declared for `entity_name`
+/// (`EngineModel::record_checks`) inside the save's transaction, on every
+/// mutation mode. Returns the body with the values the checks filled in,
+/// or `None` when none filled anything. A no-op for an entity with none.
+pub async fn run_model_record_checks(
+    conn: &mut sqlx::PgConnection,
+    state: &EngineState,
+    entity_name: &str,
+    record_id: Option<Uuid>,
+    obj: &serde_json::Map<String, Value>,
+) -> Result<Option<serde_json::Map<String, Value>>, AppError> {
+    let Some(checks) = state.record_checks.get(entity_name) else {
+        return Ok(None);
+    };
+    let mut merged: Option<serde_json::Map<String, Value>> = None;
+    for check in checks {
+        let body = merged.as_ref().unwrap_or(obj);
+        let save = attome_core::record_check::RecordSave {
+            entity: entity_name,
+            record_id,
+            body,
+        };
+        let filled = check.check(&mut *conn, state, save).await?;
+        if let Some(values) = filled {
+            let mut next = merged.take().unwrap_or_else(|| obj.clone());
+            next.extend(values);
+            merged = Some(next);
+        }
+    }
+    Ok(merged)
+}
+
 /// D-535: refuses a generic write that would create, change or restore a
 /// record of an entity a model declared through
 /// `EngineModel::engine_owned_entities` (frozen into
@@ -2192,6 +2224,15 @@ pub async fn create_one_as(
     };
     validate_self_addressed(principal, entity_name, obj, true)?;
     validate_model_record_validators(state, entity_name, obj)?;
+    // W1-T5: checks that read related records, in this transaction.
+    let checked;
+    let obj = match run_model_record_checks(tx, state, entity_name, None, obj).await? {
+        Some(map) => {
+            checked = map;
+            &checked
+        }
+        None => obj,
+    };
     // M7-T1: a record of an entity with a stage process starts in a stage
     // whose required attributes it fills (the first one when it names none).
     let staged;
@@ -3321,6 +3362,16 @@ pub async fn update_one_as(
     validate_self_addressed(principal, entity_name, obj, false)?;
     validate_engine_managed_fields(state, entity_name, obj, mode)?;
     validate_model_record_validators(state, entity_name, obj)?;
+    // W1-T5: checks that read related records, in this transaction (after
+    // the engine-managed check: a check fills engine-managed values).
+    let checked;
+    let obj = match run_model_record_checks(tx, state, entity_name, Some(record_id), obj).await? {
+        Some(map) => {
+            checked = map;
+            &checked
+        }
+        None => obj,
+    };
     // M9-T1: a record held by a pending approval process takes only the
     // process's editable attributes, from people and their agents.
     if matches!(mode, MutationMode::Strict | MutationMode::ClientId(_)) {

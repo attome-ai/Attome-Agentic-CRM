@@ -40,6 +40,30 @@ impl EngineModel for ContractModel {
         ]
     }
 
+    /// W1-T5: the playbook deviations only the playbook check writes.
+    fn engine_managed_fields(&self) -> &'static [(&'static str, &'static str)] {
+        &[("contract", crate::playbook::DEVIATIONS_FIELD)]
+    }
+
+    /// W1-T5: the playbook check on every save of a contract or its clauses.
+    fn record_checks(
+        &self,
+    ) -> Vec<(
+        &'static str,
+        std::sync::Arc<dyn attome_core::record_check::RecordCheck>,
+    )> {
+        vec![
+            (
+                "contract",
+                std::sync::Arc::new(crate::playbook::PlaybookCheck),
+            ),
+            (
+                "contract_clause",
+                std::sync::Arc::new(crate::playbook::PlaybookCheck),
+            ),
+        ]
+    }
+
     fn routes(&self) -> Router<EngineState> {
         Router::new()
             .route(

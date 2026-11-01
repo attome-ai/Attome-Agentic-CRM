@@ -125,6 +125,26 @@ impl ModelRegistry {
         validators
     }
 
+    /// W1-T5 — every `EngineModel::record_checks` pair, grouped by entity.
+    /// Call once at boot; the result is read-only.
+    pub fn record_checks(
+        &self,
+    ) -> std::collections::HashMap<
+        String,
+        Vec<std::sync::Arc<dyn attome_core::record_check::RecordCheck>>,
+    > {
+        let mut checks: std::collections::HashMap<
+            String,
+            Vec<std::sync::Arc<dyn attome_core::record_check::RecordCheck>>,
+        > = std::collections::HashMap::new();
+        for model in &self.models {
+            for (entity, check) in model.record_checks() {
+                checks.entry(entity.to_owned()).or_default().push(check);
+            }
+        }
+        checks
+    }
+
     /// Y4-T1 — every registered model's manifest, resolved with its module's
     /// name and its entities. A model without a manifest, or a manifest with
     /// a problem of its own (`EngineManifest::check`), is an error naming
