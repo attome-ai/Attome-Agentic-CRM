@@ -3221,10 +3221,6 @@ async fn evaluate_transition_guard(
     }
 }
 
-/// Submits the approval a [`PendingRedirect`] asks for, inside the record
-/// write's transaction, with its `Submitted` security event (D-062/D-545:
-/// the request and the event that names who asked commit together, and both
-/// commit with the record's move into the pending state or none of them do).
 /// The steps of a transition's approval plan whose `skip_unless` is false
 /// for the record as it stands in the pending state: every field the entity
 /// declares, typed by its metadata, null when empty. A condition that does
@@ -3281,6 +3277,10 @@ async fn transition_skipped_steps(
     Ok(skipped)
 }
 
+/// Submits the approval a [`PendingRedirect`] asks for, inside the record
+/// write's transaction, with its `Submitted` security event (D-062/D-545:
+/// the request and the event that names who asked commit together, and both
+/// commit with the record's move into the pending state or none of them do).
 async fn submit_transition_approval(
     tx: &mut Transaction<'_, Postgres>,
     state: &EngineState,
