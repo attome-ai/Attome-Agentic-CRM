@@ -193,6 +193,172 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/acceptance-scripts": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "The acceptance scripts",
+        "description": "The active acceptance scripts (customer tests with a checklist) by name, each with its steps and\nits last run. Any signed-in user.",
+        "operationId": "list_acceptance_scripts",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_AcceptanceScript"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/acceptance-scripts/{id}/runs": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Record a run of an acceptance script",
+        "description": "Records a person's run of an acceptance script, one mark per step in order: it passed when every\nstep did. Any signed-in user. Audited.",
+        "operationId": "record_acceptance_script_run",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The acceptance script",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChecklistRunBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChecklistRunResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such active acceptance script",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The marks do not match the steps one for one",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/actions": {
       "get": {
         "tags": [
@@ -30190,6 +30356,62 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/governance/coverage": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Accountability coverage and gaps",
+        "description": "L3-T6: live entities in no domain, domains with no owner, personal attributes whose domain has no\npolicy, policies nothing enforces, and stewards with inbox items overdue by more than two days.\nEach list holds at most 500 rows (`truncated` says when one was cut). Compliance administrators.",
+        "operationId": "get_governance_coverage",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Coverage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/governance/domains": {
       "get": {
         "tags": [
@@ -31217,6 +31439,140 @@
         "x-privilege": "admin",
         "x-rate-class": "api",
         "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/governance/domains/{id}/scorecard": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A data domain's scorecard",
+        "description": "L3-T6: the domain's L2 quality (the newest score per entity and dimension, and their average), its\nopen and overdue steward inbox items, its open policy exceptions and how many of its policies are\nenforced. Compliance administrators.",
+        "operationId": "get_governance_domain_scorecard",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The domain",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Scorecard"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such domain",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/governance/evidence": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Governance evidence",
+        "description": "L3-T6: the governance roles, the policies with their enforcements, the policy exceptions and the\ngoverned-change approval requests, as one JSON document for an audit (R10). Compliance\nadministrators.",
+        "operationId": "get_governance_evidence",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Evidence"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/admin/governance/policies": {
@@ -44422,6 +44778,87 @@
         "x-privilege": "admin",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/packages/preview": {
+      "post": {
+        "tags": [
+          "admin-metadata"
+        ],
+        "summary": "Preview a package install",
+        "description": "T8-T2: checks an `attome-package/v1` document's signature against the deployment's trusted\npublishers (`packages.trusted_publishers`), its manifest and its namespace, then plans its bundle\nagainst live metadata and answers what installing it does: new and changed objects, the\npermissions it requests, the effects on existing records, what it removes and what is blocked.\nThe plan is persisted like a metadata import plan; installing is applying it\n(`POST /api/v1/admin/metadata/import?mode=apply` with its `plan_id`). Administrators only.",
+        "operationId": "preview_package_install",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackagePreviewBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The preview and the persisted plan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackagePreviewResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The package does not read, is not signed by a trusted publisher, or its manifest or namespace is wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "only computes and persists a proposal, as metadata import mode=plan does; installing applies that plan through mode=apply, whose job audits every schema change",
+          "reason": "delegated",
+          "via": "EngineJob::ApplyMetadataBundle (bundle/apply.rs::audit_entity_change)"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/admin/predict/models": {
@@ -61182,6 +61619,16 @@
           },
           "403": {
             "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "governance_roles_held: the user still owns, stewards or deputises data domains (`roles` names them); reassign them first",
             "content": {
               "application/json": {
                 "schema": {
@@ -95890,6 +96337,75 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/governance/inbox": {
+      "get": {
+        "tags": [
+          "governance"
+        ],
+        "summary": "The steward inbox",
+        "description": "The work waiting on the caller as a data steward (L3-T3): open duplicates, open quality issues\nand active legal holds on the entities of the domains they steward or deputise (or own or steward\nunder L3-T2's roles), oldest first. Read only; each item links to the screen that owns it. Only\nentities whose every record the caller may read are listed, so no item names a record they cannot\nread. A caller who stewards no domain sees none.",
+        "operationId": "get_steward_inbox",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_InboxItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/graph/paths": {
@@ -136477,6 +136993,94 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/workflow/definitions/{id}/versions/{version_id}/coverage": {
+      "get": {
+        "tags": [
+          "workflow"
+        ],
+        "summary": "Test coverage of a workflow version",
+        "description": "Runs the flow's saved test cases (every active customer test with a flow expectation on this\nworkflow) on this version's graph, draft or published, each in a transaction that is rolled\nback, and lists the nodes some case reached and the nodes none did. Automation administrators\nonly.",
+        "operationId": "get_workflow_version_coverage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The definition",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "description": "The version",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowCoverage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "workflow",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/workflow/definitions/{id}/versions/{version_id}/publish": {
       "post": {
         "tags": [
@@ -137669,6 +138273,123 @@
             }
           ],
           "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "workflow",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/workflow/instances/{id}/test": {
+      "post": {
+        "tags": [
+          "workflow"
+        ],
+        "summary": "A customer test from a failed workflow run",
+        "description": "M4-T2: drafts and saves a test from a failed run that started on a record: it re-creates the\nrecord as it stands now (as `POST /api/v1/admin/customer-tests/from-record` does) and expects\nthe run's workflow, simulated on it, to complete. It fails until the flow is fixed; edit it from\nthere. Deployment administrators only. Audited.",
+        "operationId": "create_customer_test_from_workflow_run",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The failed run",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestFromRunBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The test",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerTest"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such run, or its record is gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A test with that name exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The run did not fail, or did not start on a record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
         },
         "x-cache": "no-store",
         "x-idempotent": "key",
@@ -154668,6 +155389,50 @@
           }
         }
       },
+      "AcceptanceScript": {
+        "type": "object",
+        "description": "T7-T4: one acceptance script as a person sees it.",
+        "required": [
+          "id",
+          "name",
+          "steps"
+        ],
+        "properties": {
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "last_passed": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "The last run's result and time, by anyone."
+          },
+          "last_run_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "AccessExplainEffect": {
         "type": "string",
         "description": "What one source does for the record.",
@@ -165952,6 +166717,47 @@
           "skipped"
         ]
       },
+      "ChecklistRunBody": {
+        "type": "object",
+        "description": "A person's marks for one run.",
+        "required": [
+          "steps"
+        ],
+        "properties": {
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StepMark"
+            },
+            "description": "One mark per step, in order."
+          }
+        }
+      },
+      "ChecklistRunResult": {
+        "type": "object",
+        "description": "The recorded run.",
+        "required": [
+          "run_id",
+          "passed",
+          "failures"
+        ],
+        "properties": {
+          "failures": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "One line per failed step: its number, text and note."
+          },
+          "passed": {
+            "type": "boolean"
+          },
+          "run_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "CheckoutRequest": {
         "type": "object",
         "properties": {
@@ -169505,6 +170311,54 @@
         "properties": {
           "decision": {
             "$ref": "#/components/schemas/Decision"
+          }
+        }
+      },
+      "Coverage": {
+        "type": "object",
+        "description": "Where accountability has gaps.",
+        "required": [
+          "entities_without_domain",
+          "domains_without_owner",
+          "personal_attributes_without_policy",
+          "policies_without_enforcement",
+          "stewards_with_overdue_items",
+          "truncated"
+        ],
+        "properties": {
+          "domains_without_owner": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DomainRef"
+            }
+          },
+          "entities_without_domain": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "personal_attributes_without_policy": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UncoveredAttribute"
+            }
+          },
+          "policies_without_enforcement": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UnenforcedPolicy"
+            }
+          },
+          "stewards_with_overdue_items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OverdueSteward"
+            }
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "True when a list was cut at [`MAX_ROWS`]."
           }
         }
       },
@@ -173311,6 +174165,14 @@
             "type": "string",
             "description": "Solution 7 (D-785): the layer that owns this domain —\n`platform | product | project | customer`."
           },
+          "parent_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "L3-T1: the domain this one is a sub-domain of, if any."
+          },
           "row_version": {
             "type": "integer",
             "format": "int64"
@@ -173325,6 +174187,33 @@
           "updated_at": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "DataEffect": {
+        "type": "object",
+        "description": "One effect on records already there.",
+        "required": [
+          "component",
+          "key",
+          "effect"
+        ],
+        "properties": {
+          "component": {
+            "type": "string"
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "effect": {
+            "type": "string",
+            "description": "`writes_records`, `adds_field_to_existing`, `changes_field`, `retires`."
+          },
+          "key": {
+            "type": "string"
           }
         }
       },
@@ -176674,6 +177563,23 @@
           }
         }
       },
+      "DomainRef": {
+        "type": "object",
+        "description": "A domain named in a report.",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
       "DomainReport": {
         "type": "object",
         "required": [
@@ -178081,6 +178987,13 @@
             "type": "string",
             "description": "`entity_info.name`."
           },
+          "extends": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "G1-T1: the base entity it extends, by logical name (A1-T4's\ncopy-down inheritance); absent when it extends none."
+          },
           "is_append_only": {
             "type": "boolean"
           },
@@ -179136,7 +180049,7 @@
       },
       "ErrorCode": {
         "type": "string",
-        "description": "Every `error` code the API answers with.\n\n`not_found`: No such resource, or the caller may not see it.\n`unauthorized`: Missing or invalid credentials.\n`forbidden`: The caller lacks the privilege for this action.\n`attribute_not_writable`: The write sets an attribute the caller may not write; `field` names it.\n`limit_exceeded`: The request is past a limit; `limit`, `value` and `next` say which and what to do.\n`conflict`: The request conflicts with the current state.\n`version_conflict`: The record changed since the caller read it; read it again and retry.\n`duplicate_detected`: The save matches existing records under a blocking duplicate rule.\n`idempotency_conflict`: The idempotency key was used for a different request.\n`validation_error`: The request failed validation.\n`customer_tests_failed`: A publish was refused because blocking customer tests failed; `tests` names them.\n`rule_violation`: A business rule refused the write; `rule_id` names it.\n`field_locked`: A business rule locks a field the write changed.\n`field_locked_required`: A locked field is required and was left empty.\n`feature_unavailable`: The feature is not available on this deployment.\n`feature_hidden`: The feature is switched off for this deployment.\n`rate_limit_exceeded` (retryable): Too many requests; wait for `Retry-After`.\n`overloaded` (retryable): The server is overloaded; retry shortly.\n`capability_unavailable` (retryable): A service the request needs is down; retry after `Retry-After`.\n`metadata_authoring_locked`: Metadata changes are locked on this deployment.\n`transition_not_allowed`: The state model does not allow this change of state.\n`reauth_required`: The action needs a fresh sign-in or second factor first.\n`server_timeout` (retryable): The request took too long; it may be retried.\n`query_timeout`: An interactive query ran past its limit; run it as an export.\n`read_only` (retryable): Changes are paused on this deployment; reads still work.\n`payload_too_large`: The request body is too large or too deeply nested.\n`request_rejected`: The request was refused before it reached a route: a malformed path or oversized headers.\n`invalid_cursor`: The cursor was not issued by this deployment; start again from the first page.\n`resync_needed`: The delta token is older than the change feed keeps; read the list again for a new token.\n`cascade_restricted`: The delete would cascade to a record a restrict-mode lookup still references; the message names the path.\n`idempotency_outcome_unknown`: An earlier attempt with this key did not finish; its outcome is unknown.\n`idempotency_replay_unavailable`: The stored response for this key can no longer be replayed.\n`method_not_allowed`: The path exists but not for this method; see `Allow`.\n`api_version_sunset`: The API version this request is answered at was retired; `supported` lists the current ones.\n`unsupported_api_version`: The `Attome-Version` header names a version this server does not answer; `supported` lists the ones it does.\n`internal_error` (retryable): An unexpected error; the request id finds it in the logs.",
+        "description": "Every `error` code the API answers with.\n\n`not_found`: No such resource, or the caller may not see it.\n`unauthorized`: Missing or invalid credentials.\n`forbidden`: The caller lacks the privilege for this action.\n`attribute_not_writable`: The write sets an attribute the caller may not write; `field` names it.\n`limit_exceeded`: The request is past a limit; `limit`, `value` and `next` say which and what to do.\n`conflict`: The request conflicts with the current state.\n`version_conflict`: The record changed since the caller read it; read it again and retry.\n`duplicate_detected`: The save matches existing records under a blocking duplicate rule.\n`idempotency_conflict`: The idempotency key was used for a different request.\n`validation_error`: The request failed validation.\n`customer_tests_failed`: A publish was refused because blocking customer tests failed; `tests` names them.\n`governance_roles_held`: The user still holds data-governance roles; `roles` names them. Reassign them first.\n`rule_violation`: A business rule refused the write; `rule_id` names it.\n`field_locked`: A business rule locks a field the write changed.\n`field_locked_required`: A locked field is required and was left empty.\n`feature_unavailable`: The feature is not available on this deployment.\n`feature_hidden`: The feature is switched off for this deployment.\n`rate_limit_exceeded` (retryable): Too many requests; wait for `Retry-After`.\n`overloaded` (retryable): The server is overloaded; retry shortly.\n`capability_unavailable` (retryable): A service the request needs is down; retry after `Retry-After`.\n`metadata_authoring_locked`: Metadata changes are locked on this deployment.\n`transition_not_allowed`: The state model does not allow this change of state.\n`reauth_required`: The action needs a fresh sign-in or second factor first.\n`server_timeout` (retryable): The request took too long; it may be retried.\n`query_timeout`: An interactive query ran past its limit; run it as an export.\n`read_only` (retryable): Changes are paused on this deployment; reads still work.\n`payload_too_large`: The request body is too large or too deeply nested.\n`request_rejected`: The request was refused before it reached a route: a malformed path or oversized headers.\n`invalid_cursor`: The cursor was not issued by this deployment; start again from the first page.\n`resync_needed`: The delta token is older than the change feed keeps; read the list again for a new token.\n`cascade_restricted`: The delete would cascade to a record a restrict-mode lookup still references; the message names the path.\n`idempotency_outcome_unknown`: An earlier attempt with this key did not finish; its outcome is unknown.\n`idempotency_replay_unavailable`: The stored response for this key can no longer be replayed.\n`method_not_allowed`: The path exists but not for this method; see `Allow`.\n`api_version_sunset`: The API version this request is answered at was retired; `supported` lists the current ones.\n`unsupported_api_version`: The `Attome-Version` header names a version this server does not answer; `supported` lists the ones it does.\n`internal_error` (retryable): An unexpected error; the request id finds it in the logs.",
         "enum": [
           "not_found",
           "unauthorized",
@@ -179149,6 +180062,7 @@
           "idempotency_conflict",
           "validation_error",
           "customer_tests_failed",
+          "governance_roles_held",
           "rule_violation",
           "field_locked",
           "field_locked_required",
@@ -179246,7 +180160,7 @@
           },
           "error": {
             "type": "string",
-            "description": "Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,\n`attribute_not_writable`, `limit_exceeded`,\n`conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,\n`validation_error`, `customer_tests_failed`, `feature_unavailable`, `feature_hidden`,\n`rate_limit_exceeded`, `overloaded`, `capability_unavailable`,\n`metadata_authoring_locked`, `transition_not_allowed`,\n`rule_violation`, `field_locked`, `field_locked_required`,\n`reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,\n`request_rejected`, `invalid_cursor`, `resync_needed`, `cascade_restricted`,\n`idempotency_outcome_unknown`, `idempotency_replay_unavailable`,\n`method_not_allowed`, or\n`internal_error` — one per `AppError` variant (`FieldLocked` answers\ntwo: plain and required) (`attome-types/src/error.rs`); M01 Core C-23\nfound this list four codes short of the taxonomy it documents."
+            "description": "Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,\n`attribute_not_writable`, `limit_exceeded`,\n`conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,\n`validation_error`, `customer_tests_failed`, `governance_roles_held`, `feature_unavailable`, `feature_hidden`,\n`rate_limit_exceeded`, `overloaded`, `capability_unavailable`,\n`metadata_authoring_locked`, `transition_not_allowed`,\n`rule_violation`, `field_locked`, `field_locked_required`,\n`reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,\n`request_rejected`, `invalid_cursor`, `resync_needed`, `cascade_restricted`,\n`idempotency_outcome_unknown`, `idempotency_replay_unavailable`,\n`method_not_allowed`, or\n`internal_error` — one per `AppError` variant (`FieldLocked` answers\ntwo: plain and required) (`attome-types/src/error.rs`); M01 Core C-23\nfound this list four codes short of the taxonomy it documents."
           },
           "errors": {
             "type": [
@@ -179477,96 +180391,46 @@
       },
       "Evidence": {
         "type": "object",
-        "description": "One drill's evidence.",
+        "description": "The governance evidence for an audit.",
         "required": [
-          "schema",
-          "kind",
-          "drill_id",
-          "started_at",
-          "finished_at",
-          "platform_version",
-          "checks",
-          "restore_ok",
-          "provenance_ok",
-          "overall_ok"
+          "generated_at",
+          "roles",
+          "policies",
+          "exceptions",
+          "approvals"
         ],
         "properties": {
-          "checks": {
+          "approvals": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Check"
-            }
+              "type": "object"
+            },
+            "description": "Governed-change approval requests: `{id, status, requested_by, requested_at}`."
           },
-          "data_size_bytes": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "int64",
-            "minimum": 0
+          "exceptions": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "`{id, policy_id, target_ref, reason, status, approved_by, expires_at}`."
           },
-          "deployment_id": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "drill_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "extra": {
-            "type": "object",
-            "description": "What a kind records beyond these fields."
-          },
-          "finished_at": {
+          "generated_at": {
             "type": "string",
             "format": "date-time"
           },
-          "image_digest": {
-            "type": [
-              "string",
-              "null"
-            ]
+          "policies": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "`{id, domain_id, name_en, name_ar, version, enforcements: [{kind, target_ref}]}`."
           },
-          "kind": {
-            "$ref": "#/components/schemas/EvidenceKind"
-          },
-          "overall_ok": {
-            "type": "boolean"
-          },
-          "platform_version": {
-            "type": "string"
-          },
-          "provenance_ok": {
-            "type": "boolean"
-          },
-          "restore_ok": {
-            "type": "boolean"
-          },
-          "rpo_seconds": {
-            "type": [
-              "number",
-              "null"
-            ],
-            "format": "double",
-            "description": "Data lost, measured: the recovery point."
-          },
-          "rto_seconds": {
-            "type": [
-              "number",
-              "null"
-            ],
-            "format": "double",
-            "description": "Time to serve again, measured: the recovery time."
-          },
-          "schema": {
-            "type": "string",
-            "description": "Always [`SCHEMA`]."
-          },
-          "started_at": {
-            "type": "string",
-            "format": "date-time"
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "`{domain_id, domain, user_id, role}`."
           }
         }
       },
@@ -182117,6 +182981,37 @@
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "FlowCoverage": {
+        "type": "object",
+        "description": "M4-T2: a flow's saved test cases (every active test that simulates it)\nrun on `graph`, and which of `nodes` they reached.",
+        "required": [
+          "tests",
+          "covered",
+          "uncovered"
+        ],
+        "properties": {
+          "covered": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The nodes some test reached, in graph order."
+          },
+          "tests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AffectedTestResult"
+            }
+          },
+          "uncovered": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The nodes no test reached, in graph order: the paths still untested."
           }
         }
       },
@@ -185281,6 +186176,61 @@
           }
         }
       },
+      "InboxItem": {
+        "type": "object",
+        "description": "One item in the inbox.",
+        "required": [
+          "source",
+          "id",
+          "entity",
+          "detail",
+          "due_at",
+          "link"
+        ],
+        "properties": {
+          "detail": {
+            "type": "string",
+            "description": "The duplicate's score, the issue's dimension and detail, or the\nhold's matter reference."
+          },
+          "due_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When it was detected or placed; the inbox is oldest first."
+          },
+          "entity": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The item's id in its own feature."
+          },
+          "link": {
+            "type": "string",
+            "description": "The screen that owns it."
+          },
+          "record_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The record it is about; none for a hold on a whole entity."
+          },
+          "related_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The other record of a duplicate pair or a quality issue, if any."
+          },
+          "source": {
+            "type": "string",
+            "description": "`duplicate`, `quality_issue` or `legal_hold`."
+          }
+        }
+      },
       "InboxMailbox": {
         "type": "object",
         "description": "One shared mailbox.",
@@ -185799,6 +186749,61 @@
             "format": "int64",
             "description": "Records whose idempotency key was already stored.",
             "minimum": 0
+          }
+        }
+      },
+      "InstallPreview": {
+        "type": "object",
+        "description": "What installing a package does.",
+        "required": [
+          "new_objects",
+          "changed_objects",
+          "permissions",
+          "data_effects",
+          "removed",
+          "blocked",
+          "installable"
+        ],
+        "properties": {
+          "blocked": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanEntry"
+            }
+          },
+          "changed_objects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanEntry"
+            }
+          },
+          "data_effects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DataEffect"
+            }
+          },
+          "installable": {
+            "type": "boolean",
+            "description": "False while anything is blocked: the package cannot be installed as it is."
+          },
+          "new_objects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanEntry"
+            }
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanEntry"
+            }
+          },
+          "removed": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanEntry"
+            }
           }
         }
       },
@@ -192048,7 +193053,9 @@
           "valid",
           "issues",
           "warnings",
-          "tests"
+          "tests",
+          "performance",
+          "quality_gate"
         ],
         "properties": {
           "issues": {
@@ -192056,6 +193063,17 @@
             "items": {
               "$ref": "#/components/schemas/IssueView"
             }
+          },
+          "performance": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "T1-T4: performance findings with their fixes (a form's fields and\nrelated lists, a page's data-loading components)."
+          },
+          "quality_gate": {
+            "type": "string",
+            "description": "T1-T4: `block` when the accessibility and performance findings\nabove would refuse a publish (`model.publish.quality_gate`), else\n`warn`."
           },
           "tests": {
             "type": "array",
@@ -196090,6 +197108,24 @@
           }
         }
       },
+      "OverdueSteward": {
+        "type": "object",
+        "description": "A steward with overdue inbox items in their domains.",
+        "required": [
+          "user_id",
+          "overdue_items"
+        ],
+        "properties": {
+          "overdue_items": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "OverlayView": {
         "type": "object",
         "description": "The deployment's OpenAPI overlay.",
@@ -196337,6 +197373,41 @@
           }
         },
         "additionalProperties": false
+      },
+      "PackagePreviewBody": {
+        "type": "object",
+        "description": "A package to preview.",
+        "required": [
+          "package"
+        ],
+        "properties": {
+          "package": {
+            "type": "object",
+            "description": "An `attome-package/v1` document."
+          }
+        }
+      },
+      "PackagePreviewResponse": {
+        "type": "object",
+        "description": "What installing a package would do, and the plan that installs it.",
+        "required": [
+          "manifest",
+          "plan",
+          "preview"
+        ],
+        "properties": {
+          "manifest": {
+            "type": "object",
+            "description": "The package's manifest."
+          },
+          "plan": {
+            "$ref": "#/components/schemas/PlanResponse",
+            "description": "The persisted plan: apply it with `POST /api/v1/admin/metadata/import?mode=apply`."
+          },
+          "preview": {
+            "$ref": "#/components/schemas/InstallPreview"
+          }
+        }
       },
       "Packed": {
         "type": "object",
@@ -196850,6 +197921,84 @@
           "widget_id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "PaginatedResponse_AcceptanceScript": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "T7-T4: one acceptance script as a person sees it.",
+              "required": [
+                "id",
+                "name",
+                "steps"
+              ],
+              "properties": {
+                "description": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "last_passed": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "description": "The last run's result and time, by anyone."
+                },
+                "last_run_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "steps": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
           }
         }
       },
@@ -202607,6 +203756,14 @@
                   "type": "string",
                   "description": "Solution 7 (D-785): the layer that owns this domain —\n`platform | product | project | customer`."
                 },
+                "parent_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "L3-T1: the domain this one is a sub-domain of, if any."
+                },
                 "row_version": {
                   "type": "integer",
                   "format": "int64"
@@ -207349,6 +208506,95 @@
                 "record_id": {
                   "type": "string",
                   "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_InboxItem": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One item in the inbox.",
+              "required": [
+                "source",
+                "id",
+                "entity",
+                "detail",
+                "due_at",
+                "link"
+              ],
+              "properties": {
+                "detail": {
+                  "type": "string",
+                  "description": "The duplicate's score, the issue's dimension and detail, or the\nhold's matter reference."
+                },
+                "due_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "When it was detected or placed; the inbox is oldest first."
+                },
+                "entity": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "The item's id in its own feature."
+                },
+                "link": {
+                  "type": "string",
+                  "description": "The screen that owns it."
+                },
+                "record_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "The record it is about; none for a hold on a whole entity."
+                },
+                "related_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "The other record of a duplicate pair or a quality issue, if any."
+                },
+                "source": {
+                  "type": "string",
+                  "description": "`duplicate`, `quality_issue` or `legal_hold`."
                 }
               }
             }
@@ -225821,6 +227067,33 @@
           }
         }
       },
+      "QualityLine": {
+        "type": "object",
+        "description": "One entity's newest quality score in a dimension.",
+        "required": [
+          "entity",
+          "dimension",
+          "score",
+          "computed_at"
+        ],
+        "properties": {
+          "computed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dimension": {
+            "type": "string"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number",
+            "format": "double",
+            "description": "0 to 100."
+          }
+        }
+      },
       "QualityRuleView": {
         "type": "object",
         "required": [
@@ -235256,6 +236529,62 @@
           }
         }
       },
+      "Scorecard": {
+        "type": "object",
+        "description": "One domain's scorecard.",
+        "required": [
+          "domain",
+          "quality",
+          "open_items",
+          "overdue_items",
+          "open_exceptions",
+          "policies",
+          "enforced_policies"
+        ],
+        "properties": {
+          "domain": {
+            "$ref": "#/components/schemas/DomainRef"
+          },
+          "enforced_policies": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Policies with at least one enforcement."
+          },
+          "open_exceptions": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Policy exceptions requested or approved and not expired."
+          },
+          "open_items": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Steward inbox items open in the domain, and how many are overdue."
+          },
+          "overdue_items": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "policies": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "quality": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QualityLine"
+            },
+            "description": "L2: the newest score per entity and dimension."
+          },
+          "quality_average": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Their average; none while no entity of the domain has been scored."
+          }
+        }
+      },
       "ScorecardItem": {
         "type": "object",
         "description": "One metric on a scorecard.",
@@ -241221,6 +242550,25 @@
           }
         }
       },
+      "StepMark": {
+        "type": "object",
+        "description": "T7-T4: one step's mark in a person's run of an acceptance script.",
+        "required": [
+          "passed"
+        ],
+        "properties": {
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What went wrong, for a failed step."
+          },
+          "passed": {
+            "type": "boolean"
+          }
+        }
+      },
       "StepMode": {
         "type": "string",
         "enum": [
@@ -243428,6 +244776,19 @@
           }
         }
       },
+      "TestFromRunBody": {
+        "type": "object",
+        "description": "The test name, when the body names none.",
+        "properties": {
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The test's name; one from the run when left out."
+          }
+        }
+      },
       "TestLock": {
         "type": "object",
         "required": [
@@ -245402,6 +246763,27 @@
         ],
         "description": "A 401 from a route guarded by a step-up (D-510): either the standard\nenvelope (`unauthorized`, for a missing session or a session without a live\nrefresh family) or a [`ReauthRequiredResponse`]. Clients tell them apart by\n`error`. Documentation-only."
       },
+      "UncoveredAttribute": {
+        "type": "object",
+        "description": "A personal attribute whose domain has no policy.",
+        "required": [
+          "entity",
+          "attribute",
+          "classification"
+        ],
+        "properties": {
+          "attribute": {
+            "type": "string"
+          },
+          "classification": {
+            "type": "string",
+            "description": "`personal` or `sensitive_special_category`."
+          },
+          "entity": {
+            "type": "string"
+          }
+        }
+      },
       "UndoItem": {
         "type": "object",
         "description": "B5-T3: one record's values before a bulk edit, and the row version the\nedit leaves it at.",
@@ -245693,6 +247075,28 @@
           }
         ],
         "description": "One planned undo step."
+      },
+      "UnenforcedPolicy": {
+        "type": "object",
+        "description": "A policy nothing enforces.",
+        "required": [
+          "id",
+          "domain_id",
+          "name"
+        ],
+        "properties": {
+          "domain_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
       },
       "UnresolvedReason": {
         "type": "string",
@@ -246014,6 +247418,14 @@
               "null"
             ],
             "description": "Set to an empty string to clear the category back to uncategorized."
+          },
+          "extends_entity_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "G1-T1: make this live entity extend a base (A1-T4's copy-down): a\nfield of the same name becomes the base field's copy (its type must\nmatch), the base's other fields are copied in. An entity extends one\nbase at most (409); absent leaves it unchanged."
           },
           "is_reference_data": {
             "type": [
@@ -250126,6 +251538,8 @@
       "description": "فحوص السلامة والجاهزية والإصدار"
     }
   ],
+  "x-api-version": "2026-10",
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -250177,7 +251591,5 @@
         ]
       }
     }
-  },
-  "x-version-adapters": [],
-  "x-api-version": "2026-10"
+  }
 }

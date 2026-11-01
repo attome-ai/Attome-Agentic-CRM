@@ -791,6 +791,94 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/workflow/definitions/{id}/versions/{version_id}/coverage": {
+      "get": {
+        "tags": [
+          "workflow"
+        ],
+        "summary": "Test coverage of a workflow version",
+        "description": "Runs the flow's saved test cases (every active customer test with a flow expectation on this\nworkflow) on this version's graph, draft or published, each in a transaction that is rolled\nback, and lists the nodes some case reached and the nodes none did. Automation administrators\nonly.",
+        "operationId": "get_workflow_version_coverage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The definition",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "description": "The version",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowCoverage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "workflow",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/workflow/definitions/{id}/versions/{version_id}/publish": {
       "post": {
         "tags": [
@@ -1992,6 +2080,123 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/workflow/instances/{id}/test": {
+      "post": {
+        "tags": [
+          "workflow"
+        ],
+        "summary": "A customer test from a failed workflow run",
+        "description": "M4-T2: drafts and saves a test from a failed run that started on a record: it re-creates the\nrecord as it stands now (as `POST /api/v1/admin/customer-tests/from-record` does) and expects\nthe run's workflow, simulated on it, to complete. It fails until the flow is fixed; edit it from\nthere. Deployment administrators only. Audited.",
+        "operationId": "create_customer_test_from_workflow_run",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The failed run",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestFromRunBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The test",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerTest"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such run, or its record is gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A test with that name exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The run did not fail, or did not start on a record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "workflow",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/workflow/sequences": {
       "get": {
         "tags": [
@@ -2436,6 +2641,38 @@
   },
   "components": {
     "schemas": {
+      "AffectedTestResult": {
+        "type": "object",
+        "description": "One test's result in a publish preview.",
+        "required": [
+          "id",
+          "name",
+          "blocking",
+          "passed",
+          "failures"
+        ],
+        "properties": {
+          "blocking": {
+            "type": "boolean"
+          },
+          "failures": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "passed": {
+            "type": "boolean"
+          }
+        }
+      },
       "CancelInstanceBody": {
         "type": "object",
         "required": [
@@ -2509,6 +2746,92 @@
         "type": "object",
         "properties": {
           "graph": {}
+        }
+      },
+      "CustomerTest": {
+        "type": "object",
+        "description": "A stored test.",
+        "required": [
+          "id",
+          "name",
+          "definition",
+          "blocking",
+          "is_active",
+          "row_version",
+          "created_at",
+          "updated_at",
+          "live_safe"
+        ],
+        "properties": {
+          "blocking": {
+            "type": "boolean",
+            "description": "A blocking test can stop a publish (Z15-T14)."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "definition": {
+            "type": "object",
+            "description": "The given/when/expect definition."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "flaky_since": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "T7-T3: when its runs first both passed and failed on one test and\nconfiguration version; cleared when the test is edited."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "last_passed": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "The latest run's result, when the test has run."
+          },
+          "last_run_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "live_safe": {
+            "type": "boolean",
+            "description": "T7-T3: run every night against the live configuration."
+          },
+          "name": {
+            "type": "string"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "DefinitionDetail": {
@@ -2687,7 +3010,7 @@
           },
           "error": {
             "type": "string",
-            "description": "Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,\n`attribute_not_writable`, `limit_exceeded`,\n`conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,\n`validation_error`, `customer_tests_failed`, `feature_unavailable`, `feature_hidden`,\n`rate_limit_exceeded`, `overloaded`, `capability_unavailable`,\n`metadata_authoring_locked`, `transition_not_allowed`,\n`rule_violation`, `field_locked`, `field_locked_required`,\n`reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,\n`request_rejected`, `invalid_cursor`, `resync_needed`, `cascade_restricted`,\n`idempotency_outcome_unknown`, `idempotency_replay_unavailable`,\n`method_not_allowed`, or\n`internal_error` — one per `AppError` variant (`FieldLocked` answers\ntwo: plain and required) (`attome-types/src/error.rs`); M01 Core C-23\nfound this list four codes short of the taxonomy it documents."
+            "description": "Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,\n`attribute_not_writable`, `limit_exceeded`,\n`conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,\n`validation_error`, `customer_tests_failed`, `governance_roles_held`, `feature_unavailable`, `feature_hidden`,\n`rate_limit_exceeded`, `overloaded`, `capability_unavailable`,\n`metadata_authoring_locked`, `transition_not_allowed`,\n`rule_violation`, `field_locked`, `field_locked_required`,\n`reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,\n`request_rejected`, `invalid_cursor`, `resync_needed`, `cascade_restricted`,\n`idempotency_outcome_unknown`, `idempotency_replay_unavailable`,\n`method_not_allowed`, or\n`internal_error` — one per `AppError` variant (`FieldLocked` answers\ntwo: plain and required) (`attome-types/src/error.rs`); M01 Core C-23\nfound this list four codes short of the taxonomy it documents."
           },
           "errors": {
             "type": [
@@ -2837,6 +3160,37 @@
             "items": {
               "$ref": "#/components/schemas/LockedField"
             }
+          }
+        }
+      },
+      "FlowCoverage": {
+        "type": "object",
+        "description": "M4-T2: a flow's saved test cases (every active test that simulates it)\nrun on `graph`, and which of `nodes` they reached.",
+        "required": [
+          "tests",
+          "covered",
+          "uncovered"
+        ],
+        "properties": {
+          "covered": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The nodes some test reached, in graph order."
+          },
+          "tests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AffectedTestResult"
+            }
+          },
+          "uncovered": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The nodes no test reached, in graph order: the paths still untested."
           }
         }
       },
@@ -3598,6 +3952,19 @@
           },
           "definition_logicalname": {
             "type": "string"
+          }
+        }
+      },
+      "TestFromRunBody": {
+        "type": "object",
+        "description": "The test name, when the body names none.",
+        "properties": {
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The test's name; one from the run when left out."
           }
         }
       },

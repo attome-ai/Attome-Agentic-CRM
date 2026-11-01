@@ -3092,36 +3092,6 @@
   },
   "components": {
     "schemas": {
-      "Check": {
-        "type": "object",
-        "description": "One check a drill ran.",
-        "required": [
-          "name",
-          "result"
-        ],
-        "properties": {
-          "detail": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "name": {
-            "type": "string"
-          },
-          "result": {
-            "$ref": "#/components/schemas/CheckResult"
-          }
-        }
-      },
-      "CheckResult": {
-        "type": "string",
-        "enum": [
-          "pass",
-          "fail",
-          "skipped"
-        ]
-      },
       "ClusterMember": {
         "type": "object",
         "description": "One database node.",
@@ -3477,7 +3447,7 @@
           },
           "error": {
             "type": "string",
-            "description": "Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,\n`attribute_not_writable`, `limit_exceeded`,\n`conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,\n`validation_error`, `customer_tests_failed`, `feature_unavailable`, `feature_hidden`,\n`rate_limit_exceeded`, `overloaded`, `capability_unavailable`,\n`metadata_authoring_locked`, `transition_not_allowed`,\n`rule_violation`, `field_locked`, `field_locked_required`,\n`reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,\n`request_rejected`, `invalid_cursor`, `resync_needed`, `cascade_restricted`,\n`idempotency_outcome_unknown`, `idempotency_replay_unavailable`,\n`method_not_allowed`, or\n`internal_error` — one per `AppError` variant (`FieldLocked` answers\ntwo: plain and required) (`attome-types/src/error.rs`); M01 Core C-23\nfound this list four codes short of the taxonomy it documents."
+            "description": "Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,\n`attribute_not_writable`, `limit_exceeded`,\n`conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,\n`validation_error`, `customer_tests_failed`, `governance_roles_held`, `feature_unavailable`, `feature_hidden`,\n`rate_limit_exceeded`, `overloaded`, `capability_unavailable`,\n`metadata_authoring_locked`, `transition_not_allowed`,\n`rule_violation`, `field_locked`, `field_locked_required`,\n`reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,\n`request_rejected`, `invalid_cursor`, `resync_needed`, `cascade_restricted`,\n`idempotency_outcome_unknown`, `idempotency_replay_unavailable`,\n`method_not_allowed`, or\n`internal_error` — one per `AppError` variant (`FieldLocked` answers\ntwo: plain and required) (`attome-types/src/error.rs`); M01 Core C-23\nfound this list four codes short of the taxonomy it documents."
           },
           "errors": {
             "type": [
@@ -3585,111 +3555,48 @@
       },
       "Evidence": {
         "type": "object",
-        "description": "One drill's evidence.",
+        "description": "The governance evidence for an audit.",
         "required": [
-          "schema",
-          "kind",
-          "drill_id",
-          "started_at",
-          "finished_at",
-          "platform_version",
-          "checks",
-          "restore_ok",
-          "provenance_ok",
-          "overall_ok"
+          "generated_at",
+          "roles",
+          "policies",
+          "exceptions",
+          "approvals"
         ],
         "properties": {
-          "checks": {
+          "approvals": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Check"
-            }
+              "type": "object"
+            },
+            "description": "Governed-change approval requests: `{id, status, requested_by, requested_at}`."
           },
-          "data_size_bytes": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "int64",
-            "minimum": 0
+          "exceptions": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "`{id, policy_id, target_ref, reason, status, approved_by, expires_at}`."
           },
-          "deployment_id": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "drill_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "extra": {
-            "type": "object",
-            "description": "What a kind records beyond these fields."
-          },
-          "finished_at": {
+          "generated_at": {
             "type": "string",
             "format": "date-time"
           },
-          "image_digest": {
-            "type": [
-              "string",
-              "null"
-            ]
+          "policies": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "`{id, domain_id, name_en, name_ar, version, enforcements: [{kind, target_ref}]}`."
           },
-          "kind": {
-            "$ref": "#/components/schemas/EvidenceKind"
-          },
-          "overall_ok": {
-            "type": "boolean"
-          },
-          "platform_version": {
-            "type": "string"
-          },
-          "provenance_ok": {
-            "type": "boolean"
-          },
-          "restore_ok": {
-            "type": "boolean"
-          },
-          "rpo_seconds": {
-            "type": [
-              "number",
-              "null"
-            ],
-            "format": "double",
-            "description": "Data lost, measured: the recovery point."
-          },
-          "rto_seconds": {
-            "type": [
-              "number",
-              "null"
-            ],
-            "format": "double",
-            "description": "Time to serve again, measured: the recovery time."
-          },
-          "schema": {
-            "type": "string",
-            "description": "Always [`SCHEMA`]."
-          },
-          "started_at": {
-            "type": "string",
-            "format": "date-time"
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "`{domain_id, domain, user_id, role}`."
           }
         }
-      },
-      "EvidenceKind": {
-        "type": "string",
-        "description": "What a drill exercised.",
-        "enum": [
-          "restore",
-          "failover",
-          "chaos",
-          "upgrade",
-          "secrets",
-          "recovery",
-          "drain"
-        ]
       },
       "EvidenceRecorded": {
         "type": "object",

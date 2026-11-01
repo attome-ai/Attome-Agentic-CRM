@@ -72,6 +72,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/acceptance-scripts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The acceptance scripts
+         * @description The active acceptance scripts (customer tests with a checklist) by name, each with its steps and
+         *     its last run. Any signed-in user.
+         */
+        get: operations["list_acceptance_scripts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/acceptance-scripts/{id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record a run of an acceptance script
+         * @description Records a person's run of an acceptance script, one mark per step in order: it passed when every
+         *     step did. Any signed-in user. Audited.
+         */
+        post: operations["record_acceptance_script_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/actions": {
         parameters: {
             query?: never;
@@ -5932,6 +5974,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/governance/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Accountability coverage and gaps
+         * @description L3-T6: live entities in no domain, domains with no owner, personal attributes whose domain has no
+         *     policy, policies nothing enforces, and stewards with inbox items overdue by more than two days.
+         *     Each list holds at most 500 rows (`truncated` says when one was cut). Compliance administrators.
+         */
+        get: operations["get_governance_coverage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/governance/domains": {
         parameters: {
             query?: never;
@@ -6097,6 +6161,50 @@ export interface paths {
          *     steward, or `system.admin`. Audited.
          */
         delete: operations["governance_delete_role"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/governance/domains/{id}/scorecard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A data domain's scorecard
+         * @description L3-T6: the domain's L2 quality (the newest score per entity and dimension, and their average), its
+         *     open and overdue steward inbox items, its open policy exceptions and how many of its policies are
+         *     enforced. Compliance administrators.
+         */
+        get: operations["get_governance_domain_scorecard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/governance/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Governance evidence
+         * @description L3-T6: the governance roles, the policies with their enforcements, the policy exceptions and the
+         *     governed-change approval requests, as one JSON document for an audit (R10). Compliance
+         *     administrators.
+         */
+        get: operations["get_governance_evidence"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -8934,6 +9042,31 @@ export interface paths {
         get: operations["get_outcome_summary"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/packages/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview a package install
+         * @description T8-T2: checks an `attome-package/v1` document's signature against the deployment's trusted
+         *     publishers (`packages.trusted_publishers`), its manifest and its namespace, then plans its bundle
+         *     against live metadata and answers what installing it does: new and changed objects, the
+         *     permissions it requests, the effects on existing records, what it removes and what is blocked.
+         *     The plan is persisted like a metadata import plan; installing is applying it
+         *     (`POST /api/v1/admin/metadata/import?mode=apply` with its `plan_id`). Administrators only.
+         */
+        post: operations["preview_package_install"];
         delete?: never;
         options?: never;
         head?: never;
@@ -19909,6 +20042,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/governance/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The steward inbox
+         * @description The work waiting on the caller as a data steward (L3-T3): open duplicates, open quality issues
+         *     and active legal holds on the entities of the domains they steward or deputise (or own or steward
+         *     under L3-T2's roles), oldest first. Read only; each item links to the screen that owns it. Only
+         *     entities whose every record the caller may read are listed, so no item names a record they cannot
+         *     read. A caller who stewards no domain sees none.
+         */
+        get: operations["get_steward_inbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/graph/paths": {
         parameters: {
             query?: never;
@@ -29026,6 +29183,29 @@ export interface paths {
         patch: operations["update_version_graph"];
         trace?: never;
     };
+    "/api/v1/workflow/definitions/{id}/versions/{version_id}/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Test coverage of a workflow version
+         * @description Runs the flow's saved test cases (every active customer test with a flow expectation on this
+         *     workflow) on this version's graph, draft or published, each in a transaction that is rolled
+         *     back, and lists the nodes some case reached and the nodes none did. Automation administrators
+         *     only.
+         */
+        get: operations["get_workflow_version_coverage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflow/definitions/{id}/versions/{version_id}/publish": {
         parameters: {
             query?: never;
@@ -29258,6 +29438,29 @@ export interface paths {
          *     the stored one. Automation administrators only. Audited.
          */
         post: operations["workflow_instance_retry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflow/instances/{id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * A customer test from a failed workflow run
+         * @description M4-T2: drafts and saves a test from a failed run that started on a record: it re-creates the
+         *     record as it stands now (as `POST /api/v1/admin/customer-tests/from-record` does) and expects
+         *     the run's workflow, simulated on it, to complete. It fails until the flow is fixed; edit it from
+         *     there. Deployment administrators only. Audited.
+         */
+        post: operations["create_customer_test_from_workflow_run"];
         delete?: never;
         options?: never;
         head?: never;
@@ -32675,6 +32878,18 @@ export interface components {
             plan_version_id: string;
             /** @description The renders, at `GET /api/v1/docgen/renders/{id}`. */
             render_ids: string[];
+        };
+        /** @description T7-T4: one acceptance script as a person sees it. */
+        AcceptanceScript: {
+            description?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @description The last run's result and time, by anyone. */
+            last_passed?: boolean | null;
+            /** Format: date-time */
+            last_run_at?: string | null;
+            name: string;
+            steps: string[];
         };
         /**
          * @description What one source does for the record.
@@ -36997,6 +37212,19 @@ export interface components {
         };
         /** @enum {string} */
         CheckResult: "pass" | "fail" | "skipped";
+        /** @description A person's marks for one run. */
+        ChecklistRunBody: {
+            /** @description One mark per step, in order. */
+            steps: components["schemas"]["StepMark"][];
+        };
+        /** @description The recorded run. */
+        ChecklistRunResult: {
+            /** @description One line per failed step: its number, text and note. */
+            failures: string[];
+            passed: boolean;
+            /** Format: uuid */
+            run_id: string;
+        };
         CheckoutRequest: {
             /** @description Why it is checked out, shown to others (at most 500 characters). */
             note?: string | null;
@@ -38408,6 +38636,16 @@ export interface components {
         };
         CounterpartyDecideBody: {
             decision: components["schemas"]["Decision"];
+        };
+        /** @description Where accountability has gaps. */
+        Coverage: {
+            domains_without_owner: components["schemas"]["DomainRef"][];
+            entities_without_domain: string[];
+            personal_attributes_without_policy: components["schemas"]["UncoveredAttribute"][];
+            policies_without_enforcement: components["schemas"]["UnenforcedPolicy"][];
+            stewards_with_overdue_items: components["schemas"]["OverdueSteward"][];
+            /** @description True when a list was cut at [`MAX_ROWS`]. */
+            truncated: boolean;
         };
         /** @description What a person's absence does to coverage. */
         CoverageImpact: {
@@ -39927,12 +40165,25 @@ export interface components {
              *     `platform | product | project | customer`.
              */
             owner_layer: string;
+            /**
+             * Format: uuid
+             * @description L3-T1: the domain this one is a sub-domain of, if any.
+             */
+            parent_ref?: string | null;
             /** Format: int64 */
             row_version: number;
             /** Format: uuid */
             steward_ref?: string | null;
             /** Format: date-time */
             updated_at: string;
+        };
+        /** @description One effect on records already there. */
+        DataEffect: {
+            component: string;
+            detail?: string | null;
+            /** @description `writes_records`, `adds_field_to_existing`, `changes_field`, `retires`. */
+            effect: string;
+            key: string;
         };
         DataMappingField: {
             code_map?: null | components["schemas"]["CodeMapRef"];
@@ -41221,6 +41472,12 @@ export interface components {
             /** @description `ok`, `missing`, `wrong`, `not_configured` or `unknown`. */
             status: string;
         };
+        /** @description A domain named in a report. */
+        DomainRef: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
         DomainReport: {
             classification_breakdown: components["schemas"]["ClassificationBreakdown"];
             /** Format: uuid */
@@ -41770,6 +42027,11 @@ export interface components {
             category?: string | null;
             /** @description `entity_info.name`. */
             display_name: string;
+            /**
+             * @description G1-T1: the base entity it extends, by logical name (A1-T4's
+             *     copy-down inheritance); absent when it extends none.
+             */
+            extends?: string | null;
             is_append_only?: boolean;
             is_audited?: boolean;
             is_customized?: boolean;
@@ -42240,6 +42502,7 @@ export interface components {
          *     `idempotency_conflict`: The idempotency key was used for a different request.
          *     `validation_error`: The request failed validation.
          *     `customer_tests_failed`: A publish was refused because blocking customer tests failed; `tests` names them.
+         *     `governance_roles_held`: The user still holds data-governance roles; `roles` names them. Reassign them first.
          *     `rule_violation`: A business rule refused the write; `rule_id` names it.
          *     `field_locked`: A business rule locks a field the write changed.
          *     `field_locked_required`: A locked field is required and was left empty.
@@ -42267,7 +42530,7 @@ export interface components {
          *     `internal_error` (retryable): An unexpected error; the request id finds it in the logs.
          * @enum {string}
          */
-        ErrorCode: "not_found" | "unauthorized" | "forbidden" | "attribute_not_writable" | "limit_exceeded" | "conflict" | "version_conflict" | "duplicate_detected" | "idempotency_conflict" | "validation_error" | "customer_tests_failed" | "rule_violation" | "field_locked" | "field_locked_required" | "feature_unavailable" | "feature_hidden" | "rate_limit_exceeded" | "overloaded" | "capability_unavailable" | "metadata_authoring_locked" | "transition_not_allowed" | "reauth_required" | "server_timeout" | "query_timeout" | "read_only" | "payload_too_large" | "request_rejected" | "invalid_cursor" | "resync_needed" | "cascade_restricted" | "idempotency_outcome_unknown" | "idempotency_replay_unavailable" | "method_not_allowed" | "api_version_sunset" | "unsupported_api_version" | "internal_error";
+        ErrorCode: "not_found" | "unauthorized" | "forbidden" | "attribute_not_writable" | "limit_exceeded" | "conflict" | "version_conflict" | "duplicate_detected" | "idempotency_conflict" | "validation_error" | "customer_tests_failed" | "governance_roles_held" | "rule_violation" | "field_locked" | "field_locked_required" | "feature_unavailable" | "feature_hidden" | "rate_limit_exceeded" | "overloaded" | "capability_unavailable" | "metadata_authoring_locked" | "transition_not_allowed" | "reauth_required" | "server_timeout" | "query_timeout" | "read_only" | "payload_too_large" | "request_rejected" | "invalid_cursor" | "resync_needed" | "cascade_restricted" | "idempotency_outcome_unknown" | "idempotency_replay_unavailable" | "method_not_allowed" | "api_version_sunset" | "unsupported_api_version" | "internal_error";
         /**
          * @description `ErrorResponse.details`: its shape depends on the `error` code —
          *     a list of [`FieldError`] on `validation_error`, [`RuleViolationDetails`] on
@@ -42312,7 +42575,7 @@ export interface components {
              * @description Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,
              *     `attribute_not_writable`, `limit_exceeded`,
              *     `conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,
-             *     `validation_error`, `customer_tests_failed`, `feature_unavailable`, `feature_hidden`,
+             *     `validation_error`, `customer_tests_failed`, `governance_roles_held`, `feature_unavailable`, `feature_hidden`,
              *     `rate_limit_exceeded`, `overloaded`, `capability_unavailable`,
              *     `metadata_authoring_locked`, `transition_not_allowed`,
              *     `rule_violation`, `field_locked`, `field_locked_required`,
@@ -42435,38 +42698,18 @@ export interface components {
         EventBatch: {
             events: components["schemas"]["IncomingEvent"][];
         };
-        /** @description One drill's evidence. */
+        /** @description The governance evidence for an audit. */
         Evidence: {
-            checks: components["schemas"]["Check"][];
-            /** Format: int64 */
-            data_size_bytes?: number | null;
-            deployment_id?: string | null;
-            /** Format: uuid */
-            drill_id: string;
-            /** @description What a kind records beyond these fields. */
-            extra?: Record<string, never>;
+            /** @description Governed-change approval requests: `{id, status, requested_by, requested_at}`. */
+            approvals: Record<string, never>[];
+            /** @description `{id, policy_id, target_ref, reason, status, approved_by, expires_at}`. */
+            exceptions: Record<string, never>[];
             /** Format: date-time */
-            finished_at: string;
-            image_digest?: string | null;
-            kind: components["schemas"]["EvidenceKind"];
-            overall_ok: boolean;
-            platform_version: string;
-            provenance_ok: boolean;
-            restore_ok: boolean;
-            /**
-             * Format: double
-             * @description Data lost, measured: the recovery point.
-             */
-            rpo_seconds?: number | null;
-            /**
-             * Format: double
-             * @description Time to serve again, measured: the recovery time.
-             */
-            rto_seconds?: number | null;
-            /** @description Always [`SCHEMA`]. */
-            schema: string;
-            /** Format: date-time */
-            started_at: string;
+            generated_at: string;
+            /** @description `{id, domain_id, name_en, name_ar, version, enforcements: [{kind, target_ref}]}`. */
+            policies: Record<string, never>[];
+            /** @description `{domain_id, domain, user_id, role}`. */
+            roles: Record<string, never>[];
         };
         /**
          * @description What a drill exercised.
@@ -43538,6 +43781,17 @@ export interface components {
             /** Format: date-time */
             remediated_at: string;
             status: string;
+        };
+        /**
+         * @description M4-T2: a flow's saved test cases (every active test that simulates it)
+         *     run on `graph`, and which of `nodes` they reached.
+         */
+        FlowCoverage: {
+            /** @description The nodes some test reached, in graph order. */
+            covered: string[];
+            tests: components["schemas"]["AffectedTestResult"][];
+            /** @description The nodes no test reached, in graph order: the paths still untested. */
+            uncovered: string[];
         };
         FolderGroup: {
             /**
@@ -44794,6 +45048,39 @@ export interface components {
             /** Format: uuid */
             record_id: string;
         };
+        /** @description One item in the inbox. */
+        InboxItem: {
+            /**
+             * @description The duplicate's score, the issue's dimension and detail, or the
+             *     hold's matter reference.
+             */
+            detail: string;
+            /**
+             * Format: date-time
+             * @description When it was detected or placed; the inbox is oldest first.
+             */
+            due_at: string;
+            entity: string;
+            /**
+             * Format: uuid
+             * @description The item's id in its own feature.
+             */
+            id: string;
+            /** @description The screen that owns it. */
+            link: string;
+            /**
+             * Format: uuid
+             * @description The record it is about; none for a hold on a whole entity.
+             */
+            record_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The other record of a duplicate pair or a quality issue, if any.
+             */
+            related_id?: string | null;
+            /** @description `duplicate`, `quality_issue` or `legal_hold`. */
+            source: string;
+        };
         /** @description One shared mailbox. */
         InboxMailbox: {
             /** Format: uuid */
@@ -44973,6 +45260,17 @@ export interface components {
              * @description Records whose idempotency key was already stored.
              */
             duplicates: number;
+        };
+        /** @description What installing a package does. */
+        InstallPreview: {
+            blocked: components["schemas"]["PlanEntry"][];
+            changed_objects: components["schemas"]["PlanEntry"][];
+            data_effects: components["schemas"]["DataEffect"][];
+            /** @description False while anything is blocked: the package cannot be installed as it is. */
+            installable: boolean;
+            new_objects: components["schemas"]["PlanEntry"][];
+            permissions: components["schemas"]["PlanEntry"][];
+            removed: components["schemas"]["PlanEntry"][];
         };
         InstallTemplateBody: {
             /** @description The new role's name; the template's name when omitted. */
@@ -47323,6 +47621,17 @@ export interface components {
         ModelValidateResponse: {
             issues: components["schemas"]["IssueView"][];
             /**
+             * @description T1-T4: performance findings with their fixes (a form's fields and
+             *     related lists, a page's data-loading components).
+             */
+            performance: string[];
+            /**
+             * @description T1-T4: `block` when the accessibility and performance findings
+             *     above would refuse a publish (`model.publish.quality_gate`), else
+             *     `warn`.
+             */
+            quality_gate: string;
+            /**
              * @description T7-T2: with `run_tests`, the customer tests the object can affect and
              *     how they ran (blocking ones stop a publish while the guard is on).
              */
@@ -48898,6 +49207,13 @@ export interface components {
             rule_ref?: string | null;
             source_module: string;
         };
+        /** @description A steward with overdue inbox items in their domains. */
+        OverdueSteward: {
+            /** Format: int64 */
+            overdue_items: number;
+            /** Format: uuid */
+            user_id: string;
+        };
         /** @description The deployment's OpenAPI overlay. */
         OverlayView: {
             /** @description The overlay document, or `null` when none is set. */
@@ -48986,6 +49302,19 @@ export interface components {
             weight_kg: number;
             /** Format: double */
             width_cm?: number | null;
+        };
+        /** @description A package to preview. */
+        PackagePreviewBody: {
+            /** @description An `attome-package/v1` document. */
+            package: Record<string, never>;
+        };
+        /** @description What installing a package would do, and the plan that installs it. */
+        PackagePreviewResponse: {
+            /** @description The package's manifest. */
+            manifest: Record<string, never>;
+            /** @description The persisted plan: apply it with `POST /api/v1/admin/metadata/import?mode=apply`. */
+            plan: components["schemas"]["PlanResponse"];
+            preview: components["schemas"]["InstallPreview"];
         };
         /** @description What packing wrote. */
         Packed: {
@@ -49167,6 +49496,31 @@ export interface components {
             error?: null | components["schemas"]["WidgetError"];
             /** Format: uuid */
             widget_id: string;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_AcceptanceScript: {
+            items: {
+                description?: string | null;
+                /** Format: uuid */
+                id: string;
+                /** @description The last run's result and time, by anyone. */
+                last_passed?: boolean | null;
+                /** Format: date-time */
+                last_run_at?: string | null;
+                name: string;
+                steps: string[];
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_AccessReviewCampaign: {
@@ -51338,6 +51692,11 @@ export interface components {
                  *     `platform | product | project | customer`.
                  */
                 owner_layer: string;
+                /**
+                 * Format: uuid
+                 * @description L3-T1: the domain this one is a sub-domain of, if any.
+                 */
+                parent_ref?: string | null;
                 /** Format: int64 */
                 row_version: number;
                 /** Format: uuid */
@@ -53185,6 +53544,52 @@ export interface components {
                 messages: number;
                 /** Format: uuid */
                 record_id: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_InboxItem: {
+            items: {
+                /**
+                 * @description The duplicate's score, the issue's dimension and detail, or the
+                 *     hold's matter reference.
+                 */
+                detail: string;
+                /**
+                 * Format: date-time
+                 * @description When it was detected or placed; the inbox is oldest first.
+                 */
+                due_at: string;
+                entity: string;
+                /**
+                 * Format: uuid
+                 * @description The item's id in its own feature.
+                 */
+                id: string;
+                /** @description The screen that owns it. */
+                link: string;
+                /**
+                 * Format: uuid
+                 * @description The record it is about; none for a hold on a whole entity.
+                 */
+                record_id?: string | null;
+                /**
+                 * Format: uuid
+                 * @description The other record of a duplicate pair or a quality issue, if any.
+                 */
+                related_id?: string | null;
+                /** @description `duplicate`, `quality_issue` or `legal_hold`. */
+                source: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -60248,6 +60653,18 @@ export interface components {
             resolved_at?: string | null;
             status: string;
         };
+        /** @description One entity's newest quality score in a dimension. */
+        QualityLine: {
+            /** Format: date-time */
+            computed_at: string;
+            dimension: string;
+            entity: string;
+            /**
+             * Format: double
+             * @description 0 to 100.
+             */
+            score: number;
+        };
         QualityRuleView: {
             attribute?: string | null;
             dimension: string;
@@ -63874,6 +64291,36 @@ export interface components {
              */
             team: number;
         };
+        /** @description One domain's scorecard. */
+        Scorecard: {
+            domain: components["schemas"]["DomainRef"];
+            /**
+             * Format: int64
+             * @description Policies with at least one enforcement.
+             */
+            enforced_policies: number;
+            /**
+             * Format: int64
+             * @description Policy exceptions requested or approved and not expired.
+             */
+            open_exceptions: number;
+            /**
+             * Format: int64
+             * @description Steward inbox items open in the domain, and how many are overdue.
+             */
+            open_items: number;
+            /** Format: int64 */
+            overdue_items: number;
+            /** Format: int64 */
+            policies: number;
+            /** @description L2: the newest score per entity and dimension. */
+            quality: components["schemas"]["QualityLine"][];
+            /**
+             * Format: double
+             * @description Their average; none while no entity of the domain has been scored.
+             */
+            quality_average?: number | null;
+        };
         /** @description One metric on a scorecard. */
         ScorecardItem: {
             /** Format: double */
@@ -66203,6 +66650,12 @@ export interface components {
             /** @description A rules expression; the step runs only when it is true. */
             skip_unless?: string | null;
         };
+        /** @description T7-T4: one step's mark in a person's run of an acceptance script. */
+        StepMark: {
+            /** @description What went wrong, for a failed step. */
+            note?: string | null;
+            passed: boolean;
+        };
         /** @enum {string} */
         StepMode: "any" | "all" | "nof_m";
         /** @description One step for one record. */
@@ -67005,6 +67458,11 @@ export interface components {
             message?: string | null;
             severity: string;
         };
+        /** @description The test name, when the body names none. */
+        TestFromRunBody: {
+            /** @description The test's name; one from the run when left out. */
+            name?: string | null;
+        };
         TestLock: {
             /** @description `hidden` or `disabled`. */
             effect: string;
@@ -67801,6 +68259,13 @@ export interface components {
          *     `error`. Documentation-only.
          */
         UnauthorizedResponse: components["schemas"]["ReauthRequiredResponse"] | components["schemas"]["ErrorResponse"];
+        /** @description A personal attribute whose domain has no policy. */
+        UncoveredAttribute: {
+            attribute: string;
+            /** @description `personal` or `sensitive_special_category`. */
+            classification: string;
+            entity: string;
+        };
         /**
          * @description B5-T3: one record's values before a bulk edit, and the row version the
          *     edit leaves it at.
@@ -67892,6 +68357,14 @@ export interface components {
             record_id?: string | null;
             /** @enum {string} */
             step: "not_undoable";
+        };
+        /** @description A policy nothing enforces. */
+        UnenforcedPolicy: {
+            /** Format: uuid */
+            domain_id: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
         };
         /**
          * @description Why a ticket's SLA has no deadline (D-517) — the value stored in
@@ -68027,6 +68500,14 @@ export interface components {
             business_key?: string[] | null;
             /** @description Set to an empty string to clear the category back to uncategorized. */
             category?: string | null;
+            /**
+             * Format: uuid
+             * @description G1-T1: make this live entity extend a base (A1-T4's copy-down): a
+             *     field of the same name becomes the base field's copy (its type must
+             *     match), the base's other fields are copied in. An entity extends one
+             *     base at most (409); absent leaves it unchanged.
+             */
+            extends_entity_id?: string | null;
             /**
              * @description Mark the entity as reference data (requires a business key):
              *     generic writes to it are recorded as `upsert_record` when a changeset
@@ -69672,6 +70153,100 @@ export interface operations {
             };
             /** @description A budget or daily limit is used up */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_acceptance_scripts: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_AcceptanceScript"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    record_acceptance_script_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The acceptance script */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChecklistRunBody"];
+            };
+        };
+        responses: {
+            /** @description The run */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChecklistRunResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such active acceptance script */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The marks do not match the steps one for one */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -87882,6 +88457,44 @@ export interface operations {
             };
         };
     };
+    get_governance_coverage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Coverage"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_domains: {
         parameters: {
             query?: {
@@ -88496,6 +89109,94 @@ export interface operations {
             };
             /** @description Unknown role */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_governance_domain_scorecard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The domain */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Scorecard"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such domain */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_governance_evidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Evidence"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -96579,6 +97280,57 @@ export interface operations {
             };
             /** @description Caller lacks system.admin */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_package_install: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PackagePreviewBody"];
+            };
+        };
+        responses: {
+            /** @description The preview and the persisted plan */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackagePreviewResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The package does not read, is not signed by a trusted publisher, or its manifest or namespace is wrong */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -106909,6 +107661,15 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description governance_roles_held: the user still owns, stewards or deputises data domains (`roles` names them); reassign them first */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -128091,6 +128852,46 @@ export interface operations {
             };
             /** @description The shipment is not booked with a carrier */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_steward_inbox: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_InboxItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -152644,6 +153445,58 @@ export interface operations {
             };
         };
     };
+    get_workflow_version_coverage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The definition */
+                id: string;
+                /** @description The version */
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowCoverage"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such version */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     publish_version: {
         parameters: {
             query?: never;
@@ -153333,6 +154186,78 @@ export interface operations {
             };
             /** @description The run is not failed, or changed since it was read */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_customer_test_from_workflow_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The failed run */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TestFromRunBody"];
+            };
+        };
+        responses: {
+            /** @description The test */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerTest"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such run, or its record is gone */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A test with that name exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The run did not fail, or did not start on a record */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
