@@ -75,8 +75,8 @@
       }
     },
     {
-      "name": "An outgoing letter is numbered in the Hijri year",
-      "description": "خطاب صادر مرقّم بالسنة الهجرية. An outgoing, internal-classified letter keeps its Hijri numbering.",
+      "name": "An outgoing letter goes from draft to signature and is sent",
+      "description": "خطاب صادر من المسودة إلى التوقيع ثم الإرسال، مرقّم بالسنة الهجرية. The draft is reviewed, signed by the caller and sent.",
       "definition": {
         "when": [
           {
@@ -91,13 +91,54 @@
               "subject": "إشعار بإصدار الرخصة Licence issue notice",
               "from_party": "Licensing Department / إدارة التراخيص",
               "to_party": "Al Waha Trading Est. / مؤسسة الواحة للتجارة",
-              "classification": "internal"
+              "classification": "internal",
+              "status": "draft"
             }
-          }
+          },
+          { "op": "update", "entity": "gov_correspondence", "ref": "letter", "values": { "status": "review" } },
+          {
+            "op": "update",
+            "entity": "gov_correspondence",
+            "ref": "letter",
+            "values": { "status": "signed", "signed_by": { "$ref": "@caller" }, "signed_on": "2026-11-01T10:00:00Z" }
+          },
+          { "op": "update", "entity": "gov_correspondence", "ref": "letter", "values": { "status": "sent", "sent_on": "2026-11-01T11:00:00Z" } }
         ],
         "expect": [
-          { "entity": "gov_correspondence", "ref": "letter", "attribute": "numbering_calendar", "equals": "hijri" },
-          { "entity": "gov_correspondence", "ref": "letter", "attribute": "direction", "equals": "outgoing" }
+          { "entity": "gov_correspondence", "ref": "letter", "attribute": "status", "equals": "sent" },
+          { "entity": "gov_correspondence", "ref": "letter", "attribute": "numbering_calendar", "equals": "hijri" }
+        ]
+      }
+    },
+    {
+      "name": "A citizen complaint goes from intake to closure",
+      "description": "شكوى مواطن من الاستلام إلى الإغلاق. Complaints use the service ticket: the complaint is opened, worked, resolved and closed.",
+      "definition": {
+        "when": [
+          {
+            "op": "create",
+            "entity": "service_ticket",
+            "ref": "complaint",
+            "values": {
+              "ticket_number": "GOV-CMP-GOLDEN-0001",
+              "title": "تأخر إصدار الرخصة Licence issue delayed",
+              "description": "The applicant waited 30 days / انتظر المتقدم 30 يومًا",
+              "ticket_type": "request",
+              "category": "other",
+              "channel": "portal",
+              "priority": "medium",
+              "requester_id": { "$ref": "@caller" },
+              "status": "new"
+            }
+          },
+          { "op": "update", "entity": "service_ticket", "ref": "complaint", "values": { "status": "open" } },
+          { "op": "update", "entity": "service_ticket", "ref": "complaint", "values": { "status": "in_progress" } },
+          { "op": "update", "entity": "service_ticket", "ref": "complaint", "values": { "status": "resolved", "resolution_code": "expedited" } },
+          { "op": "update", "entity": "service_ticket", "ref": "complaint", "values": { "status": "closed" } }
+        ],
+        "expect": [
+          { "entity": "service_ticket", "ref": "complaint", "attribute": "status", "equals": "closed" },
+          { "entity": "service_ticket", "ref": "complaint", "attribute": "resolution_code", "equals": "expedited" }
         ]
       }
     }

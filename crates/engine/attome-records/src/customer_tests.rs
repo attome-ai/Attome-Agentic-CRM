@@ -296,10 +296,13 @@ struct Run<'a> {
 
 /// X3-T2: `values` with every `{"$ref": "<name>"}` replaced by the id of
 /// the record the test named so, so a step can point a lookup at a record
-/// made earlier. An unknown name is a validation error. Pure.
+/// made earlier, and `{"$ref": "@caller"}` by `caller`, the person the test
+/// runs as (a requester or an owner). An unknown name is a validation
+/// error. Pure.
 pub fn resolve_refs(
     values: &Map<String, Value>,
     refs: &HashMap<String, (String, Uuid)>,
+    caller: Uuid,
 ) -> Result<Map<String, Value>, AppError> {
     values
         .iter()
@@ -309,6 +312,7 @@ pub fn resolve_refs(
                 .filter(|o| o.len() == 1)
                 .and_then(|o| o.get("$ref"))
             {
+                Some(Value::String(name)) if name == "@caller" => Value::String(caller.to_string()),
                 Some(Value::String(name)) => refs
                     .get(name)
                     .map(|(_, id)| Value::String(id.to_string()))
@@ -330,7 +334,7 @@ impl Run<'_> {
         reference: Option<&str>,
     ) -> Result<Uuid, AppError> {
         ctx.require(entity, "create")?;
-        let values = &resolve_refs(values, &self.refs)?;
+        let values = &resolve_refs(values, &self.refs, ctx.user_id)?;
         let meta = self
             .state
             .entities
@@ -396,7 +400,7 @@ impl Run<'_> {
                     .get(&step.entity)
                     .cloned()
                     .ok_or(AppError::NotFound)?;
-                let values = resolve_refs(&step.values, &self.refs)?;
+                let values = resolve_refs(&step.values, &self.refs, ctx.user_id)?;
                 crate::entity_mutation::validate_body(&meta.attrs, &values, false)?;
                 let version = read_row(tx, &step.entity, id)
                     .await?
@@ -1654,12 +1658,18 @@ mod tests {
         let refs = HashMap::from([("acct".to_owned(), ("account".to_owned(), id))]);
         let values = json!({ "account_ref": { "$ref": "acct" }, "amount": 5, "meta": { "a": 1 } });
         let resolved =
-            resolve_refs(values.as_object().expect("an object"), &refs).expect("resolved");
+            resolve_refs(values.as_object().expect("an object"), &refs, id).expect("resolved");
         assert_eq!(resolved["account_ref"], json!(id.to_string()));
         assert_eq!(resolved["amount"], json!(5));
         assert_eq!(resolved["meta"], json!({ "a": 1 }));
         let unknown = json!({ "account_ref": { "$ref": "nobody" } });
-        assert!(resolve_refs(unknown.as_object().expect("an object"), &refs).is_err());
+        assert!(resolve_refs(unknown.as_object().expect("an object"), &refs, id).is_err());
+        let me = json!({ "requester_id": { "$ref": "@caller" } });
+        let caller = Uuid::now_v7();
+        assert_eq!(
+            resolve_refs(me.as_object().expect("an object"), &refs, caller).expect("resolved")["requester_id"],
+            json!(caller.to_string())
+        );
     }
 
     #[test]
