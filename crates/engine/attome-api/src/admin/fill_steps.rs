@@ -24,9 +24,6 @@ use uuid::Uuid;
 /// Rows one batch reads.
 pub const BATCH: i64 = 1_000;
 
-/// The kinds this module runs.
-pub const KINDS: [&str; 2] = ["copy", "set_default"];
-
 /// A checked step: the entity, the target, and the source or the value.
 #[derive(Debug, Clone, PartialEq)]
 pub struct FillPlan {
