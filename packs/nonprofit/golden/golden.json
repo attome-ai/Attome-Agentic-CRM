@@ -1,0 +1,103 @@
+{
+  "format": "attome-pack-golden/v1",
+  "packs": ["crm", "nonprofit"],
+  "tests": [
+    {
+      "name": "An aid case goes from submission to disbursement and closure",
+      "description": "حالة مساعدة من التقديم إلى الصرف والإغلاق. Eligibility is checked, the committee approves, the aid is disbursed and the case closed.",
+      "definition": {
+        "given": [
+          { "entity": "npo_fund", "ref": "zakat", "record": { "name": "Zakat Fund", "name_ar": "صندوق الزكاة", "fund_type": "zakat", "is_active": true } },
+          { "entity": "npo_programme", "ref": "housing", "record": { "name": "Rent Support", "name_ar": "دعم الإيجار", "fund_ref": { "$ref": "zakat" } } }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "npo_aid_case",
+            "ref": "case",
+            "values": {
+              "case_number": "AID-GOLDEN-0001",
+              "beneficiary_name": "أم خالد Umm Khalid",
+              "household_size": 5,
+              "monthly_income": 2500,
+              "need": "إيجار ثلاثة أشهر / three months' rent",
+              "programme_ref": { "$ref": "housing" },
+              "fund_ref": { "$ref": "zakat" },
+              "requested_amount": 9000,
+              "approval_level": "committee",
+              "status": "submitted"
+            }
+          },
+          { "op": "update", "entity": "npo_aid_case", "ref": "case", "values": { "status": "eligibility" } },
+          { "op": "update", "entity": "npo_aid_case", "ref": "case", "values": { "status": "approval" } },
+          { "op": "update", "entity": "npo_aid_case", "ref": "case", "values": { "status": "approved", "approved_amount": 7500 } },
+          { "op": "update", "entity": "npo_aid_case", "ref": "case", "values": { "status": "disbursed" } },
+          { "op": "update", "entity": "npo_aid_case", "ref": "case", "values": { "status": "closed" } }
+        ],
+        "expect": [
+          { "entity": "npo_aid_case", "ref": "case", "attribute": "status", "equals": "closed" },
+          { "entity": "npo_aid_case", "ref": "case", "attribute": "approval_level", "equals": "committee" }
+        ]
+      }
+    },
+    {
+      "name": "Aid is not disbursed before it is approved",
+      "description": "لا تُصرف المساعدة قبل اعتمادها. A case in eligibility cannot be disbursed.",
+      "definition": {
+        "when": [
+          {
+            "op": "create",
+            "entity": "npo_aid_case",
+            "ref": "case",
+            "values": { "case_number": "AID-GOLDEN-0002", "beneficiary_name": "أبو سالم Abu Salem", "household_size": 3, "status": "submitted" }
+          },
+          { "op": "update", "entity": "npo_aid_case", "ref": "case", "values": { "status": "eligibility" } },
+          { "op": "update", "entity": "npo_aid_case", "ref": "case", "values": { "status": "disbursed" } }
+        ],
+        "expect": [
+          { "error": "validation" },
+          { "entity": "npo_aid_case", "ref": "case", "attribute": "status", "equals": "eligibility" }
+        ]
+      }
+    },
+    {
+      "name": "A monthly pledge is fulfilled by a gift to a restricted fund",
+      "description": "تعهد شهري يُوفى بتبرع لصندوق مقيّد. A donor pledges to the orphans' fund and gives against the pledge with an Arabic receipt.",
+      "definition": {
+        "given": [
+          { "entity": "contact", "ref": "donor", "record": { "full_name": "عبدالله الشمري Abdullah Alshammari" } },
+          { "entity": "npo_fund", "ref": "orphans", "record": { "name": "Orphan Sponsorship", "name_ar": "كفالة الأيتام", "fund_type": "restricted", "restriction": "Orphan care only / لرعاية الأيتام فقط" } }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "npo_pledge",
+            "ref": "pledge",
+            "values": { "contact_ref": { "$ref": "donor" }, "fund_ref": { "$ref": "orphans" }, "amount": 300, "frequency": "monthly", "status": "open" }
+          },
+          {
+            "op": "create",
+            "entity": "npo_gift",
+            "ref": "gift",
+            "values": {
+              "contact_ref": { "$ref": "donor" },
+              "fund_ref": { "$ref": "orphans" },
+              "pledge_ref": { "$ref": "pledge" },
+              "amount": 300,
+              "received_on": "2026-10-05T10:00:00Z",
+              "method": "bank_transfer",
+              "receipt_number": "RC-GOLDEN-0001",
+              "receipt_language": "ar"
+            }
+          },
+          { "op": "update", "entity": "npo_pledge", "ref": "pledge", "values": { "status": "fulfilled", "fulfilled_amount": 300 } }
+        ],
+        "expect": [
+          { "entity": "npo_pledge", "ref": "pledge", "attribute": "status", "equals": "fulfilled" },
+          { "entity": "npo_gift", "ref": "gift", "attribute": "receipt_language", "equals": "ar" },
+          { "entity": "npo_gift", "ref": "gift", "attribute": "method", "equals": "bank_transfer" }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "format": "attome-pack-golden/v1",
+  "packs": ["crm", "education"],
+  "tests": [
+    {
+      "name": "An applicant is assessed, offered a seat and enrolled",
+      "description": "متقدم يُقيَّم ويُعرض عليه مقعد ثم يُسجَّل. The application is submitted, assessed, decided, offered, accepted and enrolled.",
+      "definition": {
+        "given": [
+          { "entity": "edu_programme", "ref": "grade7", "record": { "name": "Grade 7", "name_ar": "الصف الأول المتوسط", "level": "intermediate", "campus": "Jeddah", "annual_fee": 32000 } },
+          {
+            "entity": "edu_intake",
+            "ref": "intake",
+            "record": { "programme_ref": { "$ref": "grade7" }, "name": "1448 intake / قبول 1448", "academic_year": "1448", "calendar": "hijri", "seats": 60 }
+          },
+          {
+            "entity": "edu_student",
+            "ref": "student",
+            "record": { "full_name": "Yousef Alharbi", "full_name_ar": "يوسف الحربي", "is_minor": true, "guardian_consent": true, "status": "applicant" }
+          }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "edu_application",
+            "ref": "application",
+            "values": { "reference": "APP-GOLDEN-0001", "student_ref": { "$ref": "student" }, "intake_ref": { "$ref": "intake" }, "source": "open_day", "status": "started" }
+          },
+          { "op": "update", "entity": "edu_application", "ref": "application", "values": { "status": "submitted" } },
+          { "op": "update", "entity": "edu_application", "ref": "application", "values": { "status": "assessment", "assessment_score": 88 } },
+          { "op": "update", "entity": "edu_application", "ref": "application", "values": { "status": "decision" } },
+          { "op": "update", "entity": "edu_application", "ref": "application", "values": { "status": "offered" } },
+          { "op": "update", "entity": "edu_application", "ref": "application", "values": { "status": "accepted" } },
+          { "op": "update", "entity": "edu_application", "ref": "application", "values": { "status": "enrolled" } },
+          { "op": "update", "entity": "edu_student", "ref": "student", "values": { "status": "enrolled", "programme_ref": { "$ref": "grade7" } } }
+        ],
+        "expect": [
+          { "entity": "edu_application", "ref": "application", "attribute": "status", "equals": "enrolled" },
+          { "entity": "edu_student", "ref": "student", "attribute": "status", "equals": "enrolled" }
+        ]
+      }
+    },
+    {
+      "name": "A waitlisted applicant is offered a seat later",
+      "description": "متقدم في قائمة الانتظار يُعرض عليه مقعد لاحقًا. A decision waitlists the applicant, then a seat frees up and an offer follows.",
+      "definition": {
+        "given": [
+          { "entity": "edu_programme", "ref": "kg", "record": { "name": "Kindergarten", "name_ar": "رياض الأطفال", "level": "kindergarten" } },
+          { "entity": "edu_intake", "ref": "intake", "record": { "programme_ref": { "$ref": "kg" }, "name": "2026/27 intake", "academic_year": "2026/27", "calendar": "gregorian", "seats": 20 } },
+          { "entity": "edu_student", "ref": "student", "record": { "full_name": "Layan Almutairi", "full_name_ar": "ليان المطيري", "is_minor": true, "guardian_consent": true, "status": "applicant" } }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "edu_application",
+            "ref": "application",
+            "values": { "reference": "APP-GOLDEN-0002", "student_ref": { "$ref": "student" }, "intake_ref": { "$ref": "intake" }, "source": "whatsapp", "status": "started" }
+          },
+          { "op": "update", "entity": "edu_application", "ref": "application", "values": { "status": "submitted" } },
+          { "op": "update", "entity": "edu_application", "ref": "application", "values": { "status": "assessment" } },
+          { "op": "update", "entity": "edu_application", "ref": "application", "values": { "status": "decision" } },
+          { "op": "update", "entity": "edu_application", "ref": "application", "values": { "status": "waitlisted", "waitlist_priority": 3 } },
+          { "op": "update", "entity": "edu_application", "ref": "application", "values": { "status": "offered" } }
+        ],
+        "expect": [
+          { "entity": "edu_application", "ref": "application", "attribute": "status", "equals": "offered" },
+          { "entity": "edu_application", "ref": "application", "attribute": "source", "equals": "whatsapp" }
+        ]
+      }
+    },
+    {
+      "name": "An application is not offered a seat before its decision",
+      "description": "لا يُعرض مقعد قبل قرار القبول. Moving a submitted application straight to an offer is refused.",
+      "definition": {
+        "given": [
+          { "entity": "edu_programme", "ref": "grade1", "record": { "name": "Grade 1", "name_ar": "الصف الأول الابتدائي", "level": "primary" } },
+          { "entity": "edu_intake", "ref": "intake", "record": { "programme_ref": { "$ref": "grade1" }, "name": "Grade 1 intake", "academic_year": "1448", "calendar": "hijri" } },
+          { "entity": "edu_student", "ref": "student", "record": { "full_name": "Omar Alghamdi", "full_name_ar": "عمر الغامدي", "status": "applicant" } }
+        ],
+        "when": [
+          {
+            "op": "create",
+            "entity": "edu_application",
+            "ref": "application",
+            "values": { "reference": "APP-GOLDEN-0003", "student_ref": { "$ref": "student" }, "intake_ref": { "$ref": "intake" }, "status": "started" }
+          },
+          { "op": "update", "entity": "edu_application", "ref": "application", "values": { "status": "submitted" } },
+          { "op": "update", "entity": "edu_application", "ref": "application", "values": { "status": "offered" } }
+        ],
+        "expect": [
+          { "error": "validation" },
+          { "entity": "edu_application", "ref": "application", "attribute": "status", "equals": "submitted" }
+        ]
+      }
+    }
+  ]
+}
