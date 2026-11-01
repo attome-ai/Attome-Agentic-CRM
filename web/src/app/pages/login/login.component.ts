@@ -302,7 +302,7 @@ const DAY_MS = 86_400_000;
       padding: 0;
       /* Indigo-600, matching auth-shared.css's .auth-link a — indigo-500 is
          4.46:1 on white and fails WCAG AA for normal text. */
-      color: #4f46e5;
+      color: var(--color-accent);
       font-weight: 500;
       font-size: 13px;
       cursor: pointer;

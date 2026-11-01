@@ -211,7 +211,7 @@
   border-radius: 10px;
   border: none;
   background-color: var(--color-accent);
-  color: white;
+  color: var(--color-on-accent);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
