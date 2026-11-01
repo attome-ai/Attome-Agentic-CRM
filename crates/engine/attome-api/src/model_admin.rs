@@ -2830,6 +2830,52 @@ async fn version_docs(
         .ok_or(AppError::NotFound)
 }
 
+/// What switching to a metadata version would change (A22-T4).
+#[derive(Serialize, ToSchema)]
+pub(crate) struct VersionPreview {
+    /// The version current now; `null` when none is.
+    from: Option<i64>,
+    /// The version previewed.
+    to: i64,
+    /// Artefacts it has and the current version does not.
+    added: Vec<String>,
+    /// Artefacts the current version has and it does not.
+    removed: Vec<String>,
+    /// Artefacts both have, cooked differently.
+    changed: Vec<String>,
+}
+
+/// Previews a switch to a metadata version (A22-T4).
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/metadata/versions/{version}/preview",
+    description = "Shows what making a recorded metadata version current would add, remove and change, before `switch` does it. Changes nothing.",
+    operation_id = "preview_metadata_version",
+    tag = "admin",
+    params(("version" = i64, Path, description = "A published metadata version")),
+    responses(
+        (status = 200, description = "What would change", body = VersionPreview),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such published version", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn version_preview(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
+    Path(version): Path<i64>,
+) -> Result<Json<VersionPreview>, AppError> {
+    let (from, changes) = attome_model::switch::preview(&state.base.db, version).await?;
+    Ok(Json(VersionPreview {
+        from,
+        to: version,
+        added: changes.added,
+        removed: changes.removed,
+        changed: changes.changed,
+    }))
+}
+
 /// Lists the nodes serving a metadata version, earliest switch first
 /// (Y8-T10). A node missing from the list has not loaded the version yet.
 #[utoipa::path(
@@ -2876,6 +2922,10 @@ pub fn routes() -> Router<EngineState> {
         .route(
             "/api/v1/admin/metadata/versions/{version}/switch",
             post(switch_version),
+        )
+        .route(
+            "/api/v1/admin/metadata/versions/{version}/preview",
+            get(version_preview),
         )
         .route(
             "/api/v1/admin/metadata/versions/{version}/nodes",
@@ -3003,6 +3053,7 @@ pub fn routes() -> Router<EngineState> {
         publish,
         retire_app,
         switch_version,
+        version_preview,
         list_versions,
         version_nodes,
         version_docs,

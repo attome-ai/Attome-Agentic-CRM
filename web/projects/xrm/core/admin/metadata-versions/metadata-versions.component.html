@@ -53,6 +53,28 @@
         @if (opened() === v.version) {
           <tr class="mv-nodes">
             <td colspan="4">
+              @if (!v.current && preview(); as p) {
+                <div class="mv-preview" data-testid="preview">
+                  <p>{{ 'metadataVersions.previewSummary' | translate: {
+                    added: p.added.length, removed: p.removed.length, changed: p.changed.length
+                  } }}</p>
+                  <ul>
+                    @for (key of p.added; track key) {
+                      <li>{{ 'metadataVersions.added' | translate }}: {{ key }}</li>
+                    }
+                    @for (key of p.removed; track key) {
+                      <li>{{ 'metadataVersions.removed' | translate }}: {{ key }}</li>
+                    }
+                    @for (key of p.changed; track key) {
+                      <li>{{ 'metadataVersions.changed' | translate }}: {{ key }}</li>
+                    }
+                  </ul>
+                  <button type="button" class="btn-ghost" data-testid="switch"
+                          (click)="switchTo(v.version)" [disabled]="busy()">
+                    {{ 'metadataVersions.switch' | translate }}
+                  </button>
+                </div>
+              }
               @if (nodesLoading()) {
                 <p class="mv-muted">{{ 'metadataVersions.loading' | translate }}</p>
               } @else if (nodes().length === 0) {

@@ -172,6 +172,57 @@ pub async fn record(
     })
 }
 
+/// What making a version current would change, by artefact key.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct VersionChanges {
+    /// The artefacts the version has and the current one does not.
+    pub added: Vec<String>,
+    /// The artefacts the current version has and it does not.
+    pub removed: Vec<String>,
+    /// The artefacts both have, cooked differently.
+    pub changed: Vec<String>,
+}
+
+/// Compares two manifests. Pure.
+pub fn changes(current: &CookManifest, version: &CookManifest) -> VersionChanges {
+    let mut out = VersionChanges::default();
+    for (key, entry) in &version.artefacts {
+        match current.artefacts.get(key) {
+            None => out.added.push(key.clone()),
+            Some(live) if live != entry => out.changed.push(key.clone()),
+            Some(_) => {}
+        }
+    }
+    out.removed = current
+        .artefacts
+        .keys()
+        .filter(|key| !version.artefacts.contains_key(*key))
+        .cloned()
+        .collect();
+    out
+}
+
+/// A22-T4: what switching to the recorded `version` would change, and the
+/// version now current. Changes nothing. Not found when it was never recorded.
+pub async fn preview(
+    pool: &DbPool,
+    version: i64,
+) -> Result<(Option<i64>, VersionChanges), AppError> {
+    let hash: Option<String> = sqlx::query_scalar(
+        "SELECT manifest_hash FROM metadata_published_version WHERE version = $1",
+    )
+    .bind(version)
+    .fetch_optional(pool)
+    .await
+    .map_err(AppError::internal)?;
+    let target = load_manifest(pool, &hash.ok_or(AppError::NotFound)?).await?;
+    let (from, live) = match current(pool).await? {
+        Some((from, hash)) => (Some(from), load_manifest(pool, &hash).await?),
+        None => (None, CookManifest::default()),
+    };
+    Ok((from, changes(&live, &target)))
+}
+
 /// Makes the recorded `version` current. Not found when it was never
 /// recorded; a conflict while another switch holds the pointer.
 pub async fn set_current(tx: &mut Tx<'_>, version: i64) -> Result<Switched, AppError> {
@@ -367,4 +418,31 @@ pub async fn follow_current(
     registry.load_version(pool, version, manifest).await?;
     record_node_switch(pool, node, version).await?;
     Ok(Some(version))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_version_preview_names_what_would_change() {
+        use crate::cooker::ManifestEntry;
+        let entry = |hash: &str| ManifestEntry {
+            content_hash: hash.to_owned(),
+            input_hash: hash.to_owned(),
+        };
+        let manifest = |items: &[(&str, &str)]| CookManifest {
+            artefacts: items
+                .iter()
+                .map(|(key, hash)| ((*key).to_owned(), entry(hash)))
+                .collect(),
+        };
+        let live = manifest(&[("form:a", "1"), ("form:b", "2"), ("page:c", "3")]);
+        let older = manifest(&[("form:a", "1"), ("form:b", "9"), ("page:d", "4")]);
+        let found = changes(&live, &older);
+        assert_eq!(found.added, ["page:d"]);
+        assert_eq!(found.removed, ["page:c"]);
+        assert_eq!(found.changed, ["form:b"]);
+        assert_eq!(changes(&live, &live), VersionChanges::default());
+    }
 }

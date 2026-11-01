@@ -22,6 +22,15 @@ export interface NodeSwitch {
   switched_at: string;
 }
 
+/** What switching to a version would change (`…/versions/{version}/preview`). */
+export interface VersionPreview {
+  from: number | null;
+  to: number;
+  added: string[];
+  removed: string[];
+  changed: string[];
+}
+
 /** What a switch or rollback moved the pointer from and to. */
 export interface VersionSwitch {
   from: number | null;
@@ -52,6 +61,14 @@ export class MetadataVersionsService {
     });
   }
 
+  preview(version: number): Observable<VersionPreview> {
+    return this.api.get<VersionPreview>(`${BASE}/versions/${version}/preview`);
+  }
+
+  switchTo(version: number): Observable<VersionSwitch> {
+    return this.api.post<VersionSwitch>(`${BASE}/versions/${version}/switch`, {});
+  }
+
   rollback(): Observable<VersionSwitch> {
     return this.api.post<VersionSwitch>(`${BASE}/rollback`, {});
   }
@@ -62,7 +79,8 @@ export class MetadataVersionsService {
  * newest first, the current one marked, each with the nodes that switched to
  * it and when, and a Rollback button (after a confirmation) that points the
  * deployment back at the version before the current one; every node follows
- * on its next catch-up.
+ * on its next catch-up. A22-T4: opening an earlier version previews what a
+ * switch to it would add, remove and change, and offers that switch.
  */
 @Component({
   selector: 'xrm-metadata-versions',
@@ -92,6 +110,8 @@ export class MetadataVersionsComponent implements OnInit {
   readonly opened = signal<number | null>(null);
   readonly nodes = signal<NodeSwitch[]>([]);
   readonly nodesLoading = signal(false);
+  /** What a switch to the opened version would change. */
+  readonly preview = signal<VersionPreview | null>(null);
 
   readonly pages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize)));
   readonly current = computed(() => this.versions().find(v => v.current) ?? null);
@@ -124,10 +144,42 @@ export class MetadataVersionsComponent implements OnInit {
     }
     this.opened.set(version);
     this.nodes.set([]);
+    this.preview.set(null);
     this.nodesLoading.set(true);
+    this.svc.preview(version).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: res => this.preview.set(res),
+      error: (err: ApiError) => this.error.set(this.lang.errorText(err)),
+    });
     this.svc.nodes(version).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: res => { this.nodes.set(res.items); this.nodesLoading.set(false); },
       error: (err: ApiError) => { this.nodesLoading.set(false); this.error.set(this.lang.errorText(err)); },
+    });
+  }
+
+  /** A22-T4: moves the deployment to the previewed version, once confirmed. */
+  async switchTo(version: number): Promise<void> {
+    if (this.busy()) return;
+    const ok = await this.confirm.confirm({
+      title: this.lang.translate('metadataVersions.switchTitle'),
+      message: this.lang.translate('metadataVersions.switchConfirm', { version }),
+      confirmText: this.lang.translate('metadataVersions.switch'),
+      cancelText: this.lang.translate('metadataVersions.cancel'),
+      variant: 'warning',
+    });
+    if (!ok) return;
+    this.busy.set(true);
+    this.error.set(null);
+    this.svc.switchTo(version).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: moved => {
+        this.busy.set(false);
+        this.rolledBack.set(moved);
+        this.opened.set(null);
+        this.load();
+      },
+      error: (err: ApiError) => {
+        this.busy.set(false);
+        this.error.set(this.lang.errorText(err));
+      },
     });
   }
 
