@@ -53,6 +53,17 @@ selects or writes by the old name still works. Its response carries a `Deprecati
 a `Link` to the new name, so a client knows to move. After 90 days the alias is pruned and the
 old name is unknown.
 
+## Old columns go only when every node has moved on
+
+Deleting a field, or finishing a large type change, no longer drops the old column at once. The
+column is **retired**: its indexes and constraints go (so the field's own can be made again), its
+`NOT NULL` and default are lifted, and it is renamed `__retired_<id>` with its values intact,
+recorded in `schema_retired_column` with the metadata version current at the time. A daily job
+drops it once `records.contract_period_hours` (168, a week, by default) has passed **and** every
+node seen in the last day has switched to that version or a later one (`metadata_node_switch`). A
+field that a computed field is built on cannot be retired; change or remove the computed field
+first. A drop that fails (the table busy, a dependent object) is logged and tried the next day.
+
 ## A builder sees their own change everywhere
 
 After a metadata write, every node catches up from the change log. It is told by a Postgres

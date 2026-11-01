@@ -830,18 +830,14 @@ pub fn delete_still_lost(row: &FieldRow) -> String {
     format!("t.{} IS NOT NULL", row.column())
 }
 
-/// Drops the column (catalog-only; the field's index and CHECKs go with it)
-/// and deletes the attribute row. The caller archived the values first, in
-/// this transaction.
+/// Retires the column (Y12-T9, [`super::contract`]: catalog-only; the
+/// field's index and CHECKs go now, the renamed column and its values when
+/// every node has switched) and deletes the attribute row. The caller
+/// archived the values first, in this transaction.
 pub async fn drop_column_in_tx(tx: &mut Tx<'_>, row: &FieldRow) -> Result<(), AppError> {
-    sqlx::query(&format!(
-        "ALTER TABLE {} DROP COLUMN IF EXISTS {}",
-        row.table(),
-        row.column()
-    ))
-    .execute(&mut **tx)
-    .await
-    .map_err(map_ddl_error)?;
+    // Y12-T9: the column is retired, and dropped by the contraction job
+    // once the period has passed and every node has switched.
+    super::contract::retire_column_in_tx(&mut **tx, &row.entity, &row.field).await?;
     let n = sqlx::query("DELETE FROM attribute_info WHERE id = $1")
         .bind(row.attribute_id)
         .execute(&mut **tx)
@@ -1472,9 +1468,10 @@ pub async fn retype_catch_up_in_tx(
 
 /// Large retype, swap (design §6.4 step 3, second half), after
 /// [`retype_catch_up_in_tx`] in the same transaction: `ACCESS EXCLUSIVE`
-/// only for the catalog DDL — drop the trigger and the old column, rename
-/// the shadow column into place — and the attribute row. The field's index
-/// (dropped with the old column) is recreated by the caller after commit.
+/// only for the catalog DDL — drop the trigger, retire the old column
+/// (Y12-T9, [`super::contract`]), rename the shadow column into place — and
+/// the attribute row. The field's index (dropped when the old column is
+/// retired) is recreated by the caller after commit.
 pub async fn retype_swap_in_tx(
     tx: &mut Tx<'_>,
     row: &FieldRow,
@@ -1491,17 +1488,22 @@ pub async fn retype_swap_in_tx(
             quote_ident(&trigger)
         ),
         format!("DROP FUNCTION IF EXISTS {}()", quote_ident(&trigger)),
-        format!("ALTER TABLE {table} DROP COLUMN {col}"),
-        format!(
-            "ALTER TABLE {table} RENAME COLUMN {} TO {col}",
-            quote_ident(&shadow)
-        ),
     ] {
         sqlx::query(&sql)
             .execute(&mut **tx)
             .await
             .map_err(map_ddl_error)?;
     }
+    // Y12-T9: the old column is retired, not dropped, before the shadow
+    // takes its name.
+    super::contract::retire_column_in_tx(&mut **tx, &row.entity, &row.field).await?;
+    sqlx::query(&format!(
+        "ALTER TABLE {table} RENAME COLUMN {} TO {col}",
+        quote_ident(&shadow)
+    ))
+    .execute(&mut **tx)
+    .await
+    .map_err(map_ddl_error)?;
     set_attribute_type_in_tx(tx, row, conv).await?;
     Ok(())
 }

@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Deleting a field or finishing a large type change retires the old column (renamed, values intact)
+  instead of dropping it; a daily job drops it after `records.contract_period_hours` (a week) once
+  every node has switched (Y12-T9, migration 0363).
 - `GET /api/v1/public/status`: the public status (public components, incidents and maintenance) for
   anyone without signing in, while `ops.status.enabled` is on; 404 otherwise (AB11-T8).
 - A copy of the public status page hosted apart: English and Arabic HTML and `status.json`, with

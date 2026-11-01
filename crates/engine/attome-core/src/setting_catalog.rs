@@ -1197,6 +1197,17 @@ fn ops_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(0),
         ),
+        // Y12-T9: how long a retired column is kept.
+        SettingDescriptor::new(
+            "records.contract_period_hours",
+            "Hours a column left by a field deletion or a large type change is kept (renamed, \
+             its values intact) before the daily contraction drops it, and only once every \
+             node has switched to the metadata that no longer uses it; 168 (a week) by default.",
+            || json!({"type": "integer", "minimum": 0, "maximum": 8760}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(168),
+        ),
         // AB11-T8: the status for anyone.
         SettingDescriptor::new(
             "ops.status.enabled",

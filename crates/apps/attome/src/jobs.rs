@@ -3383,6 +3383,8 @@ const DEDUP_KEY_DEAL_COVERAGE: &str = "sales-deal-coverage";
 /// J10-T1: the unified router's tick (a registered job type).
 const DEDUP_KEY_SERVICE_ROUTER: &str = "service-router-tick";
 const DEDUP_KEY_OPS_STATUS_WATCH: &str = "ops-status-watch";
+/// Y12-T9: the daily contraction of retired columns (a registered job type).
+const DEDUP_KEY_METADATA_CONTRACT: &str = "metadata-contract";
 /// Z12-T7: the yearly Hijri holiday review check (a registered job type).
 const DEDUP_KEY_CALENDAR_REVIEW: &str = "calendar-yearly-review";
 /// E23-T1: profile event retention (a registered job type).
@@ -3854,6 +3856,10 @@ pub const IMPORT_UNDO: attome_jobs::JobType =
 /// AB11-T4: the status watch, every minute.
 pub const OPS_STATUS_WATCH: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_ops::status_watch::TICK_JOB, 1);
+
+/// Y12-T9: the daily contraction that drops retired columns.
+pub const METADATA_CONTRACT: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_metadata::provision::contract::JOB, 1);
 
 /// Z12-T7: the check for December's Hijri holiday review reminder.
 pub const CALENDAR_YEARLY_REVIEW: attome_jobs::JobType =
@@ -5611,6 +5617,27 @@ pub fn register_job_types() {
         ) {
             tracing::error!(%error, "job type registration failed");
         }
+        // Y12-T9: drop the retired columns that are due.
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            METADATA_CONTRACT,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let hours = attome_core::setting_registry()
+                    .get(attome_metadata::provision::contract::PERIOD_SETTING)
+                    .map(|d| state.settings.load().resolve(d, None, None).0)
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(attome_metadata::provision::contract::DEFAULT_PERIOD_HOURS);
+                let dropped =
+                    attome_metadata::provision::contract::contract_due(&state.base.db, hours)
+                        .await
+                        .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if dropped > 0 {
+                    tracing::info!(dropped, "contraction: retired columns dropped");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
         // AB11-T4: the status watch.
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             OPS_STATUS_WATCH,
@@ -6522,6 +6549,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         }
         EngineJob::Registered(job) if job.name == OPS_STATUS_WATCH.name => {
             DEDUP_KEY_OPS_STATUS_WATCH
+        }
+        EngineJob::Registered(job) if job.name == METADATA_CONTRACT.name => {
+            DEDUP_KEY_METADATA_CONTRACT
         }
         EngineJob::Registered(job) if job.name == CALENDAR_YEARLY_REVIEW.name => {
             DEDUP_KEY_CALENDAR_REVIEW
@@ -8374,6 +8404,22 @@ pub fn spawn_calendar_review_scheduler(db: DbPool, interval: std::time::Duration
             "calendar yearly review",
         ),
         Err(error) => tracing::error!(%error, "calendar yearly review: not scheduled"),
+    }
+}
+
+/// Y12-T9: the contraction of retired columns, once per interval (one
+/// pending at most).
+pub fn spawn_metadata_contract_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(METADATA_CONTRACT.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_METADATA_CONTRACT,
+            "metadata contraction",
+        ),
+        Err(error) => tracing::error!(%error, "metadata contraction: not scheduled"),
     }
 }
 

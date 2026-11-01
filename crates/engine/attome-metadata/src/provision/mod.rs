@@ -29,6 +29,9 @@ pub mod change_plan;
 /// Solution 7 Phase 1 (D-785) — owner-layer stamping and changeset recording
 /// for the entity, attribute and relationship primitives.
 pub mod changeset;
+/// Y12-T9: retired columns and the contraction that drops them once every
+/// node has switched.
+pub mod contract;
 mod ddl;
 mod default_query;
 /// Solution 7 Phase 2 (D-788) — rename in place, real delete with the
