@@ -66,6 +66,10 @@ const PASSWORD: &str = "audit-emission-password-1";
 /// cannot silently outlive its route.
 const UNDRIVABLE: &[(&str, &str)] = &[
     (
+        "POST /api/v1/admin/integrations/whatsapp/{id}/templates/sync",
+        "reads the templates from Meta's Graph API with the number's access token, which this harness cannot reach; whatsapp_templates' unit tests cover the parsing and the map rules",
+    ),
+    (
         "POST /scim/v2/Users",
         "needs an identity provider's SCIM bearer token in the Authorization header, which this harness does not send; attome-api's scim test issues one and drives users and groups, checking their events",
     ),
@@ -2034,6 +2038,38 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
     let t = Some(fx.admin_token.as_str());
     const S: &str = "/api/v1/admin/security";
     let req = match key {
+        // ── J5-T3: a WhatsApp template's variable map (Configuration Update) ─
+        "PUT /api/v1/admin/integrations/whatsapp/templates/{template_id}/variables" => {
+            let system = Uuid::now_v7();
+            sqlx::query(
+                "INSERT INTO integration_system \
+                    (id, name, kind, base_url, auth_type, service_principal_ref, status, config, created_at) \
+                 VALUES ($1, 'WhatsApp emission', 'channel', 'https://graph.facebook.com', 'api_key', $2, \
+                         'active', '{\"social\": \"whatsapp\", \"waba_id\": \"1\"}', NOW())",
+            )
+            .bind(system)
+            .bind(fx.admin_id.to_string())
+            .execute(&fx.base.db)
+            .await
+            .expect("seed a WhatsApp number");
+            let template: Uuid = sqlx::query_scalar(
+                "INSERT INTO whatsapp_template (system_id, name, language, category, components, variables) \
+                 VALUES ($1, 'order_ready', 'en', 'UTILITY', '[]', ARRAY['body.1']) RETURNING id",
+            )
+            .bind(system)
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("seed a template");
+            with_if_match(
+                request(
+                    "PUT",
+                    &format!("/api/v1/admin/integrations/whatsapp/templates/{template}/variables"),
+                    t,
+                    Some(json!({"variable_map": {"body.1": "first_name"}})),
+                ),
+                0,
+            )
+        }
         // ── A1-T5: a base's index rebuild, queued (Configuration Update) ─────
         "POST /api/v1/admin/bases/{base}/reindex" => {
             request("POST", "/api/v1/admin/bases/note/reindex", t, None)

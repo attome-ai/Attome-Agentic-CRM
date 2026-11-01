@@ -3643,6 +3643,18 @@ export const xrmEn = {
       normal: 'Normal', large: 'Large',
     },
   },
+  whatsappSetup: {
+    title: 'WhatsApp numbers', subtitle: 'Connect a WhatsApp Business number, sync its approved templates and choose the field that fills each template variable.',
+    name: 'Name', phoneNumberId: 'Phone number ID', wabaId: 'Business account ID',
+    accessToken: 'Access token', appSecret: 'App secret', verifyToken: 'Webhook verify token',
+    unknownSender: 'A message from an unknown number creates', unknown_lead: 'A lead',
+    unknown_contact: 'A contact', unknown_none: 'Nothing (kept on the number)',
+    connect: 'Connect number', templates: 'Templates', synced: 'Last synced', sync: 'Sync templates',
+    showTemplates: 'Templates', noNumbers: 'No WhatsApp number is connected yet.',
+    syncedSummary: '{added} added, {updated} updated, {removed} removed.',
+    templatesOf: 'Templates of {name}', noVariables: 'This template takes no variables.',
+    attribute: 'Field name, e.g. first_name', saveMap: 'Save fields', noTemplates: 'No approved templates. Sync to read them from Meta.',
+  },
   webhooksPage: {
     title: 'Webhooks',
     intro: 'Send record changes and business events to other systems. Every delivery is signed; the secret is shown once, when the subscription is created.',

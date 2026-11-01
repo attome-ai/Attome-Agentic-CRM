@@ -827,6 +827,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/jobs').then(m => m.FailedJobsListComponent),
           },
           {
+            // J5-T3: WhatsApp numbers and their templates.
+            path: 'whatsapp',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/integration').then(m => m.WhatsAppSetupComponent),
+          },
+          {
             path: 'webhooks',
             canActivate: [authGuard],
             loadComponent: () => import('@attome/xrm/integration').then(m => m.WebhookSubscriptionsComponent),

@@ -50,5 +50,7 @@ impl EngineModel for IntegrationModel {
             .merge(crate::connector::adapters::user_mail_sync::routes())
             // J7-T1: online meetings.
             .merge(crate::connector::adapters::video::routes())
+            // J5-T3: WhatsApp numbers, template sync and variable maps.
+            .merge(crate::whatsapp_templates::routes())
     }
 }

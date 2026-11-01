@@ -3565,6 +3565,18 @@ export const xrmAr = {
       normal: 'عادي', large: 'كبير',
     },
   },
+  whatsappSetup: {
+    title: 'أرقام واتساب', subtitle: 'اربط رقم واتساب للأعمال، وزامن قوالبه المعتمدة، واختر الحقل الذي يملأ كل متغير في القالب.',
+    name: 'الاسم', phoneNumberId: 'معرّف رقم الهاتف', wabaId: 'معرّف حساب الأعمال',
+    accessToken: 'رمز الوصول', appSecret: 'سر التطبيق', verifyToken: 'رمز التحقق من الويب هوك',
+    unknownSender: 'رسالة من رقم غير معروف تنشئ', unknown_lead: 'عميلًا محتملًا',
+    unknown_contact: 'جهة اتصال', unknown_none: 'لا شيء (تبقى على الرقم)',
+    connect: 'اربط الرقم', templates: 'القوالب', synced: 'آخر مزامنة', sync: 'زامن القوالب',
+    showTemplates: 'القوالب', noNumbers: 'لم يُربط أي رقم واتساب بعد.',
+    syncedSummary: 'أُضيف {added}، وحُدّث {updated}، وأُزيل {removed}.',
+    templatesOf: 'قوالب {name}', noVariables: 'هذا القالب بلا متغيرات.',
+    attribute: 'اسم الحقل، مثل first_name', saveMap: 'احفظ الحقول', noTemplates: 'لا قوالب معتمدة. زامن لقراءتها من Meta.',
+  },
   webhooksPage: {
     title: 'الويب هوك',
     intro: 'أرسل تغييرات السجلات وأحداث العمل إلى أنظمة أخرى. كل تسليم موقّع، ويظهر السر مرة واحدة عند إنشاء الاشتراك.',

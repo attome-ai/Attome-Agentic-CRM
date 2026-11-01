@@ -6,3 +6,5 @@
 export { registerIntegrationEntityForms } from './registration/provide-integration-entity-forms';
 // M13-T4: webhook subscriptions screen.
 export { WebhookSubscriptionsComponent } from './webhooks/webhook-subscriptions.component';
+// J5-T3: WhatsApp numbers, template sync and variable maps.
+export { WhatsAppSetupComponent } from './whatsapp/whatsapp-setup.component';

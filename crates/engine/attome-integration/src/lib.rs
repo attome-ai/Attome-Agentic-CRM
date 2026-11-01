@@ -45,6 +45,8 @@ pub mod warehouse_load;
 pub mod webhook;
 /// N18-T1: WhatsApp text sent through a WhatsApp system.
 pub mod whatsapp_send;
+/// J5-T3: a WhatsApp number's approved templates and their variable maps.
+pub mod whatsapp_templates;
 
 /// D-351 — this crate's advisory-lock namespace (registry:
 /// `crates/server/tests/advisory_lock_namespaces.rs`). Used by `admin.rs`'s
@@ -63,5 +65,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(connector::adapters::user_mail_sync::openapi_fragment());
     doc.merge(connector::adapters::video::openapi_fragment());
     doc.merge(warehouse_load::openapi_fragment());
+    doc.merge(whatsapp_templates::openapi_fragment());
     doc
 }

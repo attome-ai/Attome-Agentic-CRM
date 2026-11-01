@@ -14,6 +14,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- WhatsApp numbers and their templates (J5-T3, `/xrm/admin/whatsapp`): connect a WhatsApp Business number
+  (its Meta ids, with the access token and app secret sealed), sync its approved templates from Meta
+  (`POST /api/v1/admin/integrations/whatsapp/{id}/templates/sync`; added, updated and no-longer-approved
+  ones removed, variable maps kept), list them (`GET .../whatsapp/numbers`, `GET .../whatsapp/{id}/templates`)
+  and map each template variable to the field that fills it (`PUT .../whatsapp/templates/{template_id}/variables`
+  with `If-Match`). Migration 0356.
 - A base entity's records across every entity that extends it are one read (A1-T5):
   `GET /api/v1/bases/{base}/records` lists them due first with their entity, owner, status and due time,
   filtered by `owner=me` or a user and by `status`, each entity under the caller's own record security.
