@@ -73,6 +73,20 @@ async fn failures_for(
     policy_ref: Uuid,
     overlay: Option<&Map<String, Value>>,
 ) -> Result<Vec<Failure>, AppError> {
+    Ok(judge_policy(state, owner, policy_ref, overlay)
+        .await?
+        .failures)
+}
+
+/// AH7-T6: the whole judgement for an agent owned by `owner` under the
+/// policy `policy_ref` (with `overlay` over it), whatever the agent's own
+/// status: what activation and publishing check, for any definition.
+pub async fn judge_policy(
+    state: &EngineState,
+    owner: Uuid,
+    policy_ref: Uuid,
+    overlay: Option<&Map<String, Value>>,
+) -> Result<crate::permission_test::Judged, AppError> {
     let security = state.base.security.resolve(owner).await?;
     let record =
         match attome_records::entity_crud::read_record(state, &security, POLICY_ENTITY, policy_ref)
@@ -107,7 +121,7 @@ async fn failures_for(
         &policy,
         packs.action_ids,
     );
-    Ok(crate::permission_test::judge(state, &security, &effective).failures)
+    Ok(crate::permission_test::judge(state, &security, &effective))
 }
 
 /// AH7-T3: the permission test for an `agent` model object about to be
