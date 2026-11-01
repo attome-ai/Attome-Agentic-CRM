@@ -86,6 +86,9 @@ pub struct Options {
     /// CI runs `tests` in parallel shards. A skipped step is absent from the
     /// report, so that report alone never shows it green.
     pub skip: Vec<String>,
+    /// AC5-T11: the opted-in customers' folder the upgrade rehearsal runs
+    /// customer tests from (`--customer-tests <dir>`).
+    pub customer_tests: Option<PathBuf>,
 }
 
 /// One override: the step and why its failure may be accepted.
@@ -154,6 +157,9 @@ pub fn check_with(options: &Options) -> ExitCode {
             return ExitCode::from(2);
         }
     };
+    if let Some(dir) = &options.customer_tests {
+        rehearsal::set_customer_tests(dir.clone());
+    }
     let mut steps: Vec<(&str, Step)> = vec![
         ("format", format as Step),
         ("clippy", clippy as Step),
@@ -478,6 +484,9 @@ pub fn dispatch(args: &[String]) -> Option<ExitCode> {
                     "--perf" => options.perf = true,
                     "--by" => options.by = Some(rest.next()?.clone()),
                     "--skip" => options.skip.push(rest.next()?.clone()),
+                    "--customer-tests" => {
+                        options.customer_tests = Some(PathBuf::from(rest.next()?));
+                    }
                     "--override" => match parse_override(rest.next()?) {
                         Ok(item) => options.overrides.push(item),
                         Err(error) => {
@@ -1360,6 +1369,7 @@ mod tests {
             reproducible: false,
             perf: false,
             skip: Vec::new(),
+            customer_tests: None,
             overrides: overrides
                 .iter()
                 .map(|(step, reason)| Override {

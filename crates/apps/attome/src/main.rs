@@ -109,7 +109,8 @@ Usage:
   attome audit-chainer          Run the audit hash chainer
   attome verify-audit-chain     Verify the audit hash chain
   attome changeset-replay       Replay changesets against a database
-  attome release --check [--web] [--slo-evidence] [--perf] [--override <step>=<reason> --by <name>]
+  attome release --check [--web] [--slo-evidence] [--perf] [--customer-tests <dir>]
+                [--override <step>=<reason> --by <name>]
                                 Run the release gate: format, clippy, tests, the
                                 API contract, SLO outputs, Prometheus rules (and
                                 the web app with --web)

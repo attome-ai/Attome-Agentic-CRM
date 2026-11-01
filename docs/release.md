@@ -27,7 +27,13 @@ whose role may create databases: the previous release tag's own `attome init` bu
 throwaway `attomedb_test_rehearsal_<commit>` database, this commit's `attome init` upgrades it, and
 the upgraded server must answer `/health/ready` within 120 seconds; the database and the tag's
 worktree are removed afterwards; not run when the variable is unset or the checkout has no earlier
-tag), plus the web app with
+tag; with `--customer-tests <dir>` or `ATTOME_REHEARSAL_CUSTOMER_TESTS`, a folder kept outside the
+repository with one subfolder per opted-in customer, each holding `tests.json` from
+`GET /api/v1/admin/customer-tests/export` and optionally `config/` from `attome config pull`, every
+customer then gets its own throwaway database with this commit's schema and server, a development
+API key that lives only for that run, its configuration pushed and its tests imported and run; a
+failed test the export marks blocking fails the step, any other failure is a line in
+`target/release-gate/<commit>/upgrade-notes.md`; the step needs `curl` on the path), plus the web app with
 `--web` and, with `--reproducible`, two release builds whose `attome` binaries must hash the same
 (`target/release-gate/repro.json`) and, with `--perf`, `attome perf compare`: the newest record in
 `docs/perf-history/` against the previous release's on the same machine (record one with
