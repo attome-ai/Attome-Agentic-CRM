@@ -14,6 +14,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Contracts are negotiated in rounds (migration 0353): `POST /api/v1/contract/contracts/{id}/share-for-review`
+  emails the counterparty a link valid for `contract.review_link_days` (14 by default) and closes the
+  round before. Through the public `GET`/`POST /api/v1/contract/review/{token}` the counterparty reads
+  the current version, comments, and sends back a PDF or Word version (at most 7 MB), which ends the
+  round; once the virus scan passes, the `ContractReviewSweep` job sets it on a `counterparty_upload`
+  version and queues its comparison with the version before. Each round is a note on the contract's
+  timeline; the link shows nothing of other contracts and no internal note (W1-T8).
 - Every AI agent has a generated permission test: for each action its policy allows, the cases its
   owner may not do must be refused and the consequential ones must need approval. It runs when an
   agent is made active or an active agent's policy changes, and a failure refuses the save; the agent

@@ -297,6 +297,10 @@ fn is_sms_receipt_path(path: &str) -> bool {
         // K4-T1: a signer's link; the signed token (and the emailed code,
         // to sign) is the authority.
         "/api/v1/esign/sign/",
+        // W1-T8: a counterparty's contract review link; the signed token
+        // names one open round of one contract. One segment only, so
+        // nothing under /api/v1/contract/contracts matches.
+        "/api/v1/contract/review/",
     ]
     .iter()
     .any(|prefix| {
@@ -622,6 +626,12 @@ mod tests {
         assert!(is_bypass("/api/v1/esign/sign/abc.def"));
         assert!(!is_bypass("/api/v1/esign/sign/abc/def"));
         assert!(!is_bypass("/api/v1/esign/envelopes"));
+        assert!(is_bypass("/api/v1/contract/review/abc.def"));
+        assert!(!is_bypass("/api/v1/contract/review/abc/def"));
+        assert!(!is_bypass("/api/v1/contract/review/"));
+        assert!(!is_bypass(
+            "/api/v1/contract/contracts/0198f3a2-1111-7222-8333-444455556666/share-for-review"
+        ));
         assert!(!is_bypass(
             "/api/v1/sales/quotes/0198f3a2-1111-7222-8333-444455556666/guest-link"
         ));

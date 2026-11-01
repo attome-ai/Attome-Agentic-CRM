@@ -522,6 +522,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(5 * 60),
     );
+    // W1-T8: scanned counterparty versions compared.
+    crate::jobs::spawn_contract_review_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(5 * 60),
+    );
     // B15-T1: changed addresses geocoded.
     crate::jobs::spawn_geocode_scheduler(db.clone(), std::time::Duration::from_secs(5 * 60));
     // W1-T4: contract notice deadlines, renewal tasks and obligations, nightly.

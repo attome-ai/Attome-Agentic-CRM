@@ -1,7 +1,10 @@
 //! `EngineModel` registration: mounted only when the `contract` module is on.
 use attome_core::{EngineModel, EngineState};
 use attome_modules::{MODULE_CONTRACT, ModuleId};
-use axum::{Router, routing::post};
+use axum::{
+    Router,
+    routing::{get, post},
+};
 
 /// Registered in `attome::boot::register_engines`.
 #[derive(Debug)]
@@ -81,6 +84,14 @@ impl EngineModel for ContractModel {
             .route(
                 "/api/v1/contract/contracts/{id}/send-for-signature",
                 post(crate::signature::post_send),
+            )
+            .route(
+                "/api/v1/contract/contracts/{id}/share-for-review",
+                post(crate::negotiation::post_share),
+            )
+            .route(
+                "/api/v1/contract/review/{token}",
+                get(crate::negotiation::get_review).post(crate::negotiation::post_review),
             )
             .route(
                 "/api/v1/contract/contracts/{id}/compare",

@@ -14,6 +14,7 @@ pub mod draft;
 pub mod import;
 pub mod links;
 pub mod model;
+pub mod negotiation;
 pub mod playbook;
 pub mod retention;
 pub mod signature;
@@ -32,5 +33,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<compare::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<import::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<signature::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<negotiation::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }

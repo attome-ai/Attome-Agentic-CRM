@@ -1696,6 +1696,13 @@ async fn dispatch_platform_job(
                 tracing::info!(activated, "contract signatures: run finished");
             }
         }
+        // W1-T8: scanned counterparty versions are compared.
+        EngineJob::ContractReviewSweep => {
+            let queued = attome_contract::negotiation::tick(&attome_state).await?;
+            if queued > 0 {
+                tracing::info!(queued, "contract review: comparisons queued");
+            }
+        }
         // W1-T3: counterparty match proposals, on demand.
         EngineJob::ContractCounterpartyMatch => {
             let run = attome_contract::counterparty::run_match(&db).await?;
@@ -3050,6 +3057,7 @@ const DEDUP_KEY_CONTRACT_KEY_DATES: &str = "contract-key-dates";
 const DEDUP_KEY_RECURRING_TASK_ROLL: &str = "recurring-task-roll";
 const DEDUP_KEY_CONTRACT_LINK_SWEEP: &str = "contract-link-sweep";
 const DEDUP_KEY_CONTRACT_SIGNATURE_SWEEP: &str = "contract-signature-sweep";
+const DEDUP_KEY_CONTRACT_REVIEW_SWEEP: &str = "contract-review-sweep";
 const DEDUP_KEY_GEOCODE_SWEEP: &str = "geocode-sweep";
 const DEDUP_KEY_BILLING_HANDOFF_SWEEP: &str = "billing-handoff-sweep";
 const DEDUP_KEY_BILLING_RENEWAL_SWEEP: &str = "billing-renewal-sweep";
@@ -6100,6 +6108,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::RecurringTaskRoll => DEDUP_KEY_RECURRING_TASK_ROLL,
         EngineJob::ContractLinkSweep => DEDUP_KEY_CONTRACT_LINK_SWEEP,
         EngineJob::ContractSignatureSweep => DEDUP_KEY_CONTRACT_SIGNATURE_SWEEP,
+        EngineJob::ContractReviewSweep => DEDUP_KEY_CONTRACT_REVIEW_SWEEP,
         EngineJob::GeocodeSweep => DEDUP_KEY_GEOCODE_SWEEP,
         EngineJob::BillingHandoffSweep => DEDUP_KEY_BILLING_HANDOFF_SWEEP,
         EngineJob::BillingRenewalSweep => DEDUP_KEY_BILLING_RENEWAL_SWEEP,
@@ -8938,6 +8947,17 @@ pub fn spawn_contract_signature_scheduler(db: DbPool, interval: std::time::Durat
         EngineJob::ContractSignatureSweep,
         DEDUP_KEY_CONTRACT_SIGNATURE_SWEEP,
         "contract signatures",
+    );
+}
+
+/// W1-T8: every five minutes, scanned counterparty versions are compared.
+pub fn spawn_contract_review_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::ContractReviewSweep,
+        DEDUP_KEY_CONTRACT_REVIEW_SWEEP,
+        "contract review",
     );
 }
 

@@ -486,6 +486,9 @@ pub enum EngineJob {
     /// W1-T10: activates contracts whose signature envelopes completed,
     /// and ends declined or voided signings. Bare unit variant.
     ContractSignatureSweep,
+    /// W1-T8: sets scanned counterparty versions on their contract versions
+    /// and queues their comparisons. Bare unit variant.
+    ContractReviewSweep,
     /// B15-T1: geocodes changed addresses off the change feed. Bare unit
     /// variant.
     GeocodeSweep,
@@ -1140,6 +1143,7 @@ impl EngineJob {
             | Self::RecurringTaskRoll
             | Self::ContractLinkSweep
             | Self::ContractSignatureSweep
+            | Self::ContractReviewSweep
             | Self::GeocodeSweep
             | Self::BillingRenewalSweep
             | Self::BillingGenerateCharges
@@ -1298,6 +1302,7 @@ impl EngineJob {
             EngineJob::RecurringTaskRoll => "RecurringTaskRoll",
             EngineJob::ContractLinkSweep => "ContractLinkSweep",
             EngineJob::ContractSignatureSweep => "ContractSignatureSweep",
+            EngineJob::ContractReviewSweep => "ContractReviewSweep",
             EngineJob::GeocodeSweep => "GeocodeSweep",
             EngineJob::BillingHandoffSweep => "BillingHandoffSweep",
             EngineJob::BillingRenewalSweep => "BillingRenewalSweep",
@@ -1460,6 +1465,7 @@ impl EngineJob {
             | Self::RecurringTaskRoll
             | Self::ContractLinkSweep
             | Self::ContractSignatureSweep
+            | Self::ContractReviewSweep
             | Self::GeocodeSweep
             | Self::BillingRenewalSweep
             | Self::BillingGenerateCharges
@@ -1636,6 +1642,7 @@ impl EngineJob {
             | Self::RecurringTaskRoll
             | Self::ContractLinkSweep
             | Self::ContractSignatureSweep
+            | Self::ContractReviewSweep
             | Self::GeocodeSweep
             | Self::BillingRenewalSweep
             | Self::BillingGenerateCharges
@@ -2093,6 +2100,7 @@ mod tests {
         assert_round_trips(EngineJob::RecurringTaskRoll);
         assert_round_trips(EngineJob::ContractLinkSweep);
         assert_round_trips(EngineJob::ContractSignatureSweep);
+        assert_round_trips(EngineJob::ContractReviewSweep);
         assert_round_trips(EngineJob::GeocodeSweep);
         assert_round_trips(EngineJob::BillingHandoffSweep);
         assert_round_trips(EngineJob::BillingRenewalSweep);

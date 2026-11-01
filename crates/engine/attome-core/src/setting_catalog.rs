@@ -815,6 +815,14 @@ fn records_settings() -> Vec<SettingDescriptor> {
             || json!(false),
         ),
         SettingDescriptor::new(
+            "contract.review_link_days",
+            "Days a contract review link sent to a counterparty stays valid (W1-T8).",
+            || json!({"type": "integer", "minimum": 1, "maximum": 90}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(14),
+        ),
+        SettingDescriptor::new(
             "billing.renewal.lead_days",
             "Days before a subscription ends that it is renewed (auto mode, after \
              any contract notice deadline) or gets a renewal opportunity (F3-T9).",

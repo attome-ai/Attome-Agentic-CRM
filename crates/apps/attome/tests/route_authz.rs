@@ -265,6 +265,16 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
     ),
     (
         "GET",
+        "/api/v1/contract/review/{token}",
+        "W1-T8 counterparty review page: the signed link (HMAC under the contract review domain, contract.review_link_days, over one review round) is the credential; it shows that contract's title, a 15-minute download of its current version and what was sent through this link, never another contract or an internal note. A closed, expired or unknown link is the same 404. Bypass-listed by an exact single-segment match.",
+    ),
+    (
+        "POST",
+        "/api/v1/contract/review/{token}",
+        "W1-T8 counterparty review action: the signed link names one open round; a comment, or one PDF or Word version (at most 7 MB, through the upload pipeline's virus scan, created as the person who shared the link) that ends the round. Bypass-listed by an exact single-segment match; an audited business event.",
+    ),
+    (
+        "GET",
         "/.well-known/jwks.json",
         "Z4-T4: the public halves of the Ed25519 token-signing keys, a JSON Web Key Set; publishing them is the point and no secret or customer data is in it. Bypass-listed.",
     ),
