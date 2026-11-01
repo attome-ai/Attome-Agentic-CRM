@@ -1711,7 +1711,9 @@ export const xrmEn = {
       startField: 'Start field', endField: 'End field', colorField: 'Colour field',
       datesHelp: 'Date columns from the query output. The colour field is optional.',
       chartHelp: 'The x field groups the query rows into categories; each series aggregates one column over them.',
-      chartType: { line: 'Line', area: 'Area', bar: 'Bar', column: 'Column', donut: 'Donut', pie: 'Pie', funnel: 'Funnel' },
+      chartType: { line: 'Line', area: 'Area', bar: 'Bar', column: 'Column', donut: 'Donut', pie: 'Pie', funnel: 'Funnel',
+        stacked_bar: 'Stacked bar', combo: 'Combo', waterfall: 'Waterfall', treemap: 'Treemap', sunburst: 'Sunburst', sankey: 'Sankey', radar: 'Radar', polar: 'Polar', heatmap: 'Heat map', calendar_heatmap: 'Calendar heat map', pareto: 'Pareto', control: 'Control', scatter: 'Scatter', bubble: 'Bubble', range_area: 'Range area',
+      },
       chartBucket: { day: 'Day', week: 'Week', month: 'Month', quarter: 'Quarter', year: 'Year' },
       chartSort: { x_asc: 'Category, ascending', x_desc: 'Category, descending', value_asc: 'Value, ascending', value_desc: 'Value, descending' },
       chartAggregation: {
@@ -1988,6 +1990,9 @@ export const xrmEn = {
     chart: {
       summary: '{title}: {count, plural, one {# value} other {# values}}; highest {maxLabel} ({maxValue}), lowest {minLabel} ({minValue}).',
       showTable: 'Show as table', showChart: 'Show as chart', category: 'Category', value: 'Value',
+      cumulativeShare: 'Running share', mean: 'Mean', upperLimit: 'Upper limit', lowerLimit: 'Lower limit',
+      loadFailed: 'This chart could not load. Its values are in the table.',
+      needsMeasures: 'This chart needs more measures. Add them in the widget settings.',
     },
     records: {
       title: 'Records', close: 'Close', total: '{total, plural, one {# record} other {# records}}',
@@ -2113,7 +2118,7 @@ export const xrmEn = {
     refreshOff: 'Off', refresh1Min: '1 Minute', refresh5Min: '5 Minutes',
     refresh15Min: '15 Minutes', refresh30Min: '30 Minutes', refresh1Hour: '1 Hour',
     // Data panel (Dashboard 10/10 Phase 2.1, a structured `config.data`).
-    dataTitle: 'Data', dataEntity: 'Entity', dataMeasure: 'Measure', dataMeasureField: 'Of field',
+    dataTitle: 'Data', dataEntity: 'Entity', dataExtraMeasure: 'Measure {index}', dataMeasure: 'Measure', dataMeasureField: 'Of field',
     dataSeries: 'Split by', fieldCreatedOn: 'Created On', fieldModifiedOn: 'Modified On',
     // Filters/bindings rows (Dashboard 10/10 Phase 5.A, a structured `config.data`).
     dataFilters: 'Filters', dataFilterAdd: 'Add Filter', dataFilterValueList: 'value1, value2, …',

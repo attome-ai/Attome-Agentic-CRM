@@ -39,6 +39,13 @@ describe('chart view data', () => {
     expect(chartKindFor('pie')).toBe('donut');
     expect(chartKindFor('funnel')).toBe('funnel');
     expect(chartKindFor(undefined)).toBe('line');
+    expect(chartKindFor('sankey')).toBe('sankey');
+  });
+
+  it('draws a stacked bar or column view as a stacked bar, and nothing else', () => {
+    expect(chartKindFor('bar', true)).toBe('stacked_bar');
+    expect(chartKindFor('column', true)).toBe('stacked_bar');
+    expect(chartKindFor('area', true)).toBe('area');
   });
 
   it('aggregates like SQL: counts skip nulls, numeric functions skip non-numbers', () => {

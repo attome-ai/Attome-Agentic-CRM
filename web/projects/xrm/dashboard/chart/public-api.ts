@@ -6,8 +6,12 @@
 // dashboard viewer's component barrel (D-314).
 export { DashboardChartComponent, SLICE_COLORS } from './dashboard-chart/dashboard-chart.component';
 export type {
-  ChartBucket, ChartCategory, ChartKind, ChartSeries,
+  ChartBucket, ChartCategory, ChartKind, ChartSeries, SvgChartKind,
 } from './dashboard-chart/dashboard-chart.component';
+export { CHART_REGISTRY, MEASURE_KINDS, isEChartKind } from './registry/chart-registry';
+export type { ChartAdapter, ChartInput, ChartOption, EChartKind } from './registry/chart-registry';
+export { ECHART_LOADER, EChartSurfaceComponent } from './registry/echart-surface.component';
+export type { EChartInit, EChartInstance } from './registry/echart-surface.component';
 export { ChartViewComponent, CHART_VIEW_MAX_ROWS, CHART_VIEW_PAGE_SIZE } from './chart-view/chart-view.component';
 export {
   aggregate, buildChartViewData, chartKindFor, dateBucketKey, isChartConfigured,

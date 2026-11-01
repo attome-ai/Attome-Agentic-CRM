@@ -86,8 +86,16 @@ export interface StructuredDefinition {
  * structured` in the registry, D-525). */
 const STRUCTURED_WIDGET_TYPES = new Set([
   'bar_chart', 'column_chart', 'line_chart', 'area_chart', 'pie_chart', 'donut_chart', 'funnel_chart', 'metric',
+  'stacked_bar_chart', 'combo_chart', 'waterfall_chart', 'treemap', 'sunburst_chart', 'sankey_diagram', 'radar_chart',
+  'polar_chart', 'heatmap', 'calendar_heatmap', 'pareto_chart', 'control_chart', 'scatter_plot', 'bubble_chart',
+  'range_area_chart',
 ]);
-const SERIES_WIDGET_TYPES = new Set(['line_chart', 'area_chart']);
+const SERIES_WIDGET_TYPES = new Set([
+  'line_chart', 'area_chart', 'stacked_bar_chart', 'combo_chart', 'treemap', 'sunburst_chart', 'sankey_diagram',
+  'radar_chart', 'polar_chart', 'heatmap',
+]);
+/** How many measures a widget type reads, past the first. */
+const EXTRA_MEASURES: Record<string, number> = { combo_chart: 1, scatter_plot: 1, range_area_chart: 1, bubble_chart: 2 };
 
 export const MEASURE_FNS: MeasureFn[] = ['count', 'count_distinct', 'sum', 'avg', 'min', 'max', 'median'];
 export const DATE_BUCKETS: DateBucket[] = ['day', 'week', 'month', 'quarter', 'year'];
@@ -205,6 +213,12 @@ export class WidgetInspectorComponent {
   });
 
   readonly measure = computed(() => this.definition().measures[0]);
+  /** The further measures this widget type reads, each saved with the first. */
+  readonly extraMeasures = computed(() => {
+    const count = EXTRA_MEASURES[this.widgetType()] ?? 0;
+    const measures = this.definition().measures;
+    return Array.from({ length: count }, (_, i) => measures[i + 1] ?? { aggregation: 'count' as MeasureFn });
+  });
   readonly measureFieldOptions = computed(() =>
     NUMERIC_FNS.has(this.measure().aggregation)
       ? this.fieldOptions().filter(f => f.is_numeric)
@@ -263,11 +277,26 @@ export class WidgetInspectorComponent {
 
   onMeasureFnChange(aggregation: MeasureFn): void {
     const field = aggregation === 'count' ? undefined : this.measure().field;
-    this.commit({ ...this.definition(), measures: [{ ...this.measure(), aggregation, field }] });
+    this.setMeasure(0, { ...this.measure(), aggregation, field });
   }
 
   onMeasureFieldChange(field: string): void {
-    this.commit({ ...this.definition(), measures: [{ ...this.measure(), field: field || undefined }] });
+    this.setMeasure(0, { ...this.measure(), field: field || undefined });
+  }
+
+  onExtraMeasureFnChange(index: number, aggregation: MeasureFn): void {
+    const field = aggregation === 'count' ? undefined : this.extraMeasures()[index].field;
+    this.setMeasure(index + 1, { ...this.extraMeasures()[index], aggregation, field });
+  }
+
+  onExtraMeasureFieldChange(index: number, field: string): void {
+    this.setMeasure(index + 1, { ...this.extraMeasures()[index], field: field || undefined });
+  }
+
+  private setMeasure(index: number, measure: StructuredDefinition['measures'][number]): void {
+    const measures = [this.measure(), ...this.extraMeasures()];
+    measures[index] = measure;
+    this.commit({ ...this.definition(), measures });
   }
 
   onGroupFieldChange(field: string): void {

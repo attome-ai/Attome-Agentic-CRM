@@ -1737,14 +1737,14 @@ async fn widget_types_hide_unsupported_types_by_default() {
     let palette = palette.as_array().unwrap();
     assert!(palette.iter().all(|d| d["render_kind"] != "unsupported"));
     assert!(palette.iter().any(|d| d["type_id"] == "bar_chart"));
-    assert!(!palette.iter().any(|d| d["type_id"] == "sankey_diagram"));
+    assert!(!palette.iter().any(|d| d["type_id"] == "gantt_chart"));
     let everything = list("/api/v1/attome-dashboard/widget-types?include_unsupported=true").await;
     assert!(
         everything
             .as_array()
             .unwrap()
             .iter()
-            .any(|d| d["type_id"] == "sankey_diagram")
+            .any(|d| d["type_id"] == "gantt_chart")
     );
 }
 
@@ -2471,7 +2471,7 @@ async fn publish_refuses_broken_content_and_names_the_widget() {
     // Clean content publishes, and an unsupported type only warns.
     let good = json!({ "data": { "source": deals, "measures": [{ "aggregation": "count" }] }});
     let dashboard = build_data_dashboard(&db, admin_id, &good).await;
-    sqlx::query("UPDATE dashboard_widget SET widget_type = 'sankey_diagram' WHERE id = $1")
+    sqlx::query("UPDATE dashboard_widget SET widget_type = 'gantt_chart' WHERE id = $1")
         .bind(dashboard.widget_id)
         .execute(&db)
         .await

@@ -3,6 +3,8 @@ import {
 } from '@angular/core';
 import { LangService, TranslatePipe } from '@attome/base';
 import { BucketKey } from '@attome/xrm/dashboard/data';
+import { CHART_REGISTRY, ChartOption, EChartKind, isEChartKind } from '../registry/chart-registry';
+import { EChartSurfaceComponent } from '../registry/echart-surface.component';
 import {
   BarRect, PlotArea, ValueAxis, areaAttr, bandCenter, barRects, donutPaths, plotArea, pointsAttr, scale, valueAxis,
 } from './chart-geometry';
@@ -23,7 +25,12 @@ export interface ChartBucket {
 }
 
 /** A category on the x axis (or a slice, or a funnel stage). */
-export interface ChartCategory { trackKey: string; label: string }
+export interface ChartCategory {
+  trackKey: string;
+  label: string;
+  /** The category's local date (`YYYY-MM-DD`) when it is one, for a calendar. */
+  date?: string;
+}
 
 /** One series: a value (or `null` for no value) per category, in category order. */
 export interface ChartSeries {
@@ -33,7 +40,8 @@ export interface ChartSeries {
   points:   (ChartBucket | null)[];
 }
 
-export type ChartKind = 'bar' | 'line' | 'area' | 'donut' | 'funnel';
+export type SvgChartKind = 'bar' | 'line' | 'area' | 'donut' | 'funnel';
+export type ChartKind = SvgChartKind | EChartKind;
 
 interface Hover { bucket: ChartBucket; series: string; x: number; y: number }
 
@@ -61,12 +69,18 @@ const LABEL_CHARS = 14;
  * **Size.** The SVG is drawn in pixels at the size of its container
  * (a `ResizeObserver`), so axis text is never stretched; without one it
  * falls back to 320×180.
+ *
+ * **The other kinds.** P6's chart types are drawn by ECharts through
+ * `registry/chart-registry.ts`, loaded on first use, so a dashboard of these
+ * five kinds never downloads it. Their marks are not focusable: the chart is
+ * one image, a table beside it gives screen readers the values, and the table
+ * toggle offers the same values as buttons when the chart is interactive.
  */
 @Component({
   selector:   'attome-dashboard-chart',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports:    [TranslatePipe],
+  imports:    [EChartSurfaceComponent, TranslatePipe],
   styleUrls:  ['./dashboard-chart.component.css'],
   templateUrl: './dashboard-chart.component.html',
 })
@@ -249,7 +263,42 @@ export class DashboardChartComponent {
     return this.categories().map((c, i) => ({ category: c, cells: series.map(s => ({ trackKey: s.trackKey, bucket: s.points[i] ?? null })) }));
   });
 
-  readonly legend = computed(() => this.series().length > 1 && (this.kind() === 'bar' || this.kind() === 'line' || this.kind() === 'area'));
+  readonly legend = computed(() => {
+    const kind = this.kind();
+    const named = isEChartKind(kind) ? CHART_REGISTRY[kind].legend : kind === 'bar' || kind === 'line' || kind === 'area';
+    return this.series().length > 1 && named;
+  });
+
+  /** Whether ECharts draws this kind. */
+  readonly drawnByLibrary = computed(() => isEChartKind(this.kind()));
+
+  /** The series this kind needs and does not have, when that is the problem. */
+  readonly missingSeries = computed(() => {
+    const kind = this.kind();
+    return isEChartKind(kind) ? Math.max(0, CHART_REGISTRY[kind].minSeries - this.series().length) : 0;
+  });
+
+  readonly option = computed<ChartOption | null>(() => {
+    const kind = this.kind();
+    if (!isEChartKind(kind) || this.missingSeries() > 0) return null;
+    return CHART_REGISTRY[kind].option({
+      categories: this.categories(),
+      series: this.series(),
+      threshold: this.threshold(),
+      rtl: this.rtl(),
+      // The SVG inherits the theme's text colour, so a theme switch needs no redraw.
+      textColor: 'currentColor',
+      locale: this.lang.intlLocale(),
+      labels: {
+        cumulativeShare: this.lang.translate('dashboard.chart.cumulativeShare'),
+        mean: this.lang.translate('dashboard.chart.mean'),
+        upperLimit: this.lang.translate('dashboard.chart.upperLimit'),
+        lowerLimit: this.lang.translate('dashboard.chart.lowerLimit'),
+      },
+      format: value => this.format(value),
+      compact: value => this.compact(value),
+    });
+  });
 
   toggleTable(): void {
     this.showTable.update(v => !v);

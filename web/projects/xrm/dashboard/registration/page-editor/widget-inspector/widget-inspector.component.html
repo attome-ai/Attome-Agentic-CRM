@@ -43,6 +43,25 @@
             </label>
           }
 
+          @for (extra of extraMeasures(); track $index) {
+            <label class="xf-field">
+              <span>{{ 'pageEditor.dataExtraMeasure' | translate: { index: $index + 2 } }}</span>
+              <select #extraFnSel class="xf-input" [value]="extra.aggregation" (change)="onExtraMeasureFnChange($index, $any(extraFnSel.value))">
+                @for (fn of measureFns; track fn) { <option [value]="fn">{{ fn }}</option> }
+              </select>
+            </label>
+            @if (extra.aggregation !== 'count') {
+              <label class="xf-field">
+                <span>{{ 'pageEditor.dataMeasureField' | translate }}</span>
+                <select #extraFieldSel class="xf-input" [value]="extra.field || ''"
+                        (change)="onExtraMeasureFieldChange($index, extraFieldSel.value)">
+                  <option value="">{{ 'pageEditor.chartSelectField' | translate }}</option>
+                  @for (f of fieldOptions(); track f.name) { <option [value]="f.name">{{ f.label }}</option> }
+                </select>
+              </label>
+            }
+          }
+
           @if (!isMetricWidget()) {
             <label class="xf-field">
               <span>{{ 'pageEditor.chartGroupByField' | translate }}</span>

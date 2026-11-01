@@ -15,7 +15,7 @@ export type {
   DraftTreeResponse, TreeRecord, NewPageBody, CreatedPage, RepairedRootSection,
   PublishedDashboard, ActivateResponse,
   DashboardParameter, WidgetInputs, WidgetDataResponse, PageDataResponse, PageWidgetResult,
-  StructuredBucket, BucketKey, KpiMetric, KpiPoint, RenderKind, MeasureFn, DateBucket,
+  StructuredBucket, StructuredData, BucketKey, KpiMetric, KpiPoint, RenderKind, MeasureFn, DateBucket,
   WidgetRecordsInputs, WidgetRecordsResponse, WidgetExplanation, MetricLineageNode, GateIssue,
   WidgetDrillDownInputs, WidgetDrillDownResponse, WidgetCompareInputs, WidgetCompareResponse,
   ScorecardItem, ScorecardRead, MetricCatalogueItem, MetricCataloguePage, SpreadTargetBody,

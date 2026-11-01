@@ -215,6 +215,34 @@ describe('DashboardWidgetViewComponent', () => {
       expect(view.drill()).toEqual({ bucket: { kind: 'value', value: 'won' }, series: { kind: 'value', value: 't-1' }, label: 'won · North' });
     });
 
+    it('a chart of side by side measures has one series per measure', () => {
+      const scatter = structured({ widget_type: 'scatter_plot', render_kind: 'chart_scatter' });
+      scatter.structured!.measures = [
+        { aggregation: 'sum', field: 'amount', label: 'Revenue' }, { aggregation: 'count' },
+      ];
+      scatter.structured!.buckets = [
+        { key: { kind: 'value', value: 'open' }, label: 'open', values: [100, 2] },
+        { key: { kind: 'value', value: 'won' }, label: 'won', values: [300, null] },
+      ];
+      const { fixture } = setup({}, { result: { widget_id: 'widget-1', data: scatter } });
+      const view = fixture.componentInstance;
+      expect(view.chartKind()).toBe('scatter');
+      expect(view.chartSeries().map(s => s.name)).toEqual(['Revenue', 'count']);
+      expect(view.chartSeries()[0].points.map(p => p?.value)).toEqual([100, 300]);
+      expect(view.chartSeries()[1].points.map(p => p?.value)).toEqual([2, 0]);
+      expect(view.chartSeries()[0].points[1]?.key).toEqual({ kind: 'value', value: 'won' });
+    });
+
+    it('a calendar gets the bucket\'s local date, not a label to parse', () => {
+      const calendar = structured({ widget_type: 'calendar_heatmap', render_kind: 'chart_calendar_heatmap' });
+      calendar.structured!.buckets = [
+        { key: { kind: 'range', start: '2026-01-01T22:00:00Z', end: '2026-01-02T22:00:00Z' }, label: '2026-01-02T00:00:00+02:00', values: [4] },
+      ];
+      const { fixture } = setup({}, { result: { widget_id: 'widget-1', data: calendar } });
+      expect(fixture.componentInstance.chartKind()).toBe('calendar_heatmap');
+      expect(fixture.componentInstance.chartCategories()[0].date).toBe('2026-01-02');
+    });
+
     it('renders text content as text, never as HTML', () => {
       const note = structured({ render_kind: 'text', data_class: 'none', drillability: 'none', structured: undefined });
       const { fixture } = setup(

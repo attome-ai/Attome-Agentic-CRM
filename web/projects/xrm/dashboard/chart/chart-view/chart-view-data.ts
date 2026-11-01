@@ -19,9 +19,9 @@ import {
  * `x_field`/`y_fields[].field` are shape-checked by the backend, never
  * checked against the query's columns: a field the rows do not carry reads
  * as empty, never as a crash (same posture as that module's doc comment).
- * `stacked`, `show_legend` and `number_format` are advisory presentation
- * hints the dashboard chart does not implement; they are kept on the view
- * and ignored here.
+ * `show_legend` and `number_format` are advisory presentation hints the
+ * dashboard chart does not implement; they are kept on the view and ignored
+ * here. `stacked` draws a bar or column view as a stacked bar.
  */
 
 /** The category key used for rows whose x value is empty. */
@@ -51,15 +51,17 @@ export function isChartConfigured(meta: Partial<ChartViewMetadata> | null | unde
     && Array.isArray(meta.y_fields) && meta.y_fields.length > 0;
 }
 
-export function chartKindFor(type: ChartViewMetadata['chart_type'] | undefined): ChartKind {
+export function chartKindFor(type: ChartViewMetadata['chart_type'] | undefined, stacked = false): ChartKind {
   switch (type) {
     case 'area':   return 'area';
     case 'bar':
-    case 'column': return 'bar';
+    case 'column': return stacked ? 'stacked_bar' : 'bar';
     case 'donut':
     case 'pie':    return 'donut';
     case 'funnel': return 'funnel';
-    default:       return 'line';
+    case 'line':
+    case undefined: return 'line';
+    default:       return type;
   }
 }
 
@@ -268,6 +270,7 @@ export function buildChartViewData(
   const chartCategories: ChartCategory[] = categories.map(key => ({
     trackKey: key === OTHER_KEY ? 'other' : `c:${key}`,
     label: key === OTHER_KEY ? labels.other : (categoryLabels.get(key) ?? key),
+    date: meta.x_bucket === 'day' && key !== OTHER_KEY && key !== EMPTY_KEY ? key : undefined,
   }));
   const series: ChartSeries[] = specs.map((spec, s) => ({
     trackKey: spec.trackKey,
@@ -283,7 +286,7 @@ export function buildChartViewData(
   }));
 
   return {
-    kind: chartKindFor(meta.chart_type),
+    kind: chartKindFor(meta.chart_type, meta.stacked),
     categories: chartCategories,
     series,
     threshold: typeof meta.threshold?.value === 'number' ? meta.threshold.value : null,

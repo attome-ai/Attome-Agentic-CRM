@@ -22,11 +22,11 @@ const FIELD_OPTIONS: ChartFieldOption[] = [
   { name: 'created_on', label: 'Created On', is_date: true },
 ];
 
-function widget(config: Record<string, unknown> = {}): EntityRecord {
+function widget(config: Record<string, unknown> = {}, type = 'bar_chart'): EntityRecord {
   return {
     id: 'widget-1',
     entity_id: 'dashboard_widget',
-    data: { widget_type: 'bar_chart', config: JSON.stringify(config) },
+    data: { widget_type: type, config: JSON.stringify(config) },
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
     row_version: 0,
@@ -40,14 +40,14 @@ function widget(config: Record<string, unknown> = {}): EntityRecord {
  * round trip, not a one-shot snapshot. Without this, two sequential
  * mutating calls (e.g. `addFilter()` then `onFilterOpChange()`) would both
  * read the same stale, empty `filters` array. */
-function setup(config: Record<string, unknown> = { data: { source: 'opportunity', measures: [{ aggregation: 'count' }] } }) {
+function setup(config: Record<string, unknown> = { data: { source: 'opportunity', measures: [{ aggregation: 'count' }] } }, type = 'bar_chart') {
   TestBed.configureTestingModule({
     imports: [WidgetInspectorComponent],
     providers: [{ provide: LangService, useValue: { translate: (key: string) => key } }],
   });
 
   const fixture: ComponentFixture<WidgetInspectorComponent> = TestBed.createComponent(WidgetInspectorComponent);
-  let current = widget(config);
+  let current = widget(config, type);
   fixture.componentRef.setInput('widget', current);
   fixture.componentRef.setInput('fieldOptions', FIELD_OPTIONS);
   fixture.componentRef.setInput('declaredParameters', ['region', 'owner']);
@@ -172,5 +172,39 @@ describe('WidgetInspectorComponent — bindings (Dashboard 10/10 Phase 5.A)', ()
     component.removeBinding(0);
 
     expect(component.bindings().length).toBe(1);
+  });
+});
+
+describe('WidgetInspectorComponent — chart types that read several measures (P6)', () => {
+  it('a bar chart has no further measures', () => {
+    expect(setup().component.extraMeasures()).toEqual([]);
+  });
+
+  it('a bubble chart reads two further measures, and keeps them when the first changes', () => {
+    const { component, emissions } = setup(undefined, 'bubble_chart');
+    expect(component.extraMeasures().length).toBe(2);
+
+    component.onExtraMeasureFnChange(1, 'sum');
+    component.onExtraMeasureFieldChange(1, 'amount');
+    component.onMeasureFnChange('avg');
+
+    expect(lastDefinition(emissions)['measures']).toEqual([
+      { aggregation: 'avg' }, { aggregation: 'count' }, { aggregation: 'sum', field: 'amount' },
+    ]);
+  });
+
+  it('going back to a count drops the measure\'s field', () => {
+    const { component, emissions } = setup(undefined, 'scatter_plot');
+    component.onExtraMeasureFnChange(0, 'sum');
+    component.onExtraMeasureFieldChange(0, 'amount');
+    component.onExtraMeasureFnChange(0, 'count');
+
+    expect(lastDefinition(emissions)['measures']).toEqual([{ aggregation: 'count' }, { aggregation: 'count' }]);
+  });
+
+  it('a treemap offers a series, a scatter does not', () => {
+    expect(setup(undefined, 'treemap').component.allowsSeries()).toBe(true);
+    TestBed.resetTestingModule();
+    expect(setup(undefined, 'scatter_plot').component.allowsSeries()).toBe(false);
   });
 });

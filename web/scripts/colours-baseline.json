@@ -84,8 +84,8 @@
   "projects/xrm/webcrawl/webcrawl.css": 10,
   "projects/xrm/workflow/workflow-definition/editor/workflow-graph-editor/workflow-graph-editor.component.css": 9,
   "src/app/components/auth-modal/auth-modal.component.css": 16,
-  "src/app/pages/auth-shared.css": 21,
-  "src/app/pages/login/login.component.ts": 9,
+  "src/app/pages/auth-shared.css": 8,
+  "src/app/pages/login/login.component.ts": 8,
   "src/app/pages/security-settings/security-settings.component.ts": 32,
   "src/styles.css": 2,
   "src/styles/line-awesome-subset.css": 2

@@ -43,7 +43,10 @@ export interface MapViewMetadata {
   color_field?: string | null;
 }
 
-export type ChartType = 'line' | 'area' | 'bar' | 'column' | 'donut' | 'pie' | 'funnel';
+export type ChartType =
+  | 'line' | 'area' | 'bar' | 'column' | 'donut' | 'pie' | 'funnel'
+  | 'stacked_bar' | 'combo' | 'waterfall' | 'treemap' | 'sunburst' | 'sankey' | 'radar' | 'polar'
+  | 'heatmap' | 'calendar_heatmap' | 'pareto' | 'control' | 'scatter' | 'bubble' | 'range_area';
 export type ChartAggregation = 'sum' | 'avg' | 'count' | 'count_distinct' | 'min' | 'max' | 'median';
 export type ChartDateBucket = 'day' | 'week' | 'month' | 'quarter' | 'year';
 export type ChartSort = 'x_asc' | 'x_desc' | 'value_asc' | 'value_desc';

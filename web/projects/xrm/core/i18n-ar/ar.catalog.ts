@@ -1672,7 +1672,9 @@ export const xrmAr = {
       startField: 'حقل البداية', endField: 'حقل النهاية', colorField: 'حقل اللون',
       datesHelp: 'أعمدة تاريخ من نتيجة الاستعلام. حقل اللون اختياري.',
       chartHelp: 'يجمع حقل المحور السيني صفوف الاستعلام في فئات، وتجمّع كل سلسلة عموداً واحداً عليها.',
-      chartType: { line: 'خطي', area: 'مساحي', bar: 'أشرطة', column: 'أعمدة', donut: 'حلقي', pie: 'دائري', funnel: 'قمعي' },
+      chartType: { line: 'خطي', area: 'مساحي', bar: 'أشرطة', column: 'أعمدة', donut: 'حلقي', pie: 'دائري', funnel: 'قمعي',
+        stacked_bar: 'أشرطة مكدسة', combo: 'مركب', waterfall: 'شلالي', treemap: 'خريطة شجرية', sunburst: 'شمسي', sankey: 'سانكي', radar: 'راداري', polar: 'قطبي', heatmap: 'خريطة حرارية', calendar_heatmap: 'خريطة حرارية للتقويم', pareto: 'باريتو', control: 'مخطط ضبط', scatter: 'تشتت', bubble: 'فقاعي', range_area: 'نطاق مساحي',
+      },
       chartBucket: { day: 'يوم', week: 'أسبوع', month: 'شهر', quarter: 'ربع سنة', year: 'سنة' },
       chartSort: { x_asc: 'الفئة، تصاعدياً', x_desc: 'الفئة، تنازلياً', value_asc: 'القيمة، تصاعدياً', value_desc: 'القيمة، تنازلياً' },
       chartAggregation: {
@@ -1943,6 +1945,9 @@ export const xrmAr = {
     chart: {
       summary: '{title}: {count, plural, one {قيمة واحدة} other {# قيم}}؛ الأعلى {maxLabel} ({maxValue})، والأدنى {minLabel} ({minValue}).',
       showTable: 'عرض كجدول', showChart: 'عرض كمخطط', category: 'الفئة', value: 'القيمة',
+      cumulativeShare: 'الحصة التراكمية', mean: 'المتوسط', upperLimit: 'الحد الأعلى', lowerLimit: 'الحد الأدنى',
+      loadFailed: 'تعذّر تحميل هذا المخطط. قيمه موجودة في الجدول.',
+      needsMeasures: 'يحتاج هذا المخطط إلى مقاييس إضافية. أضفها في إعدادات الأداة.',
     },
     records: {
       title: 'السجلات', close: 'إغلاق', total: '{total, plural, one {سجل واحد} other {# سجلات}}',
@@ -2057,7 +2062,7 @@ export const xrmAr = {
     settingsTabGeneral: 'عام', settingsTabParameters: 'المعلمات', settingsTabAccess: 'الوصول',
     refreshOff: 'إيقاف', refresh1Min: 'دقيقة واحدة', refresh5Min: '5 دقائق',
     refresh15Min: '15 دقيقة', refresh30Min: '30 دقيقة', refresh1Hour: 'ساعة واحدة',
-    dataTitle: 'البيانات', dataEntity: 'الكيان', dataMeasure: 'المقياس', dataMeasureField: 'للحقل',
+    dataTitle: 'البيانات', dataEntity: 'الكيان', dataExtraMeasure: 'المقياس {index}', dataMeasure: 'المقياس', dataMeasureField: 'للحقل',
     dataSeries: 'التقسيم حسب', fieldCreatedOn: 'تاريخ الإنشاء', fieldModifiedOn: 'تاريخ التعديل',
     dataFilters: 'عوامل التصفية', dataFilterAdd: 'إضافة عامل تصفية', dataFilterValueList: 'قيمة1، قيمة2، …',
     dataBindings: 'الارتباطات', dataBindingAdd: 'إضافة ارتباط',

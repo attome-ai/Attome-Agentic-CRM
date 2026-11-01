@@ -123,6 +123,21 @@ pub enum RenderKind {
     ChartArea,
     ChartDonut,
     ChartFunnel,
+    ChartStackedBar,
+    ChartCombo,
+    ChartWaterfall,
+    ChartTreemap,
+    ChartSunburst,
+    ChartSankey,
+    ChartRadar,
+    ChartPolar,
+    ChartHeatmap,
+    ChartCalendarHeatmap,
+    ChartPareto,
+    ChartControl,
+    ChartScatter,
+    ChartBubble,
+    ChartRangeArea,
     /// One number (the first measure of an ungrouped definition).
     Scalar,
     /// Rows of a stored query or view.
@@ -182,6 +197,81 @@ const RENDERERS: &[(&str, RenderKind, DataContract)] = &[
     (
         "funnel_chart",
         RenderKind::ChartFunnel,
+        DataContract::Structured,
+    ),
+    (
+        "stacked_bar_chart",
+        RenderKind::ChartStackedBar,
+        DataContract::Structured,
+    ),
+    (
+        "combo_chart",
+        RenderKind::ChartCombo,
+        DataContract::Structured,
+    ),
+    (
+        "waterfall_chart",
+        RenderKind::ChartWaterfall,
+        DataContract::Structured,
+    ),
+    (
+        "treemap",
+        RenderKind::ChartTreemap,
+        DataContract::Structured,
+    ),
+    (
+        "sunburst_chart",
+        RenderKind::ChartSunburst,
+        DataContract::Structured,
+    ),
+    (
+        "sankey_diagram",
+        RenderKind::ChartSankey,
+        DataContract::Structured,
+    ),
+    (
+        "radar_chart",
+        RenderKind::ChartRadar,
+        DataContract::Structured,
+    ),
+    (
+        "polar_chart",
+        RenderKind::ChartPolar,
+        DataContract::Structured,
+    ),
+    (
+        "heatmap",
+        RenderKind::ChartHeatmap,
+        DataContract::Structured,
+    ),
+    (
+        "calendar_heatmap",
+        RenderKind::ChartCalendarHeatmap,
+        DataContract::Structured,
+    ),
+    (
+        "pareto_chart",
+        RenderKind::ChartPareto,
+        DataContract::Structured,
+    ),
+    (
+        "control_chart",
+        RenderKind::ChartControl,
+        DataContract::Structured,
+    ),
+    (
+        "scatter_plot",
+        RenderKind::ChartScatter,
+        DataContract::Structured,
+    ),
+    (
+        "bubble_chart",
+        RenderKind::ChartBubble,
+        DataContract::Structured,
+    ),
+    (
+        "range_area_chart",
+        RenderKind::ChartRangeArea,
         DataContract::Structured,
     ),
     ("metric", RenderKind::Scalar, DataContract::Structured),
@@ -943,8 +1033,22 @@ mod tests {
         assert_eq!(registry().render_kind("text"), RenderKind::Text);
         assert_eq!(
             registry().render_kind("sankey_diagram"),
-            RenderKind::Unsupported
+            RenderKind::ChartSankey
         );
+        // No definition can produce these yet: quartiles, bins, open and
+        // close values, or start and end pairs.
+        for type_id in [
+            "histogram",
+            "box_plot",
+            "gantt_chart",
+            "timeline",
+            "candlestick_chart",
+            "distribution_chart",
+            "correlation_matrix",
+            "cohort_chart",
+        ] {
+            assert_eq!(registry().render_kind(type_id), RenderKind::Unsupported);
+        }
         assert_eq!(
             registry().render_kind("no_such_type"),
             RenderKind::Unsupported

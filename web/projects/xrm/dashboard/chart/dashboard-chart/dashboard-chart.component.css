@@ -47,6 +47,13 @@
   border: 0;
 }
 
+.xch-needs-series {
+  margin: auto;
+  font-size: 13px;
+  opacity: 0.7;
+  text-align: center;
+}
+
 .xch-surface {
   position: relative;
   flex: 1;

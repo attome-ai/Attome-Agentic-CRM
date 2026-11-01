@@ -10,10 +10,10 @@ import { logicalToUrlPath, resolveRouteTemplate } from '@attome/xrm/core/entity'
 import { QueryColumnDef, QueryExecResponse } from '@attome/xrm/core/query/data';
 import {
   BucketKey, DashboardService, DashboardVariableBusService, KpiMetric, PageWidgetResult, RenderKind,
-  StructuredBucket, WidgetDataResponse, WidgetInputs,
+  StructuredBucket, StructuredData, WidgetDataResponse, WidgetInputs,
 } from '@attome/xrm/dashboard/data';
 import {
-  ChartBucket, ChartCategory, ChartKind, ChartSeries, DashboardChartComponent, SLICE_COLORS,
+  ChartBucket, ChartCategory, ChartKind, ChartSeries, DashboardChartComponent, MEASURE_KINDS, SLICE_COLORS,
 } from '@attome/xrm/dashboard/chart';
 import { DeclarativeWidgetRendererComponent } from '../../widget/declarative-widget-renderer/declarative-widget-renderer.component';
 import { WidgetExplainPanelComponent } from '../widget-explain-panel/widget-explain-panel.component';
@@ -202,7 +202,9 @@ export class DashboardWidgetViewComponent implements OnChanges, OnInit, OnDestro
     const seen = new Map<string, ChartCategory>();
     for (const b of s.other ? [...s.buckets, s.other] : s.buckets) {
       const id = keyIdentity(b.key);
-      if (!seen.has(id)) seen.set(id, { trackKey: id, label: this.keyLabel(b) });
+      if (!seen.has(id)) {
+        seen.set(id, { trackKey: id, label: this.keyLabel(b), date: b.key.kind === 'range' ? b.label?.slice(0, 10) : undefined });
+      }
     }
     return [...seen.values()];
   });
@@ -217,6 +219,8 @@ export class DashboardWidgetViewComponent implements OnChanges, OnInit, OnDestro
       return points.length ? [{ trackKey: 'rows', name: '', color: COLORS[0], points }] : [];
     }
     const categories = this.chartCategories();
+    const measures = this.measureSeries(s);
+    if (measures) return measures;
     const index = new Map(categories.map((c, i) => [c.trackKey, i]));
     const bySeries = new Map<string, ChartSeries>();
     for (const b of s.other ? [...s.buckets, s.other] : s.buckets) {
@@ -241,14 +245,50 @@ export class DashboardWidgetViewComponent implements OnChanges, OnInit, OnDestro
     return [...bySeries.values()];
   });
 
+  /** A chart of measures side by side has one series per measure, when the
+   * definition does not split them by a field. */
+  private measureSeries(s: StructuredData): ChartSeries[] | null {
+    const kind = this.chartKind();
+    if (!kind || !MEASURE_KINDS.has(kind) || s.series || s.measures.length < 2) return null;
+    const buckets = s.other ? [...s.buckets, s.other] : s.buckets;
+    return s.measures.map((measure, m) => ({
+      trackKey: `measure-${m}`,
+      name: measure.label || measure.field || measure.aggregation,
+      color: COLORS[m % COLORS.length],
+      points: buckets.map(b => ({
+        trackKey: `${keyIdentity(b.key)}|measure-${m}`,
+        label: this.keyLabel(b),
+        value: b.values[m] ?? 0,
+        key: b.key,
+        seriesKey: null,
+      })),
+    }));
+  }
+
   readonly chartKind = computed<ChartKind | null>(() => {
-    switch (this.renderKind()) {
-      case 'chart_bar':    return 'bar';
-      case 'chart_line':   return 'line';
-      case 'chart_area':   return 'area';
-      case 'chart_donut':  return 'donut';
-      case 'chart_funnel': return 'funnel';
-      default:             return null;
+    const kind = this.renderKind();
+    switch (kind) {
+      case 'chart_bar':            return 'bar';
+      case 'chart_line':           return 'line';
+      case 'chart_area':           return 'area';
+      case 'chart_donut':          return 'donut';
+      case 'chart_funnel':         return 'funnel';
+      case 'chart_stacked_bar':
+      case 'chart_combo':
+      case 'chart_waterfall':
+      case 'chart_treemap':
+      case 'chart_sunburst':
+      case 'chart_sankey':
+      case 'chart_radar':
+      case 'chart_polar':
+      case 'chart_heatmap':
+      case 'chart_calendar_heatmap':
+      case 'chart_pareto':
+      case 'chart_control':
+      case 'chart_scatter':
+      case 'chart_bubble':
+      case 'chart_range_area':     return kind.slice('chart_'.length) as ChartKind;
+      default:                     return null;
     }
   });
 

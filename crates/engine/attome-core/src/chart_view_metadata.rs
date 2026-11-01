@@ -106,6 +106,21 @@ pub enum ChartType {
     Donut,
     Pie,
     Funnel,
+    StackedBar,
+    Combo,
+    Waterfall,
+    Treemap,
+    Sunburst,
+    Sankey,
+    Radar,
+    Polar,
+    Heatmap,
+    CalendarHeatmap,
+    Pareto,
+    Control,
+    Scatter,
+    Bubble,
+    RangeArea,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, ToSchema)]

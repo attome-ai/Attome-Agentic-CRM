@@ -14,6 +14,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Dashboards and chart views draw 15 more chart types: stacked bar, combo, waterfall, treemap, sunburst,
+  sankey, radar, polar, heat map, calendar heat map, Pareto, control, scatter, bubble and range area,
+  in both reading directions and with a table of their values. ECharts draws them and loads only on a
+  page that shows one. The widget types that need a measure, a bin or a date pair no definition can
+  produce yet stay unsupported: histogram, box plot, Gantt, timeline, candlestick, distribution,
+  correlation matrix and cohort chart (P6-T1).
 - `attome config pull|plan|diff|push|rollback` move a deployment's configuration as a folder
   through its admin API (T4-T2).
 - `attome upgrade check --manifest <file>` reports, before an upgrade, whether a signed release can

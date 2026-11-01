@@ -39,6 +39,7 @@ export type WidgetDataResponse  = ApiComponents['schemas']['WidgetDataResponse']
 export type PageDataResponse    = ApiComponents['schemas']['PageDataResponse'];
 export type PageWidgetResult    = ApiComponents['schemas']['PageWidgetResult'];
 export type StructuredBucket    = ApiComponents['schemas']['StructuredBucket'];
+export type StructuredData      = ApiComponents['schemas']['StructuredData'];
 export type BucketKey           = ApiComponents['schemas']['BucketKey'];
 export type KpiMetric           = ApiComponents['schemas']['KpiMetric'];
 export type KpiPoint            = ApiComponents['schemas']['KpiPoint'];

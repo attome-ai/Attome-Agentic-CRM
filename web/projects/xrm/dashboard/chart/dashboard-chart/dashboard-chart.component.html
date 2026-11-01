@@ -41,6 +41,40 @@
         </tbody>
       </table>
     </div>
+  } @else if (drawnByLibrary()) {
+    @if (option(); as chart) {
+      <attome-echart [option]="chart" [summary]="summary()" [interactive]="interactive()" (picked)="activate($event)" />
+    } @else {
+      <p class="xch-needs-series">{{ 'dashboard.chart.needsMeasures' | translate }}</p>
+    }
+    @if (legend()) {
+      <ul class="xch-legend">
+        @for (s of series(); track s.trackKey) {
+          <li class="xch-legend-item"><span class="xch-swatch" [style.background]="s.color"></span><span class="xch-legend-text">{{ s.name }}</span></li>
+        }
+      </ul>
+    }
+    <table class="xch-sr-only">
+      <caption>{{ summary() }}</caption>
+      <thead>
+        <tr>
+          <th scope="col">{{ 'dashboard.chart.category' | translate }}</th>
+          @for (s of series(); track s.trackKey) {
+            <th scope="col">{{ s.name || ('dashboard.chart.value' | translate) }}</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of tableRows(); track row.category.trackKey) {
+          <tr>
+            <th scope="row">{{ row.category.label }}</th>
+            @for (cell of row.cells; track cell.trackKey) {
+              <td>{{ format(cell.bucket?.value) }}</td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
   } @else {
     @switch (kind()) {
       @case ('funnel') {

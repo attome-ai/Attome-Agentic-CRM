@@ -60629,7 +60629,7 @@ export interface components {
          *     state (and is reported by health).
          * @enum {string}
          */
-        RenderKind: "chart_bar" | "chart_line" | "chart_area" | "chart_donut" | "chart_funnel" | "scalar" | "table" | "declarative" | "kpi_scorecard" | "kpi_trendline" | "text" | "divider" | "unsupported";
+        RenderKind: "chart_bar" | "chart_line" | "chart_area" | "chart_donut" | "chart_funnel" | "chart_stacked_bar" | "chart_combo" | "chart_waterfall" | "chart_treemap" | "chart_sunburst" | "chart_sankey" | "chart_radar" | "chart_polar" | "chart_heatmap" | "chart_calendar_heatmap" | "chart_pareto" | "chart_control" | "chart_scatter" | "chart_bubble" | "chart_range_area" | "scalar" | "table" | "declarative" | "kpi_scorecard" | "kpi_trendline" | "text" | "divider" | "unsupported";
         RenderStatusResponse: {
             attach_error?: string | null;
             attached: boolean;

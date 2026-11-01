@@ -13,7 +13,11 @@ import type {
  * metadata unchanged.
  */
 
-export const CHART_TYPES: readonly ChartType[] = ['line', 'area', 'bar', 'column', 'donut', 'pie', 'funnel'];
+export const CHART_TYPES: readonly ChartType[] = [
+  'line', 'area', 'bar', 'column', 'donut', 'pie', 'funnel',
+  'stacked_bar', 'combo', 'waterfall', 'treemap', 'sunburst', 'sankey', 'radar', 'polar',
+  'heatmap', 'calendar_heatmap', 'pareto', 'control', 'scatter', 'bubble', 'range_area',
+];
 export const CHART_AGGREGATIONS: readonly ChartAggregation[] =
   ['count', 'count_distinct', 'sum', 'avg', 'min', 'max', 'median'];
 export const CHART_DATE_BUCKETS: readonly ChartDateBucket[] = ['day', 'week', 'month', 'quarter', 'year'];
