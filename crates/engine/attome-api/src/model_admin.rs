@@ -908,7 +908,7 @@ async fn provision_dependency(state: &EngineState, id: Uuid, doc: &Value) -> Res
         (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
         (status = 404, description = "No such kind, or no open draft", body = ErrorResponse),
         (status = 409, description = "Another save is in progress", body = ErrorResponse),
-        (status = 422, description = "The draft fails the publish checks, an eval suite's newest run fails a safety case (the issues are listed), or customer_tests_failed (blocking customer tests failed while customer_tests.require_pass_before_publish is on)", body = ErrorResponse),
+        (status = 422, description = "The draft fails the publish checks, an eval suite's newest run fails a safety case (the issues are listed), an agent's permission test fails (the failing cases are listed), or customer_tests_failed (blocking customer tests failed while customer_tests.require_pass_before_publish is on)", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
@@ -924,6 +924,12 @@ async fn publish(
     let gate = attome_ai::publish_gate::check(&state.base.db, kind.name().as_str(), id).await?;
     if !gate.blocked.is_empty() {
         return Err(AppError::Validation(gate.blocked.join("; ")));
+    }
+    // AH7-T3: an agent publishes only when its permission test passes, run
+    // as the publisher under the policy its draft names.
+    if kind.name() == attome_model::kinds::agent::AGENT {
+        let draft = attome_model::store::read(&state.base.db, id, None).await?;
+        attome_ai::agent_activation::check_publish(&state, ctx.user_id, &draft.doc).await?;
     }
     // B22-T2: a form's or page's accessibility findings warn; they never block.
     let mut warnings = gate.warnings;

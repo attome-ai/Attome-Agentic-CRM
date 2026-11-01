@@ -8,6 +8,10 @@
 //! agent uses, judged with the policy as it will be saved, for each such
 //! agent up to [`MAX_AGENTS`].
 //!
+//! An agent published as a model object (V2-D487's `agent` kind) is
+//! judged the same way at publish ([`check_publish`]), as the publisher,
+//! with the policy its draft names.
+//!
 //! The test runs as the agent's owner (its `owner_ref`; the saving user on
 //! create), with the policy and capability packs a session would hold. An
 //! agent with no policy is not judged: no session can start from it
@@ -104,6 +108,25 @@ async fn failures_for(
         packs.action_ids,
     );
     Ok(crate::permission_test::judge(state, &security, &effective).failures)
+}
+
+/// AH7-T3: the permission test for an `agent` model object about to be
+/// published, run as `publisher` under the policy its draft `doc` names. A
+/// draft naming no policy is not judged: no session can start from it.
+pub async fn check_publish(
+    state: &EngineState,
+    publisher: Uuid,
+    doc: &Value,
+) -> Result<(), AppError> {
+    let Some(policy) = doc.get("policy").and_then(lookup) else {
+        return Ok(());
+    };
+    let failures = failures_for(state, publisher, policy, None).await?;
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        Err(refusal(&failures))
+    }
 }
 
 type StoredAgent = (Option<String>, Option<Uuid>, Option<Uuid>);
