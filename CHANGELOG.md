@@ -14,6 +14,33 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Workflow test cases (M4-T2): publishing a workflow version runs the customer tests that simulate it on
+  the draft about to go live; `GET /api/v1/workflow/definitions/{id}/versions/{version_id}/coverage` lists
+  the steps no case reaches, and the editor shows it; `POST /api/v1/workflow/instances/{id}/test` turns a
+  failed run on a record into a test (the run screen's Make a test from this run).
+- Acceptance scripts (T7-T4): a customer test whose definition is a `checklist` is run by a person on
+  `/xrm/acceptance-scripts` (`GET /api/v1/acceptance-scripts`, `POST /api/v1/acceptance-scripts/{id}/runs`),
+  never by an automatic runner. Customer-test steps take `{"$ref": "<name>"}` and `{"$ref": "@caller"}`.
+- A publish quality report (T1-T4): the model validate preview adds `performance` findings and
+  `quality_gate`; the setting `model.publish.quality_gate` (`warn`, `block`) makes accessibility and
+  performance findings refuse a publish.
+- Golden workflows for the vertical packs (X3-T2 to X11-T2): `packs/<pack>/golden/golden.json`, run by
+  the `pack_golden` tests in the release gate.
+- The steward inbox, cover and coverage (L3-T3, L3-T4, L3-T6, L3-T7): `GET /api/v1/governance/inbox`, a
+  deputy's cover while the steward is out of office, a daily escalation of overdue items to domain owners,
+  `GET /api/v1/admin/governance/coverage`, `.../domains/{id}/scorecard` and `.../evidence`, and the
+  governance screens for the inbox, coverage and the domain tree with its roles and policy register.
+  Data domains now carry `parent_ref`. Disabling a user who still holds governance roles answers
+  `409 governance_roles_held` with `roles`.
+- Recurring imports read SFTP (over the machine's OpenSSH client, the key from an integration
+  connection) and email attachments (a mailbox integration's mail to the import's address) (A23-T12).
+- The upgrade rehearsal runs opted-in customers' tests (`attome release --check --customer-tests <dir>`):
+  blocking failures fail it, others become upgrade notes (AC5-T11).
+- Package install preview against the deployment's trusted publishers (`packages.trusted_publishers`,
+  `POST /api/v1/admin/packages/preview`) (T8-T2).
+- Free enrichment sources (the commercial register, the National Address, the company website), the
+  `enrich_records` job with `enrichment.daily_limits`, and the agent tools `sales.enrich.record`,
+  `sales.enrich.list`, `sales.account.brief` and `sales.suggest_arabic_names` (D24-T5, D24-T8, D24-T9).
 - A live entity can be made to extend a base (G1-T1's prerequisite): `PATCH /api/v1/admin/entities/{id}`
   takes `extends_entity_id`; a field of the same name becomes the base field's copy (its type must match),
   the base's other fields are copied in, an entity extends one base at most (409) and never loops. The
