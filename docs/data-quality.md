@@ -133,3 +133,18 @@ role): each owner gets one notice per domain naming how many, and an item is esc
 user who still stewards, deputises or owns a domain cannot be deactivated:
 `POST /api/v1/admin/security/users/{id}/disable` answers `409 governance_roles_held` with the roles
 in `roles`; reassign them first.
+
+## Coverage, scorecards and evidence
+
+For compliance administrators:
+
+- `GET /api/v1/admin/governance/coverage` lists where accountability has gaps: live entities in no
+  domain, domains with no owner, personal and special-category attributes on entities whose domain
+  has no policy, policies nothing enforces, and stewards with inbox items overdue by more than two
+  days. Each list holds at most 500 rows; `truncated` says when one was cut.
+- `GET /api/v1/admin/governance/domains/{id}/scorecard` gives one domain's quality (the newest score
+  per entity and dimension, and their average), its open and overdue inbox items, its open policy
+  exceptions and how many of its policies are enforced.
+- `GET /api/v1/admin/governance/evidence` returns the governance roles, the policies with their
+  enforcements, the policy exceptions and the governed-change approval requests as one JSON
+  document for an audit.

@@ -56,6 +56,8 @@ pub mod dsr_restriction;
 pub mod erasure_admin;
 pub mod erasure_replay;
 pub mod governance_admin;
+/// L3-T6: accountability coverage, domain scorecards and audit evidence.
+pub mod governance_coverage;
 /// L3-T2: governance roles, policies, exceptions and certifications.
 pub mod governance_policy;
 pub mod legal_hold_admin;
