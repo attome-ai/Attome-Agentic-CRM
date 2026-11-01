@@ -46,3 +46,8 @@ account's Latin legal name, 20 names a call, and files each as a `review` propos
 `model`: a suggestion a person accepts, never a fill. Sources rank as the registry, then any other
 provider, then the model: an account whose Arabic legal name is filled, or has a pending value
 from the registry or another provider, gets no suggestion.
+
+An enrichment run over accounts does this on its own when it finishes: it asks for the Arabic
+names of the run's accounts as an agent of the person who queued the run, so their record access,
+the approved model and their AI budget apply, and the audit names them. Without AI, or with the
+budget spent, the run ends as it did and no suggestion is made.

@@ -64,6 +64,10 @@ pub struct EnrichPayload {
     pub entity: String,
     pub ids: Vec<Uuid>,
     pub provider: String,
+    /// D24-T8: who queued the run; the Arabic name suggestions that follow
+    /// an account run are made, and charged, as an agent of this person.
+    #[serde(default)]
+    pub requested_by: Option<Uuid>,
 }
 
 /// What a run would cost.
@@ -164,6 +168,7 @@ pub async fn enqueue(
                 entity: entity.to_owned(),
                 ids,
                 provider: provider.to_owned(),
+                requested_by: Some(ctx.user_id),
             }),
             next: None,
         }),
@@ -312,5 +317,16 @@ mod tests {
             }
         );
         assert_eq!(estimate_of(5, 100).over_budget, 0);
+    }
+
+    /// D24-T8: a job queued before `requested_by` existed still reads, with
+    /// no one to suggest Arabic names as.
+    #[test]
+    fn an_older_payload_has_no_requester() {
+        let payload: EnrichPayload = serde_json::from_value(serde_json::json!({
+            "entity": "account", "ids": [], "provider": "website"
+        }))
+        .unwrap();
+        assert_eq!(payload.requested_by, None);
     }
 }

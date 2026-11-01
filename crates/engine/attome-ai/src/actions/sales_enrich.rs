@@ -374,6 +374,61 @@ fn arabic_system_prompt() -> String {
         .to_owned()
 }
 
+/// D24-T8 step 1: after an enrichment run over accounts, asks for the
+/// Arabic form of their Latin legal names as an agent of `requester` (the
+/// person who queued the run), through the gate like any agent call: the
+/// requester's access, the approved model, their AI budget and the audit
+/// all apply, and the accounts that need no suggestion are skipped by the
+/// action itself. The suggestions it made; a refusal (no AI, no licence,
+/// no budget, no access) is the requester's normal state and answers 0.
+pub async fn suggest_after_enrichment(
+    state: &EngineState,
+    requester: Uuid,
+    account_ids: &[Uuid],
+) -> Result<u64, AppError> {
+    if account_ids.is_empty() {
+        return Ok(0);
+    }
+    let security = state.base.security.resolve(requester).await?;
+    let ctx = ActionContext::agent(security, RiskTier::Reversible);
+    let module = crate::engine::REGISTRY
+        .resolve(SUGGEST_ARABIC_NAMES)
+        .map(|d| d.module)
+        .ok_or(AppError::NotFound)?;
+    attome_core::ai_runtime_switch::refresh(&state.base.db).await;
+    let inputs = crate::engine::gate_inputs(state, module);
+    let mut suggested = 0;
+    for chunk in account_ids.chunks(MAX_ARABIC_ACCOUNTS) {
+        let args = json!({ "account_ids": chunk });
+        let outcome = crate::execute::dispatch(
+            state,
+            &crate::engine::REGISTRY,
+            &crate::engine::EXECUTORS,
+            SUGGEST_ARABIC_NAMES,
+            &ctx,
+            &inputs,
+            &args,
+        )
+        .await;
+        match outcome {
+            Ok(crate::execute::ActionOutcome::Completed { result, .. }) => {
+                suggested += result.get("suggested").and_then(Value::as_u64).unwrap_or(0);
+            }
+            Ok(_) => return Ok(suggested),
+            Err(error @ (AppError::NotFound | AppError::Forbidden | AppError::Validation(_))) => {
+                tracing::debug!(%requester, %error, "Arabic name suggestions: not made");
+                return Ok(suggested);
+            }
+            Err(AppError::TooManyRequests { .. }) => {
+                tracing::info!(%requester, "Arabic name suggestions: the AI budget is spent");
+                return Ok(suggested);
+            }
+            Err(error) => return Err(error),
+        }
+    }
+    Ok(suggested)
+}
+
 struct SuggestArabicNames;
 
 impl Action for SuggestArabicNames {

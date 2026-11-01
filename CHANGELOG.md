@@ -14,6 +14,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- An account enrichment run ends by suggesting Arabic forms of the Latin legal names it left without
+  one, made and charged as the person who queued the run (D24-T8).
 - CRM pack `0012`: the Global Account Manager role reads and updates the accounts, contacts and
   opportunities owned by everyone under its holder in the position hierarchy, so a group's manager
   sees its subsidiaries (D2-T2).

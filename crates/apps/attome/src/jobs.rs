@@ -3967,6 +3967,29 @@ pub fn register_job_types() {
                     proposals = summary.proposals,
                     "enrichment run finished"
                 );
+                // D24-T8: Latin legal names left without an Arabic form get
+                // a model suggestion, made as the person who queued the run.
+                // The run itself is done, so a failure here is logged, not
+                // retried.
+                if payload.entity == "account"
+                    && let Some(requester) = payload.requested_by
+                {
+                    match attome_ai::actions::sales_enrich::suggest_after_enrichment(
+                        &state,
+                        requester,
+                        &payload.ids,
+                    )
+                    .await
+                    {
+                        Ok(suggested) => {
+                            tracing::info!(suggested, "Arabic name suggestions after enrichment")
+                        }
+                        Err(error) => tracing::warn!(
+                            %error,
+                            "Arabic name suggestions after enrichment failed"
+                        ),
+                    }
+                }
                 Ok(())
             },
         ) {
