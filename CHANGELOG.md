@@ -31,8 +31,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   changeset 0015 seeds four starter segments over contacts (engaged in the last 90 days, new this
   month, unengaged for 6 months, customers with a won opportunity); a list's `query_id` may now name
   its stored query as `<entity>/<name>`. A starter list refreshes once it has an owner.
-- Agent tool `segment.explain_change` (E7-T11): why a marketing list's size changed between two
-  dates, entered and left grouped by reason.
+- Agent tools `segment.explain_change` and `segment.lookalike` (E7-T11): why a marketing list's size
+  changed between two dates (entered and left grouped by reason), and look-alike conditions from the
+  choice values clearly more common among its members than overall.
 - Journey routes, part one (E8-T10): `GET /api/v1/marketing/journeys/{id}/counts`,
   `GET .../people/{person_id}/path`, `POST .../enrolments` (up to 1,000 readable contacts or leads,
   through the journey's re-entry rule and cap; `is_test` for test runs) and

@@ -213,6 +213,8 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
 - Segments (reads only, marketing): `segment.explain_change` explains why a marketing list's size
   changed between two dates, with the people who entered and left grouped by reason (a refresh, a
   manual change, an import, a form or a flow); counts only, for a list the caller may read.
+  `segment.lookalike` suggests conditions for a look-alike segment: choice values clearly more common
+  among the list's members (those the caller may read) than among all records, saving nothing.
 - Org charts (sales; no manager is set): `sales.orgchart.read` reads an account's chart,
   `sales.committee.read` a deal's buying committee (influence and attitude only through the Deal
   Attitude profile) and `sales.coverage.gaps` just its gaps; `sales.orgchart.propose` queues
