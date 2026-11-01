@@ -27,6 +27,20 @@
         </button>
       </div>
     }
+    @if (inst.status === 'failed') {
+      @if (testError()) { <p class="error-msg">{{ testError() }}</p> }
+      @if (madeTest(); as name) {
+        <p class="cell-muted" role="status" data-testid="made-test">
+          Test “{{ name }}” saved. <a routerLink="/xrm/admin/customer-tests">Open customer tests</a>
+        </p>
+      } @else {
+        <div class="btn-row">
+          <button type="button" data-testid="make-test" (click)="makeTest()" [disabled]="makingTest()">
+            {{ makingTest() ? 'Saving…' : 'Make a test from this run' }}
+          </button>
+        </div>
+      }
+    }
   </div>
 
   <div class="card">

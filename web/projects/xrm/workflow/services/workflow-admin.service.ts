@@ -564,6 +564,11 @@ export class WorkflowAdminService {
     return this.api.post(`/api/v1/workflow/instances/${id}/cancel`, { row_version: rowVersion });
   }
 
+  /** M4-T2: a customer test from a failed run on a record (it expects the flow to complete). */
+  testFromRun(id: string): Observable<{ id: string; name: string }> {
+    return this.api.post<{ id: string; name: string }>(`/api/v1/workflow/instances/${id}/test`, {});
+  }
+
   startInstance(body: StartInstanceBody): Observable<{ id: string }> {
     return this.api.post<{ id: string }>('/api/v1/workflow/instances', body);
   }

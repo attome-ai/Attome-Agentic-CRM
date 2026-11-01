@@ -23,6 +23,10 @@ export class WorkflowInstanceDetailComponent implements OnInit {
   readonly error      = signal<string | null>(null);
   readonly cancelling = signal(false);
   readonly cancelError = signal<string | null>(null);
+  /** M4-T2: the test made from this failed run, once made. */
+  readonly madeTest   = signal<string | null>(null);
+  readonly makingTest = signal(false);
+  readonly testError  = signal<string | null>(null);
 
   ngOnInit(): void { this.load(); }
 
@@ -31,6 +35,18 @@ export class WorkflowInstanceDetailComponent implements OnInit {
     this.svc.getInstance(this.id()).subscribe({
       next:  i => { this.instance.set(i); this.loading.set(false); },
       error: (e: ApiError) => { this.error.set(e.message); this.loading.set(false); },
+    });
+  }
+
+  /** M4-T2: turns this failed run into a customer test in one step. */
+  makeTest(): void {
+    const inst = this.instance();
+    if (!inst) return;
+    this.makingTest.set(true);
+    this.testError.set(null);
+    this.svc.testFromRun(inst.id).subscribe({
+      next:  t => { this.makingTest.set(false); this.madeTest.set(t.name); },
+      error: (e: ApiError) => { this.testError.set(e.message); this.makingTest.set(false); },
     });
   }
 
