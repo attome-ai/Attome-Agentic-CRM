@@ -10,7 +10,9 @@ import { reportBuilderAr, reportBuilderEn } from '@attome/xrm/report/builder';
 import { emailDesignerAr, emailDesignerEn } from '@attome/xrm/marketing/email-designer';
 import { appDesignerAr, appDesignerEn } from '@attome/xrm/core/admin/app-designer';
 import { fleetAr, fleetEn } from '@attome/xrm/fleet';
-import { businessRulesAr, businessRulesEn, duplicatesManagerAr, duplicatesManagerEn } from '@attome/xrm/core/admin';
+import {
+  businessRulesAr, businessRulesEn, dataModelAr, dataModelEn, duplicatesManagerAr, duplicatesManagerEn,
+} from '@attome/xrm/core/admin';
 import { agentDesignerAr, agentDesignerEn } from '@attome/xrm/model';
 import { agentSessionsAr, agentSessionsEn } from '@attome/xrm/ai';
 import { searchLabAr, searchLabEn } from '@attome/xrm/search';
@@ -108,6 +110,7 @@ const LAYERS = [
   ['searchLab', searchLabEn, searchLabAr],
   ['migration', migrationEn, migrationAr],
   ['portalAdmin', portalAdminEn, portalAdminAr],
+  ['dataModel', dataModelEn, dataModelAr],
 ] as const;
 
 describe('i18n catalog coverage — all layers', () => {
@@ -130,6 +133,7 @@ describe('i18n catalog coverage — all layers', () => {
         provideLayerCatalog(searchLabEn, () => Promise.resolve(searchLabAr)),
         provideLayerCatalog(migrationEn, () => Promise.resolve(migrationAr)),
         provideLayerCatalog(portalAdminEn, () => Promise.resolve(portalAdminAr)),
+        provideLayerCatalog(dataModelEn, () => Promise.resolve(dataModelAr)),
       ],
     });
     const lang = TestBed.inject(LangService);
