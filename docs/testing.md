@@ -84,7 +84,14 @@ route ships with its `negative:` test and a fix with its `regression:` test.
 A customer test is a builder's own check of their configuration, written without code: records to
 start from (`given`), writes to make (`when`, optionally as a role with `as_role`) and what must
 hold afterwards (`expect`: an attribute's value, or an error a step must meet: `validation`,
-`forbidden`, `conflict`, `not_found`).
+`forbidden`, `conflict`, `not_found`). Two more expectations state a permission and a flow's
+outcome:
+
+- `{ "entity": "deal", "action": "delete", "allowed": false }`: whether the acting role (or the
+  person running the test) may read, create, update or delete the entity.
+- `{ "flow": "welcome", "entity": "contact", "ref": "c", "status": "completed", "reaches": ["send_email"] }`:
+  the published workflow `welcome` simulated on the record as the test left it; nothing it would do
+  happens. `status` is `completed`, `would_wait` or `failed`; `reaches` lists nodes it must reach.
 
 ```json
 { "as_role": "Sales Rep",
@@ -104,6 +111,18 @@ Mark a test **blocking** and turn on the deployment setting
 `customer_tests.require_pass_before_publish` to make every changeset apply, model publish and
 blueprint apply run the blocking tests first; a failure refuses the publish with
 `422 customer_tests_failed`, naming the tests in `tests`.
+A model publish runs only the blocking tests it can affect: the entities the object references (and
+the entity or workflow itself) against the entities and flows each test touches. The preview,
+`POST /api/v1/admin/model/{kind}/{id}/validate` with `run_tests: true`, runs every affected test and
+returns the results; the page designer shows them beside Publish.
+
+Mark a test **live safe** and it runs every night against the live configuration, as its author;
+failures alert the administrators, and a test whose runs on the same test and configuration
+version both passed and failed is marked **flaky** until someone edits it.
+
+To start from a real case, `POST /api/v1/admin/customer-tests/from-record` (or **From a record**
+on the screen) drafts a test that re-creates a record and checks each field still holds its value
+once saved, so a rule, default or flow that changes it shows; edit it from there.
 
 ## Fuzzing
 
