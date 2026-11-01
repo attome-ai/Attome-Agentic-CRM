@@ -366,6 +366,9 @@ impl EngineSystem {
             // AB11-T8: the public status, same shape (own module and
             // setting check, 404 either way, bypass-listed).
             .merge(attome_ops::public_status::public_routes())
+            // AB11-T6: subscribe, confirm, unsubscribe and the feed, same
+            // shape.
+            .merge(attome_ops::subscribers::public_routes())
             // Consent Management (M24, D-428) public capture endpoint — same
             // bypass-listed shape as content_public/service_public above,
             // except it does no manual license check of its own: this

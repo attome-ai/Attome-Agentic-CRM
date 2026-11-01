@@ -97,7 +97,27 @@ When it changed since the last copy:
 A target that fails is logged (`status page: the hosted copy was not updated`) and tried again the
 next minute.
 
+## Subscribers
+
+While the status is published (`ops.status.enabled`), people and tools can follow it:
+
+- `POST /api/v1/public/status/subscribe` `{"channel": "email" | "webhook", "address": "...",
+  "components": [...], "consent": true}` answers 202 and sends a confirmation link (by email, or as
+  a `subscription_confirm` POST to the webhook). Nothing else is sent until the link is opened.
+  Without `consent: true` it is refused; `sms` and `whatsapp` answer `channel not available`. A
+  webhook must be `https` and reachable on a public address.
+- The link (`/api/v1/public/status/confirm?token=`) works once. Every notice carries a one-click
+  `/api/v1/public/status/unsubscribe?token=` link, which also works once.
+- `GET /api/v1/public/status/feed.rss`: the public incidents and their updates of the last 30 days.
+- Staff with `ops.incident.publish` list, add (confirmed at once) and remove subscribers at
+  `/api/v1/ops/status-subscribers`.
+
+Every minute, each confirmed subscriber gets the updates of public incidents published since they
+confirmed and the upcoming public maintenance, for the components they follow (all when they named
+none), 50 notices a run at most and each once. An email goes out through the mail queue; a webhook
+that does not take a notice gets it again the next minute.
+
 ## Not built yet
 
-- Subscriptions (email, webhook, RSS) and the 24-hour and 1-hour maintenance reminders.
+- SMS and WhatsApp notices, and the 24-hour and 1-hour maintenance reminders.
 - Publishing public incidents and maintenance to the public status page.

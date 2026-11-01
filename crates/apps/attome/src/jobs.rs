@@ -5664,6 +5664,12 @@ pub fn register_job_types() {
                         tracing::warn!(%error, "status page: the hosted copy was not updated")
                     }
                 }
+                // AB11-T6: the subscribers' notices, 50 a run at most.
+                match attome_ops::subscribers::deliver_due(&state).await {
+                    Ok(0) => {}
+                    Ok(sent) => tracing::info!(sent, "status notices sent"),
+                    Err(error) => tracing::warn!(%error, "status notices: the run failed"),
+                }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {

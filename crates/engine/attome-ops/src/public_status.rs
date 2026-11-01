@@ -271,6 +271,17 @@ pub async fn status_for(
 /// AB11-T8: the setting that publishes the status to anyone.
 pub const PUBLIC_SETTING: &str = "ops.status.enabled";
 
+/// Whether the deployment publishes its status to anyone: the ops module
+/// is on and [`PUBLIC_SETTING`] is true.
+pub(crate) fn published(state: &EngineState) -> bool {
+    state.modules.load().has(attome_modules::MODULE_OPS)
+        && attome_core::setting_registry()
+            .get(PUBLIC_SETTING)
+            .map(|d| state.settings.load().resolve(d, None, None).0)
+            .and_then(|v| v.as_bool())
+            == Some(true)
+}
+
 /// How long a client may cache the public status.
 const PUBLIC_MAX_AGE: &str = "public, max-age=30";
 
@@ -416,13 +427,7 @@ async fn get_banner(
     ),
 )]
 async fn get_public_status(State(state): State<EngineState>) -> Result<Response, AppError> {
-    let on = state.modules.load().has(attome_modules::MODULE_OPS)
-        && attome_core::setting_registry()
-            .get(PUBLIC_SETTING)
-            .map(|d| state.settings.load().resolve(d, None, None).0)
-            .and_then(|v| v.as_bool())
-            == Some(true);
-    if !on {
+    if !published(&state) {
         return Err(AppError::NotFound);
     }
     let snapshot = public_snapshot(&state).await?;

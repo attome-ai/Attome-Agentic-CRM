@@ -46,6 +46,8 @@ pub mod static_page;
 pub mod status;
 /// AB11-T4: draft incidents for components that stay down.
 pub mod status_watch;
+/// AB11-T6: status subscribers, their notices and the public feed.
+pub mod subscribers;
 /// AB2-T8: planned switchover under two-person control.
 pub mod switchover;
 /// AB8-T6: the upgrade record and its routes.
@@ -69,6 +71,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(disasters::openapi_fragment());
     doc.merge(status::openapi_fragment());
     doc.merge(public_status::openapi_fragment());
+    doc.merge(subscribers::openapi_fragment());
     doc.merge(incidents::openapi_fragment());
     doc.merge(maintenance::openapi_fragment());
     doc.merge(drills::openapi_fragment());

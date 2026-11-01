@@ -10,6 +10,14 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     // AB11-T8: the public status (public components and incidents only),
     // a GET answering 404 unless the deployment publishes it.
     "/api/v1/public/status",
+    // AB11-T6: following the public status. Subscribe stores a pending
+    // subscription only (consent required, limited per address); confirm
+    // and unsubscribe take a token; the feed is the public incidents. All
+    // answer 404 unless the deployment publishes its status.
+    "/api/v1/public/status/subscribe",
+    "/api/v1/public/status/confirm",
+    "/api/v1/public/status/unsubscribe",
+    "/api/v1/public/status/feed.rss",
     // B13-T4: published logos, favicons and fonts, served inert; no user data.
     "/api/v1/branding/asset",
     // Q21-T2: browsers report CSP violations with no credential; counted
@@ -566,6 +574,10 @@ mod tests {
     fn the_public_status_is_bypassed_but_the_signed_in_status_is_not() {
         assert!(is_bypass("/api/v1/public/status"));
         assert!(!is_bypass("/api/v1/public/status/x"));
+        assert!(is_bypass("/api/v1/public/status/subscribe"));
+        assert!(is_csrf_exempt("/api/v1/public/status/subscribe"));
+        assert!(is_bypass("/api/v1/public/status/feed.rss"));
+        assert!(!is_bypass("/api/v1/ops/status-subscribers"));
         assert!(!is_bypass("/api/v1/ops/status"));
         assert!(!is_bypass("/api/v1/ops/status/banner"));
     }

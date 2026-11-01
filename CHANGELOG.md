@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Status subscribers: email and webhook subscriptions with consent and a confirmation link, one-click
+  unsubscribe, an RSS feed, and notices of public incident updates and maintenance (AB11-T6,
+  migration 0364).
 - Field service pack: the technician app (Today and Job menus over four new views) and work orders,
   tasks, lines and time entries marked offline (I4-T1).
 - Deleting a field or finishing a large type change retires the old column (renamed, values intact)
