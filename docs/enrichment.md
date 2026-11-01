@@ -21,3 +21,20 @@ The website is fetched through the crawler's SSRF-safe client, so a private or i
 is never read, and no AI model is called. The register's status and activities are not proposed:
 the account has no field for the status, and the ISIC list the activities would map to is not
 shipped yet.
+
+## Queueing a run, budgets and agent tools
+
+A run enriches up to 500 records of one entity with one provider in the background (the
+`enrich_records` job). Queueing it checks that the caller reads the entity and answers the cost
+estimate: the calls it would make, the calls left in the provider's budget today, and how many
+records the budget would not reach. Each provider's daily budget is the deployment setting
+`enrichment.daily_limits` (`{"registry": 100, "website": 500}`; a provider not named gets 100).
+Records already matched to an account by their work-email domain are skipped before any call.
+The registry uses the API key of the integration connection named `wathq`, the National Address
+that of `national_address`; the website needs none.
+
+Agents have three tools: `sales.enrich.record` (one record), `sales.enrich.list` (up to 500
+records; an agent always asks a person first, and the answer carries the estimate) and
+`sales.account.brief`, a short brief of an account in which every line cites its source: the
+account record (`record:account/<id>`), the registry (`registry:CR <number>`) or the website's
+address, with when an enrichment value was fetched. The brief changes nothing and calls no model.

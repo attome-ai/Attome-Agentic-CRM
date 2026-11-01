@@ -3952,6 +3952,26 @@ pub const HEAVY_OP_UNDO_RETENTION: attome_jobs::JobType =
 pub fn register_job_types() {
     static ONCE: std::sync::Once = std::sync::Once::new();
     ONCE.call_once(|| {
+        // L9, D24-T9: a set of records enriched by one provider.
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            attome_sales::enrichment::queue::ENRICH_RECORDS,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: attome_sales::enrichment::queue::EnrichPayload = job.payload()?;
+                let summary = attome_sales::enrichment::queue::run_job(&state, &payload)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(
+                    provider = %payload.provider,
+                    entity = %payload.entity,
+                    asked = summary.asked,
+                    proposals = summary.proposals,
+                    "enrichment run finished"
+                );
+                Ok(())
+            },
+        ) {
+            tracing::error!(%error, "enrichment job type was not registered");
+        }
         // T5-T1: a sandbox copy asked for through the API.
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             attome_api::sandboxes::SANDBOX_COPY,

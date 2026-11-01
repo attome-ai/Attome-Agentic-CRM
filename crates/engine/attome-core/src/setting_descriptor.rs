@@ -248,7 +248,7 @@ pub fn area(key: &str) -> &'static str {
         Some("data_profile") => "data",
         Some("quality" | "master" | "lineage") => "data",
         Some("revrec" | "fulfilment" | "contract") => "sales",
-        Some("model" | "packages") => "data",
+        Some("model" | "packages" | "enrichment") => "data",
         Some("grc") => "security",
         _ => "other",
     }
@@ -490,6 +490,9 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
         }
         "omnichannel.web_chat_offline_message" => {
             "الرد التلقائي لزائر محادثة الويب خارج ساعات العمل."
+        }
+        "enrichment.daily_limits" => {
+            "عدد المرات التي يُستدعى فيها كل مزود إثراء يوميًا، مثل {\"registry\": 100}؛ المزود غير المذكور له 100. إذا نفد العدد لا يُقترح شيء آخر من ذلك المزود في ذلك اليوم."
         }
         "packages.trusted_publishers" => {
             "الناشرون الذين تُثبَّت حزمهم الموقّعة في هذا النشر، لكل منهم الاسم والمفتاح العام Ed25519 الذي تُوقَّع به حزمه. إن كانت القائمة فارغة فلا تُعاين أي حزمة ولا تُثبَّت."

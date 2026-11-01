@@ -814,6 +814,16 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(false),
         ),
+        // L9, D24-T9: each enrichment provider's daily call budget.
+        SettingDescriptor::new(
+            "enrichment.daily_limits",
+            "Each enrichment provider's daily call budget, as `{\"registry\": 100, \"national_address\": 500, \"website\": 500}`; \
+             a provider not named gets 100. Once spent, a run proposes nothing more for that provider that day.",
+            || json!({"type": "object", "additionalProperties": {"type": "integer", "minimum": 0, "maximum": 100000}}),
+            &[SettingScope::Deployment],
+            false,
+            || json!({}),
+        ),
         // T8-T2: the publishers whose signed packages may be installed.
         SettingDescriptor::new(
             "packages.trusted_publishers",
