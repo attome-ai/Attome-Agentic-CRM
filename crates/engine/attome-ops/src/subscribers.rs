@@ -708,6 +708,21 @@ struct Notice {
     payload: Value,
 }
 
+/// The maintenance notices due for a window starting in `lead`: the
+/// announcement always, the 24-hour reminder inside the last day and the
+/// 1-hour reminder inside the last hour, as (key suffix, subject prefix).
+/// Pure.
+fn maintenance_notices(lead: chrono::Duration) -> Vec<(&'static str, &'static str)> {
+    let mut out = vec![("", "Planned maintenance")];
+    if lead <= chrono::Duration::hours(24) && lead > chrono::Duration::hours(1) {
+        out.push(("_24h", "Maintenance tomorrow"));
+    }
+    if lead <= chrono::Duration::hours(1) {
+        out.push(("_1h", "Maintenance within the hour"));
+    }
+    out
+}
+
 fn follows(subscriber: &[String], item: &[String]) -> bool {
     subscriber.is_empty() || item.iter().any(|c| subscriber.contains(c))
 }
@@ -769,10 +784,11 @@ pub async fn deliver_due(state: &EngineState) -> Result<u64, AppError> {
             }),
         })
         .collect();
+    let now = Utc::now();
     notices.extend(
         maintenance
             .iter()
-            .map(|(id, en, ar, components, starts, ends)| {
+            .flat_map(|(id, en, ar, components, starts, ends)| {
                 let when = format!(
                     "{} - {}",
                     crate::static_page::dual_date(*starts, false),
@@ -784,17 +800,23 @@ pub async fn deliver_due(state: &EngineState) -> Result<u64, AppError> {
                     crate::static_page::dual_date(*ends, true)
                 );
                 let title_ar = ar.as_deref().unwrap_or(en);
-                Notice {
-                    key: format!("maintenance:{id}"),
-                    components: components.clone(),
-                    at: None,
-                    subject: format!("Planned maintenance: {en}"),
-                    text: format!("{en}\n{when}\n\n{title_ar}\n{when_ar}\n"),
-                    payload: json!({
-                        "type": "maintenance", "maintenance_id": id, "title_en": en, "title_ar": ar,
-                        "components": components, "starts_at": starts, "ends_at": ends,
-                    }),
-                }
+                // AB11-T5: the announcement, then the reminders 24 hours and
+                // 1 hour before, each once.
+                maintenance_notices(*starts - now)
+                    .into_iter()
+                    .map(|(kind, prefix)| Notice {
+                        key: format!("maintenance{kind}:{id}"),
+                        components: components.clone(),
+                        at: None,
+                        subject: format!("{prefix}: {en}"),
+                        text: format!("{en}\n{when}\n\n{title_ar}\n{when_ar}\n"),
+                        payload: json!({
+                            "type": format!("maintenance{kind}"), "maintenance_id": id,
+                            "title_en": en, "title_ar": ar, "components": components,
+                            "starts_at": starts, "ends_at": ends,
+                        }),
+                    })
+                    .collect::<Vec<_>>()
             }),
     );
     let mut sent = 0;
@@ -929,6 +951,19 @@ mod tests {
             Some("channel not available")
         );
         assert!(address_problem("pigeon", "x").is_some());
+    }
+
+    #[test]
+    fn maintenance_reminders_come_a_day_and_an_hour_before() {
+        let kinds = |hours: i64| -> Vec<&str> {
+            maintenance_notices(chrono::Duration::hours(hours))
+                .into_iter()
+                .map(|(kind, _)| kind)
+                .collect()
+        };
+        assert_eq!(kinds(72), vec![""]);
+        assert_eq!(kinds(20), vec!["", "_24h"]);
+        assert_eq!(kinds(1), vec!["", "_1h"]);
     }
 
     #[test]

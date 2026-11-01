@@ -113,11 +113,12 @@ While the status is published (`ops.status.enabled`), people and tools can follo
   `/api/v1/ops/status-subscribers`.
 
 Every minute, each confirmed subscriber gets the updates of public incidents published since they
-confirmed and the upcoming public maintenance, for the components they follow (all when they named
+confirmed and the upcoming public maintenance (announced once, then reminded 24 hours and 1 hour
+before it starts), for the components they follow (all when they named
 none), 50 notices a run at most and each once. An email goes out through the mail queue; a webhook
 that does not take a notice gets it again the next minute.
 
 ## Not built yet
 
-- SMS and WhatsApp notices, and the 24-hour and 1-hour maintenance reminders.
+- SMS and WhatsApp notices.
 - Publishing public incidents and maintenance to the public status page.
