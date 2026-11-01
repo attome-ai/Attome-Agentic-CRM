@@ -885,7 +885,7 @@ fn date_pattern(format: Option<&str>) -> Result<Option<&'static str>, AppError> 
 
 /// A requested in-place conversion (the op's `args.conversion` plus the
 /// target type).
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Conversion {
     pub from_type: String,
     #[serde(default)]
