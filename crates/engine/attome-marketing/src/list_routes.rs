@@ -16,7 +16,8 @@
 
 use attome_core::{EngineState, quote_ident};
 use attome_security::{
-    RecordAction, bind_rls_predicate, resolve_entity_access_level, rls_predicate,
+    RLS_BIND_COUNT, RecordAction, bind_rls_predicate, bind_rls_predicate_as,
+    resolve_entity_access_level, rls_predicate,
 };
 use attome_server::authz::{Authorized, Privilege};
 use attome_server::security::SecurityContext;
@@ -239,7 +240,7 @@ pub async fn members(
         quote_ident(&entity),
         pred.as_ref().map_or("", |p| p.sql.as_str())
     );
-    let next = 2 + pred.as_ref().map_or(0, |p| p.binds.len());
+    let next = 2 + if pred.is_some() { RLS_BIND_COUNT } else { 0 };
 
     let count_sql = format!("SELECT COUNT(*) {from}");
     let mut count = sqlx::query_scalar::<_, i64>(&count_sql).bind(list);
@@ -258,7 +259,7 @@ pub async fn members(
     );
     let mut rows = sqlx::query_as::<_, MarketingListMember>(&page_sql).bind(list);
     if let Some(p) = &pred {
-        rows = bind_rls_predicate(rows, &p.binds);
+        rows = bind_rls_predicate_as(rows, &p.binds);
     }
     let items = rows
         .bind(window.page_size)
