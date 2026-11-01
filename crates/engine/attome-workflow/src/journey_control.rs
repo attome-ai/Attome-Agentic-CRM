@@ -10,8 +10,12 @@
 //!   enrolments already skip a journey that is not live.
 //! - `POST .../resume`: the journey is `live` again and its paused runs go
 //!   on where they stopped (a step still waiting keeps waiting).
+//! - `POST .../simulate`: the newest published version runs in memory for
+//!   up to [`MAX_SAMPLE`] sample people, each person's record as the
+//!   trigger, through the workflow simulation ([`crate::simulate`]), which
+//!   never writes, sends or requests anything; waits do not wait.
 //!
-//! Both need `marketing_journey.update` and the marketing module, hold the
+//! Pause and resume need `marketing_journey.update` and the marketing module, hold the
 //! journey's lock (`attome-workflow/journey-control:{id}`), and write a
 //! Configuration security event in their transaction.
 
@@ -215,16 +219,135 @@ async fn post_resume(
         .map(Json)
 }
 
+/// Most sample people one simulation takes.
+pub const MAX_SAMPLE: usize = 20;
+
+#[derive(Debug, serde::Deserialize, ToSchema)]
+pub struct JourneySimulateBody {
+    /// The people to run the journey for, at most 20.
+    pub sample_people: Vec<crate::model::SimulateRecordRef>,
+}
+
+/// One sample person's simulated run.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct JourneySimulatedRun {
+    pub entity: String,
+    pub person_id: Uuid,
+    /// `completed`, `would_wait` or `failed`.
+    pub status: String,
+    pub trace: Vec<crate::model::SimulateNodeTrace>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct JourneySimulation {
+    pub journey_id: Uuid,
+    pub version_id: Uuid,
+    pub runs: Vec<JourneySimulatedRun>,
+}
+
+/// Simulate a journey
+///
+/// Runs the journey's newest published version in memory for each sample person, their record as
+/// the trigger, and returns every node's trace per person. Waits do not wait; nothing is written,
+/// sent or requested.
+#[utoipa::path(
+    post,
+    path = "/api/v1/marketing/journeys/{id}/simulate",
+    operation_id = "simulate_marketing_journey",
+    tag = "marketing",
+    params(("id" = Uuid, Path, description = "The journey")),
+    request_body = JourneySimulateBody,
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::DryRun,
+        None,
+        "D-431: the journey's graph runs in memory through the workflow simulation, which \
+         may never write, send or request anything under any node type.",
+    )))),
+    responses(
+        (status = 200, description = "Each sample person's simulated run", body = JourneySimulation),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks marketing_journey.read", body = ErrorResponse),
+        (status = 404, description = "No such journey, no published version, or a person the caller may not read", body = ErrorResponse),
+        (status = 422, description = "No sample people, more than 20, or a graph that does not parse", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn post_simulate(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<attome_marketing::journey::routes::JourneyRead>>,
+    Path(journey): Path<Uuid>,
+    Json(body): Json<JourneySimulateBody>,
+) -> Result<Json<JourneySimulation>, AppError> {
+    if body.sample_people.is_empty() || body.sample_people.len() > MAX_SAMPLE {
+        return Err(AppError::Validation(format!(
+            "send 1 to {MAX_SAMPLE} sample people"
+        )));
+    }
+    let published: Option<(Uuid, serde_json::Value)> = sqlx::query_as(
+        "SELECT v.id, v.graph FROM marketing_journey j \
+           JOIN workflow_definition d ON d.logicalname = j.workflow_definition_logicalname \
+           JOIN workflow_definition_version v ON v.definition_id = d.id \
+          WHERE j.id = $1 AND j.is_active IS NOT FALSE AND d.kind = 'journey' \
+            AND v.status = 'published' \
+          ORDER BY v.version_number DESC LIMIT 1",
+    )
+    .bind(journey)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some((version_id, graph_json)) = published else {
+        return Err(AppError::NotFound);
+    };
+    let graph = crate::graph::Graph::parse(&graph_json)
+        .map_err(|e| AppError::Validation(format!("graph did not parse: {e}")))?;
+    let decisions = std::collections::HashMap::new();
+    let mut runs = Vec::with_capacity(body.sample_people.len());
+    for person in &body.sample_people {
+        let payload =
+            crate::simulate::with_real_record(&state, &ctx, serde_json::json!({}), person).await?;
+        let module_steps = crate::simulate::dry_run_module_steps(&state, &graph, &payload).await;
+        let (status, trace) = crate::simulate::run_simulation_reading(
+            &state,
+            &ctx,
+            &graph,
+            payload,
+            &decisions,
+            &module_steps,
+        )
+        .await;
+        runs.push(JourneySimulatedRun {
+            entity: person.entity.clone(),
+            person_id: person.id,
+            status,
+            trace,
+        });
+    }
+    Ok(Json(JourneySimulation {
+        journey_id: journey,
+        version_id,
+        runs,
+    }))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/marketing/journeys/{id}/pause", post(post_pause))
         .route("/api/v1/marketing/journeys/{id}/resume", post(post_resume))
+        .route(
+            "/api/v1/marketing/journeys/{id}/simulate",
+            post(post_simulate),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(post_pause, post_resume),
-    components(schemas(JourneyControlResult))
+    paths(post_pause, post_resume, post_simulate),
+    components(schemas(
+        JourneyControlResult,
+        JourneySimulateBody,
+        JourneySimulatedRun,
+        JourneySimulation
+    ))
 )]
 struct ApiDocFragment;
 

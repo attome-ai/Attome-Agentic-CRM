@@ -75,5 +75,7 @@ journey enrolments, blocks and message log, and cancels their running journeys, 
 
 ## Not built yet
 
-Publishing with a version choice and simulation have no journey routes yet; publish through the
-workflow routes.
+`POST /api/v1/marketing/journeys/{id}/simulate` runs the newest published version for up to 20 sample
+people, each person's record as the trigger, and returns every step of each run without waiting,
+sending or writing anything. Publishing with a version choice has no journey route yet; publish through
+the workflow routes.
