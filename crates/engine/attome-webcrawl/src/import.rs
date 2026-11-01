@@ -750,7 +750,7 @@ pub async fn retire_missing(
 /// audit row. Best effort, as the source's other business events.
 async fn audit_item(state: &EngineState, user_id: Uuid, item: Uuid, event: &str, comment: String) {
     let (user_ctx, org_ref) = attome_records::entity_crud::fetch_audit_ctx(state, user_id).await;
-    let event = attome_audit::AuditEvent {
+    let record = attome_audit::AuditEvent {
         organization_ref: org_ref,
         category: attome_audit::AuditCategory::BusinessEvent,
         entity_name: Some(ITEM.to_string()),
@@ -774,7 +774,7 @@ async fn audit_item(state: &EngineState, user_id: Uuid, item: Uuid, event: &str,
             .with_ingest_capture(state.base.config.audit.ingest_capture_enabled)
             .with_chainer_enabled(state.base.config.audit.chainer_enabled)
             .with_erasure_key(state.audit_erasure_key.clone());
-    if let Err(e) = audit_service.write(event).await {
+    if let Err(e) = audit_service.write(record).await {
         tracing::warn!(error = %e, event, "webcrawl: item audit write failed");
     }
 }
