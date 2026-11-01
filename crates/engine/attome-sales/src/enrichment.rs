@@ -1,12 +1,12 @@
 //! D24 data enrichment: firmographics and contact data from outside sources.
 
+/// D24-T8: Arabic forms of Latin names as suggestions, ranked below the registry.
+pub mod arabic_names;
 /// D24-T4: a lead or account matched to an existing account by its work
 /// email's domain, before any provider is called.
 pub mod domain;
 /// D24-T5: the free sources: the commercial register, the National Address
 /// and the company's own website.
 pub mod free_sources;
-/// D24-T8: Arabic forms of Latin names as suggestions, ranked below the registry.
-pub mod arabic_names;
 /// L9's queue: a set of records enriched by one provider in the background.
 pub mod queue;

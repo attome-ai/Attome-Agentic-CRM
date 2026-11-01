@@ -1936,14 +1936,14 @@ async fn explain_metric(
     };
     let query_name: Option<String> =
         match query_ref.as_deref().and_then(|r| Uuid::parse_str(r).ok()) {
-            Some(query_id) => {
-                sqlx::query_scalar::<_, Option<String>>("SELECT record_no FROM sql_query WHERE id = $1")
-                    .bind(query_id)
-                    .fetch_optional(db)
-                    .await
-                    .map_err(AppError::internal)?
-                    .flatten()
-            }
+            Some(query_id) => sqlx::query_scalar::<_, Option<String>>(
+                "SELECT record_no FROM sql_query WHERE id = $1",
+            )
+            .bind(query_id)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?
+            .flatten(),
             None => None,
         };
     let target = match &metric.current {

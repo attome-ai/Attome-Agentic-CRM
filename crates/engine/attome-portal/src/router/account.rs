@@ -1052,13 +1052,9 @@ async fn partner_statement(
         page: query.page,
         page_size: query.page_size,
     };
-    let statement = attome_commission::partner_pay::partner_statement(
-        &state,
-        partner,
-        query.period_id,
-        &page,
-    )
-    .await?;
+    let statement =
+        attome_commission::partner_pay::partner_statement(&state, partner, query.period_id, &page)
+            .await?;
     Ok(Json(statement))
 }
 
@@ -1251,7 +1247,10 @@ pub(super) fn routes() -> Router<EngineState> {
             "/api/v1/partner/applications/{id}/decision",
             post(partner_application_decision),
         )
-        .route("/{keyword}/api/v1/partner/statement", get(partner_statement))
+        .route(
+            "/{keyword}/api/v1/partner/statement",
+            get(partner_statement),
+        )
         .route(
             "/{keyword}/api/v1/partner/leads/{id}/accept",
             post(partner_lead_accept),

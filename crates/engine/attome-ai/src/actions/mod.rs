@@ -41,11 +41,6 @@ pub mod collections;
 pub mod commission;
 /// W1-T12: contract.review_against_playbook, contract.summarise, contract.answer.
 pub mod contract;
-/// K6-T12: webcrawl.propose_scope, webcrawl.summarise_changes (read only).
-pub mod webcrawl;
-/// D24-T9: sales.enrich.record, sales.enrich.list, sales.account.brief.
-pub mod sales_enrich;
-pub mod partner;
 /// P7-T10: a dashboard number explained in words.
 pub mod dashboard_explain;
 /// E6-T12: deliverability explanation and a cleaner segment draft.
@@ -101,6 +96,7 @@ pub mod ops_slo;
 pub mod ops_status;
 /// AB8-T9: the latest platform upgrade, read only.
 pub mod ops_upgrade;
+pub mod partner;
 /// L6-T8: profile.summary, profile.explain.
 pub mod profile;
 /// L2-T9: quality.explain_drop, quality.record_score, quality.propose_rules.
@@ -115,6 +111,8 @@ pub mod route_classify;
 pub mod sales_competitors;
 /// D21-T9: draft call lists, reorder a list, draft call notes. Nothing dials.
 pub mod sales_dialer;
+/// D24-T9: sales.enrich.record, sales.enrich.list, sales.account.brief.
+pub mod sales_enrich;
 pub mod sales_lines;
 pub mod sales_orgchart;
 pub mod sales_team;
@@ -136,6 +134,8 @@ pub mod table;
 pub mod timeline;
 pub mod transition;
 pub mod translate;
+/// K6-T12: webcrawl.propose_scope, webcrawl.summarise_changes (read only).
+pub mod webcrawl;
 // T2-T5: a page drafted from a description.
 pub mod draft_page;
 /// F6-T16: read-only fulfilment tools.

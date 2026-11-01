@@ -65,8 +65,8 @@ use entity::{create_entity, delete_entity, get_entity, list_entities, update_ent
 /// reach them. Same cross-module wrinkle `attome_security::admin`'s
 /// `ACTION_ROLE_GRANT`/`do_assign_user_role` re-export documents.
 pub(crate) use attribute::{
-    ACTION_SCHEMA_CHANGE, CreateAttributeBody, StructureAction, UpdateAttributeBody,
-    adopt_base, do_create_attribute_recorded, do_update_attribute_recorded, run_structure_change,
+    ACTION_SCHEMA_CHANGE, CreateAttributeBody, StructureAction, UpdateAttributeBody, adopt_base,
+    do_create_attribute_recorded, do_update_attribute_recorded, run_structure_change,
 };
 pub(crate) use entity::{
     ACTION_ENTITY_DELETE, ACTION_ENTITY_HARD_DELETE, CreateEntityBody, create_entity_core,
