@@ -14,6 +14,25 @@ use axum::http::{Method, StatusCode};
 use serde_json::json;
 use uuid::Uuid;
 
+/// The AI definitions the server's boot applies, in its order.
+async fn definitions(app: &TestApp) {
+    for name in [
+        "xrm-core-authentication-type",
+        "attome-ai-provider",
+        "attome-ai-model-catalog",
+        "attome-ai-agent",
+        "attome-ai-capability-pack",
+    ] {
+        attome_api::changeset::boot::apply_platform_definition(&app.state, name)
+            .await
+            .unwrap_or_else(|e| panic!("{name}: {e}"));
+    }
+    let registry = attome_core::build_registry(&app.state.base.db)
+        .await
+        .expect("build the metadata registry");
+    app.state.entities.swap(registry);
+}
+
 async fn model(app: &TestApp) -> Uuid {
     let id = Uuid::now_v7();
     sqlx::query(
@@ -52,6 +71,7 @@ fn activation_runs_the_permission_test() {
         let Some(app) = TestApp::start().await else {
             return;
         };
+        definitions(&app).await;
         let model = model(&app).await;
         let narrow = policy(&app, true).await;
         let broken = policy(&app, false).await;

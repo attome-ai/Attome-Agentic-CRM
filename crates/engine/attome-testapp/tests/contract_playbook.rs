@@ -24,6 +24,11 @@ const PACKS: [&str; 6] = [
 ];
 
 async fn install(app: &TestApp) {
+    // The playbook rule entity is a platform definition the server's boot
+    // applies; the fixture applies it here.
+    attome_api::changeset::boot::apply_platform_definition(&app.state, "attome-contract")
+        .await
+        .expect("apply the contract platform definition");
     for pack in PACKS {
         let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../../packs")
@@ -43,6 +48,10 @@ async fn install(app: &TestApp) {
                 .unwrap_or_else(|e| panic!("{}: {e}", file.display()));
         }
     }
+    let registry = attome_core::build_registry(&app.state.base.db)
+        .await
+        .expect("build the metadata registry");
+    app.state.entities.swap(registry);
 }
 
 async fn rule(app: &TestApp, clause_key: Option<&str>, condition: &str, severity: &str) {
