@@ -30,7 +30,7 @@ use serde_json::{Value, json};
 use crate::cmd::login::{Auth, credentials};
 
 const DEFAULT_URL: &str = "http://127.0.0.1:7865";
-const BUNDLE_FILE: &str = "bundle.json";
+pub(crate) const BUNDLE_FILE: &str = "bundle.json";
 const OBJECTS_DIR: &str = "objects";
 const USAGE: &str = "usage: attome config pull --out <dir>\n       attome config plan --dir <dir> [--allow-retire]\n       attome config diff\n       attome config push --dir <dir> [--allow-retire] [--yes] [--confirm-target <name>]\n       attome config rollback <bundle> --to <version> [--allow-retire] [--yes] [--confirm-target <name>]\n  each with [--target <name> | --url <url>] [--json]";
 
@@ -107,7 +107,7 @@ pub fn plan_line(plan: &Value) -> String {
 }
 
 /// `bundle.json` from the folder.
-fn read_bundle(dir: &Path) -> Result<Value, String> {
+pub(crate) fn read_bundle(dir: &Path) -> Result<Value, String> {
     let path = dir.join(BUNDLE_FILE);
     let text = std::fs::read_to_string(&path)
         .map_err(|error| format!("read {}: {error}", path.display()))?;

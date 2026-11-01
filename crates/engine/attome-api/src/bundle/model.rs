@@ -136,6 +136,10 @@ pub struct Bundle {
     #[serde(default)]
     pub version: Option<String>,
     pub requires: Requires,
+    /// A22-T3: a selection, not the whole configuration: what it leaves out
+    /// stays as it is rather than being retired.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub partial: bool,
     #[serde(default)]
     pub entities: Vec<EntityDef>,
     #[serde(default)]
@@ -1173,6 +1177,7 @@ impl Bundle {
             name: None,
             version: None,
             requires,
+            partial: false,
             entities: Vec::new(),
             queries: Vec::new(),
             views: Vec::new(),

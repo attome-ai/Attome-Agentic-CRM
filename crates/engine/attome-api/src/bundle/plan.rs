@@ -308,6 +308,10 @@ pub fn build_plan(
     applied_schema: i64,
     platform_version: &str,
 ) -> BundlePlan {
+    let opts = PlanOptions {
+        additive_only: opts.additive_only || desired.partial,
+        ..opts
+    };
     let mut diff = Diff::default();
     for b in check_requires(desired, license, applied_schema, platform_version) {
         diff.push(b);
@@ -1477,6 +1481,32 @@ mod tests {
         assert_eq!(
             find(&diff.entries, COMPONENT_ATTRIBUTE, "account.name").action,
             PlanAction::Noop
+        );
+    }
+
+    #[test]
+    fn a_partial_bundle_leaves_what_it_omits() {
+        let l = live();
+        let mut d = live();
+        d.entities.retain(|e| e.logicalname == "account");
+        d.roles.clear();
+        d.privileges.clear();
+        d.partial = true;
+        let plan = build_plan(
+            &l,
+            &d,
+            PlanOptions::default(),
+            &ModuleSet::from_bits([u64::MAX; 4]),
+            i64::MAX,
+            "9.9.9",
+        );
+        assert!(plan.retires.is_empty(), "{:#?}", plan.retires);
+        assert!(
+            plan.blocked
+                .iter()
+                .all(|e| e.reason.as_deref() != Some("retire requires allow_retire")),
+            "{:#?}",
+            plan.blocked
         );
     }
 
