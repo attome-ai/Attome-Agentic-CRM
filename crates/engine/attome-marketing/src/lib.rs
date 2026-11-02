@@ -37,9 +37,11 @@ pub mod landing;
 pub mod list_routes;
 pub mod loyalty;
 pub mod model;
-/// E9-T3: the nurture step and the drip that sends each track on its cadence.
 /// E9-T5: hand-off to sales when a nurtured person's score reaches the programme's threshold.
 pub mod nurture_handoff;
+/// E9-T8: hand-off accept and return, nurture history and programme statistics over HTTP.
+pub mod nurture_routes;
+/// E9-T3: the nurture step and the drip that sends each track on its cadence.
 pub mod nurture_run;
 pub mod nurture_tracks;
 pub mod precheck;
@@ -84,6 +86,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<deliverability::routes::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<static_list::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<list_routes::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<nurture_routes::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<journey::routes::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<campaign::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<profile::ApiDocFragment as utoipa::OpenApi>::openapi());

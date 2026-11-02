@@ -706,3 +706,114 @@ fn recycled_lead_wakes_on_date_and_handoff_is_returned() {
         );
     });
 }
+
+/// E9-T8: a hand-off assigned to `assignee`, as the nurture tick makes one.
+async fn assigned_handoff(app: &TestApp, assignee: Uuid) -> (Uuid, Uuid, Uuid) {
+    let model = Uuid::now_v7().to_string();
+    let program = handoff_programme(app, &model, 50.0).await;
+    sqlx::query("UPDATE marketing_nurture_program SET recycling_enabled = true WHERE id = $1")
+        .bind(program)
+        .execute(app.db())
+        .await
+        .unwrap();
+    let person = person(app).await;
+    enter(app, person, program).await;
+    score(app, &model, person, 90.0).await;
+    let handoff = nurture_handoff::detect(&app.state)
+        .await
+        .unwrap()
+        .into_iter()
+        .find(|h| h.person == person)
+        .expect("handed off");
+    sqlx::query("UPDATE marketing_handoff SET assigned_to = $2 WHERE id = $1")
+        .bind(handoff.id)
+        .bind(assignee)
+        .execute(app.db())
+        .await
+        .unwrap();
+    (handoff.id, program, person)
+}
+
+// feature: E9
+#[test]
+fn only_assignee_can_accept() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let _serial = SERIAL.lock().await;
+        install(&app).await;
+        let assignee = attome_testapp::seed_user(app.db(), "assignee").await;
+        let stranger = attome_testapp::seed_user(app.db(), "stranger").await;
+        let (handoff, _, _) = assigned_handoff(&app, assignee.id).await;
+        let path = format!("/api/v1/marketing/handoffs/{handoff}/accept");
+        let (status, _) = app
+            .request_as(&stranger.cookie, Method::POST, &path, None)
+            .await;
+        assert_eq!(status, StatusCode::FORBIDDEN);
+        let (status, body) = app
+            .request_as(&assignee.cookie, Method::POST, &path, None)
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["status"], json!("accepted"));
+        let (status, _) = app
+            .request_as(&assignee.cookie, Method::POST, &path, None)
+            .await;
+        assert_eq!(status, StatusCode::CONFLICT, "decided once");
+    });
+}
+
+// feature: E9
+#[test]
+fn return_recycles_lead() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let _serial = SERIAL.lock().await;
+        install(&app).await;
+        let assignee = attome_testapp::seed_user(app.db(), "assignee").await;
+        let (handoff, program, person) = assigned_handoff(&app, assignee.id).await;
+        let (status, body) = app
+            .request_as(
+                &assignee.cookie,
+                Method::POST,
+                &format!("/api/v1/marketing/handoffs/{handoff}/return"),
+                Some(json!({ "reason": "no budget this year" })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["recycled"], json!(true));
+        let state: String = sqlx::query_scalar(
+            "SELECT status FROM marketing_nurture_state WHERE program_id = $1 AND person_id = $2",
+        )
+        .bind(program)
+        .bind(person)
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        assert_eq!(state, "active");
+    });
+}
+
+// feature: E9
+#[test]
+fn history_forbidden_without_read() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let _serial = SERIAL.lock().await;
+        install(&app).await;
+        let stranger = attome_testapp::seed_user(app.db(), "stranger").await;
+        let person = person(&app).await;
+        let path = format!("/api/v1/marketing/people/{person}/nurture-history");
+        let (status, _) = app
+            .request_as(&stranger.cookie, Method::GET, &path, None)
+            .await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "a person they may not read");
+        let (status, body) = app.request(Method::GET, &path, None).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["person_id"], json!(person));
+    });
+}

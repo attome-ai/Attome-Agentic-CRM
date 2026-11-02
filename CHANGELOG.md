@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Hand-off and nurture routes (E9-T8): `POST /api/v1/marketing/handoffs/{id}/accept` and `.../return`
+  (assignee, their manager or an administrator), `GET /api/v1/marketing/handoffs`,
+  `GET /api/v1/marketing/people/{person_id}/nurture-history` and
+  `GET /api/v1/marketing/nurture/programs/{id}/stats`.
 - Nurture pauses while sales works a person and recycles returned hand-offs (E9-T6): with
   `pause_enabled`, an active sales sequence, a meeting in the last 14 days or an open hand-off holds the
   drip a day at a time (paused and resumed are audited); a returned hand-off starts the person's
