@@ -6,7 +6,10 @@
 //! pipeline's hook stages by Y10-T2 and held to each extension's approved
 //! grants by Y10-T3.
 
+/// Y10-T3: what an extension may touch, checked before every host call.
+pub mod grants;
 /// Y10-T1: the engine, the limits and running one export.
 pub mod runtime;
 
+pub use grants::{Denied, EntityGrant, Grants};
 pub use runtime::{ExtensionError, Limits, Runtime};
