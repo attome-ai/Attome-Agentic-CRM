@@ -1,0 +1,65 @@
+{
+  "author": "packs",
+  "checksum": "sha256:73a0c21e41e721cc45e32ad42caf437b14aa6d2ae64cb238e55fe1b7bcbf4484",
+  "closed_at": "2026-11-02T00:00:00Z",
+  "description": "Lifecycle queries (E9-T9): leads and contacts per lifecycle stage, for nurture statistics and dashboards.",
+  "format": "attome-changeset/v1",
+  "id": "01a19c40-0000-7e99-8000-000000000016",
+  "layer": "product",
+  "name": "marketing-lifecycle-queries",
+  "opened_at": "2026-11-02T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "lead",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": true,
+          "name": "Leads per lifecycle stage",
+          "required_privilege": "lead.read",
+          "sql": "SELECT t.lifecycle_stage, COUNT(*) AS people FROM \"lead\" t WHERE t.is_active IS NOT FALSE GROUP BY t.lifecycle_stage",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "lead",
+        "query": "Leads per lifecycle stage"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "contact",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": true,
+          "name": "Contacts per lifecycle stage",
+          "required_privilege": "contact.read",
+          "sql": "SELECT t.lifecycle_stage, COUNT(*) AS people FROM \"contact\" t WHERE t.is_active IS NOT FALSE GROUP BY t.lifecycle_stage",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "contact",
+        "query": "Contacts per lifecycle stage"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "marketing",
+  "seq": 16,
+  "title": "Pack: lifecycle queries"
+}

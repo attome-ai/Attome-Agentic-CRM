@@ -14,6 +14,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Five nurture programme journeys (flow templates) and two lifecycle stored queries, leads and contacts
+  per lifecycle stage, in the marketing pack (E9-T9, changeset 0016).
 - Seven starter journeys in the marketing pack (E8-T11), as flow templates: welcome, onboarding, event
   reminder, abandoned form, re-engagement, renewal reminder and post-purchase feedback, in English and
   Arabic; each becomes a draft once its email designs are named.

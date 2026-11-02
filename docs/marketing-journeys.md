@@ -103,6 +103,10 @@ post-purchase feedback. Each asks for its email designs and consent purpose (and
 and becomes a draft through `POST /api/v1/admin/model/flow_template/{id}/instantiate`, saved as the
 journey's draft version. Nothing is live until someone publishes it.
 
+It also ships five nurture programme journeys (new subscriber, content download, webinar attendee, lost
+deal, recycled lead): a trigger and the nurture step, for a programme whose `journey_ref` is the journey
+made from one. The pack's changeset 0016 adds two stored queries, leads and contacts per lifecycle stage.
+
 ## In the workflow editor
 
 A journey is edited on the workflow canvas. Its picker lists the marketing steps under "Steps from

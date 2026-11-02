@@ -1,4 +1,5 @@
-//! E8-T11: the marketing pack's seven starter journeys
+//! E8-T11 and E9-T9: the marketing pack's seven starter journeys and five
+//! nurture programme journeys
 //! (`packs/marketing/model/flow_template/marketing/*.json`) are valid
 //! `flow_template` pack objects that instantiate, with a design for each
 //! email, into a graph the workflow engine's publish validation accepts, made
@@ -18,7 +19,9 @@ use attome_model::Kind;
 use attome_model::kinds::flow_template::{FlowTemplateKind, instantiate};
 use serde_json::{Map, Value, json};
 
-const STARTERS: [&str; 7] = [
+/// E8-T11's seven starter journeys and E9-T9's five nurture programme
+/// journeys, in file-name order.
+const STARTERS: [&str; 12] = [
     "journey-abandoned-form",
     "journey-event-reminder",
     "journey-onboarding",
@@ -26,6 +29,11 @@ const STARTERS: [&str; 7] = [
     "journey-re-engagement",
     "journey-renewal-reminder",
     "journey-welcome",
+    "nurture-content-download",
+    "nurture-lost-deal",
+    "nurture-new-subscriber",
+    "nurture-recycled-lead",
+    "nurture-webinar-attendee",
 ];
 
 /// The marketing step behind a handler key, as the journey would run it.
@@ -33,6 +41,7 @@ fn step(key: &str) -> Box<dyn WorkflowStepHandler> {
     use attome_marketing::journey::{control_step, message_step};
     match key {
         "marketing.send_email" => Box::new(message_step::SendEmail),
+        "marketing.nurture_run" => Box::new(attome_marketing::nurture_run::NurtureRun),
         "marketing.engagement" => Box::new(control_step::Engagement),
         other => panic!("a starter journey uses {other}, which it should not"),
     }
@@ -54,7 +63,7 @@ fn starter_journeys_instantiate_and_validate() {
     names.sort();
     assert_eq!(
         names, STARTERS,
-        "the marketing pack ships seven starter journeys"
+        "the marketing pack ships seven starter journeys and five nurture journeys"
     );
 
     for name in STARTERS {

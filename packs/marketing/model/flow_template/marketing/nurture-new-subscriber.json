@@ -1,0 +1,48 @@
+{
+  "app": "marketing",
+  "kind": "flow_template",
+  "name": "nurture-new-subscriber",
+  "schema_version": 1,
+  "doc": {
+    "description_en": "Nurture journey: new subscribers, drip by their track until they are ready for sales.",
+    "description_ar": "رحلة رعاية: المشتركون الجدد، رسائل متتابعة حسب مسارهم حتى يصبحوا جاهزين للمبيعات.",
+    "parameters": [
+      {
+        "name": "purpose",
+        "type": "text",
+        "label_en": "Consent purpose",
+        "label_ar": "غرض الموافقة",
+        "default": "marketing"
+      }
+    ],
+    "graph": {
+      "nodes": [
+        {
+          "id": "start",
+          "type": "trigger",
+          "config": {
+            "trigger_type": "manual"
+          }
+        },
+        {
+          "id": "nurture",
+          "type": "module_step",
+          "config": {
+            "handler": "marketing.nurture_run",
+            "config": {
+              "purpose": "{{purpose}}"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from_node": "start",
+          "from_port": "out",
+          "to_node": "nurture",
+          "to_port": "input"
+        }
+      ]
+    }
+  }
+}
