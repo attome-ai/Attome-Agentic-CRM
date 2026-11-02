@@ -3,6 +3,11 @@
 // `@attome/xrm/core/i18n-ar` entry point and mirrors this key-for-key.
 
 export const xrmEn = {
+  templatePreview: {
+    title:       'Preview',
+    empty:       'Write a template to see it here, filled in with sample values.',
+    unavailable: 'The preview is not available right now.',
+  },
   // projects/xrm's first-ever catalog adoption (P-i18n-a11y §3/step 5) — the
   // entity-list.component.html strings i18n-allowlist.txt already flagged as
   // debt. Namespaced "xrmList" (not "xrm.*") to keep this catalog flat.

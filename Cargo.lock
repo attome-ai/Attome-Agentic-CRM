@@ -702,6 +702,7 @@ dependencies = [
  "attome-auth",
  "attome-billing",
  "attome-cache",
+ "attome-calendar",
  "attome-commission",
  "attome-compliance",
  "attome-config",
@@ -1567,6 +1568,18 @@ dependencies = [
  "chrono-tz",
  "scraper",
  "thiserror 2.0.21",
+]
+
+[[package]]
+name = "attome-html-wasm"
+version = "0.1.0"
+dependencies = [
+ "attome-html",
+ "attome-rules",
+ "attome-rules-wasm",
+ "chrono",
+ "serde_json",
+ "wasm-bindgen",
 ]
 
 [[package]]

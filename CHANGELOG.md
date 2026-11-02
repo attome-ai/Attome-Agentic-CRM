@@ -66,6 +66,15 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - A marketing list's form has a Segment tab (E7-T12): the estimated size, an exact count on request,
   how many can be emailed for a consent purpose, a sample of up to 20 people with why each is in or
   out, and the sends, programmes and journeys that use the list, in English and Arabic.
+- Business-time math in the browser (Z12-T11): `GET /api/v1/admin/calendars/{id}/expanded` returns a
+  calendar with its layers merged and holidays resolved, and `RulesEvaluatorService` gains
+  `calendarAdd`, `calendarBetween`, `calendarNext` and `calendarIsWorking`, the server's own code built
+  to WebAssembly.
+- A document template's form previews it as you type, with the server's renderer built to
+  WebAssembly (Z13-T9), on sample values; when the module cannot run, a saved template falls back to
+  `POST /api/v1/admin/templates/preview`.
+- Seven starter journeys in Arabic and English in the marketing pack, as drafts (E8-T11): changeset
+  0016 also gives `marketing_journey` the fields `name` and `name_ar`.
 - Role grant conditions can name the caller and follow one lookup (V2-D1532 (2)): the values `@me` and
   `@my_teams` compare a lookup with the requesting user or their teams, and a field written
   `lookup.field` (say `partner_account_ref.partner_manager_ref`) matches through the record the lookup

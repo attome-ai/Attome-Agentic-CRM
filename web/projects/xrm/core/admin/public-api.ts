@@ -47,3 +47,5 @@ export { duplicatesManagerAr, duplicatesManagerEn } from './duplicates-manager.i
 export { DataModelDiagramComponent, layoutDiagram } from './entity-metadata/diagram/data-model-diagram.component';
 export type { Diagram, DiagramEdge, DiagramNode, DiagramRole } from './entity-metadata/diagram/data-model-diagram.component';
 export { dataModelAr, dataModelEn } from './entity-metadata/diagram/data-model.i18n';
+// Z13-T9: a template rendered as it is typed.
+export { TemplatePreviewComponent } from './template-preview/template-preview.component';

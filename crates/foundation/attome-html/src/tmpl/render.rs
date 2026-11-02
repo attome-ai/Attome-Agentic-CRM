@@ -1,7 +1,9 @@
 //! Rendering a compiled template (Z13-T2), escaping each value for where it
 //! lands (Z13-T3) and within bounded time, output and loop work (Z13-T6).
 
-use std::time::{Duration, Instant};
+use std::time::Duration;
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
 
 use attome_rules::{Context, Value};
 
@@ -63,7 +65,7 @@ pub(crate) fn render(nodes: &[Node], ctx: &RenderContext) -> Result<String, Temp
         locale: Locale::parse(&ctx.locale),
         output: ctx.output,
         limits: ctx.limits,
-        started: Instant::now(),
+        started: Started::now(),
         iterations: 0,
         place: HtmlPlace::default(),
         out: String::new(),
@@ -73,11 +75,37 @@ pub(crate) fn render(nodes: &[Node], ctx: &RenderContext) -> Result<String, Temp
     Ok(renderer.out)
 }
 
+/// When a render started, for the time limit. Z13-T9: wasm32-unknown-unknown
+/// has no clock (`Instant::now` panics there), so in the browser the iteration
+/// and output limits alone bound a render.
+#[derive(Clone, Copy)]
+struct Started(#[cfg(not(target_arch = "wasm32"))] Instant);
+
+impl Started {
+    fn now() -> Self {
+        #[cfg(not(target_arch = "wasm32"))]
+        return Self(Instant::now());
+        #[cfg(target_arch = "wasm32")]
+        return Self();
+    }
+
+    #[cfg_attr(target_arch = "wasm32", allow(clippy::unused_self))]
+    fn over(self, limit: Duration) -> bool {
+        #[cfg(not(target_arch = "wasm32"))]
+        return self.0.elapsed() >= limit;
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = limit;
+            false
+        }
+    }
+}
+
 struct Renderer {
     locale: Locale,
     output: Output,
     limits: RenderLimits,
-    started: Instant,
+    started: Started,
     iterations: usize,
     place: HtmlPlace,
     out: String,
@@ -92,7 +120,7 @@ impl Renderer {
 
     /// The time and output limits, between nodes.
     fn check(&self) -> Result<(), TemplateError> {
-        if self.started.elapsed() >= self.limits.max_time {
+        if self.started.over(self.limits.max_time) {
             return Err(self.stop(RenderLimit::Time));
         }
         if self.out.len() > self.limits.max_output_bytes {

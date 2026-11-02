@@ -11,6 +11,14 @@
             <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
           }
         </div>
+        @defer (on viewport) {
+          <attome-template-preview
+            [template]="draft().body"
+            [entity]="draft().entity"
+            [recordId]="id()" />
+        } @placeholder {
+          <div></div>
+        }
       </div>
     </section>
   </ng-template>

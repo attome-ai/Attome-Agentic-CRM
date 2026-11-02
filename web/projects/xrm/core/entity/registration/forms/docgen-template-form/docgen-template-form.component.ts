@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
 import { LangService } from '@attome/base';
 import {
   FieldInputComponent, XrmBaseFormComponent, EngineFormBase, XrmTabDirective, recordTabDefs,
 } from '@attome/xrm/core/entity';
 import type { XrmFormTabDef } from '@attome/xrm/core/entity';
+import { TemplatePreviewComponent } from '@attome/xrm/core/admin';
 import type { FieldSchema } from '@attome/xrm';
 
 /**
@@ -23,12 +24,28 @@ import type { FieldSchema } from '@attome/xrm';
   selector:   'attome-docgen-template-form',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, XrmBaseFormComponent, XrmTabDirective, FieldInputComponent],
+  imports: [ReactiveFormsModule, XrmBaseFormComponent, XrmTabDirective, FieldInputComponent, TemplatePreviewComponent],
   styleUrls:  ['../../../../../styles/xrm-form.css', './docgen-template-form.component.css'],
   templateUrl: './docgen-template-form.component.html',
 })
 export class DocgenTemplateFormComponent extends EngineFormBase {
   private readonly lang = inject(LangService);
+  /** Z13-T9: the template as typed, for the preview. */
+  protected readonly draft = signal({ body: '', entity: '' });
+
+  constructor() {
+    super();
+    effect(onCleanup => {
+      const form = this.form();
+      const read = (): void => this.draft.set({
+        body: String(form.get('body')?.value ?? ''),
+        entity: String(form.get('entity')?.value ?? ''),
+      });
+      read();
+      const changes = form.valueChanges.subscribe(read);
+      onCleanup(() => changes.unsubscribe());
+    });
+  }
 
   protected override defineTabs(): XrmFormTabDef[] {
     return [

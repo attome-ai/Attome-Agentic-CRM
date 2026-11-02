@@ -2,6 +2,11 @@
 // key-for-key (NGB-5.2c, D-761).
 
 export const xrmAr = {
+  templatePreview: {
+    title:       'معاينة',
+    empty:       'اكتب قالبًا لتراه هنا معبّأً بقيم تجريبية.',
+    unavailable: 'المعاينة غير متاحة الآن.',
+  },
   xrmList: {
     searchAriaLabel:        'بحث في السجلات',
     searchPlaceholder:      'بحث في السجلات',

@@ -123,4 +123,6 @@ export { TOURS_SEEN_SETTING, autoTour, localText, routeMatches, tourFor } from '
 export type { LocalText, Tour, TourPlacement, TourStep } from './lib/tours/tour';
 // Z11-T13: the server's expression evaluator, built to WebAssembly.
 export { RULES_WASM_SOURCE, RulesEvaluatorService }  from './lib/rules/rules-evaluator.service';
-export type { RulesAnswer, RulesContext, RulesDiagnostic, RulesSchema } from './lib/rules/rules-evaluator.service';
+export type { CalendarAnswer, CalendarDefinition, RulesAnswer, RulesContext, RulesDiagnostic, RulesSchema } from './lib/rules/rules-evaluator.service';
+export { TEMPLATE_WASM_SOURCE, TemplateRendererService } from './lib/rules/template-renderer.service';
+export type { TemplateAnswer } from './lib/rules/template-renderer.service';

@@ -11,6 +11,7 @@ members = [
     "crates/foundation/attome-calendar",
     "crates/foundation/attome-rules",
     "crates/foundation/attome-rules-wasm",
+    "crates/foundation/attome-html-wasm",
     "crates/foundation/attome-storage",
     "crates/foundation/attome-inference",
     "crates/foundation/attome-profiler",
@@ -99,6 +100,7 @@ attome-cache     = { path = "crates/foundation/attome-cache" }
 attome-html      = { path = "crates/foundation/attome-html" }
 attome-calendar  = { path = "crates/foundation/attome-calendar" }
 attome-rules     = { path = "crates/foundation/attome-rules" }
+attome-rules-wasm = { path = "crates/foundation/attome-rules-wasm" }
 attome-storage   = { path = "crates/foundation/attome-storage" }
 attome-inference = { path = "crates/foundation/attome-inference" }
 attome-profiler  = { path = "crates/foundation/attome-profiler" }
