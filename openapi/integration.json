@@ -829,6 +829,303 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/integrations/rpa/{system}/record": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Start an RPA recording",
+        "description": "M16-T3: opens a live page at `url` in the system's browser service,\nheld to `allowed_hosts`, and answers its first frame.",
+        "operationId": "start_rpa_recording",
+        "parameters": [
+          {
+            "name": "system",
+            "in": "path",
+            "description": "The integration system of the browser service",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartRecording"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The recording's first frame",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordFrame"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No active integration system of that name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The service refused the start",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "opens a page in the browser service for the editor; stores nothing",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "integration",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/integrations/rpa/{system}/record/{session}": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Act on an RPA recording",
+        "description": "M16-T3: a click, typed text or a key on the recorded page; answers the\nstep it recorded and the next frame.",
+        "operationId": "act_on_rpa_recording",
+        "parameters": [
+          {
+            "name": "system",
+            "in": "path",
+            "description": "The integration system of the browser service",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "session",
+            "in": "path",
+            "description": "The recording",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordAction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The step and the next frame",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordFrame"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No active integration system of that name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A bad action, or the service refused it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "drives the editor's page in the browser service; stores nothing",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "integration",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      },
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Stop an RPA recording",
+        "description": "M16-T3: closes the recorded page.",
+        "operationId": "stop_rpa_recording",
+        "parameters": [
+          {
+            "name": "system",
+            "in": "path",
+            "description": "The integration system of the browser service",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "session",
+            "in": "path",
+            "description": "The recording",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Closed"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No active integration system of that name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "closes the editor's page in the browser service; stores nothing",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "integration",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/api/v1/admin/integrations/systems": {
       "post": {
         "tags": [
@@ -3191,6 +3488,76 @@
           }
         }
       },
+      "RecordAction": {
+        "type": "object",
+        "description": "One thing done on the recorded page: a click at `x`, `y` (pixels of the\n1280 x 800 view), `text` typed into the last clicked field, or `key`\npressed there.",
+        "required": [
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "key": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "x": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "y": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
+      },
+      "RecordFrame": {
+        "type": "object",
+        "description": "The step recorded and the page as it now looks.",
+        "required": [
+          "step",
+          "password",
+          "png_base64"
+        ],
+        "properties": {
+          "password": {
+            "type": "boolean",
+            "description": "Whether the clicked field is a password field."
+          },
+          "png_base64": {
+            "type": "string",
+            "description": "The page's screenshot, PNG."
+          },
+          "session": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The recording, on its start."
+          },
+          "step": {
+            "type": "object",
+            "description": "The step, as the `integration.rpa` step list takes it."
+          }
+        }
+      },
       "Recording": {
         "type": "object",
         "description": "A recording to play.",
@@ -3337,6 +3704,26 @@
             "type": "string"
           }
         }
+      },
+      "StartRecording": {
+        "type": "object",
+        "description": "Where a recording starts.",
+        "required": [
+          "url",
+          "allowed_hosts"
+        ],
+        "properties": {
+          "allowed_hosts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
       },
       "SubscriptionCreatedResponse": {
         "type": "object",

@@ -6145,6 +6145,116 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/extensions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List extension versions */
+        get: operations["list_extensions"];
+        put?: never;
+        /**
+         * Upload an extension version
+         * @description Y10-T5: the module must compile in the extension runtime and the
+         *     manifest's grants must be well formed. Stored as the next version, in
+         *     draft. Audited.
+         */
+        post: operations["upload_extension"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/extensions/{name}/off": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Switch an extension off
+         * @description Y10-T5: every version of the extension stops running at once, on every
+         *     node (the runtime reads the status on every call). Publish a version to
+         *     switch it on again. Audited.
+         */
+        post: operations["switch_off_extension"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/extensions/{name}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An extension's runs
+         * @description Y10-T6: the latest 200 runs, newest first, with time, fuel, result and
+         *     masked log lines.
+         */
+        get: operations["list_extension_runs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/extensions/{name}/versions/{version}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish an extension version
+         * @description Y10-T5: that version becomes the one that runs; the one published
+         *     before is superseded. Publishing an older version rolls back. Audited.
+         */
+        post: operations["publish_extension"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/extensions/{name}/versions/{version}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test an extension version on sample records
+         * @description Y10-T6: runs the version's `on_record` hook on each sample exactly as a
+         *     write would (only granted attributes, its changes held to its grants)
+         *     and saves nothing but the runs, logged as test runs. Any version may be
+         *     tested, drafts included.
+         */
+        post: operations["test_extension"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/features": {
         parameters: {
             query?: never;
@@ -6704,6 +6814,52 @@ export interface paths {
          * @description Changes an inbound hook (M14-T1); a new secret rotates it.
          */
         patch: operations["update_inbound_hook"];
+        trace?: never;
+    };
+    "/api/v1/admin/integrations/rpa/{system}/record": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start an RPA recording
+         * @description M16-T3: opens a live page at `url` in the system's browser service,
+         *     held to `allowed_hosts`, and answers its first frame.
+         */
+        post: operations["start_rpa_recording"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/integrations/rpa/{system}/record/{session}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Act on an RPA recording
+         * @description M16-T3: a click, typed text or a key on the recorded page; answers the
+         *     step it recorded and the next frame.
+         */
+        post: operations["act_on_rpa_recording"];
+        /**
+         * Stop an RPA recording
+         * @description M16-T3: closes the recorded page.
+         */
+        delete: operations["stop_rpa_recording"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/admin/integrations/systems": {
@@ -45432,6 +45588,40 @@ export interface components {
             expr: string;
             value: Record<string, never>;
         };
+        /** @description Y10-T6: one run of an extension, as logged. */
+        ExtensionRun: {
+            /** Format: int32 */
+            duration_ms: number;
+            error?: string | null;
+            /** Format: int64 */
+            fuel_used: number;
+            /** Format: uuid */
+            id: string;
+            is_test: boolean;
+            /** @description `[{level, message}]`, secrets masked. */
+            logs: Record<string, never>;
+            ok: boolean;
+            /** Format: date-time */
+            started_at: string;
+            /** Format: int32 */
+            version: number;
+        };
+        /** @description One version of an extension. */
+        ExtensionVersion: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            manifest: Record<string, never>;
+            module_sha256: string;
+            name: string;
+            /** Format: date-time */
+            published_at?: string | null;
+            /** @description `draft`, `published`, `superseded` or `off`. */
+            status: string;
+            /** Format: int32 */
+            version: number;
+        };
         /** @description Repeating attributes to move into a child entity. */
         ExtractChildBody: {
             /** @description The child entity's logical name (`contact_phone`). */
@@ -55535,6 +55725,66 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_ExtensionRun: {
+            items: {
+                /** Format: int32 */
+                duration_ms: number;
+                error?: string | null;
+                /** Format: int64 */
+                fuel_used: number;
+                /** Format: uuid */
+                id: string;
+                is_test: boolean;
+                /** @description `[{level, message}]`, secrets masked. */
+                logs: Record<string, never>;
+                ok: boolean;
+                /** Format: date-time */
+                started_at: string;
+                /** Format: int32 */
+                version: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_ExtensionVersion: {
+            items: {
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                id: string;
+                manifest: Record<string, never>;
+                module_sha256: string;
+                name: string;
+                /** Format: date-time */
+                published_at?: string | null;
+                /** @description `draft`, `published`, `superseded` or `off`. */
+                status: string;
+                /** Format: int32 */
+                version: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_FailoverEvent: {
             items: {
                 cause?: string | null;
@@ -60760,6 +61010,32 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_TestOutcome: {
+            items: {
+                /**
+                 * @description `"continue"`, `{"change": {...}}` or `{"reject": "..."}`; absent on
+                 *     an error.
+                 */
+                answer?: Record<string, never> | null;
+                /** Format: int64 */
+                duration_ms: number;
+                error?: string | null;
+                /** Format: int64 */
+                fuel_used: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_ThemeRow: {
             items: {
                 /** Format: date-time */
@@ -64240,6 +64516,20 @@ export interface components {
             /** Format: uuid */
             request_id: string;
         };
+        /**
+         * @description One thing done on the recorded page: a click at `x`, `y` (pixels of the
+         *     1280 x 800 view), `text` typed into the last clicked field, or `key`
+         *     pressed there.
+         */
+        RecordAction: {
+            action: string;
+            key?: string | null;
+            text?: string | null;
+            /** Format: double */
+            x?: number | null;
+            /** Format: double */
+            y?: number | null;
+        };
         RecordColumn: {
             /** @description The whitelisted data type (`number`, `date`, `choice`, `lookup`, ...). */
             data_type: string;
@@ -64308,6 +64598,20 @@ export interface components {
             /** @description `approve` or `reject`. */
             decision: string;
             reason?: string | null;
+        };
+        /** @description The step recorded and the page as it now looks. */
+        RecordFrame: {
+            /** @description Whether the clicked field is a password field. */
+            password: boolean;
+            /** @description The page's screenshot, PNG. */
+            png_base64: string;
+            /**
+             * Format: uuid
+             * @description The recording, on its start.
+             */
+            session?: string | null;
+            /** @description The step, as the `integration.rpa` step list takes it. */
+            step: Record<string, never>;
         };
         RecordGroup: {
             display_name: string;
@@ -69478,6 +69782,11 @@ export interface components {
             /** @description **Required.** `"read"` | `"reversible"` | `"consequential"`. */
             risk_ceiling: string;
         };
+        /** @description Where a recording starts. */
+        StartRecording: {
+            allowed_hosts: string[];
+            url: string;
+        };
         /** @description Body of `POST /api/v1/ai/conversations/{id}/runs` (N7-T1). */
         StartRunRequest: {
             /**
@@ -70658,6 +70967,15 @@ export interface components {
             message?: string | null;
             severity: string;
         };
+        /** @description Y10-T6: sample writes to run a version's hook on. */
+        TestExtension: {
+            /**
+             * @description One to [`MAX_TEST_SAMPLES`] writes, each as the hook would be given
+             *     it: `{stage, entity, values, previous?, is_create?, record_id?,
+             *     actor?}`.
+             */
+            samples: Record<string, never>[];
+        };
         /** @description The test name, when the body names none. */
         TestFromRunBody: {
             /** @description The test's name; one from the run when left out. */
@@ -70667,6 +70985,19 @@ export interface components {
             /** @description `hidden` or `disabled`. */
             effect: string;
             field: string;
+        };
+        /** @description What the hook answered for one sample. */
+        TestOutcome: {
+            /**
+             * @description `"continue"`, `{"change": {...}}` or `{"reject": "..."}`; absent on
+             *     an error.
+             */
+            answer?: Record<string, never> | null;
+            /** Format: int64 */
+            duration_ms: number;
+            error?: string | null;
+            /** Format: int64 */
+            fuel_used: number;
         };
         /** @description `POST /api/v1/admin/themes`. */
         ThemeDraftBody: {
@@ -72139,6 +72470,14 @@ export interface components {
              * @description The signed evidence of the verification (AB4-T2).
              */
             verification_evidence_id?: string | null;
+        };
+        /** @description An uploaded version. */
+        UploadExtension: {
+            /** @description The grants: `{entities, secrets, hosts}`. */
+            manifest: Record<string, never>;
+            /** @description The compiled WebAssembly module, base64. */
+            module_base64: string;
+            name: string;
         };
         UploadSessionRequest: {
             checksum_sha256?: string | null;
@@ -92226,6 +92565,301 @@ export interface operations {
             };
         };
     };
+    list_extensions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every version, by name and newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ExtensionVersion"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    upload_extension: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UploadExtension"];
+            };
+        };
+        responses: {
+            /** @description The stored version */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtensionVersion"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A bad name, a module that does not compile, or bad grants */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    switch_off_extension: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The extension */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Off */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such extension */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_extension_runs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The extension */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The runs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ExtensionRun"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    publish_extension: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The extension */
+                name: string;
+                /** @description The version to publish */
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The published version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtensionVersion"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such version */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    test_extension: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The extension */
+                name: string;
+                /** @description The version */
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TestExtension"];
+            };
+        };
+        responses: {
+            /** @description One outcome per sample */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_TestOutcome"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such version */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No samples, too many, or a stored manifest that does not parse */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_features: {
         parameters: {
             query?: never;
@@ -94151,6 +94785,184 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    start_rpa_recording: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The integration system of the browser service */
+                system: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartRecording"];
+            };
+        };
+        responses: {
+            /** @description The recording's first frame */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordFrame"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No active integration system of that name */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The service refused the start */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    act_on_rpa_recording: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The integration system of the browser service */
+                system: string;
+                /** @description The recording */
+                session: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordAction"];
+            };
+        };
+        responses: {
+            /** @description The step and the next frame */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordFrame"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No active integration system of that name */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A bad action, or the service refused it */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    stop_rpa_recording: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The integration system of the browser service */
+                system: string;
+                /** @description The recording */
+                session: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Closed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No active integration system of that name */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

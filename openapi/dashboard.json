@@ -5088,6 +5088,31 @@
           },
           {
             "type": "object",
+            "description": "P6-T1: a histogram bin: `low ≤ x < high`.",
+            "required": [
+              "low",
+              "high",
+              "kind"
+            ],
+            "properties": {
+              "high": {
+                "type": "number",
+                "format": "double"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "bin"
+                ]
+              },
+              "low": {
+                "type": "number",
+                "format": "double"
+              }
+            }
+          },
+          {
+            "type": "object",
             "description": "Everything past `presentation.limit`, when `other_bucket` is set.",
             "required": [
               "kind"
@@ -6411,6 +6436,14 @@
           "field"
         ],
         "properties": {
+          "bin_width": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "P6-T1: present only for a histogram: the width of each bin over a\nnumber field, every bin `low ≤ x < low + width` with `low` a multiple\nof the width. Not with `bucket`."
+          },
           "bucket": {
             "oneOf": [
               {
@@ -6739,7 +6772,9 @@
           "avg",
           "min",
           "max",
-          "median"
+          "median",
+          "q1",
+          "q3"
         ]
       },
       "MetricCertification": {
@@ -8013,6 +8048,7 @@
           "chart_scatter",
           "chart_bubble",
           "chart_range_area",
+          "chart_box_plot",
           "scalar",
           "table",
           "declarative",
