@@ -23,8 +23,17 @@
 //! dashboards) to move to the child: there is no Develop-mode draft to
 //! write the rewritten objects into, so they are listed for the builder
 //! rather than changed. Delete the sources once nothing reads them.
+//!
+//! **A lookup to many-to-many.**
+//! `POST /api/v1/admin/entities/{entity_id}/refactor/to-many-to-many`
+//! creates a many-to-many relationship between the entity and the lookup's
+//! target (the ordinary relationship creation, with its join table) and
+//! queues a data step run of kind `link_copy` that writes one link per live
+//! record whose lookup is set, in the same keyset batches; a link already
+//! there is left alone. The lookup is kept, and the objects that read it
+//! are listed the same way.
 
-use attome_core::changeset::RecordingCtx;
+use attome_core::changeset::{Op, RecordingCtx};
 use attome_core::{EngineState, FieldType, quote_ident};
 use attome_metadata::provision::field_change as fc;
 use attome_server::authz::{Authorized, Privilege, area};
@@ -484,17 +493,314 @@ pub(crate) async fn continue_extract(
     Ok(())
 }
 
-pub(super) fn routes() -> Router<EngineState> {
-    Router::new().route(
-        "/api/v1/admin/entities/{entity_id}/refactor/extract-child",
-        post(extract_child),
+/// A lookup to turn into a many-to-many relationship.
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ToManyToManyBody {
+    /// The lookup attribute of the entity.
+    pub lookup: String,
+    /// The relationship's name (`contact_account`).
+    pub name: String,
+    /// What a record of this entity is to the other (`Contact`).
+    pub role_a: String,
+    /// What the other is to a record of this entity (`Account`).
+    pub role_b: String,
+}
+
+/// The created relationship and the queued link copy.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct ToManyToManyQueued {
+    pub run_id: Uuid,
+    pub relationship_id: Uuid,
+    pub join_table: String,
+    /// Objects that read the lookup and should move to the relationship.
+    pub to_review: Vec<ToReview>,
+}
+
+/// The lookup's target entity, when `lookup` is a single-target lookup of
+/// `entity` to another entity. Pure.
+pub fn lookup_target<'r>(
+    registry: &'r attome_core::EntityMetaRegistry,
+    entity: &attome_core::EntityMeta,
+    lookup: &str,
+) -> Result<&'r attome_core::EntityMeta, AppError> {
+    let attr = entity
+        .attrs
+        .iter()
+        .find(|a| a.logicalname == lookup && a.field_type() == FieldType::Lookup)
+        .ok_or_else(|| {
+            AppError::Validation(format!("{} has no lookup {lookup}", entity.logicalname))
+        })?;
+    let target = attr
+        .lookup_entity_ref
+        .and_then(|id| registry.get_by_id(id))
+        .ok_or_else(|| AppError::Validation(format!("{lookup} has no single target entity")))?;
+    if target.entity_id == entity.entity_id {
+        return Err(AppError::Validation(
+            "a lookup to the same entity cannot become a many-to-many relationship".into(),
+        ));
+    }
+    Ok(target)
+}
+
+/// Turn a lookup into a many-to-many relationship
+///
+/// Creates the relationship (and its join table) between the entity and
+/// the lookup's target, and queues the copy of every set lookup as a link
+/// (`/api/v1/admin/data-step-runs/{id}`). The lookup is kept; the answer
+/// lists the objects that read it. Administrators only. Audited.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/entities/{entity_id}/refactor/to-many-to-many",
+    operation_id = "lookup_to_many_to_many",
+    tag = "admin",
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[
+        (attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Create),
+    ])))),
+    params(("entity_id" = Uuid, Path, description = "The entity holding the lookup")),
+    request_body = ToManyToManyBody,
+    responses(
+        (status = 202, description = "The relationship exists and the link copy is queued", body = ToManyToManyQueued),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such entity", body = ErrorResponse),
+        (status = 422, description = "Not a single-target lookup to another entity, or a bad name", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn to_many_to_many(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<area::DataModel>>,
+    recording: RecordingCtx,
+    Path(entity_id): Path<Uuid>,
+    Json(body): Json<ToManyToManyBody>,
+) -> Result<impl IntoResponse, AppError> {
+    let (entity, target) = {
+        let registry = state.entities.load();
+        let entity = registry
+            .get_by_id(entity_id)
+            .cloned()
+            .ok_or(AppError::NotFound)?;
+        let target = lookup_target(&registry, &entity, &body.lookup)?.clone();
+        (entity, target)
+    };
+    let name = body.name.trim().to_lowercase();
+    if !identifier(&name) {
+        return Err(AppError::Validation(format!(
+            "{name} is not a lower-case identifier"
+        )));
+    }
+    if body.role_a.trim().is_empty() || body.role_b.trim().is_empty() {
+        return Err(AppError::Validation(
+            "role_a and role_b must not be empty".into(),
+        ));
+    }
+    recording.preflight(&state.base.db_migrator).await?;
+    let desc = attome_metadata::provision::RelationshipDesc {
+        name: name.clone(),
+        entity_a: entity.logicalname.clone(),
+        entity_b: target.logicalname.clone(),
+        role_a: body.role_a.trim().to_owned(),
+        role_b: body.role_b.trim().to_owned(),
+        cascade: Default::default(),
+        is_active: true,
+    };
+    let (detail, _) = attome_metadata::provision::reconcile_relationship_recorded(
+        &state,
+        &desc,
+        attome_metadata::provision::ReconcilePolicy::Admin,
+        Some(ctx.user_id),
+        Some(attome_metadata::provision::RecordAs::op(
+            &recording,
+            Op::UpsertRelationship,
+        )),
     )
+    .await?;
+
+    let spec = json!({
+        "entity_id": entity_id,
+        "lookup": body.lookup,
+        "join_table": detail.join_table,
+    });
+    let mut tx = attome_db::tx::begin(&state.base.db_migrator).await?;
+    let run_id: Uuid = sqlx::query_scalar(
+        "INSERT INTO data_step_run (source, entity_logicalname, kind, spec, created_by) \
+         VALUES ('admin', $1, 'link_copy', $2, $3) RETURNING id",
+    )
+    .bind(&entity.logicalname)
+    .bind(&spec)
+    .bind(ctx.user_id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    attome_jobs::enqueue_in_tx(
+        &mut tx,
+        attome_core::jobs::EngineJob::RunDataStep { run_id },
+    )
+    .await
+    .map_err(AppError::internal)?;
+    attome_audit::security::write_security_event(
+        &mut tx,
+        &attome_audit::audit_service(&state),
+        attome_audit::security::SecurityEvent::new(
+            attome_audit::security::MandatoryCategory::Configuration,
+            attome_audit::AuditOperation::Create,
+            ctx.user_id,
+            "relationship_info",
+            Some(detail.id),
+        )
+        .named("relationship.from_lookup")
+        .comment(format!(
+            "{}.{} to many-to-many {name}",
+            entity.logicalname, body.lookup
+        )),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+
+    let to_review = attome_core::metadata_reference::references_to_entity(
+        &state.base.db_migrator,
+        &entity.logicalname,
+        MAX_REFERENCES,
+    )
+    .await?
+    .into_iter()
+    .filter(|r| r.to_attribute == body.lookup)
+    .map(|r| ToReview {
+        kind: r.from_kind,
+        id: r.from_ref,
+        label: r.from_label,
+        attribute: r.to_attribute,
+    })
+    .collect();
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(ToManyToManyQueued {
+            run_id,
+            relationship_id: detail.id,
+            join_table: detail.join_table,
+            to_review,
+        }),
+    ))
+}
+
+/// One batch's links: for the records `$1` that are live and have the
+/// lookup set, a link to its target, created by `$2`; an existing link is
+/// left alone. Identifiers come from metadata, quoted. Pure.
+pub fn link_sql(entity: &str, lookup: &str, join_table: &str) -> String {
+    format!(
+        "INSERT INTO {join} (a_id, b_id, created_by) \
+         SELECT t.\"id\", t.{lookup}, $2 FROM {entity} t \
+          WHERE t.\"id\" = ANY($1) AND t.{lookup} IS NOT NULL \
+            AND (t.is_active IS NULL OR t.is_active = true) \
+         ON CONFLICT (a_id, b_id) DO NOTHING",
+        join = quote_ident(join_table),
+        lookup = quote_ident(lookup),
+        entity = quote_ident(entity),
+    )
+}
+
+/// `RunDataStep` for a `link_copy` run: batches of records from the run's
+/// cursor, each batch's links, counts and cursor committed together.
+pub(crate) async fn continue_link_copy(
+    state: &EngineState,
+    run: &fc::RunRow,
+) -> Result<(), AppError> {
+    let db = &state.base.db_migrator;
+    let entity_id = run
+        .spec
+        .get("entity_id")
+        .and_then(Value::as_str)
+        .and_then(|s| Uuid::parse_str(s).ok())
+        .ok_or_else(|| {
+            AppError::internal(format!("link run {}: spec.entity_id missing", run.id))
+        })?;
+    let lookup = run.spec["lookup"].as_str().unwrap_or_default().to_owned();
+    let join_table = run.spec["join_table"]
+        .as_str()
+        .unwrap_or_default()
+        .to_owned();
+    // Checked again: the metadata may have changed since it was queued.
+    let entity = {
+        let registry = state.entities.load();
+        let entity = registry.get_by_id(entity_id).cloned().ok_or_else(|| {
+            AppError::internal(format!("link run {}: the entity is gone", run.id))
+        })?;
+        lookup_target(&registry, &entity, &lookup)?;
+        entity
+    };
+    if !attome_metadata::provision::valid_identifier(&join_table) {
+        return Err(AppError::internal(format!(
+            "link run {}: spec.join_table is not an identifier",
+            run.id
+        )));
+    }
+    let insert = link_sql(&entity.logicalname, &lookup, &join_table);
+    let mut cursor = run.cursor;
+    loop {
+        if fc::run_stopped(db, run.id).await? {
+            tracing::info!(run_id = %run.id, "link_copy: paused or cancelled; stopped between batches");
+            return Ok(());
+        }
+        let mut tx = attome_db::tx::begin(db).await?;
+        let ids: Vec<Uuid> = sqlx::query_scalar(&format!(
+            "SELECT \"id\" FROM {} WHERE \"id\" > $1 ORDER BY \"id\" LIMIT $2",
+            quote_ident(&entity.logicalname)
+        ))
+        .bind(cursor.unwrap_or(Uuid::nil()))
+        .bind(EXTRACT_BATCH)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+        let read = ids.len();
+        let written = if ids.is_empty() {
+            0
+        } else {
+            sqlx::query(&insert)
+                .bind(&ids)
+                .bind(run.created_by)
+                .execute(&mut *tx)
+                .await
+                .map_err(AppError::internal)?
+                .rows_affected()
+        };
+        if let Some(last) = ids.last() {
+            cursor = Some(*last);
+        }
+        fc::advance_run(&mut tx, run.id, cursor, read as u64, written, 0).await?;
+        attome_db::tx::commit(tx).await?;
+        if (read as i64) < EXTRACT_BATCH {
+            break;
+        }
+    }
+    let mut conn = db.acquire().await.map_err(AppError::internal)?;
+    fc::finish_run(&mut conn, run.id, None).await?;
+    tracing::info!(run_id = %run.id, entity = %entity.logicalname, "link_copy: finished");
+    Ok(())
+}
+
+pub(super) fn routes() -> Router<EngineState> {
+    Router::new()
+        .route(
+            "/api/v1/admin/entities/{entity_id}/refactor/extract-child",
+            post(extract_child),
+        )
+        .route(
+            "/api/v1/admin/entities/{entity_id}/refactor/to-many-to-many",
+            post(to_many_to_many),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(extract_child),
-    components(schemas(ExtractChildBody, ExtractChildQueued, ToReview))
+    paths(extract_child, to_many_to_many),
+    components(schemas(
+        ExtractChildBody,
+        ExtractChildQueued,
+        ToReview,
+        ToManyToManyBody,
+        ToManyToManyQueued
+    ))
 )]
 struct ApiDocFragment;
 
@@ -576,6 +882,20 @@ mod tests {
             "{sql}"
         );
         assert!(sql.contains("btrim(s.v::text) <> ''"), "{sql}");
+    }
+
+    #[test]
+    fn lookup_to_many_to_many_link_sql() {
+        let sql = link_sql("contact", "account_ref", "contact_account");
+        assert!(
+            sql.starts_with("INSERT INTO \"contact_account\" (a_id, b_id, created_by)"),
+            "{sql}"
+        );
+        assert!(sql.contains("t.\"account_ref\" IS NOT NULL"), "{sql}");
+        assert!(
+            sql.ends_with("ON CONFLICT (a_id, b_id) DO NOTHING"),
+            "{sql}"
+        );
     }
 
     #[test]

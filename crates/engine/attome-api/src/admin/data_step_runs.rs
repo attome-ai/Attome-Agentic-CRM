@@ -292,7 +292,10 @@ pub(super) async fn cancel_data_step_run(
         return load(&state, id).await.map(Json);
     }
     // A1-T8: a split has nothing to undo; the rows it wrote keep their values.
-    let (to, error) = if matches!(run.kind.as_str(), "orphan_scan" | "split" | "extract_child") {
+    let (to, error) = if matches!(
+        run.kind.as_str(),
+        "orphan_scan" | "split" | "extract_child" | "link_copy"
+    ) {
         ("abandoned", None)
     } else {
         ("failed", Some("cancelled by an administrator"))

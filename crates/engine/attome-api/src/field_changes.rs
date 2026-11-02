@@ -1286,6 +1286,7 @@ pub async fn run_field_run(state: &EngineState, run_id: Uuid) -> Result<(), AppE
         "split" => crate::admin::refactor::continue_split(state, &run).await,
         // A1-T9: repeating attributes copied into a child entity.
         "extract_child" => crate::admin::refactor_child::continue_extract(state, &run).await,
+        "link_copy" => crate::admin::refactor_child::continue_link_copy(state, &run).await,
         // A22-T4: the changeset data steps that fill a column.
         "copy" | "set_default" | "map_values" | "convert" => {
             crate::admin::fill_steps::continue_fill(state, &run).await
