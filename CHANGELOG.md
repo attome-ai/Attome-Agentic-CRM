@@ -14,6 +14,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Revenue agent actions (F11-T12): `revrec.explain_period`, `revrec.propose_revenue_rule` and
+  `revrec.draft_disclosure`, read-only, on the default agent.
 - Partners (F9): `/api/v1/partner/*` (application decisions and agreements, registration decisions and
   conflicts, lead offers, tier proposals, MDF request and claim decisions) and the portal's
   `/{keyword}/api/v1/partner/*` (applications, lead accept and reject, members, statement). See

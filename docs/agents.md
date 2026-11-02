@@ -231,6 +231,11 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   `nurture.draft_summary` writes a hand-off's summary in the person's language (saving nothing), and
   `nurture.find_stalls` names tracks waiting more than twice the programme's median. No tool creates,
   accepts or returns a hand-off.
+- Revenue (ledger): `revrec.explain_period` explains why an amount of revenue falls in a period (the
+  line, its obligation's pattern and dates, the standalone selling price method and version, and the
+  product's revenue rule); `revrec.propose_revenue_rule` drafts a rule for a product and
+  `revrec.draft_disclosure` a period's revenue note from its figures, saving nothing. No tool closes a
+  month, changes a contract or creates a rule.
 - Commerce (sales): `commerce.product_answer` finds orderable products by name or SKU, read with the
   caller's own access; `commerce.order_track` tells a shopper an order's status only when the phone or
   email they give is the order's contact's (the caller also needs `order.read`; a mismatch answers like

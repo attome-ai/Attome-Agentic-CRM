@@ -113,6 +113,8 @@ pub mod read;
 pub mod record_schema;
 pub mod record_update_field;
 pub mod record_write;
+/// F11-T12: revrec.explain_period, revrec.propose_revenue_rule, revrec.draft_disclosure.
+pub mod revrec;
 pub mod route_classify;
 pub mod sales_competitors;
 /// D21-T9: draft call lists, reorder a list, draft call notes. Nothing dials.
@@ -257,6 +259,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(workforce::descriptors());
     all.extend(fulfilment::descriptors());
     all.extend(commerce::descriptors());
+    all.extend(revrec::descriptors());
     all.extend(crate::meeting::brief::descriptors());
     all.extend(crate::meeting::notes::descriptors());
     all.extend(meeting::descriptors());
@@ -373,6 +376,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(workforce::executors());
     all.extend(fulfilment::executors());
     all.extend(commerce::executors());
+    all.extend(revrec::executors());
     all.extend(crate::meeting::brief::executors());
     all.extend(crate::meeting::notes::executors());
     all.extend(meeting::executors());
