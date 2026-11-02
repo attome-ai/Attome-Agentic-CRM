@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
-import { ApiService, type Page } from '@attome/base';
+import { SdkService, type Page } from '@attome/base';
 import type { ApiComponents } from '@attome/base';
 
 /** C11 B5 — the runtime AI switch, as the admin route returns it (generated types). */
@@ -132,11 +132,11 @@ export function parseJsonIdArray(raw: unknown): string[] | null {
  */
 @Injectable({ providedIn: 'root' })
 export class AdminAiService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** Every AI surface: configuration, runtime switch, and the two together (C11 B5). */
   runtimeSwitch(): Observable<RuntimeSwitchView> {
-    return this.api.get<RuntimeSwitchView>('/api/v1/admin/ai/runtime-switch');
+    return this.sdk.get<RuntimeSwitchView>('/api/v1/admin/ai/runtime-switch');
   }
 
   /**
@@ -144,9 +144,9 @@ export class AdminAiService {
    * narrow: on restores what the configuration allows, never more.
    */
   setRuntimeSwitch(surface: string, enabled: boolean, reason: string | null): Observable<RuntimeSwitchView> {
-    return this.api.put<RuntimeSwitchView>(
+    return this.sdk.put<RuntimeSwitchView>(
       `/api/v1/admin/ai/runtime-switch/${encodeURIComponent(surface)}`,
-      { enabled, reason },
+      { body: { enabled, reason } },
     );
   }
 
@@ -156,7 +156,7 @@ export class AdminAiService {
    * `platform-bundles/attome-ai-bot-analytics*.json`.
    */
   botAnalytics(from: string, to: string): Observable<BotAnalytics> {
-    return this.api.get<BotAnalytics>('/api/v1/admin/ai/bot-analytics', { from, to });
+    return this.sdk.get<BotAnalytics>('/api/v1/admin/ai/bot-analytics', { query: { from, to } });
   }
 
   /**
@@ -167,11 +167,13 @@ export class AdminAiService {
    * 200 packs needs a paged picker, not a bigger constant.
    */
   listCapabilityPacks(): Observable<CapabilityPackRow[]> {
-    return this.api
-      .post<QueryExecuteResponse>('/api/v1/query/execute', {
+    return this.sdk.post<QueryExecuteResponse>(
+      '/api/v1/query/execute',
+      { body: {
         entity: 'ai_capability_pack',
         page_size: 200,
-      })
+      } },
+    )
       .pipe(
         map((r) => (r.data?.records ?? []).map((row) => ({
           id: String(row['id']),
@@ -188,11 +190,13 @@ export class AdminAiService {
 
   /** Every knowledge data source, for the policy form's retrieval-scope list. */
   listKnowledgeSources(): Observable<KnowledgeSourceRow[]> {
-    return this.api
-      .post<QueryExecuteResponse>('/api/v1/query/execute', {
+    return this.sdk.post<QueryExecuteResponse>(
+      '/api/v1/query/execute',
+      { body: {
         entity: 'knowledge_data_source',
         page_size: 200,
-      })
+      } },
+    )
       .pipe(
         map((r) => (r.data?.records ?? []).map((row) => ({
           id: String(row['id']),
@@ -223,50 +227,56 @@ export class AdminAiService {
       page_size: String(pageSize),
     };
     if (status !== 'all') params['status'] = status;
-    return this.api.get<Page<AgentSessionSummary>>('/api/v1/admin/agents/sessions', params);
+    return this.sdk.get<Page<AgentSessionSummary>>('/api/v1/admin/agents/sessions', { query: params });
   }
 
   /** A session's steps, oldest first (`GET /api/v1/admin/agents/sessions/{id}/trace`, N29-T2). */
   sessionTrace(id: string): Observable<Page<AgentTraceStep>> {
-    return this.api.get<Page<AgentTraceStep>>(`/api/v1/admin/agents/sessions/${encodeURIComponent(id)}/trace`);
+    return this.sdk.get<Page<AgentTraceStep>>(`/api/v1/admin/agents/sessions/${encodeURIComponent(id)}/trace`);
   }
 
   /** The sessions a supervising session delegated to (N8-T1's run tree). */
   sessionChildren(id: string): Observable<Page<AgentChildSession>> {
-    return this.api.get<Page<AgentChildSession>>(`/api/v1/admin/agents/sessions/${encodeURIComponent(id)}/children`);
+    return this.sdk.get<Page<AgentChildSession>>(`/api/v1/admin/agents/sessions/${encodeURIComponent(id)}/children`);
   }
 
   /** AH1-T5: what undoing a session would do; nothing is written. */
   undoPreview(sessionId: string): Observable<Page<UndoStep>> {
-    return this.api.get<Page<UndoStep>>(`/api/v1/ai/agent-sessions/${encodeURIComponent(sessionId)}/undo-preview`);
+    return this.sdk.get<Page<UndoStep>>(`/api/v1/ai/agent-sessions/${encodeURIComponent(sessionId)}/undo-preview`);
   }
 
   /** AH1-T5: starts the undo; the run is applied in the background. */
   startUndo(sessionId: string): Observable<{ undo_run_id: string }> {
-    return this.api.post<{ undo_run_id: string }>(
-      `/api/v1/ai/agent-sessions/${encodeURIComponent(sessionId)}/undo`, {},
+    return this.sdk.post<{ undo_run_id: string }>(
+      `/api/v1/ai/agent-sessions/${encodeURIComponent(sessionId)}/undo`,
+      { body: {} },
     );
   }
 
   /** AH2-T4: what rolling an agent back to `since` (ISO-8601) would do. */
   rollbackPreview(agentId: string, since: string): Observable<RollbackPreview> {
-    return this.api.get<RollbackPreview>(
-      `/api/v1/admin/ai/agents/${encodeURIComponent(agentId)}/rollback-preview`, { since },
+    return this.sdk.get<RollbackPreview>(
+      `/api/v1/admin/ai/agents/${encodeURIComponent(agentId)}/rollback-preview`,
+      { query: { since } },
     );
   }
 
   /** AH2-T4: revokes the agent's live sessions and undoes what it did since `since`. */
   rollback(agentId: string, since: string): Observable<{ undo_run_id: string }> {
-    return this.api.post<{ undo_run_id: string }>(
-      `/api/v1/admin/ai/agents/${encodeURIComponent(agentId)}/rollback`, { since },
+    return this.sdk.post<{ undo_run_id: string }>(
+      `/api/v1/admin/ai/agents/${encodeURIComponent(agentId)}/rollback`,
+      { body: { since } },
     );
   }
 
   /** AH1-T5: an undo run's status, counts and first items. */
   undoRun(runId: string): Observable<UndoRun> {
-    return this.api.get<UndoRun>(`/api/v1/ai/undo-runs/${encodeURIComponent(runId)}`, {
+    return this.sdk.get<UndoRun>(
+      `/api/v1/ai/undo-runs/${encodeURIComponent(runId)}`,
+      { query: {
       page: '1', page_size: '200',
-    });
+    } },
+    );
   }
 }
 

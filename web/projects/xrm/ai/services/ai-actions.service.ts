@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 
 /** One action the current caller may invoke, as `GET /api/v1/actions` reports it. */
 export interface ActionSummary {
@@ -41,7 +41,7 @@ export type SuggestionDecision =
 
 @Injectable({ providedIn: 'root' })
 export class AiActionsService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /**
    * The actions this caller may invoke.
@@ -53,15 +53,14 @@ export class AiActionsService {
    * so there is nothing here to tell the user beyond "this is not available".
    */
   listActions(): Observable<ActionSummary[]> {
-    return this.api
-      .get<{ items: ActionSummary[] }>('/api/v1/actions')
+    return this.sdk.get<{ items: ActionSummary[] }>('/api/v1/actions')
       .pipe(map((r) => r.items ?? []));
   }
 
   invoke(actionId: string, args: unknown): Observable<ActionOutcome> {
-    return this.api.post<ActionOutcome>(
+    return this.sdk.post<ActionOutcome>(
       `/api/v1/actions/${encodeURIComponent(actionId)}/invoke`,
-      { args },
+      { body: { args } },
     );
   }
 
@@ -90,9 +89,9 @@ export class AiActionsService {
     suggestionId: string,
     decision: SuggestionDecision,
   ): Observable<{ recorded: boolean }> {
-    return this.api.post<{ recorded: boolean }>(
+    return this.sdk.post<{ recorded: boolean }>(
       `/api/v1/ai/suggestions/${encodeURIComponent(suggestionId)}/outcome`,
-      decision,
+      { body: decision },
     );
   }
 }

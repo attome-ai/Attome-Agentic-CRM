@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 
 // ── Wire types (mirror attome_service::offering exactly) ─────────────────────
 
@@ -139,20 +139,22 @@ function text(value: unknown): string | null {
  */
 @Injectable({ providedIn: 'root' })
 export class ServiceAdminService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   listActiveOfferings(): Observable<OfferingSummary[]> {
-    return this.api.get<OfferingSummary[]>('/api/v1/service-offering/active');
+    return this.sdk.get<OfferingSummary[]>('/api/v1/service-offering/active');
   }
 
   /** G2-T4: the latest work requests, for the triage board (at most 200). */
   listWorkRequests(): Observable<TriageItem[]> {
-    return this.api
-      .get<{ items: Record<string, unknown>[] }>('/api/v1/service_work_request', {
+    return this.sdk.get<{ items: Record<string, unknown>[] }>(
+      '/api/v1/service_work_request',
+      { query: {
         select: 'id,title,reference,status,priority,category,created_at,row_version',
         sort: '-created_at',
         page_size: '200',
-      })
+      } },
+    )
       .pipe(map(page => (page.items ?? []).map(row => ({
         id: String(row['id']),
         title: text(row['title']) ?? '',
@@ -167,17 +169,19 @@ export class ServiceAdminService {
 
   /** G2-T4: accept (`triaged`) or reject a request, against its version. */
   setWorkRequestStatus(item: TriageItem, status: 'triaged' | 'rejected'): Observable<unknown> {
-    return this.api.patch(`/api/v1/service_work_request/${item.id}`, { status }, item.row_version);
+    return this.sdk.patch(`/api/v1/service_work_request/${item.id}`, { body: { status }, ifMatch: item.row_version });
   }
 
   /** G2-T3: the conversion maps there are. */
   listConversionMaps(): Observable<ConversionMapOption[]> {
-    return this.api
-      .get<{ items: Record<string, unknown>[] }>('/api/v1/service_conversion_map', {
+    return this.sdk.get<{ items: Record<string, unknown>[] }>(
+      '/api/v1/service_conversion_map',
+      { query: {
         select: 'id,name,target_entity',
         sort: 'name',
         page_size: '200',
-      })
+      } },
+    )
       .pipe(map(page => (page.items ?? []).map(row => ({
         id: String(row['id']),
         name: text(row['name']) ?? String(row['id']),
@@ -187,13 +191,12 @@ export class ServiceAdminService {
 
   /** G2-T3: converts a request with one map. */
   convertWorkRequest(id: string, mapId: string): Observable<unknown> {
-    return this.api.post(`/api/v1/work-request/${id}/convert`, { map_ids: [mapId] });
+    return this.sdk.post(`/api/v1/work-request/${id}/convert`, { body: { map_ids: [mapId] } });
   }
 
   /** G2-T4: knowledge passages that match what a request says so far. */
   suggestKnowledge(query: string): Observable<KnowledgeSuggestion[]> {
-    return this.api
-      .get<{ items: KnowledgeSuggestion[] }>('/api/v1/search/knowledge', { q: query, limit: '3' })
+    return this.sdk.get<{ items: KnowledgeSuggestion[] }>('/api/v1/search/knowledge', { query: { q: query, limit: '3' } })
       .pipe(map(page => page.items ?? []));
   }
 
@@ -201,39 +204,42 @@ export class ServiceAdminService {
   searchCatalog(q: string): Observable<CatalogOffering[]> {
     const params: Record<string, string> = {};
     if (q.trim()) params['q'] = q.trim();
-    return this.api
-      .get<{ items: CatalogOffering[] }>('/api/v1/service-catalog', params)
+    return this.sdk.get<{ items: CatalogOffering[] }>('/api/v1/service-catalog', { query: params })
       .pipe(map(page => page.items ?? []));
   }
 
   /** G3-T3: places a cart as one order for `requesterId`. */
   placeOrder(requesterId: string, lines: CartLine[]): Observable<OrderPlaced> {
-    return this.api.post<OrderPlaced>('/api/v1/service-orders', {
+    return this.sdk.post<OrderPlaced>(
+      '/api/v1/service-orders',
+      { body: {
       requester_id: requesterId,
-      lines: lines.map(l => ({ offering_id: l.offering.id, quantity: l.quantity })),
-    });
+      lines: lines.map(l => ({ offering_id: l.offering.id, quantity: l.quantity })) },
+      },
+    );
   }
 
   /** G3-T3: the caller's orders. */
   myOrders(): Observable<OrderView[]> {
-    return this.api
-      .get<{ items: OrderView[] }>('/api/v1/service-orders/mine')
+    return this.sdk.get<{ items: OrderView[] }>('/api/v1/service-orders/mine')
       .pipe(map(page => page.items ?? []));
   }
 
   /** G3-T3: cancels one order item. */
   cancelOrderItem(itemId: string): Observable<unknown> {
-    return this.api.post(`/api/v1/service-orders/items/${itemId}/cancel`, {});
+    return this.sdk.post(`/api/v1/service-orders/items/${itemId}/cancel`, { body: {} });
   }
 
   /** G3-T3: people an order can be placed for (the first 200). */
   listRecipients(): Observable<OrderRecipient[]> {
-    return this.api
-      .get<{ items: Record<string, unknown>[] }>('/api/v1/user_account', {
+    return this.sdk.get<{ items: Record<string, unknown>[] }>(
+      '/api/v1/user_account',
+      { query: {
         select: 'id,user_name,email',
         sort: 'email',
         page_size: '200',
-      })
+      } },
+    )
       .pipe(map(page => (page.items ?? []).map(row => ({
         id: String(row['id']),
         label: text(row['user_name']) ?? text(row['email']) ?? String(row['id']),
@@ -244,9 +250,9 @@ export class ServiceAdminService {
     offeringId: string,
     body: CreateWorkRequestFromOfferingRequest,
   ): Observable<CreateWorkRequestFromOfferingResponse> {
-    return this.api.post<CreateWorkRequestFromOfferingResponse>(
+    return this.sdk.post<CreateWorkRequestFromOfferingResponse>(
       `/api/v1/service-offering/${offeringId}/create-work-request`,
-      body,
+      { body: body },
     );
   }
 }

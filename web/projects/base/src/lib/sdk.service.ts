@@ -1,8 +1,8 @@
-import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams, HttpResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { AttomeClient, ApiError as SdkApiError, CHANGESET_HEADER } from '@attome/sdk';
 import type { AuthProvider, AuthRequestContext, RequestOptions } from '@attome/sdk';
-import { Observable, catchError, defer, firstValueFrom, from, map, throwError } from 'rxjs';
+import { Observable } from 'rxjs';
 import { ApiService, MAX_ALL_PAGES_ITEMS, apiErrorOf, walkAllPages, writeHeaders } from './api.service';
 import type { Page, WriteOptions } from './api.service';
 import { ATTOME_CONFIG } from './config';
@@ -36,18 +36,41 @@ export function httpClientFetch(http: HttpClient): typeof fetch {
     if (typeof body === 'string' && (headers.get('content-type') ?? '').includes('application/json')) {
       body = JSON.parse(body) as unknown;
     }
-    const answer = await firstValueFrom(
-      http.request(method, url, {
-        body,
-        headers,
-        params,
-        observe: 'response',
-        responseType: 'json',
-        withCredentials: true,
-      }),
-    ).catch((err: unknown) => {
-      if (err instanceof HttpErrorResponse) return err;
-      throw err;
+    const request = http.request(method, url, {
+      body,
+      headers,
+      params,
+      observe: 'response',
+      responseType: 'json',
+      withCredentials: true,
+    });
+    // The SDK's signal cancels the request; one that ends with no answer (a
+    // test tearing down) is an abort too, never an unanswered promise.
+    const signal = init?.signal ?? undefined;
+    const answer = await new Promise<HttpResponse<unknown> | HttpErrorResponse>((resolve, reject) => {
+      const aborted = (): void => reject(new DOMException('The request was cancelled', 'AbortError'));
+      if (signal?.aborted) return aborted();
+      let settled = false;
+      const subscription = request.subscribe({
+        next: response => {
+          if (response instanceof HttpResponse) {
+            settled = true;
+            resolve(response);
+          }
+        },
+        error: (err: unknown) => {
+          settled = true;
+          if (err instanceof HttpErrorResponse) resolve(err);
+          else reject(err);
+        },
+        complete: () => {
+          if (!settled) aborted();
+        },
+      });
+      signal?.addEventListener('abort', () => {
+        subscription.unsubscribe();
+        if (!settled) aborted();
+      }, { once: true });
     });
     let text: string | null;
     if (answer instanceof HttpErrorResponse) {
@@ -110,13 +133,14 @@ export class SdkService {
   private readonly api = inject(ApiService);
   readonly client = new AttomeClient({
     baseUrl: inject(ATTOME_CONFIG).apiUrl || SAME_ORIGIN,
-    auth: new AppSessionAuth(() => this.api.activeChangeset()),
+    // A test's stand-in ApiService may have no changeset to name.
+    auth: new AppSessionAuth(() => (typeof this.api.activeChangeset === 'function' ? this.api.activeChangeset() : null)),
     fetch: httpClientFetch(inject(HttpClient)),
     timeoutMs: 0,
   });
 
   get<T>(path: string, opts?: RequestOptions): Observable<T> {
-    return this.call(() => this.client.get<T>(path, opts));
+    return this.call(signal => this.client.get<T>(path, { ...opts, signal }));
   }
 
   /**
@@ -124,19 +148,19 @@ export class SdkService {
    * duplicate reason, merge, background, `ifMatch`), sent as the same headers.
    */
   post<T>(path: string, opts?: RequestOptions, write?: WriteOptions): Observable<T> {
-    return this.call(() => this.client.post<T>(path, withWrite(opts, write)));
+    return this.call(signal => this.client.post<T>(path, { ...withWrite(opts, write), signal }));
   }
 
   patch<T>(path: string, opts?: RequestOptions, write?: WriteOptions): Observable<T> {
-    return this.call(() => this.client.patch<T>(path, withWrite(opts, write)));
+    return this.call(signal => this.client.patch<T>(path, { ...withWrite(opts, write), signal }));
   }
 
   put<T>(path: string, opts?: RequestOptions, write?: WriteOptions): Observable<T> {
-    return this.call(() => this.client.put<T>(path, withWrite(opts, write)));
+    return this.call(signal => this.client.put<T>(path, { ...withWrite(opts, write), signal }));
   }
 
   delete<T = void>(path: string, opts?: RequestOptions): Observable<T> {
-    return this.call(() => this.client.delete<T>(path, opts));
+    return this.call(signal => this.client.delete<T>(path, { ...opts, signal }));
   }
 
   /**
@@ -155,14 +179,31 @@ export class SdkService {
     return walkAllPages(fetchPage, maxItems, firstPage);
   }
 
-  private call<T>(send: () => Promise<{ data: T }>): Observable<T> {
-    return defer(() => from(send())).pipe(
-      map(response => response.data),
-      catchError((err: unknown) =>
-        throwError(() => (err instanceof SdkApiError
-          ? apiErrorOf(err.status, err.body, err.requestId ?? null)
-          : err)),
-      ),
-    );
+  /**
+   * One SDK call as an Observable: unsubscribing aborts the request, and an
+   * aborted call emits nothing (no error a subscriber has left).
+   */
+  private call<T>(send: (signal: AbortSignal) => Promise<{ data: T }>): Observable<T> {
+    return new Observable<T>(subscriber => {
+      const controller = new AbortController();
+      send(controller.signal).then(
+        response => {
+          subscriber.next(response.data);
+          subscriber.complete();
+        },
+        (err: unknown) => {
+          if (controller.signal.aborted) return;
+          // HttpClient ended with no answer: complete quietly, as ApiService does.
+          if (err instanceof DOMException && err.name === 'AbortError') {
+            subscriber.complete();
+            return;
+          }
+          subscriber.error(err instanceof SdkApiError
+            ? apiErrorOf(err.status, err.body, err.requestId ?? null)
+            : err);
+        },
+      );
+      return () => controller.abort();
+    });
   }
 }

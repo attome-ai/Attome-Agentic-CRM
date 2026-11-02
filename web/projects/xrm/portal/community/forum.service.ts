@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiService, Page } from '@attome/base';
+import { SdkService, Page } from '@attome/base';
 import { Observable, map } from 'rxjs';
 
 /** A record as the portal returns it (`PortalRecord`): only the fields the
@@ -66,15 +66,14 @@ const PAGE = 100;
  */
 @Injectable({ providedIn: 'root' })
 export class ForumService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   private base(keyword: string, entity: string): string {
     return `/${encodeURIComponent(keyword)}/api/v1/records/${entity}`;
   }
 
   private list<T>(keyword: string, entity: string, filters: Record<string, string> = {}): Observable<PortalRecord<T>[]> {
-    return this.api
-      .get<Page<PortalRecord<T>>>(this.base(keyword, entity), { page: '1', page_size: String(PAGE), ...filters })
+    return this.sdk.get<Page<PortalRecord<T>>>(this.base(keyword, entity), { query: { page: '1', page_size: String(PAGE), ...filters } })
       .pipe(map(page => page.items));
   }
 
@@ -87,7 +86,7 @@ export class ForumService {
   }
 
   thread(keyword: string, id: string): Observable<PortalRecord<ForumThread>> {
-    return this.api.get<PortalRecord<ForumThread>>(`${this.base(keyword, 'forum_thread')}/${encodeURIComponent(id)}`);
+    return this.sdk.get<PortalRecord<ForumThread>>(`${this.base(keyword, 'forum_thread')}/${encodeURIComponent(id)}`);
   }
 
   posts(keyword: string, thread: string): Observable<PortalRecord<ForumPost>[]> {
@@ -99,15 +98,15 @@ export class ForumService {
   }
 
   createThread(keyword: string, category: string, title: string, body: string): Observable<PortalRecord<ForumThread>> {
-    return this.api.post(this.base(keyword, 'forum_thread'), { category_ref: category, title, body });
+    return this.sdk.post(this.base(keyword, 'forum_thread'), { body: { category_ref: category, title, body } });
   }
 
   reply(keyword: string, thread: string, body: string): Observable<PortalRecord<ForumPost>> {
-    return this.api.post(this.base(keyword, 'forum_post'), { thread_ref: thread, body });
+    return this.sdk.post(this.base(keyword, 'forum_post'), { body: { thread_ref: thread, body } });
   }
 
   createIdea(keyword: string, category: string, title: string, description: string): Observable<PortalRecord<ForumIdea>> {
-    return this.api.post(this.base(keyword, 'forum_idea'), { category_ref: category, title, description });
+    return this.sdk.post(this.base(keyword, 'forum_idea'), { body: { category_ref: category, title, description } });
   }
 
   /** One vote by the signed-in portal user: `+1` on an idea, or `+1`/`-1` on a post. */
@@ -115,11 +114,11 @@ export class ForumService {
     const body: Record<string, unknown> = { voter_key: voter, value };
     if (target.idea) body['idea_ref'] = target.idea;
     if (target.post) body['post_ref'] = target.post;
-    return this.api.post(this.base(keyword, 'forum_vote'), body);
+    return this.sdk.post(this.base(keyword, 'forum_vote'), { body: body });
   }
 
   /** The signed-in portal user (`GET /{keyword}/api/v1/me`). */
   me(keyword: string): Observable<{ id: string }> {
-    return this.api.get<{ id: string }>(`/${encodeURIComponent(keyword)}/api/v1/me`);
+    return this.sdk.get<{ id: string }>(`/${encodeURIComponent(keyword)}/api/v1/me`);
   }
 }

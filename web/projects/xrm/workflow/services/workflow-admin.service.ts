@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { ApiComponents, ApiService } from '@attome/base';
+import { ApiComponents, SdkService } from '@attome/base';
 
 // ── Response types (mirror attome-workflow/src/model.rs exactly) ─────────────────
 
@@ -551,94 +551,96 @@ export interface FlowCoverage {
 
 @Injectable({ providedIn: 'root' })
 export class WorkflowAdminService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** One-based, like every offset list (D-347, D-793) — `getAllPages`' default. */
   listDefinitions(isActive?: boolean): Observable<DefinitionListItem[]> {
-    return this.api.getAllPages<DefinitionListItem>(
+    return this.sdk.getAllPages<DefinitionListItem>(
       '/api/v1/workflow/definitions',
       isActive === undefined ? {} : { is_active: String(isActive) },
     );
   }
 
   createDefinition(body: CreateDefinitionBody): Observable<DefinitionDetail> {
-    return this.api.post<DefinitionDetail>('/api/v1/workflow/definitions', body);
+    return this.sdk.post<DefinitionDetail>('/api/v1/workflow/definitions', { body: body });
   }
 
   getDefinition(id: string): Observable<DefinitionDetail> {
-    return this.api.get<DefinitionDetail>(`/api/v1/workflow/definitions/${id}`);
+    return this.sdk.get<DefinitionDetail>(`/api/v1/workflow/definitions/${id}`);
   }
 
   updateDefinition(id: string, body: UpdateDefinitionBody): Observable<DefinitionDetail> {
-    return this.api.patch<DefinitionDetail>(`/api/v1/workflow/definitions/${id}`, body);
+    return this.sdk.patch<DefinitionDetail>(`/api/v1/workflow/definitions/${id}`, { body: body });
   }
 
   deleteDefinition(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/workflow/definitions/${id}`);
+    return this.sdk.delete(`/api/v1/workflow/definitions/${id}`);
   }
 
   createVersion(definitionId: string, body: CreateVersionBody = {}): Observable<VersionDetail> {
-    return this.api.post<VersionDetail>(`/api/v1/workflow/definitions/${definitionId}/versions`, body);
+    return this.sdk.post<VersionDetail>(`/api/v1/workflow/definitions/${definitionId}/versions`, { body: body });
   }
 
   /** E8-T13: the module steps engines registered, by key. */
   stepHandlers(): Observable<StepHandlerInfo[]> {
-    return this.api
-      .get<{ items: StepHandlerInfo[] }>('/api/v1/workflow/step-handlers')
+    return this.sdk.get<{ items: StepHandlerInfo[] }>('/api/v1/workflow/step-handlers')
       .pipe(map(page => page.items ?? []));
   }
 
   getVersion(definitionId: string, versionId: string): Observable<VersionDetail> {
-    return this.api.get<VersionDetail>(`/api/v1/workflow/definitions/${definitionId}/versions/${versionId}`);
+    return this.sdk.get<VersionDetail>(`/api/v1/workflow/definitions/${definitionId}/versions/${versionId}`);
   }
 
   updateVersionGraph(definitionId: string, versionId: string, body: UpdateVersionGraphBody): Observable<VersionDetail> {
-    return this.api.patch<VersionDetail>(
-      `/api/v1/workflow/definitions/${definitionId}/versions/${versionId}`, body,
+    return this.sdk.patch<VersionDetail>(
+      `/api/v1/workflow/definitions/${definitionId}/versions/${versionId}`,
+      { body: body },
     );
   }
 
   publishVersion(definitionId: string, versionId: string): Observable<VersionDetail> {
-    return this.api.post<VersionDetail>(
-      `/api/v1/workflow/definitions/${definitionId}/versions/${versionId}/publish`, {},
+    return this.sdk.post<VersionDetail>(
+      `/api/v1/workflow/definitions/${definitionId}/versions/${versionId}/publish`,
+      { body: {} },
     );
   }
 
   simulateVersion(definitionId: string, versionId: string, body: SimulateRequestBody = {}): Observable<SimulateResponse> {
-    return this.api.post<SimulateResponse>(
-      `/api/v1/workflow/definitions/${definitionId}/versions/${versionId}/simulate`, body,
+    return this.sdk.post<SimulateResponse>(
+      `/api/v1/workflow/definitions/${definitionId}/versions/${versionId}/simulate`,
+      { body: body },
     );
   }
 
   /** M4-T2: the flow's saved test cases run on this version, and the nodes none reached. */
   versionCoverage(definitionId: string, versionId: string): Observable<FlowCoverage> {
-    return this.api.get<FlowCoverage>(
+    return this.sdk.get<FlowCoverage>(
       `/api/v1/workflow/definitions/${definitionId}/versions/${versionId}/coverage`,
     );
   }
 
   /** One-based, like `/workflow/definitions` above (D-347). */
   listInstances(status?: string): Observable<InstanceListItem[]> {
-    return this.api.getAllPages<InstanceListItem>(
+    return this.sdk.getAllPages<InstanceListItem>(
       '/api/v1/workflow/instances',
       status ? { status } : {},
     );
   }
 
   getInstance(id: string): Observable<InstanceDetail> {
-    return this.api.get<InstanceDetail>(`/api/v1/workflow/instances/${id}`);
+    return this.sdk.get<InstanceDetail>(`/api/v1/workflow/instances/${id}`);
   }
 
   cancelInstance(id: string, rowVersion: number): Observable<unknown> {
-    return this.api.post(`/api/v1/workflow/instances/${id}/cancel`, { row_version: rowVersion });
+    return this.sdk.post(`/api/v1/workflow/instances/${id}/cancel`, { body: { row_version: rowVersion } });
   }
 
   /** M4-T2: a customer test from a failed run on a record (it expects the flow to complete). */
   testFromRun(id: string): Observable<{ id: string; name: string }> {
-    return this.api.post<{ id: string; name: string }>(`/api/v1/workflow/instances/${id}/test`, {});
+    return this.sdk.post<{ id: string; name: string }>(`/api/v1/workflow/instances/${id}/test`, { body: {} });
   }
 
   startInstance(body: StartInstanceBody): Observable<{ id: string }> {
-    return this.api.post<{ id: string }>('/api/v1/workflow/instances', body);
+    return this.sdk.post<{ id: string }>('/api/v1/workflow/instances', { body: body });
   }
 }

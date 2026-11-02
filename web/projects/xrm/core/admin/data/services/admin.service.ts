@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { map, Observable, tap } from 'rxjs';
-import { ApiComponents, ApiService, LangService } from '@attome/base';
+import { ApiComponents, SdkService, LangService } from '@attome/base';
 import { EntityMetadataChangeService } from './entity-metadata-change.service';
 
 export const XRM_FIELD_TYPES = [
@@ -216,7 +216,7 @@ export type UpdateRelationshipBody = ApiComponents['schemas']['UpdateRelationshi
 
 @Injectable({ providedIn: 'root' })
 export class AdminService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   /**
    * PERF-3 - every mutation below that changes what
    * `GET /api/v1/schema/{logicalname}` would return notifies through here, so
@@ -233,162 +233,167 @@ export class AdminService {
   }
 
   listEntities(): Observable<EntityMeta[]> {
-    return this.api.getAllPages<EntityMeta>('/api/v1/admin/entities');
+    return this.sdk.getAllPages<EntityMeta>('/api/v1/admin/entities');
   }
 
   /** M05/D-426: `?locale=` threads `LangService.intlLocale()` (e.g. `"ar-SA"`)
    * so a translated sidebar label resolves the same requested -> deployment
    * default -> base-name chain the schema endpoint uses. */
   getSidebar(): Observable<SidebarItem[]> {
-    return this.api.get<SidebarItem[]>('/api/v1/sidebar/get', { locale: this.lang.intlLocale() });
+    return this.sdk.get<SidebarItem[]>('/api/v1/sidebar/get', { query: { locale: this.lang.intlLocale() } });
   }
 
   listSidebarAdmin(): Observable<SidebarAdminItem[]> {
-    return this.api.getAllPages<SidebarAdminItem>('/api/v1/sidebar/admin');
+    return this.sdk.getAllPages<SidebarAdminItem>('/api/v1/sidebar/admin');
   }
 
   listSidebarPrivileges(): Observable<SidebarPrivilege[]> {
-    return this.api.getAllPages<SidebarPrivilege>('/api/v1/sidebar/admin/privileges');
+    return this.sdk.getAllPages<SidebarPrivilege>('/api/v1/sidebar/admin/privileges');
   }
 
   createSidebarItem(body: SidebarMutation): Observable<SidebarAdminItem> {
-    return this.api.post<SidebarAdminItem>('/api/v1/sidebar/admin', body);
+    return this.sdk.post<SidebarAdminItem>('/api/v1/sidebar/admin', { body: body });
   }
 
   updateSidebarItem(id: string, body: SidebarMutation): Observable<SidebarAdminItem> {
-    return this.api.patch<SidebarAdminItem>(`/api/v1/sidebar/admin/${id}`, body);
+    return this.sdk.patch<SidebarAdminItem>(`/api/v1/sidebar/admin/${id}`, { body: body });
   }
 
   // ── Calendars (D-404 / M83 Phase 1) ───────────────────────────────────────
 
   listCalendars(): Observable<CalendarAdminItem[]> {
-    return this.api.getAllPages<CalendarAdminItem>('/api/v1/admin/calendars');
+    return this.sdk.getAllPages<CalendarAdminItem>('/api/v1/admin/calendars');
   }
 
   createCalendar(body: CalendarMutation): Observable<CalendarAdminItem> {
-    return this.api.post<CalendarAdminItem>('/api/v1/admin/calendars', body);
+    return this.sdk.post<CalendarAdminItem>('/api/v1/admin/calendars', { body: body });
   }
 
   updateCalendar(id: string, body: CalendarMutation): Observable<CalendarAdminItem> {
-    return this.api.patch<CalendarAdminItem>(`/api/v1/admin/calendars/${id}`, body);
+    return this.sdk.patch<CalendarAdminItem>(`/api/v1/admin/calendars/${id}`, { body: body });
   }
 
   deleteCalendar(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/calendars/${id}`);
+    return this.sdk.delete(`/api/v1/admin/calendars/${id}`);
   }
 
   listHolidays(calendarId: string): Observable<CalendarHoliday[]> {
-    return this.api.get<CalendarHoliday[]>(`/api/v1/admin/calendars/${calendarId}/holidays`);
+    return this.sdk.get<CalendarHoliday[]>(`/api/v1/admin/calendars/${calendarId}/holidays`);
   }
 
   createHoliday(calendarId: string, body: CalendarHolidayMutation): Observable<CalendarHoliday> {
-    return this.api.post<CalendarHoliday>(`/api/v1/admin/calendars/${calendarId}/holidays`, body);
+    return this.sdk.post<CalendarHoliday>(`/api/v1/admin/calendars/${calendarId}/holidays`, { body: body });
   }
 
   deleteHoliday(calendarId: string, holidayId: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/calendars/${calendarId}/holidays/${holidayId}`);
+    return this.sdk.delete(`/api/v1/admin/calendars/${calendarId}/holidays/${holidayId}`);
   }
 
   listExceptions(calendarId: string): Observable<CalendarException[]> {
-    return this.api.get<CalendarException[]>(`/api/v1/admin/calendars/${calendarId}/exceptions`);
+    return this.sdk.get<CalendarException[]>(`/api/v1/admin/calendars/${calendarId}/exceptions`);
   }
 
   createException(calendarId: string, body: CalendarExceptionMutation): Observable<CalendarException> {
-    return this.api.post<CalendarException>(`/api/v1/admin/calendars/${calendarId}/exceptions`, body);
+    return this.sdk.post<CalendarException>(`/api/v1/admin/calendars/${calendarId}/exceptions`, { body: body });
   }
 
   deleteException(calendarId: string, exceptionId: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/calendars/${calendarId}/exceptions/${exceptionId}`);
+    return this.sdk.delete(`/api/v1/admin/calendars/${calendarId}/exceptions/${exceptionId}`);
   }
 
   // ── Calendar rules, seasons, sightings, packs, feeds (Z12-T6..T8, T13) ───
 
   getCalendar(id: string): Observable<CalendarFull> {
-    return this.api.get<CalendarFull>(`/api/v1/admin/calendars/${id}`);
+    return this.sdk.get<CalendarFull>(`/api/v1/admin/calendars/${id}`);
   }
 
   createRule(calendarId: string, body: CalendarRuleBody): Observable<CalendarRule> {
-    return this.api.post<CalendarRule>(`/api/v1/admin/calendars/${calendarId}/holiday-rules`, body);
+    return this.sdk.post<CalendarRule>(`/api/v1/admin/calendars/${calendarId}/holiday-rules`, { body: body });
   }
 
   deleteRule(calendarId: string, ruleId: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/calendars/${calendarId}/holiday-rules/${ruleId}`);
+    return this.sdk.delete(`/api/v1/admin/calendars/${calendarId}/holiday-rules/${ruleId}`);
   }
 
   /** Each rule's days, Gregorian and Hijri, for `years` from `fromYear`. */
   expandedRules(calendarId: string, fromYear?: number, years = 2): Observable<CalendarExpandedRules> {
     const params: Record<string, string> = { years: String(years) };
     if (fromYear !== undefined) params['from_year'] = String(fromYear);
-    return this.api.get<CalendarExpandedRules>(
-      `/api/v1/admin/calendars/${calendarId}/holiday-rules/expanded`, params);
+    return this.sdk.get<CalendarExpandedRules>(
+      `/api/v1/admin/calendars/${calendarId}/holiday-rules/expanded`,
+      { query: params },
+    );
   }
 
   createSeason(calendarId: string, body: CalendarSeasonBody): Observable<CalendarSeason> {
-    return this.api.post<CalendarSeason>(`/api/v1/admin/calendars/${calendarId}/seasons`, body);
+    return this.sdk.post<CalendarSeason>(`/api/v1/admin/calendars/${calendarId}/seasons`, { body: body });
   }
 
   deleteSeason(calendarId: string, seasonId: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/calendars/${calendarId}/seasons/${seasonId}`);
+    return this.sdk.delete(`/api/v1/admin/calendars/${calendarId}/seasons/${seasonId}`);
   }
 
   /** Every sighted holiday expected to start in the Gregorian `year`. */
   listSightings(year: number): Observable<CalendarSighting[]> {
-    return this.api.get<CalendarSighting[]>('/api/v1/calendar-sightings', { year: String(year) });
+    return this.sdk.get<CalendarSighting[]>('/api/v1/calendar-sightings', { query: { year: String(year) } });
   }
 
   confirmSighting(body: CalendarSightingBody): Observable<unknown> {
-    return this.api.post<unknown>('/api/v1/calendar-sightings', body);
+    return this.sdk.post<unknown>('/api/v1/calendar-sightings', { body: body });
   }
 
   listPacks(): Observable<CalendarPack[]> {
-    return this.api.get<CalendarPack[]>('/api/v1/admin/calendars/packs');
+    return this.sdk.get<CalendarPack[]>('/api/v1/admin/calendars/packs');
   }
 
   applyPack(code: string): Observable<CalendarPackApplied> {
-    return this.api.post<CalendarPackApplied>(
-      `/api/v1/admin/calendars/packs/${encodeURIComponent(code)}/apply`, {});
+    return this.sdk.post<CalendarPackApplied>(
+      `/api/v1/admin/calendars/packs/${encodeURIComponent(code)}/apply`,
+      { body: {} },
+    );
   }
 
   listFeeds(calendarId: string): Observable<CalendarFeed[]> {
-    return this.api.getAllPages<CalendarFeed>('/api/v1/calendar-feeds', { calendar_id: calendarId });
+    return this.sdk.getAllPages<CalendarFeed>('/api/v1/calendar-feeds', { calendar_id: calendarId });
   }
 
   createFeed(body: CalendarFeedBody): Observable<CalendarFeed> {
-    return this.api.post<CalendarFeed>('/api/v1/calendar-feeds', body);
+    return this.sdk.post<CalendarFeed>('/api/v1/calendar-feeds', { body: body });
   }
 
   deleteFeed(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/calendar-feeds/${id}`);
+    return this.sdk.delete(`/api/v1/calendar-feeds/${id}`);
   }
 
   getAssignment(subjectType: 'user' | 'team', subjectId: string): Observable<CalendarAssignment> {
-    return this.api.get<CalendarAssignment>(
-      `/api/v1/calendar-assignments/${subjectType}/${encodeURIComponent(subjectId)}`);
+    return this.sdk.get<CalendarAssignment>(
+      `/api/v1/calendar-assignments/${subjectType}/${encodeURIComponent(subjectId)}`,
+    );
   }
 
   putAssignment(
     subjectType: 'user' | 'team', subjectId: string, calendarId: string, rowVersion?: number | null,
   ): Observable<CalendarAssignment> {
-    return this.api.put<CalendarAssignment>(
+    return this.sdk.put<CalendarAssignment>(
       `/api/v1/calendar-assignments/${subjectType}/${encodeURIComponent(subjectId)}`,
-      { calendar_id: calendarId, row_version: rowVersion ?? null },
+      { body: { calendar_id: calendarId, row_version: rowVersion ?? null } },
     );
   }
 
   deleteAssignment(subjectType: 'user' | 'team', subjectId: string): Observable<void> {
-    return this.api.delete(
-      `/api/v1/calendar-assignments/${subjectType}/${encodeURIComponent(subjectId)}`);
+    return this.sdk.delete(
+      `/api/v1/calendar-assignments/${subjectType}/${encodeURIComponent(subjectId)}`,
+    );
   }
 
   // ── Metadata labels (M05 Phase 1, D-426) ─────────────────────────────────
 
   listLabels(entityId: string): Observable<MetadataLabel[]> {
-    return this.api.get<MetadataLabel[]>(`/api/v1/admin/entities/${entityId}/labels`);
+    return this.sdk.get<MetadataLabel[]>(`/api/v1/admin/entities/${entityId}/labels`);
   }
 
   createLabel(entityId: string, body: MetadataLabelMutation): Observable<MetadataLabel> {
-    return this.api
-      .post<MetadataLabel>(`/api/v1/admin/entities/${entityId}/labels`, body)
+    return this.sdk.post<MetadataLabel>(`/api/v1/admin/entities/${entityId}/labels`, { body: body })
       .pipe(this.notifyOnSuccess());
   }
 
@@ -397,14 +402,12 @@ export class AdminService {
     labelId: string,
     body: MetadataLabelMutation,
   ): Observable<MetadataLabel> {
-    return this.api
-      .patch<MetadataLabel>(`/api/v1/admin/entities/${entityId}/labels/${labelId}`, body)
+    return this.sdk.patch<MetadataLabel>(`/api/v1/admin/entities/${entityId}/labels/${labelId}`, { body: body })
       .pipe(this.notifyOnSuccess());
   }
 
   deleteLabel(entityId: string, labelId: string): Observable<void> {
-    return this.api
-      .delete(`/api/v1/admin/entities/${entityId}/labels/${labelId}`)
+    return this.sdk.delete(`/api/v1/admin/entities/${entityId}/labels/${labelId}`)
       .pipe(this.notifyOnSuccess());
   }
 
@@ -417,20 +420,18 @@ export class AdminService {
   // is `getAllPages`' default.
 
   listRelationships(entity?: string): Observable<RelationshipDef[]> {
-    return this.api.getAllPages<RelationshipDef>(
+    return this.sdk.getAllPages<RelationshipDef>(
       '/api/v1/admin/relationships', entity ? { entity } : {},
     );
   }
 
   createRelationship(body: CreateRelationshipBody): Observable<RelationshipDef> {
-    return this.api
-      .post<RelationshipDef>('/api/v1/admin/relationships', body)
+    return this.sdk.post<RelationshipDef>('/api/v1/admin/relationships', { body: body })
       .pipe(this.notifyOnSuccess());
   }
 
   updateRelationship(id: string, body: UpdateRelationshipBody): Observable<RelationshipDef> {
-    return this.api
-      .patch<RelationshipDef>(`/api/v1/admin/relationships/${id}`, body)
+    return this.sdk.patch<RelationshipDef>(`/api/v1/admin/relationships/${id}`, { body: body })
       .pipe(this.notifyOnSuccess());
   }
 
@@ -438,53 +439,47 @@ export class AdminService {
    * table and its link rows are never dropped (see the Rust handler's own
    * doc comment). */
   deleteRelationship(id: string): Observable<void> {
-    return this.api
-      .delete(`/api/v1/admin/relationships/${id}`)
+    return this.sdk.delete(`/api/v1/admin/relationships/${id}`)
       .pipe(this.notifyOnSuccess());
   }
 
   getEntity(id: string): Observable<EntityDetail> {
-    return this.api.get<EntityDetail>(`/api/v1/admin/entities/${id}`);
+    return this.sdk.get<EntityDetail>(`/api/v1/admin/entities/${id}`);
   }
 
   createEntity(body: CreateEntityBody): Observable<EntityMeta> {
-    return this.api
-      .post<EntityMeta>('/api/v1/admin/entities', body)
+    return this.sdk.post<EntityMeta>('/api/v1/admin/entities', { body: body })
       .pipe(this.notifyOnSuccess());
   }
 
   updateEntity(id: string, body: UpdateEntityBody): Observable<EntityMeta> {
-    return this.api
-      .patch<EntityMeta>(`/api/v1/admin/entities/${id}`, body)
+    return this.sdk.patch<EntityMeta>(`/api/v1/admin/entities/${id}`, { body: body })
       .pipe(this.notifyOnSuccess());
   }
 
   deleteEntity(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/entities/${id}`).pipe(this.notifyOnSuccess());
+    return this.sdk.delete(`/api/v1/admin/entities/${id}`).pipe(this.notifyOnSuccess());
   }
 
   createAttribute(entityId: string, body: CreateAttributeBody): Observable<AttributeMeta> {
-    return this.api
-      .post<AttributeMeta>(`/api/v1/admin/entities/${entityId}/fields`, body)
+    return this.sdk.post<AttributeMeta>(`/api/v1/admin/entities/${entityId}/fields`, { body: body })
       .pipe(this.notifyOnSuccess());
   }
 
   updateAttribute(entityId: string, attrId: string, body: UpdateAttributeBody): Observable<AttributeMeta> {
-    return this.api
-      .patch<AttributeMeta>(`/api/v1/admin/entities/${entityId}/fields/${attrId}`, body)
+    return this.sdk.patch<AttributeMeta>(`/api/v1/admin/entities/${entityId}/fields/${attrId}`, { body: body })
       .pipe(this.notifyOnSuccess());
   }
 
   deleteAttribute(entityId: string, attrId: string): Observable<void> {
-    return this.api
-      .delete(`/api/v1/admin/entities/${entityId}/fields/${attrId}`)
+    return this.sdk.delete(`/api/v1/admin/entities/${entityId}/fields/${attrId}`)
       .pipe(this.notifyOnSuccess());
   }
 
   // ── Dev-only scaffolding (never present against a deployed backend) ──────
 
   devToolsAvailable(): Observable<DevToolsInfo> {
-    return this.api.get<DevToolsInfo>('/api/v1/admin/dev-tools/available');
+    return this.sdk.get<DevToolsInfo>('/api/v1/admin/dev-tools/available');
   }
 
   /**
@@ -498,9 +493,9 @@ export class AdminService {
     kind: ScaffoldKind,
     targetDir: string,
   ): Observable<ScaffoldResult> {
-    return this.api.post<ScaffoldResult>(
+    return this.sdk.post<ScaffoldResult>(
       `/api/v1/admin/entities/${entityId}/scaffold-ui`,
-      { kind, target_dir: targetDir },
+      { body: { kind, target_dir: targetDir } },
     );
   }
 
@@ -512,7 +507,9 @@ export class AdminService {
   // default query filtered by target entity, and writes are plain entity CRUD.
 
   listAutoValues(entityLogicalname: string): Observable<AutoValueRule[]> {
-    return this.api.post<QueryExecEnvelope>('/api/v1/query/execute', {
+    return this.sdk.post<QueryExecEnvelope>(
+      '/api/v1/query/execute',
+      { body: {
       entity:        AUTOVALUE_ENTITY,
       page:          1,
       page_size:     200,
@@ -522,11 +519,12 @@ export class AdminService {
       // filterable, which is exactly this lookup.
       filters:       [{ field: 'entity_logicalname', op: 'eq', value: entityLogicalname }],
       include_total: false,
-    }).pipe(map(res => res.data.records.map(toAutoValueRule)));
+    } },
+    ).pipe(map(res => res.data.records.map(toAutoValueRule)));
   }
 
   createAutoValue(body: AutoValueMutation): Observable<Record<string, unknown>> {
-    return this.api.post<Record<string, unknown>>(`/api/v1/${AUTOVALUE_ENTITY}`, body);
+    return this.sdk.post<Record<string, unknown>>(`/api/v1/${AUTOVALUE_ENTITY}`, { body: body });
   }
 
   updateAutoValue(
@@ -534,15 +532,14 @@ export class AdminService {
     body: AutoValueMutation,
     rowVersion: number,
   ): Observable<Record<string, unknown>> {
-    return this.api.patch<Record<string, unknown>>(
+    return this.sdk.patch<Record<string, unknown>>(
       `/api/v1/${AUTOVALUE_ENTITY}/${id}`,
-      body,
-      rowVersion,
+      { body: body, ifMatch: rowVersion },
     );
   }
 
   deleteAutoValue(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/${AUTOVALUE_ENTITY}/${id}`);
+    return this.sdk.delete(`/api/v1/${AUTOVALUE_ENTITY}/${id}`);
   }
 
 }

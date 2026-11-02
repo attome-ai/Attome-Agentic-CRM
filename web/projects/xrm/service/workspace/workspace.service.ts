@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 
 /** One item of the caller's work (`GET /api/v1/my-work/{provider}`). */
 export interface WorkItem {
@@ -66,23 +66,24 @@ export function openSession(tabs: SessionTab[], entity: string, recordId: string
 /** G5-T1: the workspace's reads, over routes that already exist. */
 @Injectable({ providedIn: 'root' })
 export class WorkspaceService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** The caller's open cases (the `service` My Work provider). */
   myWork(): Observable<WorkItem[]> {
-    return this.api
-      .get<{ items: WorkItem[] }>('/api/v1/my-work/service', { limit: '50' })
+    return this.sdk.get<{ items: WorkItem[] }>('/api/v1/my-work/service', { query: { limit: '50' } })
       .pipe(map(page => page.items ?? []));
   }
 
   /** The work queues there are. */
   queues(): Observable<QueueSummary[]> {
-    return this.api
-      .get<{ items: Record<string, unknown>[] }>('/api/v1/service_work_queue', {
+    return this.sdk.get<{ items: Record<string, unknown>[] }>(
+      '/api/v1/service_work_queue',
+      { query: {
         select: 'id,name',
         sort: 'name',
         page_size: '100',
-      })
+      } },
+    )
       .pipe(map(page => (page.items ?? []).map(row => ({
         id: String(row['id']),
         name: String(row['name'] ?? row['id']),
@@ -91,12 +92,14 @@ export class WorkspaceService {
 
   /** Web chat requests not yet converted, newest first. */
   conversations(): Observable<ConversationSummary[]> {
-    return this.api
-      .get<{ items: Record<string, unknown>[] }>('/api/v1/service_work_request', {
+    return this.sdk.get<{ items: Record<string, unknown>[] }>(
+      '/api/v1/service_work_request',
+      { query: {
         select: 'id,title,reference,status,channel,created_at',
         sort: '-created_at',
         page_size: '100',
-      })
+      } },
+    )
       .pipe(map(page => (page.items ?? [])
         .filter(row => row['channel'] === 'web_chat' && (row['status'] === 'new' || row['status'] === 'triaged'))
         .map(row => ({
@@ -109,6 +112,6 @@ export class WorkspaceService {
 
   /** One record, for a session tab. */
   record(entity: string, id: string): Observable<RecordView> {
-    return this.api.get<RecordView>(`/api/v1/${entity}/${id}`);
+    return this.sdk.get<RecordView>(`/api/v1/${entity}/${id}`);
   }
 }

@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { ApiComponents, ApiService } from '@attome/base';
+import { ApiComponents, SdkService } from '@attome/base';
 
 /**
  * U3/U6 (basic-units plan, D-601) — the record timeline and record history
@@ -76,41 +76,45 @@ export interface TimelineRequest {
 
 @Injectable({ providedIn: 'root' })
 export class RecordTimelineService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   timeline(entityName: string, recordId: string, req: TimelineRequest = {}): Observable<TimelinePage> {
     const params: Record<string, string> = {};
     if (req.cursor) params['cursor'] = req.cursor;
     if (req.pageSize) params['page_size'] = String(req.pageSize);
     if (req.kinds?.length) params['kinds'] = req.kinds.join(',');
-    return this.api.get<TimelinePage>(
-      `/api/v1/${encodeURIComponent(entityName)}/${encodeURIComponent(recordId)}/timeline`, params,
+    return this.sdk.get<TimelinePage>(
+      `/api/v1/${encodeURIComponent(entityName)}/${encodeURIComponent(recordId)}/timeline`,
+      { query: params },
     );
   }
 
   /** B1-T2: the entries pinned on the record, newest first. */
   pinned(entityName: string, recordId: string): Observable<TimelinePage> {
-    return this.api.get<TimelinePage>(
+    return this.sdk.get<TimelinePage>(
       `/api/v1/${encodeURIComponent(entityName)}/${encodeURIComponent(recordId)}/timeline`,
-      { pinned_only: 'true', page_size: String(MAX_PINNED) },
+      { query: { pinned_only: 'true', page_size: String(MAX_PINNED) } },
     );
   }
 
   /** B1-T2: pins one entry on the record, for everyone who opens it. */
   pin(entityName: string, recordId: string, entry: TimelineEntry): Observable<void> {
-    return this.api.put<void>(this.pinPath(entityName, recordId, entry), {});
+    return this.sdk.put<void>(this.pinPath(entityName, recordId, entry), { body: {} });
   }
 
   unpin(entityName: string, recordId: string, entry: TimelineEntry): Observable<void> {
-    return this.api.delete(this.pinPath(entityName, recordId, entry));
+    return this.sdk.delete(this.pinPath(entityName, recordId, entry));
   }
 
   /** B1-T2: adds a note on the record, through the generic record API. */
   addNote(entityName: string, recordId: string, text: string): Observable<unknown> {
-    return this.api.post('/api/v1/note', {
+    return this.sdk.post(
+      '/api/v1/note',
+      { body: {
       entity_name: entityName, record_id: recordId,
       title: text.split('\n')[0].slice(0, 120), note_text: text,
-    });
+    } },
+    );
   }
 
   /** B1-T2: logs a call or creates a task on the record. */
@@ -121,7 +125,7 @@ export class RecordTimelineService {
     };
     if (activity.type === 'call') body['completed_at'] = new Date().toISOString();
     if (activity.type === 'task' && activity.due) body['due_at'] = activity.due;
-    return this.api.post('/api/v1/activity', body);
+    return this.sdk.post('/api/v1/activity', { body: body });
   }
 
   private pinPath(entityName: string, recordId: string, entry: TimelineEntry): string {
@@ -134,18 +138,21 @@ export class RecordTimelineService {
    * from the events the person may see; `null` when there is none.
    */
   summary(entityName: string, recordId: string): Observable<TimelineSummary | null> {
-    return this.api
-      .post<SummaryOutcome>('/api/v1/actions/timeline.summarize/invoke', {
+    return this.sdk.post<SummaryOutcome>(
+      '/api/v1/actions/timeline.summarize/invoke',
+      { body: {
         args: { entity: entityName, record_id: recordId },
-      })
+      } },
+    )
       .pipe(map(timelineSummary));
   }
 
   history(entityName: string, recordId: string, cursor?: string | null): Observable<RecordHistoryPage> {
     const params: Record<string, string> = {};
     if (cursor) params['cursor'] = cursor;
-    return this.api.get<RecordHistoryPage>(
-      `/api/v1/${encodeURIComponent(entityName)}/${encodeURIComponent(recordId)}/history`, params,
+    return this.sdk.get<RecordHistoryPage>(
+      `/api/v1/${encodeURIComponent(entityName)}/${encodeURIComponent(recordId)}/history`,
+      { query: params },
     );
   }
 }

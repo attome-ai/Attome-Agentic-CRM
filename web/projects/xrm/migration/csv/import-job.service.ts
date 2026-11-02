@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { ApiComponents, ApiService } from '@attome/base';
+import { ApiComponents, SdkService } from '@attome/base';
 import { map, Observable } from 'rxjs';
 
 export type ImportJob = ApiComponents['schemas']['ImportJobView'];
@@ -64,7 +64,7 @@ export function countsOf(job: ImportJob | null): ImportCounts {
  */
 @Injectable({ providedIn: 'root' })
 export class ImportJobService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   private base(entity: string): string {
     return `/api/v1/${encodeURIComponent(entity)}/imports`;
@@ -75,41 +75,40 @@ export class ImportJobService {
     const form = new FormData();
     form.append('file', file, name);
     form.append('options', JSON.stringify({ ...options, dry_run: dryRun }));
-    return this.api.post<ImportCreated>(this.base(entity), form);
+    return this.sdk.post<ImportCreated>(this.base(entity), { body: form });
   }
 
   list(entity: string): Observable<ImportJob[]> {
-    return this.api
-      .get<{ items: ImportJob[] }>(this.base(entity), { page_size: '20' })
+    return this.sdk.get<{ items: ImportJob[] }>(this.base(entity), { query: { page_size: '20' } })
       .pipe(map(page => page.items));
   }
 
   get(entity: string, id: string): Observable<ImportJob> {
-    return this.api.get<ImportJob>(`${this.base(entity)}/${id}`);
+    return this.sdk.get<ImportJob>(`${this.base(entity)}/${id}`);
   }
 
   update(entity: string, id: string, options: ImportOptionsBody): Observable<ImportJob> {
-    return this.api.patch<ImportJob>(`${this.base(entity)}/${id}`, options);
+    return this.sdk.patch<ImportJob>(`${this.base(entity)}/${id}`, { body: options });
   }
 
   dryRun(entity: string, id: string): Observable<ImportAccepted> {
-    return this.api.post<ImportAccepted>(`${this.base(entity)}/${id}/dry-run`, {});
+    return this.sdk.post<ImportAccepted>(`${this.base(entity)}/${id}/dry-run`, { body: {} });
   }
 
   apply(entity: string, id: string): Observable<ImportAccepted> {
-    return this.api.post<ImportAccepted>(`${this.base(entity)}/${id}/apply`, {});
+    return this.sdk.post<ImportAccepted>(`${this.base(entity)}/${id}/apply`, { body: {} });
   }
 
   undo(entity: string, id: string): Observable<ImportAccepted> {
-    return this.api.post<ImportAccepted>(`${this.base(entity)}/${id}/undo`, {});
+    return this.sdk.post<ImportAccepted>(`${this.base(entity)}/${id}/undo`, { body: {} });
   }
 
   cancel(entity: string, id: string): Observable<ImportAccepted> {
-    return this.api.post<ImportAccepted>(`${this.base(entity)}/${id}/cancel`, {});
+    return this.sdk.post<ImportAccepted>(`${this.base(entity)}/${id}/cancel`, { body: {} });
   }
 
   preview(entity: string, id: string, limit = 50): Observable<ImportPreview> {
-    return this.api.get<ImportPreview>(`${this.base(entity)}/${id}/preview`, { limit: String(limit) });
+    return this.sdk.get<ImportPreview>(`${this.base(entity)}/${id}/preview`, { query: { limit: String(limit) } });
   }
 
   /** Where the error file downloads from (the session cookie authorizes it). */
@@ -119,11 +118,10 @@ export class ImportJobService {
 
   /** The mapping agent's proposal, or null when the action did not run. */
   proposeMapping(jobId: string): Observable<ProposedColumn[] | null> {
-    return this.api
-      .post<{ status: string; result?: { columns?: ProposedColumn[] } }>(
-        `/api/v1/actions/${encodeURIComponent('import.propose_mapping')}/invoke`,
-        { args: { job_id: jobId } },
-      )
+    return this.sdk.post<{ status: string; result?: { columns?: ProposedColumn[] } }>(
+      `/api/v1/actions/${encodeURIComponent('import.propose_mapping')}/invoke`,
+      { body: { args: { job_id: jobId } } },
+    )
       .pipe(map(outcome => (outcome.status === 'completed' ? (outcome.result?.columns ?? []) : null)));
   }
 }
