@@ -3366,6 +3366,8 @@ const DEDUP_KEY_FULFILMENT_CUSTOMER_UPDATES: &str = "fulfilment-customer-updates
 const DEDUP_KEY_CALLINTEL_AGGREGATE: &str = "callintel-aggregate";
 /// G1-T4: the weekly quality review sample (a registered job type).
 const DEDUP_KEY_SERVICE_QUALITY_SAMPLE: &str = "service-quality-sample";
+/// F8-T9: the abandoned cart sweep (a registered job type).
+const DEDUP_KEY_COMMERCE_ABANDONED_CART: &str = "commerce-abandoned-cart";
 /// O1-T2: the weekly drift check of active prediction models.
 const DEDUP_KEY_PREDICT_DRIFT: &str = "predict-drift";
 const DEDUP_KEY_CONTENT_SEO_AUDIT: &str = "content-seo-audit";
@@ -3837,6 +3839,10 @@ pub const FULFILMENT_EXCEPTIONS: attome_jobs::JobType =
 /// F6-T10: booked shipments' status read from their carriers.
 pub const FULFILMENT_TRACKING: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_fulfilment::tracking::JOB, 1);
+
+/// F8-T9: the abandoned cart sweep.
+pub const COMMERCE_ABANDONED_CART: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_sales::abandoned_cart::JOB, 1);
 
 /// G1-T4: the weekly quality review sample.
 pub const SERVICE_QUALITY_SAMPLE: attome_jobs::JobType =
@@ -5283,6 +5289,27 @@ pub fn register_job_types() {
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 if moved > 0 {
                     tracing::info!(moved, "fulfilment shipments tracked");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            COMMERCE_ABANDONED_CART,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_SALES) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let swept = attome_sales::abandoned_cart::sweep(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if swept.emitted + swept.no_consent > 0 {
+                    tracing::info!(
+                        emitted = swept.emitted,
+                        no_consent = swept.no_consent,
+                        "abandoned carts swept"
+                    );
                 }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
@@ -6753,6 +6780,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == SERVICE_QUALITY_SAMPLE.name => {
             DEDUP_KEY_SERVICE_QUALITY_SAMPLE
         }
+        EngineJob::Registered(job) if job.name == COMMERCE_ABANDONED_CART.name => {
+            DEDUP_KEY_COMMERCE_ABANDONED_CART
+        }
         EngineJob::Registered(job) if job.name == PREDICT_DRIFT.name => DEDUP_KEY_PREDICT_DRIFT,
         EngineJob::Registered(job) if job.name == CONTENT_SEO_AUDIT.name => {
             DEDUP_KEY_CONTENT_SEO_AUDIT
@@ -7047,6 +7077,7 @@ pub const SCHEDULE_MODULES: &[(&str, &str)] = &[
     ("fulfilment-customer-updates", "fulfilment"),
     ("callintel-aggregate", "callintel"),
     ("service-quality-sample", "service"),
+    ("commerce-abandoned-cart", "sales"),
     ("workforce-intraday", "workforce"),
     ("rfq-open", "procurement"),
     ("grc-policy-sweep", "grc"),
@@ -8430,6 +8461,22 @@ pub fn spawn_fulfilment_tracking_scheduler(db: DbPool, interval: std::time::Dura
             "fulfilment tracking",
         ),
         Err(error) => tracing::error!(%error, "fulfilment tracking: not scheduled"),
+    }
+}
+
+/// F8-T9: every 15 minutes, the abandoned cart sweep (it does nothing while
+/// its setting is off).
+pub fn spawn_commerce_abandoned_cart_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(COMMERCE_ABANDONED_CART.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_COMMERCE_ABANDONED_CART,
+            "abandoned cart sweep",
+        ),
+        Err(error) => tracing::error!(%error, "abandoned cart sweep: not scheduled"),
     }
 }
 

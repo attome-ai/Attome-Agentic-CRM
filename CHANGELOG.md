@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Abandoned carts (F8-T9, migration `0376`): with `commerce.abandoned_cart.enabled`, idle portal carts of
+  consenting buyers become one `cart.abandoned` change-feed event for marketing journeys; settings
+  `commerce.abandoned_cart.enabled` and `.idle_minutes`.
 - Monthly revenue close (F11-T7): `POST /api/v1/ledger/revrec/close` and `POST /api/v1/ledger/revrec/close/{id}/post`;
   a job recognises the month's lines and writes deferred and unbilled balances (billed to date from issued
   invoices for the contract's source), the controller approves, and the revenue posts through the

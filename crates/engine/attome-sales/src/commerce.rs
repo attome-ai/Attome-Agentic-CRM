@@ -317,7 +317,8 @@ pub async fn set_line(
         let cart: Uuid = sqlx::query_scalar(
             "INSERT INTO commerce_cart (id, portal_user_id, account_id) VALUES ($1, $2, $3) \
              ON CONFLICT (portal_user_id) WHERE status = 'open' \
-             DO UPDATE SET updated_at = now() RETURNING id",
+             DO UPDATE SET updated_at = now(), abandoned_cart_outcome = NULL, \
+                           abandoned_cart_notified_at = NULL RETURNING id",
         )
         .bind(Uuid::now_v7())
         .bind(portal_user)

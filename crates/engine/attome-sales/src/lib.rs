@@ -6,6 +6,8 @@
 //! schedules, D23-D25 forecasting and territories). Gated on the `sales`
 //! module.
 
+/// F8-T9: abandoned carts handed to marketing journeys.
+pub mod abandoned_cart;
 pub mod attainment;
 /// D20-T2: public booking links.
 pub mod booking;
@@ -26,6 +28,8 @@ pub mod discount_policy;
 pub mod enrichment;
 pub mod flags;
 pub mod forecast;
+/// F8-T7: checkout without an account, proved by a code to the phone.
+pub mod guest_checkout;
 /// D3-T2: converting a lead into an account, a contact and an opportunity, and undoing it.
 pub mod lead_convert;
 pub mod leavers;
@@ -37,12 +41,10 @@ pub mod orgchart;
 pub mod owner_change;
 /// D26-T2: the plays that apply to a deal.
 pub mod plays;
-/// F8-T7: checkout without an account, proved by a code to the phone.
-pub mod guest_checkout;
-/// F8-T6: promotions and coupons in the shop's pricing order.
-pub mod promotion;
 pub mod price_resolution;
 pub mod pricing;
+/// F8-T6: promotions and coupons in the shop's pricing order.
+pub mod promotion;
 pub mod quote;
 /// D9-T3: quote acceptance by guest link.
 pub mod quote_accept;

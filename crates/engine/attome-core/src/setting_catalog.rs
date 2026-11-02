@@ -786,6 +786,25 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(0),
         ),
+        // F8-T9: abandoned carts.
+        SettingDescriptor::new(
+            "commerce.abandoned_cart.enabled",
+            "Whether idle portal carts are handed to marketing journeys as a cart.abandoned event on \
+         the buyer's contact, with the contact's marketing consent only (F8-T9). Off by default.",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
+        SettingDescriptor::new(
+            "commerce.abandoned_cart.idle_minutes",
+            "How many minutes a portal cart sits unchanged before it counts as abandoned (F8-T9). \
+         60 by default; 15 to 10080.",
+            || json!({"type": "integer", "minimum": 15, "maximum": 10080}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(60),
+        ),
         // F8-T7: guest checkout.
         SettingDescriptor::new(
             "commerce.guest_account",

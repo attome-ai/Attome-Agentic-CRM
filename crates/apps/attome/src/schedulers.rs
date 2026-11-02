@@ -282,6 +282,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(30 * 60),
     );
+    // F8-T9: the abandoned cart sweep, every 15 minutes.
+    crate::jobs::spawn_commerce_abandoned_cart_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(15 * 60),
+    );
     // G1-T4: the quality review sample, weekly.
     crate::jobs::spawn_service_quality_sample_scheduler(
         db.clone(),

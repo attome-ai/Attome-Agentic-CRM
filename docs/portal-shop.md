@@ -67,6 +67,16 @@ orders go under (and `commerce.vat_rate`, 0 by default, is the VAT rate on them)
 Both guest routes need the portal's own origin and its service user (`contact.create`, `order.create`,
 `order_line.create`, and `payment_link.create` for paid orders).
 
+## Abandoned carts
+
+With `commerce.abandoned_cart.enabled` on (off by default), every 15 minutes the open portal carts that
+hold a line and have sat unchanged for `commerce.abandoned_cart.idle_minutes` (60 by default, up to 7
+days old) are looked at once. When the buyer's contact has a phone or email and its `marketing` consent,
+a `cart.abandoned` event on the contact goes to the change feed, where a marketing journey with the
+entry source `{"type": "event", "event_name": "cart.abandoned"}` picks it up and sends; without consent
+the cart is marked skipped. Changing the cart makes it eligible again. Nothing is sent by the sweep
+itself.
+
 ## Routes
 
 - `GET /{keyword}/api/v1/shop/catalogue?search=`
