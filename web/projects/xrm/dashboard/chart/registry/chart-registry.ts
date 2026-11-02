@@ -568,6 +568,8 @@ export function boxRows(input: ChartInput): BoxRow[] {
   });
 }
 
+const NO_BOX = ['-', '-', '-', '-', '-'];
+
 /** Boxes on the category axis; a click drills into the category through the
  * median's bucket. */
 function boxPlot(input: ChartInput): ChartOption {
@@ -576,9 +578,11 @@ function boxPlot(input: ChartInput): ChartOption {
   return cartesian(input, [{
     type: 'boxplot',
     itemStyle: { color: 'transparent', borderColor: color },
+    // A category with no box gets ECharts' empty values, fresh each time (ECharts
+    // adds the category index to each array; a null item breaks the boxplot).
     data: input.categories.map((category, index) => {
       const row = rows.get(index);
-      if (!row) return null;
+      if (!row) return [...NO_BOX];
       return {
         value: row.entries.map(e => e.bucket.value),
         bucket: row.entries[2].bucket,

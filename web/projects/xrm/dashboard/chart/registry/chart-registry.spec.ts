@@ -157,10 +157,11 @@ describe('what an adapter computes', () => {
     expect(rows.map(r => r.index)).toEqual([0, 1]);
     expect(rows[0].entries.map(e => e.bucket.value)).toEqual([1, 3, 5, 7, 9]);
     const [box] = seriesOf(CHART_REGISTRY.box_plot.option(input({ series: five })));
-    const data = box['data'] as (ChartOption | null)[];
-    expect(data[0]!['value']).toEqual([1, 3, 5, 7, 9]);
-    expect((data[0]!['bucket'] as ChartBucket).trackKey).toBe('a|Median');
-    expect(data[2]).toBeNull();
+    const data = box['data'] as (ChartOption | string[])[];
+    const first = data[0] as ChartOption;
+    expect(first['value']).toEqual([1, 3, 5, 7, 9]);
+    expect((first['bucket'] as ChartBucket).trackKey).toBe('a|Median');
+    expect(data[2]).toEqual(['-', '-', '-', '-', '-']);
     expect(draw(CHART_REGISTRY.box_plot.option(input({ series: five })))).toMatch(/<path\b/);
     expect(boxRows(input())).toEqual([]);
   });
