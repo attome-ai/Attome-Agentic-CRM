@@ -34,3 +34,6 @@ key is inside it. Since nobody can sign in afterwards, the certificate is also w
 store as `exit/<id>/deletion-certificate.json`.
 
 Nothing can undo the deletion. Keep the archive and the certificate.
+
+What to do with the archive, reading its files and loading them into plain PostgreSQL or another
+system: [the exit guide](content/exit/README.md).
