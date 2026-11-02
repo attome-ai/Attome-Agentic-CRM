@@ -43,42 +43,46 @@ describe('ReportRunService', () => {
     expect(isTerminalRun(status('running'))).toBe(false);
   });
 
-  it('enqueues a run with an empty body (the report record supplies the format)', () => {
+  it('enqueues a run with an empty body (the report record supplies the format)', async () => {
     service.run('rep-1').subscribe();
+    await vi.advanceTimersByTimeAsync(0);
     const req = http.expectOne(`${API}/api/v1/reports/rep-1/run`);
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({});
     req.flush({ id: 'run-1', status: 'pending' });
+    await vi.advanceTimersByTimeAsync(0);
   });
 
-  it('runs, then polls the run until it completes, emitting the final status', () => {
+  it('runs, then polls the run until it completes, emitting the final status', async () => {
     const results: ReportRunStatus[] = [];
     service.runAndWait('rep-1', { intervalMs: 1000, maxPolls: 10 }).subscribe(r => results.push(r));
+    await vi.advanceTimersByTimeAsync(0);
 
     http.expectOne(`${API}/api/v1/reports/rep-1/run`).flush({ id: 'run-1', status: 'pending' });
-    vi.advanceTimersByTime(0);
+    await vi.advanceTimersByTimeAsync(0);
     http.expectOne(`${API}/api/v1/reports/runs/run-1`).flush(status('running'));
-    vi.advanceTimersByTime(1000);
+    await vi.advanceTimersByTimeAsync(1000);
     http.expectOne(`${API}/api/v1/reports/runs/run-1`).flush(
       status('completed', { row_count: 3, download_url: 'http://storage/r.csv', expires_in_secs: 900 }),
     );
-    vi.advanceTimersByTime(5000);
+    await vi.advanceTimersByTimeAsync(5000);
 
     expect(results).toEqual([
       status('completed', { row_count: 3, download_url: 'http://storage/r.csv', expires_in_secs: 900 }),
     ]);
   });
 
-  it('stops after the poll budget and emits the still-running status', () => {
+  it('stops after the poll budget and emits the still-running status', async () => {
     const results: ReportRunStatus[] = [];
     service.runAndWait('rep-1', { intervalMs: 1000, maxPolls: 2 }).subscribe(r => results.push(r));
+    await vi.advanceTimersByTimeAsync(0);
 
     http.expectOne(`${API}/api/v1/reports/rep-1/run`).flush({ id: 'run-1', status: 'pending' });
-    vi.advanceTimersByTime(0);
+    await vi.advanceTimersByTimeAsync(0);
     http.expectOne(`${API}/api/v1/reports/runs/run-1`).flush(status('running'));
-    vi.advanceTimersByTime(1000);
+    await vi.advanceTimersByTimeAsync(1000);
     http.expectOne(`${API}/api/v1/reports/runs/run-1`).flush(status('running'));
-    vi.advanceTimersByTime(5000);
+    await vi.advanceTimersByTimeAsync(5000);
     http.expectNone(`${API}/api/v1/reports/runs/run-1`);
 
     expect(results.map(r => r.status)).toEqual(['running']);

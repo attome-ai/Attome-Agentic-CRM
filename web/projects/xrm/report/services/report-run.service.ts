@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, switchMap } from 'rxjs';
-import { ApiComponents, ApiService } from '@attome/base';
+import { ApiComponents, SdkService } from '@attome/base';
 import { BulkJobRunner } from '@attome/xrm/core/entity';
 import type { PollOptions } from '@attome/xrm/core/entity';
 
@@ -32,15 +32,15 @@ export const REPORT_POLL: Required<PollOptions> = { intervalMs: 2000, maxPolls: 
  */
 @Injectable({ providedIn: 'root' })
 export class ReportRunService {
-  private readonly api    = inject(ApiService);
+  private readonly sdk    = inject(SdkService);
   private readonly runner = inject(BulkJobRunner);
 
   run(reportId: string, body: RunReportBody = {}): Observable<RunEnqueueResponse> {
-    return this.api.post<RunEnqueueResponse>(`/api/v1/reports/${encodeURIComponent(reportId)}/run`, body);
+    return this.sdk.post<RunEnqueueResponse>(`/api/v1/reports/${encodeURIComponent(reportId)}/run`, { body });
   }
 
   status(runId: string): Observable<ReportRunStatus> {
-    return this.api.get<ReportRunStatus>(`/api/v1/reports/runs/${encodeURIComponent(runId)}`);
+    return this.sdk.get<ReportRunStatus>(`/api/v1/reports/runs/${encodeURIComponent(runId)}`);
   }
 
   /** Enqueues a run, then polls it (bounded, `REPORT_POLL`). Emits the last
