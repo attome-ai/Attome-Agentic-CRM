@@ -441,6 +441,7 @@ async fn write_decision_event(
 #[utoipa::path(
     get,
     path = "/api/v1/admin/predict/next-actions",
+    operation_id = "list_nba_actions",
     tag = "predict",
     responses(
         (status = 200, description = "Every active action", body = PaginatedResponse<NbaAction>),

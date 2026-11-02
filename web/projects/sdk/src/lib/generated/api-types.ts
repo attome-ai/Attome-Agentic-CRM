@@ -9257,7 +9257,7 @@ export interface paths {
             cookie?: never;
         };
         /** List next-best actions */
-        get: operations["list_actions"];
+        get: operations["list_nba_actions"];
         put?: never;
         /**
          * Create a next-best action
@@ -100566,7 +100566,7 @@ export interface operations {
             };
         };
     };
-    list_actions: {
+    list_nba_actions: {
         parameters: {
             query?: never;
             header?: never;

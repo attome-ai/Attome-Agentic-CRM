@@ -45696,7 +45696,7 @@
           "predict"
         ],
         "summary": "List next-best actions",
-        "operationId": "list_actions",
+        "operationId": "list_nba_actions",
         "responses": {
           "200": {
             "description": "Every active action",
