@@ -52,7 +52,7 @@ const MAX_PRODUCTS: i64 = 200;
 /// Lines a cart holds at most.
 pub const MAX_LINES: i64 = 100;
 
-fn setting(state: &EngineState, key: &str) -> serde_json::Value {
+pub(crate) fn setting(state: &EngineState, key: &str) -> serde_json::Value {
     attome_core::setting_registry()
         .get(key)
         .map(|d| state.settings.load().resolve(d, None, None).0)
@@ -64,7 +64,7 @@ pub fn enabled(state: &EngineState) -> bool {
     setting(state, ENABLED_SETTING).as_bool().unwrap_or(false)
 }
 
-fn currency(state: &EngineState) -> String {
+pub(crate) fn currency(state: &EngineState) -> String {
     setting(state, CURRENCY_SETTING)
         .as_str()
         .map(str::trim)
@@ -141,10 +141,10 @@ pub struct CheckedOut {
     pub approval_id: Option<Uuid>,
 }
 
-type ProductRow = (Uuid, Option<String>, Option<String>, Option<String>);
+pub(crate) type ProductRow = (Uuid, Option<String>, Option<String>, Option<String>);
 
 /// The products on sale whose name or SKU contains `search`.
-async fn visible_products(
+pub(crate) async fn visible_products(
     state: &EngineState,
     search: Option<&str>,
     only: Option<&[Uuid]>,
@@ -168,15 +168,15 @@ async fn visible_products(
 
 /// `product`'s unit price for `account` in `currency` today for
 /// `quantity`; `None` without one.
-async fn price(
+pub(crate) async fn price(
     state: &EngineState,
-    account: Uuid,
+    account: Option<Uuid>,
     product: Uuid,
     currency: &str,
     quantity: Decimal,
 ) -> Result<Option<Decimal>, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
-    let inputs = load_price_inputs(&mut tx, Some(account), product, currency).await?;
+    let inputs = load_price_inputs(&mut tx, account, product, currency).await?;
     tx.rollback().await.map_err(AppError::internal)?;
     let request = PriceRequest {
         currency: currency.to_owned(),
@@ -205,7 +205,7 @@ pub async fn catalogue(
     let currency = currency(state);
     let mut out = Vec::new();
     for (id, name, name_ar, sku) in visible_products(state, search, None).await? {
-        if let Some(p) = price(state, account, id, &currency, Decimal::ONE).await? {
+        if let Some(p) = price(state, Some(account), id, &currency, Decimal::ONE).await? {
             out.push(CatalogueItem {
                 product_id: id,
                 name,
@@ -256,7 +256,7 @@ pub async fn cart(state: &EngineState, portal_user: Uuid, account: Uuid) -> Resu
         let qty = Decimal::from_str(&quantity).unwrap_or(Decimal::ZERO);
         let listed = on_sale.iter().find(|p| p.0 == product);
         let unit = match listed {
-            Some(_) => price(state, account, product, &currency, qty).await?,
+            Some(_) => price(state, Some(account), product, &currency, qty).await?,
             None => None,
         };
         let line = unit.map(|u| line_total(qty, u, Decimal::ZERO));
@@ -308,7 +308,7 @@ pub async fn set_line(
         let listed = visible_products(state, None, Some(std::slice::from_ref(&product))).await?;
         let currency = currency(state);
         if listed.is_empty()
-            || price(state, account, product, &currency, quantity)
+            || price(state, Some(account), product, &currency, quantity)
                 .await?
                 .is_none()
         {

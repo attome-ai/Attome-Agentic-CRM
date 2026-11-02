@@ -786,6 +786,25 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(0),
         ),
+        // F8-T7: guest checkout.
+        SettingDescriptor::new(
+            "commerce.guest_account",
+            "The account (its id) that orders placed without a portal account go under (F8-T7). \
+         Empty by default: guests cannot check out.",
+            || json!({"type": ["string", "null"], "format": "uuid"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(null),
+        ),
+        SettingDescriptor::new(
+            "commerce.vat_rate",
+            "The VAT rate added to guest orders on their discounted lines and shipping, as a \
+         fraction such as 0.15 (F8-T7). 0 by default.",
+            || json!({"type": "number", "minimum": 0, "exclusiveMaximum": 1}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(0),
+        ),
         // D22-T5: call analysis.
         SettingDescriptor::new(
             "callintel.enabled",

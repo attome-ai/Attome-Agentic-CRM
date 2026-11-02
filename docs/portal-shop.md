@@ -43,6 +43,30 @@ the promotion's `max_uses_per_customer` for the buyer's contact, refuses the che
 the cart back. Each order line keeps its `discount_amount` and `promotion_ref`, so the cost of every
 offer can be reported.
 
+## Shipping and guest checkout
+
+Shipping zones (`shipping_zone`: `countries` and optional `cities`, comma separated) hold rates
+(`shipping_rate`): `flat`, `by_weight` (inside `min_weight`..`max_weight`; products carry no weight yet,
+so only a band without a lower bound matches), `free_over` (nothing once the total reaches
+`free_over_amount`) and `carrier_live` (nothing until a carrier connector quotes). Cash on delivery adds
+the rate's `cod_fee`. `GET /{keyword}/api/v1/shop/shipping?country=SA&city=&total=` lists the options.
+
+A buyer without a portal account can check out once `commerce.guest_account` names the account guest
+orders go under (and `commerce.vat_rate`, 0 by default, is the VAT rate on them):
+
+1. `POST /{keyword}/api/v1/shop/guest/start` `{phone, lines: [{product_id, quantity}]}` keeps the lines and
+   texts a 6-digit code (through the SMS provider; only its SHA-256 is stored), valid 10 minutes; at most
+   3 codes per phone in 15 minutes and 10 tries per address and minute.
+2. `POST /{keyword}/api/v1/shop/guest/confirm` with an `Idempotency-Key` header and `{checkout_id, code,
+   name, address, country, city, shipping_rate_id, cash_on_delivery, coupon}` places the order: prices,
+   offers, shipping and VAT are worked out again here. A wrong code is 401 (5 tries); the same key again
+   returns the same order; a second key for a spent code is 409. The contact is matched by phone or made.
+   Cash on delivery sets `payment_status` `due_on_delivery` and `cod_amount`; otherwise a payment link for
+   the order is returned as `payment_url`.
+
+Both guest routes need the portal's own origin and its service user (`contact.create`, `order.create`,
+`order_line.create`, and `payment_link.create` for paid orders).
+
 ## Routes
 
 - `GET /{keyword}/api/v1/shop/catalogue?search=`

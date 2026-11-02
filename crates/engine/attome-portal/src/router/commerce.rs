@@ -11,25 +11,39 @@
 //!   account, written as the portal's service user (V2-D1588 (1)), with an
 //!   approval request above the shop's limit.
 //!
+//! - `GET /{keyword}/api/v1/shop/shipping?country=&city=&total=`: the ways
+//!   to ship an order of that total to an address (F8-T7).
+//! - `POST /{keyword}/api/v1/shop/guest/start` `{phone, lines}` and
+//!   `POST /{keyword}/api/v1/shop/guest/confirm` (with `Idempotency-Key`):
+//!   checkout without a portal account, proved by a code texted to the
+//!   phone (`attome_sales::guest_checkout`), same-origin and limited per
+//!   address; confirm writes as the portal's service user.
+//!
 //! The account always comes from the portal user's contact. 404 while the
 //! sales module or `commerce.enabled` is off, for a user with no account,
 //! and, for checkout, while the portal has no service user.
 
 use attome_core::EngineState;
 use attome_sales::commerce::{Cart, CatalogueItem, CheckedOut, ShopOrder};
+use attome_sales::guest_checkout::{Confirm, GuestLine, GuestOrder, Started};
+use attome_sales::shipping::ShippingOption;
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
-    extract::{Path, Query, State},
+    extract::{ConnectInfo, Path, Query, State},
     http::HeaderMap,
     routing::{get, post, put},
 };
 use serde::Deserialize;
+use std::net::SocketAddr;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use super::fulfilment::account_of;
-use super::{authenticate, portal_for};
+use super::{authenticate, budget, check_same_origin, portal_budget, portal_for};
+
+/// Guest checkout starts and confirms per address and minute.
+const GUEST_IP_RPM: i32 = 10;
 
 /// The signed-in portal user and their account, while the shop is open.
 async fn shopper(
@@ -251,12 +265,194 @@ pub(super) fn routes() -> Router<EngineState> {
         )
         .route("/{keyword}/api/v1/shop/cart/checkout", post(checkout))
         .route("/{keyword}/api/v1/shop/orders", get(my_orders))
+        .route("/{keyword}/api/v1/shop/shipping", get(shipping))
+        .route("/{keyword}/api/v1/shop/guest/start", post(guest_start))
+        .route("/{keyword}/api/v1/shop/guest/confirm", post(guest_confirm))
+}
+
+/// F8-T7: an open shop on `keyword` for a guest, its per-address budget
+/// spent.
+async fn guest_portal(
+    state: &EngineState,
+    keyword: &str,
+    headers: &HeaderMap,
+    connect: Option<axum::Extension<ConnectInfo<SocketAddr>>>,
+) -> Result<crate::provision::PortalDetail, AppError> {
+    if !state.modules.load().has(attome_modules::MODULE_SALES)
+        || !attome_sales::guest_checkout::enabled(state)
+    {
+        return Err(AppError::NotFound);
+    }
+    let portal = portal_for(state, keyword).await?;
+    check_same_origin(state, &portal, headers)?;
+    portal_budget(state, &portal).await?;
+    if let Some(c) = connect {
+        let ip = attome_server::middleware::client_ip::client_ip_from_parts(
+            c.0.0.ip(),
+            headers,
+            &state.base.config,
+        );
+        budget(
+            state,
+            format!("attome-portal:rl:guest-checkout:{}:{ip}", portal.id),
+            GUEST_IP_RPM,
+        )
+        .await?;
+    }
+    Ok(portal)
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct ShippingQuery {
+    /// ISO 3166-1 alpha-2.
+    pub country: String,
+    pub city: Option<String>,
+    /// The order's total, a decimal (for free-over rates).
+    pub total: Option<String>,
+}
+
+/// Shipping options
+///
+/// F8-T7: the ways to ship an order of `total` to the address, cheapest first; cash on delivery adds each
+/// option's `cod_fee`.
+#[utoipa::path(
+    get,
+    path = "/{keyword}/api/v1/shop/shipping",
+    operation_id = "portal_shop_shipping",
+    tag = "sales",
+    params(("keyword" = String, Path, description = "The portal"), ShippingQuery),
+    responses(
+        (status = 200, description = "The options", body = Vec<ShippingOption>),
+        (status = 404, description = "The shop is off, or no such portal", body = ErrorResponse),
+    ),
+)]
+async fn shipping(
+    State(state): State<EngineState>,
+    Path(keyword): Path<String>,
+    Query(query): Query<ShippingQuery>,
+) -> Result<Json<Vec<ShippingOption>>, AppError> {
+    if !state.modules.load().has(attome_modules::MODULE_SALES)
+        || !attome_sales::commerce::enabled(&state)
+    {
+        return Err(AppError::NotFound);
+    }
+    portal_for(&state, &keyword).await?;
+    Ok(Json(
+        attome_sales::shipping::quote_for_address(
+            &state,
+            &query.country,
+            query.city.as_deref(),
+            query.total.as_deref(),
+        )
+        .await?,
+    ))
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct GuestStart {
+    pub phone: String,
+    pub lines: Vec<GuestLine>,
+}
+
+/// Start a guest checkout
+///
+/// F8-T7: keeps the lines and texts a 6-digit code to the phone; the code works for 10 minutes.
+#[utoipa::path(
+    post,
+    path = "/{keyword}/api/v1/shop/guest/start",
+    operation_id = "portal_shop_guest_start",
+    tag = "sales",
+    params(("keyword" = String, Path, description = "The portal")),
+    request_body = GuestStart,
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(attome_audit::security::ExemptReason::UserPreference, None, "F8-T7: keeps an unconfirmed guest basket and texts its code; nothing is ordered until confirm, which is audited")))),
+    responses(
+        (status = 200, description = "The code was sent", body = Started),
+        (status = 403, description = "Not from the portal's own origin", body = ErrorResponse),
+        (status = 404, description = "Guest checkout is off, or no such portal", body = ErrorResponse),
+        (status = 422, description = "Not a phone number, a product not on sale, or no SMS provider", body = ErrorResponse),
+        (status = 429, description = "Too many codes for the phone or the address", body = ErrorResponse),
+    ),
+)]
+async fn guest_start(
+    State(state): State<EngineState>,
+    Path(keyword): Path<String>,
+    connect: Option<axum::Extension<ConnectInfo<SocketAddr>>>,
+    headers: HeaderMap,
+    Json(body): Json<GuestStart>,
+) -> Result<Json<Started>, AppError> {
+    let portal = guest_portal(&state, &keyword, &headers, connect).await?;
+    Ok(Json(
+        attome_sales::guest_checkout::start(&state, portal.id, &body.phone, &body.lines).await?,
+    ))
+}
+
+/// Confirm a guest checkout
+///
+/// F8-T7: with the texted code, places the order: prices, offers, shipping and VAT recomputed here. The
+/// same `Idempotency-Key` again returns the same order.
+#[utoipa::path(
+    post,
+    path = "/{keyword}/api/v1/shop/guest/confirm",
+    operation_id = "portal_shop_guest_confirm",
+    tag = "sales",
+    params(
+        ("keyword" = String, Path, description = "The portal"),
+        ("Idempotency-Key" = String, Header, description = "One key per order"),
+    ),
+    request_body = Confirm,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Create)])))),
+    responses(
+        (status = 200, description = "The order", body = GuestOrder),
+        (status = 401, description = "Wrong, expired or exhausted code", body = ErrorResponse),
+        (status = 403, description = "Not from the portal's own origin", body = ErrorResponse),
+        (status = 404, description = "Guest checkout is off, or the portal has no service user", body = ErrorResponse),
+        (status = 409, description = "The code was used already, or the order is being placed", body = ErrorResponse),
+        (status = 422, description = "No Idempotency-Key, a product no longer on sale, a shipping rate that does not apply, or a coupon that does not", body = ErrorResponse),
+        (status = 429, description = "Too many tries from the address", body = ErrorResponse),
+    ),
+)]
+async fn guest_confirm(
+    State(state): State<EngineState>,
+    Path(keyword): Path<String>,
+    connect: Option<axum::Extension<ConnectInfo<SocketAddr>>>,
+    headers: HeaderMap,
+    Json(body): Json<Confirm>,
+) -> Result<Json<GuestOrder>, AppError> {
+    let portal = guest_portal(&state, &keyword, &headers, connect).await?;
+    let key = headers
+        .get("idempotency-key")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .to_owned();
+    let service_user = crate::provision::service_user(&state.base.db, portal.id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    let ctx = state.base.security.resolve_strict(service_user).await?;
+    Ok(Json(
+        attome_sales::guest_checkout::confirm(&state, &ctx, portal.id, &key, &body).await?,
+    ))
 }
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(catalogue, my_cart, set_line, checkout, my_orders),
+    paths(
+        catalogue,
+        my_cart,
+        set_line,
+        checkout,
+        my_orders,
+        shipping,
+        guest_start,
+        guest_confirm
+    ),
     components(schemas(
+        ShippingOption,
+        GuestStart,
+        GuestLine,
+        Started,
+        Confirm,
+        GuestOrder,
         CatalogueItem,
         Cart,
         attome_sales::commerce::CartLine,

@@ -1,0 +1,107 @@
+{
+  "author": "packs",
+  "checksum": "sha256:ab190c7725de0e21dc4f6be517106b81579d504a96839e46a1a1cc3eb1b2b663",
+  "closed_at": "2026-11-02T00:00:00Z",
+  "description": "Guest checkout (F8-T7): an order keeps its shipping charge and its payment status (awaiting payment, due on delivery, paid).",
+  "format": "attome-changeset/v1",
+  "id": "01a19c40-0000-7f08-8000-000000000033",
+  "layer": "product",
+  "name": "sales-guest-checkout",
+  "opened_at": "2026-11-02T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Shipping",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "shipping_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "order",
+        "field": "shipping_total"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Payment status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "payment_status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "awaiting_payment",
+              "due_on_delivery",
+              "paid"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "order",
+        "field": "payment_status"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الشحن"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "locale": "ar",
+        "object_key": "order.shipping_total",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "حالة الدفع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "order.payment_status",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 33,
+  "title": "Pack: order shipping and payment status"
+}

@@ -14,6 +14,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Shipping and guest checkout (F8-T7, migration `0375`, sales pack changeset `0033`): shipping zones and
+  rates quoted at `GET /{keyword}/api/v1/shop/shipping`; `POST /{keyword}/api/v1/shop/guest/start` texts a
+  one-time code and `POST /{keyword}/api/v1/shop/guest/confirm` (with `Idempotency-Key`) places the order with
+  shipping, offers and VAT recomputed, cash on delivery or a payment link; settings `commerce.guest_account`
+  and `commerce.vat_rate`; `order.shipping_total` and `order.payment_status`.
 - Promotions and coupons at checkout (F8-T6, sales pack changeset `0032`): percent, amount, buy X
   get Y, free shipping and bundle offers applied after the list price and before VAT, eligibility by a
   rule, `?coupon=` on `POST /{keyword}/api/v1/shop/cart/checkout`, coupon limits enforced under a lock

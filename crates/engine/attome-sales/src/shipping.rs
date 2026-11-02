@@ -176,6 +176,24 @@ pub async fn quote_shipping(
     Ok(options.into_iter().map(|(_, option)| option).collect())
 }
 
+/// [`quote_shipping`] for a weightless order of `total` (a decimal in
+/// text) to `country` and `city`, as the shop's routes take them.
+pub async fn quote_for_address(
+    state: &EngineState,
+    country: &str,
+    city: Option<&str>,
+    total: Option<&str>,
+) -> Result<Vec<ShippingOption>, AppError> {
+    let total = total
+        .and_then(|t| Decimal::from_str(t.trim()).ok())
+        .unwrap_or(Decimal::ZERO);
+    let to = ShipTo {
+        country: country.trim().to_ascii_uppercase(),
+        city: city.map(str::to_owned),
+    };
+    quote_shipping(state, &to, Decimal::ZERO, total).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

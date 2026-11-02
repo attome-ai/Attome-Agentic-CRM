@@ -37,6 +37,8 @@ pub mod orgchart;
 pub mod owner_change;
 /// D26-T2: the plays that apply to a deal.
 pub mod plays;
+/// F8-T7: checkout without an account, proved by a code to the phone.
+pub mod guest_checkout;
 /// F8-T6: promotions and coupons in the shop's pricing order.
 pub mod promotion;
 pub mod price_resolution;
