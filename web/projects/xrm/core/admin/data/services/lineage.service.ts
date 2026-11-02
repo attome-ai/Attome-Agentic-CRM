@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 
 /**
  * L5 lineage over `crates/engine/attome-api/src/lineage_admin.rs` and
@@ -97,7 +97,7 @@ export interface LineageWalk {
 
 @Injectable({ providedIn: 'root' })
 export class LineageService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** Walks from `kind`/`ref`: `entity` with `<entity>[.<attribute>]`, or a definition kind with its id. */
   walk(kind: string, ref: string, walk: LineageWalk = {}): Observable<LineageGraph> {
@@ -106,23 +106,24 @@ export class LineageService {
     if (walk.depth) params['depth'] = String(walk.depth);
     if (walk.kinds?.length) params['kinds'] = walk.kinds.join(',');
     if (walk.version !== null && walk.version !== undefined) params['version'] = String(walk.version);
-    return this.api.get<LineageGraph>(
-      `/api/v1/lineage/${encodeURIComponent(kind)}/${encodeURIComponent(ref)}`, params,
+    return this.sdk.get<LineageGraph>(
+      `/api/v1/lineage/${encodeURIComponent(kind)}/${encodeURIComponent(ref)}`,
+      { query: params },
     );
   }
 
   compare(from: number, to: number): Observable<LineageComparison> {
-    return this.api.get<LineageComparison>('/api/v1/lineage/compare', { from: String(from), to: String(to) });
+    return this.sdk.get<LineageComparison>('/api/v1/lineage/compare', { query: { from: String(from), to: String(to) } });
   }
 
   cleanup(): Observable<LineageCleanup> {
-    return this.api.get<LineageCleanup>('/api/v1/lineage/cleanup');
+    return this.sdk.get<LineageCleanup>('/api/v1/lineage/cleanup');
   }
 
   impact(entity: string, attribute: string | null, change: ImpactChange, depth?: number): Observable<ImpactReport> {
     const params: Record<string, string> = { entity, change };
     if (attribute) params['attribute'] = attribute;
     if (depth) params['depth'] = String(depth);
-    return this.api.get<ImpactReport>('/api/v1/admin/lineage/impact', params);
+    return this.sdk.get<ImpactReport>('/api/v1/admin/lineage/impact', { query: params });
   }
 }

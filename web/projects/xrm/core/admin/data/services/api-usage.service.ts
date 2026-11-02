@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService, Page } from '@attome/base';
+import { SdkService, Page } from '@attome/base';
 
 /**
  * M61 / S10-T1 — API usage over `crates/engine/attome-api/src/api_usage_admin.rs`
@@ -43,25 +43,31 @@ export const USAGE_WINDOWS = [1, 7, 30, 90] as const;
 
 @Injectable({ providedIn: 'root' })
 export class ApiUsageService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   summary(days: number, page = 1, pageSize = 50): Observable<Page<ApiUsageSummaryRow>> {
-    return this.api.get<Page<ApiUsageSummaryRow>>('/api/v1/admin/api-usage/summary', {
+    return this.sdk.get<Page<ApiUsageSummaryRow>>(
+      '/api/v1/admin/api-usage/summary',
+      { query: {
       days: String(days), page: String(page), page_size: String(pageSize),
-    });
+    } },
+    );
   }
 
   keys(days: number, page = 1, pageSize = 50): Observable<Page<ApiKeyUsageRow>> {
-    return this.api.get<Page<ApiKeyUsageRow>>('/api/v1/admin/api-keys', {
+    return this.sdk.get<Page<ApiKeyUsageRow>>(
+      '/api/v1/admin/api-keys',
+      { query: {
       days: String(days), page: String(page), page_size: String(pageSize),
-    });
+    } },
+    );
   }
 
   /** Sets the key's quota; `null` clears it. */
   setQuota(id: string, requestsPerMinute: number | null): Observable<ApiKeyQuotaSet> {
-    return this.api.put<ApiKeyQuotaSet>(
+    return this.sdk.put<ApiKeyQuotaSet>(
       `/api/v1/admin/api-keys/${encodeURIComponent(id)}/quota`,
-      { requests_per_minute: requestsPerMinute },
+      { body: { requests_per_minute: requestsPerMinute } },
     );
   }
 }

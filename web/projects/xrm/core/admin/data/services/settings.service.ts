@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 
 /** Mirrors `SettingScope` (`attome-core::setting_descriptor`, M02/D-412). */
 export type SettingScope = 'user' | 'organization' | 'deployment';
@@ -34,13 +34,13 @@ export interface SettingListResponse {
 
 @Injectable({ providedIn: 'root' })
 export class SettingsService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** Admin overview — every runtime-eligible setting's deployment-scope
    * effective value (a deployment override if one exists, else its code
    * default). `boot_time_only` settings never appear here. */
   listAdminSettings(): Observable<SettingListResponse> {
-    return this.api.get<SettingListResponse>('/api/v1/admin/settings');
+    return this.sdk.get<SettingListResponse>('/api/v1/admin/settings');
   }
 
   /** Admin-only write, at an explicit scope. `scopeRef` is required for
@@ -51,22 +51,25 @@ export class SettingsService {
     value: unknown,
     scopeRef?: string,
   ): Observable<SettingValueView> {
-    return this.api.put<SettingValueView>(`/api/v1/admin/settings/${encodeURIComponent(key)}`, {
+    return this.sdk.put<SettingValueView>(
+      `/api/v1/admin/settings/${encodeURIComponent(key)}`,
+      { body: {
       scope,
       scope_ref: scopeRef ?? null,
       value,
-    });
+    } },
+    );
   }
 
   /** Every runtime-eligible setting that allows the `user` scope, resolved
    * for the calling user (their own override, else org, else deployment,
    * else the code default). */
   listMySettings(): Observable<SettingListResponse> {
-    return this.api.get<SettingListResponse>('/api/v1/settings/me');
+    return this.sdk.get<SettingListResponse>('/api/v1/settings/me');
   }
 
   /** Sets the calling user's own override. */
   putMySetting(key: string, value: unknown): Observable<SettingValueView> {
-    return this.api.put<SettingValueView>(`/api/v1/settings/me/${encodeURIComponent(key)}`, { value });
+    return this.sdk.put<SettingValueView>(`/api/v1/settings/me/${encodeURIComponent(key)}`, { body: { value } });
   }
 }

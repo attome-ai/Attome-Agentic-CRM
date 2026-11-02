@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import type { ApiComponents, Page } from '@attome/base';
 
 /**
@@ -13,20 +13,23 @@ export type CacheStatsRow = ApiComponents['schemas']['CacheStatsRow'];
 
 @Injectable({ providedIn: 'root' })
 export class CacheAdminService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** `GET /api/v1/admin/caches` (one-based pages). */
   list(page = 1, pageSize = 200): Observable<Page<CacheStatsRow>> {
-    return this.api.get<Page<CacheStatsRow>>('/api/v1/admin/caches', {
+    return this.sdk.get<Page<CacheStatsRow>>(
+      '/api/v1/admin/caches',
+      { query: {
       page: String(page), page_size: String(pageSize),
-    });
+    } },
+    );
   }
 
   /** `POST /api/v1/admin/caches/{name}/purge`: one key, or everything when `key` is null. */
   purge(name: string, key: string | null): Observable<void> {
-    return this.api.post<void>(
+    return this.sdk.post<void>(
       `/api/v1/admin/caches/${encodeURIComponent(name)}/purge`,
-      key ? { key } : {},
+      { body: key ? { key } : {} },
     );
   }
 }

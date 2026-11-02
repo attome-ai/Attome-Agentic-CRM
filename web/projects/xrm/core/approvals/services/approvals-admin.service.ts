@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 
 // ── Response types (mirror attome_api::approval_admin::ApprovalRequestView /
 // attome_approval::ApprovalRequest exactly — crates/engine/attome-api/src/approval_admin.rs) ──
@@ -108,7 +108,7 @@ export interface BatchDecideResponse {
 
 @Injectable({ providedIn: 'root' })
 export class ApprovalsAdminService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** Always `status = "pending"` server-side (`attome_approval::list_pending`)
    *  — this is deliberately the only queue view; a decided/expired/cancelled
@@ -117,7 +117,7 @@ export class ApprovalsAdminService {
   list(page = 1, pageSize = 50, actionType?: string): Observable<ApprovalRequestsPage> {
     const params: Record<string, string> = { page: String(page), page_size: String(pageSize) };
     if (actionType) params['action_type'] = actionType;
-    return this.api.get<ApprovalRequestsPage>('/api/v1/admin/approvals', params);
+    return this.sdk.get<ApprovalRequestsPage>('/api/v1/admin/approvals', { query: params });
   }
 
   approve(id: string, rowVersion: number, comment?: string | null): Observable<DecideResponse> {
@@ -139,7 +139,7 @@ export class ApprovalsAdminService {
     };
     const note = comment?.trim();
     if (note) body.comment = note;
-    return this.api.post<DecideResponse>(`/api/v1/admin/approvals/${id}/decide`, body);
+    return this.sdk.post<DecideResponse>(`/api/v1/admin/approvals/${id}/decide`, { body: body });
   }
 
   /** Decides many requests the same way (N30-T6); each keeps its own checks
@@ -152,16 +152,19 @@ export class ApprovalsAdminService {
     };
     const note = comment?.trim();
     if (note) body.comment = note;
-    return this.api.post<BatchDecideResponse>('/api/v1/admin/approvals/batch-decide', body);
+    return this.sdk.post<BatchDecideResponse>('/api/v1/admin/approvals/batch-decide', { body: body });
   }
 
   /** Only the request's own `requested_by` may cancel it — a different admin
    *  gets a 403 (`attome_approval::cancel`'s separation-of-duties check, the
    *  inverse of `decide()`'s). */
   cancel(id: string, rowVersion: number): Observable<ApprovalRequestItem> {
-    return this.api.post<ApprovalRequestItem>(`/api/v1/admin/approvals/${id}/cancel`, {
+    return this.sdk.post<ApprovalRequestItem>(
+      `/api/v1/admin/approvals/${id}/cancel`,
+      { body: {
       row_version: rowVersion,
-    });
+    } },
+    );
   }
 
   /** D-421 — hands the caller's own standing on this request's current plan
@@ -172,9 +175,12 @@ export class ApprovalsAdminService {
    *  with `422` — D-421's core invariant, that a delegation can never
    *  manufacture a path to self-approval. */
   delegate(id: string, toUserId: string, validTo?: string): Observable<{ delegation_id: string }> {
-    return this.api.post<{ delegation_id: string }>(`/api/v1/admin/approvals/${id}/delegate`, {
+    return this.sdk.post<{ delegation_id: string }>(
+      `/api/v1/admin/approvals/${id}/delegate`,
+      { body: {
       to_user_id: toUserId, valid_to: validTo ?? null,
-    });
+    } },
+    );
   }
 
   // ── D-421 — approval policies ─────────────────────────────────────────
@@ -182,22 +188,22 @@ export class ApprovalsAdminService {
   listPolicies(page = 1, pageSize = 50, actionType?: string): Observable<ApprovalPoliciesPage> {
     const params: Record<string, string> = { page: String(page), page_size: String(pageSize) };
     if (actionType) params['action_type'] = actionType;
-    return this.api.get<ApprovalPoliciesPage>('/api/v1/admin/approval-policies', params);
+    return this.sdk.get<ApprovalPoliciesPage>('/api/v1/admin/approval-policies', { query: params });
   }
 
   getPolicy(id: string): Observable<ApprovalPolicy> {
-    return this.api.get<ApprovalPolicy>(`/api/v1/admin/approval-policies/${id}`);
+    return this.sdk.get<ApprovalPolicy>(`/api/v1/admin/approval-policies/${id}`);
   }
 
   createPolicy(body: CreateApprovalPolicyBody): Observable<ApprovalPolicy> {
-    return this.api.post<ApprovalPolicy>('/api/v1/admin/approval-policies', body);
+    return this.sdk.post<ApprovalPolicy>('/api/v1/admin/approval-policies', { body: body });
   }
 
   updatePolicy(id: string, body: UpdateApprovalPolicyBody): Observable<ApprovalPolicy> {
-    return this.api.put<ApprovalPolicy>(`/api/v1/admin/approval-policies/${id}`, body);
+    return this.sdk.put<ApprovalPolicy>(`/api/v1/admin/approval-policies/${id}`, { body: body });
   }
 
   deletePolicy(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/approval-policies/${id}`);
+    return this.sdk.delete(`/api/v1/admin/approval-policies/${id}`);
   }
 }

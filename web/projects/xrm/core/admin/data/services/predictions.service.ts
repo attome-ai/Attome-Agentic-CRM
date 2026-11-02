@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 
 // M36 Phase 0+1 (Predictive Intelligence, D-473) — mirrors
 // attome_predict::predictions::PredictionSummary exactly
@@ -33,17 +33,20 @@ export interface PredictionsPage {
 
 @Injectable({ providedIn: 'root' })
 export class PredictionsService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** The record banner's/widget's own read — no `Admin` gate server-side,
    *  only the caller's own `{regardingEntity}.read` (`predictions.rs`'s own
    *  module doc). Newest first. */
   forRecord(regardingEntity: string, regardingId: string, pageSize = 5): Observable<PredictionsPage> {
-    return this.api.get<PredictionsPage>('/api/v1/predictions', {
+    return this.sdk.get<PredictionsPage>(
+      '/api/v1/predictions',
+      { query: {
       regarding_entity: regardingEntity,
       regarding_id: regardingId,
       page: '1',
       page_size: String(pageSize),
-    });
+    } },
+    );
   }
 }

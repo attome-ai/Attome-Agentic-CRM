@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 
 // ── Response types (mirror attome_jobs::DeadLetterJobRow / attome_api::jobs_admin exactly) ──
 
@@ -27,16 +27,19 @@ export interface ReplayResponse {
 
 @Injectable({ providedIn: 'root' })
 export class JobsAdminService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** `queue`: `"fast"` (default) or `"batch"` — see `EngineJob::is_batch`. */
   listDeadLetter(queue: 'fast' | 'batch', page = 1, pageSize = 50): Observable<DeadLetterJobsPage> {
-    return this.api.get<DeadLetterJobsPage>('/api/v1/admin/jobs/dead-letter', {
+    return this.sdk.get<DeadLetterJobsPage>(
+      '/api/v1/admin/jobs/dead-letter',
+      { query: {
       queue, page: String(page), page_size: String(pageSize),
-    });
+    } },
+    );
   }
 
   replay(id: string): Observable<ReplayResponse> {
-    return this.api.post<ReplayResponse>(`/api/v1/admin/jobs/${id}/replay`, {});
+    return this.sdk.post<ReplayResponse>(`/api/v1/admin/jobs/${id}/replay`, { body: {} });
   }
 }

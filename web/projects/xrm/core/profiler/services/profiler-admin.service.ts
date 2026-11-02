@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 
 // ── Response types (mirror profiler_admin.rs exactly) ─────────────────────────
 
@@ -31,15 +31,18 @@ export interface TraceSample {
 
 @Injectable({ providedIn: 'root' })
 export class ProfilerAdminService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   stats(): Observable<ApiGroup[]> {
-    return this.api.get<ApiGroup[]>('/api/v1/admin/profiler/stats');
+    return this.sdk.get<ApiGroup[]>('/api/v1/admin/profiler/stats');
   }
 
   trace(name: string, limit = 20): Observable<TraceSample[]> {
-    return this.api.get<TraceSample[]>('/api/v1/admin/profiler/trace', {
+    return this.sdk.get<TraceSample[]>(
+      '/api/v1/admin/profiler/trace',
+      { query: {
       name, limit: String(limit),
-    });
+    } },
+    );
   }
 }

@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiService, type Page } from '@attome/base';
+import { SdkService, type Page } from '@attome/base';
 import { Observable } from 'rxjs';
 
 /** `attome_ai::work_share_routes::ShareDay`. */
@@ -43,17 +43,18 @@ export type DoneBy = 'agent' | 'person';
 /** AK3-T6: the work-share routes (administrators). */
 @Injectable({ providedIn: 'root' })
 export class AiWorkShareService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   summary(from: string, to: string): Observable<Page<ProcessShare>> {
-    return this.api.get<Page<ProcessShare>>('/api/v1/admin/ai/work-share', { from, to });
+    return this.sdk.get<Page<ProcessShare>>('/api/v1/admin/ai/work-share', { query: { from, to } });
   }
 
   events(processKey: string, day: string, by: DoneBy, cursor?: string | null): Observable<ShareEventsPage> {
     const params: Record<string, string> = { day, by };
     if (cursor) params['cursor'] = cursor;
-    return this.api.get<ShareEventsPage>(
-      `/api/v1/admin/ai/work-share/${encodeURIComponent(processKey)}/events`, params,
+    return this.sdk.get<ShareEventsPage>(
+      `/api/v1/admin/ai/work-share/${encodeURIComponent(processKey)}/events`,
+      { query: params },
     );
   }
 }

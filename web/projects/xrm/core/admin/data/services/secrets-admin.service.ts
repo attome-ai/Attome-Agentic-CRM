@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import type { ApiComponents, Page } from '@attome/base';
 
 /**
@@ -15,24 +15,30 @@ export type ConfigChange = ApiComponents['schemas']['ConfigChange'];
 
 @Injectable({ providedIn: 'root' })
 export class SecretsAdminService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** `GET /api/v1/admin/secrets` (one-based pages). */
   secrets(page = 1, pageSize = 200): Observable<Page<SecretInventoryRow>> {
-    return this.api.get<Page<SecretInventoryRow>>('/api/v1/admin/secrets', {
+    return this.sdk.get<Page<SecretInventoryRow>>(
+      '/api/v1/admin/secrets',
+      { query: {
       page: String(page), page_size: String(pageSize),
-    });
+    } },
+    );
   }
 
   /** `GET /api/v1/admin/config/starts`, newest first (one-based pages). */
   starts(page = 1, pageSize = 50): Observable<Page<ConfigStartRow>> {
-    return this.api.get<Page<ConfigStartRow>>('/api/v1/admin/config/starts', {
+    return this.sdk.get<Page<ConfigStartRow>>(
+      '/api/v1/admin/config/starts',
+      { query: {
       page: String(page), page_size: String(pageSize),
-    });
+    } },
+    );
   }
 
   /** `GET /api/v1/admin/config/starts/diff?a=&b=`: the keys that differ. */
   diff(a: string, b: string): Observable<Page<ConfigChange>> {
-    return this.api.get<Page<ConfigChange>>('/api/v1/admin/config/starts/diff', { a, b });
+    return this.sdk.get<Page<ConfigChange>>('/api/v1/admin/config/starts/diff', { query: { a, b } });
   }
 }

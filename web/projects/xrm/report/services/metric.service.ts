@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiComponents, ApiService, Page } from '@attome/base';
+import { ApiComponents, SdkService, Page } from '@attome/base';
 
 // Wire shapes come from the generated OpenAPI contract (M26 R-15 — the
 // "generated api-types.ts doesn't compile" justification `attome-project`'s own
@@ -27,21 +27,27 @@ export type ComputeMetricResponse = ApiComponents['schemas']['ComputeMetricRespo
 
 @Injectable({ providedIn: 'root' })
 export class MetricService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   listMetrics(page = 1, pageSize = 50): Observable<PaginatedMetricDefinitions> {
-    return this.api.get<PaginatedMetricDefinitions>('/api/v1/metrics', {
+    return this.sdk.get<PaginatedMetricDefinitions>(
+      '/api/v1/metrics',
+      { query: {
       page: String(page), page_size: String(pageSize),
-    });
+    } },
+    );
   }
 
   listSnapshots(metricId: string, page = 1, pageSize = 50): Observable<Page<MetricSnapshot>> {
-    return this.api.get<Page<MetricSnapshot>>(`/api/v1/metrics/${metricId}/snapshots`, {
+    return this.sdk.get<Page<MetricSnapshot>>(
+      `/api/v1/metrics/${metricId}/snapshots`,
+      { query: {
       page: String(page), page_size: String(pageSize),
-    });
+    } },
+    );
   }
 
   compute(metricId: string, body: ComputeMetricRequest = {}): Observable<ComputeMetricResponse> {
-    return this.api.post<ComputeMetricResponse>(`/api/v1/metrics/${metricId}/compute`, body);
+    return this.sdk.post<ComputeMetricResponse>(`/api/v1/metrics/${metricId}/compute`, { body: body });
   }
 }

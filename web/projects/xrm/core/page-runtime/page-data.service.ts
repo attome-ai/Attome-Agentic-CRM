@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiService, Page } from '@attome/base';
+import { SdkService, Page } from '@attome/base';
 import { EntityService } from '@attome/xrm/core/entity';
 import { QueryService } from '@attome/xrm/core/query/data';
 import { Observable, catchError, map, of, switchMap, throwError } from 'rxjs';
@@ -37,23 +37,23 @@ export function bindingFilters(binding: PageBinding, recordId: string | null): {
  */
 @Injectable({ providedIn: 'root' })
 export class PageDataService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly query = inject(QueryService);
   private readonly entities = inject(EntityService);
 
   /** The published page `id`; a page not in the current version is a 404. */
   page(id: string): Observable<PageDoc> {
-    return this.api.get<Page<CookedRef>>('/api/v1/cooked/page').pipe(
+    return this.sdk.get<Page<CookedRef>>('/api/v1/cooked/page').pipe(
       map(list => list.items.find(i => i.key === `page:${id}`)),
       switchMap(ref => (ref
-        ? this.api.get<PageDoc>(ref.url)
+        ? this.sdk.get<PageDoc>(ref.url)
         : throwError(() => ({ status: 404, kind: 'not_found', message: '' })))),
     );
   }
 
   /** The caller's role names; none when they cannot be read. */
   myRoles(): Observable<string[]> {
-    return this.api.get<{ items: string[] }>('/api/v1/me/roles').pipe(
+    return this.sdk.get<{ items: string[] }>('/api/v1/me/roles').pipe(
       map(r => r.items ?? []),
       catchError(() => of([])),
     );
@@ -86,19 +86,25 @@ export class PageDataService {
 
   /** Starts the flow definition `definitionId` about a record. */
   startFlow(definitionId: string, entity: string | null, recordId: string | null): Observable<unknown> {
-    return this.api.get<{ logicalname: string }>(`/api/v1/workflow/definitions/${encodeURIComponent(definitionId)}`).pipe(
-      switchMap(def => this.api.post('/api/v1/workflow/instances', {
+    return this.sdk.get<{ logicalname: string }>(`/api/v1/workflow/definitions/${encodeURIComponent(definitionId)}`).pipe(
+      switchMap(def => this.sdk.post(
+        '/api/v1/workflow/instances',
+        { body: {
         definition_logicalname: def.logicalname,
         context: recordId ? { entity, record_id: recordId } : {},
         correlation_entity_id: recordId ?? undefined,
-      })),
+      } },
+      )),
     );
   }
 
   /** Runs the action `actionId` with the record as its arguments. */
   runAction(actionId: string, entity: string | null, recordId: string | null): Observable<unknown> {
-    return this.api.post(`/api/v1/actions/${encodeURIComponent(actionId)}/invoke`, {
+    return this.sdk.post(
+      `/api/v1/actions/${encodeURIComponent(actionId)}/invoke`,
+      { body: {
       args: recordId ? { entity, id: recordId } : {},
-    });
+    } },
+    );
   }
 }
