@@ -266,6 +266,21 @@ pub(crate) async fn load_parent_access(db: &attome_db::DbPool) {
         .collect();
     let owned = ownership.len();
     attome_security::ownership::install(ownership);
+    // A31-T4: each entity's leaver rule, from the same artefacts.
+    let leavers: Vec<(uuid::Uuid, attome_security::ownership::LeaverRule)> = snapshot
+        .manifest
+        .artefacts
+        .keys()
+        .filter(|key| key.starts_with(&prefix))
+        .filter_map(|key| {
+            cooked.get::<serde_json::Value>(attome_model::kinds::ENTITY_SETTINGS.0, key)
+        })
+        .filter_map(|doc| attome_model::kinds::entity_settings::leaver(&doc))
+        .filter_map(|(entity, rule)| {
+            attome_security::ownership::LeaverRule::parse(&rule).map(|r| (entity, r))
+        })
+        .collect();
+    attome_security::ownership::install_leavers(leavers);
     tracing::info!(owned, "entity ownership models loaded");
     match attome_security::parent_access::resolve(db, &pairs).await {
         Ok(links) => {

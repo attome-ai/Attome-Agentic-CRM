@@ -3874,6 +3874,10 @@ pub const SERVICE_QUALITY_SAMPLE: attome_jobs::JobType =
 pub const CALLINTEL_COMPETITORS: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_callintel::analysis::signals::JOB, 1);
 
+/// A31-T4: a disabled person's records moved per entity rule.
+pub const LEAVER_REASSIGN: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_security::ownership::LEAVER_JOB, 3);
+
 /// Y5-T5: one clean-exit export.
 pub const EXIT_EXPORT: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_api::exit::EXPORT_JOB, 1);
@@ -5375,6 +5379,20 @@ pub fn register_job_types() {
                 if opened > 0 {
                     tracing::info!(opened, "quality reviews opened");
                 }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            LEAVER_REASSIGN,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: attome_security::ownership::LeaverPayload = job.payload()?;
+                let started =
+                    attome_api::leaver::reassign(&state, payload.actor_id, payload.user_id)
+                        .await
+                        .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(user = %payload.user_id, started, "leaver reassignment started");
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {

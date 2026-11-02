@@ -125,6 +125,17 @@ Ownership applies to an entity with its own access, not one controlled by its pa
 effect when the metadata version is published; a person's access resolved before an entity became
 `unit` reaches none of its records at User/Team level until it is resolved again.
 
+## When someone leaves
+
+An entity's settings can name where a disabled person's records go:
+`"access": { "mode": "own", "leaver": "manager" }`, or `"team"`, or `"user:<email>"`. Disabling a person
+queues a job that, for each entity with a rule, moves the records they own: to someone holding the
+position above theirs (`manager`), to their first team by name (`team`), or to the named person. It runs
+as the administrator who disabled them, through the mass reassign, so each record goes through its
+normal path and audit; past the inline size it runs in the background. An entity whose new owner cannot
+be found is skipped and named in the log. Records an agent creates are owned by the person the agent
+acts for.
+
 ## Fields
 
 A sensitive field needs a **field-security** grant: a profile, assigned to roles, that grants `can_read`

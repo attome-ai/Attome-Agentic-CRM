@@ -81,6 +81,8 @@ pub mod exchange_rates;
 pub mod exit;
 /// A20-T2: agent-drafted label translations for review.
 pub mod label_drafts;
+/// A31-T4: a leaver's records moved per entity rule.
+pub mod leaver;
 /// AA9-T6 — the limits registry, its values and use.
 pub mod limits_admin;
 mod mentions;

@@ -66,6 +66,23 @@ pub const ACCESS_MODES: [&str; 2] = ["own", "controlled_by_parent"];
 /// A31-T1: the ownership models.
 pub const OWNERSHIP_MODELS: [&str; 3] = ["user_or_team", "organisation", "unit"];
 
+/// A31-T4: whether `rule` is a leaver rule: `manager`, `team` or
+/// `user:<email>`. Pure.
+pub fn leaver_rule_ok(rule: &str) -> bool {
+    matches!(rule, "manager" | "team")
+        || rule
+            .strip_prefix("user:")
+            .is_some_and(|email| email.contains('@') && !email.contains(char::is_whitespace))
+}
+
+/// A31-T4: the entity and its leaver rule, from cooked entity settings.
+pub fn leaver(cooked: &Value) -> Option<(Uuid, String)> {
+    let rule = cooked["access"]["leaver"].as_str()?;
+    leaver_rule_ok(rule)
+        .then(|| Some((uuid_at(&cooked["entity"])?, rule.to_owned())))
+        .flatten()
+}
+
 /// A31-T1: the entity and its ownership model, from cooked entity settings
 /// whose model is not the default `user_or_team`.
 pub fn ownership(cooked: &Value) -> Option<(Uuid, String)> {
@@ -149,7 +166,7 @@ fn check_access(access: &Value, issues: &mut Vec<Issue>) {
         return;
     };
     for key in object.keys() {
-        if !matches!(key.as_str(), "mode" | "lookup" | "ownership") {
+        if !matches!(key.as_str(), "mode" | "lookup" | "ownership" | "leaver") {
             issues.push(Issue::new(
                 format!("/access/{key}"),
                 "unknown_property",
@@ -175,6 +192,14 @@ fn check_access(access: &Value, issues: &mut Vec<Issue>) {
             "/access/ownership",
             "unknown_value",
             format!("ownership is one of {}", OWNERSHIP_MODELS.join(", ")),
+        ));
+    }
+    let leaver = &access["leaver"];
+    if !leaver.is_null() && !leaver.as_str().is_some_and(leaver_rule_ok) {
+        issues.push(Issue::new(
+            "/access/leaver",
+            "unknown_value",
+            "leaver is manager, team or user:<email>",
         ));
     }
     let lookup = &access["lookup"];
@@ -382,6 +407,13 @@ impl Kind for EntitySettingsKind {
                     }
                     plan["access"]["ownership"] = json!(model);
                 }
+                // A31-T4: a leaver rule.
+                if let Some(rule) = input.doc["access"]["leaver"].as_str() {
+                    if plan.get("access").is_none() {
+                        plan["access"] = json!({ "mode": "own" });
+                    }
+                    plan["access"]["leaver"] = json!(rule);
+                }
                 let text = crate::canonical::canonicalize(&plan).map_err(AppError::Validation)?;
                 Ok(Artefact {
                     kind: ENTITY_SETTINGS,
@@ -521,6 +553,38 @@ mod tests {
         let default = cook("user_or_team");
         assert!(default.get("access").is_none(), "the default is not cooked");
         assert_eq!(ownership(&default), None);
+    }
+
+    #[test]
+    fn leaver_rule_is_checked_and_cooked() {
+        let entity = Uuid::now_v7();
+        for (rule, ok) in [
+            ("manager", true),
+            ("team", true),
+            ("user:head@example.com", true),
+            ("user:nobody", false),
+            ("boss", false),
+        ] {
+            let doc = json!({
+                "entity": entity.to_string(),
+                "access": { "mode": "own", "leaver": rule }
+            });
+            assert_eq!(
+                EntitySettingsKind.validate_shape(&doc).is_ok(),
+                ok,
+                "{rule}"
+            );
+        }
+        let doc = json!({ "entity": entity.to_string(), "access": { "mode": "own", "leaver": "manager" } });
+        let out = EntitySettingsKind
+            .cook(&[CookInput {
+                id: ObjectId(Uuid::now_v7()),
+                name: "account".into(),
+                doc,
+            }])
+            .unwrap();
+        let plan: Value = serde_json::from_slice(&out[0].payload).unwrap();
+        assert_eq!(leaver(&plan), Some((entity, "manager".to_owned())));
     }
 
     #[test]

@@ -72,6 +72,64 @@ pub fn install(models: impl IntoIterator<Item = (Uuid, Ownership)>) {
     *slot().write().unwrap_or_else(|e| e.into_inner()) = Arc::new(map);
 }
 
+/// A31-T4: where a disabled person's records go, per entity.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LeaverRule {
+    /// To someone holding the position above the person's.
+    Manager,
+    /// To the person's first team (by name).
+    Team,
+    /// To the named user, by email.
+    User(String),
+}
+
+impl LeaverRule {
+    /// The rule a settings value names; `None` for an unknown one.
+    pub fn parse(rule: &str) -> Option<LeaverRule> {
+        match rule {
+            "manager" => Some(LeaverRule::Manager),
+            "team" => Some(LeaverRule::Team),
+            other => other
+                .strip_prefix("user:")
+                .filter(|email| email.contains('@'))
+                .map(|email| LeaverRule::User(email.to_owned())),
+        }
+    }
+}
+
+type Leavers = Arc<Vec<(Uuid, LeaverRule)>>;
+
+fn leaver_slot() -> &'static RwLock<Leavers> {
+    static SLOT: OnceLock<RwLock<Leavers>> = OnceLock::new();
+    SLOT.get_or_init(|| RwLock::new(Arc::new(Vec::new())))
+}
+
+/// Replaces every entity's leaver rule (the metadata runtime, with the
+/// ownership models).
+pub fn install_leavers(rules: impl IntoIterator<Item = (Uuid, LeaverRule)>) {
+    *leaver_slot().write().unwrap_or_else(|e| e.into_inner()) =
+        Arc::new(rules.into_iter().collect());
+}
+
+/// Every entity's leaver rule.
+pub fn leaver_rules() -> Leavers {
+    leaver_slot()
+        .read()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone()
+}
+
+/// The registered job that moves a disabled person's records.
+pub const LEAVER_JOB: &str = "security_leaver_reassign";
+
+/// The leaver job's payload: who left, and the administrator who disabled
+/// them (the reassignment runs as that administrator).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct LeaverPayload {
+    pub user_id: Uuid,
+    pub actor_id: Uuid,
+}
+
 /// Whether any entity is unit-owned, so a person's own units must be
 /// resolved (the resolver reads this).
 pub fn any_unit() -> bool {
@@ -95,6 +153,16 @@ pub fn model_for(entity: Uuid) -> Ownership {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn leaver_rules_parse() {
+        assert_eq!(LeaverRule::parse("manager"), Some(LeaverRule::Manager));
+        assert_eq!(
+            LeaverRule::parse("user:head@example.com"),
+            Some(LeaverRule::User("head@example.com".into()))
+        );
+        assert_eq!(LeaverRule::parse("user:nobody"), None);
+    }
 
     #[test]
     fn ownership_model_names() {
