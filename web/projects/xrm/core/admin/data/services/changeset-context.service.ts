@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { ApiComponents, ApiError, ApiService, AuthService, Page } from '@attome/base';
+import { ApiComponents, ApiError, AuthService, ChangesetState, Page, SdkService } from '@attome/base';
 import { Observable, catchError, map, of, tap } from 'rxjs';
 
 /** `GET /api/v1/admin/changesets` item (Solution 7, D-785). */
@@ -22,7 +22,7 @@ const OPEN_PAGE_SIZE = 100;
  * Solution 7 (D-785) — which changeset the metadata designer is recording
  * into, and so which layer it is editing.
  *
- * The picked id lives in `ApiService` (`setChangeset`), which sends it as
+ * The picked id lives in `ChangesetState`, which both HTTP clients send as
  * `X-Attome-Changeset` on every mutating request; this service only lists the
  * open changesets and forwards the pick. Nothing is picked implicitly: with no
  * pick the server itself uses the caller's single open changeset (else 409
@@ -35,7 +35,8 @@ const OPEN_PAGE_SIZE = 100;
  */
 @Injectable({ providedIn: 'root' })
 export class ChangesetContextService {
-  private readonly api  = inject(ApiService);
+  private readonly sdk  = inject(SdkService);
+  private readonly changesets = inject(ChangesetState);
   private readonly auth = inject(AuthService);
 
   private readonly _open   = signal<ChangesetSummary[]>([]);
@@ -46,7 +47,7 @@ export class ChangesetContextService {
   readonly status = this._status.asReadonly();
 
   /** The id sent as `X-Attome-Changeset`, or `null`. */
-  readonly selectedId = this.api.activeChangeset;
+  readonly selectedId = this.changesets.active;
 
   readonly selected = computed<ChangesetSummary | null>(() => {
     const id = this.selectedId();
@@ -75,13 +76,13 @@ export class ChangesetContextService {
   /** Re-reads the open changesets; a pick that is no longer open is cleared. */
   refresh(): Observable<ChangesetListStatus> {
     this._status.set('loading');
-    return this.api.get<Page<ChangesetSummary>>('/api/v1/admin/changesets', {
+    return this.sdk.get<Page<ChangesetSummary>>('/api/v1/admin/changesets', { query: {
       status: 'open', page: '1', page_size: String(OPEN_PAGE_SIZE),
-    }).pipe(
+    } }).pipe(
       tap(res => {
         this._open.set(res.items);
         const id = this.selectedId();
-        if (id && !res.items.some(c => c.id === id)) this.api.setChangeset(null);
+        if (id && !res.items.some(c => c.id === id)) this.changesets.set(null);
       }),
       map((): ChangesetListStatus => 'ready'),
       catchError((err: ApiError) => {
@@ -98,6 +99,6 @@ export class ChangesetContextService {
 
   /** Records later writes into `id`, or clears the pick with `null`. */
   select(id: string | null): void {
-    this.api.setChangeset(id);
+    this.changesets.set(id);
   }
 }

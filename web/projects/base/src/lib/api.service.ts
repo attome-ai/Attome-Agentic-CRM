@@ -1,7 +1,8 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { EMPTY, Observable, catchError, defer, expand, map, of, reduce, throwError } from 'rxjs';
 import { ATTOME_CONFIG } from './config';
+import { ChangesetState } from './changeset-state';
 import { ConditionalCache } from './conditional-cache';
 import { ApiError, VersionConflictState } from './types';
 
@@ -161,23 +162,13 @@ export class ApiService {
   private readonly config = inject(ATTOME_CONFIG);
   private readonly conditional = inject(ConditionalCache);
 
-  /**
-   * Solution 7 (D-785): the changeset id every mutating request names through
-   * `X-Attome-Changeset`, or `null` to send none (the server then uses the
-   * caller's single open changeset, or refuses/auto-records per its mode).
-   * Set only through `setChangeset` — nothing here picks one implicitly.
-   */
-  private readonly changesetId = signal<string | null>(null);
-  readonly activeChangeset = this.changesetId.asReadonly();
+  /** Solution 7 (D-785): the picked changeset, held by `ChangesetState`. */
+  private readonly changesets = inject(ChangesetState);
+  readonly activeChangeset = this.changesets.active;
 
-  /**
-   * Names the changeset later mutating requests record into; `null` clears
-   * it. An empty or whitespace-only id is treated as `null` so a blank picker
-   * never sends a header the server would reject as malformed (422).
-   */
+  /** Names the changeset later mutating requests record into (`ChangesetState.set`). */
   setChangeset(id: string | null): void {
-    const trimmed = id?.trim() ?? '';
-    this.changesetId.set(trimmed.length > 0 ? trimmed : null);
+    this.changesets.set(id);
   }
 
   private url(path: string): string {
@@ -187,7 +178,7 @@ export class ApiService {
   /** `writeHeaders` plus the picked changeset, when there is one. */
   private mutationHeaders(options: WriteOptions, etag?: number): Record<string, string> {
     const headers = writeHeaders(options, etag);
-    const changeset = this.changesetId();
+    const changeset = this.changesets.active();
     if (changeset && !Object.keys(headers).some(k => k.toLowerCase() === CHANGESET_HEADER.toLowerCase())) {
       headers[CHANGESET_HEADER] = changeset;
     }

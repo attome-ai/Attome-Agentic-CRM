@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams, HttpResponse } from '@angular/common/http';
 import { Observable, catchError, throwError } from 'rxjs';
-import { ATTOME_CONFIG, ApiService, CHANGESET_HEADER } from '@attome/base';
+import { ATTOME_CONFIG, CHANGESET_HEADER, ChangesetState } from '@attome/base';
 import type { ApiError, ApiErrorKind } from '@attome/base';
 
 /**
@@ -151,12 +151,12 @@ export interface AdminRequestOptions {
 export class AdminHttp {
   private readonly http   = inject(HttpClient);
   private readonly config = inject(ATTOME_CONFIG);
-  private readonly api    = inject(ApiService);
+  private readonly changesets = inject(ChangesetState);
 
   request<T>(method: 'POST' | 'DELETE', path: string, options: AdminRequestOptions = {}): Observable<HttpResponse<T>> {
     let headers = new HttpHeaders();
     if (options.ifMatch !== undefined) headers = headers.set('If-Match', `"${options.ifMatch}"`);
-    const changeset = this.api.activeChangeset();
+    const changeset = this.changesets.active();
     if (changeset) headers = headers.set(CHANGESET_HEADER, changeset);
     let params = new HttpParams();
     for (const [k, v] of Object.entries(options.params ?? {})) params = params.set(k, v);

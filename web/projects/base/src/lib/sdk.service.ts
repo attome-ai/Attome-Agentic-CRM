@@ -4,9 +4,10 @@ import { AttomeClient, ApiError as SdkApiError, CHANGESET_HEADER } from '@attome
 import type { AuthProvider, AuthRequestContext, RequestOptions } from '@attome/sdk';
 import { Observable, defer } from 'rxjs';
 import {
-  ApiService, BACKGROUND_HEADER, MAX_ALL_PAGES_ITEMS, QUERY_EXECUTE_PATH, SCHEMA_PATH, apiErrorOf, walkAllPages, writeHeaders,
+  BACKGROUND_HEADER, MAX_ALL_PAGES_ITEMS, QUERY_EXECUTE_PATH, SCHEMA_PATH, apiErrorOf, walkAllPages, writeHeaders,
 } from './api.service';
 import type { Page, WriteOptions } from './api.service';
+import { ChangesetState } from './changeset-state';
 import { ATTOME_CONFIG } from './config';
 import { ConditionalCache } from './conditional-cache';
 
@@ -142,12 +143,11 @@ function withWrite(opts: RequestOptions | undefined, write: WriteOptions | undef
  */
 @Injectable({ providedIn: 'root' })
 export class SdkService {
-  private readonly api = inject(ApiService);
+  private readonly changesets = inject(ChangesetState);
   private readonly conditional = inject(ConditionalCache);
   readonly client = new AttomeClient({
     baseUrl: inject(ATTOME_CONFIG).apiUrl || SAME_ORIGIN,
-    // A test's stand-in ApiService may have no changeset to name.
-    auth: new AppSessionAuth(() => (typeof this.api.activeChangeset === 'function' ? this.api.activeChangeset() : null)),
+    auth: new AppSessionAuth(() => this.changesets.active()),
     fetch: httpClientFetch(inject(HttpClient)),
     timeoutMs: 0,
   });

@@ -24,6 +24,7 @@ export {
 export type { ImpersonationSession } from './lib/impersonation.service';
 export type { Page } from './lib/api.service';
 export { ConditionalCache } from './lib/conditional-cache';
+export { ChangesetState } from './lib/changeset-state';
 export type { ConditionalEntry } from './lib/conditional-cache';
 // Solution 7 (D-785) — the changeset header and the 409 refusal codes.
 export { CHANGESET_HEADER, CHANGESET_REFUSAL_CODES, changesetRefusalCode } from './lib/api.service';

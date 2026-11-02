@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, AuthService, LangService, type ApiError } from '@attome/base';
+import { ApiService, SdkService, AuthService, ChangesetState, LangService, type ApiError } from '@attome/base';
 import { AccessService } from '@attome/xrm/core/access/data';
 import { type ChangesetSummary } from '@attome/xrm/core/admin/data';
 import { of, throwError, type Observable } from 'rxjs';
@@ -17,15 +17,17 @@ function changeset(id: string, layer: string, author_ref: string | null, title =
 
 function mount(opts: { admin: boolean; list: () => Observable<unknown> }) {
   const picked = signal<string | null>(null);
+  // The pick lives in ChangesetState (Y9-T3); `api.setChangeset` is its setter here.
+  const state = { active: picked.asReadonly(), set: vi.fn((id: string | null) => picked.set(id)) };
   const api = {
     get: vi.fn(opts.list),
-    activeChangeset: picked.asReadonly(),
-    setChangeset: vi.fn((id: string | null) => picked.set(id)),
+    setChangeset: state.set,
   };
   TestBed.configureTestingModule({
     providers: [
       { provide: ApiService, useValue: api },
       { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+      { provide: ChangesetState, useValue: state },
       { provide: AuthService, useValue: { userId: signal('me') } },
       { provide: AccessService, useValue: { ready: () => of(undefined), hasPrivilege: () => opts.admin } },
       { provide: LangService, useValue: {
