@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Quality reviews of closed cases (G1-T4, platform changeset `0090`): with
+  `service.quality_review.sample_size` above 0, each week every agent's resolved or closed cases of the week
+  before are sampled (the same pick on a rerun, a case once) into `service_quality_review` records for the
+  agent's manager to score on tone, accuracy and process.
 - Call trend aggregates (D22-T9, platform changeset `0089`): a nightly job rebuilds yesterday's
   `call_daily_aggregate` rows per team (calls, talk share, question rate, scorecard yes-rate, tracker
   hits), read by three stored queries.

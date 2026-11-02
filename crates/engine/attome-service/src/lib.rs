@@ -27,6 +27,8 @@ pub mod oncall;
 pub mod order;
 pub mod portal;
 pub mod presence;
+/// G1-T4: sampled quality reviews of closed cases.
+pub mod quality_review;
 pub mod queue;
 pub mod returns;
 pub mod router;

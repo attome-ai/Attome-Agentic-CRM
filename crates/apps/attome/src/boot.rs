@@ -1285,6 +1285,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-service-ticket-work-item",
         // D22-T9: the call trend stored queries.
         "attome-callintel-trends",
+        // G1-T4: quality reviews of sampled closed cases.
+        "attome-service-quality-review",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

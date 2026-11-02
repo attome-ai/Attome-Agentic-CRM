@@ -747,6 +747,16 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(false),
         ),
+        // G1-T4: sampled quality reviews.
+        SettingDescriptor::new(
+            "service.quality_review.sample_size",
+            "How many of each agent's cases resolved or closed in the past week are sampled every \
+         week for a quality review by the agent's manager (G1-T4). 0 by default: no sampling.",
+            || json!({"type": "integer", "minimum": 0, "maximum": 50}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(0),
+        ),
         // F7-T1: the portal shop.
         SettingDescriptor::new(
             "commerce.enabled",

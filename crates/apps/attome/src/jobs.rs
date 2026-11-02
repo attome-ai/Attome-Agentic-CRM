@@ -3364,6 +3364,8 @@ const DEDUP_KEY_FULFILMENT_TRACKING: &str = "fulfilment-tracking";
 const DEDUP_KEY_FULFILMENT_CUSTOMER_UPDATES: &str = "fulfilment-customer-updates";
 /// D22-T9: the nightly call trend aggregates (a registered job type).
 const DEDUP_KEY_CALLINTEL_AGGREGATE: &str = "callintel-aggregate";
+/// G1-T4: the weekly quality review sample (a registered job type).
+const DEDUP_KEY_SERVICE_QUALITY_SAMPLE: &str = "service-quality-sample";
 /// O1-T2: the weekly drift check of active prediction models.
 const DEDUP_KEY_PREDICT_DRIFT: &str = "predict-drift";
 const DEDUP_KEY_CONTENT_SEO_AUDIT: &str = "content-seo-audit";
@@ -3835,6 +3837,10 @@ pub const FULFILMENT_EXCEPTIONS: attome_jobs::JobType =
 /// F6-T10: booked shipments' status read from their carriers.
 pub const FULFILMENT_TRACKING: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_fulfilment::tracking::JOB, 1);
+
+/// G1-T4: the weekly quality review sample.
+pub const SERVICE_QUALITY_SAMPLE: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_service::quality_review::JOB, 1);
 
 /// D22-T9: yesterday's call trend aggregates.
 pub const CALLINTEL_AGGREGATE: attome_jobs::JobType =
@@ -5280,6 +5286,24 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            SERVICE_QUALITY_SAMPLE,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_SERVICE) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let week = chrono::Utc::now().date_naive();
+                let opened = attome_service::quality_review::sample_week(&state, week)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if opened > 0 {
+                    tracing::info!(opened, "quality reviews opened");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             CALLINTEL_AGGREGATE,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 if !state
@@ -6706,6 +6730,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == CALLINTEL_AGGREGATE.name => {
             DEDUP_KEY_CALLINTEL_AGGREGATE
         }
+        EngineJob::Registered(job) if job.name == SERVICE_QUALITY_SAMPLE.name => {
+            DEDUP_KEY_SERVICE_QUALITY_SAMPLE
+        }
         EngineJob::Registered(job) if job.name == PREDICT_DRIFT.name => DEDUP_KEY_PREDICT_DRIFT,
         EngineJob::Registered(job) if job.name == CONTENT_SEO_AUDIT.name => {
             DEDUP_KEY_CONTENT_SEO_AUDIT
@@ -6999,6 +7026,7 @@ pub const SCHEDULE_MODULES: &[(&str, &str)] = &[
     ("fulfilment-tracking", "fulfilment"),
     ("fulfilment-customer-updates", "fulfilment"),
     ("callintel-aggregate", "callintel"),
+    ("service-quality-sample", "service"),
     ("workforce-intraday", "workforce"),
     ("rfq-open", "procurement"),
     ("grc-policy-sweep", "grc"),
@@ -8382,6 +8410,21 @@ pub fn spawn_fulfilment_tracking_scheduler(db: DbPool, interval: std::time::Dura
             "fulfilment tracking",
         ),
         Err(error) => tracing::error!(%error, "fulfilment tracking: not scheduled"),
+    }
+}
+
+/// G1-T4: weekly, the quality review sample.
+pub fn spawn_service_quality_sample_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(SERVICE_QUALITY_SAMPLE.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_SERVICE_QUALITY_SAMPLE,
+            "quality review sample",
+        ),
+        Err(error) => tracing::error!(%error, "quality review sample: not scheduled"),
     }
 }
 

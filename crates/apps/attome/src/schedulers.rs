@@ -282,6 +282,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(30 * 60),
     );
+    // G1-T4: the quality review sample, weekly.
+    crate::jobs::spawn_service_quality_sample_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(7 * 24 * 60 * 60),
+    );
     // D22-T9: call trend aggregates, nightly.
     crate::jobs::spawn_callintel_aggregate_scheduler(
         db.clone(),

@@ -123,6 +123,10 @@ pub const PLATFORM_BUNDLES: &[(&str, &str)] = &[
         include_str!("../../../../../platform-bundles/attome-service-case-links.json"),
     ),
     (
+        "attome-service-quality-review",
+        include_str!("../../../../../platform-bundles/attome-service-quality-review.json"),
+    ),
+    (
         "attome-service-queue-skills",
         include_str!("../../../../../platform-bundles/attome-service-queue-skills.json"),
     ),
