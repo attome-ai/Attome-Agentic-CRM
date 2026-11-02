@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import type { ApiComponents } from '@attome/base';
 
 type Schemas = ApiComponents['schemas'];
@@ -56,7 +56,7 @@ export interface PageSearchOptions {
 /** The search page's and the search settings' calls (A25-T11). */
 @Injectable({ providedIn: 'root' })
 export class SearchPageService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** `GET /api/v1/search` with facets, and explanations or asking in words when chosen. */
   search(q: string, opts: PageSearchOptions = {}): Observable<AskingSearchResponse> {
@@ -64,7 +64,7 @@ export class SearchPageService {
     if (opts.pageSize) params['page_size'] = String(opts.pageSize);
     if (opts.explain) params['explain'] = 'true';
     if (opts.ask) params['mode'] = 'ask';
-    return this.api.get<AskingSearchResponse>('/api/v1/search', params);
+    return this.sdk.get<AskingSearchResponse>('/api/v1/search', { query: params });
   }
 
   /**
@@ -72,78 +72,81 @@ export class SearchPageService {
    * page a search matched.
    */
   documentFileUrl(documentId: string): Observable<{ download_url: string }> {
-    return this.api.get<{ download_url: string }>(
+    return this.sdk.get<{ download_url: string }>(
       `/api/v1/attome_document/${encodeURIComponent(documentId)}/files/file/download-url`,
     );
   }
 
   /** Saves the query as the caller's own saved search; `alert` emails them new results. */
   saveSearch(name: string, query: string, alert: boolean): Observable<unknown> {
-    return this.api.post('/api/v1/saved_search', {
+    return this.sdk.post(
+      '/api/v1/saved_search',
+      { body: {
       name,
       query_text: query,
       alert_enabled: alert,
-    });
+    } },
+    );
   }
 
   entitySettings(entity: string): Observable<SearchEntitySettings> {
-    return this.api.get<SearchEntitySettings>(`/api/v1/admin/search/entities/${encodeURIComponent(entity)}`);
+    return this.sdk.get<SearchEntitySettings>(`/api/v1/admin/search/entities/${encodeURIComponent(entity)}`);
   }
 
   /** Replaces an entity's settings at `rowVersion` (`If-Match`). */
   saveEntitySettings(entity: string, body: SearchEntitySettingsBody, rowVersion: number): Observable<SearchEntitySettings> {
-    return this.api.put<SearchEntitySettings>(
+    return this.sdk.put<SearchEntitySettings>(
       `/api/v1/admin/search/entities/${encodeURIComponent(entity)}`,
-      body,
+      { body: body },
       { ifMatch: rowVersion },
     );
   }
 
   synonyms(): Observable<Schemas['PaginatedResponse_SearchSynonym']> {
-    return this.api.get<Schemas['PaginatedResponse_SearchSynonym']>('/api/v1/admin/search/synonyms', ADMIN_PAGE);
+    return this.sdk.get<Schemas['PaginatedResponse_SearchSynonym']>('/api/v1/admin/search/synonyms', { query: ADMIN_PAGE });
   }
 
   addSynonym(terms: string[], lang: string | null): Observable<SearchSynonym> {
-    return this.api.post<SearchSynonym>('/api/v1/admin/search/synonyms', { terms, lang });
+    return this.sdk.post<SearchSynonym>('/api/v1/admin/search/synonyms', { body: { terms, lang } });
   }
 
   deleteSynonym(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/search/synonyms/${encodeURIComponent(id)}`);
+    return this.sdk.delete(`/api/v1/admin/search/synonyms/${encodeURIComponent(id)}`);
   }
 
   stopwords(): Observable<Schemas['PaginatedResponse_SearchStopword']> {
-    return this.api.get<Schemas['PaginatedResponse_SearchStopword']>('/api/v1/admin/search/stopwords', ADMIN_PAGE);
+    return this.sdk.get<Schemas['PaginatedResponse_SearchStopword']>('/api/v1/admin/search/stopwords', { query: ADMIN_PAGE });
   }
 
   addStopword(word: string, lang: string): Observable<SearchStopword> {
-    return this.api.post<SearchStopword>('/api/v1/admin/search/stopwords', { word, lang });
+    return this.sdk.post<SearchStopword>('/api/v1/admin/search/stopwords', { body: { word, lang } });
   }
 
   deleteStopword(word: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/search/stopwords/${encodeURIComponent(word)}`);
+    return this.sdk.delete(`/api/v1/admin/search/stopwords/${encodeURIComponent(word)}`);
   }
 
   pins(): Observable<Schemas['PaginatedResponse_SearchPin']> {
-    return this.api.get<Schemas['PaginatedResponse_SearchPin']>('/api/v1/admin/search/pins', ADMIN_PAGE);
+    return this.sdk.get<Schemas['PaginatedResponse_SearchPin']>('/api/v1/admin/search/pins', { query: ADMIN_PAGE });
   }
 
   addPin(body: SearchPinBody): Observable<SearchPin> {
-    return this.api.post<SearchPin>('/api/v1/admin/search/pins', body);
+    return this.sdk.post<SearchPin>('/api/v1/admin/search/pins', { body: body });
   }
 
   deletePin(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/search/pins/${encodeURIComponent(id)}`);
+    return this.sdk.delete(`/api/v1/admin/search/pins/${encodeURIComponent(id)}`);
   }
 
   size(): Observable<SearchIndexSize> {
-    return this.api.get<SearchIndexSize>('/api/v1/admin/search/size');
+    return this.sdk.get<SearchIndexSize>('/api/v1/admin/search/size');
   }
 
   status(): Observable<SearchStatus> {
-    return this.api.get<SearchStatus>('/api/v1/admin/search/status');
+    return this.sdk.get<SearchStatus>('/api/v1/admin/search/status');
   }
 
   quality(): Observable<SearchQuality> {
-    return this.api.get<SearchQuality>('/api/v1/admin/search/quality');
+    return this.sdk.get<SearchQuality>('/api/v1/admin/search/quality');
   }
 }

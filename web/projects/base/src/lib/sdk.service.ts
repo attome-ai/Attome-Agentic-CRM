@@ -3,8 +3,8 @@ import { Injectable, inject } from '@angular/core';
 import { AttomeClient, ApiError as SdkApiError, CHANGESET_HEADER } from '@attome/sdk';
 import type { AuthProvider, AuthRequestContext, RequestOptions } from '@attome/sdk';
 import { Observable, catchError, defer, firstValueFrom, from, map, throwError } from 'rxjs';
-import { ApiService, MAX_ALL_PAGES_ITEMS, apiErrorOf, walkAllPages } from './api.service';
-import type { Page } from './api.service';
+import { ApiService, MAX_ALL_PAGES_ITEMS, apiErrorOf, walkAllPages, writeHeaders } from './api.service';
+import type { Page, WriteOptions } from './api.service';
 import { ATTOME_CONFIG } from './config';
 
 /** The SDK needs an origin; this one stands for "the page's own" and is cut off again. */
@@ -88,6 +88,17 @@ class AppSessionAuth implements AuthProvider {
   }
 }
 
+/** `opts` with ApiService's write options as their headers. */
+function withWrite(opts: RequestOptions | undefined, write: WriteOptions | undefined): RequestOptions | undefined {
+  if (!write) return opts;
+  const ifMatch = write.ifMatch ?? opts?.ifMatch;
+  return {
+    ...opts,
+    ifMatch,
+    headers: { ...writeHeaders({ ...write, ifMatch: undefined }), ...opts?.headers },
+  };
+}
+
 /**
  * Y9-T3: the generated `@attome/sdk` client for the app's data services,
  * through `HttpClient` ([`httpClientFetch`]). Each call is an `Observable` of
@@ -108,16 +119,20 @@ export class SdkService {
     return this.call(() => this.client.get<T>(path, opts));
   }
 
-  post<T>(path: string, opts?: RequestOptions): Observable<T> {
-    return this.call(() => this.client.post<T>(path, opts));
+  /**
+   * `write` is ApiService's option bag (idempotency key, operation id,
+   * duplicate reason, merge, background, `ifMatch`), sent as the same headers.
+   */
+  post<T>(path: string, opts?: RequestOptions, write?: WriteOptions): Observable<T> {
+    return this.call(() => this.client.post<T>(path, withWrite(opts, write)));
   }
 
-  patch<T>(path: string, opts?: RequestOptions): Observable<T> {
-    return this.call(() => this.client.patch<T>(path, opts));
+  patch<T>(path: string, opts?: RequestOptions, write?: WriteOptions): Observable<T> {
+    return this.call(() => this.client.patch<T>(path, withWrite(opts, write)));
   }
 
-  put<T>(path: string, opts?: RequestOptions): Observable<T> {
-    return this.call(() => this.client.put<T>(path, opts));
+  put<T>(path: string, opts?: RequestOptions, write?: WriteOptions): Observable<T> {
+    return this.call(() => this.client.put<T>(path, withWrite(opts, write)));
   }
 
   delete<T = void>(path: string, opts?: RequestOptions): Observable<T> {

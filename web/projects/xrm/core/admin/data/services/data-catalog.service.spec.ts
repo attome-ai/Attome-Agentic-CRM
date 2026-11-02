@@ -5,6 +5,9 @@ import { ATTOME_CONFIG } from '@attome/base';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DataCatalogService } from './data-catalog.service';
 
+/** The SDK sends after a promise turn (Y9-T3). */
+const tick = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
 describe('DataCatalogService', () => {
   const API = 'http://localhost:7865';
   let service: DataCatalogService;
@@ -24,8 +27,9 @@ describe('DataCatalogService', () => {
 
   afterEach(() => http.verify());
 
-  it('searches from page 1 (one-based endpoint) and trims the query', () => {
+  it('searches from page 1 (one-based endpoint) and trims the query', async () => {
     service.searchEntities({ q: '  acc ' }).subscribe();
+    await tick();
     const req = http.expectOne(r => r.url === `${API}/api/v1/catalog/entities`);
     expect(req.request.params.get('page')).toBe('1');
     expect(req.request.params.get('q')).toBe('acc');
@@ -33,16 +37,18 @@ describe('DataCatalogService', () => {
     req.flush({ items: [], total: 0, page: 1, page_size: 50 });
   });
 
-  it('omits an empty query', () => {
+  it('omits an empty query', async () => {
     service.searchEntities({ q: '   ', classification: 'personal' }).subscribe();
+    await tick();
     const req = http.expectOne(r => r.url === `${API}/api/v1/catalog/entities`);
     expect(req.request.params.has('q')).toBe(false);
     expect(req.request.params.get('classification')).toBe('personal');
     req.flush({ items: [], total: 0, page: 1, page_size: 50 });
   });
 
-  it('reads one entity by logical name', () => {
+  it('reads one entity by logical name', async () => {
     service.getEntity('contact').subscribe();
+    await tick();
     const req = http.expectOne(`${API}/api/v1/catalog/entities/contact`);
     expect(req.request.method).toBe('GET');
     req.flush({});

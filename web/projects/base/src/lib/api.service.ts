@@ -56,7 +56,7 @@ export interface WriteOptions {
 }
 
 /** `If-Match` from `etag`, plus the idempotency key. */
-function writeHeaders(options: WriteOptions, etag?: number): Record<string, string> {
+export function writeHeaders(options: WriteOptions, etag?: number): Record<string, string> {
   const headers: Record<string, string> = {};
   if (options.idempotencyKey) headers['x-idempotency-key'] = options.idempotencyKey;
   if (etag !== undefined) headers['If-Match'] = `"${etag}"`;

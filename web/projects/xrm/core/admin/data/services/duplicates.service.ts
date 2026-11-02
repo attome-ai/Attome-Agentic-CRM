@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { ApiService, DuplicateMatchRef } from '@attome/base';
+import { SdkService, DuplicateMatchRef } from '@attome/base';
 
 // D-432 / M13 (Master Data Management, scoped to dedup + survivorship only) —
 // mirrors attome_api::duplicates_admin / duplicates_match exactly
@@ -203,32 +203,32 @@ export interface RuleProposal {
 
 @Injectable({ providedIn: 'root' })
 export class DuplicatesService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   // ── Match rules ──────────────────────────────────────────────────────
 
   listMatchRules(page = 1, pageSize = 50, entity?: string): Observable<MatchRulesPage> {
     const params: Record<string, string> = { page: String(page), page_size: String(pageSize) };
     if (entity) params['entity'] = entity;
-    return this.api.get<MatchRulesPage>('/api/v1/admin/data/match-rules', params);
+    return this.sdk.get<MatchRulesPage>('/api/v1/admin/data/match-rules', { query: params });
   }
 
   createMatchRule(body: CreateMatchRuleBody): Observable<MatchRule> {
-    return this.api.post<MatchRule>('/api/v1/admin/data/match-rules', body);
+    return this.sdk.post<MatchRule>('/api/v1/admin/data/match-rules', { body: body });
   }
 
   deleteMatchRule(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/data/match-rules/${id}`);
+    return this.sdk.delete(`/api/v1/admin/data/match-rules/${id}`);
   }
 
   /** A15-T6: queues a full-table scan of the rule's entity. */
   scanMatchRule(id: string): Observable<{ queued: boolean }> {
-    return this.api.post<{ queued: boolean }>(`/api/v1/admin/data/match-rules/${id}/scan`, {});
+    return this.sdk.post<{ queued: boolean }>(`/api/v1/admin/data/match-rules/${id}/scan`, { body: {} });
   }
 
   /** A15-T7: scores a draft rule over a sample of live rows; saves nothing. */
   previewMatchRule(body: { entity: string; fields: MatchField[]; threshold: number }): Observable<RulePreview> {
-    return this.api.post<RulePreview>('/api/v1/admin/data/match-rules/preview', body);
+    return this.sdk.post<RulePreview>('/api/v1/admin/data/match-rules/preview', { body: body });
   }
 
   // ── Survivorship rules ───────────────────────────────────────────────
@@ -236,15 +236,15 @@ export class DuplicatesService {
   listSurvivorshipRules(page = 1, pageSize = 50, entity?: string): Observable<SurvivorshipRulesPage> {
     const params: Record<string, string> = { page: String(page), page_size: String(pageSize) };
     if (entity) params['entity'] = entity;
-    return this.api.get<SurvivorshipRulesPage>('/api/v1/admin/data/survivorship-rules', params);
+    return this.sdk.get<SurvivorshipRulesPage>('/api/v1/admin/data/survivorship-rules', { query: params });
   }
 
   createSurvivorshipRule(body: CreateSurvivorshipRuleBody): Observable<SurvivorshipRule> {
-    return this.api.post<SurvivorshipRule>('/api/v1/admin/data/survivorship-rules', body);
+    return this.sdk.post<SurvivorshipRule>('/api/v1/admin/data/survivorship-rules', { body: body });
   }
 
   deleteSurvivorshipRule(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/data/survivorship-rules/${id}`);
+    return this.sdk.delete(`/api/v1/admin/data/survivorship-rules/${id}`);
   }
 
   // ── Duplicate candidates (steward queue) ────────────────────────────
@@ -256,11 +256,11 @@ export class DuplicatesService {
     const params: Record<string, string> = { page: String(page), page_size: String(pageSize) };
     if (status) params['status'] = status;
     if (entity) params['entity'] = entity;
-    return this.api.get<DuplicateCandidatesPage>('/api/v1/admin/data/duplicates', params);
+    return this.sdk.get<DuplicateCandidatesPage>('/api/v1/admin/data/duplicates', { query: params });
   }
 
   getCandidate(id: string): Observable<DuplicateCandidate> {
-    return this.api.get<DuplicateCandidate>(`/api/v1/admin/data/duplicates/${id}`);
+    return this.sdk.get<DuplicateCandidate>(`/api/v1/admin/data/duplicates/${id}`);
   }
 
   /** `canonicalId` must equal the candidate's `record_a` or `record_b` — the
@@ -269,48 +269,61 @@ export class DuplicatesService {
    *  endpoint runs, so a `manual`-strategy survivorship conflict comes back
    *  in the response, not silently resolved. */
   mergeCandidate(id: string, canonicalId: string): Observable<MergeResponse> {
-    return this.api.post<MergeResponse>(`/api/v1/admin/data/duplicates/${id}/merge`, {
+    return this.sdk.post<MergeResponse>(
+      `/api/v1/admin/data/duplicates/${id}/merge`,
+      { body: {
       canonical_id: canonicalId,
-    });
+    } },
+    );
   }
 
   dismissCandidate(id: string, rowVersion: number, note?: string): Observable<DuplicateCandidate> {
-    return this.api.post<DuplicateCandidate>(`/api/v1/admin/data/duplicates/${id}/dismiss`, {
+    return this.sdk.post<DuplicateCandidate>(
+      `/api/v1/admin/data/duplicates/${id}/dismiss`,
+      { body: {
       row_version: rowVersion, note: note ?? null,
-    });
+    } },
+    );
   }
 
   /** A15-T8: asks the `duplicates.propose_rules` agent action for a rule
    *  draft and its preview; `null` when the action did not complete (no AI on
    *  this deployment, or it waits for a confirmation). Saves nothing. */
   proposeRules(entity: string): Observable<RuleProposal | null> {
-    return this.api.post<{ status: string; result?: RuleProposal }>(
-      '/api/v1/actions/duplicates.propose_rules/invoke', { args: { entity } },
+    return this.sdk.post<{ status: string; result?: RuleProposal }>(
+      '/api/v1/actions/duplicates.propose_rules/invoke',
+      { body: { args: { entity } } },
     ).pipe(map(o => (o.status === 'completed' && o.result ? o.result : null)));
   }
 
   /** A15-T7: why a pair was flagged, field by field. */
   explainCandidate(id: string): Observable<CandidateExplanation> {
-    return this.api.get<CandidateExplanation>(`/api/v1/admin/data/duplicates/${id}/explain`);
+    return this.sdk.get<CandidateExplanation>(`/api/v1/admin/data/duplicates/${id}/explain`);
   }
 
   /** A15-T7: open, merged and dismissed pair counts per entity. */
   stats(entity?: string): Observable<DuplicateStats[]> {
-    return this.api.get<DuplicateStats[]>('/api/v1/admin/data/duplicates/stats', entity ? { entity } : undefined);
+    return this.sdk.get<DuplicateStats[]>('/api/v1/admin/data/duplicates/stats', { query: entity ? { entity } : undefined });
   }
 
   /** A15-T7: the records saving `values` would duplicate; writes nothing. */
   check(entity: string, values: Record<string, unknown>, recordId?: string | null): Observable<DuplicateCheckResult> {
-    return this.api.post<DuplicateCheckResult>('/api/v1/data/duplicates/check', {
+    return this.sdk.post<DuplicateCheckResult>(
+      '/api/v1/data/duplicates/check',
+      { body: {
       entity, values, record_id: recordId ?? null,
-    });
+    } },
+    );
   }
 
   /** A15-T5/T7: what merging `mergedId` into `survivorId` would do. */
   mergePreview(entity: string, survivorId: string, mergedId: string, picks: MergePicks = {}): Observable<MergePreview> {
-    return this.api.post<MergePreview>(`/api/v1/${entity}/${survivorId}/merge/preview`, {
+    return this.sdk.post<MergePreview>(
+      `/api/v1/${entity}/${survivorId}/merge/preview`,
+      { body: {
       duplicate_id: mergedId, picks,
-    });
+    } },
+    );
   }
 
   /** Merges `mergedId` into `survivorId` with the person's field picks; a
@@ -319,23 +332,30 @@ export class DuplicatesService {
     entity: string, survivorId: string, mergedId: string,
     options: { picks?: MergePicks; candidateId?: string; rowVersion?: number } = {},
   ): Observable<MergeResponse> {
-    return this.api.post<MergeResponse>(`/api/v1/${entity}/${survivorId}/merge`, {
+    return this.sdk.post<MergeResponse>(
+      `/api/v1/${entity}/${survivorId}/merge`,
+      { body: {
       duplicate_id: mergedId,
       picks: options.picks ?? {},
       ...(options.candidateId ? { candidate_id: options.candidateId } : {}),
-    }, { ifMatch: options.rowVersion });
+    } },
+      { ifMatch: options.rowVersion },
+    );
   }
 
   /** A15-T5/T7: undoes a merge as one unit. */
   undoMerge(entity: string, mergeId: string): Observable<MergeUndone> {
-    return this.api.post<MergeUndone>(`/api/v1/${entity}/merges/${mergeId}/undo`, {});
+    return this.sdk.post<MergeUndone>(`/api/v1/${entity}/merges/${mergeId}/undo`, { body: {} });
   }
 
   /** The record form's "possible duplicate" banner — no `Admin` gate
    *  server-side, only the caller's own read access to `recordId`. */
   candidatesForRecord(entity: string, recordId: string): Observable<DuplicateCandidate[]> {
-    return this.api.get<DuplicateCandidate[]>('/api/v1/data/duplicates/for-record', {
+    return this.sdk.get<DuplicateCandidate[]>(
+      '/api/v1/data/duplicates/for-record',
+      { query: {
       entity, record_id: recordId,
-    });
+    } },
+    );
   }
 }

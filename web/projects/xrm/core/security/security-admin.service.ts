@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { ApiComponents, ApiService, Page } from '@attome/base';
+import { ApiComponents, SdkService, Page } from '@attome/base';
 import { RecordSharingService } from '@attome/xrm/core/entity';
 
 // P-api-contract (C-26): every interface in this file used to be hand-written
@@ -234,81 +234,84 @@ export function endOfDay(day: string): string | null {
 
 @Injectable({ providedIn: 'root' })
 export class SecurityAdminService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   // U7 Phase A: the record-share routes' one client wrapper now lives beside
   // the record form and list that also call them (`@attome/xrm/core/entity`).
   private readonly sharing = inject(RecordSharingService);
 
   listPrivileges(): Observable<PrivilegeItem[]> {
-    return this.api.getAllPages<PrivilegeItem>('/api/v1/admin/security/privileges');
+    return this.sdk.getAllPages<PrivilegeItem>('/api/v1/admin/security/privileges');
   }
 
   listRoles(): Observable<RoleItem[]> {
-    return this.api.getAllPages<RoleItem>('/api/v1/admin/security/roles');
+    return this.sdk.getAllPages<RoleItem>('/api/v1/admin/security/roles');
   }
 
   createRole(body: CreateRoleBody): Observable<RoleItem> {
-    return this.api.post<RoleItem>('/api/v1/admin/security/roles', body);
+    return this.sdk.post<RoleItem>('/api/v1/admin/security/roles', { body: body });
   }
 
   updateRole(id: string, body: UpdateRoleBody): Observable<RoleItem> {
-    return this.api.patch<RoleItem>(`/api/v1/admin/security/roles/${id}`, body);
+    return this.sdk.patch<RoleItem>(`/api/v1/admin/security/roles/${id}`, { body: body });
   }
 
   /** The dedicated endpoint `updateRole` deliberately excludes — see `UpdateRoleBody`. */
   updateRolePositionHierarchy(id: string, enabled: boolean): Observable<void> {
-    return this.api.put<void>(`/api/v1/admin/security/roles/${id}/position-hierarchy`, {
+    return this.sdk.put<void>(
+      `/api/v1/admin/security/roles/${id}/position-hierarchy`,
+      { body: {
       position_hierarchy_enabled: enabled,
-    });
+    } },
+    );
   }
 
   listRoleUsers(roleId: string): Observable<RoleUserItem[]> {
-    return this.api.getAllPages<RoleUserItem>(`/api/v1/admin/security/roles/${roleId}/users`);
+    return this.sdk.getAllPages<RoleUserItem>(`/api/v1/admin/security/roles/${roleId}/users`);
   }
 
   listRoleGrants(): Observable<RoleGrantItem[]> {
-    return this.api.getAllPages<RoleGrantItem>('/api/v1/admin/security/role-grants');
+    return this.sdk.getAllPages<RoleGrantItem>('/api/v1/admin/security/role-grants');
   }
 
   createRoleGrant(body: CreateRoleGrantBody): Observable<RoleGrantItem> {
-    return this.api.post<RoleGrantItem>('/api/v1/admin/security/role-grants', body);
+    return this.sdk.post<RoleGrantItem>('/api/v1/admin/security/role-grants', { body: body });
   }
 
   deleteRoleGrant(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/security/role-grants/${id}`);
+    return this.sdk.delete(`/api/v1/admin/security/role-grants/${id}`);
   }
 
   // ── D-369: bounded per-grant record conditions ─────────────────────────
 
   listGrantConditions(grantId: string): Observable<RoleGrantConditionItem[]> {
-    return this.api.get<RoleGrantConditionItem[]>(
+    return this.sdk.get<RoleGrantConditionItem[]>(
       `/api/v1/admin/security/role-grants/${grantId}/conditions`,
     );
   }
 
   createGrantCondition(grantId: string, body: CreateConditionBody): Observable<RoleGrantConditionItem> {
-    return this.api.post<RoleGrantConditionItem>(
+    return this.sdk.post<RoleGrantConditionItem>(
       `/api/v1/admin/security/role-grants/${grantId}/conditions`,
-      body,
+      { body: body },
     );
   }
 
   deleteGrantCondition(grantId: string, conditionId: string): Observable<void> {
-    return this.api.delete(
+    return this.sdk.delete(
       `/api/v1/admin/security/role-grants/${grantId}/conditions/${conditionId}`,
     );
   }
 
   listFieldProfiles(): Observable<FieldSecurityProfileItem[]> {
-    return this.api.getAllPages<FieldSecurityProfileItem>('/api/v1/admin/security/field-profiles');
+    return this.sdk.getAllPages<FieldSecurityProfileItem>('/api/v1/admin/security/field-profiles');
   }
 
   createFieldProfile(body: CreateFieldSecurityProfileBody): Observable<FieldSecurityProfileItem> {
-    return this.api.post<FieldSecurityProfileItem>('/api/v1/admin/security/field-profiles', body);
+    return this.sdk.post<FieldSecurityProfileItem>('/api/v1/admin/security/field-profiles', { body: body });
   }
 
   listFieldProfileFields(profileId: string): Observable<FieldSecurityProfileFieldItem[]> {
-    return this.api.getAllPages<FieldSecurityProfileFieldItem>(
+    return this.sdk.getAllPages<FieldSecurityProfileFieldItem>(
       `/api/v1/admin/security/field-profiles/${profileId}/fields`,
     );
   }
@@ -317,21 +320,21 @@ export class SecurityAdminService {
     profileId: string,
     body: SetFieldProfileFieldBody,
   ): Observable<FieldSecurityProfileFieldItem> {
-    return this.api.post<FieldSecurityProfileFieldItem>(
+    return this.sdk.post<FieldSecurityProfileFieldItem>(
       `/api/v1/admin/security/field-profiles/${profileId}/fields`,
-      body,
+      { body: body },
     );
   }
 
   assignFieldProfile(profileId: string, roleId: string): Observable<void> {
-    return this.api.post<void>(
+    return this.sdk.post<void>(
       `/api/v1/admin/security/field-profiles/${profileId}/assignments`,
-      { role_id: roleId },
+      { body: { role_id: roleId } },
     );
   }
 
   unassignFieldProfile(profileId: string, roleId: string): Observable<void> {
-    return this.api.delete(
+    return this.sdk.delete(
       `/api/v1/admin/security/field-profiles/${profileId}/assignments/${roleId}`,
     );
   }
@@ -339,85 +342,85 @@ export class SecurityAdminService {
   // ── Role x entity access-level grants ──────────────────────────────────
 
   listEntityAccessGrants(): Observable<RoleEntityAccessItem[]> {
-    return this.api.getAllPages<RoleEntityAccessItem>('/api/v1/admin/security/role-entity-access');
+    return this.sdk.getAllPages<RoleEntityAccessItem>('/api/v1/admin/security/role-entity-access');
   }
 
   upsertEntityAccessGrant(body: UpsertEntityAccessGrantBody): Observable<RoleEntityAccessItem> {
-    return this.api.post<RoleEntityAccessItem>('/api/v1/admin/security/role-entity-access', body);
+    return this.sdk.post<RoleEntityAccessItem>('/api/v1/admin/security/role-entity-access', { body: body });
   }
 
   deleteEntityAccessGrant(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/security/role-entity-access/${id}`);
+    return this.sdk.delete(`/api/v1/admin/security/role-entity-access/${id}`);
   }
 
   // ── Direct user -> role assignment ─────────────────────────────────────
 
   listUserRoles(userId: string): Observable<UserRoleItem[]> {
-    return this.api.getAllPages<UserRoleItem>(`/api/v1/admin/security/users/${userId}/roles`);
+    return this.sdk.getAllPages<UserRoleItem>(`/api/v1/admin/security/users/${userId}/roles`);
   }
 
   assignUserRole(userId: string, body: AssignUserRoleBody): Observable<UserRoleItem> {
-    return this.api.post<UserRoleItem>(`/api/v1/admin/security/users/${userId}/roles`, body);
+    return this.sdk.post<UserRoleItem>(`/api/v1/admin/security/users/${userId}/roles`, { body: body });
   }
 
   removeUserRole(userId: string, roleId: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/security/users/${userId}/roles/${roleId}`);
+    return this.sdk.delete(`/api/v1/admin/security/users/${userId}/roles/${roleId}`);
   }
 
   // ── Teams: membership + team-role assignment ───────────────────────────
 
   listTeams(): Observable<TeamItem[]> {
-    return this.api.getAllPages<TeamItem>('/api/v1/admin/security/teams');
+    return this.sdk.getAllPages<TeamItem>('/api/v1/admin/security/teams');
   }
 
   createTeam(body: CreateTeamBody): Observable<TeamItem> {
-    return this.api.post<TeamItem>('/api/v1/admin/security/teams', body);
+    return this.sdk.post<TeamItem>('/api/v1/admin/security/teams', { body: body });
   }
 
   deleteTeam(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/security/teams/${id}`);
+    return this.sdk.delete(`/api/v1/admin/security/teams/${id}`);
   }
 
   listTeamMembers(teamId: string): Observable<TeamMemberItem[]> {
-    return this.api.getAllPages<TeamMemberItem>(`/api/v1/admin/security/teams/${teamId}/members`);
+    return this.sdk.getAllPages<TeamMemberItem>(`/api/v1/admin/security/teams/${teamId}/members`);
   }
 
   addTeamMember(teamId: string, body: AddTeamMemberBody): Observable<TeamMemberItem> {
-    return this.api.post<TeamMemberItem>(`/api/v1/admin/security/teams/${teamId}/members`, body);
+    return this.sdk.post<TeamMemberItem>(`/api/v1/admin/security/teams/${teamId}/members`, { body: body });
   }
 
   removeTeamMember(teamId: string, userId: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/security/teams/${teamId}/members/${userId}`);
+    return this.sdk.delete(`/api/v1/admin/security/teams/${teamId}/members/${userId}`);
   }
 
   listTeamRoles(teamId: string): Observable<TeamRoleItem[]> {
-    return this.api.getAllPages<TeamRoleItem>(`/api/v1/admin/security/teams/${teamId}/roles`);
+    return this.sdk.getAllPages<TeamRoleItem>(`/api/v1/admin/security/teams/${teamId}/roles`);
   }
 
   addTeamRole(teamId: string, roleId: string): Observable<TeamRoleItem> {
-    return this.api.post<TeamRoleItem>(`/api/v1/admin/security/teams/${teamId}/roles`, { role_id: roleId });
+    return this.sdk.post<TeamRoleItem>(`/api/v1/admin/security/teams/${teamId}/roles`, { body: { role_id: roleId } });
   }
 
   removeTeamRole(teamId: string, roleId: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/security/teams/${teamId}/roles/${roleId}`);
+    return this.sdk.delete(`/api/v1/admin/security/teams/${teamId}/roles/${roleId}`);
   }
 
   // ── Business units (organization membership) ───────────────────────────
 
   listOrganizations(): Observable<OrganizationItem[]> {
-    return this.api.getAllPages<OrganizationItem>('/api/v1/admin/security/organizations');
+    return this.sdk.getAllPages<OrganizationItem>('/api/v1/admin/security/organizations');
   }
 
   listOrganizationMembers(orgId: string): Observable<OrganizationMemberItem[]> {
-    return this.api.getAllPages<OrganizationMemberItem>(`/api/v1/admin/security/organizations/${orgId}/members`);
+    return this.sdk.getAllPages<OrganizationMemberItem>(`/api/v1/admin/security/organizations/${orgId}/members`);
   }
 
   addOrganizationMember(orgId: string, body: AddOrganizationMemberBody): Observable<OrganizationMemberItem> {
-    return this.api.post<OrganizationMemberItem>(`/api/v1/admin/security/organizations/${orgId}/members`, body);
+    return this.sdk.post<OrganizationMemberItem>(`/api/v1/admin/security/organizations/${orgId}/members`, { body: body });
   }
 
   removeOrganizationMember(orgId: string, userId: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/security/organizations/${orgId}/members/${userId}`);
+    return this.sdk.delete(`/api/v1/admin/security/organizations/${orgId}/members/${userId}`);
   }
 
   // ── Record shares + entity-default shares (D-133 (4)) ──────────────────
@@ -439,105 +442,106 @@ export class SecurityAdminService {
   }
 
   listEntityDefaultShares(entity: string): Observable<EntityDefaultShareItem[]> {
-    return this.api.getAllPages<EntityDefaultShareItem>('/api/v1/admin/security/entity-default-shares', { entity });
+    return this.sdk.getAllPages<EntityDefaultShareItem>('/api/v1/admin/security/entity-default-shares', { entity });
   }
 
   createEntityDefaultShare(body: CreateEntityDefaultShareBody): Observable<EntityDefaultShareItem> {
-    return this.api.post<EntityDefaultShareItem>('/api/v1/admin/security/entity-default-shares', body);
+    return this.sdk.post<EntityDefaultShareItem>('/api/v1/admin/security/entity-default-shares', { body: body });
   }
 
   deleteEntityDefaultShare(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/security/entity-default-shares/${id}`);
+    return this.sdk.delete(`/api/v1/admin/security/entity-default-shares/${id}`);
   }
 
   // ── Permission sets (Q10-T5) ────────────────────────────────────────────
 
   listPermissionSets(): Observable<PermissionSetItem[]> {
-    return this.api.getAllPages<PermissionSetItem>('/api/v1/admin/security/permission-sets');
+    return this.sdk.getAllPages<PermissionSetItem>('/api/v1/admin/security/permission-sets');
   }
 
   getPermissionSet(id: string): Observable<PermissionSetDetail> {
-    return this.api.get<PermissionSetDetail>(`/api/v1/admin/security/permission-sets/${id}`);
+    return this.sdk.get<PermissionSetDetail>(`/api/v1/admin/security/permission-sets/${id}`);
   }
 
   createPermissionSet(body: CreatePermissionSetBody): Observable<PermissionSetItem> {
-    return this.api.post<PermissionSetItem>('/api/v1/admin/security/permission-sets', body);
+    return this.sdk.post<PermissionSetItem>('/api/v1/admin/security/permission-sets', { body: body });
   }
 
   updatePermissionSet(id: string, body: UpdatePermissionSetBody, rowVersion: number): Observable<PermissionSetItem> {
-    return this.api.patch<PermissionSetItem>(`/api/v1/admin/security/permission-sets/${id}`, body, rowVersion);
+    return this.sdk.patch<PermissionSetItem>(`/api/v1/admin/security/permission-sets/${id}`, { body: body, ifMatch: rowVersion });
   }
 
   deletePermissionSet(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/security/permission-sets/${id}`);
+    return this.sdk.delete(`/api/v1/admin/security/permission-sets/${id}`);
   }
 
   setPermissionSetEntityAccess(id: string, body: SetEntityAccessItem): Observable<SetEntityAccessItem> {
-    return this.api.post<SetEntityAccessItem>(`/api/v1/admin/security/permission-sets/${id}/entity-access`, body);
+    return this.sdk.post<SetEntityAccessItem>(`/api/v1/admin/security/permission-sets/${id}/entity-access`, { body: body });
   }
 
   clearPermissionSetEntityAccess(id: string, entity: string): Observable<void> {
-    return this.api.delete(
+    return this.sdk.delete(
       `/api/v1/admin/security/permission-sets/${id}/entity-access/${encodeURIComponent(entity)}`,
     );
   }
 
   addPermissionSetPrivilege(id: string, privilegeKey: string): Observable<void> {
-    return this.api.post<void>(`/api/v1/admin/security/permission-sets/${id}/privileges`, { privilege_key: privilegeKey });
+    return this.sdk.post<void>(`/api/v1/admin/security/permission-sets/${id}/privileges`, { body: { privilege_key: privilegeKey } });
   }
 
   removePermissionSetPrivilege(id: string, privilegeKey: string): Observable<void> {
-    return this.api.delete(
+    return this.sdk.delete(
       `/api/v1/admin/security/permission-sets/${id}/privileges/${encodeURIComponent(privilegeKey)}`,
     );
   }
 
   listPermissionSetAssignments(id: string): Observable<PermissionSetAssignment[]> {
-    return this.api.getAllPages<PermissionSetAssignment>(`/api/v1/admin/security/permission-set-assignments/${id}`);
+    return this.sdk.getAllPages<PermissionSetAssignment>(`/api/v1/admin/security/permission-set-assignments/${id}`);
   }
 
   assignPermissionSet(id: string, body: CreatePermissionSetAssignmentBody): Observable<PermissionSetAssignment> {
-    return this.api.post<PermissionSetAssignment>(`/api/v1/admin/security/permission-set-assignments/${id}`, body);
+    return this.sdk.post<PermissionSetAssignment>(`/api/v1/admin/security/permission-set-assignments/${id}`, { body: body });
   }
 
   removePermissionSetAssignment(id: string, assignmentId: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/security/permission-set-assignments/${id}/${assignmentId}`);
+    return this.sdk.delete(`/api/v1/admin/security/permission-set-assignments/${id}/${assignmentId}`);
   }
 
   // ── Conflict rules (Q10-T8) ─────────────────────────────────────────────
 
   listConflictRules(): Observable<ConflictRule[]> {
-    return this.api.getAllPages<ConflictRule>('/api/v1/admin/security/role-conflicts/rules');
+    return this.sdk.getAllPages<ConflictRule>('/api/v1/admin/security/role-conflicts/rules');
   }
 
   createConflictRule(body: CreateConflictRuleBody): Observable<ConflictRule> {
-    return this.api.post<ConflictRule>('/api/v1/admin/security/role-conflicts/rules', body);
+    return this.sdk.post<ConflictRule>('/api/v1/admin/security/role-conflicts/rules', { body: body });
   }
 
   deleteConflictRule(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/security/role-conflicts/rules/${id}`);
+    return this.sdk.delete(`/api/v1/admin/security/role-conflicts/rules/${id}`);
   }
 
   listCurrentConflicts(): Observable<CurrentConflict[]> {
-    return this.api.getAllPages<CurrentConflict>('/api/v1/admin/security/role-conflicts/current');
+    return this.sdk.getAllPages<CurrentConflict>('/api/v1/admin/security/role-conflicts/current');
   }
 
   // ── Role templates (Q10-T7) ─────────────────────────────────────────────
 
   listRoleTemplates(): Observable<RoleTemplateItem[]> {
-    return this.api.get<RoleTemplateItem[]>('/api/v1/admin/security/role-templates');
+    return this.sdk.get<RoleTemplateItem[]>('/api/v1/admin/security/role-templates');
   }
 
   installRoleTemplate(key: string, name: string | null): Observable<InstalledRole> {
-    return this.api.post<InstalledRole>(
-      `/api/v1/admin/security/role-templates/${encodeURIComponent(key)}/install`, { name },
+    return this.sdk.post<InstalledRole>(
+      `/api/v1/admin/security/role-templates/${encodeURIComponent(key)}/install`,
+      { body: { name } },
     );
   }
 
   // ── Effective-access preview ────────────────────────────────────────────
 
   effectiveAccessPreview(userId: string): Observable<EffectiveAccessPreview> {
-    return this.api.get<EffectiveAccessPreview>(`/api/v1/admin/security/users/${userId}/effective-access`);
+    return this.sdk.get<EffectiveAccessPreview>(`/api/v1/admin/security/users/${userId}/effective-access`);
   }
 
   // ── User lookup by email (shared by the pages below) ────────────────────
@@ -548,24 +552,28 @@ export class SecurityAdminService {
    * service-local `UserListPage` — C-26 (guidelines §12).
    */
   listUsers(page = 1, pageSize = 200): Observable<Page<UserListItem>> {
-    return this.api.get<Page<UserListItem>>('/api/v1/admin/security/users', {
+    return this.sdk.get<Page<UserListItem>>(
+      '/api/v1/admin/security/users',
+      { query: {
       page: String(page), page_size: String(pageSize),
-    });
+    } },
+    );
   }
 
   findUserByEmail(email: string): Observable<ApiComponents['schemas']['UserLookupItem'][]> {
-    return this.api.get<ApiComponents['schemas']['UserLookupItem'][]>(
-      '/api/v1/admin/security/users/lookup', { email },
+    return this.sdk.get<ApiComponents['schemas']['UserLookupItem'][]>(
+      '/api/v1/admin/security/users/lookup',
+      { query: { email } },
     );
   }
   // ── Q5-T10: role sign-in policy and MFA coverage ────────────────────────
 
   getRoleAuthPolicy(roleId: string): Observable<RoleAuthPolicy> {
-    return this.api.get<RoleAuthPolicy>(`/api/v1/admin/security/roles/${encodeURIComponent(roleId)}/auth-policy`);
+    return this.sdk.get<RoleAuthPolicy>(`/api/v1/admin/security/roles/${encodeURIComponent(roleId)}/auth-policy`);
   }
 
   updateRoleAuthPolicy(roleId: string, body: RoleAuthPolicyBody): Observable<RoleAuthPolicy> {
-    return this.api.put<RoleAuthPolicy>(`/api/v1/admin/security/roles/${encodeURIComponent(roleId)}/auth-policy`, body);
+    return this.sdk.put<RoleAuthPolicy>(`/api/v1/admin/security/roles/${encodeURIComponent(roleId)}/auth-policy`, { body: body });
   }
 
   /** At most 500 active accounts, administrators first. */
@@ -573,83 +581,87 @@ export class SecurityAdminService {
     const params: Record<string, string> = {};
     if (filter.roleId) params['role_id'] = filter.roleId;
     if (filter.missingOnly) params['missing_only'] = 'true';
-    return this.api.get<Page<MfaCoverageRow>>('/api/v1/admin/security/mfa/coverage', params).pipe(map(p => p.items));
+    return this.sdk.get<Page<MfaCoverageRow>>('/api/v1/admin/security/mfa/coverage', { query: params }).pipe(map(p => p.items));
   }
 
   mfaCoverageSummary(): Observable<MfaCoverageSummary[]> {
-    return this.api.get<MfaCoverageSummary[]>('/api/v1/admin/security/mfa/coverage/summary');
+    return this.sdk.get<MfaCoverageSummary[]>('/api/v1/admin/security/mfa/coverage/summary');
   }
 
   // ── Q1-T14: sign-in providers ────────────────────────────────────────────
 
   listOidcProviders(): Observable<OidcProviderItem[]> {
-    return this.api.getAllPages<OidcProviderItem>('/api/v1/admin/security/oidc-providers');
+    return this.sdk.getAllPages<OidcProviderItem>('/api/v1/admin/security/oidc-providers');
   }
 
   listOidcPresets(): Observable<OidcPresetItem[]> {
-    return this.api.get<OidcPresetItem[]>('/api/v1/admin/security/oidc-presets');
+    return this.sdk.get<OidcPresetItem[]>('/api/v1/admin/security/oidc-presets');
   }
 
   createOidcProvider(body: CreateOidcProviderBody): Observable<OidcProviderItem> {
-    return this.api.post<OidcProviderItem>('/api/v1/admin/security/oidc-providers', body);
+    return this.sdk.post<OidcProviderItem>('/api/v1/admin/security/oidc-providers', { body: body });
   }
 
   /** `rowVersion` goes out as `If-Match`; a stale one is a 409. */
   updateOidcProvider(id: string, body: UpdateOidcProviderBody, rowVersion: number): Observable<OidcProviderItem> {
-    return this.api.patch<OidcProviderItem>(
-      `/api/v1/admin/security/oidc-providers/${encodeURIComponent(id)}`, body, rowVersion,
+    return this.sdk.patch<OidcProviderItem>(
+      `/api/v1/admin/security/oidc-providers/${encodeURIComponent(id)}`,
+      { body: body, ifMatch: rowVersion },
     );
   }
 
   deleteOidcProvider(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/security/oidc-providers/${encodeURIComponent(id)}`);
+    return this.sdk.delete(`/api/v1/admin/security/oidc-providers/${encodeURIComponent(id)}`);
   }
 
   /** Starts a test sign-in; open `authorize_url` to finish it at the provider. */
   testOidcProvider(id: string): Observable<OidcTestStart> {
-    return this.api.post<OidcTestStart>(
-      `/api/v1/admin/security/oidc-providers/${encodeURIComponent(id)}/test`, {},
+    return this.sdk.post<OidcTestStart>(
+      `/api/v1/admin/security/oidc-providers/${encodeURIComponent(id)}/test`,
+      { body: {} },
     );
   }
 
   oidcProviderHealth(id: string): Observable<OidcProviderHealthItem> {
-    return this.api.get<OidcProviderHealthItem>(
+    return this.sdk.get<OidcProviderHealthItem>(
       `/api/v1/admin/security/oidc-providers/${encodeURIComponent(id)}/health`,
     );
   }
 
   listOidcDomains(): Observable<OidcDomainItem[]> {
-    return this.api.getAllPages<OidcDomainItem>('/api/v1/admin/security/oidc-domains');
+    return this.sdk.getAllPages<OidcDomainItem>('/api/v1/admin/security/oidc-domains');
   }
 
   createOidcDomain(body: CreateOidcDomainBody): Observable<OidcDomainItem> {
-    return this.api.post<OidcDomainItem>('/api/v1/admin/security/oidc-domains', body);
+    return this.sdk.post<OidcDomainItem>('/api/v1/admin/security/oidc-domains', { body: body });
   }
 
   verifyOidcDomain(id: string): Observable<OidcDomainItem> {
-    return this.api.post<OidcDomainItem>(
-      `/api/v1/admin/security/oidc-domains/${encodeURIComponent(id)}/verify`, {},
+    return this.sdk.post<OidcDomainItem>(
+      `/api/v1/admin/security/oidc-domains/${encodeURIComponent(id)}/verify`,
+      { body: {} },
     );
   }
 
   deleteOidcDomain(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/security/oidc-domains/${encodeURIComponent(id)}`);
+    return this.sdk.delete(`/api/v1/admin/security/oidc-domains/${encodeURIComponent(id)}`);
   }
 
   listOidcGroupMappings(providerId: string): Observable<OidcGroupMappingItem[]> {
-    return this.api.getAllPages<OidcGroupMappingItem>(
+    return this.sdk.getAllPages<OidcGroupMappingItem>(
       `/api/v1/admin/security/oidc-providers/${encodeURIComponent(providerId)}/group-mappings`,
     );
   }
 
   createOidcGroupMapping(providerId: string, body: CreateOidcGroupMappingBody): Observable<OidcGroupMappingItem> {
-    return this.api.post<OidcGroupMappingItem>(
-      `/api/v1/admin/security/oidc-providers/${encodeURIComponent(providerId)}/group-mappings`, body,
+    return this.sdk.post<OidcGroupMappingItem>(
+      `/api/v1/admin/security/oidc-providers/${encodeURIComponent(providerId)}/group-mappings`,
+      { body: body },
     );
   }
 
   deleteOidcGroupMapping(providerId: string, mappingId: string): Observable<void> {
-    return this.api.delete(
+    return this.sdk.delete(
       `/api/v1/admin/security/oidc-providers/${encodeURIComponent(providerId)}/group-mappings/${encodeURIComponent(mappingId)}`,
     );
   }
@@ -660,29 +672,31 @@ export class SecurityAdminService {
   listSessions(roleId?: string, page = 1, pageSize = 50): Observable<Page<AdminSessionItem>> {
     const params: Record<string, string> = { page: String(page), page_size: String(pageSize) };
     if (roleId) params['role_id'] = roleId;
-    return this.api.get<Page<AdminSessionItem>>('/api/v1/admin/security/sessions', params);
+    return this.sdk.get<Page<AdminSessionItem>>('/api/v1/admin/security/sessions', { query: params });
   }
 
   listUserSessions(userId: string, page = 1, pageSize = 50): Observable<Page<AdminSessionItem>> {
-    return this.api.get<Page<AdminSessionItem>>(
+    return this.sdk.get<Page<AdminSessionItem>>(
       `/api/v1/admin/security/users/${encodeURIComponent(userId)}/sessions`,
-      { page: String(page), page_size: String(pageSize) },
+      { query: { page: String(page), page_size: String(pageSize) } },
     );
   }
 
   endSession(familyId: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/security/sessions/${encodeURIComponent(familyId)}`);
+    return this.sdk.delete(`/api/v1/admin/security/sessions/${encodeURIComponent(familyId)}`);
   }
 
   revokeUserSessions(userId: string): Observable<SessionsEnded> {
-    return this.api.post<SessionsEnded>(
-      `/api/v1/admin/security/users/${encodeURIComponent(userId)}/sessions/revoke-all`, {},
+    return this.sdk.post<SessionsEnded>(
+      `/api/v1/admin/security/users/${encodeURIComponent(userId)}/sessions/revoke-all`,
+      { body: {} },
     );
   }
 
   revokeRoleSessions(roleId: string): Observable<SessionsEnded> {
-    return this.api.post<SessionsEnded>(
-      `/api/v1/admin/security/roles/${encodeURIComponent(roleId)}/sessions/revoke-all`, {},
+    return this.sdk.post<SessionsEnded>(
+      `/api/v1/admin/security/roles/${encodeURIComponent(roleId)}/sessions/revoke-all`,
+      { body: {} },
     );
   }
 }

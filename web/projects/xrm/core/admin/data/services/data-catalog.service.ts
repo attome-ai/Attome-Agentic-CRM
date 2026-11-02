@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiComponents, ApiService, Page } from '@attome/base';
+import { ApiComponents, SdkService, Page } from '@attome/base';
 
 /**
  * M18 Data Catalog Phase 1 (D-466) — `GET /api/v1/catalog/entities` and
@@ -45,18 +45,18 @@ export interface CatalogSearch {
 
 @Injectable({ providedIn: 'root' })
 export class DataCatalogService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   searchEntities(search: CatalogSearch, page = 1, pageSize = 50): Observable<Page<CatalogEntitySummary>> {
     const params: Record<string, string> = { page: String(page), page_size: String(pageSize) };
     const q = search.q?.trim();
     if (q) params['q'] = q;
     if (search.classification) params['classification'] = search.classification;
-    return this.api.get<Page<CatalogEntitySummary>>('/api/v1/catalog/entities', params);
+    return this.sdk.get<Page<CatalogEntitySummary>>('/api/v1/catalog/entities', { query: params });
   }
 
   getEntity(logicalname: string): Observable<CatalogEntityDetail> {
-    return this.api.get<CatalogEntityDetail>(`/api/v1/catalog/entities/${encodeURIComponent(logicalname)}`);
+    return this.sdk.get<CatalogEntityDetail>(`/api/v1/catalog/entities/${encodeURIComponent(logicalname)}`);
   }
 
   /** L4-T6: a page of the assets the caller may see, with facet counts. */
@@ -67,36 +67,43 @@ export class DataCatalogService {
     if (search.kind) params['kind'] = search.kind;
     if (search.domain) params['domain'] = search.domain;
     if (search.label) params['label'] = search.label;
-    return this.api.get<CatalogAssetSearch>('/api/v1/catalog/assets', params);
+    return this.sdk.get<CatalogAssetSearch>('/api/v1/catalog/assets', { query: params });
   }
 
   getAsset(id: string): Observable<CatalogAssetPage> {
-    return this.api.get<CatalogAssetPage>(`/api/v1/catalog/assets/${encodeURIComponent(id)}`);
+    return this.sdk.get<CatalogAssetPage>(`/api/v1/catalog/assets/${encodeURIComponent(id)}`);
   }
 
   /** Saves a description as a draft, at the asset's `row_version`. */
   setDescription(id: string, rowVersion: number, body: AssetDescription): Observable<CatalogAssetSummary> {
-    return this.api.patch<CatalogAssetSummary>(
-      `/api/v1/catalog/assets/${encodeURIComponent(id)}/description`, body, rowVersion,
+    return this.sdk.patch<CatalogAssetSummary>(
+      `/api/v1/catalog/assets/${encodeURIComponent(id)}/description`,
+      { body: body, ifMatch: rowVersion },
     );
   }
 
   /** A builder approves the draft, at the asset's `row_version`. */
   approveDescription(id: string, rowVersion: number): Observable<CatalogAssetSummary> {
-    return this.api.post<CatalogAssetSummary>(
-      `/api/v1/catalog/assets/${encodeURIComponent(id)}/description/approve`, {}, { ifMatch: rowVersion },
+    return this.sdk.post<CatalogAssetSummary>(
+      `/api/v1/catalog/assets/${encodeURIComponent(id)}/description/approve`,
+      { body: {} },
+      { ifMatch: rowVersion },
     );
   }
 
   requestAccess(id: string, reason: string): Observable<CatalogAccessRequest> {
-    return this.api.post<CatalogAccessRequest>(
-      `/api/v1/catalog/assets/${encodeURIComponent(id)}/access-requests`, { reason },
+    return this.sdk.post<CatalogAccessRequest>(
+      `/api/v1/catalog/assets/${encodeURIComponent(id)}/access-requests`,
+      { body: { reason } },
     );
   }
 
   personalDataMap(page = 1, pageSize = 50): Observable<Page<PersonalDataItem>> {
-    return this.api.get<Page<PersonalDataItem>>('/api/v1/catalog/personal-data-map', {
+    return this.sdk.get<Page<PersonalDataItem>>(
+      '/api/v1/catalog/personal-data-map',
+      { query: {
       page: String(page), page_size: String(pageSize),
-    });
+    } },
+    );
   }
 }

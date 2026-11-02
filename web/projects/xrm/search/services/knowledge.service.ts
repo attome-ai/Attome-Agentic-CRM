@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import type { Page } from '@attome/base';
 
 /**
@@ -63,7 +63,7 @@ export interface IndexerStatus {
  */
 @Injectable({ providedIn: 'root' })
 export class KnowledgeService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** The queue, most recently seen first. `status` omitted means the whole queue. */
   listGaps(opts?: { status?: GapTopic['status']; page?: number; pageSize?: number }): Observable<Page<GapTopic>> {
@@ -71,19 +71,22 @@ export class KnowledgeService {
     if (opts?.status) params['status'] = opts.status;
     if (opts?.page !== undefined) params['page'] = String(opts.page);
     if (opts?.pageSize !== undefined) params['page_size'] = String(opts.pageSize);
-    return this.api.get<Page<GapTopic>>('/api/v1/admin/knowledge/gaps', params);
+    return this.sdk.get<Page<GapTopic>>('/api/v1/admin/knowledge/gaps', { query: params });
   }
 
   /** One page of live collections with their coverage. One-based (D-347). */
   coverage(page = 1, pageSize = 100): Observable<Page<CollectionCoverage>> {
-    return this.api.get<Page<CollectionCoverage>>('/api/v1/admin/knowledge/coverage', {
+    return this.sdk.get<Page<CollectionCoverage>>(
+      '/api/v1/admin/knowledge/coverage',
+      { query: {
       page: String(page),
       page_size: String(pageSize),
-    });
+    } },
+    );
   }
 
   indexerStatus(): Observable<IndexerStatus> {
-    return this.api.get<IndexerStatus>('/api/v1/admin/knowledge/coverage/indexer');
+    return this.sdk.get<IndexerStatus>('/api/v1/admin/knowledge/coverage/indexer');
   }
 
   /**
@@ -95,9 +98,12 @@ export class KnowledgeService {
     status: GapTopic['status'],
     addressedItemRef?: string | null,
   ): Observable<GapTopic> {
-    return this.api.patch<GapTopic>(`/api/v1/admin/knowledge/gaps/${id}`, {
+    return this.sdk.patch<GapTopic>(
+      `/api/v1/admin/knowledge/gaps/${id}`,
+      { body: {
       status,
       addressed_item_ref: addressedItemRef ?? null,
-    });
+    } },
+    );
   }
 }
