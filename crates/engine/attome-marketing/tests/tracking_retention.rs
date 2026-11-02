@@ -199,6 +199,7 @@ async fn view(
     at: DateTime<Utc>,
     url: &str,
 ) {
+    ensure_month(db, at).await;
     sqlx::query(
         "INSERT INTO marketing_web_event \
             (id, site_key, visitor_id, session_id, occurred_at, kind, url) \
@@ -213,6 +214,33 @@ async fn view(
     .execute(db)
     .await
     .expect("insert event");
+}
+
+/// The monthly partition `at` falls in, named as the migration names them.
+/// The migration made only the month it ran in and the next, and a test may
+/// look a few days back across the turn of a month. Another test process may
+/// create it at the same moment: then it exists, which is all this needs.
+async fn ensure_month(db: &sqlx::PgPool, at: DateTime<Utc>) {
+    let (name, ddl): (String, String) = sqlx::query_as(
+        "SELECT 'marketing_web_event_p' || to_char(date_trunc('month', $1::timestamptz), 'YYYY_MM'), \
+                format('CREATE TABLE IF NOT EXISTS %I PARTITION OF marketing_web_event \
+                        FOR VALUES FROM (%L) TO (%L)', \
+                       'marketing_web_event_p' || to_char(date_trunc('month', $1::timestamptz), 'YYYY_MM'), \
+                       date_trunc('month', $1::timestamptz), \
+                       date_trunc('month', $1::timestamptz) + interval '1 month')",
+    )
+    .bind(at)
+    .fetch_one(db)
+    .await
+    .expect("the month's partition DDL");
+    if let Err(error) = sqlx::query(&ddl).execute(db).await {
+        let exists: Option<String> = sqlx::query_scalar("SELECT to_regclass($1)::text")
+            .bind(&name)
+            .fetch_one(db)
+            .await
+            .expect("look the partition up");
+        assert!(exists.is_some(), "create {name}: {error}");
+    }
 }
 
 async fn count(db: &sqlx::PgPool, sql: &str, id: Uuid) -> i64 {
