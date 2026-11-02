@@ -26,6 +26,7 @@ fn b64(text: &str) -> String {
 // op: publish_extension
 // op: switch_off_extension
 // op: list_extension_runs
+// op: test_extension
 #[test]
 fn extensions_version_publish_roll_back_and_switch_off() {
     attome_testkit::run_shared(async {
@@ -264,6 +265,36 @@ fn published_extensions_run_at_their_hook_stage() {
             .await;
         assert_eq!(status, StatusCode::OK, "{body}");
         assert_eq!(body["items"][0]["ok"], true, "the run is logged");
+
+        // Y10-T6: a sample run saves nothing and is logged as a test.
+        let (status, body) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/admin/extensions/{name}/versions/1/test"),
+                Some(json!({ "samples": [
+                    { "stage": "before_save", "entity": "account", "is_create": true,
+                      "values": { "name": "Sample" } }
+                ] })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["items"][0]["answer"]["change"]["name"], "Set by wasm");
+        let tests: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM extension_run WHERE extension_name = $1 AND is_test",
+        )
+        .bind(&name)
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        assert_eq!(tests, 1);
+        let (status, _) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/admin/extensions/{name}/versions/1/test"),
+                Some(json!({ "samples": [] })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
 
         // Version 2 refuses the save with its message.
         upload_and_publish(REJECTS, 2).await;

@@ -461,6 +461,124 @@ async fn runs(
     Ok(Json(PaginatedResponse::new(items, total, 1, total.max(1))))
 }
 
+/// The most sample records one test run takes.
+pub const MAX_TEST_SAMPLES: usize = 50;
+
+/// Y10-T6: sample writes to run a version's hook on.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TestExtension {
+    /// One to [`MAX_TEST_SAMPLES`] writes, each as the hook would be given
+    /// it: `{stage, entity, values, previous?, is_create?, record_id?,
+    /// actor?}`.
+    #[schema(value_type = Vec<Object>)]
+    pub samples: Vec<attome_extension::HookInput>,
+}
+
+/// What the hook answered for one sample.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct TestOutcome {
+    /// `"continue"`, `{"change": {...}}` or `{"reject": "..."}`; absent on
+    /// an error.
+    #[schema(value_type = Option<Object>)]
+    pub answer: Option<Value>,
+    pub error: Option<String>,
+    pub fuel_used: i64,
+    pub duration_ms: i64,
+}
+
+/// Test an extension version on sample records
+///
+/// Y10-T6: runs the version's `on_record` hook on each sample exactly as a
+/// write would (only granted attributes, its changes held to its grants)
+/// and saves nothing but the runs, logged as test runs. Any version may be
+/// tested, drafts included.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/extensions/{name}/versions/{version}/test",
+    operation_id = "test_extension",
+    tag = "admin",
+    params(
+        ("name" = String, Path, description = "The extension"),
+        ("version" = i32, Path, description = "The version"),
+    ),
+    request_body = TestExtension,
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::DryRun,
+        None,
+        "runs a hook on sample records and saves only the run log"
+    )))),
+    responses(
+        (status = 200, description = "One outcome per sample", body = PaginatedResponse<TestOutcome>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such version", body = ErrorResponse),
+        (status = 422, description = "No samples, too many, or a stored manifest that does not parse", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn test_version(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<area::Automation>>,
+    Path((name, version)): Path<(String, i32)>,
+    Json(body): Json<TestExtension>,
+) -> Result<Json<PaginatedResponse<TestOutcome>>, AppError> {
+    if body.samples.is_empty() || body.samples.len() > MAX_TEST_SAMPLES {
+        return Err(AppError::Validation(format!(
+            "samples holds 1 to {MAX_TEST_SAMPLES} writes"
+        )));
+    }
+    let row: Option<(String, String, Value)> = sqlx::query_as(
+        "SELECT module_key, module_sha256, manifest FROM extension WHERE name = $1 AND version = $2",
+    )
+    .bind(&name)
+    .bind(version)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some((key, sha, manifest)) = row else {
+        return Err(AppError::NotFound);
+    };
+    let grants: attome_extension::Grants = serde_json::from_value(manifest)
+        .map_err(|e| AppError::Validation(format!("the stored manifest: {e}")))?;
+    let module = crate::extension_hooks::load(&state, &key, &sha).await?;
+    let limits = attome_extension::Limits::from(&state.base.config.extensions);
+    let mut items = Vec::with_capacity(body.samples.len());
+    for sample in body.samples {
+        let module = module.clone();
+        let grants = grants.clone();
+        let (answer, cost) =
+            tokio::task::spawn_blocking(move || match attome_extension::Runtime::shared() {
+                Ok(rt) => attome_extension::call_hook(rt, &module, &sample, &grants, &limits),
+                Err(e) => (Err(e.to_string()), attome_extension::CallCost::default()),
+            })
+            .await
+            .map_err(AppError::internal)?;
+        let error = answer.as_ref().err().cloned();
+        record_run(
+            &state.base.db,
+            &name,
+            version,
+            cost,
+            error.as_deref(),
+            &[],
+            &[],
+            true,
+        )
+        .await?;
+        items.push(TestOutcome {
+            answer: answer
+                .ok()
+                .map(|a| serde_json::to_value(a).unwrap_or(Value::Null)),
+            error,
+            fuel_used: i64::try_from(cost.fuel_used).unwrap_or(i64::MAX),
+            duration_ms: i64::try_from(cost.elapsed.as_millis()).unwrap_or(i64::MAX),
+        });
+    }
+    let total = items.len() as i64;
+    Ok(Json(PaginatedResponse::new(items, total, 1, total.max(1))))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/extensions", get(list).post(upload))
@@ -470,10 +588,14 @@ pub fn routes() -> Router<EngineState> {
         )
         .route("/api/v1/admin/extensions/{name}/off", post(switch_off))
         .route("/api/v1/admin/extensions/{name}/runs", get(runs))
+        .route(
+            "/api/v1/admin/extensions/{name}/versions/{version}/test",
+            post(test_version),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list, upload, publish, switch_off, runs))]
+#[openapi(paths(list, upload, publish, switch_off, runs, test_version))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

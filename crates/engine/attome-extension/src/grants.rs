@@ -148,6 +148,24 @@ impl Grants {
         }
     }
 
+    /// The values of `entity` the extension may see: every attribute, or
+    /// the granted ones and the id; nothing without a read grant. Pure.
+    pub fn visible(
+        &self,
+        entity: &str,
+        values: &serde_json::Map<String, serde_json::Value>,
+    ) -> serde_json::Map<String, serde_json::Value> {
+        match self.entities.get(entity).filter(|g| g.read) {
+            Some(grant) if !grant.attributes.is_empty() => values
+                .iter()
+                .filter(|(k, _)| k.as_str() == "id" || grant.attributes.contains(k.as_str()))
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect(),
+            Some(_) => values.clone(),
+            None => serde_json::Map::new(),
+        }
+    }
+
     /// Whether the extension may read the secret `name`.
     pub fn may_read_secret(&self, name: &str) -> Result<(), Denied> {
         if self.secrets.contains(name) {

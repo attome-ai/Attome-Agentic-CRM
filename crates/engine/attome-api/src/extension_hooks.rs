@@ -1,8 +1,8 @@
 //! Y10-T2: published extensions run at the record write pipeline's hook
 //! stages. A manifest's `hooks` name the entity and stage; [`ExtensionHooks`]
 //! (one per stage, registered at boot) calls each matching extension's
-//! `on_record` export through the JSON calling convention
-//! (`attome_extension::Runtime::call_json_measured`).
+//! `on_record` export through `attome_extension::call_hook`, the same call
+//! the test route makes on sample records.
 //!
 //! What a hook sees and may do is held to its grants: the values it is given
 //! are only the attributes it may read, and a change to an attribute it may
@@ -31,17 +31,13 @@ use std::time::Duration;
 
 use attome_core::EngineState;
 use attome_core::record_hooks::{HookEvent, HookFuture, HookOutcome, HookStage, RecordHook};
-use attome_extension::{Grants, HookPoint, Limits, Runtime};
+use attome_extension::{Grants, HookAnswer, HookInput, HookPoint, Limits, Runtime, call_hook};
 use attome_storage::object_store::{ObjectStoreExt, path::Path as ObjectPath};
 use attome_types::AppError;
-use serde::Deserialize;
-use serde_json::{Map, Value, json};
+use serde_json::{Map, Value};
 
 /// How often [`start`]'s task reloads the published extensions.
 pub const REFRESH_EVERY: Duration = Duration::from_secs(5);
-
-/// The export a hook calls.
-pub const HOOK_EXPORT: &str = "on_record";
 
 /// One published extension's hook on one entity and stage.
 #[derive(Clone)]
@@ -163,7 +159,7 @@ pub async fn refresh(state: &EngineState) -> Result<usize, AppError> {
 
 /// Reads a module from the file store, checks its digest and compiles it
 /// off the async workers.
-async fn load(
+pub(crate) async fn load(
     state: &EngineState,
     key: &str,
     sha256: &str,
@@ -208,29 +204,6 @@ pub async fn start(state: EngineState) {
             }
         }
     });
-}
-
-/// What an extension answered.
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "snake_case")]
-enum Answer {
-    Continue,
-    Change(Map<String, Value>),
-    Reject(String),
-}
-
-/// The values a grant lets the extension see: every attribute, or the
-/// granted ones and the id. Pure.
-fn visible(grants: &Grants, entity: &str, values: &Map<String, Value>) -> Map<String, Value> {
-    match grants.entities.get(entity) {
-        Some(grant) if !grant.attributes.is_empty() => values
-            .iter()
-            .filter(|(k, _)| k.as_str() == "id" || grant.attributes.contains(k.as_str()))
-            .map(|(k, v)| (k.clone(), v.clone()))
-            .collect(),
-        Some(_) => values.clone(),
-        None => Map::new(),
-    }
 }
 
 /// The record write hook for one stage, running every published extension
@@ -300,26 +273,22 @@ impl RecordHook for ExtensionHooks {
                 };
                 let mut values = event.values.clone();
                 values.extend(changes.clone());
-                let input = json!({
-                    "stage": point,
-                    "entity": event.entity,
-                    "record_id": event.record_id,
-                    "is_create": event.is_create,
-                    "values": visible(&target.grants, event.entity, &values),
-                    "previous": event.previous.map(|p| visible(&target.grants, event.entity, p)),
-                    "actor": event.actor,
-                });
-                let input = serde_json::to_vec(&input).map_err(AppError::internal)?;
-                let (result, cost) = tokio::task::spawn_blocking(move || match Runtime::shared() {
-                    Ok(rt) => rt.call_json_measured(&module, HOOK_EXPORT, &input, &limits),
-                    Err(e) => (Err(e), attome_extension::CallCost::default()),
+                let input = HookInput {
+                    stage: point,
+                    entity: event.entity.to_owned(),
+                    record_id: event.record_id.map(|id| id.to_string()),
+                    is_create: event.is_create,
+                    values,
+                    previous: event.previous.cloned(),
+                    actor: event.actor.map(|id| id.to_string()),
+                };
+                let grants = target.grants.clone();
+                let (answer, cost) = tokio::task::spawn_blocking(move || match Runtime::shared() {
+                    Ok(rt) => call_hook(rt, &module, &input, &grants, &limits),
+                    Err(e) => (Err(e.to_string()), attome_extension::CallCost::default()),
                 })
                 .await
                 .map_err(AppError::internal)?;
-                let answer = result.map_err(|e| e.to_string()).and_then(|out| {
-                    serde_json::from_slice::<Answer>(&out)
-                        .map_err(|e| format!("the answer is not continue, change or reject: {e}"))
-                });
                 let error = answer.as_ref().err().cloned();
                 if let Err(log_error) = crate::extension_admin::record_run(
                     &state.base.db,
@@ -342,21 +311,9 @@ impl RecordHook for ExtensionHooks {
                             target.name
                         )));
                     }
-                    Ok(Answer::Continue) => {}
-                    Ok(Answer::Change(set)) => {
-                        let keys: Vec<&str> = set.keys().map(String::as_str).collect();
-                        target
-                            .grants
-                            .may_write(event.entity, &keys)
-                            .map_err(|denied| {
-                                AppError::Validation(format!(
-                                    "the extension {}: {denied}",
-                                    target.name
-                                ))
-                            })?;
-                        changes.extend(set);
-                    }
-                    Ok(Answer::Reject(message)) => return Ok(HookOutcome::Reject(message)),
+                    Ok(HookAnswer::Continue) => {}
+                    Ok(HookAnswer::Change(set)) => changes.extend(set),
+                    Ok(HookAnswer::Reject(message)) => return Ok(HookOutcome::Reject(message)),
                 }
             }
             Ok(if changes.is_empty() {
@@ -365,34 +322,5 @@ impl RecordHook for ExtensionHooks {
                 HookOutcome::Change(changes)
             })
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn answers_and_visible_values() {
-        assert!(matches!(
-            serde_json::from_str::<Answer>(r#""continue""#),
-            Ok(Answer::Continue)
-        ));
-        assert!(matches!(
-            serde_json::from_str::<Answer>(r#"{"reject":"no"}"#),
-            Ok(Answer::Reject(m)) if m == "no"
-        ));
-        assert!(serde_json::from_str::<Answer>(r#"{"other":1}"#).is_err());
-
-        let grants: Grants = serde_json::from_value(json!({
-            "entities": { "account": { "read": true, "attributes": ["name"] } }
-        }))
-        .unwrap();
-        let values: Map<String, Value> =
-            serde_json::from_value(json!({ "id": "x", "name": "n", "secret_note": "s" })).unwrap();
-        let seen = visible(&grants, "account", &values);
-        assert_eq!(seen.len(), 2);
-        assert!(!seen.contains_key("secret_note"));
-        assert!(visible(&grants, "deal", &values).is_empty());
     }
 }

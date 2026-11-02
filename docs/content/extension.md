@@ -79,6 +79,10 @@ Custom code runs as WebAssembly on Wasmtime inside the server (Y10, V2-D125), in
   back) and `.../{name}/off` stops every version.
 - **Run logs.** Each run is kept with its version, time, fuel used, result and log lines, every
   granted secret masked: `GET /api/v1/admin/extensions/{name}/runs`.
+- **Testing a version.** `POST /api/v1/admin/extensions/{name}/versions/{v}/test` with
+  `{"samples": [{"stage", "entity", "values", ...}]}` (up to 50) runs the version's hook on each
+  sample exactly as a write would, saves nothing, and answers each answer with its fuel and time;
+  the runs are logged as test runs. Drafts can be tested before they are published.
 
 Not yet: the host API calls from inside a hook (reading other records, secrets, HTTP after the
 commit), JavaScript extensions, and approving grants at publish by a second person.

@@ -8,12 +8,15 @@
 
 /// Y10-T3: what an extension may touch, checked before every host call.
 pub mod grants;
+/// Y10-T6: one hook call, shared by live writes and sample runs.
+pub mod harness;
 /// The host API as a Rust trait, and AE2-T1's in-memory fake host.
 pub mod host;
 /// Y10-T1: the engine, the limits and running one export.
 pub mod runtime;
 
 pub use grants::{Denied, EntityGrant, Grants, HookDecl, HookPoint};
+pub use harness::{HOOK_EXPORT, HookAnswer, HookInput, call_hook};
 pub use host::{FakeHost, HostApi, Level, Response};
 pub use wasmtime::Module;
 
