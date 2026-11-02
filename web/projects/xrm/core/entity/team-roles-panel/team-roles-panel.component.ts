@@ -4,7 +4,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 import { EntityService } from '../services/entity.service';
 
 interface TeamRoleItem {
@@ -32,7 +32,7 @@ interface RoleOption {
  * cached SecurityContext (`invalidate_sync_all`), which raw generic CRUD on
  * the junction table would silently skip. Reads/writes therefore go through
  * the existing bespoke admin endpoints (`/api/v1/admin/security/teams/{id}/roles`)
- * via `ApiService` directly rather than `SecurityAdminService` — this
+ * via `SdkService` directly rather than `SecurityAdminService` — this
  * component lives in `@attome/xrm/entity`, which `@attome/xrm/security` does
  * not depend on, and pulling that whole entry point in for three endpoint
  * calls would cost far more bundle weight than it is worth (same reasoning
@@ -48,7 +48,7 @@ interface RoleOption {
   templateUrl: './team-roles-panel.component.html',
 })
 export class TeamRolesPanelComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly entitySvc = inject(EntityService);
   private readonly pickerSearchInput = viewChild<ElementRef<HTMLInputElement>>('pickerSearchInput');
 
@@ -109,7 +109,7 @@ export class TeamRolesPanelComponent implements OnInit {
   private load(teamId: string): void {
     this.loading.set(true);
     this.error.set('');
-    this.api.getAllPages<TeamRoleItem>(`/api/v1/admin/security/teams/${teamId}/roles`).subscribe({
+    this.sdk.getAllPages<TeamRoleItem>(`/api/v1/admin/security/teams/${teamId}/roles`).subscribe({
       next: rows => {
         this.roles.set(rows);
         this.loading.set(false);
@@ -148,7 +148,7 @@ export class TeamRolesPanelComponent implements OnInit {
     this.pickerSaving.set(true);
     this.pickerError.set('');
     forkJoin(roleIds.map(roleId =>
-      this.api.post<TeamRoleItem>(`/api/v1/admin/security/teams/${teamId}/roles`, { role_id: roleId }),
+      this.sdk.post<TeamRoleItem>(`/api/v1/admin/security/teams/${teamId}/roles`, { body: { role_id: roleId } }),
     )).subscribe({
       next: () => {
         this.pickerSaving.set(false);
@@ -167,7 +167,7 @@ export class TeamRolesPanelComponent implements OnInit {
     if (!teamId || this.removingId()) return;
     this.removingId.set(role.id);
     this.error.set('');
-    this.api.delete(`/api/v1/admin/security/teams/${teamId}/roles/${role.role_id}`).subscribe({
+    this.sdk.delete(`/api/v1/admin/security/teams/${teamId}/roles/${role.role_id}`).subscribe({
       next: () => {
         this.removingId.set(null);
         this.load(teamId);

@@ -4,10 +4,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
-import {
-  ApiService, AuthService, LangService, LocalDatePipe, TranslatePipe,
-  type ApiComponents, type ApiError,
-} from '@attome/base';
+import { AuthService, LangService, LocalDatePipe, SdkService, TranslatePipe, type ApiComponents, type ApiError } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 
 type RoleItem               = ApiComponents['schemas']['RoleItem'];
@@ -33,7 +30,7 @@ const USERS = '/api/v1/admin/security/users';
  * the four-eyes gate (`security.role_grant`): a 2xx may mean "submitted for
  * approval", not "assigned", and is reported as such.
  *
- * Calls `ApiService` directly rather than `SecurityAdminService` for the same
+ * Calls `SdkService` directly rather than `SecurityAdminService` for the same
  * chunk reason `user-account-state.actions.ts` records: importing
  * `@attome/xrm/core/security` from this registration entry would pull that
  * entry's eight admin pages into this lazy chunk.
@@ -56,7 +53,7 @@ export class UserSecurityPanelComponent implements OnInit {
   /** Emits the account's new state after a successful activate/deactivate, so the form header can follow. */
   readonly activeChange = output<boolean>();
 
-  private readonly api    = inject(ApiService);
+  private readonly sdk    = inject(SdkService);
   private readonly auth   = inject(AuthService);
   private readonly lang   = inject(LangService);
   private readonly dialog = inject(DialogService);
@@ -105,9 +102,9 @@ export class UserSecurityPanelComponent implements OnInit {
     this.loading.set(true);
     this.loadError.set(null);
     forkJoin({
-      preview:   this.api.get<EffectiveAccessPreview>(`${USERS}/${id}/effective-access`),
-      userRoles: this.api.getAllPages<UserRoleItem>(`${USERS}/${id}/roles`),
-      allRoles:  this.api.getAllPages<RoleItem>('/api/v1/admin/security/roles'),
+      preview:   this.sdk.get<EffectiveAccessPreview>(`${USERS}/${id}/effective-access`),
+      userRoles: this.sdk.getAllPages<UserRoleItem>(`${USERS}/${id}/roles`),
+      allRoles:  this.sdk.getAllPages<RoleItem>('/api/v1/admin/security/roles'),
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: r => {
         this.preview.set(r.preview);
@@ -131,8 +128,8 @@ export class UserSecurityPanelComponent implements OnInit {
     const id = this.userId();
     this.refreshing.set(true);
     forkJoin({
-      preview:   this.api.get<EffectiveAccessPreview>(`${USERS}/${id}/effective-access`),
-      userRoles: this.api.getAllPages<UserRoleItem>(`${USERS}/${id}/roles`),
+      preview:   this.sdk.get<EffectiveAccessPreview>(`${USERS}/${id}/effective-access`),
+      userRoles: this.sdk.getAllPages<UserRoleItem>(`${USERS}/${id}/roles`),
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: r => { this.preview.set(r.preview); this.userRoles.set(r.userRoles); this.refreshing.set(false); },
       error: (e: ApiError) => { this.actionError.set(this.lang.errorText(e)); this.refreshing.set(false); },
@@ -161,7 +158,7 @@ export class UserSecurityPanelComponent implements OnInit {
     });
     if (!ok) return;
     this.begin('active');
-    this.api.post<void>(`${USERS}/${this.userId()}/${deactivate ? 'disable' : 'enable'}`, {})
+    this.sdk.post<void>(`${USERS}/${this.userId()}/${deactivate ? 'disable' : 'enable'}`, { body: {} })
       .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
           this.busy.set(null);
@@ -184,7 +181,7 @@ export class UserSecurityPanelComponent implements OnInit {
     });
     if (!ok) return;
     this.begin('mfa');
-    this.api.post<void>(`${USERS}/${this.userId()}/mfa/reset`, {})
+    this.sdk.post<void>(`${USERS}/${this.userId()}/mfa/reset`, { body: {} })
       .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
           this.busy.set(null);
@@ -206,7 +203,7 @@ export class UserSecurityPanelComponent implements OnInit {
     const roleId = this.selectedRoleId;
     if (!roleId || this.busy()) return;
     this.begin('assign');
-    this.api.post<AssignUserRoleResponse>(`${USERS}/${this.userId()}/roles`, { role_id: roleId })
+    this.sdk.post<AssignUserRoleResponse>(`${USERS}/${this.userId()}/roles`, { body: { role_id: roleId } })
       .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: r => {
           this.busy.set(null);
@@ -232,7 +229,7 @@ export class UserSecurityPanelComponent implements OnInit {
     });
     if (!ok) return;
     this.begin(`remove:${role.role_id}`);
-    this.api.delete(`${USERS}/${this.userId()}/roles/${role.role_id}`)
+    this.sdk.delete(`${USERS}/${this.userId()}/roles/${role.role_id}`)
       .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => {
           this.busy.set(null);

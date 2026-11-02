@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
-import { ApiError, ApiService, LangService, TranslatePipe, type Page } from '@attome/base';
+import { ApiError, LangService, SdkService, TranslatePipe, type Page } from '@attome/base';
 import type { PageDoc } from '@attome/xrm/core/page-runtime';
 
 import { PortalSiteService } from './portal-site.service';
@@ -105,7 +105,7 @@ export function valueFor(field: PortalField, raw: string): unknown {
   `],
 })
 export class PortalCreateFormComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly site = inject(PortalSiteService);
   private readonly lang = inject(LangService);
 
@@ -137,7 +137,7 @@ export class PortalCreateFormComponent {
   }
 
   private load(keyword: string, entity: string): void {
-    this.api.get<PortalEntityView>(`${this.base(keyword)}/metadata/${encodeURIComponent(entity)}`).subscribe({
+    this.sdk.get<PortalEntityView>(`${this.base(keyword)}/metadata/${encodeURIComponent(entity)}`).subscribe({
       next: view => {
         this.view.set(view);
         for (const f of formFields(view, this.target().fields)) {
@@ -152,7 +152,7 @@ export class PortalCreateFormComponent {
   private loadChoices(keyword: string, field: PortalField): void {
     this.api
       .get<Page<{ id: string; data: Record<string, unknown> }>>(
-        `${this.base(keyword)}/records/${encodeURIComponent(field.lookup_entity ?? '')}`, { page: '1', page_size: '50' })
+        `${this.base(keyword)}/records/${encodeURIComponent(field.lookup_entity ?? '')}`, { query: { page: '1', page_size: '50' } })
       .subscribe({
         next: page => this.choices.update(c => ({
           ...c,

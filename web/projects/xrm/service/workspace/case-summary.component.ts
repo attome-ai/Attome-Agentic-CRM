@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
-import { ApiService, TranslatePipe } from '@attome/base';
+import { SdkService, TranslatePipe } from '@attome/base';
 
 interface SummaryOutcome {
   status: string;
@@ -49,7 +49,7 @@ export function summaryText(outcome: SummaryOutcome | null | undefined): string 
   `],
 })
 export class CaseSummaryComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly entity = input.required<string>();
   readonly recordId = input.required<string>();
@@ -76,9 +76,9 @@ export class CaseSummaryComponent {
     if (!entity || !recordId) return;
     this.loading.set(true);
     this.api
-      .post<SummaryOutcome>('/api/v1/actions/record.summarize/invoke', {
+      .post<SummaryOutcome>('/api/v1/actions/record.summarize/invoke', { body: {
         args: { entity, record_id: recordId },
-      })
+      } })
       .subscribe({
         next: outcome => {
           this.summary.set(summaryText(outcome));

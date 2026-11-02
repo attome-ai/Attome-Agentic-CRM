@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import { map, Observable } from 'rxjs';
 
 /** A member's access to the deal (D7-T2). */
@@ -67,11 +67,11 @@ function has(row: Record<string, unknown>, name: string): boolean {
 /** D7-T7: the deal team (D7-T2, D7-T3) and split (D7-T4) routes, and the generic lists they read. */
 @Injectable({ providedIn: 'root' })
 export class SalesTeamApiService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   private list(entity: string, params: Record<string, string>): Observable<Record<string, unknown>[]> {
     return this.api
-      .get<{ items: Record<string, unknown>[] }>(`/api/v1/${entity}`, { page_size: '200', ...params })
+      .get<{ items: Record<string, unknown>[] }>(`/api/v1/${entity}`, { query: { page_size: '200', ...params } })
       .pipe(map(r => r.items ?? []));
   }
 
@@ -103,19 +103,19 @@ export class SalesTeamApiService {
   }
 
   addMember(opportunity: string, body: { user_ref: string; team_role_ref: string; access_level: TeamAccess }): Observable<unknown> {
-    return this.api.post(`/api/v1/sales/opportunities/${encodeURIComponent(opportunity)}/team`, body);
+    return this.sdk.post(`/api/v1/sales/opportunities/${encodeURIComponent(opportunity)}/team`, { body });
   }
 
   removeMember(opportunity: string, member: string): Observable<unknown> {
-    return this.api.delete(
+    return this.sdk.delete(
       `/api/v1/sales/opportunities/${encodeURIComponent(opportunity)}/team/${encodeURIComponent(member)}`,
     );
   }
 
   copyAccountTeam(opportunity: string, roles: string[]): Observable<{ added: number; skipped: number }> {
-    return this.api.post<{ added: number; skipped: number }>(
+    return this.sdk.post<{ added: number; skipped: number }>(
       `/api/v1/sales/opportunities/${encodeURIComponent(opportunity)}/team/copy-account-team`,
-      { roles },
+      { body: { roles } },
     );
   }
 
@@ -146,7 +146,7 @@ export class SalesTeamApiService {
   }
 
   saveSplits(opportunity: string, splits: SplitRow[], changeReason: string | null): Observable<SplitsOutcome> {
-    return this.api.put<SplitsOutcome>(`/api/v1/sales/opportunities/${encodeURIComponent(opportunity)}/splits`, {
+    return this.sdk.put<SplitsOutcome>(`/api/v1/sales/opportunities/${encodeURIComponent(opportunity)}/splits`, { body: {
       splits: splits.map(s => ({
         member_id: s.member_ref,
         split_type_id: s.split_type_ref,
@@ -154,6 +154,6 @@ export class SalesTeamApiService {
         percent: s.percent.trim(),
       })),
       change_reason: changeReason,
-    });
+    } });
   }
 }

@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { DatePipe } from '@angular/common';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, LangService, SdkService, TranslatePipe } from '@attome/base';
 import type { EntitySchema } from '@attome/xrm';
 // Type-only — erased at compile time, so importing from the parent
 // `@attome/xrm/workflow` entry here (this form lives in the separate,
@@ -12,7 +12,7 @@ import type { EntitySchema } from '@attome/xrm';
 // into the parent entry's services/ folder was tried first and rejected:
 // ng-packagr enforces each entry's rootDir strictly, so even a type-only
 // relative import outside `workflow/registration/` fails the build (TS6059).
-// The three HTTP calls below still go through ApiService directly rather
+// The three HTTP calls below go through SdkService directly rather
 // than WorkflowAdminService, which would be a real (non-type-only) import.
 import type { DefinitionDetail, VersionSummary } from '@attome/xrm/workflow';
 import { XrmBaseFormComponent, EngineFormBase, XrmTabDirective, recordTabDefs } from '@attome/xrm/core/entity';
@@ -45,7 +45,7 @@ import { OwnerLayerBadgeComponent } from '@attome/xrm/core/generic/components';
 })
 export class WorkflowDefinitionFormComponent extends EngineFormBase {
   private readonly nav = inject(Router);
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
 
   readonly versions        = signal<VersionSummary[]>([]);
@@ -73,7 +73,7 @@ export class WorkflowDefinitionFormComponent extends EngineFormBase {
    */
   private loadVersions(): void {
     this.versionsLoading.set(true);
-    this.api.get<DefinitionDetail>(`/api/v1/workflow/definitions/${this.id()}`).subscribe({
+    this.sdk.get<DefinitionDetail>(`/api/v1/workflow/definitions/${this.id()}`).subscribe({
       next: d => {
         this.versions.set(d.versions);
         this.ownerLayer.set(d.owner_layer ?? null);
@@ -89,7 +89,7 @@ export class WorkflowDefinitionFormComponent extends EngineFormBase {
   createVersion(): void {
     this.creatingVersion.set(true);
     this.versionError.set(null);
-    this.api.post(`/api/v1/workflow/definitions/${this.id()}/versions`, {}).subscribe({
+    this.sdk.post(`/api/v1/workflow/definitions/${this.id()}/versions`, { body: {} }).subscribe({
       next:  () => { this.creatingVersion.set(false); this.loadVersions(); },
       error: (e: ApiError) => { this.versionError.set(e.message); this.creatingVersion.set(false); },
     });
@@ -98,7 +98,7 @@ export class WorkflowDefinitionFormComponent extends EngineFormBase {
   publish(v: VersionSummary): void {
     this.publishingId.set(v.id);
     this.versionError.set(null);
-    this.api.post(`/api/v1/workflow/definitions/${this.id()}/versions/${v.id}/publish`, {}).subscribe({
+    this.sdk.post(`/api/v1/workflow/definitions/${this.id()}/versions/${v.id}/publish`, { body: {} }).subscribe({
       next:  () => { this.publishingId.set(null); this.loadVersions(); },
       error: (e: ApiError) => { this.versionError.set(e.message); this.publishingId.set(null); },
     });
