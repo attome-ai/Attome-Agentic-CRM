@@ -2012,6 +2012,94 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/marketing/journeys/{id}/versions/{version_id}/preview": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Preview a journey version's move",
+        "description": "For publishing `version_id`: the people waiting at each node of the journey's live runs, whether\nthe new version keeps that node, and how many `move_matching` would move there. Changes nothing.",
+        "operationId": "preview_marketing_journey_version",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The journey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "version_id",
+            "in": "path",
+            "description": "The draft version to publish",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "People waiting per node, sorted by node (one page)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_NodeWaiting"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_journey.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such journey, or a version that is not one of its",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/marketing/landing/stats": {
       "get": {
         "tags": [
@@ -6128,6 +6216,67 @@
                     "string",
                     "null"
                   ]
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_NodeWaiting": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "People waiting at one node, for the preview.",
+              "required": [
+                "node_id",
+                "waiting_count",
+                "exists_in_new",
+                "movable_count"
+              ],
+              "properties": {
+                "exists_in_new": {
+                  "type": "boolean"
+                },
+                "movable_count": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "How many of them `move_matching` would move."
+                },
+                "node_id": {
+                  "type": "string"
+                },
+                "waiting_count": {
+                  "type": "integer",
+                  "format": "int64"
                 }
               }
             }

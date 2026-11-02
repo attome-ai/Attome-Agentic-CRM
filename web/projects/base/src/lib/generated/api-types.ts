@@ -21442,6 +21442,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/marketing/journeys/{id}/versions/{version_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview a journey version's move
+         * @description For publishing `version_id`: the people waiting at each node of the journey's live runs, whether
+         *     the new version keeps that node, and how many `move_matching` would move there. Changes nothing.
+         */
+        get: operations["preview_marketing_journey_version"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/marketing/landing/stats": {
         parameters: {
             query?: never;
@@ -48917,6 +48938,18 @@ export interface components {
              */
             switched_at: string;
         };
+        /** @description People waiting at one node, for the preview. */
+        NodeWaiting: {
+            exists_in_new: boolean;
+            /**
+             * Format: int64
+             * @description How many of them `move_matching` would move.
+             */
+            movable_count: number;
+            node_id: string;
+            /** Format: int64 */
+            waiting_count: number;
+        };
         /**
          * @description Phase 2/3 route stubs (`/bottlenecks`, `/conformance`, `/findings`) —
          *     mirrors the `not_computable` shape `attome-dashboard::scenario`'s
@@ -55388,6 +55421,31 @@ export interface components {
                  * @description When the node started serving the version.
                  */
                 switched_at: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_NodeWaiting: {
+            items: {
+                exists_in_new: boolean;
+                /**
+                 * Format: int64
+                 * @description How many of them `move_matching` would move.
+                 */
+                movable_count: number;
+                node_id: string;
+                /** Format: int64 */
+                waiting_count: number;
             }[];
             /** Format: int64 */
             page: number;
@@ -133480,6 +133538,58 @@ export interface operations {
             };
             /** @description No sample people, more than 20, or a graph that does not parse */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_marketing_journey_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The journey */
+                id: string;
+                /** @description The draft version to publish */
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description People waiting per node, sorted by node (one page) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_NodeWaiting"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_journey.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such journey, or a version that is not one of its */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
