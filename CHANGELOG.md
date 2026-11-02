@@ -14,6 +14,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- E14: first-party web visitor tracking (script, collection, sessions, identification, visits on the
+  timeline, alerts, retention), documented in `docs/marketing-tracking.md`.
 - Website tracking screen (E14-T12, `/xrm/marketing/tracking`, marketing pack changeset `0019`): per
   tracked site, the embed code to copy, visits over 7, 30 or 90 days with how many were by known people
   and the top sources, landing pages and campaigns (`GET /api/v1/marketing/tracking/report`,

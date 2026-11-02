@@ -37,6 +37,7 @@
 - [Marketing lists and segments](marketing-segments.md): static lists and segments, combinations, refresh modes and live eligibility, counts after consent, explanations, history, and the wide-access grant.
 - [Marketing nurture](marketing-nurture.md): programmes, tracks and content, the drip and why it is scheduler-driven, the switches, hand-off to sales and its SLA, and the agent tools.
 - [Marketing journeys](marketing-journeys.md): entry sources, admission, steps and their rules, versions, counts, a person's path and erasure.
+- [Website tracking](marketing-tracking.md): the flags, setting up a site and its embed code, consent, collection and its limits, known visitors and alerts, likely company, the tracking screen, retention and erasure.
 - [Marketing email deliverability](marketing-deliverability.md): the dashboard, the pre-send check, alerts, sunset, blocklists, reputation and DMARC reports, and what is off by default.
 - [Device sign-in](device-sign-in.md): the CLI and the mail add-ins signing a person in with the RFC 8628 device grant, approved from a signed-in browser.
 - [Pages](pages.md): component pages, their bindings to views, queries, entities and the record, and an entity's record page such as the crm pack's Account 360.
