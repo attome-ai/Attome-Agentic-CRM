@@ -1626,6 +1626,9 @@ impl AppConfig {
         if let Err((field, reason)) = self.ops.check() {
             return Err(ConfigError::Invalid { field, reason });
         }
+        if let Err((field, reason)) = self.extensions.check() {
+            return Err(ConfigError::Invalid { field, reason });
+        }
         if !self.oidc.client_secret_encryption_key.is_empty() {
             Self::check_secret_ring(
                 "oidc.client_secret_encryption_key",

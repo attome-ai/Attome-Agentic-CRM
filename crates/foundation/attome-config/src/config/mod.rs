@@ -41,6 +41,7 @@ pub use sections::database::{
 pub use sections::docgen::DocgenSection;
 pub use sections::einvoice::EinvoiceSection;
 pub use sections::events::EventsSection;
+pub use sections::extensions::ExtensionsSection;
 pub use sections::fleet::FleetSection;
 pub use sections::inference::{
     AiEnablement, AiSurface, CatalogueModel, DataLabel, InferenceEndpoint, InferenceSection,
@@ -257,6 +258,11 @@ pub struct AppConfig {
     /// AB5-T7 — priority load shedding: slots per request class.
     #[serde(default)]
     pub shed: ShedSection,
+
+    /// Y10-T1 — the limits every extension call runs within (WebAssembly on
+    /// Wasmtime): fuel, memory and time.
+    #[serde(default)]
+    pub extensions: ExtensionsSection,
 
     /// BCF-5 (D-615) — the `${VAR}` names `from_file` left unresolved,
     /// recorded so the production profile can refuse boot even under

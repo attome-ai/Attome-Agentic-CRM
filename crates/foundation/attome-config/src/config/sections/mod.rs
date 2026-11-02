@@ -15,6 +15,7 @@ pub(crate) mod deployment;
 pub(crate) mod docgen;
 pub(crate) mod einvoice;
 pub(crate) mod events;
+pub(crate) mod extensions;
 pub(crate) mod fleet;
 pub(crate) mod inference;
 pub(crate) mod integration;

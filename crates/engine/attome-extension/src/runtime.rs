@@ -46,6 +46,19 @@ impl Default for Limits {
     }
 }
 
+impl From<&attome_config::ExtensionsSection> for Limits {
+    /// The deployment's `extensions` section.
+    fn from(section: &attome_config::ExtensionsSection) -> Self {
+        Self {
+            fuel: section.fuel,
+            memory_bytes: usize::try_from(section.memory_mib)
+                .unwrap_or(usize::MAX)
+                .saturating_mul(1024 * 1024),
+            timeout: Duration::from_millis(u64::from(section.timeout_ms)),
+        }
+    }
+}
+
 mod millis {
     use std::time::Duration;
 
@@ -270,6 +283,12 @@ mod tests {
             rt.call_i32(&module, "run", 0, &Limits::default()),
             Err(ExtensionError::Memory(64 * 1024 * 1024))
         );
+    }
+
+    #[test]
+    fn limits_follow_the_deployment_config() {
+        let limits = Limits::from(&attome_config::ExtensionsSection::default());
+        assert_eq!(limits, Limits::default());
     }
 
     #[test]

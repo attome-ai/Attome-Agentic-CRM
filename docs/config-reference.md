@@ -334,6 +334,16 @@ M62 Phase 1 — Event Bus subscriptions/webhook delivery. Ships dark (`webhooks_
 | `events.webhook_signing_key` | string \| object |  | yes | P-key-rotation-and-jwt (a) trust domain for signing outbound webhook deliveries, deliberately **separate** from `s2s.key_encryption_key` (D-069's "machine-auth secrets and human/other secrets are separate trust domains; a compromise or rotation of one key must never implicate the other" — S2S authenticates *inbound* machine calls, this key signs *outbound* payloads sent to a subscriber-controlled URL, so the two must be independently rotatable). |
 | `events.webhooks_enabled` | boolean | `false` |  |  |
 
+## `extensions`
+
+Y10-T1 — the limits every extension call runs within (WebAssembly on Wasmtime): fuel, memory and time.
+
+| Key | Type | Default | Secret | Description |
+|---|---|---|---|---|
+| `extensions.fuel` | integer | `100000000` |  | Fuel one call may spend, about one unit per instruction. |
+| `extensions.memory_mib` | integer | `64` |  | The most linear memory one call may hold, in MiB (1 to 4096). |
+| `extensions.timeout_ms` | integer | `500` |  | The longest one call may run, in milliseconds (1 to 60000). |
+
 ## `fleet`
 
 D-792 — the fleet console (developer machine only). Empty by default; refused on the production profile. See `FleetSection`'s doc comment.

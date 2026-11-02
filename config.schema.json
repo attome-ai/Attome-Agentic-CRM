@@ -1817,6 +1817,33 @@
       },
       "type": "object"
     },
+    "ExtensionsSection": {
+      "description": "Limits of one extension call.",
+      "properties": {
+        "fuel": {
+          "default": 100000000,
+          "description": "Fuel one call may spend, about one unit per instruction.",
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "memory_mib": {
+          "default": 64,
+          "description": "The most linear memory one call may hold, in MiB (1 to 4096).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "timeout_ms": {
+          "default": 500,
+          "description": "The longest one call may run, in milliseconds (1 to 60000).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
     "FleetSection": {
       "properties": {
         "changesets_dir": {
@@ -3896,6 +3923,10 @@
     "events": {
       "$ref": "#/$defs/EventsSection",
       "description": "M62 Phase 1 — Event Bus subscriptions/webhook delivery. Ships dark\n(`webhooks_enabled: false`). See `EventsSection`'s doc comment."
+    },
+    "extensions": {
+      "$ref": "#/$defs/ExtensionsSection",
+      "description": "Y10-T1 — the limits every extension call runs within (WebAssembly on\nWasmtime): fuel, memory and time."
     },
     "fleet": {
       "$ref": "#/$defs/FleetSection",
