@@ -47,6 +47,7 @@
 - [Polymorphic lookups](polymorphic-lookups.md): fields that point at a record of several entities, their targets and per-target delete rules.
 - [Metrics](metrics.md): building a metric from its parts, periods and calendars, dimensions, status bands, KPI trees, versions, backfill, cascading targets, who sees what, scorecards and the drafting actions.
 - [Printing labels](labels.md): QR and Code 128 codes in a document template, and one PDF of labels for up to 500 records.
+- [Partners](partners.md): setting up a channel programme, and how recruiting, registration, leads, tiers, MDF and the scorecard work.
 - [The portal shop](portal-shop.md): what is on sale to a portal member, the cart, checkout into a draft order and approval above a limit.
 - [Subscriptions](subscriptions.md): the routes, how charges become invoices, the renewal, trial and portal settings, and the open points.
 - [Subscriptions on the portal](billing-portal.md): what a portal user sees of their account's subscriptions, open invoices and saved payment methods, and what they cannot change yet.

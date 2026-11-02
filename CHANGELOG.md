@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Partners (F9): `/api/v1/partner/*` (application decisions and agreements, registration decisions and
+  conflicts, lead offers, tier proposals, MDF request and claim decisions) and the portal's
+  `/{keyword}/api/v1/partner/*` (applications, lead accept and reject, members, statement). See
+  `docs/partners.md`.
 - Revenue close to an ERP (F11-T8, V2-D1610): with `revrec.posting_target = connector:<id>` an approved
   close sends its balanced entries to that integration system once, keyed by the close, instead of posting
   them to Attome's ledger.
