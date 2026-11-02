@@ -188,7 +188,8 @@ export class SdkService {
       const controller = new AbortController();
       send(controller.signal).then(
         response => {
-          subscriber.next(response.data);
+          // An empty answer (a 204) is null, as HttpClient gives it.
+          subscriber.next((response.data === undefined ? null : response.data) as T);
           subscriber.complete();
         },
         (err: unknown) => {

@@ -1,11 +1,12 @@
 import { computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService, UserPreferencesService } from '@attome/base';
+import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AccountStatement } from '../data/billing.service';
 import { AccountStatementComponent, monthStart } from './account-statement.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const STATEMENT: AccountStatement = {
   account_id: 'a1',
@@ -30,6 +31,7 @@ describe('AccountStatementComponent (F4-T16)', () => {
       imports: [AccountStatementComponent],
       providers: [
         { provide: ApiService, useValue: { get } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         {
           provide: LangService,
           useValue: {

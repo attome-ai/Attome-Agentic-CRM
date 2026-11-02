@@ -1,12 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService, RulesEvaluatorService } from '@attome/base';
+import { ApiService, SdkService, LangService, RulesEvaluatorService } from '@attome/base';
 import { AdminService } from '@attome/xrm/core/admin/data';
 import { dottedPaths, pathAt, withPaths } from '@attome/xrm/core/admin/expression-editor';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { FormulaEditorComponent, formulaOptions } from './formula-editor.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const field = (name: string, field_type: string, options: unknown = null) =>
   ({ id: name, entity_id: 'e', name, display_name: name, field_type, options, sort_order: 0, is_required: false });
@@ -39,6 +40,7 @@ function setup(options: unknown, update = vi.fn(() => of({}))) {
     imports: [FormulaEditorComponent],
     providers: [
       { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       { provide: RulesEvaluatorService, useValue: { validate } },
       { provide: AdminService, useValue: { updateAttribute: update } },
       { provide: LangService, useValue: {

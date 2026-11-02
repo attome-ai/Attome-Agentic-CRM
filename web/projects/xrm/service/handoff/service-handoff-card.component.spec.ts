@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ServiceHandoffCardComponent } from './service-handoff-card.component';
 import { ServiceHandoff, canHandBack, partyIcon } from './service-handoff.service';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const FROM_AGENT: ServiceHandoff = {
   id: 'h1', ticket_id: 't1', from_kind: 'agent', from_ref: 'a1', to_kind: 'user', to_ref: 'u1',
@@ -24,6 +25,7 @@ describe('ServiceHandoffCardComponent (AI7-T6)', () => {
       imports: [ServiceHandoffCardComponent],
       providers: [
         { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         {
           provide: LangService,
           useValue: { translate: (k: string) => k, current: signal('en'), errorText: () => 'error', intlLocale: () => 'en-US' },

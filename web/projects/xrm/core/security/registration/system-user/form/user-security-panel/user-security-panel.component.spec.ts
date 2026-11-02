@@ -2,9 +2,10 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
-import { ApiService, AuthService, LangService } from '@attome/base';
+import { ApiService, SdkService, AuthService, LangService } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { UserSecurityPanelComponent } from './user-security-panel.component';
+import { sdkFromApi } from '../../../../../../testing/sdk-from-api';
 
 // The panel replaces the form's old "Active account" switch, which was bound to
 // a system-managed column the generic PATCH drops — it saved nothing. These
@@ -61,6 +62,7 @@ describe('UserSecurityPanelComponent', () => {
       imports: [UserSecurityPanelComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: AuthService, useValue: { userId: currentUser } },
         { provide: DialogService, useValue: { confirm } },
         // Echoes keys (and params) so assertions target structure, not a catalog.

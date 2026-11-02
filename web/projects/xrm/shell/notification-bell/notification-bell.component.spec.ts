@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { ApiService, LangService, LiveChannel } from '@attome/base';
+import { ApiService, SdkService, LangService, LiveChannel } from '@attome/base';
 import { Observable, defer, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -12,6 +12,7 @@ import {
   groupNotifications,
   notificationPollDelay,
 } from './notification-bell.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 interface PollResponse { notifications: XrmNotif[]; unread_count: number }
 
@@ -53,6 +54,7 @@ function mount(api = new StubApi()): { fixture: ComponentFixture<NotificationBel
     providers: [
       provideRouter([]),
       { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       { provide: LangService, useValue: { current: signal('en'), set: vi.fn(), translate: (key: string) => key } },
     ],
   });

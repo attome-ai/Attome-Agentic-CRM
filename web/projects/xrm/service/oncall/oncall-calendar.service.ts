@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import { EntityService } from '@attome/xrm/core/entity';
 import { Observable, map } from 'rxjs';
 
@@ -59,7 +59,7 @@ export function byDay(stretches: readonly OnCallStretch[], from: Date, days: num
 /** H7-T2: the on-call schedules, and who is on call on one over a range. */
 @Injectable({ providedIn: 'root' })
 export class OncallCalendarService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly entities = inject(EntityService);
 
   schedules(): Observable<OncallScheduleRef[]> {
@@ -72,9 +72,9 @@ export class OncallCalendarService {
   }
 
   calendar(schedule: string, from: Date, to: Date): Observable<OnCallStretch[]> {
-    return this.api.get<{ items: OnCallStretch[] }>(
+    return this.sdk.get<{ items: OnCallStretch[] }>(
       `/api/v1/service/oncall/schedules/${encodeURIComponent(schedule)}/calendar`,
-      { from: from.toISOString(), to: to.toISOString() },
+      { query: { from: from.toISOString(), to: to.toISOString() } },
     ).pipe(map(page => page.items));
   }
 }

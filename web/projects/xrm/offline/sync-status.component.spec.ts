@@ -1,11 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryBackend, OfflineStore, uuidv7 } from './offline-store';
 import { OFFLINE_FILE_UPLOADER, OFFLINE_STORE, OfflineQueueService, OfflineUploadResult } from './offline-queue.service';
 import { SyncStatusComponent } from './sync-status.component';
 import { SyncService } from './sync.service';
+import { sdkFromApi } from '../testing/sdk-from-api';
 
 describe('B18-T10 sync status and offline files', () => {
   let backend: MemoryBackend;
@@ -27,6 +28,7 @@ describe('B18-T10 sync status and offline files', () => {
       providers: [
         { provide: OFFLINE_STORE, useFactory: () => new OfflineStore(backend) },
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: OFFLINE_FILE_UPLOADER, useValue: { upload } },
         { provide: LangService, useValue: {
           translate: (key: string, params?: Record<string, unknown>) => params ? `${key} ${JSON.stringify(params)}` : key,

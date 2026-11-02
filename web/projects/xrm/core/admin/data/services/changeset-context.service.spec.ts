@@ -1,9 +1,10 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, AuthService, type ApiError } from '@attome/base';
+import { ApiService, SdkService, AuthService, type ApiError } from '@attome/base';
 import { firstValueFrom, of, throwError, type Observable } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { ChangesetContextService, type ChangesetSummary } from './changeset-context.service';
+import { sdkFromApi } from '../../../../testing/sdk-from-api';
 
 function changeset(id: string, layer: string, author_ref: string | null): ChangesetSummary {
   return {
@@ -22,6 +23,7 @@ function setup(list: () => Observable<unknown>, initialPick: string | null = nul
   TestBed.configureTestingModule({
     providers: [
       { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       { provide: AuthService, useValue: { userId: signal('me') } },
     ],
   });

@@ -1,8 +1,9 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ComposerComponent, ReplyTemplate, matchTemplates, slashQuery } from './composer.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const TEMPLATES: ReplyTemplate[] = [
   { id: 't1', name: 'Refund approved', folder: 'Billing', reply: 'Your refund for case 42 is approved.' },
@@ -18,6 +19,7 @@ describe('ComposerComponent', () => {
       imports: [ComposerComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k } },
       ],
     });

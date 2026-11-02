@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import { OFFLINE_FILE_UPLOADER, OFFLINE_STORE, OfflineQueueService, QueuedOp } from './offline-queue.service';
 import { OfflineProfileBundle, PROFILE_KEY } from './state-machine';
 import { OfflineSearch } from './offline-search';
@@ -71,7 +71,7 @@ export function expired(lastSyncAt: number | null, maxDaysOffline: number | null
  */
 @Injectable({ providedIn: 'root' })
 export class SyncService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly store = inject(OFFLINE_STORE);
   private readonly queue = inject(OfflineQueueService);
   /** B18-T11: the device search, indexed again after each pull. */
@@ -170,11 +170,14 @@ export class SyncService {
         if (ready) batch.push(ready);
       }
       if (!batch.length) continue;
-      const answer = await firstValueFrom(this.api.post<{ results: PushResult[] }>('/api/v1/offline/push', {
+      const answer = await firstValueFrom(this.sdk.post<{ results: PushResult[] }>(
+        '/api/v1/offline/push',
+        { body: {
         device_id: this.deviceId,
         ops: batch.map(withoutSeq),
         queue_size: await this.queue.size(),
-      }));
+      } },
+      ));
       const byId = new Map(batch.map(op => [op.client_op_id, op]));
       for (const result of answer.results) {
         const op = byId.get(result.client_op_id);
@@ -235,7 +238,7 @@ export class SyncService {
   private async refreshProfile(): Promise<void> {
     let profile: OfflineProfileBundle;
     try {
-      profile = await firstValueFrom(this.api.get<OfflineProfileBundle>('/api/v1/offline/profile'));
+      profile = await firstValueFrom(this.sdk.get<OfflineProfileBundle>('/api/v1/offline/profile'));
     } catch {
       return;
     }
@@ -248,7 +251,7 @@ export class SyncService {
   private async pullAll(): Promise<void> {
     for (let page = 0; page < 1000; page++) {
       const answer = await firstValueFrom(
-        this.api.post<PullAnswer>('/api/v1/offline/pull', { device_id: this.deviceId }),
+        this.sdk.post<PullAnswer>('/api/v1/offline/pull', { body: { device_id: this.deviceId } }),
       );
       for (const u of answer.upserts) {
         if (u.record?.id) await this.store.putRecord(u.entity, String(u.record.id), u.record);

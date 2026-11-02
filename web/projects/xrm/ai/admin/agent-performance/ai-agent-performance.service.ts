@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiService, type Page } from '@attome/base';
+import { SdkService, type Page } from '@attome/base';
 import { Observable } from 'rxjs';
 
 /** `attome_ai::agent_stats_routes::AgentPerformance`. */
@@ -84,35 +84,36 @@ export interface AgentBehaviour {
 /** AI8-T6: the agent performance routes (AI8-T4). */
 @Injectable({ providedIn: 'root' })
 export class AiAgentPerformanceService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   summary(from: string, to: string): Observable<Page<AgentPerformance>> {
-    return this.api.get<Page<AgentPerformance>>(
+    return this.sdk.get<Page<AgentPerformance>>(
       `/api/v1/admin/ai/agents/performance?from=${from}&to=${to}`,
     );
   }
 
   daily(agentId: string, from: string, to: string): Observable<Page<AgentPerformanceDay>> {
-    return this.api.get<Page<AgentPerformanceDay>>(
+    return this.sdk.get<Page<AgentPerformanceDay>>(
       `/api/v1/admin/ai/agents/${encodeURIComponent(agentId)}/performance/daily?from=${from}&to=${to}`,
     );
   }
 
   /** AH5-T5: the agent's status, baseline, last 24 hours and last automatic stop. */
   behaviour(agentId: string): Observable<AgentBehaviour> {
-    return this.api.get<AgentBehaviour>(`/api/v1/admin/ai/agents/${encodeURIComponent(agentId)}/behaviour`);
+    return this.sdk.get<AgentBehaviour>(`/api/v1/admin/ai/agents/${encodeURIComponent(agentId)}/behaviour`);
   }
 
   /** AH5-T5: a person switches a stopped agent back on: the ordinary update, with If-Match. */
   switchOn(agentId: string, rowVersion: number | null): Observable<unknown> {
-    return this.api.patch<unknown>(
-      `/api/v1/ai_agent/${encodeURIComponent(agentId)}`, { status: 'active' }, rowVersion ?? undefined,
+    return this.sdk.patch<unknown>(
+      `/api/v1/ai_agent/${encodeURIComponent(agentId)}`,
+      { body: { status: 'active' }, ifMatch: rowVersion ?? undefined },
     );
   }
 
   runs(agentId: string, day: string, metric: RunsMetric, cursor?: string | null): Observable<RunsPage> {
     const after = cursor ? `&cursor=${encodeURIComponent(cursor)}` : '';
-    return this.api.get<RunsPage>(
+    return this.sdk.get<RunsPage>(
       `/api/v1/admin/ai/agents/${encodeURIComponent(agentId)}/runs?day=${day}&metric=${metric}${after}`,
     );
   }

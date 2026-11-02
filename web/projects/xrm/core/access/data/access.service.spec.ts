@@ -1,9 +1,10 @@
 import { signal, WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, AuthService } from '@attome/base';
+import { ApiService, SdkService, AuthService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AccessService } from './access.service';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 describe('AccessService (NGB-1.2)', () => {
   let userId: WritableSignal<string | null>;
@@ -15,6 +16,7 @@ describe('AccessService (NGB-1.2)', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: ApiService, useValue: { get } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: AuthService, useValue: { userId } },
       ],
     });

@@ -1,10 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService, ThemeService, UserPreferencesService } from '@attome/base';
+import { ApiService, SdkService, LangService, ThemeService, UserPreferencesService } from '@attome/base';
 import { Observable, of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { PersonalSettingsPageComponent, labelKey, optionKey } from './personal-settings-page.component';
 import { PersonalSettingsService, REDUCED_MOTION_CLASS, SIMPLE_MODE_CLASS, TEXT_LARGE_CLASS } from './personal-settings.service';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const ITEMS = [
   { key: 'core.locale', value: 'en-US', source: 'default' },
@@ -33,6 +34,7 @@ function setup() {
     imports: [PersonalSettingsPageComponent],
     providers: [
       { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       { provide: LangService, useValue: lang },
       { provide: ThemeService, useValue: theme },
     ],

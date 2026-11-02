@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import { Observable } from 'rxjs';
 
 /** `attome_billing::statements::StatementEntry`. */
@@ -62,21 +62,21 @@ export const AGEING_BUCKETS = ['current', 'days_1_30', 'days_31_60', 'days_61_90
  */
 @Injectable({ providedIn: 'root' })
 export class BillingService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   statement(accountId: string, from: string, to: string): Observable<AccountStatement> {
     const query = new URLSearchParams({ from, to });
-    return this.api.get<AccountStatement>(
+    return this.sdk.get<AccountStatement>(
       `/api/v1/billing/accounts/${encodeURIComponent(accountId)}/statement?${query}`,
     );
   }
 
   ageing(asOf: string, page: number, pageSize = 50): Observable<Page<AgeingRow>> {
     const query = new URLSearchParams({ as_of: asOf, page: String(page), page_size: String(pageSize) });
-    return this.api.get<Page<AgeingRow>>(`/api/v1/billing/ageing?${query}`);
+    return this.sdk.get<Page<AgeingRow>>(`/api/v1/billing/ageing?${query}`);
   }
 
   ageingTotals(asOf: string): Observable<Page<AgeingTotals>> {
-    return this.api.get<Page<AgeingTotals>>(`/api/v1/billing/ageing/totals?as_of=${encodeURIComponent(asOf)}`);
+    return this.sdk.get<Page<AgeingTotals>>(`/api/v1/billing/ageing/totals?as_of=${encodeURIComponent(asOf)}`);
   }
 }

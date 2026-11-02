@@ -1,13 +1,14 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { Observable, of } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FavouritesComponent } from './favourites.component';
 import {
   FavouriteList, FavouritesService, RECENT_FLUSH_MS, moved, recordFromUrl,
 } from './favourites.service';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const RECORD = '0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b';
 
@@ -39,6 +40,7 @@ function setup(api = new StubApi()) {
     providers: [
       provideRouter([]),
       { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       { provide: LangService, useValue: { current: signal('en'), set: vi.fn(), translate: (key: string) => key } },
     ],
   });

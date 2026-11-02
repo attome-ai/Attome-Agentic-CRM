@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, ATTOME_CONFIG, LangService, provideAttomeI18n } from '@attome/base';
+import { ApiService, SdkService, ATTOME_CONFIG, LangService, provideAttomeI18n } from '@attome/base';
 import { provideXrmI18n } from '@attome/xrm/core/i18n';
 import { xrmEn } from '@attome/xrm/core/i18n-en';
 import { DialogService } from '@attome/base/dialog';
@@ -9,6 +9,7 @@ import { EntityRecordResponse, EntityService } from '@attome/xrm/core/entity';
 import { Observable, of, throwError } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PageEditorComponent, pageDraftStorageKey } from './page-editor.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 /**
  * Page Editor save paths against a real `DashboardService` over mocked
@@ -120,6 +121,7 @@ function setup(options: SetupOptions = {}) {
       provideRouter([]),
       { provide: EntityService, useValue: entityService },
       { provide: ApiService, useValue: apiService },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       { provide: DialogService, useValue: dialogService },
       ...(options.render
         ? [{ provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } }, provideAttomeI18n(), provideXrmI18n(xrmEn)]

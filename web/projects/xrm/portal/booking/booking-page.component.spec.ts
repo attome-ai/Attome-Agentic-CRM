@@ -1,10 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BookManageComponent } from './booking-manage.component';
 import { BookPageComponent } from './booking-page.component';
 import { groupByDay, meetingTime, timeZones } from './booking';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const page = {
   name: 'Intro call',
@@ -57,7 +58,8 @@ describe('BookPageComponent (D20-T2)', () => {
     };
     TestBed.configureTestingModule({
       imports: [BookPageComponent, BookManageComponent],
-      providers: [{ provide: ApiService, useValue: api }, { provide: LangService, useValue: lang }],
+      providers: [{ provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi }, { provide: LangService, useValue: lang }],
     });
   });
 

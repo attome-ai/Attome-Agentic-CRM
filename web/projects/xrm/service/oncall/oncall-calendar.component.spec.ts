@@ -1,13 +1,14 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { EntityService } from '@attome/xrm/core/entity';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { OncallCalendarComponent } from './oncall-calendar.component';
 import { byDay, weekStart, type OnCallStretch } from './oncall-calendar.service';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const stretch = (start: string, end: string, user: string, via = 'layer', layer: number | null = 0): OnCallStretch => ({
   start, end, user_id: user, user_name: `name-${user}`, via, layer,
@@ -49,6 +50,7 @@ describe('on-call calendar (H7-T2)', () => {
       providers: [
         provideRouter([]),
         { provide: ApiService, useValue: { get } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: EntityService, useValue: { list } },
         {
           provide: LangService,

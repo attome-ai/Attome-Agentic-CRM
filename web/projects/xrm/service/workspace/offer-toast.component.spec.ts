@@ -1,10 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { OfferToastComponent, currentOffer, secondsLeft, type WorkOffer } from './offer-toast.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const offer = (id: string, expires: string, status = 'offered'): WorkOffer => ({
   id, item_id: `i-${id}`, queue_id: 'q1', channel: 'chat', status, offered_at: '2026-10-27T10:00:00Z',
@@ -35,6 +36,7 @@ describe('work offer toast (J10-T2)', () => {
       imports: [OfferToastComponent],
       providers: [
         { provide: ApiService, useValue: { getBackground: get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, isRtl: signal(false), errorText: () => 'error' } },
       ],
     });

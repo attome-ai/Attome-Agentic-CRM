@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CaseSummaryComponent, summaryText } from './case-summary.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 describe('summaryText', () => {
   it('reads a completed summary and nothing else', () => {
@@ -23,6 +24,7 @@ describe('CaseSummaryComponent (G1-T3)', () => {
       imports: [CaseSummaryComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (key: string) => key } },
       ],
     });

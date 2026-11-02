@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActionBarComponent, appliesTo } from './action-bar.component';
 import type { CatalogAction } from './action-bar.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const RECORD = '01900000-0000-7000-8000-0000000000b1';
 const OTHER = '01900000-0000-7000-8000-0000000000b2';
@@ -34,6 +35,7 @@ describe('action bar (AE1-T5)', () => {
       imports: [ActionBarComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { intlLocale: () => 'en-US', translate: (key: string) => key } },
       ],
     });

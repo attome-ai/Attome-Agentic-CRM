@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService, RulesEvaluatorService } from '@attome/base';
+import { ApiService, SdkService, LangService, RulesEvaluatorService } from '@attome/base';
 import type { RulesAnswer } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { ExpressionEditorComponent } from './expression-editor.component';
 import { errorKey, indexOfByte, rulesSchemaOf, wordAt } from './expression-text';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const SCHEMA = {
   id: 'e', name: 'Deal', plural_name: 'Deals', relationships: [],
@@ -33,6 +34,7 @@ async function typed(text: string, lang: 'en' | 'ar') {
         get: (url: string) => of(url.startsWith('/api/v1/schema/') ? SCHEMA : { functions: [] }),
         post: vi.fn(),
       } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       { provide: RulesEvaluatorService, useValue: { validate } },
       { provide: LangService, useValue: {
         current: signal(lang),

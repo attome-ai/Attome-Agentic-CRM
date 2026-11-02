@@ -1,10 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService } from '@attome/base';
+import { ApiService, SdkService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryBackend, OfflineStore, uuidv7 } from './offline-store';
 import { OFFLINE_STORE, OfflineQueueService } from './offline-queue.service';
 import { SyncService, expired, nextBackoff } from './sync.service';
+import { sdkFromApi } from '../testing/sdk-from-api';
 
 describe('offline', () => {
   let backend: MemoryBackend;
@@ -16,6 +17,7 @@ describe('offline', () => {
       providers: [
         { provide: OFFLINE_STORE, useFactory: () => new OfflineStore(backend) },
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       ],
     });
     return {

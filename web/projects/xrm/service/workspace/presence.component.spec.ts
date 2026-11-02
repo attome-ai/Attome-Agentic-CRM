@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PresenceComponent, toPresence } from './presence.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 describe('toPresence', () => {
   it('reads busy and away, and treats anything else as available', () => {
@@ -28,6 +29,7 @@ describe('PresenceComponent (G5-T3)', () => {
       imports: [PresenceComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (key: string) => key } },
       ],
     });

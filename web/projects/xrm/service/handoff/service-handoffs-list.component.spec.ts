@@ -1,12 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ServiceHandoffsListComponent } from './service-handoffs-list.component';
 import type { ServiceHandoff } from './service-handoff.service';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const H1: ServiceHandoff = {
     id: 'h1', ticket_id: 't1', from_kind: 'agent', from_ref: 'a1', to_kind: 'queue', to_ref: 'q1',
@@ -29,6 +30,7 @@ describe('ServiceHandoffsListComponent (AI7-T6)', () => {
       providers: [
         provideRouter([]),
         { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         {
           provide: LangService,
           useValue: { translate: (k: string) => k, current: signal('en'), errorText: () => 'error', intlLocale: () => 'en-US' },

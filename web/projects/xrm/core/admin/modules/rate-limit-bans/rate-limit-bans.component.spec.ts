@@ -1,10 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ActiveBan, RateLimitBansComponent, minutesLeft } from './rate-limit-bans.component';
+import { sdkFromApi } from '../../../../testing/sdk-from-api';
 
 const BANS: ActiveBan[] = [
   { bucket: 'ip:203.0.113.9', category: 'auth', seconds_left: 610 },
@@ -19,6 +20,7 @@ describe('RateLimitBansComponent (Q20-T5)', () => {
       imports: [RateLimitBansComponent],
       providers: [
         { provide: ApiService, useValue: { get, delete: del } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en') } },
       ],
     });

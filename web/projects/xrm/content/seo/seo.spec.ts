@@ -1,6 +1,6 @@
 import { Type, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -8,6 +8,7 @@ import { SeoPanelComponent } from '../content-page/form/seo-panel/seo-panel.comp
 import { RobotsEditorComponent } from './robots-editor.component';
 import { SeoTopicsPageComponent } from './seo-topics-page.component';
 import { clip, displayLength, isArabic, lengthState, lineChanges } from './seo-text';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const LANG = {
   translate: (k: string) => k, current: signal('en'), errorText: () => 'error', intlLocale: () => 'en-US',
@@ -26,6 +27,7 @@ function setup<T>(component: Type<T>, api: Record<string, unknown>) {
     imports: [component],
     providers: [
       { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       { provide: LangService, useValue: LANG },
     ],
   });

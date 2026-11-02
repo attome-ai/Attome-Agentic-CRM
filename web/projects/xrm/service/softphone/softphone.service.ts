@@ -1,7 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 
 /** `GET /api/v1/voice/softphone`. */
 export interface SoftphoneConfig {
@@ -73,7 +73,7 @@ export function popLink(pop: ScreenPop): { path: string; query: Record<string, s
  */
 @Injectable({ providedIn: 'root' })
 export class SoftphoneService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly doc = inject(DOCUMENT);
 
   readonly state = signal<PhoneState>('off');
@@ -114,9 +114,9 @@ export class SoftphoneService {
     this.error.set(null);
     const browser = this.device !== null && this.state() === 'ready';
     try {
-      const placed = await firstValueFrom(this.api.post<{ call_id: string; activity_id: string }>(
+      const placed = await firstValueFrom(this.sdk.post<{ call_id: string; activity_id: string }>(
         '/api/v1/voice/calls',
-        { to: number, entity_name: record.entity, record_id: record.id, mode: browser ? 'browser' : 'phone' },
+        { body: { to: number, entity_name: record.entity, record_id: record.id, mode: browser ? 'browser' : 'phone' } },
       ));
       if (!browser || !this.device) {
         this.state.set(this.device ? 'ready' : 'off');
@@ -152,7 +152,7 @@ export class SoftphoneService {
     this.caller.set(from);
     this.pop.set(null);
     if (from && from.startsWith('+')) {
-      this.api.get<ScreenPop>('/api/v1/voice/lookup', { number: from }).subscribe({
+      this.sdk.get<ScreenPop>('/api/v1/voice/lookup', { query: { number: from } }).subscribe({
         next: pop => this.pop.set(pop),
         // Nobody the agent may see has this number: no pop, the call still rings.
         error: () => this.pop.set(null),
@@ -180,7 +180,7 @@ export class SoftphoneService {
   }
 
   private async refreshToken(): Promise<void> {
-    const config = await firstValueFrom(this.api.get<SoftphoneConfig>('/api/v1/voice/softphone'));
+    const config = await firstValueFrom(this.sdk.get<SoftphoneConfig>('/api/v1/voice/softphone'));
     if (config.token) this.device?.updateToken(config.token);
   }
 

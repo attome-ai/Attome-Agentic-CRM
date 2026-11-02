@@ -1,12 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AiAgentPerformanceComponent, costAmount, defaultRange, trend } from './ai-agent-performance.component';
 import type { AgentPerformance, AgentPerformanceDay } from './ai-agent-performance.service';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const PRICED: AgentPerformance = {
   agent_id: 'a1', name: 'followup_agent', tasks_done: 10, tasks_resolved: 7, tasks_measured: 8,
@@ -47,6 +48,7 @@ describe('AiAgentPerformanceComponent (AI8-T6)', () => {
       providers: [
         provideRouter([]),
         { provide: ApiService, useValue: { get } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         {
           provide: LangService,
           useValue: { translate: (k: string) => k, current: signal('en'), errorText: () => 'error', intlLocale: () => 'en-US' },

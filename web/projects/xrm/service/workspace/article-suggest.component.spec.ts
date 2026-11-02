@@ -1,8 +1,9 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ArticleSuggestComponent, caseQuery } from './article-suggest.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const ARTICLES = [
   { item_id: 'k1', title: 'Reset a VPN token', passage: 'Open the portal and…' },
@@ -18,6 +19,7 @@ describe('ArticleSuggestComponent', () => {
       imports: [ArticleSuggestComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k } },
       ],
     });

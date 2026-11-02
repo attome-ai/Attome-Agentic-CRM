@@ -1,11 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, ApiService, AuthService, LangService } from '@attome/base';
+import { ApiError, ApiService, SdkService, AuthService, LangService } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { EntityService } from '../services/entity.service';
 import { FileUploadService } from '../field/file-upload.service';
 import { NotesPanelComponent } from './notes-panel.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 describe('NotesPanelComponent', () => {
   let fixture: ComponentFixture<NotesPanelComponent>;
@@ -122,6 +123,7 @@ describe('NotesPanelComponent', () => {
         { provide: DialogService, useValue: dialogService },
         { provide: FileUploadService, useValue: fileService },
         { provide: ApiService, useValue: {} },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: AuthService, useValue: { userId: () => 'user-1' } },
         { provide: LangService, useValue: { translate: (key: string) => key } },
       ],

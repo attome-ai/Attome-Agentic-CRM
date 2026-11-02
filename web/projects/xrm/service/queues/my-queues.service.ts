@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import { EntityRecord } from '@attome/xrm';
 import { EntityService } from '@attome/xrm/core/entity';
 import { Observable, concat, forkJoin, map, of, catchError, toArray } from 'rxjs';
@@ -104,7 +104,7 @@ export interface BulkOutcome {
 /** G4-T3: the V7 queue items behind "my queues", and their moves (G4-T2). */
 @Injectable({ providedIn: 'root' })
 export class MyQueuesService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly entities = inject(EntityService);
 
   queues(): Observable<QueueRef[]> {
@@ -133,17 +133,17 @@ export class MyQueuesService {
   }
 
   pick(id: string): Observable<QueueItemState> {
-    return this.api.post<QueueItemState>(`/api/v1/queue-items/${encodeURIComponent(id)}/pick`, {});
+    return this.sdk.post<QueueItemState>(`/api/v1/queue-items/${encodeURIComponent(id)}/pick`, { body: {} });
   }
 
   release(id: string): Observable<QueueItemState> {
-    return this.api.post<QueueItemState>(`/api/v1/queue-items/${encodeURIComponent(id)}/release`, {});
+    return this.sdk.post<QueueItemState>(`/api/v1/queue-items/${encodeURIComponent(id)}/release`, { body: {} });
   }
 
   transfer(id: string, queueId: string): Observable<QueueItemState> {
-    return this.api.post<QueueItemState>(
+    return this.sdk.post<QueueItemState>(
       `/api/v1/queue-items/${encodeURIComponent(id)}/transfer`,
-      { queue_id: queueId },
+      { body: { queue_id: queueId } },
     );
   }
 

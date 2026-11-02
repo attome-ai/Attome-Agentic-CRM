@@ -1,12 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiError, ApiService, AuthService, LangService, ThemeService } from '@attome/base';
+import { ApiError, ApiService, SdkService, AuthService, LangService, ThemeService } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { EntityService } from '@attome/xrm/core/entity';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProfileMenuComponent } from './profile-menu.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 describe('ProfileMenuComponent sign-out', () => {
   let logout: ReturnType<typeof vi.fn>;
@@ -22,6 +23,7 @@ describe('ProfileMenuComponent sign-out', () => {
         { provide: AuthService, useValue: { userId: signal<string | null>(null), logout } },
         { provide: EntityService, useValue: { get: () => of({ data: {} }) } },
         { provide: ApiService, useValue: { get: () => of({ items: [] }) } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: DialogService, useValue: { confirm } },
         { provide: ThemeService, useValue: { mode: signal('light'), setMode: vi.fn() } },
         { provide: LangService, useValue: { current: signal('en'), set: vi.fn(), translate: (key: string) => key } },

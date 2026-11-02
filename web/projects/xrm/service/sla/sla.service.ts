@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import type { ApiComponents } from '@attome/base';
 
 type Schemas = ApiComponents['schemas'];
@@ -24,7 +24,7 @@ export const SLA_PAUSE_REASONS: readonly SlaPauseReason[] = ['waiting_customer',
  */
 @Injectable({ providedIn: 'root' })
 export class SlaService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /**
    * Picks the matching policy (severity for an incident, then priority, then
@@ -32,19 +32,19 @@ export class SlaService {
    * route's 204: no matching or fallback policy is configured.
    */
   applyPolicy(ticketId: string): Observable<ApplySlaPolicyResponse | null> {
-    return this.api.post<ApplySlaPolicyResponse | null>(`/api/v1/ticket/${ticketId}/apply-sla-policy`, {});
+    return this.sdk.post<ApplySlaPolicyResponse | null>(`/api/v1/ticket/${ticketId}/apply-sla-policy`, { body: {} });
   }
 
   pauseClock(ticketId: string, reason: SlaPauseReason): Observable<SlaClockView> {
-    return this.api.post<SlaClockView>(`/api/v1/ticket/${ticketId}/sla-clock/pause`, { reason });
+    return this.sdk.post<SlaClockView>(`/api/v1/ticket/${ticketId}/sla-clock/pause`, { body: { reason } });
   }
 
   resumeClock(ticketId: string): Observable<SlaClockView> {
-    return this.api.post<SlaClockView>(`/api/v1/ticket/${ticketId}/sla-clock/resume`, {});
+    return this.sdk.post<SlaClockView>(`/api/v1/ticket/${ticketId}/sla-clock/resume`, { body: {} });
   }
 
   /** Recalculates an unresolved SLA; a no-op (`recalculated: false`) otherwise. */
   recalculate(ticketId: string): Observable<SlaRecalculation> {
-    return this.api.post<SlaRecalculation>(`/api/v1/ticket/${ticketId}/sla/recalculate`, {});
+    return this.sdk.post<SlaRecalculation>(`/api/v1/ticket/${ticketId}/sla/recalculate`, { body: {} });
   }
 }

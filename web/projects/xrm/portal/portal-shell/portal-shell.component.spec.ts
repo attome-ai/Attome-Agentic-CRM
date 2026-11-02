@@ -1,13 +1,14 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { PortalPageHostComponent, replyOf } from './portal-pages.component';
 import { PortalShellComponent, navigation } from './portal-shell.component';
 import { PortalSiteService, portalFilters } from './portal-site.service';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const LANG = {
   translate: (k: string) => k,
@@ -75,6 +76,7 @@ describe('PortalShellComponent (G12-T1)', () => {
       providers: [
         provideRouter([]),
         { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: LANG },
       ],
     });
@@ -130,6 +132,7 @@ describe('PortalPageHostComponent (G12-T1)', () => {
       providers: [
         provideRouter([]),
         { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: LANG },
       ],
     });
@@ -162,7 +165,8 @@ describe('PortalPrivacyComponent (R1-T2)', () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [PortalPrivacyComponent],
-      providers: [{ provide: ApiService, useValue: { get, post } }, { provide: LangService, useValue: LANG }],
+      providers: [{ provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi }, { provide: LangService, useValue: LANG }],
     });
     TestBed.inject(PortalSiteService).keyword.set('acme');
     const fixture = TestBed.createComponent(PortalPrivacyComponent);

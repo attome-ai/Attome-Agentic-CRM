@@ -1,10 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService } from '@attome/base';
+import { ApiService, SdkService } from '@attome/base';
 import { firstValueFrom, of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ModelService } from './model.service';
 import { PlanStore } from './plan-store';
+import { sdkFromApi } from '../testing/sdk-from-api';
 
 const PLAN = { id: 'f1', name: 'Contact', entity: 'contact', sections: [] };
 
@@ -19,6 +20,7 @@ describe('ModelService.formPlan (Y14-T2)', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: PlanStore, useValue: store },
       ],
     });

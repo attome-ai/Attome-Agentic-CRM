@@ -1,9 +1,10 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { Observable, of } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AppSwitcherComponent, AvailableApp } from './app-switcher.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const APPS: AvailableApp[] = [
   { id: 'app-1', name: 'Sales', icon: 'las la-chart-line', sidebar_root_ref: null, default_dashboard_ref: null, entities: ['account'] },
@@ -22,6 +23,7 @@ function mount(api = new StubApi()): { fixture: ComponentFixture<AppSwitcherComp
     imports: [AppSwitcherComponent],
     providers: [
       { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       { provide: LangService, useValue: { current: signal('en'), set: vi.fn(), translate: (key: string) => key } },
     ],
   });

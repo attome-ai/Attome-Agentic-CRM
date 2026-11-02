@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, AuthService, LangService, type ApiError } from '@attome/base';
+import { ApiService, SdkService, AuthService, LangService, type ApiError } from '@attome/base';
 import { AccessService } from '@attome/xrm/core/access/data';
 import { type ChangesetSummary } from '@attome/xrm/core/admin/data';
 import { of, throwError, type Observable } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { ChangesetIndicatorComponent } from './changeset-indicator.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 function changeset(id: string, layer: string, author_ref: string | null, title = id): ChangesetSummary {
   return {
@@ -24,6 +25,7 @@ function mount(opts: { admin: boolean; list: () => Observable<unknown> }) {
   TestBed.configureTestingModule({
     providers: [
       { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       { provide: AuthService, useValue: { userId: signal('me') } },
       { provide: AccessService, useValue: { ready: () => of(undefined), hasPrivilege: () => opts.admin } },
       { provide: LangService, useValue: {

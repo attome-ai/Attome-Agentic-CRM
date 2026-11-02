@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ATTOME_CONFIG, ApiService, LangService } from '@attome/base';
+import { ATTOME_CONFIG, ApiService, SdkService, LangService } from '@attome/base';
 import { QueryService, ViewAdminService } from '@attome/xrm/core/query/data';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { MAP_LIBRARY_LOADER, MapViewComponent, pointOf } from './map-view.component';
+import { sdkFromApi } from '../../../../testing/sdk-from-api';
 
 /** A MapLibre stand-in that records what the component asks of it. */
 function fakeLibrary() {
@@ -65,6 +66,7 @@ describe('MapViewComponent (B15-T2)', () => {
         ]) } },
         { provide: QueryService, useValue: { execute } },
         { provide: ApiService, useValue: { get } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://api.test' } },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },
         { provide: MAP_LIBRARY_LOADER, useValue: () => Promise.resolve(library) },

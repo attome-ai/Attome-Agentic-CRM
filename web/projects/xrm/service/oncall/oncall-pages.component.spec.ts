@@ -1,10 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService, UserPreferencesService } from '@attome/base';
+import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { OnCallPage, OncallPagesComponent } from './oncall-pages.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const PAGES: OnCallPage[] = [
   { id: 'p1', ticket_id: 't1', subject: 'Major incident: payments down', paged_at: '2026-11-01T10:00:00Z', acknowledged_at: null },
@@ -19,6 +20,7 @@ describe('OncallPagesComponent (H7-T2)', () => {
       imports: [OncallPagesComponent],
       providers: [
         { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('ar'), intlLocale: () => 'ar-SA' } },
         { provide: UserPreferencesService, useValue: { timezone: () => 'UTC', calendar: () => null, digits: () => null } },
       ],

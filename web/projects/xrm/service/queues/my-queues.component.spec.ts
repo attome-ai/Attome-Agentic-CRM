@@ -1,13 +1,14 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { EntityService } from '@attome/xrm/core/entity';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { MyQueuesComponent } from './my-queues.component';
 import { MyQueuesService, groupByQueue, missingStarters, type QueueItemRow } from './my-queues.service';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const item = (id: string, queue: string, priority: string, entered: string, status = 'waiting'): QueueItemRow => ({
   id, queue_ref: queue, record_entity: 'service_ticket', record_id: `t-${id}`, priority, status,
@@ -39,6 +40,7 @@ describe('my queues (G4-T3)', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: ApiService, useValue: {} },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: EntityService, useValue: {} },
       ],
     });
@@ -61,6 +63,7 @@ describe('my queues (G4-T3)', () => {
       providers: [
         provideRouter([]),
         { provide: ApiService, useValue: { post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: EntityService, useValue: { list, create: createRecord } },
         {
           provide: LangService,

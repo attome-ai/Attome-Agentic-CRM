@@ -1,9 +1,10 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { Observable, of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { RecordTag, RecordTagsComponent } from './record-tags.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const VIP: RecordTag = { id: 't1', name: 'VIP', colour: '#aa3300', group_id: null, personal: false };
 
@@ -30,6 +31,7 @@ function setup() {
     imports: [RecordTagsComponent],
     providers: [
       { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       { provide: LangService, useValue: { current: signal('en'), translate: (k: string) => k, errorText: () => 'error' } },
     ],
   });

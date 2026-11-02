@@ -1,12 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SoftphoneComponent } from './softphone.component';
 import {
   SdkCall, SoftphoneConfig, SoftphoneService, popLink, recordFromUrl, telNumber,
 } from './softphone.service';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 /** A stand-in for the provider SDK's Device and Call. */
 class FakeCall implements SdkCall {
@@ -68,6 +69,7 @@ describe('SoftphoneService (J6-T2)', () => {
       providers: [
         provideRouter([]),
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k } },
       ],
     });

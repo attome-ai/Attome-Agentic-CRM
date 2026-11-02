@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService, AuthService } from '@attome/base';
+import { ApiService, SdkService, AuthService } from '@attome/base';
 import type { SelectionAction } from '@attome/xrm/core/entity';
 import { userAccountStateActions } from './user-account-state.actions';
+import { sdkFromApi } from '../../../../testing/sdk-from-api';
 
 describe('user account-state selection actions', () => {
   const post   = vi.fn(() => of(undefined));
@@ -30,6 +31,7 @@ describe('user account-state selection actions', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: ApiService,  useValue: { post, delete: del } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: AuthService, useValue: { userId: () => SELF } },
       ],
     });

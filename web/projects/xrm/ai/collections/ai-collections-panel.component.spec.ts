@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AiCollectionsPanelComponent } from './ai-collections-panel.component';
 import { PaymentPromise, awaitsReview, stillOpen } from './ai-collections.service';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const PENDING: PaymentPromise = {
   id: 'p1', promised_amount: 1250.5, promised_date: '2027-03-04', source: 'agent', status: 'open',
@@ -25,6 +26,7 @@ describe('AiCollectionsPanelComponent (AI5-T7)', () => {
       imports: [AiCollectionsPanelComponent],
       providers: [
         { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         {
           provide: LangService,
           useValue: { translate: (k: string) => k, current: signal('en'), errorText: () => 'error', intlLocale: () => 'en-US' },
