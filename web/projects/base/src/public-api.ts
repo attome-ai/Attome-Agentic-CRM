@@ -14,7 +14,9 @@ export type {
 } from './lib/generated/api-types';
 
 export { ATTOME_CONFIG, AttomeBaseConfig } from './lib/config';
-export { ApiService, BACKGROUND_HEADER, MAX_ALL_PAGES_ITEMS } from './lib/api.service';
+export { ApiService, BACKGROUND_HEADER, MAX_ALL_PAGES_ITEMS, apiErrorOf } from './lib/api.service';
+// Y9-T3: the generated SDK through HttpClient, for data services moving off ApiService.
+export { SdkService, httpClientFetch } from './lib/sdk.service';
 // Q13-T2: the view-as / act-as session this tab works in.
 export {
   IMPERSONATION_HEADER, IMPERSONATION_ROUTES, ImpersonationService, impersonationInterceptor,

@@ -392,76 +392,7 @@ export class ApiService {
     // default either. A body with no `message` leaves this empty and the UI
     // renders `LangService.errorText(err)`, which is language-correct for
     // every kind.
-    const body = err.error;
-    const error: ApiError = {
-      status:  err.status,
-      kind:    codeToKind(body?.error) ?? statusToKind(err.status),
-      message: typeof body?.message === 'string' ? body.message : '',
-    };
-    if (typeof body?.error === 'string') error.code = body.error;
-    // Solution 7 (D-785): a changeset refusal is a plain `conflict` on the
-    // wire; its stable code is the message's prefix. Lifting it into `code`
-    // is what makes the UI say "open a changeset first" or "owned by another
-    // layer" instead of "someone else changed this first". `kind` stays
-    // `conflict`, so every existing 409 branch still sees a conflict.
-    if (error.kind === 'conflict') {
-      const refusal = changesetRefusalCode(body?.message);
-      if (refusal) {
-        error.code = refusal;
-        // The many screens that still print `err.message` show the server's
-        // explanation without the `conflict: <code>:` plumbing in front of it.
-        error.message = refusalProse(error.message, refusal);
-      }
-    }
-
-    // NGB-2.1 — support correlates a UI error with the server's logs. The body
-    // is authoritative; the header is the fallback for a response that carries
-    // no JSON body at all (a proxy's 502, a 413 from the body-size guard).
-    const headerId = err.headers?.get?.('x-request-id') ?? null;
-    const requestId = typeof body?.request_id === 'string' ? body.request_id : headerId;
-    if (typeof requestId === 'string' && requestId.length > 0) error.requestId = requestId;
-    // M45 Phase 2 / D-472: `rule_violation` is the one code whose body answers
-    // *which* rule refused the write. Kept for that code only — same posture as
-    // the step-up fields below.
-    if (error.kind === 'rule_violation' && typeof body?.rule_id === 'string') error.ruleId = body.rule_id;
-
-    // D-789 (business rules): a `field_locked` / `field_locked_required`
-    // refusal names the field, rule and effect at the top level and lists
-    // every locked field in `details.fields`; a `rule_violation` may carry
-    // `details.field`. Kept additively so a form can put the refusal under
-    // its field instead of parsing the message. No record value is ever in
-    // these members (the server echoes names only).
-    const fieldLocked = body?.error === 'field_locked' || body?.error === 'field_locked_required';
-    if (fieldLocked && typeof body?.rule_id === 'string') error.ruleId = body.rule_id;
-    if (typeof body?.field === 'string') error.field = body.field;
-    if (typeof body?.rule_name === 'string') error.ruleName = body.rule_name;
-    if (typeof body?.effect === 'string') error.effect = body.effect;
-    if (body?.details !== undefined && body?.details !== null) error.details = body.details;
-
-    // A15-T4: a save refused as a likely duplicate names the records it
-    // matches (only those the caller may read) and counts the rest.
-    if (body?.error === 'duplicate_detected') {
-      error.duplicates = {
-        matches: Array.isArray(body?.matches) ? body.matches : [],
-        hidden: typeof body?.hidden === 'number' ? body.hidden : 0,
-      };
-    }
-
-    // A16-T1: a version conflict says what the record holds now, so a form
-    // can show the differences instead of reloading blind.
-    if (body?.error === 'version_conflict' && typeof body?.current_version === 'number') {
-      error.versionConflict = versionConflictState(body.current_version, body.current_state);
-    }
-
-    // D-510 rule 6: the step-up prompt is built from these two fields, so they
-    // are the only extra body fields kept — and only for this one code.
-    if (error.kind === 'reauth_required') {
-      if (typeof body?.operation === 'string') error.operation = body.operation;
-      error.acceptableFactors = Array.isArray(body?.acceptable_factors)
-        ? body.acceptable_factors.filter((f: unknown): f is string => typeof f === 'string')
-        : [];
-    }
-    return throwError(() => error);
+    return throwError(() => apiErrorOf(err.status, err.error, err.headers?.get?.('x-request-id') ?? null));
   }
 }
 
@@ -543,4 +474,81 @@ function statusToKind(status: number): ApiError['kind'] {
     case 503: return 'unavailable';
     default:  return 'unknown';
   }
+}
+
+/**
+ * The `ApiError` an error answer maps to, from its status, its parsed JSON
+ * body and its `x-request-id` header. Shared by `ApiService` and `SdkService`
+ * (Y9-T3), so both clients report a refusal the same way. Pure.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function apiErrorOf(status: number, body: any, headerId: string | null): ApiError {
+  const error: ApiError = {
+    status,
+    kind:    codeToKind(body?.error) ?? statusToKind(status),
+    message: typeof body?.message === 'string' ? body.message : '',
+  };
+  if (typeof body?.error === 'string') error.code = body.error;
+  // Solution 7 (D-785): a changeset refusal is a plain `conflict` on the
+  // wire; its stable code is the message's prefix. Lifting it into `code`
+  // is what makes the UI say "open a changeset first" or "owned by another
+  // layer" instead of "someone else changed this first". `kind` stays
+  // `conflict`, so every existing 409 branch still sees a conflict.
+  if (error.kind === 'conflict') {
+    const refusal = changesetRefusalCode(body?.message);
+    if (refusal) {
+      error.code = refusal;
+      // The many screens that still print `err.message` show the server's
+      // explanation without the `conflict: <code>:` plumbing in front of it.
+      error.message = refusalProse(error.message, refusal);
+    }
+  }
+
+  // NGB-2.1 — support correlates a UI error with the server's logs. The body
+  // is authoritative; the header is the fallback for a response that carries
+  // no JSON body at all (a proxy's 502, a 413 from the body-size guard).
+  const requestId = typeof body?.request_id === 'string' ? body.request_id : headerId;
+  if (typeof requestId === 'string' && requestId.length > 0) error.requestId = requestId;
+  // M45 Phase 2 / D-472: `rule_violation` is the one code whose body answers
+  // *which* rule refused the write. Kept for that code only — same posture as
+  // the step-up fields below.
+  if (error.kind === 'rule_violation' && typeof body?.rule_id === 'string') error.ruleId = body.rule_id;
+
+  // D-789 (business rules): a `field_locked` / `field_locked_required`
+  // refusal names the field, rule and effect at the top level and lists
+  // every locked field in `details.fields`; a `rule_violation` may carry
+  // `details.field`. Kept additively so a form can put the refusal under
+  // its field instead of parsing the message. No record value is ever in
+  // these members (the server echoes names only).
+  const fieldLocked = body?.error === 'field_locked' || body?.error === 'field_locked_required';
+  if (fieldLocked && typeof body?.rule_id === 'string') error.ruleId = body.rule_id;
+  if (typeof body?.field === 'string') error.field = body.field;
+  if (typeof body?.rule_name === 'string') error.ruleName = body.rule_name;
+  if (typeof body?.effect === 'string') error.effect = body.effect;
+  if (body?.details !== undefined && body?.details !== null) error.details = body.details;
+
+  // A15-T4: a save refused as a likely duplicate names the records it
+  // matches (only those the caller may read) and counts the rest.
+  if (body?.error === 'duplicate_detected') {
+    error.duplicates = {
+      matches: Array.isArray(body?.matches) ? body.matches : [],
+      hidden: typeof body?.hidden === 'number' ? body.hidden : 0,
+    };
+  }
+
+  // A16-T1: a version conflict says what the record holds now, so a form
+  // can show the differences instead of reloading blind.
+  if (body?.error === 'version_conflict' && typeof body?.current_version === 'number') {
+    error.versionConflict = versionConflictState(body.current_version, body.current_state);
+  }
+
+  // D-510 rule 6: the step-up prompt is built from these two fields, so they
+  // are the only extra body fields kept — and only for this one code.
+  if (error.kind === 'reauth_required') {
+    if (typeof body?.operation === 'string') error.operation = body.operation;
+    error.acceptableFactors = Array.isArray(body?.acceptable_factors)
+      ? body.acceptable_factors.filter((f: unknown): f is string => typeof f === 'string')
+      : [];
+  }
+  return error;
 }

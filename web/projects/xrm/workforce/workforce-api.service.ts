@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import type { ApiComponents } from '@attome/base';
 import { map, Observable } from 'rxjs';
 
@@ -80,14 +80,17 @@ export function coverageDays(raw: unknown): DayCoverage[] {
     }));
 }
 
-/** G17-T13: the workforce routes (G17-T7..T11) and the generic lists the screens read. */
+/**
+ * G17-T13: the workforce routes (G17-T7..T11) and the generic lists the screens read,
+ * through the generated SDK (Y9-T3).
+ */
 @Injectable({ providedIn: 'root' })
 export class WorkforceApiService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   private list(entity: string, params: Record<string, string>): Observable<Record<string, unknown>[]> {
-    return this.api
-      .get<{ items: Record<string, unknown>[] }>(`/api/v1/${entity}`, { page_size: '200', ...params })
+    return this.sdk
+      .get<{ items: Record<string, unknown>[] }>(`/api/v1/${entity}`, { query: { page_size: '200', ...params } })
       .pipe(map(r => r.items ?? []));
   }
 
@@ -109,13 +112,13 @@ export class WorkforceApiService {
   schedules(groupId: string | null): Observable<ScheduleSummary[]> {
     const params: Record<string, string> = { page_size: '50' };
     if (groupId) params['group_id'] = groupId;
-    return this.api
-      .get<{ items: ScheduleSummary[] }>('/api/v1/workforce/schedules', params)
+    return this.sdk
+      .get<{ items: ScheduleSummary[] }>('/api/v1/workforce/schedules', { query: params })
       .pipe(map(r => r.items ?? []));
   }
 
   schedule(id: string): Observable<ScheduleDetail> {
-    return this.api
+    return this.sdk
       .get<ScheduleSummary & { assignments: AssignmentView[]; coverage: unknown }>(
         `/api/v1/workforce/schedules/${encodeURIComponent(id)}`,
       )
@@ -123,22 +126,23 @@ export class WorkforceApiService {
   }
 
   build(groupId: string, from: string, to: string): Observable<{ run_id: string }> {
-    return this.api.post<{ run_id: string }>(
+    return this.sdk.post<{ run_id: string }>(
       `/api/v1/workforce/groups/${encodeURIComponent(groupId)}/schedules/build`,
-      { from, to },
+      { body: { from, to } },
     );
   }
 
   publish(id: string, rowVersion: number): Observable<Published> {
-    return this.api.post<Published>(
+    return this.sdk.post<Published>(
       `/api/v1/workforce/schedules/${encodeURIComponent(id)}/publish`,
-      {},
-      { ifMatch: rowVersion },
+      { body: {}, ifMatch: rowVersion },
     );
   }
 
   moveAssignment(id: string, rowVersion: number, patch: { user_id?: string; start_at?: string; end_at?: string; reason?: string }): Observable<AssignmentView> {
-    return this.api.patch<AssignmentView>(`/api/v1/workforce/assignments/${encodeURIComponent(id)}`, patch, rowVersion);
+    return this.sdk.patch<AssignmentView>(`/api/v1/workforce/assignments/${encodeURIComponent(id)}`, {
+      body: patch, ifMatch: rowVersion,
+    });
   }
 
   swaps(): Observable<SwapRow[]> {
@@ -154,9 +158,9 @@ export class WorkforceApiService {
   }
 
   decideSwap(id: string, approve: boolean, reason: string | null): Observable<{ status: string }> {
-    return this.api.post<{ status: string }>(
+    return this.sdk.post<{ status: string }>(
       `/api/v1/workforce/swaps/${encodeURIComponent(id)}/decide`,
-      { approve, reason },
+      { body: { approve, reason } },
     );
   }
 
@@ -175,18 +179,18 @@ export class WorkforceApiService {
   }
 
   sendOffer(id: string): Observable<unknown> {
-    return this.api.post(`/api/v1/workforce/offers/${encodeURIComponent(id)}/send`, {});
+    return this.sdk.post(`/api/v1/workforce/offers/${encodeURIComponent(id)}/send`, { body: {} });
   }
 
   /** G17-T14: the caller's own published shifts between two days. */
   mySchedule(from: string, to: string): Observable<AssignmentView[]> {
-    return this.api.get<AssignmentView[]>('/api/v1/workforce/me/schedule', { from, to });
+    return this.sdk.get<AssignmentView[]>('/api/v1/workforce/me/schedule', { query: { from, to } });
   }
 
   /** G17-T14: give one of the caller's shifts to a colleague (a swap request; it may wait for approval). */
   giveAway(assignmentId: string, toUserId: string, reason: string | null): Observable<SwapResult> {
-    return this.api.post<SwapResult>('/api/v1/workforce/swaps', {
-      assignment_id: assignmentId, to_user_id: toUserId, reason,
+    return this.sdk.post<SwapResult>('/api/v1/workforce/swaps', {
+      body: { assignment_id: assignmentId, to_user_id: toUserId, reason },
     });
   }
 
@@ -207,10 +211,10 @@ export class WorkforceApiService {
 
   /** G17-T14: take an offer; the first to accept gets it. */
   acceptOffer(id: string): Observable<OfferState> {
-    return this.api.post<OfferState>(`/api/v1/workforce/offers/${encodeURIComponent(id)}/accept`, {});
+    return this.sdk.post<OfferState>(`/api/v1/workforce/offers/${encodeURIComponent(id)}/accept`, { body: {} });
   }
 
   live(groupId: string): Observable<LiveRow[]> {
-    return this.api.get<LiveRow[]>('/api/v1/workforce/adherence/live', { group: groupId });
+    return this.sdk.get<LiveRow[]>('/api/v1/workforce/adherence/live', { query: { group: groupId } });
   }
 }
