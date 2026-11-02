@@ -110,7 +110,7 @@ export class PushService {
 
   /** On sign-out: the subscription goes, and the shell stops receiving. */
   async stop(): Promise<void> {
-    let id: string | null = null;
+    let id: string | null;
     try {
       id = localStorage.getItem(PUSH_SUBSCRIPTION_KEY);
       localStorage.removeItem(PUSH_SUBSCRIPTION_KEY);
