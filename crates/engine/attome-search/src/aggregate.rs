@@ -509,6 +509,12 @@ fn measure_sql(scope: &AggregateScope, definition: &DataDefinition) -> Result<St
                     MeasureFn::Median => {
                         format!("percentile_cont(0.5) WITHIN GROUP (ORDER BY {column})")
                     }
+                    MeasureFn::Q1 => {
+                        format!("percentile_cont(0.25) WITHIN GROUP (ORDER BY {column})")
+                    }
+                    MeasureFn::Q3 => {
+                        format!("percentile_cont(0.75) WITHIN GROUP (ORDER BY {column})")
+                    }
                     MeasureFn::Count => unreachable!("matched above"),
                 }
             }

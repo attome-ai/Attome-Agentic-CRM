@@ -122,6 +122,10 @@ pub enum MeasureFn {
     Min,
     Max,
     Median,
+    /// P6-T1: the lower quartile (25th percentile), for a box plot.
+    Q1,
+    /// P6-T1: the upper quartile (75th percentile), for a box plot.
+    Q3,
 }
 
 impl MeasureFn {
@@ -134,7 +138,7 @@ impl MeasureFn {
     pub fn needs_numeric_field(self) -> bool {
         matches!(
             self,
-            Self::Sum | Self::Avg | Self::Min | Self::Max | Self::Median
+            Self::Sum | Self::Avg | Self::Min | Self::Max | Self::Median | Self::Q1 | Self::Q3
         )
     }
 
@@ -153,6 +157,8 @@ impl MeasureFn {
             Self::Min => "min",
             Self::Max => "max",
             Self::Median => "median",
+            Self::Q1 => "q1",
+            Self::Q3 => "q3",
         }
     }
 }

@@ -49268,7 +49268,7 @@ export interface components {
             grain: components["schemas"]["DateBucket"];
         };
         /** @enum {string} */
-        MeasureFn: "count" | "count_distinct" | "sum" | "avg" | "min" | "max" | "median";
+        MeasureFn: "count" | "count_distinct" | "sum" | "avg" | "min" | "max" | "median" | "q1" | "q3";
         /** @description A created meeting. */
         Meeting: {
             /** @description The provider's id for it. */
@@ -64999,7 +64999,7 @@ export interface components {
          *     state (and is reported by health).
          * @enum {string}
          */
-        RenderKind: "chart_bar" | "chart_line" | "chart_area" | "chart_donut" | "chart_funnel" | "chart_stacked_bar" | "chart_combo" | "chart_waterfall" | "chart_treemap" | "chart_sunburst" | "chart_sankey" | "chart_radar" | "chart_polar" | "chart_heatmap" | "chart_calendar_heatmap" | "chart_pareto" | "chart_control" | "chart_scatter" | "chart_bubble" | "chart_range_area" | "scalar" | "table" | "declarative" | "kpi_scorecard" | "kpi_trendline" | "text" | "divider" | "unsupported";
+        RenderKind: "chart_bar" | "chart_line" | "chart_area" | "chart_donut" | "chart_funnel" | "chart_stacked_bar" | "chart_combo" | "chart_waterfall" | "chart_treemap" | "chart_sunburst" | "chart_sankey" | "chart_radar" | "chart_polar" | "chart_heatmap" | "chart_calendar_heatmap" | "chart_pareto" | "chart_control" | "chart_scatter" | "chart_bubble" | "chart_range_area" | "chart_box_plot" | "scalar" | "table" | "declarative" | "kpi_scorecard" | "kpi_trendline" | "text" | "divider" | "unsupported";
         /** @description `POST /api/v1/docgen/templates/{id}/render-labels`. */
         RenderLabelsBody: {
             /** @description The records to print, 1 to 500, in order; a repeated id prints once. */

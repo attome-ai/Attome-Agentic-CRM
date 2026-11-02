@@ -138,6 +138,9 @@ pub enum RenderKind {
     ChartScatter,
     ChartBubble,
     ChartRangeArea,
+    /// P6-T1: a box per category from five measures side by side: lowest,
+    /// lower quartile, median, upper quartile, highest.
+    ChartBoxPlot,
     /// One number (the first measure of an ungrouped definition).
     Scalar,
     /// Rows of a stored query or view.
@@ -272,6 +275,11 @@ const RENDERERS: &[(&str, RenderKind, DataContract)] = &[
     (
         "range_area_chart",
         RenderKind::ChartRangeArea,
+        DataContract::Structured,
+    ),
+    (
+        "box_plot",
+        RenderKind::ChartBoxPlot,
         DataContract::Structured,
     ),
     ("metric", RenderKind::Scalar, DataContract::Structured),
@@ -1035,11 +1043,12 @@ mod tests {
             registry().render_kind("sankey_diagram"),
             RenderKind::ChartSankey
         );
-        // No definition can produce these yet: quartiles, bins, open and
-        // close values, or start and end pairs.
+        // P6-T1: quartile measures (q1, q3) give a box plot five values.
+        assert_eq!(registry().render_kind("box_plot"), RenderKind::ChartBoxPlot);
+        // No definition can produce these yet: bins, open and close values,
+        // or start and end pairs.
         for type_id in [
             "histogram",
-            "box_plot",
             "gantt_chart",
             "timeline",
             "candlestick_chart",

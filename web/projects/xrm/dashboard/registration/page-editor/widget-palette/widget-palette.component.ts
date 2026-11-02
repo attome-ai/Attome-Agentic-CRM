@@ -31,6 +31,7 @@ const WIDGET_TYPE_ICONS: Record<string, string> = {
   calendar_heatmap: 'la-calendar',
   control_chart: 'la-chart-line',
   range_area_chart: 'la-water',
+  box_plot: 'la-chart-bar',
   scatter_plot: 'la-braille',
   bubble_chart: 'la-braille',
   table: 'la-table',

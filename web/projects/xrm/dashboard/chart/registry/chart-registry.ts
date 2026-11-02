@@ -16,7 +16,7 @@ import { ChartBucket, ChartCategory, ChartSeries, SLICE_COLORS } from '../dashbo
  */
 export type EChartKind =
   | 'stacked_bar' | 'combo' | 'waterfall' | 'treemap' | 'sunburst' | 'sankey' | 'radar' | 'polar'
-  | 'heatmap' | 'calendar_heatmap' | 'pareto' | 'control' | 'scatter' | 'bubble' | 'range_area';
+  | 'heatmap' | 'calendar_heatmap' | 'pareto' | 'control' | 'scatter' | 'bubble' | 'range_area' | 'box_plot';
 
 export type ChartOption = Record<string, unknown>;
 
@@ -549,6 +549,45 @@ function rangeArea(input: ChartInput): ChartOption {
   ]);
 }
 
+export interface BoxRow { index: number; entries: { name: string; bucket: ChartBucket }[] }
+
+/**
+ * P6-T1: one box per category from the first five series (the `min`, `q1`,
+ * `median`, `q3` and `max` measures), each box's five values in ascending
+ * order, which is the order of genuine quartiles whatever order the measures
+ * were listed in. A category missing any of the five has no box.
+ */
+export function boxRows(input: ChartInput): BoxRow[] {
+  const five = input.series.slice(0, 5);
+  if (five.length < 5) return [];
+  return input.categories.flatMap((_, index) => {
+    const entries = five.flatMap(s => s.points[index] ? [{ name: s.name, bucket: s.points[index]! }] : []);
+    if (entries.length < 5) return [];
+    entries.sort((a, b) => a.bucket.value - b.bucket.value);
+    return [{ index, entries }];
+  });
+}
+
+/** Boxes on the category axis; a click drills into the category through the
+ * median's bucket. */
+function boxPlot(input: ChartInput): ChartOption {
+  const rows = new Map(boxRows(input).map(r => [r.index, r]));
+  const color = input.series[2]?.color ?? input.series[0]?.color;
+  return cartesian(input, [{
+    type: 'boxplot',
+    itemStyle: { color: 'transparent', borderColor: color },
+    data: input.categories.map((category, index) => {
+      const row = rows.get(index);
+      if (!row) return null;
+      return {
+        value: row.entries.map(e => e.bucket.value),
+        bucket: row.entries[2].bucket,
+        tip: tip(category.label, ...row.entries.map(e => `${e.name}: ${input.format(e.bucket.value)}`)),
+      };
+    }),
+  }]);
+}
+
 export const CHART_REGISTRY: Record<EChartKind, ChartAdapter> = {
   stacked_bar:      { minSeries: 1, legend: true,  option: stackedBar },
   combo:            { minSeries: 1, legend: true,  option: combo },
@@ -565,6 +604,7 @@ export const CHART_REGISTRY: Record<EChartKind, ChartAdapter> = {
   scatter:          { minSeries: 2, legend: false, option: scatter },
   bubble:           { minSeries: 3, legend: false, option: bubble },
   range_area:       { minSeries: 2, legend: true,  option: rangeArea },
+  box_plot:         { minSeries: 5, legend: false, option: boxPlot },
 };
 
 export function isEChartKind(kind: string): kind is EChartKind {
@@ -572,4 +612,4 @@ export function isEChartKind(kind: string): kind is EChartKind {
 }
 
 /** Kinds whose series are measures side by side, not one measure split by a field. */
-export const MEASURE_KINDS: ReadonlySet<string> = new Set(['combo', 'scatter', 'bubble', 'range_area']);
+export const MEASURE_KINDS: ReadonlySet<string> = new Set(['combo', 'scatter', 'bubble', 'range_area', 'box_plot']);

@@ -3,7 +3,8 @@
 // of these kinds never downloads it. Only the parts the registry's adapters
 // use are registered.
 import {
-  BarChart, CustomChart, HeatmapChart, LineChart, RadarChart, SankeyChart, ScatterChart, SunburstChart, TreemapChart,
+  BarChart, BoxplotChart, CustomChart, HeatmapChart, LineChart, RadarChart, SankeyChart, ScatterChart, SunburstChart,
+  TreemapChart,
 } from 'echarts/charts';
 import {
   CalendarComponent, GridComponent, MarkLineComponent, PolarComponent, RadarComponent, TooltipComponent, VisualMapComponent,
@@ -12,7 +13,8 @@ import { init, use } from 'echarts/core';
 import { SVGRenderer } from 'echarts/renderers';
 
 use([
-  BarChart, CustomChart, HeatmapChart, LineChart, RadarChart, SankeyChart, ScatterChart, SunburstChart, TreemapChart,
+  BarChart, BoxplotChart, CustomChart, HeatmapChart, LineChart, RadarChart, SankeyChart, ScatterChart, SunburstChart,
+  TreemapChart,
   CalendarComponent, GridComponent, MarkLineComponent, PolarComponent, RadarComponent, TooltipComponent, VisualMapComponent,
   SVGRenderer,
 ]);

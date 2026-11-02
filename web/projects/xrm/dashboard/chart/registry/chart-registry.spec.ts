@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { init } from '../../echarts/public-api';
 import type { ChartBucket, ChartCategory, ChartSeries } from '../dashboard-chart/dashboard-chart.component';
 import {
-  CHART_REGISTRY, ChartInput, ChartOption, EChartKind, calendarDays, controlLimits, isEChartKind, paretoRows, rangeBand,
-  tip, waterfallSteps,
+  CHART_REGISTRY, ChartInput, ChartOption, EChartKind, boxRows, calendarDays, controlLimits, isEChartKind, paretoRows,
+  rangeBand, tip, waterfallSteps,
 } from './chart-registry';
 
 const KINDS = Object.keys(CHART_REGISTRY) as EChartKind[];
@@ -55,7 +55,7 @@ function seriesOf(option: ChartOption): Record<string, unknown>[] {
 
 describe('the chart registry', () => {
   it('registers an adapter per kind and nothing else', () => {
-    expect(KINDS).toHaveLength(15);
+    expect(KINDS).toHaveLength(16);
     expect(isEChartKind('sankey')).toBe(true);
     expect(isEChartKind('bar')).toBe(false);
   });
@@ -78,9 +78,12 @@ describe('the chart registry', () => {
     it(`${kind} escapes a label in its tooltip`, () => {
       const hostile = '<img src=x onerror=alert(1)>';
       const named = [{ ...categories[0], label: hostile }, categories[1], categories[2]];
+      // Enough series for the kind's fewest (a box plot needs five).
+      const enough = [...input().series, series('Four', [6, 6, 6]), series('Five', [9, 9, 9])]
+        .slice(0, Math.max(3, CHART_REGISTRY[kind].minSeries));
       const withLabel = input({
         categories: named,
-        series: input().series.map(s => ({
+        series: enough.map(s => ({
           ...s, points: s.points.map((p, i) => p && (i === 0 ? { ...p, label: hostile } : p)),
         })),
       });
@@ -143,6 +146,23 @@ describe('what an adapter computes', () => {
       series: [series('Won', [5, 3, 9])],
     }));
     expect(days.map(d => d.day)).toEqual(['2026-01-02', '2026-01-03']);
+  });
+
+  it('draws a box per category from five measures, in ascending order', () => {
+    const five = [
+      series('Highest', [9, 8, 7]), series('Q1', [3, 2, 2]), series('Median', [5, 4, null]),
+      series('Q3', [7, 6, 5]), series('Lowest', [1, 1, 1]),
+    ];
+    const rows = boxRows(input({ series: five }));
+    expect(rows.map(r => r.index)).toEqual([0, 1]);
+    expect(rows[0].entries.map(e => e.bucket.value)).toEqual([1, 3, 5, 7, 9]);
+    const [box] = seriesOf(CHART_REGISTRY.box_plot.option(input({ series: five })));
+    const data = box['data'] as (ChartOption | null)[];
+    expect(data[0]!['value']).toEqual([1, 3, 5, 7, 9]);
+    expect((data[0]!['bucket'] as ChartBucket).trackKey).toBe('a|Median');
+    expect(data[2]).toBeNull();
+    expect(draw(CHART_REGISTRY.box_plot.option(input({ series: five })))).toMatch(/<path\b/);
+    expect(boxRows(input())).toEqual([]);
   });
 
   it('skips a category missing either edge of a band', () => {

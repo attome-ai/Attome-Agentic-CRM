@@ -1530,6 +1530,14 @@ pub fn plain_definition(
             format!("Median {field} of {entity}"),
             format!("وسيط {field} في {entity}"),
         ),
+        Some(MeasureFn::Q1) => (
+            format!("Lower quartile of {field} of {entity}"),
+            format!("الربيع الأدنى لـ {field} في {entity}"),
+        ),
+        Some(MeasureFn::Q3) => (
+            format!("Upper quartile of {field} of {entity}"),
+            format!("الربيع الأعلى لـ {field} في {entity}"),
+        ),
     };
     if !filters.is_empty() {
         let conditions: Vec<(String, String)> = filters
@@ -1791,6 +1799,8 @@ pub async fn explain_widget(
                             format!("COUNT(DISTINCT {field})")
                         }
                         (Some(field), MeasureFn::Median) => format!("MEDIAN({field})"),
+                        (Some(field), MeasureFn::Q1) => format!("PERCENTILE_25({field})"),
+                        (Some(field), MeasureFn::Q3) => format!("PERCENTILE_75({field})"),
                         (Some(field), agg) => format!("{}({field})", agg.as_str().to_uppercase()),
                         (None, agg) => agg.as_str().to_uppercase(),
                     },
