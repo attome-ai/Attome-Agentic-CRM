@@ -4,6 +4,16 @@ The partner pack (`packs/partner`) holds partner programmes and tiers, deal regi
 applications, onboarding, certifications, market development funds and resources. The `partner`
 module runs the engine code below; partners use the partner portal pages ([pages.md](pages.md)).
 
+## Setting up
+
+1. Install the partner pack (it builds on crm, sales, vendor-supplier and contract-management).
+2. Create a programme (`partner_programme`) and its tiers (`partner_tier`): each tier's revenue, certified
+   people and registration thresholds and its `protection_days`.
+3. Set each partner account's partner manager (`partner_manager_ref`) and give those people the
+   **Channel Manager** role (below).
+4. Create the partner portal and its roles with `attome partner portal-roles`; give the portal a service
+   user for the routes that write for members.
+
 ## Deal registration
 
 A partner registers a deal as a `deal_registration` record, from the portal's **Register a deal**
@@ -145,3 +155,17 @@ manages that partner's people on the portal (`attome partner portal-roles` creat
 
 Anyone else gets 403, and another partner's member answers 404. Each change is audited with the
 partner administrator as the actor.
+
+## Scorecard and portal pages
+
+Nightly, each partner gets one `partner_performance_snapshot` for the day: revenue, pipeline and win rate
+over 12 months, average response time to offered leads, certified people and MDF spent. The partner's
+members read their own snapshots on the portal's scorecard page; the pack's stored queries report them
+internally, grouped by partner. The portal pages are listed in [pages.md](pages.md): home, deal
+registrations, leads offered, deals, MDF, certifications, the scorecard and resources.
+
+## Switches
+
+There is no separate partner feature flag: the `partner` module's licence and the pack's installation turn
+the programme on, and each person sees what their role grants. The one setting is
+`partner.lead_stale_days` (14).
