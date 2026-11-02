@@ -116,7 +116,11 @@ export class CallPageComponent implements OnInit {
   readonly timeline = computed(() =>
     (this.page()?.findings ?? []).filter(f => f.start_ms !== null),
   );
-  readonly talkRows = computed(() => Object.entries(this.page()?.talk ?? {}));
+  readonly talkRows = computed(() =>
+    Object.entries(this.page()?.talk ?? {}).filter(
+      (row): row is [string, number] => typeof row[1] === 'number',
+    ),
+  );
 
   readonly clock = clock;
 
