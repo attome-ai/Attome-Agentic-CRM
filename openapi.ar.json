@@ -101627,6 +101627,909 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/marketing/journeys/{id}/counts": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Read a journey's counts",
+        "description": "How many people entered, wait at, passed, were blocked at and left at each node, with the\njourney's goal conversion.",
+        "operationId": "get_marketing_journey_counts",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The journey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The journey's node counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JourneyCounts"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_journey.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such journey",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/marketing/journeys/{id}/enrolments": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "List a journey's enrolments",
+        "description": "The journey's enrolments of one person entity, newest first, only of people the caller may\nread.",
+        "operationId": "list_marketing_journey_enrolments",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The journey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "person_entity",
+            "in": "query",
+            "description": "The people's entity: `contact` (default) or `lead`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based: page 1 is the first page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of enrolments of people the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_JourneyEnrolment"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_journey.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such journey",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A person entity other than contact or lead",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Enrol people in a journey",
+        "description": "Enrols up to 1,000 contacts or leads the caller may read, through the journey's re-entry rule\nand daily cap. Audited.",
+        "operationId": "enrol_marketing_journey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The journey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualEnrolBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Who was enrolled and who was skipped, and why",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualEnrolResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_journey.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such journey",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "More than 1,000 people, or a journey not live for a real enrolment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Workflow runs cannot start on this node",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/journeys/{id}/enrolments/{enrolment_id}": {
+      "delete": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Take a person out of a journey",
+        "description": "Ends the active enrolment as `removed` and cancels its run. Audited.",
+        "operationId": "remove_marketing_journey_enrolment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The journey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "enrolment_id",
+            "in": "path",
+            "description": "The enrolment",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The person is out of the journey"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_journey.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such journey, or no active enrolment with that id in it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/marketing/journeys/{id}/pause": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Pause a journey",
+        "description": "A live journey stops: it takes no one new, and its people's runs pause where they are, every\nkind of step included. Audited.",
+        "operationId": "pause_marketing_journey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The journey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The journey and its runs are paused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JourneyControlResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_journey.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such journey",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The journey is not live, or another pause or resume is in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "workflow",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/journeys/{id}/people/{person_id}/path": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Read a person's path through a journey",
+        "description": "Each of the person's runs: the nodes in the order they ran, the blocks with their reasons, and\nhow the run ended.",
+        "operationId": "get_marketing_journey_person_path",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The journey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "person_id",
+            "in": "path",
+            "description": "The contact or lead",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The person's runs, oldest first (one page)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PersonRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_journey.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such journey, or a person the caller may not read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/marketing/journeys/{id}/publish": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Publish a journey version",
+        "description": "Publishes a draft of the journey's workflow with the workflow's own checks, then moves the people\nalready in it as `version_mode` says; a draft journey becomes live. Needs the journey's\npublish role when it names one. Audited.",
+        "operationId": "publish_marketing_journey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The journey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JourneyPublishBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The version is live and the people are placed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JourneyPublishResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_journey.update or the journey's publish role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such journey",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not a draft of this journey, or another publish in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The graph fails the publish checks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "activated"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "workflow",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/journeys/{id}/resume": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Resume a journey",
+        "description": "A paused journey is live again, and its paused runs go on where they stopped. Audited.",
+        "operationId": "resume_marketing_journey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The journey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The journey is live and its runs go on",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JourneyControlResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_journey.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such journey",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The journey is not paused, or another pause or resume is in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "workflow",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/journeys/{id}/simulate": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Simulate a journey",
+        "description": "Runs the journey's newest published version in memory for each sample person, their record as\nthe trigger, and returns every node's trace per person. Waits do not wait; nothing is written,\nsent or requested.",
+        "operationId": "simulate_marketing_journey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The journey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JourneySimulateBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Each sample person's simulated run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JourneySimulation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_journey.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such journey, no published version, or a person the caller may not read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No sample people, more than 20, or a graph that does not parse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "D-431: the journey's graph runs in memory through the workflow simulation, which may never write, send or request anything under any node type.",
+          "reason": "dry_run",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "workflow",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/marketing/landing/stats": {
       "get": {
         "tags": [
@@ -102308,6 +103211,103 @@
       }
     },
     "/api/v1/marketing/lists/{id}/members": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Read a list's members",
+        "description": "The list's current members the caller may read, newest first.",
+        "operationId": "list_marketing_list_members",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The marketing list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based: page 1 is the first page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of the members the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_MarketingListMember"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
       "post": {
         "tags": [
           "marketing"
@@ -102650,6 +103650,93 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/marketing/lists/{id}/refresh": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Refresh a marketing list",
+        "description": "Queues a refresh of the list's members; the list's `last_refreshed_at` moves once it has run.\nA refresh already waiting is not queued twice.",
+        "operationId": "refresh_marketing_list",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The marketing list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "The refresh is queued (or already was)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketingListRefresh"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/marketing/lists/{id}/sample": {
       "get": {
         "tags": [
@@ -102946,6 +104033,84 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/lists/{id}/usage": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Read what uses a list",
+        "description": "The email and SMS sends to the list, the nurture programmes whose audience it is, and the\njourneys that take entries from it.",
+        "operationId": "get_marketing_list_usage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The marketing list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every use, at most 100 of each kind (one page)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_MarketingListUsage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/marketing/o/{token}": {
@@ -113027,6 +114192,248 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/ops/status-subscribers": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Status subscribers",
+        "description": "AB11-T6: the people and tools that receive status notices, newest first. `ops.incident.publish`.",
+        "operationId": "list_ops_status_subscribers",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The subscribers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_StatusSubscriber"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.incident.publish",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Add a status subscriber",
+        "description": "AB11-T6: staff add an email address or a webhook, confirmed at once (they vouch for the consent,\nwhich `consent` must say). `ops.incident.publish`. Audited.",
+        "operationId": "create_ops_status_subscriber",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscribeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The subscriber",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusSubscriber"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.incident.publish",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No consent, an unknown or unavailable channel, or a bad address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/ops/status-subscribers/{id}": {
+      "delete": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Remove a status subscriber",
+        "description": "AB11-T6: ends a subscription; nothing more is sent to it. `ops.incident.publish`. Audited.",
+        "operationId": "delete_ops_status_subscriber",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The subscriber",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Ended"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.incident.publish",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such subscriber",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "soft_delete"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/api/v1/ops/status/banner": {
       "get": {
         "tags": [
@@ -117559,6 +118966,283 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/public/status": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "The public status",
+        "description": "AB11-T8: public components, public incidents and public maintenance, for anyone and without\nsigning in; nothing internal. 404 unless the deployment publishes its status\n(`ops.status.enabled`).",
+        "operationId": "get_public_status",
+        "responses": {
+          "200": {
+            "description": "The public status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusSnapshot"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "This deployment does not publish its status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/public/status/confirm": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Confirm a status subscription",
+        "description": "AB11-T6: the link a subscription request sent; it works once. 404 for an unknown or used link, or\nwhile the status is not published.",
+        "operationId": "confirm_public_status_subscription",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Confirmed (an HTML page)",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/public/status/feed.rss": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Public status feed",
+        "description": "AB11-T6: the public incidents and their updates from the last 30 days as RSS 2.0, newest first.\n404 unless the status is published.",
+        "operationId": "get_public_status_feed",
+        "responses": {
+          "200": {
+            "description": "RSS 2.0",
+            "content": {
+              "application/rss+xml": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "This deployment does not publish its status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/public/status/subscribe": {
+      "post": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Follow the status",
+        "description": "AB11-T6: subscribe an email address or a webhook to status notices, with consent; a confirmation\nlink is sent to it, and nothing else until it is opened. 404 unless the status is published.",
+        "operationId": "subscribe_public_status",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscribeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "A confirmation link was sent"
+          },
+          "404": {
+            "description": "This deployment does not publish its status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No consent, an unknown or unavailable channel, or a bad address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ops",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/public/status/unsubscribe": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Unsubscribe from status notices",
+        "description": "AB11-T6: the one-click link every notice carries; it ends the subscription, and a second use\nanswers 404.",
+        "operationId": "unsubscribe_public_status",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unsubscribed (an HTML page)",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such subscription",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/push/subscriptions": {
@@ -154236,6 +155920,307 @@
         "x-risk": "medium"
       }
     },
+    "/{keyword}/api/v1/partner/members": {
+      "get": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "The partner's members",
+        "description": "F9-T8: the members of the signed-in partner administrator's own partner on this portal.",
+        "operationId": "portal_partner_members",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The members",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PartnerMember"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the administrator of a partner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "Invite a partner member",
+        "description": "F9-T8: invites a contact at the partner administrator's own account with a partner role; refused\npast the partner's user limit. Audited.",
+        "operationId": "portal_partner_invite_member",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartnerMemberInvite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Invited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerMember"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the administrator of a partner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal, or no such contact at the partner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The contact already has a portal account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a partner role, no email address, or the user limit is reached",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Email is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "credential",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/{keyword}/api/v1/partner/members/{id}/deactivate": {
+      "post": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "Deactivate a partner member",
+        "description": "F9-T8: disables another member of the partner administrator's own partner on this portal; every\nsession they hold ends. Audited.",
+        "operationId": "portal_partner_deactivate_member",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The member",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Disabled; every session ended",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerMember"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the administrator of a partner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such member of the caller's partner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An administrator cannot deactivate themselves",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "access",
+              "operation": "account_disabled"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/{keyword}/api/v1/partner/statement": {
       "get": {
         "tags": [
@@ -187550,6 +189535,237 @@
           }
         }
       },
+      "JourneyControlResult": {
+        "type": "object",
+        "description": "What a pause or resume did.",
+        "required": [
+          "journey_id",
+          "status",
+          "runs"
+        ],
+        "properties": {
+          "journey_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "runs": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Runs paused or resumed.",
+            "minimum": 0
+          },
+          "status": {
+            "type": "string",
+            "description": "`paused` or `live`."
+          }
+        }
+      },
+      "JourneyCounts": {
+        "type": "object",
+        "description": "A journey's counts and goal conversion.",
+        "required": [
+          "definition_id",
+          "nodes",
+          "enrolled",
+          "converted",
+          "conversion"
+        ],
+        "properties": {
+          "conversion": {
+            "type": "number",
+            "format": "double",
+            "description": "`converted / enrolled`, or 0 with none enrolled."
+          },
+          "converted": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Of those, the ones that reached the journey's goal."
+          },
+          "definition_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "enrolled": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Enrolments (test ones left out)."
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NodeCount"
+            }
+          }
+        }
+      },
+      "JourneyEnrolment": {
+        "type": "object",
+        "required": [
+          "id",
+          "person_id",
+          "person_entity",
+          "status",
+          "entry_source",
+          "entered_at",
+          "is_test"
+        ],
+        "properties": {
+          "end_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ended_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "entered_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "entry_source": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "is_test": {
+            "type": "boolean"
+          },
+          "person_entity": {
+            "type": "string"
+          },
+          "person_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "`active`, `completed`, `exited` or `removed`."
+          }
+        }
+      },
+      "JourneyPublishBody": {
+        "type": "object",
+        "required": [
+          "version_id"
+        ],
+        "properties": {
+          "version_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The draft version to publish."
+          },
+          "version_mode": {
+            "$ref": "#/components/schemas/VersionMode",
+            "description": "What happens to people already in the journey."
+          }
+        }
+      },
+      "JourneyPublishResult": {
+        "type": "object",
+        "required": [
+          "journey_id",
+          "version_id",
+          "moved",
+          "kept"
+        ],
+        "properties": {
+          "journey_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kept": {
+            "type": "integer",
+            "format": "int64",
+            "description": "People who finish on the version they started.",
+            "minimum": 0
+          },
+          "moved": {
+            "type": "integer",
+            "format": "int64",
+            "description": "People moved to the new version.",
+            "minimum": 0
+          },
+          "version_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "JourneySimulateBody": {
+        "type": "object",
+        "required": [
+          "sample_people"
+        ],
+        "properties": {
+          "sample_people": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SimulateRecordRef"
+            },
+            "description": "The people to run the journey for, at most 20."
+          }
+        }
+      },
+      "JourneySimulatedRun": {
+        "type": "object",
+        "description": "One sample person's simulated run.",
+        "required": [
+          "entity",
+          "person_id",
+          "status",
+          "trace"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "person_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "`completed`, `would_wait` or `failed`."
+          },
+          "trace": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SimulateNodeTrace"
+            }
+          }
+        }
+      },
+      "JourneySimulation": {
+        "type": "object",
+        "required": [
+          "journey_id",
+          "version_id",
+          "runs"
+        ],
+        "properties": {
+          "journey_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "runs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JourneySimulatedRun"
+            }
+          },
+          "version_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "JsonRpcError": {
         "type": "object",
         "required": [
@@ -190033,6 +192249,46 @@
           }
         }
       },
+      "ManualEnrolBody": {
+        "type": "object",
+        "required": [
+          "people"
+        ],
+        "properties": {
+          "is_test": {
+            "type": "boolean",
+            "description": "Test runs: they never count toward the daily cap and a draft journey\ntakes them."
+          },
+          "people": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            },
+            "description": "The people, at most 1,000."
+          }
+        }
+      },
+      "ManualEnrolResult": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/EnrolOutcome"
+          },
+          {
+            "type": "object",
+            "required": [
+              "skipped_unreadable"
+            ],
+            "properties": {
+              "skipped_unreadable": {
+                "type": "integer",
+                "format": "int64",
+                "description": "People left out because the caller may not read them.",
+                "minimum": 0
+              }
+            }
+          }
+        ]
+      },
       "ManualLinkBody": {
         "type": "object",
         "description": "A link to document by hand.",
@@ -190279,6 +192535,50 @@
           }
         }
       },
+      "MarketingListMember": {
+        "type": "object",
+        "required": [
+          "person_id",
+          "person_entity",
+          "source",
+          "added_at"
+        ],
+        "properties": {
+          "added_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "person_entity": {
+            "type": "string",
+            "description": "The person's entity (`contact`, `lead`, ...)."
+          },
+          "person_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source": {
+            "type": "string",
+            "description": "`segment`, `manual`, `form`, `flow` or `import`."
+          }
+        }
+      },
+      "MarketingListRefresh": {
+        "type": "object",
+        "required": [
+          "list_id",
+          "queued"
+        ],
+        "properties": {
+          "list_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "queued": {
+            "type": "boolean",
+            "description": "`false` when a refresh of this list was already waiting to run."
+          }
+        }
+      },
       "MarketingListSample": {
         "type": "object",
         "required": [
@@ -190300,6 +192600,36 @@
           },
           "target_entity": {
             "type": "string"
+          }
+        }
+      },
+      "MarketingListUsage": {
+        "type": "object",
+        "required": [
+          "kind",
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "description": "`email_send`, `sms_send`, `nurture_program` or `journey`."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The email subject, programme or journey name; none for an SMS send."
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -194695,6 +197025,48 @@
           "reads_personal": {
             "type": "boolean",
             "description": "A definition that uses a personal attribute."
+          }
+        }
+      },
+      "NodeCount": {
+        "type": "object",
+        "description": "One node's counts.",
+        "required": [
+          "definition_version_id",
+          "node_id",
+          "entered",
+          "waiting",
+          "passed",
+          "blocked",
+          "exited"
+        ],
+        "properties": {
+          "blocked": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "definition_version_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entered": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "exited": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "node_id": {
+            "type": "string"
+          },
+          "passed": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "waiting": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -209207,6 +211579,92 @@
           }
         }
       },
+      "PaginatedResponse_JourneyEnrolment": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "person_id",
+                "person_entity",
+                "status",
+                "entry_source",
+                "entered_at",
+                "is_test"
+              ],
+              "properties": {
+                "end_reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "ended_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "entered_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "entry_source": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "is_test": {
+                  "type": "boolean"
+                },
+                "person_entity": {
+                  "type": "string"
+                },
+                "person_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`active`, `completed`, `exited` or `removed`."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_KindView": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -210178,6 +212636,131 @@
                 },
                 "title_en": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_MarketingListMember": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "person_id",
+                "person_entity",
+                "source",
+                "added_at"
+              ],
+              "properties": {
+                "added_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "person_entity": {
+                  "type": "string",
+                  "description": "The person's entity (`contact`, `lead`, ...)."
+                },
+                "person_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "source": {
+                  "type": "string",
+                  "description": "`segment`, `manual`, `form`, `flow` or `import`."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_MarketingListUsage": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "kind",
+                "id"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "type": "string",
+                  "description": "`email_send`, `sms_send`, `nurture_program` or `journey`."
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The email subject, programme or journey name; none for an SMS send."
+                },
+                "status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 }
               }
             }
@@ -213378,6 +215961,89 @@
                 },
                 "passed": {
                   "type": "boolean"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_PersonRun": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One of a person's runs of a journey.",
+              "required": [
+                "enrolment_id",
+                "status",
+                "entered_at",
+                "steps",
+                "blocks"
+              ],
+              "properties": {
+                "blocks": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PathBlock"
+                  }
+                },
+                "end_reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "ended_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "enrolment_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "entered_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "steps": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PathStep"
+                  }
                 }
               }
             }
@@ -219242,6 +221908,82 @@
           }
         }
       },
+      "PaginatedResponse_StatusSubscriber": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One subscriber, as staff see it.",
+              "required": [
+                "id",
+                "channel",
+                "address",
+                "components",
+                "created_at"
+              ],
+              "properties": {
+                "address": {
+                  "type": "string"
+                },
+                "channel": {
+                  "type": "string",
+                  "description": "`email` or `webhook`."
+                },
+                "components": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "The component keys followed; empty for all."
+                },
+                "confirmed_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_String": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -222400,6 +225142,60 @@
           }
         }
       },
+      "PartnerMember": {
+        "type": "object",
+        "description": "One member of the caller's partner on this portal.",
+        "required": [
+          "id",
+          "name",
+          "status"
+        ],
+        "properties": {
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The member's partner role; none when they hold none."
+          },
+          "status": {
+            "type": "string",
+            "description": "`invited`, `active` or `disabled`."
+          }
+        }
+      },
+      "PartnerMemberInvite": {
+        "type": "object",
+        "description": "An invitation.",
+        "required": [
+          "contact_id",
+          "role"
+        ],
+        "properties": {
+          "contact_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A contact at the caller's own partner account."
+          },
+          "role": {
+            "type": "string",
+            "description": "`partner_admin`, `partner_sales` or `partner_service`."
+          }
+        }
+      },
       "PasskeyAssertionBody": {
         "type": "object",
         "description": "A passkey assertion: the browser's response to the request options.",
@@ -222587,6 +225383,57 @@
               "object",
               "null"
             ]
+          }
+        }
+      },
+      "PathBlock": {
+        "type": "object",
+        "description": "One block a guard or step recorded.",
+        "required": [
+          "node_id",
+          "reason",
+          "at"
+        ],
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "node_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "PathStep": {
+        "type": "object",
+        "description": "One node a run reached.",
+        "required": [
+          "node_id",
+          "status"
+        ],
+        "properties": {
+          "completed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "node_id": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
           }
         }
       },
@@ -223184,6 +226031,73 @@
           },
           "passed": {
             "type": "boolean"
+          }
+        }
+      },
+      "PersonRef": {
+        "type": "object",
+        "description": "A person to enrol: a contact or a lead.",
+        "required": [
+          "id",
+          "entity"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string",
+            "description": "`contact` or `lead`."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "PersonRun": {
+        "type": "object",
+        "description": "One of a person's runs of a journey.",
+        "required": [
+          "enrolment_id",
+          "status",
+          "entered_at",
+          "steps",
+          "blocks"
+        ],
+        "properties": {
+          "blocks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PathBlock"
+            }
+          },
+          "end_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ended_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "enrolment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entered_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PathStep"
+            }
           }
         }
       },
@@ -242707,6 +245621,48 @@
           }
         }
       },
+      "StatusSubscriber": {
+        "type": "object",
+        "description": "One subscriber, as staff see it.",
+        "required": [
+          "id",
+          "channel",
+          "address",
+          "components",
+          "created_at"
+        ],
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string",
+            "description": "`email` or `webhook`."
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The component keys followed; empty for all."
+          },
+          "confirmed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "StatusToken": {
         "type": "object",
         "description": "A link's token (`?token=`, or the page's form field).",
@@ -243452,6 +246408,33 @@
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "SubscribeBody": {
+        "type": "object",
+        "description": "A subscription request.",
+        "required": [
+          "channel",
+          "address"
+        ],
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string",
+            "description": "`email` or `webhook`."
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "consent": {
+            "type": "boolean",
+            "description": "The subscriber agrees to receive status notices; required."
           }
         }
       },
@@ -249527,6 +252510,14 @@
           }
         }
       },
+      "VersionMode": {
+        "type": "string",
+        "description": "What happens to people already in the journey when a version is published.",
+        "enum": [
+          "finish_on_old",
+          "move_matching"
+        ]
+      },
       "VersionPreview": {
         "type": "object",
         "description": "What switching to a metadata version would change (A22-T4).",
@@ -251790,6 +254781,8 @@
       "description": "فحوص السلامة والجاهزية والإصدار"
     }
   ],
+  "x-api-version": "2026-10",
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -251841,7 +254834,5 @@
         ]
       }
     }
-  },
-  "x-api-version": "2026-10",
-  "x-version-adapters": []
+  }
 }

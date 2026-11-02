@@ -21269,6 +21269,179 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/marketing/journeys/{id}/counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a journey's counts
+         * @description How many people entered, wait at, passed, were blocked at and left at each node, with the
+         *     journey's goal conversion.
+         */
+        get: operations["get_marketing_journey_counts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/journeys/{id}/enrolments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a journey's enrolments
+         * @description The journey's enrolments of one person entity, newest first, only of people the caller may
+         *     read.
+         */
+        get: operations["list_marketing_journey_enrolments"];
+        put?: never;
+        /**
+         * Enrol people in a journey
+         * @description Enrols up to 1,000 contacts or leads the caller may read, through the journey's re-entry rule
+         *     and daily cap. Audited.
+         */
+        post: operations["enrol_marketing_journey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/journeys/{id}/enrolments/{enrolment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Take a person out of a journey
+         * @description Ends the active enrolment as `removed` and cancels its run. Audited.
+         */
+        delete: operations["remove_marketing_journey_enrolment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/journeys/{id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pause a journey
+         * @description A live journey stops: it takes no one new, and its people's runs pause where they are, every
+         *     kind of step included. Audited.
+         */
+        post: operations["pause_marketing_journey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/journeys/{id}/people/{person_id}/path": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a person's path through a journey
+         * @description Each of the person's runs: the nodes in the order they ran, the blocks with their reasons, and
+         *     how the run ended.
+         */
+        get: operations["get_marketing_journey_person_path"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/journeys/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish a journey version
+         * @description Publishes a draft of the journey's workflow with the workflow's own checks, then moves the people
+         *     already in it as `version_mode` says; a draft journey becomes live. Needs the journey's
+         *     publish role when it names one. Audited.
+         */
+        post: operations["publish_marketing_journey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/journeys/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resume a journey
+         * @description A paused journey is live again, and its paused runs go on where they stopped. Audited.
+         */
+        post: operations["resume_marketing_journey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/journeys/{id}/simulate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Simulate a journey
+         * @description Runs the journey's newest published version in memory for each sample person, their record as
+         *     the trigger, and returns every node's trace per person. Waits do not wait; nothing is written,
+         *     sent or requested.
+         */
+        post: operations["simulate_marketing_journey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/marketing/landing/stats": {
         parameters: {
             query?: never;
@@ -21423,7 +21596,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Read a list's members
+         * @description The list's current members the caller may read, newest first.
+         */
+        get: operations["list_marketing_list_members"];
         put?: never;
         /**
          * Add people to a static list.
@@ -21471,6 +21648,27 @@ export interface paths {
          * @description Each removal is a membership event; people not in the list are skipped.
          */
         post: operations["remove_marketing_list_members"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/lists/{id}/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh a marketing list
+         * @description Queues a refresh of the list's members; the list's `last_refreshed_at` moves once it has run.
+         *     A refresh already waiting is not queued twice.
+         */
+        post: operations["refresh_marketing_list"];
         delete?: never;
         options?: never;
         head?: never;
@@ -21533,6 +21731,27 @@ export interface paths {
          *     holding each message until the recipient's quiet hours end.
          */
         post: operations["start_sms_campaign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/lists/{id}/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read what uses a list
+         * @description The email and SMS sends to the list, the nurture programmes whose audience it is, and the
+         *     journeys that take entries from it.
+         */
+        get: operations["get_marketing_list_usage"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -23978,6 +24197,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ops/status-subscribers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Status subscribers
+         * @description AB11-T6: the people and tools that receive status notices, newest first. `ops.incident.publish`.
+         */
+        get: operations["list_ops_status_subscribers"];
+        put?: never;
+        /**
+         * Add a status subscriber
+         * @description AB11-T6: staff add an email address or a webhook, confirmed at once (they vouch for the consent,
+         *     which `consent` must say). `ops.incident.publish`. Audited.
+         */
+        post: operations["create_ops_status_subscriber"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/status-subscribers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a status subscriber
+         * @description AB11-T6: ends a subscription; nothing more is sent to it. `ops.incident.publish`. Audited.
+         */
+        delete: operations["delete_ops_status_subscriber"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ops/status/banner": {
         parameters: {
             query?: never;
@@ -24888,6 +25152,112 @@ export interface paths {
          *     says whether the spend fits, warns or is blocked by the line's setting.
          */
         post: operations["post_project_spend_check"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The public status
+         * @description AB11-T8: public components, public incidents and public maintenance, for anyone and without
+         *     signing in; nothing internal. 404 unless the deployment publishes its status
+         *     (`ops.status.enabled`).
+         */
+        get: operations["get_public_status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/status/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Confirm a status subscription
+         * @description AB11-T6: the link a subscription request sent; it works once. 404 for an unknown or used link, or
+         *     while the status is not published.
+         */
+        get: operations["confirm_public_status_subscription"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/status/feed.rss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public status feed
+         * @description AB11-T6: the public incidents and their updates from the last 30 days as RSS 2.0, newest first.
+         *     404 unless the status is published.
+         */
+        get: operations["get_public_status_feed"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/status/subscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Follow the status
+         * @description AB11-T6: subscribe an email address or a webhook to status notices, with consent; a confirmation
+         *     link is sent to it, and nothing else until it is opened. 404 unless the status is published.
+         */
+        post: operations["subscribe_public_status"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/status/unsubscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Unsubscribe from status notices
+         * @description AB11-T6: the one-click link every notice carries; it ends the subscription, and a second use
+         *     answers 404.
+         */
+        get: operations["unsubscribe_public_status"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -32652,6 +33022,52 @@ export interface paths {
          *     partner. Audited.
          */
         post: operations["portal_partner_lead_reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/partner/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The partner's members
+         * @description F9-T8: the members of the signed-in partner administrator's own partner on this portal.
+         */
+        get: operations["portal_partner_members"];
+        put?: never;
+        /**
+         * Invite a partner member
+         * @description F9-T8: invites a contact at the partner administrator's own account with a partner role; refused
+         *     past the partner's user limit. Audited.
+         */
+        post: operations["portal_partner_invite_member"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/partner/members/{id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deactivate a partner member
+         * @description F9-T8: disables another member of the partner administrator's own partner on this portal; every
+         *     session they hold ends. Audited.
+         */
+        post: operations["portal_partner_deactivate_member"];
         delete?: never;
         options?: never;
         head?: never;
@@ -45558,6 +45974,100 @@ export interface components {
         JoinSession: {
             code: string;
         };
+        /** @description What a pause or resume did. */
+        JourneyControlResult: {
+            /** Format: uuid */
+            journey_id: string;
+            /**
+             * Format: int64
+             * @description Runs paused or resumed.
+             */
+            runs: number;
+            /** @description `paused` or `live`. */
+            status: string;
+        };
+        /** @description A journey's counts and goal conversion. */
+        JourneyCounts: {
+            /**
+             * Format: double
+             * @description `converted / enrolled`, or 0 with none enrolled.
+             */
+            conversion: number;
+            /**
+             * Format: int64
+             * @description Of those, the ones that reached the journey's goal.
+             */
+            converted: number;
+            /** Format: uuid */
+            definition_id: string;
+            /**
+             * Format: int64
+             * @description Enrolments (test ones left out).
+             */
+            enrolled: number;
+            nodes: components["schemas"]["NodeCount"][];
+        };
+        JourneyEnrolment: {
+            end_reason?: string | null;
+            /** Format: date-time */
+            ended_at?: string | null;
+            /** Format: date-time */
+            entered_at: string;
+            entry_source: string;
+            /** Format: uuid */
+            id: string;
+            is_test: boolean;
+            person_entity: string;
+            /** Format: uuid */
+            person_id: string;
+            /** @description `active`, `completed`, `exited` or `removed`. */
+            status: string;
+        };
+        JourneyPublishBody: {
+            /**
+             * Format: uuid
+             * @description The draft version to publish.
+             */
+            version_id: string;
+            /** @description What happens to people already in the journey. */
+            version_mode?: components["schemas"]["VersionMode"];
+        };
+        JourneyPublishResult: {
+            /** Format: uuid */
+            journey_id: string;
+            /**
+             * Format: int64
+             * @description People who finish on the version they started.
+             */
+            kept: number;
+            /**
+             * Format: int64
+             * @description People moved to the new version.
+             */
+            moved: number;
+            /** Format: uuid */
+            version_id: string;
+        };
+        JourneySimulateBody: {
+            /** @description The people to run the journey for, at most 20. */
+            sample_people: components["schemas"]["SimulateRecordRef"][];
+        };
+        /** @description One sample person's simulated run. */
+        JourneySimulatedRun: {
+            entity: string;
+            /** Format: uuid */
+            person_id: string;
+            /** @description `completed`, `would_wait` or `failed`. */
+            status: string;
+            trace: components["schemas"]["SimulateNodeTrace"][];
+        };
+        JourneySimulation: {
+            /** Format: uuid */
+            journey_id: string;
+            runs: components["schemas"]["JourneySimulatedRun"][];
+            /** Format: uuid */
+            version_id: string;
+        };
         JsonRpcError: {
             /** Format: int32 */
             code: number;
@@ -46486,6 +46996,22 @@ export interface components {
             status: components["schemas"]["PlanStatus"];
             version: string;
         };
+        ManualEnrolBody: {
+            /**
+             * @description Test runs: they never count toward the daily cap and a draft journey
+             *     takes them.
+             */
+            is_test?: boolean;
+            /** @description The people, at most 1,000. */
+            people: components["schemas"]["PersonRef"][];
+        };
+        ManualEnrolResult: components["schemas"]["EnrolOutcome"] & {
+            /**
+             * Format: int64
+             * @description People left out because the caller may not read them.
+             */
+            skipped_unreadable: number;
+        };
         /** @description A link to document by hand. */
         ManualLinkBody: {
             /** @description `inbound`, `outbound` or `both` (the default). */
@@ -46586,11 +47112,36 @@ export interface components {
             person_id: string;
             steps: components["schemas"]["ExplainStep"][];
         };
+        MarketingListMember: {
+            /** Format: date-time */
+            added_at: string;
+            /** @description The person's entity (`contact`, `lead`, ...). */
+            person_entity: string;
+            /** Format: uuid */
+            person_id: string;
+            /** @description `segment`, `manual`, `form`, `flow` or `import`. */
+            source: string;
+        };
+        MarketingListRefresh: {
+            /** Format: uuid */
+            list_id: string;
+            /** @description `false` when a refresh of this list was already waiting to run. */
+            queued: boolean;
+        };
         MarketingListSample: {
             /** Format: uuid */
             list_id: string;
             person_ids: string[];
             target_entity: string;
+        };
+        MarketingListUsage: {
+            /** Format: uuid */
+            id: string;
+            /** @description `email_send`, `sms_send`, `nurture_program` or `journey`. */
+            kind: string;
+            /** @description The email subject, programme or journey name; none for an SMS send. */
+            name?: string | null;
+            status?: string | null;
         };
         /** @description What a batch did. */
         MarketingProfileBatchResult: {
@@ -48259,6 +48810,22 @@ export interface components {
             node: components["schemas"]["NodeRef"];
             /** @description A definition that uses a personal attribute. */
             reads_personal: boolean;
+        };
+        /** @description One node's counts. */
+        NodeCount: {
+            /** Format: int64 */
+            blocked: number;
+            /** Format: uuid */
+            definition_version_id: string;
+            /** Format: int64 */
+            entered: number;
+            /** Format: int64 */
+            exited: number;
+            node_id: string;
+            /** Format: int64 */
+            passed: number;
+            /** Format: int64 */
+            waiting: number;
         };
         /** @description One node whose outcome differs between a real run and the draft. */
         NodeDifference: {
@@ -53818,6 +54385,36 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_JourneyEnrolment: {
+            items: {
+                end_reason?: string | null;
+                /** Format: date-time */
+                ended_at?: string | null;
+                /** Format: date-time */
+                entered_at: string;
+                entry_source: string;
+                /** Format: uuid */
+                id: string;
+                is_test: boolean;
+                person_entity: string;
+                /** Format: uuid */
+                person_id: string;
+                /** @description `active`, `completed`, `exited` or `removed`. */
+                status: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_KindView: {
             items: {
                 description: string;
@@ -54183,6 +54780,53 @@ export interface components {
                 starts_at: string;
                 title_ar?: string | null;
                 title_en: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_MarketingListMember: {
+            items: {
+                /** Format: date-time */
+                added_at: string;
+                /** @description The person's entity (`contact`, `lead`, ...). */
+                person_entity: string;
+                /** Format: uuid */
+                person_id: string;
+                /** @description `segment`, `manual`, `form`, `flow` or `import`. */
+                source: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_MarketingListUsage: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                /** @description `email_send`, `sms_send`, `nurture_program` or `journey`. */
+                kind: string;
+                /** @description The email subject, programme or journey name; none for an SMS send. */
+                name?: string | null;
+                status?: string | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -55363,6 +56007,32 @@ export interface components {
                 /** Format: uuid */
                 id: string;
                 passed: boolean;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_PersonRun: {
+            items: {
+                blocks: components["schemas"]["PathBlock"][];
+                end_reason?: string | null;
+                /** Format: date-time */
+                ended_at?: string | null;
+                /** Format: uuid */
+                enrolment_id: string;
+                /** Format: date-time */
+                entered_at: string;
+                status: string;
+                steps: components["schemas"]["PathStep"][];
             }[];
             /** Format: int64 */
             page: number;
@@ -57585,6 +58255,33 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_StatusSubscriber: {
+            items: {
+                address: string;
+                /** @description `email` or `webhook`. */
+                channel: string;
+                /** @description The component keys followed; empty for all. */
+                components: string[];
+                /** Format: date-time */
+                confirmed_at?: string | null;
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                id: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_String: {
             items: string[];
             /** Format: int64 */
@@ -58796,6 +59493,27 @@ export interface components {
             /** @description `offered`, `accepted` or `rejected`. */
             partner_status: string;
         };
+        /** @description One member of the caller's partner on this portal. */
+        PartnerMember: {
+            email?: string | null;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description The member's partner role; none when they hold none. */
+            role?: string | null;
+            /** @description `invited`, `active` or `disabled`. */
+            status: string;
+        };
+        /** @description An invitation. */
+        PartnerMemberInvite: {
+            /**
+             * Format: uuid
+             * @description A contact at the caller's own partner account.
+             */
+            contact_id: string;
+            /** @description `partner_admin`, `partner_sales` or `partner_service`. */
+            role: string;
+        };
         /** @description A passkey assertion: the browser's response to the request options. */
         PasskeyAssertionBody: {
             /** @description `PublicKeyCredential.toJSON()` of `navigator.credentials.get`. */
@@ -58864,6 +59582,22 @@ export interface components {
             op: string;
             path: string;
             value?: Record<string, never> | null;
+        };
+        /** @description One block a guard or step recorded. */
+        PathBlock: {
+            /** Format: date-time */
+            at: string;
+            node_id: string;
+            reason: string;
+        };
+        /** @description One node a run reached. */
+        PathStep: {
+            /** Format: date-time */
+            completed_at?: string | null;
+            node_id: string;
+            /** Format: date-time */
+            started_at?: string | null;
+            status: string;
         };
         PathsRequest: {
             edge_types?: string[] | null;
@@ -59067,6 +59801,26 @@ export interface components {
             /** Format: uuid */
             id: string;
             passed: boolean;
+        };
+        /** @description A person to enrol: a contact or a lead. */
+        PersonRef: {
+            /** @description `contact` or `lead`. */
+            entity: string;
+            /** Format: uuid */
+            id: string;
+        };
+        /** @description One of a person's runs of a journey. */
+        PersonRun: {
+            blocks: components["schemas"]["PathBlock"][];
+            end_reason?: string | null;
+            /** Format: date-time */
+            ended_at?: string | null;
+            /** Format: uuid */
+            enrolment_id: string;
+            /** Format: date-time */
+            entered_at: string;
+            status: string;
+            steps: components["schemas"]["PathStep"][];
         };
         /** @description An attribute labelled personal, financial or health, and what reads it. */
         PersonalDataItem: {
@@ -66702,6 +67456,20 @@ export interface components {
             /** @description `en` (the default) or `ar`: the language of the emails. */
             language?: string | null;
         };
+        /** @description One subscriber, as staff see it. */
+        StatusSubscriber: {
+            address: string;
+            /** @description `email` or `webhook`. */
+            channel: string;
+            /** @description The component keys followed; empty for all. */
+            components: string[];
+            /** Format: date-time */
+            confirmed_at?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+        };
         /** @description A link's token (`?token=`, or the page's form field). */
         StatusToken: {
             /** @description The signed token from the link. */
@@ -66985,6 +67753,15 @@ export interface components {
              */
             row_version: number;
             status: string;
+        };
+        /** @description A subscription request. */
+        SubscribeBody: {
+            address: string;
+            /** @description `email` or `webhook`. */
+            channel: string;
+            components?: string[];
+            /** @description The subscriber agrees to receive status notices; required. */
+            consent?: boolean;
         };
         Subscription: {
             /** Format: uuid */
@@ -69214,6 +69991,11 @@ export interface components {
             /** Format: int64 */
             version: number;
         };
+        /**
+         * @description What happens to people already in the journey when a version is published.
+         * @enum {string}
+         */
+        VersionMode: "finish_on_old" | "move_matching";
         /** @description What switching to a metadata version would change (A22-T4). */
         VersionPreview: {
             /** @description Artefacts it has and the current version does not. */
@@ -132097,6 +132879,549 @@ export interface operations {
             };
         };
     };
+    get_marketing_journey_counts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The journey */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The journey's node counts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JourneyCounts"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_journey.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such journey */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_marketing_journey_enrolments: {
+        parameters: {
+            query?: {
+                /** @description The people's entity: `contact` (default) or `lead`. */
+                person_entity?: string;
+                /** @description One-based: page 1 is the first page. */
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The journey */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of enrolments of people the caller may read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_JourneyEnrolment"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_journey.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such journey */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A person entity other than contact or lead */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    enrol_marketing_journey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The journey */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualEnrolBody"];
+            };
+        };
+        responses: {
+            /** @description Who was enrolled and who was skipped, and why */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualEnrolResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_journey.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such journey */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description More than 1,000 people, or a journey not live for a real enrolment */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Workflow runs cannot start on this node */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    remove_marketing_journey_enrolment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The journey */
+                id: string;
+                /** @description The enrolment */
+                enrolment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The person is out of the journey */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_journey.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such journey, or no active enrolment with that id in it */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    pause_marketing_journey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The journey */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The journey and its runs are paused */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JourneyControlResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_journey.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such journey */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The journey is not live, or another pause or resume is in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_marketing_journey_person_path: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The journey */
+                id: string;
+                /** @description The contact or lead */
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The person's runs, oldest first (one page) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_PersonRun"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_journey.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such journey, or a person the caller may not read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    publish_marketing_journey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The journey */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JourneyPublishBody"];
+            };
+        };
+        responses: {
+            /** @description The version is live and the people are placed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JourneyPublishResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_journey.update or the journey's publish role */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such journey */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a draft of this journey, or another publish in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The graph fails the publish checks */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    resume_marketing_journey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The journey */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The journey is live and its runs go on */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JourneyControlResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_journey.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such journey */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The journey is not paused, or another pause or resume is in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    simulate_marketing_journey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The journey */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JourneySimulateBody"];
+            };
+        };
+        responses: {
+            /** @description Each sample person's simulated run */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JourneySimulation"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_journey.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such journey, no published version, or a person the caller may not read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No sample people, more than 20, or a graph that does not parse */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_marketing_landing_stats: {
         parameters: {
             query: {
@@ -132488,6 +133813,61 @@ export interface operations {
             };
         };
     };
+    list_marketing_list_members: {
+        parameters: {
+            query?: {
+                /** @description One-based: page 1 is the first page. */
+                page?: number;
+                /** @description Rows per page. */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The marketing list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the members the caller may read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_MarketingListMember"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_list.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such list */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     add_marketing_list_members: {
         parameters: {
             query?: never;
@@ -132689,6 +134069,56 @@ export interface operations {
             };
         };
     };
+    refresh_marketing_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The marketing list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The refresh is queued (or already was) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketingListRefresh"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_list.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such list */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_marketing_list_sample: {
         parameters: {
             query?: never;
@@ -132865,6 +134295,56 @@ export interface operations {
             };
             /** @description No body or purpose, or nobody to text */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_marketing_list_usage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The marketing list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every use, at most 100 of each kind (one page) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_MarketingListUsage"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_list.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such list */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -138999,6 +140479,154 @@ export interface operations {
             };
         };
     };
+    list_ops_status_subscribers: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The subscribers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_StatusSubscriber"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.incident.publish */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_ops_status_subscriber: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubscribeBody"];
+            };
+        };
+        responses: {
+            /** @description The subscriber */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusSubscriber"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.incident.publish */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No consent, an unknown or unavailable channel, or a bad address */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_ops_status_subscriber: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The subscriber */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ended */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.incident.publish */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such subscriber */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_ops_status_banner: {
         parameters: {
             query?: never;
@@ -141857,6 +143485,193 @@ export interface operations {
             };
             /** @description No budget line, or not an amount */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_public_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The public status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusSnapshot"];
+                };
+            };
+            /** @description This deployment does not publish its status */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    confirm_public_status_subscription: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Confirmed (an HTML page) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description No such link */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_public_status_feed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description RSS 2.0 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/rss+xml": string;
+                };
+            };
+            /** @description This deployment does not publish its status */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    subscribe_public_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubscribeBody"];
+            };
+        };
+        responses: {
+            /** @description A confirmation link was sent */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description This deployment does not publish its status */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No consent, an unknown or unavailable channel, or a bad address */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    unsubscribe_public_status: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unsubscribed (an HTML page) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description No such subscription */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many requests */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -163664,6 +165479,198 @@ export interface operations {
             };
             /** @description No such portal, or no live offer to the caller's partner */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_partner_members: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The members */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerMember"][];
+                };
+            };
+            /** @description Not signed in to the portal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not the administrator of a partner */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such portal */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_partner_invite_member: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerMemberInvite"];
+            };
+        };
+        responses: {
+            /** @description Invited */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerMember"];
+                };
+            };
+            /** @description Not signed in to the portal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not the administrator of a partner */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such portal, or no such contact at the partner */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The contact already has a portal account */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a partner role, no email address, or the user limit is reached */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Email is not configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_partner_deactivate_member: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+                /** @description The member */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disabled; every session ended */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerMember"];
+                };
+            };
+            /** @description Not signed in to the portal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not the administrator of a partner */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such member of the caller's partner */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An administrator cannot deactivate themselves */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

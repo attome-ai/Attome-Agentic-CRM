@@ -6454,6 +6454,307 @@
         "x-risk": "medium"
       }
     },
+    "/{keyword}/api/v1/partner/members": {
+      "get": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "The partner's members",
+        "description": "F9-T8: the members of the signed-in partner administrator's own partner on this portal.",
+        "operationId": "portal_partner_members",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The members",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PartnerMember"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the administrator of a partner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "Invite a partner member",
+        "description": "F9-T8: invites a contact at the partner administrator's own account with a partner role; refused\npast the partner's user limit. Audited.",
+        "operationId": "portal_partner_invite_member",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartnerMemberInvite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Invited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerMember"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the administrator of a partner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal, or no such contact at the partner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The contact already has a portal account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a partner role, no email address, or the user limit is reached",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Email is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "credential",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/{keyword}/api/v1/partner/members/{id}/deactivate": {
+      "post": {
+        "tags": [
+          "partner"
+        ],
+        "summary": "Deactivate a partner member",
+        "description": "F9-T8: disables another member of the partner administrator's own partner on this portal; every\nsession they hold ends. Audited.",
+        "operationId": "portal_partner_deactivate_member",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The member",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Disabled; every session ended",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerMember"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the administrator of a partner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such member of the caller's partner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An administrator cannot deactivate themselves",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "access",
+              "operation": "account_disabled"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/{keyword}/api/v1/partner/statement": {
       "get": {
         "tags": [
@@ -9310,6 +9611,60 @@
           "partner_status": {
             "type": "string",
             "description": "`offered`, `accepted` or `rejected`."
+          }
+        }
+      },
+      "PartnerMember": {
+        "type": "object",
+        "description": "One member of the caller's partner on this portal.",
+        "required": [
+          "id",
+          "name",
+          "status"
+        ],
+        "properties": {
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The member's partner role; none when they hold none."
+          },
+          "status": {
+            "type": "string",
+            "description": "`invited`, `active` or `disabled`."
+          }
+        }
+      },
+      "PartnerMemberInvite": {
+        "type": "object",
+        "description": "An invitation.",
+        "required": [
+          "contact_id",
+          "role"
+        ],
+        "properties": {
+          "contact_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A contact at the caller's own partner account."
+          },
+          "role": {
+            "type": "string",
+            "description": "`partner_admin`, `partner_sales` or `partner_service`."
           }
         }
       },

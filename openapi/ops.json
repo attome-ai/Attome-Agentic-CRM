@@ -2752,6 +2752,248 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/ops/status-subscribers": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Status subscribers",
+        "description": "AB11-T6: the people and tools that receive status notices, newest first. `ops.incident.publish`.",
+        "operationId": "list_ops_status_subscribers",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The subscribers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_StatusSubscriber"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.incident.publish",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Add a status subscriber",
+        "description": "AB11-T6: staff add an email address or a webhook, confirmed at once (they vouch for the consent,\nwhich `consent` must say). `ops.incident.publish`. Audited.",
+        "operationId": "create_ops_status_subscriber",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscribeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The subscriber",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusSubscriber"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.incident.publish",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No consent, an unknown or unavailable channel, or a bad address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/ops/status-subscribers/{id}": {
+      "delete": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Remove a status subscriber",
+        "description": "AB11-T6: ends a subscription; nothing more is sent to it. `ops.incident.publish`. Audited.",
+        "operationId": "delete_ops_status_subscriber",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The subscriber",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Ended"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.incident.publish",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such subscriber",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "soft_delete"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/api/v1/ops/status/banner": {
       "get": {
         "tags": [
@@ -3087,6 +3329,283 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/public/status": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "The public status",
+        "description": "AB11-T8: public components, public incidents and public maintenance, for anyone and without\nsigning in; nothing internal. 404 unless the deployment publishes its status\n(`ops.status.enabled`).",
+        "operationId": "get_public_status",
+        "responses": {
+          "200": {
+            "description": "The public status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusSnapshot"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "This deployment does not publish its status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/public/status/confirm": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Confirm a status subscription",
+        "description": "AB11-T6: the link a subscription request sent; it works once. 404 for an unknown or used link, or\nwhile the status is not published.",
+        "operationId": "confirm_public_status_subscription",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Confirmed (an HTML page)",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/public/status/feed.rss": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Public status feed",
+        "description": "AB11-T6: the public incidents and their updates from the last 30 days as RSS 2.0, newest first.\n404 unless the status is published.",
+        "operationId": "get_public_status_feed",
+        "responses": {
+          "200": {
+            "description": "RSS 2.0",
+            "content": {
+              "application/rss+xml": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "This deployment does not publish its status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/public/status/subscribe": {
+      "post": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Follow the status",
+        "description": "AB11-T6: subscribe an email address or a webhook to status notices, with consent; a confirmation\nlink is sent to it, and nothing else until it is opened. 404 unless the status is published.",
+        "operationId": "subscribe_public_status",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscribeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "A confirmation link was sent"
+          },
+          "404": {
+            "description": "This deployment does not publish its status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No consent, an unknown or unavailable channel, or a bad address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ops",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/public/status/unsubscribe": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Unsubscribe from status notices",
+        "description": "AB11-T6: the one-click link every notice carries; it ends the subscription, and a second use\nanswers 404.",
+        "operationId": "unsubscribe_public_status",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unsubscribed (an HTML page)",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such subscription",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "public",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     }
   },
@@ -5201,6 +5720,82 @@
           }
         }
       },
+      "PaginatedResponse_StatusSubscriber": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One subscriber, as staff see it.",
+              "required": [
+                "id",
+                "channel",
+                "address",
+                "components",
+                "created_at"
+              ],
+              "properties": {
+                "address": {
+                  "type": "string"
+                },
+                "channel": {
+                  "type": "string",
+                  "description": "`email` or `webhook`."
+                },
+                "components": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "The component keys followed; empty for all."
+                },
+                "confirmed_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_Upgrade": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -5578,6 +6173,75 @@
             "items": {
               "$ref": "#/components/schemas/MaintenanceSummary"
             }
+          }
+        }
+      },
+      "StatusSubscriber": {
+        "type": "object",
+        "description": "One subscriber, as staff see it.",
+        "required": [
+          "id",
+          "channel",
+          "address",
+          "components",
+          "created_at"
+        ],
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string",
+            "description": "`email` or `webhook`."
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The component keys followed; empty for all."
+          },
+          "confirmed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "SubscribeBody": {
+        "type": "object",
+        "description": "A subscription request.",
+        "required": [
+          "channel",
+          "address"
+        ],
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string",
+            "description": "`email` or `webhook`."
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "consent": {
+            "type": "boolean",
+            "description": "The subscriber agrees to receive status notices; required."
           }
         }
       },

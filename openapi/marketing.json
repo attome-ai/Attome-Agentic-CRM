@@ -1523,6 +1523,495 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/marketing/journeys/{id}/counts": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Read a journey's counts",
+        "description": "How many people entered, wait at, passed, were blocked at and left at each node, with the\njourney's goal conversion.",
+        "operationId": "get_marketing_journey_counts",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The journey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The journey's node counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JourneyCounts"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_journey.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such journey",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/marketing/journeys/{id}/enrolments": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "List a journey's enrolments",
+        "description": "The journey's enrolments of one person entity, newest first, only of people the caller may\nread.",
+        "operationId": "list_marketing_journey_enrolments",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The journey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "person_entity",
+            "in": "query",
+            "description": "The people's entity: `contact` (default) or `lead`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based: page 1 is the first page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of enrolments of people the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_JourneyEnrolment"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_journey.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such journey",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A person entity other than contact or lead",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Enrol people in a journey",
+        "description": "Enrols up to 1,000 contacts or leads the caller may read, through the journey's re-entry rule\nand daily cap. Audited.",
+        "operationId": "enrol_marketing_journey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The journey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualEnrolBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Who was enrolled and who was skipped, and why",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualEnrolResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_journey.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such journey",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "More than 1,000 people, or a journey not live for a real enrolment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Workflow runs cannot start on this node",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/journeys/{id}/enrolments/{enrolment_id}": {
+      "delete": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Take a person out of a journey",
+        "description": "Ends the active enrolment as `removed` and cancels its run. Audited.",
+        "operationId": "remove_marketing_journey_enrolment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The journey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "enrolment_id",
+            "in": "path",
+            "description": "The enrolment",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The person is out of the journey"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_journey.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such journey, or no active enrolment with that id in it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/marketing/journeys/{id}/people/{person_id}/path": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Read a person's path through a journey",
+        "description": "Each of the person's runs: the nodes in the order they ran, the blocks with their reasons, and\nhow the run ended.",
+        "operationId": "get_marketing_journey_person_path",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The journey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "person_id",
+            "in": "path",
+            "description": "The contact or lead",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The person's runs, oldest first (one page)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PersonRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_journey.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such journey, or a person the caller may not read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/marketing/landing/stats": {
       "get": {
         "tags": [
@@ -2204,6 +2693,103 @@
       }
     },
     "/api/v1/marketing/lists/{id}/members": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Read a list's members",
+        "description": "The list's current members the caller may read, newest first.",
+        "operationId": "list_marketing_list_members",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The marketing list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based: page 1 is the first page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of the members the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_MarketingListMember"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
       "post": {
         "tags": [
           "marketing"
@@ -2546,6 +3132,93 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/marketing/lists/{id}/refresh": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Refresh a marketing list",
+        "description": "Queues a refresh of the list's members; the list's `last_refreshed_at` moves once it has run.\nA refresh already waiting is not queued twice.",
+        "operationId": "refresh_marketing_list",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The marketing list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "The refresh is queued (or already was)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketingListRefresh"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/marketing/lists/{id}/sample": {
       "get": {
         "tags": [
@@ -2842,6 +3515,84 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/lists/{id}/usage": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Read what uses a list",
+        "description": "The email and SMS sends to the list, the nurture programmes whose audience it is, and the\njourneys that take entries from it.",
+        "operationId": "get_marketing_list_usage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The marketing list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every use, at most 100 of each kind (one page)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_MarketingListUsage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/api/v1/marketing/o/{token}": {
@@ -3972,6 +4723,34 @@
           }
         }
       },
+      "EnrolOutcome": {
+        "type": "object",
+        "description": "What an enrolment did.",
+        "required": [
+          "enrolled",
+          "skipped_active",
+          "skipped_missing"
+        ],
+        "properties": {
+          "enrolled": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "skipped_active": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Already active in this sequence.",
+            "minimum": 0
+          },
+          "skipped_missing": {
+            "type": "integer",
+            "format": "int64",
+            "description": "No such live contact.",
+            "minimum": 0
+          }
+        }
+      },
       "ErrorDetails": {
         "oneOf": [
           {
@@ -4352,6 +5131,44 @@
           }
         }
       },
+      "JourneyCounts": {
+        "type": "object",
+        "description": "A journey's counts and goal conversion.",
+        "required": [
+          "definition_id",
+          "nodes",
+          "enrolled",
+          "converted",
+          "conversion"
+        ],
+        "properties": {
+          "conversion": {
+            "type": "number",
+            "format": "double",
+            "description": "`converted / enrolled`, or 0 with none enrolled."
+          },
+          "converted": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Of those, the ones that reached the journey's goal."
+          },
+          "definition_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "enrolled": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Enrolments (test ones left out)."
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NodeCount"
+            }
+          }
+        }
+      },
       "Keep": {
         "type": "string",
         "description": "How a conflict is settled.",
@@ -4486,6 +5303,46 @@
           }
         }
       },
+      "ManualEnrolBody": {
+        "type": "object",
+        "required": [
+          "people"
+        ],
+        "properties": {
+          "is_test": {
+            "type": "boolean",
+            "description": "Test runs: they never count toward the daily cap and a draft journey\ntakes them."
+          },
+          "people": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            },
+            "description": "The people, at most 1,000."
+          }
+        }
+      },
+      "ManualEnrolResult": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/EnrolOutcome"
+          },
+          {
+            "type": "object",
+            "required": [
+              "skipped_unreadable"
+            ],
+            "properties": {
+              "skipped_unreadable": {
+                "type": "integer",
+                "format": "int64",
+                "description": "People left out because the caller may not read them.",
+                "minimum": 0
+              }
+            }
+          }
+        ]
+      },
       "MarketingCancelled": {
         "type": "object",
         "required": [
@@ -4596,6 +5453,23 @@
             "items": {
               "$ref": "#/components/schemas/ExplainStep"
             }
+          }
+        }
+      },
+      "MarketingListRefresh": {
+        "type": "object",
+        "required": [
+          "list_id",
+          "queued"
+        ],
+        "properties": {
+          "list_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "queued": {
+            "type": "boolean",
+            "description": "`false` when a refresh of this list was already waiting to run."
           }
         }
       },
@@ -4761,6 +5635,48 @@
               "format": "uuid"
             },
             "description": "The people (records of the list's target entity), at most 1,000."
+          }
+        }
+      },
+      "NodeCount": {
+        "type": "object",
+        "description": "One node's counts.",
+        "required": [
+          "definition_version_id",
+          "node_id",
+          "entered",
+          "waiting",
+          "passed",
+          "blocked",
+          "exited"
+        ],
+        "properties": {
+          "blocked": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "definition_version_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entered": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "exited": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "node_id": {
+            "type": "string"
+          },
+          "passed": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "waiting": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -4931,6 +5847,92 @@
           }
         }
       },
+      "PaginatedResponse_JourneyEnrolment": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "person_id",
+                "person_entity",
+                "status",
+                "entry_source",
+                "entered_at",
+                "is_test"
+              ],
+              "properties": {
+                "end_reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "ended_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "entered_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "entry_source": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "is_test": {
+                  "type": "boolean"
+                },
+                "person_entity": {
+                  "type": "string"
+                },
+                "person_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`active`, `completed`, `exited` or `removed`."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_LiveVisitor": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -5026,6 +6028,214 @@
           }
         }
       },
+      "PaginatedResponse_MarketingListMember": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "person_id",
+                "person_entity",
+                "source",
+                "added_at"
+              ],
+              "properties": {
+                "added_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "person_entity": {
+                  "type": "string",
+                  "description": "The person's entity (`contact`, `lead`, ...)."
+                },
+                "person_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "source": {
+                  "type": "string",
+                  "description": "`segment`, `manual`, `form`, `flow` or `import`."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_MarketingListUsage": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "kind",
+                "id"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "type": "string",
+                  "description": "`email_send`, `sms_send`, `nurture_program` or `journey`."
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The email subject, programme or journey name; none for an SMS send."
+                },
+                "status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_PersonRun": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One of a person's runs of a journey.",
+              "required": [
+                "enrolment_id",
+                "status",
+                "entered_at",
+                "steps",
+                "blocks"
+              ],
+              "properties": {
+                "blocks": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PathBlock"
+                  }
+                },
+                "end_reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "ended_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "enrolment_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "entered_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "steps": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PathStep"
+                  }
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_String": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -5060,6 +6270,75 @@
               "$ref": "#/components/schemas/Warning"
             },
             "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PathBlock": {
+        "type": "object",
+        "description": "One block a guard or step recorded.",
+        "required": [
+          "node_id",
+          "reason",
+          "at"
+        ],
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "node_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "PathStep": {
+        "type": "object",
+        "description": "One node a run reached.",
+        "required": [
+          "node_id",
+          "status"
+        ],
+        "properties": {
+          "completed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "node_id": {
+            "type": "string"
+          },
+          "started_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "PersonRef": {
+        "type": "object",
+        "description": "A person to enrol: a contact or a lead.",
+        "required": [
+          "id",
+          "entity"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string",
+            "description": "`contact` or `lead`."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },

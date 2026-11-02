@@ -14,6 +14,420 @@
   },
   "x-api-version": "2026-10",
   "paths": {
+    "/api/v1/marketing/journeys/{id}/pause": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Pause a journey",
+        "description": "A live journey stops: it takes no one new, and its people's runs pause where they are, every\nkind of step included. Audited.",
+        "operationId": "pause_marketing_journey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The journey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The journey and its runs are paused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JourneyControlResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_journey.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such journey",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The journey is not live, or another pause or resume is in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "workflow",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/journeys/{id}/publish": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Publish a journey version",
+        "description": "Publishes a draft of the journey's workflow with the workflow's own checks, then moves the people\nalready in it as `version_mode` says; a draft journey becomes live. Needs the journey's\npublish role when it names one. Audited.",
+        "operationId": "publish_marketing_journey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The journey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JourneyPublishBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The version is live and the people are placed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JourneyPublishResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_journey.update or the journey's publish role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such journey",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not a draft of this journey, or another publish in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The graph fails the publish checks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "activated"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "workflow",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/journeys/{id}/resume": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Resume a journey",
+        "description": "A paused journey is live again, and its paused runs go on where they stopped. Audited.",
+        "operationId": "resume_marketing_journey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The journey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The journey is live and its runs go on",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JourneyControlResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_journey.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such journey",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The journey is not paused, or another pause or resume is in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "workflow",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/journeys/{id}/simulate": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Simulate a journey",
+        "description": "Runs the journey's newest published version in memory for each sample person, their record as\nthe trigger, and returns every node's trace per person. Waits do not wait; nothing is written,\nsent or requested.",
+        "operationId": "simulate_marketing_journey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The journey",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JourneySimulateBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Each sample person's simulated run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JourneySimulation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_journey.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such journey, no published version, or a person the caller may not read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No sample people, more than 20, or a graph that does not parse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "D-431: the journey's graph runs in memory through the workflow simulation, which may never write, send or request anything under any node type.",
+          "reason": "dry_run",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "workflow",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/workflow/definitions": {
       "get": {
         "tags": [
@@ -3257,6 +3671,147 @@
           }
         }
       },
+      "JourneyControlResult": {
+        "type": "object",
+        "description": "What a pause or resume did.",
+        "required": [
+          "journey_id",
+          "status",
+          "runs"
+        ],
+        "properties": {
+          "journey_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "runs": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Runs paused or resumed.",
+            "minimum": 0
+          },
+          "status": {
+            "type": "string",
+            "description": "`paused` or `live`."
+          }
+        }
+      },
+      "JourneyPublishBody": {
+        "type": "object",
+        "required": [
+          "version_id"
+        ],
+        "properties": {
+          "version_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The draft version to publish."
+          },
+          "version_mode": {
+            "$ref": "#/components/schemas/VersionMode",
+            "description": "What happens to people already in the journey."
+          }
+        }
+      },
+      "JourneyPublishResult": {
+        "type": "object",
+        "required": [
+          "journey_id",
+          "version_id",
+          "moved",
+          "kept"
+        ],
+        "properties": {
+          "journey_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kept": {
+            "type": "integer",
+            "format": "int64",
+            "description": "People who finish on the version they started.",
+            "minimum": 0
+          },
+          "moved": {
+            "type": "integer",
+            "format": "int64",
+            "description": "People moved to the new version.",
+            "minimum": 0
+          },
+          "version_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "JourneySimulateBody": {
+        "type": "object",
+        "required": [
+          "sample_people"
+        ],
+        "properties": {
+          "sample_people": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SimulateRecordRef"
+            },
+            "description": "The people to run the journey for, at most 20."
+          }
+        }
+      },
+      "JourneySimulatedRun": {
+        "type": "object",
+        "description": "One sample person's simulated run.",
+        "required": [
+          "entity",
+          "person_id",
+          "status",
+          "trace"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "person_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "`completed`, `would_wait` or `failed`."
+          },
+          "trace": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SimulateNodeTrace"
+            }
+          }
+        }
+      },
+      "JourneySimulation": {
+        "type": "object",
+        "required": [
+          "journey_id",
+          "version_id",
+          "runs"
+        ],
+        "properties": {
+          "journey_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "runs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JourneySimulatedRun"
+            }
+          },
+          "version_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "LockedField": {
         "type": "object",
         "description": "One field a business rule locks for the writer (D-789 §3.5): `effect` is\n`hidden` or `disabled`. No value is ever echoed.",
@@ -4064,6 +4619,14 @@
             "format": "int32"
           }
         }
+      },
+      "VersionMode": {
+        "type": "string",
+        "description": "What happens to people already in the journey when a version is published.",
+        "enum": [
+          "finish_on_old",
+          "move_matching"
+        ]
       },
       "VersionSummary": {
         "type": "object",
