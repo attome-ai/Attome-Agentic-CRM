@@ -110,23 +110,8 @@ async fn set_user_active(
     // A31-T4: a leaver's records move per each entity's leaver rule, in a
     // job queued with the disable. A deployment that has not registered the
     // job (a test binary) disables without it, and says so.
-    if !active && !crate::ownership::leaver_rules().is_empty() {
-        match attome_core::jobs::JOB_TYPES.job(
-            crate::ownership::LEAVER_JOB,
-            &crate::ownership::LeaverPayload {
-                user_id: target_user_id,
-                actor_id: ctx.user_id,
-            },
-        ) {
-            Ok(job) => {
-                attome_jobs::enqueue_in_tx(&mut tx, attome_core::jobs::EngineJob::Registered(job))
-                    .await
-                    .map_err(AppError::internal)?;
-            }
-            Err(error) => {
-                tracing::warn!(%error, user = %target_user_id, "leaver reassignment not queued");
-            }
-        }
+    if !active {
+        crate::ownership::queue_leaver(&mut tx, target_user_id, ctx.user_id).await?;
     }
     if !active {
         sqlx::query(

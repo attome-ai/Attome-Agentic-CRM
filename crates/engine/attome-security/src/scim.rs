@@ -789,14 +789,18 @@ async fn write_user(
             (user_id, true, doc.active)
         }
     };
-    if was_active && !doc.active {
-        // As the admin disable: sessions end, API keys go.
+    let deprovisioned = deprovisions(was_active, doc.active);
+    if deprovisioned {
+        // As the admin disable: sessions end, API keys go, and (Q3-T2) the
+        // person's records move by each entity's leaver rule, run as the
+        // administrator who issued the token.
         attome_auth::epoch::bump_in_tx(&mut tx, user_id).await?;
         sqlx::query("UPDATE api_key SET is_active = false WHERE user_ref = $1 AND is_active")
             .bind(user_id)
             .execute(&mut *tx)
             .await
             .map_err(AppError::internal)?;
+        crate::ownership::queue_leaver(&mut tx, user_id, token.created_by).await?;
     }
     let (operation, name) = if created {
         (AuditOperation::Create, "scim.user_created")
@@ -818,7 +822,21 @@ async fn write_user(
     )
     .await?;
     attome_db::tx::commit(tx).await?;
+    if deprovisioned {
+        // Q3-T2: access ends at once, as the admin disable ends it: refresh
+        // tokens revoked and every cached view of the account dropped.
+        attome_auth::refresh::revoke_all_for_user(&state.base.db, user_id).await?;
+        attome_auth::epoch::invalidate_cache(&state.base.redis, user_id).await;
+        state.base.security.invalidate_sync(user_id).await?;
+        attome_auth::epoch::invalidate_cache(&state.base.redis_coordination, user_id).await;
+    }
     Ok((user_id, created))
+}
+
+/// Q3-T2: whether a SCIM write deprovisions the account (an active user
+/// made inactive). Pure.
+pub fn deprovisions(was_active: bool, active: bool) -> bool {
+    was_active && !active
 }
 
 /// SCIM: create a user
@@ -1626,6 +1644,15 @@ pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn scim_deprovision_only_when_an_active_user_is_made_inactive() {
+        assert!(deprovisions(true, false));
+        assert!(!deprovisions(false, false), "already inactive");
+        assert!(!deprovisions(true, true));
+        assert!(!deprovisions(false, true), "a reactivation");
+    }
+
     use super::*;
 
     /// Entra ID's create (from its SCIM validator).

@@ -130,6 +130,34 @@ pub struct LeaverPayload {
     pub actor_id: Uuid,
 }
 
+/// Queues the leaver job for `user` in `tx`, run as `actor`, when any
+/// entity has a leaver rule. A binary that has not registered the job type
+/// (a test binary) queues nothing and logs it.
+pub async fn queue_leaver(
+    tx: &mut attome_db::Tx<'_>,
+    user: Uuid,
+    actor: Uuid,
+) -> Result<(), attome_types::AppError> {
+    if leaver_rules().is_empty() {
+        return Ok(());
+    }
+    match attome_core::jobs::JOB_TYPES.job(
+        LEAVER_JOB,
+        &LeaverPayload {
+            user_id: user,
+            actor_id: actor,
+        },
+    ) {
+        Ok(job) => attome_jobs::enqueue_in_tx(tx, attome_core::jobs::EngineJob::Registered(job))
+            .await
+            .map_err(attome_types::AppError::internal),
+        Err(error) => {
+            tracing::warn!(%error, %user, "leaver reassignment not queued");
+            Ok(())
+        }
+    }
+}
+
 /// Whether any entity is unit-owned, so a person's own units must be
 /// resolved (the resolver reads this).
 pub fn any_unit() -> bool {
