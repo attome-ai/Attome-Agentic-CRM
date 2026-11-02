@@ -11056,6 +11056,94 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/calendars/{id}/expanded": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A calendar's expanded definition",
+        "description": "The calendar with its inherited layers merged and its holiday rules resolved, from a year ago to two years ahead, for the browser to do business-time math the same way the server does. Administrators of automation only.",
+        "operationId": "get_calendar_expanded",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The calendar",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The expanded calendar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpandedCalendar"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such calendar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The calendar cannot be resolved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/calendars/{id}/holiday-rules": {
       "post": {
         "tags": [
@@ -183839,6 +183927,65 @@
           "stage_change"
         ]
       },
+      "ExpandedCalendar": {
+        "type": "object",
+        "description": "A calendar as the browser's business-time math reads it (Z12-T11).",
+        "required": [
+          "timezone",
+          "working_days",
+          "hours",
+          "holidays",
+          "exceptions"
+        ],
+        "properties": {
+          "exceptions": {
+            "type": "object",
+            "description": "A date's own ranges, in the same window; none closes the date.",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/ExpandedRange"
+              }
+            },
+            "propertyNames": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          "holidays": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "From a year ago to two years ahead."
+          },
+          "hours": {
+            "type": "object",
+            "description": "The working ranges of each working day, by the same codes.",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/ExpandedRange"
+              }
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "timezone": {
+            "type": "string",
+            "description": "The IANA time zone."
+          },
+          "working_days": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "`mon` to `sun`."
+          }
+        }
+      },
       "ExpandedDay": {
         "type": "object",
         "description": "One day a holiday rule closes, in both calendars.",
@@ -183856,6 +184003,26 @@
               "null"
             ],
             "description": "The Umm al-Qura date, `1447-10-01`; `null` outside its range."
+          }
+        }
+      },
+      "ExpandedRange": {
+        "type": "object",
+        "description": "One working range, in minutes from local midnight.",
+        "required": [
+          "start_minute",
+          "end_minute"
+        ],
+        "properties": {
+          "end_minute": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "start_minute": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
           }
         }
       },
@@ -255833,6 +256000,8 @@
       "description": "فحوص السلامة والجاهزية والإصدار"
     }
   ],
+  "x-api-version": "2026-10",
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -255884,7 +256053,5 @@
         ]
       }
     }
-  },
-  "x-api-version": "2026-10",
-  "x-version-adapters": []
+  }
 }

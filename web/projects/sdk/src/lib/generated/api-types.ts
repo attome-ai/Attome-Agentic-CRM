@@ -2281,6 +2281,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/calendars/{id}/expanded": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A calendar's expanded definition
+         * @description The calendar with its inherited layers merged and its holiday rules resolved, from a year ago to two years ahead, for the browser to do business-time math the same way the server does. Administrators of automation only.
+         */
+        get: operations["get_calendar_expanded"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/calendars/{id}/holiday-rules": {
         parameters: {
             query?: never;
@@ -43640,12 +43660,36 @@ export interface components {
          * @enum {string}
          */
         ExitOn: "reply" | "meeting" | "stage_change";
+        /** @description A calendar as the browser's business-time math reads it (Z12-T11). */
+        ExpandedCalendar: {
+            /** @description A date's own ranges, in the same window; none closes the date. */
+            exceptions: {
+                [key: string]: components["schemas"]["ExpandedRange"][];
+            };
+            /** @description From a year ago to two years ahead. */
+            holidays: string[];
+            /** @description The working ranges of each working day, by the same codes. */
+            hours: {
+                [key: string]: components["schemas"]["ExpandedRange"][];
+            };
+            /** @description The IANA time zone. */
+            timezone: string;
+            /** @description `mon` to `sun`. */
+            working_days: string[];
+        };
         /** @description One day a holiday rule closes, in both calendars. */
         ExpandedDay: {
             /** Format: date */
             date: string;
             /** @description The Umm al-Qura date, `1447-10-01`; `null` outside its range. */
             hijri?: string | null;
+        };
+        /** @description One working range, in minutes from local midnight. */
+        ExpandedRange: {
+            /** Format: int32 */
+            end_minute: number;
+            /** Format: int32 */
+            start_minute: number;
         };
         /** @description Z12-T13: a holiday rule and the days it closes in the years asked for. */
         ExpandedRule: {
@@ -77974,6 +78018,65 @@ export interface operations {
             };
             /** @description No active exception has this id in this calendar */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_calendar_expanded: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The calendar */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The expanded calendar */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpandedCalendar"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such calendar */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The calendar cannot be resolved */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
