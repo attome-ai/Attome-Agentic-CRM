@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Revenue contract changes (F11-T6, V2-D1588, migration `0373`): `POST /api/v1/ledger/revrec/changes`
+  previews an amendment, change order or credit note as a separate contract, a prospective change or a
+  cumulative catch-up (IFRS 15 by change kind, overridable), and `.../{id}/apply` or `.../{id}/discard`
+  decide it; recognised and locked lines never change. See `docs/revenue-contract-changes.md`.
 - Call analysis (D22-T5, V2-D1588, migration `0372`): with `callintel.enabled` on, a call's finished
   transcript gets a redacted copy (emails, phones and IBANs masked) and one analysis per transcript version
   in the background: talk patterns and exact-term tracker hits, for calls whose speakers are labelled staff

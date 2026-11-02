@@ -66,6 +66,7 @@
 - [Contracts](contracts.md): the repository, renewal reminders, drafting, the playbook, approval, negotiation and signature.
 - [Procurement](procurement.md): requisitions, orders, receipts, vendor bills, budget checks and scorecards.
 - [Call analysis](call-analysis.md): what is analysed after a recorded call, the redacted copy it reads, speaker roles, and what makes a call skipped.
+- [Revenue contract changes](revenue-contract-changes.md): previewing and applying an amendment, change order or credit note by its IFRS 15 treatment.
 - [Invoicing](invoicing.md): drafts, issue and numbering, notes, the invoice document, statements, ageing and write-offs.
 - [Workforce](workforce.md): planning groups, staffing, schedule builds, self-service, swaps and intraday offers.
 - [Rule language functions](rule-language.md): language versions and the functions V2 adds.

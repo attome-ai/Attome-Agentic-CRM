@@ -6,6 +6,8 @@
 
 /// F11-T4: standalone selling prices and allocation across obligations.
 pub mod allocation;
+/// F11-T6: contract changes, previewed and applied by their IFRS 15 treatment.
+pub mod change;
 /// F11-T3: contracts from orders and subscriptions, and combining them.
 pub mod contract;
 /// F11-T9: loyalty points deferred as a material right.
