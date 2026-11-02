@@ -759,6 +759,136 @@ async fn end_other_sessions(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// One outside identity linked to the signed-in portal account (G12-T2).
+#[derive(Debug, Serialize, ToSchema, sqlx::FromRow)]
+pub struct PortalIdentityItem {
+    pub id: Uuid,
+    /// The portal's identity provider key (an OIDC broker, Nafath, UAE Pass).
+    pub provider_key: String,
+    pub issuer: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+/// List my linked identities
+///
+/// G12-T2: the outside identities linked to the signed-in account in this
+/// portal. A link belongs to one portal's membership; another portal's
+/// account is never shown or touched.
+#[utoipa::path(
+    get,
+    path = "/{keyword}/api/v1/me/identities",
+    operation_id = "portal_list_identities",
+    tag = "auth",
+    params(("keyword" = String, Path, description = "Web portal keyword")),
+    responses(
+        (status = 200, description = "The linked identities", body = [PortalIdentityItem]),
+        (status = 401, description = "No valid portal session", body = ErrorResponse),
+        (status = 404, description = "No such portal", body = ErrorResponse),
+    ),
+)]
+async fn list_identities(
+    State(state): State<EngineState>,
+    Path(keyword): Path<String>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<PortalIdentityItem>>, AppError> {
+    let portal = portal_for(&state, &keyword).await?;
+    let principal = authenticate(&state, &portal, &headers, true).await?;
+    let items: Vec<PortalIdentityItem> = sqlx::query_as(
+        "SELECT id, provider_key, issuer, created_at FROM webportal_identity \
+          WHERE webportal_id = $1 AND webportal_user_id = $2 ORDER BY created_at, id",
+    )
+    .bind(principal.webportal_id)
+    .bind(principal.user_id)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(sqlx_err)?;
+    Ok(Json(items))
+}
+
+/// Whether unlinking one identity would leave the account no way to sign
+/// in: no password and no other linked identity. Pure.
+pub fn unlink_strands(has_password: bool, linked: usize) -> bool {
+    !has_password && linked <= 1
+}
+
+/// Unlink one of my identities
+///
+/// G12-T2: removes the link, in this portal only. Refused with 409 when it
+/// is the account's last way to sign in (no password, no other link).
+#[utoipa::path(
+    delete,
+    path = "/{keyword}/api/v1/me/identities/{id}",
+    operation_id = "portal_unlink_identity",
+    tag = "auth",
+    params(
+        ("keyword" = String, Path, description = "Web portal keyword"),
+        ("id" = Uuid, Path, description = "Identity link id from the list"),
+    ),
+    extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Credential, AuditOperation::Revoke)])))),
+    responses(
+        (status = 204, description = "Unlinked"),
+        (status = 401, description = "No valid portal session", body = ErrorResponse),
+        (status = 404, description = "No such portal, or no such link of yours", body = ErrorResponse),
+        (status = 409, description = "It is the last way to sign in", body = ErrorResponse),
+    ),
+)]
+async fn unlink_identity(
+    State(state): State<EngineState>,
+    Path((keyword, id)): Path<(String, Uuid)>,
+    headers: HeaderMap,
+) -> Result<StatusCode, AppError> {
+    let portal = portal_for(&state, &keyword).await?;
+    let principal = authenticate(&state, &portal, &headers, true).await?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    // The account's links, locked, so two unlinks cannot both pass the
+    // last-way check.
+    let linked: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM webportal_identity \
+          WHERE webportal_id = $1 AND webportal_user_id = $2 FOR UPDATE",
+    )
+    .bind(principal.webportal_id)
+    .bind(principal.user_id)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(sqlx_err)?;
+    if !linked.contains(&id) {
+        return Err(AppError::NotFound);
+    }
+    let has_password: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM webportal_credential \
+                         WHERE webportal_user_id = $1 AND password_hash IS NOT NULL)",
+    )
+    .bind(principal.user_id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(sqlx_err)?;
+    if unlink_strands(has_password, linked.len()) {
+        return Err(AppError::Conflict(
+            "this is the account's last way to sign in; set a password first",
+        ));
+    }
+    sqlx::query("DELETE FROM webportal_identity WHERE id = $1 AND webportal_user_id = $2")
+        .bind(id)
+        .bind(principal.user_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(sqlx_err)?;
+    write(
+        &state,
+        &mut tx,
+        event(
+            MandatoryCategory::Credential,
+            AuditOperation::Revoke,
+            Some(principal.user_id),
+        )
+        .named("portal identity unlinked by its user")
+        .outcome(AuditOutcome::Succeeded),
+    )
+    .await?;
+    tx.commit().await.map_err(sqlx_err)?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 /// Ask for my portal account to be erased
 ///
 /// Sends the request to staff, who erase or reject it; an open request is returned rather than a
@@ -1275,6 +1405,11 @@ pub(super) fn routes() -> Router<EngineState> {
         )
         .route("/{keyword}/api/v1/me/password", post(change_password))
         .route("/{keyword}/api/v1/me/sessions", get(list_sessions))
+        .route("/{keyword}/api/v1/me/identities", get(list_identities))
+        .route(
+            "/{keyword}/api/v1/me/identities/{id}",
+            delete(unlink_identity),
+        )
         .route("/{keyword}/api/v1/me/sessions/{id}", delete(end_session))
         .route(
             "/{keyword}/api/v1/me/sessions/end-others",
@@ -1297,6 +1432,8 @@ pub(super) fn routes() -> Router<EngineState> {
         change_password,
         list_sessions,
         end_session,
+        list_identities,
+        unlink_identity,
         end_other_sessions,
         erasure_request,
         privacy_request,
@@ -1314,3 +1451,15 @@ pub(super) fn routes() -> Router<EngineState> {
     ))
 )]
 pub(super) struct AccountApiDoc;
+
+#[cfg(test)]
+mod identity_tests {
+    use super::unlink_strands;
+
+    #[test]
+    fn unlinking_the_last_way_to_sign_in_is_refused() {
+        assert!(unlink_strands(false, 1), "no password, one link");
+        assert!(!unlink_strands(false, 2), "another link remains");
+        assert!(!unlink_strands(true, 1), "the password remains");
+    }
+}
