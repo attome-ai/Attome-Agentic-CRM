@@ -1675,6 +1675,8 @@ export const xrmEn = {
     dropzone: 'Drop files here or click to browse',
   },
   fieldInput: {
+    // B17-T7 — the call and WhatsApp buttons of a phone field.
+    phone: { call: 'Call this number', whatsapp: 'Message on WhatsApp' },
     currency: 'Currency', baseAmount: 'In the base currency: {amount}',
     scan: {
       button: 'Scan a code into {field}',

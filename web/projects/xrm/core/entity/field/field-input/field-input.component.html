@@ -41,6 +41,17 @@
              [attr.aria-invalid]="showRequiredError()"
              [formControlName]="field().name"
              [placeholder]="textPlaceholder()" />
+      @if (textType() === 'tel' && ctrl.value) {
+        <!-- B17-T7: call or message the number, on a phone through its own apps. -->
+        <button type="button" class="scan-btn" data-testid="phone-call"
+                [attr.aria-label]="'fieldInput.phone.call' | translate" (click)="callPhone()">
+          <i class="las la-phone" aria-hidden="true"></i>
+        </button>
+        <button type="button" class="scan-btn" data-testid="phone-whatsapp"
+                [attr.aria-label]="'fieldInput.phone.whatsapp' | translate" (click)="whatsAppPhone()">
+          <i class="las la-comment-dots" aria-hidden="true"></i>
+        </button>
+      }
       @if (canScan()) {
         <button type="button" class="scan-btn" data-testid="scan-button"
                 [attr.aria-label]="'fieldInput.scan.button' | translate: { field: field().display_name || field().name }"

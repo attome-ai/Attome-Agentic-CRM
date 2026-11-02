@@ -1636,6 +1636,8 @@ export const xrmAr = {
     dropzone: 'أفلت الملفات هنا أو انقر للتصفح',
   },
   fieldInput: {
+    // B17-T7 — the call and WhatsApp buttons of a phone field.
+    phone: { call: 'اتصل بهذا الرقم', whatsapp: 'راسل عبر واتساب' },
     currency: 'العملة', baseAmount: 'بالعملة الأساسية: {amount}',
     scan: {
       button: 'امسح رمزًا في {field}',

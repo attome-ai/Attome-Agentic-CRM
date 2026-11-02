@@ -7,6 +7,7 @@ import {
   FormGroupDirective, ReactiveFormsModule,
 } from '@angular/forms';
 import { Subscription } from 'rxjs';
+import { NativeService } from '@attome/base/native';
 import { ScanService } from '@attome/base/scan';
 
 import {
@@ -88,6 +89,7 @@ export class FieldInputComponent implements OnInit, OnDestroy {
   private readonly lang     = inject(LangService);
   private readonly prefs    = inject(UserPreferencesService);
   private readonly scanner  = inject(ScanService);
+  private readonly native   = inject(NativeService);
 
   // ── Scanning (B16-T4) ─────────────────────────────────────────────────────
   /** The field's `options.scan`, when it has one. */
@@ -385,6 +387,16 @@ export class FieldInputComponent implements OnInit, OnDestroy {
   }
 
   // ── Form control access ───────────────────────────────────────────────────
+  /** B17-T7: dials the field's number. */
+  callPhone(): void {
+    this.native.openTel(String(this.ctrl.value ?? ''));
+  }
+
+  /** B17-T7: opens a WhatsApp chat with the field's number. */
+  whatsAppPhone(): void {
+    this.native.openWhatsApp(String(this.ctrl.value ?? ''));
+  }
+
   get ctrl(): AbstractControl {
     return (this.cc.control as FormGroup).get(this.field().name)!;
   }
