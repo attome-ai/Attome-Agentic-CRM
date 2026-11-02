@@ -48,7 +48,7 @@ function sampleOf(type: string, label: string): unknown {
   styles: [`
     .preview { display: block; margin-top: 16px; }
     h3 { margin: 0 0 8px; font-size: 14px; }
-    iframe { width: 100%; min-height: 240px; border: 1px solid var(--color-border); background: #fff; }
+    iframe { width: 100%; min-height: 240px; border: 1px solid var(--color-border); /* an email renders on white in every theme */ background: var(--color-mail-canvas, #fff); }
     .problem { color: var(--color-danger); white-space: pre-wrap; }
   `],
 })
