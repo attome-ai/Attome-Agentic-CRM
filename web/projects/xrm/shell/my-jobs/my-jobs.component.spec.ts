@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -28,8 +28,7 @@ describe('MyJobsComponent (M12-T4)', () => {
     TestBed.configureTestingModule({
       imports: [MyJobsComponent],
       providers: [
-        { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi(api) },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: signal('en-US'), errorText: () => 'error' } },
       ],
     });

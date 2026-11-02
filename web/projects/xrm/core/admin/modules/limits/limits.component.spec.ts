@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { SettingsService } from '@attome/xrm/core/admin/data';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -28,8 +28,7 @@ describe('LimitsComponent (AA9-T8)', () => {
     TestBed.configureTestingModule({
       imports: [LimitsComponent],
       providers: [
-        { provide: ApiService, useValue: { get } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get }) },
         { provide: SettingsService, useValue: { putAdminSetting } },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en') } },
       ],

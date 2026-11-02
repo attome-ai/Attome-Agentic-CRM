@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -26,8 +26,7 @@ describe('ReportBuilderComponent (P1-T1)', () => {
     TestBed.configureTestingModule({
       imports: [ReportBuilderComponent],
       providers: [
-        { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi(api) },
         {
           provide: LangService,
           useValue: {
@@ -119,7 +118,8 @@ describe('ReportBuilderComponent (P1-T1)', () => {
   it('asks prompts as parameters, saves the report and shares it (P1-T3)', () => {
     const { cmp, post } = setUp({ items: [] });
     const put = vi.fn(() => of({ query_id: 'q-1', shares: [] }));
-    (TestBed.inject(ApiService) as unknown as { put: typeof put }).put = put;
+    (TestBed.inject(SdkService) as unknown as { put: (path: string, opts?: { body?: unknown }) => unknown }).put =
+      (path, opts) => put(path, opts?.body);
     cmp.toggleColumn('name');
     cmp.addPrompt();
     cmp.setPrompt(0, { field: 'stage', name: 'stage', value: 'won' });

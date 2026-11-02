@@ -3,12 +3,12 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import { describe, expect, it } from 'vitest';
-import { ApiService } from './api.service';
+import { ChangesetState } from './changeset-state';
 import { ATTOME_CONFIG } from './config';
 import { SdkService } from './sdk.service';
 import type { ApiError } from './types';
 
-function setup(): { sdk: SdkService; http: HttpTestingController; api: ApiService } {
+function setup(): { sdk: SdkService; http: HttpTestingController; changesets: ChangesetState } {
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(),
@@ -19,7 +19,7 @@ function setup(): { sdk: SdkService; http: HttpTestingController; api: ApiServic
   return {
     sdk: TestBed.inject(SdkService),
     http: TestBed.inject(HttpTestingController),
-    api: TestBed.inject(ApiService),
+    changesets: TestBed.inject(ChangesetState),
   };
 }
 
@@ -44,7 +44,7 @@ describe('SdkService', () => {
     http.verify();
   });
 
-  it('raises the same ApiError ApiService does', async () => {
+  it('raises the ApiError shape the app reads', async () => {
     const { sdk, http } = setup();
     const answer = firstValueFrom(sdk.get('/api/v1/thing/2')).catch((e: ApiError) => e);
     await tick();
@@ -59,8 +59,8 @@ describe('SdkService', () => {
   });
 
   it('names the picked changeset on a write, not on a read', async () => {
-    const { sdk, http, api } = setup();
-    api.setChangeset('cs-1');
+    const { sdk, http, changesets } = setup();
+    changesets.set('cs-1');
     const write = firstValueFrom(sdk.post('/api/v1/thing', { body: {} }));
     await tick();
     const post = http.expectOne('http://api.test/api/v1/thing');

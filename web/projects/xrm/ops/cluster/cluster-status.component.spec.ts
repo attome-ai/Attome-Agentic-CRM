@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
+import { SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { AccessService } from '@attome/xrm/core/access/data';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -33,8 +33,7 @@ describe('ClusterStatusComponent (AB2-T11)', () => {
     TestBed.configureTestingModule({
       imports: [ClusterStatusComponent],
       providers: [
-        { provide: ApiService, useValue: { get, post } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get, post }) },
         { provide: AccessService, useValue: { ready: () => of(undefined), hasPrivilege: () => canSwitch } },
         {
           provide: LangService,

@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { AdminService, BusinessRule, BusinessRulesService, EntityMeta } from '@attome/xrm/core/admin/data';
 import {
   BusinessRuleEditorComponent, cleanPolicy, issuePathsFromMessage,
@@ -47,8 +47,7 @@ describe('BusinessRuleEditorComponent (D-789 section 10)', () => {
       providers: [
         { provide: BusinessRulesService, useValue: service },
         // Z11-T14: the expression editor loads the entity's fields and the function list.
-        { provide: ApiService, useValue: { get: () => of({}), post: vi.fn() } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get: () => of({}), post: vi.fn() }) },
         { provide: AdminService, useValue: { getEntity: vi.fn().mockReturnValue(of({ attributes: ATTRIBUTES })) } },
         { provide: LangService, useValue: { translate: (k: string) => k, errorText: () => 'error' } },
       ],

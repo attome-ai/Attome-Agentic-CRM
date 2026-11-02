@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { QueryService } from '@attome/xrm/core/query/data';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -48,8 +48,7 @@ describe('BookingBoardComponent (V4-T1)', () => {
     TestBed.configureTestingModule({
       imports: [BookingBoardComponent],
       providers: [
-        { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi(api) },
         { provide: QueryService, useValue: { execute } },
         { provide: EntityService, useValue: { update, create } },
         { provide: LangService, useValue: { translate: (k: string, p?: Record<string, unknown>) => (p ? `${k}:${JSON.stringify(p)}` : k), isRtl: () => false, errorText: () => 'failed' } },

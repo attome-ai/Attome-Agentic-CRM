@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -75,8 +75,7 @@ describe('PortalShellComponent (G12-T1)', () => {
       imports: [PortalShellComponent],
       providers: [
         provideRouter([]),
-        { provide: ApiService, useValue: { get, post } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get, post }) },
         { provide: LangService, useValue: LANG },
       ],
     });
@@ -131,8 +130,7 @@ describe('PortalPageHostComponent (G12-T1)', () => {
       imports: [PortalPageHostComponent],
       providers: [
         provideRouter([]),
-        { provide: ApiService, useValue: { get, post } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get, post }) },
         { provide: LangService, useValue: LANG },
       ],
     });
@@ -165,8 +163,8 @@ describe('PortalPrivacyComponent (R1-T2)', () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [PortalPrivacyComponent],
-      providers: [{ provide: ApiService, useValue: { get, post } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi }, { provide: LangService, useValue: LANG }],
+      providers: [{ provide: SdkService, useValue: sdkFromApi({ get, post }) },
+{ provide: LangService, useValue: LANG }],
     });
     TestBed.inject(PortalSiteService).keyword.set('acme');
     const fixture = TestBed.createComponent(PortalPrivacyComponent);

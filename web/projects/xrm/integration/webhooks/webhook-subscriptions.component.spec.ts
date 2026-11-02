@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
+import { SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -36,8 +36,7 @@ describe('WebhookSubscriptionsComponent (M13-T4)', () => {
     TestBed.configureTestingModule({
       imports: [WebhookSubscriptionsComponent],
       providers: [
-        { provide: ApiService, useValue: { get, post, patch } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get, post, patch }) },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },
         { provide: UserPreferencesService, useValue: { timezone: () => 'UTC', calendar: () => null, digits: () => null } },
       ],

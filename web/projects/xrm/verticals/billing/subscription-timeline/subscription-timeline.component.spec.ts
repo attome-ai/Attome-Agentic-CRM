@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
+import { SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { EntityService } from '@attome/xrm/core/entity';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -55,8 +55,7 @@ describe('SubscriptionTimelineComponent (F3-T14)', () => {
     TestBed.configureTestingModule({
       imports: [SubscriptionTimelineComponent],
       providers: [
-        { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi(api) },
         { provide: EntityService, useValue: entities },
         {
           provide: LangService,

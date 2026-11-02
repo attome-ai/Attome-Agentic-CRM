@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { ScanService } from '@attome/base/scan';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -21,8 +21,7 @@ describe('ScanFindComponent (B16-T6)', () => {
     TestBed.configureTestingModule({
       imports: [ScanFindComponent],
       providers: [
-        { provide: ApiService, useValue: { get } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get }) },
         { provide: Router, useValue: { navigate } },
         { provide: ScanService, useValue: { startCamera: vi.fn(), stop: vi.fn() } },
         { provide: LangService, useValue: { translate: (k: string) => k, errorText: () => 'failed' } },

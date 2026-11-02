@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ComposerComponent, ReplyTemplate, matchTemplates, slashQuery } from './composer.component';
@@ -18,8 +18,7 @@ describe('ComposerComponent', () => {
     TestBed.configureTestingModule({
       imports: [ComposerComponent],
       providers: [
-        { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi(api) },
         { provide: LangService, useValue: { translate: (k: string) => k } },
       ],
     });

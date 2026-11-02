@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
-import { ApiService, SdkService, AuthService, LangService } from '@attome/base';
+import { SdkService, AuthService, LangService } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { UserSecurityPanelComponent } from './user-security-panel.component';
 import { sdkFromApi } from '../../../../../../testing/sdk-from-api';
@@ -61,8 +61,7 @@ describe('UserSecurityPanelComponent', () => {
     TestBed.configureTestingModule({
       imports: [UserSecurityPanelComponent],
       providers: [
-        { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi(api) },
         { provide: AuthService, useValue: { userId: currentUser } },
         { provide: DialogService, useValue: { confirm } },
         // Echoes keys (and params) so assertions target structure, not a catalog.

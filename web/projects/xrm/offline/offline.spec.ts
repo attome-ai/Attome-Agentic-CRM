@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryBackend, OfflineStore, uuidv7 } from './offline-store';
@@ -16,8 +16,7 @@ describe('offline', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: OFFLINE_STORE, useFactory: () => new OfflineStore(backend) },
-        { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi(api) },
       ],
     });
     return {

@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ATTOME_CONFIG, ApiService, SdkService, LangService } from '@attome/base';
+import { ATTOME_CONFIG, SdkService, LangService } from '@attome/base';
 import { QueryService, ViewAdminService } from '@attome/xrm/core/query/data';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -65,8 +65,7 @@ describe('MapViewComponent (B15-T2)', () => {
           { id: 'v1', kind: 'map', view_metadata: { location_field: 'location', label_field: 'name' } },
         ]) } },
         { provide: QueryService, useValue: { execute } },
-        { provide: ApiService, useValue: { get } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get }) },
         { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://api.test' } },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },
         { provide: MAP_LIBRARY_LOADER, useValue: () => Promise.resolve(library) },

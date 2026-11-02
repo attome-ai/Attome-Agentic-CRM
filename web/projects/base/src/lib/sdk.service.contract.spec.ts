@@ -4,14 +4,20 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { beforeEach, afterEach, describe, expect, it } from 'vitest';
-import { ApiService, CHANGESET_HEADER, changesetRefusalCode } from './api.service';
+import { CHANGESET_HEADER, changesetRefusalCode } from './api.service';
+import { ChangesetState } from './changeset-state';
+import { SdkService } from './sdk.service';
 import { AuthService } from './auth.service';
 import { ConditionalCache } from './conditional-cache';
 import { ATTOME_CONFIG } from './config';
 import type { ApiError } from './types';
 
-describe('ApiService', () => {
-  let service: ApiService;
+/** The SDK sends, and answers, a promise turn later (Y9-T3). */
+const tick = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
+describe('SdkService, as ApiService behaved (Y9-T3)', () => {
+  let service: SdkService;
+  let changesets: ChangesetState;
   let httpMock: HttpTestingController;
 
   beforeEach(() => {
@@ -23,50 +29,61 @@ describe('ApiService', () => {
         { provide: Router, useValue: { navigate: () => Promise.resolve(true) } },
       ],
     });
-    service = TestBed.inject(ApiService);
+    service = TestBed.inject(SdkService);
+    changesets = TestBed.inject(ChangesetState);
     httpMock = TestBed.inject(HttpTestingController);
   });
 
   afterEach(() => httpMock.verify());
 
-  it('prefixes requests with the configured apiUrl', () => {
+  it('prefixes requests with the configured apiUrl', async () => {
     service.get('/api/v1/foo').subscribe();
+    await tick();
     const req = httpMock.expectOne('http://localhost:7865/api/v1/foo');
     expect(req.request.withCredentials).toBe(true);
     req.flush({});
+    await tick();
   });
 
   describe('getIfChanged (Y14-T2)', () => {
     it('returns the body and its ETag, sending no If-None-Match without one', async () => {
       const result = firstValueFrom(service.getIfChanged<{ a: number }>('/api/v1/plan', null));
+      await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/plan');
       expect(req.request.headers.has('If-None-Match')).toBe(false);
       req.flush({ a: 1 }, { headers: { ETag: '"v1"' } });
+      await tick();
       expect(await result).toEqual({ body: { a: 1 }, etag: '"v1"' });
     });
 
     it('answers a 304 as an unchanged, bodyless result', async () => {
       const result = firstValueFrom(service.getIfChanged('/api/v1/plan', '"v1"'));
+      await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/plan');
       expect(req.request.headers.get('If-None-Match')).toBe('"v1"');
       req.flush(null, { status: 304, statusText: 'Not Modified' });
+      await tick();
       expect(await result).toEqual({ body: null, etag: '"v1"' });
     });
   });
 
   describe('patch / If-Match', () => {
-    it('sends no If-Match header when no row_version is given', () => {
-      service.patch('/api/v1/foo/1', { name: 'x' }).subscribe();
+    it('sends no If-Match header when no row_version is given', async () => {
+      service.patch('/api/v1/foo/1', { body: { name: 'x' } }).subscribe();
+      await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/foo/1');
       expect(req.request.headers.has('If-Match')).toBe(false);
       req.flush({});
+      await tick();
     });
 
-    it('sends a quoted If-Match header when a row_version is given', () => {
-      service.patch('/api/v1/foo/1', { name: 'x' }, 3).subscribe();
+    it('sends a quoted If-Match header when a row_version is given', async () => {
+      service.patch('/api/v1/foo/1', { body: { name: 'x' }, ifMatch: 3 }).subscribe();
+      await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/foo/1');
       expect(req.request.headers.get('If-Match')).toBe('"3"');
       req.flush({});
+      await tick();
     });
   });
 
@@ -75,44 +92,56 @@ describe('ApiService', () => {
   describe('write options (NGB-2.5)', () => {
     const URL = 'http://localhost:7865/api/v1/foo';
 
-    it('post sends the idempotency key as x-idempotency-key, with credentials', () => {
-      service.post('/api/v1/foo', { a: 1 }, { idempotencyKey: 'k-1' }).subscribe();
+    it('post sends the idempotency key as x-idempotency-key, with credentials', async () => {
+      service.post('/api/v1/foo', { body: { a: 1 } }, { idempotencyKey: 'k-1' }).subscribe();
+      await tick();
       const req = httpMock.expectOne(URL);
       expect(req.request.headers.get('x-idempotency-key')).toBe('k-1');
       expect(req.request.withCredentials).toBe(true);
       req.flush({});
+      await tick();
     });
 
-    it('post sends no idempotency header when none is given', () => {
-      service.post('/api/v1/foo', { a: 1 }).subscribe();
+    it('post sends no idempotency header when none is given', async () => {
+      service.post('/api/v1/foo', { body: { a: 1 } }).subscribe();
+      await tick();
       const req = httpMock.expectOne(URL);
       expect(req.request.headers.has('x-idempotency-key')).toBe(false);
       req.flush({});
+      await tick();
     });
 
-    it('put, patch and delete all carry the option', () => {
-      service.put('/api/v1/foo', { a: 1 }, { idempotencyKey: 'k-put' }).subscribe();
+    it('put, patch and delete all carry the option', async () => {
+      service.put('/api/v1/foo', { body: { a: 1 } }, { idempotencyKey: 'k-put' }).subscribe();
+      await tick();
       const putReq = httpMock.expectOne(r => r.url === URL && r.method === 'PUT');
       expect(putReq.request.headers.get('x-idempotency-key')).toBe('k-put');
       putReq.flush({});
+      await tick();
 
-      service.patch('/api/v1/foo', { a: 2 }, 7, { idempotencyKey: 'k-patch' }).subscribe();
+      service.patch('/api/v1/foo', { body: { a: 2 }, ifMatch: 7 }, { idempotencyKey: 'k-patch' }).subscribe();
+      await tick();
       const patchReq = httpMock.expectOne(r => r.url === URL && r.method === 'PATCH');
       expect(patchReq.request.headers.get('x-idempotency-key')).toBe('k-patch');
       expect(patchReq.request.headers.get('If-Match')).toBe('"7"');
       patchReq.flush({});
+      await tick();
 
-      service.delete('/api/v1/foo', { idempotencyKey: 'k-del' }).subscribe();
+      service.delete('/api/v1/foo', undefined, { idempotencyKey: 'k-del' }).subscribe();
+      await tick();
       const deleteReq = httpMock.expectOne(r => r.url === URL && r.method === 'DELETE');
       expect(deleteReq.request.headers.get('x-idempotency-key')).toBe('k-del');
       deleteReq.flush(null);
+      await tick();
     });
 
-    it('sends a duplicate reason as Attome-Duplicate-Reason (A15-T4)', () => {
-      service.post('/api/v1/foo', { a: 1 }, { duplicateReason: 'second branch' }).subscribe();
+    it('sends a duplicate reason as Attome-Duplicate-Reason (A15-T4)', async () => {
+      service.post('/api/v1/foo', { body: { a: 1 } }, { duplicateReason: 'second branch' }).subscribe();
+      await tick();
       const req = httpMock.expectOne(URL);
       expect(req.request.headers.get('Attome-Duplicate-Reason')).toBe('second branch');
       req.flush({});
+      await tick();
     });
   });
 
@@ -123,12 +152,17 @@ describe('ApiService', () => {
     const expectPage = (pageNo: number) =>
       httpMock.expectOne(r => r.url === LIST && r.params.get('page') === String(pageNo));
 
-    it('walks every page and accumulates the items in order', () => {
+    it('walks every page and accumulates the items in order', async () => {
       let result: string[] | undefined;
       service.getAllPages<string>('/api/v1/things').subscribe(r => (result = r));
 
+      await tick();
       expectPage(1).flush(page(['a'], 1, 201));
+      await tick();
+      await tick();
       expectPage(2).flush(page(['b'], 2, 201));
+      await tick();
+      await tick();
 
       expect(result).toEqual(['a', 'b']);
     });
@@ -136,9 +170,13 @@ describe('ApiService', () => {
     it('fails before the second request when the reported total exceeds the ceiling', async () => {
       const promise = firstValueFrom(service.getAllPages<string>('/api/v1/things', {}, 200, 300));
 
+      await tick();
       expectPage(1).flush(page(['a'], 1, 301));
+      await tick();
+      await tick();
       // The ceiling is read off page 1's `total`, so the remaining round-trips
       // never go out — that is the whole point of the bound (F-012).
+      await tick();
       httpMock.expectNone(r => r.url === LIST && r.params.get('page') === '2');
 
       const error = await promise.catch((e: ApiError) => e);
@@ -149,75 +187,107 @@ describe('ApiService', () => {
       expect((error as ApiError).message).toBe('');
     });
 
-    it('loads a catalog that sits exactly on the ceiling', () => {
+    it('loads a catalog that sits exactly on the ceiling', async () => {
       let result: string[] | undefined;
       service.getAllPages<string>('/api/v1/things', {}, 2, 4).subscribe(r => (result = r));
 
+      await tick();
       expectPage(1).flush(page(['a', 'b'], 1, 4, 2));
+      await tick();
+      await tick();
       expectPage(2).flush(page(['c', 'd'], 2, 4, 2));
+      await tick();
+      await tick();
 
       expect(result).toEqual(['a', 'b', 'c', 'd']);
     });
 
-    it('stops instead of looping when a response reports page_size 0', () => {
+    it('stops instead of looping when a response reports page_size 0', async () => {
       let result: string[] | undefined;
       service.getAllPages<string>('/api/v1/things').subscribe(r => (result = r));
 
       // `page * 0 < total` would be true forever; httpMock.verify() in
       // afterEach is what catches a regression here.
+      await tick();
       expectPage(1).flush(page(['a'], 1, 99, 0));
+      await tick();
+      await tick();
 
       expect(result).toEqual(['a']);
     });
 
-    it('starts the walk at the endpoint base and counts pages relative to it', () => {
+    it('starts the walk at the endpoint base and counts pages relative to it', async () => {
       // Every endpoint is one-based (D-347, D-793): page 1 is the first page, so
       // `total` 3 over `page_size` 2 is exactly two pages — 1 and 2, never a page 0.
       let result: string[] | undefined;
       service.getAllPages<string>('/api/v1/things', {}, 2, 4).subscribe(r => (result = r));
 
+      await tick();
       httpMock.expectNone(r => r.url === LIST && r.params.get('page') === '0');
+      await tick();
       expectPage(1).flush(page(['a', 'b'], 1, 3, 2));
+      await tick();
+      await tick();
       expectPage(2).flush(page(['c'], 2, 3, 2));
+      await tick();
+      await tick();
 
       expect(result).toEqual(['a', 'b', 'c']);
     });
 
-    it('does not re-request the last page of a one-based endpoint', () => {
+    it('does not re-request the last page of a one-based endpoint', async () => {
       // Zero-based arithmetic ((page + 1) * size < total) would read page 2 of 2
       // as "2 * 2 < 4 -> keep going" and walk off the end of the list.
       let result: string[] | undefined;
       service.getAllPages<string>('/api/v1/things', {}, 2, 4).subscribe(r => (result = r));
 
+      await tick();
       expectPage(1).flush(page(['a', 'b'], 1, 4, 2));
+      await tick();
+      await tick();
       expectPage(2).flush(page(['c', 'd'], 2, 4, 2));
+      await tick();
+      await tick();
 
       expect(result).toEqual(['a', 'b', 'c', 'd']);
       httpMock.verify(); // a third request would fail here
     });
 
-    it('resumes from the page the server says it served, not the one requested', () => {
+    it('resumes from the page the server says it served, not the one requested', async () => {
       // A handler that clamps an out-of-range page reports the clamped number.
       // Following `res.page` is what keeps the walk contiguous — resuming from
       // the requested page instead would re-read page 1 forever.
       let result: string[] | undefined;
       service.getAllPages<string>('/api/v1/things', {}, 2, 6).subscribe(r => (result = r));
 
+      await tick();
       expectPage(1).flush(page(['a', 'b'], 1, 6, 2));
+      await tick();
+      await tick();
       expectPage(2).flush(page(['c', 'd'], 2, 6, 2));
+      await tick();
+      await tick();
       expectPage(3).flush(page(['e', 'f'], 3, 6, 2));
+      await tick();
+      await tick();
 
       expect(result).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
     });
 
-    it('accumulates into a fresh array on every subscription', () => {
+    it('accumulates into a fresh array on every subscription', async () => {
       const all$ = service.getAllPages<string>('/api/v1/things');
       const results: string[][] = [];
 
       all$.subscribe(r => results.push(r));
+      await tick();
       expectPage(1).flush(page(['a'], 1, 1));
+      await tick();
+      await tick();
       all$.subscribe(r => results.push(r));
+      await tick();
       expectPage(1).flush(page(['a'], 1, 1));
+      await tick();
+      await tick();
 
       expect(results).toEqual([['a'], ['a']]);
     });
@@ -258,8 +328,10 @@ describe('ApiService', () => {
     for (const [status, code, kind] of cases) {
       it(`maps HTTP ${status} + code "${code}" to kind "${kind}"`, async () => {
         const promise = firstValueFrom(service.get('/api/v1/foo'));
+        await tick();
         const req = httpMock.expectOne('http://localhost:7865/api/v1/foo');
         req.flush({ error: code, message: 'boom' }, { status, statusText: 'Error' });
+        await tick();
 
         const error = await promise.catch((e: ApiError) => e);
         expect(error).toMatchObject({ status, kind, message: 'boom' });
@@ -278,8 +350,10 @@ describe('ApiService', () => {
     for (const [status, kind] of statusCases) {
       it(`falls back to kind "${kind}" for HTTP ${status} with no body code`, async () => {
         const promise = firstValueFrom(service.get('/api/v1/foo'));
+        await tick();
         const req = httpMock.expectOne('http://localhost:7865/api/v1/foo');
         req.flush({ message: 'boom' }, { status, statusText: 'Error' });
+        await tick();
 
         const error = await promise.catch((e: ApiError) => e);
         expect(error).toMatchObject({ status, kind });
@@ -289,8 +363,10 @@ describe('ApiService', () => {
     // NGB-2.1 — support correlates a UI error with the server's logs.
     it('keeps request_id from the body', async () => {
       const promise = firstValueFrom(service.get('/api/v1/foo'));
+      await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/foo');
       req.flush({ error: 'internal_error', message: 'x', request_id: 'req-body' }, { status: 500, statusText: 'Error' });
+      await tick();
 
       const error = await promise.catch((e: ApiError) => e);
       expect((error as ApiError).requestId).toBe('req-body');
@@ -298,23 +374,27 @@ describe('ApiService', () => {
 
     it('falls back to the x-request-id response header when the body carries none', async () => {
       const promise = firstValueFrom(service.get('/api/v1/foo'));
+      await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/foo');
       req.flush(
         null,
         { status: 502, statusText: 'Bad Gateway', headers: { 'x-request-id': 'req-header' } },
       );
+      await tick();
 
       const error = await promise.catch((e: ApiError) => e);
       expect((error as ApiError).requestId).toBe('req-header');
     });
 
     it('keeps the matches and hidden count of a duplicate_detected refusal (A15-T4)', async () => {
-      const refused = firstValueFrom(service.post('/api/v1/contact', { phone: '1' }));
+      const refused = firstValueFrom(service.post('/api/v1/contact', { body: { phone: '1' } }));
       const match = { record_id: 'r1', rule_id: 'm1', rule_name: 'Phone', score: 0.9 };
+      await tick();
       httpMock.expectOne('http://localhost:7865/api/v1/contact').flush(
         { error: 'duplicate_detected', message: 'dup', matches: [match], hidden: 2 },
         { status: 409, statusText: 'Error' },
       );
+      await tick();
       const err = (await refused.catch((e: ApiError) => e)) as ApiError;
       expect(err.kind).toBe('conflict');
       expect(err.code).toBe('duplicate_detected');
@@ -323,23 +403,28 @@ describe('ApiService', () => {
 
     it('keeps rule_id on a rule_violation only', async () => {
       const violation = firstValueFrom(service.get('/api/v1/foo'));
+      await tick();
       httpMock.expectOne('http://localhost:7865/api/v1/foo')
         .flush(
           { error: 'rule_violation', message: 'rule violation: nope', rule_id: 'rule-7' },
           { status: 422, statusText: 'Error' },
         );
+      await tick();
       expect(((await violation.catch((e: ApiError) => e)) as ApiError).ruleId).toBe('rule-7');
 
       const other = firstValueFrom(service.get('/api/v1/foo'));
+      await tick();
       httpMock.expectOne('http://localhost:7865/api/v1/foo')
         .flush({ error: 'conflict', message: 'x', rule_id: 'rule-7' }, { status: 409, statusText: 'Error' });
+      await tick();
       const err = (await other.catch((e: ApiError) => e)) as ApiError;
       expect(err.kind).toBe('conflict');
       expect(err.ruleId).toBeUndefined();
     });
 
     it('keeps field, rule_name, effect and details of a field_locked refusal (D-789)', async () => {
-      const promise = firstValueFrom(service.patch('/api/v1/deal/1', { amount: 5 }, 3));
+      const promise = firstValueFrom(service.patch('/api/v1/deal/1', { body: { amount: 5 }, ifMatch: 3 }));
+      await tick();
       httpMock.expectOne('http://localhost:7865/api/v1/deal/1').flush(
         {
           error: 'field_locked', message: "'amount' is locked by the rule 'Closed deals' and cannot be changed",
@@ -348,6 +433,7 @@ describe('ApiService', () => {
         },
         { status: 422, statusText: 'Error' },
       );
+      await tick();
       const err = (await promise.catch((e: ApiError) => e)) as ApiError;
       expect(err.kind).toBe('validation');
       expect(err.code).toBe('field_locked');
@@ -362,17 +448,21 @@ describe('ApiService', () => {
 
     it('keeps the details of a rule_violation and leaves the new members unset when absent', async () => {
       const violation = firstValueFrom(service.get('/api/v1/foo'));
+      await tick();
       httpMock.expectOne('http://localhost:7865/api/v1/foo').flush(
         { error: 'rule_violation', message: 'nope', rule_id: 'r', details: { field: 'amount', rules: [] } },
         { status: 422, statusText: 'Error' },
       );
+      await tick();
       const err = (await violation.catch((e: ApiError) => e)) as ApiError;
       expect(err.details).toEqual({ field: 'amount', rules: [] });
       expect(err.field).toBeUndefined();
 
       const plain = firstValueFrom(service.get('/api/v1/foo'));
+      await tick();
       httpMock.expectOne('http://localhost:7865/api/v1/foo')
         .flush({ error: 'not_found', message: 'x' }, { status: 404, statusText: 'Error' });
+      await tick();
       const nf = (await plain.catch((e: ApiError) => e)) as ApiError;
       expect(nf.field).toBeUndefined();
       expect(nf.ruleName).toBeUndefined();
@@ -381,7 +471,8 @@ describe('ApiService', () => {
     });
 
     it('maps reauth_required with its code, operation and acceptable factors (D-510)', async () => {
-      const promise = firstValueFrom(service.post('/api/v1/auth/api-keys', { name: 'k' }));
+      const promise = firstValueFrom(service.post('/api/v1/auth/api-keys', { body: { name: 'k' } }));
+      await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/auth/api-keys');
       req.flush(
         {
@@ -393,6 +484,7 @@ describe('ApiService', () => {
         },
         { status: 401, statusText: 'Unauthorized' },
       );
+      await tick();
 
       const error = await promise.catch((e: ApiError) => e);
       expect(error).toEqual({
@@ -409,11 +501,13 @@ describe('ApiService', () => {
 
     it('keeps no step-up fields on any other error', async () => {
       const promise = firstValueFrom(service.get('/api/v1/foo'));
+      await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/foo');
       req.flush(
         { error: 'unauthorized', message: 'no', operation: 'api_key_create', acceptable_factors: ['password'] },
         { status: 401, statusText: 'Unauthorized' },
       );
+      await tick();
 
       const error = await promise.catch((e: ApiError) => e);
       expect(error).toEqual({ status: 401, kind: 'unauthorized', code: 'unauthorized', message: 'no' });
@@ -421,8 +515,10 @@ describe('ApiService', () => {
 
     it('falls back to status-based classification when the body has no recognized error code', async () => {
       const promise = firstValueFrom(service.get('/api/v1/foo'));
+      await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/foo');
       req.flush({ message: 'boom' }, { status: 404, statusText: 'Error' });
+      await tick();
 
       const error = await promise.catch((e: ApiError) => e);
       expect(error).toMatchObject({ status: 404, kind: 'not_found' });
@@ -430,8 +526,10 @@ describe('ApiService', () => {
 
     it('falls back to "unknown" for an unrecognized status with no body code', async () => {
       const promise = firstValueFrom(service.get('/api/v1/foo'));
+      await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/foo');
       req.flush(null, { status: 418, statusText: 'Error' });
+      await tick();
 
       const error = await promise.catch((e: ApiError) => e);
       expect((error as ApiError).kind).toBe('unknown');
@@ -443,8 +541,10 @@ describe('ApiService', () => {
     // for every kind. (The old default was 'An unexpected error occurred'.)
     it('leaves the message empty when the server sends none', async () => {
       const promise = firstValueFrom(service.get('/api/v1/foo'));
+      await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/foo');
       req.flush(null, { status: 500, statusText: 'Error' });
+      await tick();
 
       const error = await promise.catch((e: ApiError) => e);
       expect((error as ApiError).message).toBe('');
@@ -453,6 +553,7 @@ describe('ApiService', () => {
 
     it('never surfaces HttpErrorResponse.message, which embeds the request URL', async () => {
       const promise = firstValueFrom(service.get('/api/v1/foo'));
+      await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/foo');
       // status 0 — connection refused, no JSON body at all.
       req.error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
@@ -467,41 +568,49 @@ describe('ApiService', () => {
   describe('changeset header', () => {
     const URL = 'http://localhost:7865/api/v1/admin/entities';
 
-    it('sends no X-Attome-Changeset until one is set', () => {
-      service.post('/api/v1/admin/entities', {}).subscribe();
+    it('sends no X-Attome-Changeset until one is set', async () => {
+      service.post('/api/v1/admin/entities', { body: {} }).subscribe();
+      await tick();
       const req = httpMock.expectOne(URL);
       expect(req.request.headers.has(CHANGESET_HEADER)).toBe(false);
       req.flush({});
+      await tick();
     });
 
-    it('sends the set changeset on post, put, patch and delete, never on get', () => {
-      service.setChangeset('0199aaaa-0000-7000-8000-000000000001');
-      expect(service.activeChangeset()).toBe('0199aaaa-0000-7000-8000-000000000001');
+    it('sends the set changeset on post, put, patch and delete, never on get', async () => {
+      changesets.set('0199aaaa-0000-7000-8000-000000000001');
+      expect(changesets.active()).toBe('0199aaaa-0000-7000-8000-000000000001');
 
-      service.post('/api/v1/admin/entities', {}).subscribe();
-      service.put('/api/v1/admin/entities', {}).subscribe();
-      service.patch('/api/v1/admin/entities', {}, 2).subscribe();
+      service.post('/api/v1/admin/entities', { body: {} }).subscribe();
+      service.put('/api/v1/admin/entities', { body: {} }).subscribe();
+      service.patch('/api/v1/admin/entities', { body: {}, ifMatch: 2 }).subscribe();
       service.delete('/api/v1/admin/entities').subscribe();
       for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
+        await tick();
         const req = httpMock.expectOne(r => r.url === URL && r.method === method);
         expect(req.request.headers.get(CHANGESET_HEADER)).toBe('0199aaaa-0000-7000-8000-000000000001');
         req.flush(method === 'DELETE' ? null : {});
+        await tick();
       }
 
       service.get('/api/v1/admin/entities').subscribe();
+      await tick();
       const get = httpMock.expectOne(r => r.url === URL && r.method === 'GET');
       expect(get.request.headers.has(CHANGESET_HEADER)).toBe(false);
       get.flush({});
+      await tick();
     });
 
-    it('clearing (null or blank) stops sending it', () => {
-      service.setChangeset('0199aaaa-0000-7000-8000-000000000001');
-      service.setChangeset('   ');
-      expect(service.activeChangeset()).toBeNull();
-      service.post('/api/v1/admin/entities', {}).subscribe();
+    it('clearing (null or blank) stops sending it', async () => {
+      changesets.set('0199aaaa-0000-7000-8000-000000000001');
+      changesets.set('   ');
+      expect(changesets.active()).toBeNull();
+      service.post('/api/v1/admin/entities', { body: {} }).subscribe();
+      await tick();
       const req = httpMock.expectOne(URL);
       expect(req.request.headers.has(CHANGESET_HEADER)).toBe(false);
       req.flush({});
+      await tick();
     });
   });
 
@@ -516,9 +625,11 @@ describe('ApiService', () => {
 
     for (const [code, message] of cases) {
       it(`lifts "${code}" out of a 409 conflict message, keeping kind conflict`, async () => {
-        const promise = firstValueFrom(service.patch('/api/v1/admin/entities/1', {}, 1));
+        const promise = firstValueFrom(service.patch('/api/v1/admin/entities/1', { body: {}, ifMatch: 1 }));
+        await tick();
         httpMock.expectOne('http://localhost:7865/api/v1/admin/entities/1')
           .flush({ error: 'conflict', message }, { status: 409, statusText: 'Conflict' });
+        await tick();
         const error = (await promise.catch((e: ApiError) => e)) as ApiError;
         expect(error.kind).toBe('conflict');
         expect(error.code).toBe(code);
@@ -530,9 +641,11 @@ describe('ApiService', () => {
     }
 
     it('leaves an ordinary conflict alone', async () => {
-      const promise = firstValueFrom(service.post('/api/v1/foo', {}));
+      const promise = firstValueFrom(service.post('/api/v1/foo', { body: {} }));
+      await tick();
       httpMock.expectOne('http://localhost:7865/api/v1/foo')
         .flush({ error: 'conflict', message: 'conflict: name already taken' }, { status: 409, statusText: 'Conflict' });
+      await tick();
       const error = (await promise.catch((e: ApiError) => e)) as ApiError;
       expect(error.code).toBe('conflict');
       expect(error.message).toBe('conflict: name already taken');
@@ -549,60 +662,80 @@ describe('ApiService', () => {
     const QUERY = 'http://localhost:7865/api/v1/query/execute';
     const query = { entity: 'account', page_size: 25 };
 
-    function prime(): void {
-      service.post('/api/v1/query/execute', query).subscribe();
+    async function prime(): Promise<void> {
+      service.post('/api/v1/query/execute', { body: query }).subscribe();
+      await tick();
       httpMock.expectOne(QUERY).flush({ rows: [{ id: 1 }] }, { headers: { ETag: '"q1"' } });
+      await tick();
     }
 
     it('reuses cached body on 304', async () => {
-      prime();
-      const again = firstValueFrom(service.post<{ rows: unknown[] }>('/api/v1/query/execute', query));
+      await prime();
+      const again = firstValueFrom(service.post<{ rows: unknown[] }>('/api/v1/query/execute', { body: query }));
+      await tick();
       const req = httpMock.expectOne(QUERY);
       expect(req.request.headers.get('If-None-Match')).toBe('"q1"');
       req.flush(null, { status: 304, statusText: 'Not Modified' });
+      await tick();
       expect(await again).toEqual({ rows: [{ id: 1 }] });
     });
 
     it('revalidates a schema GET and keys entries by request', async () => {
       service.get('/api/v1/schema/account').subscribe();
+      await tick();
       httpMock.expectOne('http://localhost:7865/api/v1/schema/account')
         .flush({ fields: [] }, { headers: { ETag: '"s1"' } });
+      await tick();
       service.get('/api/v1/schema/contact').subscribe();
+      await tick();
       const other = httpMock.expectOne('http://localhost:7865/api/v1/schema/contact');
       expect(other.request.headers.has('If-None-Match')).toBe(false);
       other.flush({ fields: [] });
+      await tick();
       const again = firstValueFrom(service.get('/api/v1/schema/account'));
+      await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/schema/account');
       expect(req.request.headers.get('If-None-Match')).toBe('"s1"');
       req.flush(null, { status: 304, statusText: 'Not Modified' });
+      await tick();
       expect(await again).toEqual({ fields: [] });
     });
 
     it('does not let a caller edit the remembered body', async () => {
-      const first = firstValueFrom(service.post<{ rows: unknown[] }>('/api/v1/query/execute', query));
+      const first = firstValueFrom(service.post<{ rows: unknown[] }>('/api/v1/query/execute', { body: query }));
+      await tick();
       httpMock.expectOne(QUERY).flush({ rows: [{ id: 1 }] }, { headers: { ETag: '"q1"' } });
+      await tick();
       (await first).rows.push({ id: 2 });
-      const again = firstValueFrom(service.post<{ rows: unknown[] }>('/api/v1/query/execute', query));
+      const again = firstValueFrom(service.post<{ rows: unknown[] }>('/api/v1/query/execute', { body: query }));
+      await tick();
       httpMock.expectOne(QUERY).flush(null, { status: 304, statusText: 'Not Modified' });
+      await tick();
       expect(await again).toEqual({ rows: [{ id: 1 }] });
     });
 
-    it('leaves other requests alone', () => {
+    it('leaves other requests alone', async () => {
       service.get('/api/v1/account').subscribe();
+      await tick();
       httpMock.expectOne('http://localhost:7865/api/v1/account').flush([], { headers: { ETag: '"a"' } });
+      await tick();
       service.get('/api/v1/account').subscribe();
+      await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/account');
       expect(req.request.headers.has('If-None-Match')).toBe(false);
       req.flush([]);
+      await tick();
     });
 
-    it('clears cache on logout', () => {
-      prime();
+    it('clears cache on logout', async () => {
+      await prime();
       TestBed.inject(AuthService).clearSession();
-      service.post('/api/v1/query/execute', query).subscribe();
+      service.post('/api/v1/query/execute', { body: query }).subscribe();
+      await tick();
       const req = httpMock.expectOne(QUERY);
       expect(req.request.headers.has('If-None-Match')).toBe(false);
       req.flush({ rows: [] });
+      await tick();
     });
 
     it('keeps at most 200 entries, dropping the least recently used', () => {

@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
+import { SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -22,8 +22,7 @@ describe('ApprovalLinkPageComponent (M9-T3)', () => {
     TestBed.configureTestingModule({
       imports: [ApprovalLinkPageComponent],
       providers: [
-        { provide: ApiService, useValue: { post } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ post }) },
         { provide: Router, useValue: { navigate } },
         { provide: ActivatedRoute, useValue: { snapshot: { fragment } } },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },

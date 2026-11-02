@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { SwPush } from '@angular/service-worker';
-import { ApiService, SdkService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import { of, Subject } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -35,8 +35,7 @@ describe('WebPushService (B19-T2)', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: SwPush, useValue: sw },
-        { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi(api) },
         { provide: Router, useValue: router },
       ],
     });

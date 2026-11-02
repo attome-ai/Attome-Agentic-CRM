@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { EntityService } from '../services/entity.service';
 import { FileUploadService } from '../field/file-upload.service';
@@ -39,8 +39,7 @@ describe('DocumentFolderBrowserComponent virtual scrolling (FE-6)', () => {
     await TestBed.configureTestingModule({
       imports: [DocumentFolderBrowserComponent],
       providers: [
-        { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi(api) },
         { provide: EntityService, useValue: { get: vi.fn().mockReturnValue(of({ data: {} })), delete: vi.fn() } },
         { provide: FileUploadService, useValue: {} },
         { provide: DialogService, useValue: { confirm: vi.fn(), prompt: vi.fn(), error: vi.fn() } },

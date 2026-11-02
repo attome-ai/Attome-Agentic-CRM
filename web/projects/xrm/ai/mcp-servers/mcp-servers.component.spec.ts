@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -19,8 +19,7 @@ describe('AiMcpServersComponent (N13-T1)', () => {
     TestBed.configureTestingModule({
       imports: [AiMcpServersComponent],
       providers: [
-        { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi(api) },
         { provide: LangService, useValue: { translate: (key: string) => key } },
       ],
     });

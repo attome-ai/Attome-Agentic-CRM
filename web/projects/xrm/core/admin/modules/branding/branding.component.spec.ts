@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -24,8 +24,7 @@ describe('BrandingComponent (B13-T9)', () => {
     TestBed.configureTestingModule({
       imports: [BrandingComponent],
       providers: [
-        { provide: ApiService, useValue: { get, post } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get, post }) },
         { provide: LangService, useValue: { translate: (key: string) => key } },
       ],
     });

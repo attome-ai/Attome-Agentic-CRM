@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -42,8 +42,7 @@ describe('relationship explorer (A7-T5)', () => {
     TestBed.configureTestingModule({
       imports: [RelationshipExplorerComponent],
       providers: [
-        { provide: ApiService, useValue: { post } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ post }) },
         { provide: Router, useValue: { navigate: vi.fn() } },
         {
           provide: LangService,

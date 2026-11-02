@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, SdkService, AuthService, LangService } from '@attome/base';
+import { SdkService, AuthService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FeedComponent, FeedItem, FeedPage, feedEventKey } from './feed.component';
@@ -25,8 +25,7 @@ describe('FeedComponent', () => {
       imports: [FeedComponent],
       providers: [
         provideRouter([]),
-        { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi(api) },
         { provide: AuthService, useValue: { userId: signal<string | null>(ME) } },
         {
           provide: LangService,

@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { ApiService, SdkService, LangService, LiveChannel } from '@attome/base';
+import { SdkService, LangService, LiveChannel } from '@attome/base';
 import { Observable, defer, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -53,8 +53,7 @@ function mount(api = new StubApi()): { fixture: ComponentFixture<NotificationBel
     imports: [NotificationBellComponent],
     providers: [
       provideRouter([]),
-      { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+      { provide: SdkService, useValue: sdkFromApi(api) },
       { provide: LangService, useValue: { current: signal('en'), set: vi.fn(), translate: (key: string) => key } },
     ],
   });

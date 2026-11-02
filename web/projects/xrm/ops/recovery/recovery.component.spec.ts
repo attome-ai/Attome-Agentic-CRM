@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, ATTOME_CONFIG, LangService, UserPreferencesService } from '@attome/base';
+import { SdkService, ATTOME_CONFIG, LangService, UserPreferencesService } from '@attome/base';
 import { AccessService } from '@attome/xrm/core/access/data';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -35,8 +35,7 @@ describe('RecoveryComponent (AB3-T10)', () => {
     TestBed.configureTestingModule({
       imports: [RecoveryComponent],
       providers: [
-        { provide: ApiService, useValue: { get, post } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get, post }) },
         { provide: AccessService, useValue: { ready: () => of(undefined), hasPrivilege: (k: string) => privileges.includes(k) } },
         { provide: ATTOME_CONFIG, useValue: { apiUrl: 'https://crm.example' } },
         {

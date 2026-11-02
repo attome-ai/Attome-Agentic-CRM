@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -13,8 +13,7 @@ describe('BulkTagComponent (B4-T4)', () => {
     TestBed.configureTestingModule({
       imports: [BulkTagComponent],
       providers: [
-        { provide: ApiService, useValue: { get, post } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get, post }) },
         { provide: LangService, useValue: { translate: (key: string) => key } },
       ],
     });

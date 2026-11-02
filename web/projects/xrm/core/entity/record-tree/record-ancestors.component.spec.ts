@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -13,8 +13,7 @@ describe('RecordAncestorsComponent (A17-T5)', () => {
       imports: [RecordAncestorsComponent],
       providers: [
         provideRouter([]),
-        { provide: ApiService, useValue: { get } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get }) },
         { provide: LangService, useValue: { translate: (k: string) => k } },
       ],
     });

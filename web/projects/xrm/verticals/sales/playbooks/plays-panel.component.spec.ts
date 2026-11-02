@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { xrmAr } from '@attome/xrm/core/i18n-ar';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -38,8 +38,7 @@ function mount(options: { plays?: SalesPlay[] | 'missing'; arabic?: boolean; sta
   TestBed.configureTestingModule({
     imports: [PlaysPanelComponent],
     providers: [
-      { provide: ApiService, useValue: { get } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+      { provide: SdkService, useValue: sdkFromApi({ get }) },
       { provide: LangService, useValue: { translate, current: signal(options.arabic ? 'ar' : 'en') } },
     ],
   });

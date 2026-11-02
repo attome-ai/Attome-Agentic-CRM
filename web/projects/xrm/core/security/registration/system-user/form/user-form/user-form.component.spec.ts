@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { EMPTY, of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService, SdkService, ATTOME_CONFIG, LangService } from '@attome/base';
+import { SdkService, ATTOME_CONFIG, LangService } from '@attome/base';
 import type { EntitySchema } from '@attome/xrm';
 import { EntityService, FileUploadService, ImageUploadComponent, RecordTabPanelsComponent, RelatedGridComponent, TagsPanelComponent, XrmBaseFormComponent } from '@attome/xrm/core/entity';
 import { UserSecurityPanelComponent } from '../user-security-panel/user-security-panel.component';
@@ -112,8 +112,7 @@ describe('UserFormComponent — version-conflict surfacing', () => {
         { provide: FileUploadService, useValue: files },
         // EMPTY, not a shape: the blanked side panels still run ngOnInit, and a
         // stub that emits makes each one parse a response it never asked for.
-        { provide: ApiService, useValue: { get: vi.fn().mockReturnValue(EMPTY), getAllPages: vi.fn().mockReturnValue(EMPTY), post: vi.fn().mockReturnValue(EMPTY), put: vi.fn().mockReturnValue(EMPTY), patch: vi.fn().mockReturnValue(EMPTY), delete: vi.fn().mockReturnValue(EMPTY) } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get: vi.fn().mockReturnValue(EMPTY), getAllPages: vi.fn().mockReturnValue(EMPTY), post: vi.fn().mockReturnValue(EMPTY), put: vi.fn().mockReturnValue(EMPTY), patch: vi.fn().mockReturnValue(EMPTY), delete: vi.fn().mockReturnValue(EMPTY) }) },
         { provide: Router, useValue: { navigate: vi.fn(), parseUrl: () => ({ queryParamMap: { get: () => null } }), url: '/' } },
         { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } },
         // Echoes the key, so assertions target structure rather than a catalog.
@@ -235,8 +234,7 @@ describe('UserFormComponent — content', () => {
       providers: [
         { provide: EntityService, useValue: { ...inertEntityServiceMethods(), ...svc } },
         { provide: FileUploadService, useValue: files },
-        { provide: ApiService, useValue: { get: vi.fn().mockReturnValue(EMPTY), getAllPages: vi.fn().mockReturnValue(EMPTY), post: vi.fn().mockReturnValue(EMPTY), put: vi.fn().mockReturnValue(EMPTY), patch: vi.fn().mockReturnValue(EMPTY), delete: vi.fn().mockReturnValue(EMPTY) } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get: vi.fn().mockReturnValue(EMPTY), getAllPages: vi.fn().mockReturnValue(EMPTY), post: vi.fn().mockReturnValue(EMPTY), put: vi.fn().mockReturnValue(EMPTY), patch: vi.fn().mockReturnValue(EMPTY), delete: vi.fn().mockReturnValue(EMPTY) }) },
         { provide: Router, useValue: { navigate: vi.fn(), parseUrl: () => ({ queryParamMap: { get: () => null } }), url: '/' } },
         { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } },
         { provide: LangService, useValue: { translate: (key: string) => key } },

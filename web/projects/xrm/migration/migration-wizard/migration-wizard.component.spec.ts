@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, ATTOME_CONFIG, LangService } from '@attome/base';
+import { SdkService, ATTOME_CONFIG, LangService } from '@attome/base';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { CsvImportService } from '../csv/csv-import.service';
 import { MigrationWizardComponent } from './migration-wizard.component';
@@ -10,8 +10,7 @@ describe('MigrationWizardComponent', () => {
     TestBed.configureTestingModule({
       imports: [MigrationWizardComponent],
       providers: [
-        { provide: ApiService, useValue: {} },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({}) },
         { provide: CsvImportService, useValue: {} },
         { provide: ATTOME_CONFIG, useValue: { apiUrl: '' } },
         { provide: LangService, useValue: { intlLocale: () => 'en-US', translate: (k: string) => k } },

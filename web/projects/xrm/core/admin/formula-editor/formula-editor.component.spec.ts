@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService, RulesEvaluatorService } from '@attome/base';
+import { SdkService, LangService, RulesEvaluatorService } from '@attome/base';
 import { AdminService } from '@attome/xrm/core/admin/data';
 import { dottedPaths, pathAt, withPaths } from '@attome/xrm/core/admin/expression-editor';
 import { of, throwError } from 'rxjs';
@@ -39,8 +39,7 @@ function setup(options: unknown, update = vi.fn(() => of({}))) {
   TestBed.configureTestingModule({
     imports: [FormulaEditorComponent],
     providers: [
-      { provide: ApiService, useValue: { get, post } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+      { provide: SdkService, useValue: sdkFromApi({ get, post }) },
       { provide: RulesEvaluatorService, useValue: { validate } },
       { provide: AdminService, useValue: { updateAttribute: update } },
       { provide: LangService, useValue: {

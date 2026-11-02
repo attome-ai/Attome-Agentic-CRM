@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService, ThemeService, UserPreferencesService } from '@attome/base';
+import { SdkService, LangService, ThemeService, UserPreferencesService } from '@attome/base';
 import { Observable, of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { PersonalSettingsPageComponent, labelKey, optionKey } from './personal-settings-page.component';
@@ -33,8 +33,7 @@ function setup() {
   TestBed.configureTestingModule({
     imports: [PersonalSettingsPageComponent],
     providers: [
-      { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+      { provide: SdkService, useValue: sdkFromApi(api) },
       { provide: LangService, useValue: lang },
       { provide: ThemeService, useValue: theme },
     ],

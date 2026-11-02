@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService, SdkService, AuthService } from '@attome/base';
+import { SdkService, AuthService } from '@attome/base';
 import type { SelectionAction } from '@attome/xrm/core/entity';
 import { userAccountStateActions } from './user-account-state.actions';
 import { sdkFromApi } from '../../../../testing/sdk-from-api';
@@ -30,8 +30,7 @@ describe('user account-state selection actions', () => {
     del.mockReset().mockImplementation(() => of(undefined));
     TestBed.configureTestingModule({
       providers: [
-        { provide: ApiService,  useValue: { post, delete: del } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ post, delete: del }) },
         { provide: AuthService, useValue: { userId: () => SELF } },
       ],
     });

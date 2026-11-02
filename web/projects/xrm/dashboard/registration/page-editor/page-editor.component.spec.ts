@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, SdkService, ATTOME_CONFIG, LangService, provideAttomeI18n } from '@attome/base';
+import { SdkService, ATTOME_CONFIG, LangService, provideAttomeI18n } from '@attome/base';
 import { provideXrmI18n } from '@attome/xrm/core/i18n';
 import { xrmEn } from '@attome/xrm/core/i18n-en';
 import { DialogService } from '@attome/base/dialog';
@@ -13,7 +13,7 @@ import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 /**
  * Page Editor save paths against a real `DashboardService` over mocked
- * `EntityService`/`ApiService`:
+ * `EntityService`/`SdkService`:
  *
  * - R-02 regression: an inspector edit to `view_id` reaches the PATCH.
  * - Dashboard 10/10 Phase 1.4 — the editor never loses work: structural
@@ -120,8 +120,7 @@ function setup(options: SetupOptions = {}) {
     providers: [
       provideRouter([]),
       { provide: EntityService, useValue: entityService },
-      { provide: ApiService, useValue: apiService },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+      { provide: SdkService, useValue: sdkFromApi(apiService) },
       { provide: DialogService, useValue: dialogService },
       ...(options.render
         ? [{ provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } }, provideAttomeI18n(), provideXrmI18n(xrmEn)]

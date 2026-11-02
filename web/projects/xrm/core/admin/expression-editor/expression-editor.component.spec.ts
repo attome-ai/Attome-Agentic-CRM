@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService, RulesEvaluatorService } from '@attome/base';
+import { SdkService, LangService, RulesEvaluatorService } from '@attome/base';
 import type { RulesAnswer } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -30,11 +30,10 @@ async function typed(text: string, lang: 'en' | 'ar') {
   const validate = vi.fn(async () => UNKNOWN_FIELD);
   TestBed.configureTestingModule({
     providers: [
-      { provide: ApiService, useValue: {
+      { provide: SdkService, useValue: sdkFromApi({
         get: (url: string) => of(url.startsWith('/api/v1/schema/') ? SCHEMA : { functions: [] }),
         post: vi.fn(),
-      } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+      }) },
       { provide: RulesEvaluatorService, useValue: { validate } },
       { provide: LangService, useValue: {
         current: signal(lang),

@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService, SdkService } from '@attome/base';
+import { LangService, SdkService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -30,8 +30,7 @@ describe('RpaEditorComponent (M16-T3)', () => {
     TestBed.configureTestingModule({
       imports: [RpaEditorComponent],
       providers: [
-        { provide: ApiService, useValue: { post, delete: del } },
-        { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ post, delete: del }) },
         {
           provide: LangService,
           useValue: { translate: (k: string) => k, current: signal('en'), isRtl: signal(false) },

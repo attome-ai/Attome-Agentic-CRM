@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
+import { SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { EntityService } from '@attome/xrm/core/entity';
 import { xrmAr } from '@attome/xrm/core/i18n-ar';
 import { of } from 'rxjs';
@@ -44,8 +44,7 @@ function mount(options: { arabic?: boolean; calendar?: 'gregorian' | 'hijri' } =
   TestBed.configureTestingModule({
     imports: [CommissionStatementComponent],
     providers: [
-      { provide: ApiService, useValue: { get } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+      { provide: SdkService, useValue: sdkFromApi({ get }) },
       { provide: EntityService, useValue: { list } },
       {
         provide: LangService,

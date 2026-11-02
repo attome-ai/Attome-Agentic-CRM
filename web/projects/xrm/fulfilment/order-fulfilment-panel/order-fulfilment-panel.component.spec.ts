@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
+import { SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import {
@@ -28,8 +28,7 @@ function setup(rtl: boolean) {
   TestBed.configureTestingModule({
     imports: [OrderFulfilmentPanelComponent],
     providers: [
-      { provide: ApiService, useValue: { get } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+      { provide: SdkService, useValue: sdkFromApi({ get }) },
       {
         provide: LangService,
         useValue: {

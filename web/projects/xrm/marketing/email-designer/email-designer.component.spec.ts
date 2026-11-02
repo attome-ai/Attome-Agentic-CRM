@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { ApiService, LangService, SdkService } from '@attome/base';
+import { LangService, SdkService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -34,8 +34,7 @@ describe('EmailDesignerComponent (E2-T1)', () => {
       imports: [EmailDesignerComponent],
       providers: [
         provideRouter([]),
-        { provide: ApiService, useValue: api },
-        { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi(api) },
         {
           provide: LangService,
           useValue: {

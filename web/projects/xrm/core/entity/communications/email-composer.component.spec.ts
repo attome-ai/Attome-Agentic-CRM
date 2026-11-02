@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { EntityService } from '../services/entity.service';
 import { EmailComposerComponent, composeBody, splitAddresses } from './email-composer.component';
 import { sdkFromApi } from '../../../testing/sdk-from-api';
@@ -35,8 +35,7 @@ describe('EmailComposerComponent (J1-T2)', () => {
     TestBed.configureTestingModule({
       imports: [EmailComposerComponent],
       providers: [
-        { provide: ApiService, useValue: { get, post } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get, post }) },
         { provide: EntityService, useValue: entities },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },
       ],

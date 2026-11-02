@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -11,10 +11,9 @@ describe('StatusBannerComponent (AB5-T9)', () => {
     TestBed.configureTestingModule({
       imports: [StatusBannerComponent],
       providers: [
-        { provide: ApiService, useValue: {
+        { provide: SdkService, useValue: sdkFromApi({
           get: vi.fn((url: string) => of(url.includes('/ops/status/banner') ? notice : status)),
-        } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        }) },
         { provide: LangService, useValue: { translate: (k: string) => k } },
       ],
     });

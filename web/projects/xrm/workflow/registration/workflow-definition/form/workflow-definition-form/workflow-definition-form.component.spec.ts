@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { EMPTY, of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService, SdkService, ATTOME_CONFIG, LangService } from '@attome/base';
+import { SdkService, ATTOME_CONFIG, LangService } from '@attome/base';
 import type { EntitySchema } from '@attome/xrm';
 import { EntityService, RecordTabPanelsComponent, XrmBaseFormComponent } from '@attome/xrm/core/entity';
 import { WorkflowDefinitionFormComponent } from './workflow-definition-form.component';
@@ -104,8 +104,7 @@ describe('WorkflowDefinitionFormComponent — version-conflict surfacing', () =>
         // `loadVersions()` hits the workflow engine's own admin API on init.
         // EMPTY, not a shape: the blanked side panels still run ngOnInit, and a
         // stub that emits makes each one parse a response it never asked for.
-        { provide: ApiService, useValue: { get: vi.fn().mockReturnValue(EMPTY), post: vi.fn().mockReturnValue(EMPTY), put: vi.fn().mockReturnValue(EMPTY), patch: vi.fn().mockReturnValue(EMPTY), delete: vi.fn().mockReturnValue(EMPTY) } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get: vi.fn().mockReturnValue(EMPTY), post: vi.fn().mockReturnValue(EMPTY), put: vi.fn().mockReturnValue(EMPTY), patch: vi.fn().mockReturnValue(EMPTY), delete: vi.fn().mockReturnValue(EMPTY) }) },
         { provide: Router, useValue: { navigate: vi.fn(), parseUrl: () => ({ queryParamMap: { get: () => null } }), url: '/' } },
         { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } },
         { provide: LangService, useValue: { translate: (key: string) => key } },

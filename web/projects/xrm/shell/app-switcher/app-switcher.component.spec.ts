@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { Observable, of } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AppSwitcherComponent, AvailableApp } from './app-switcher.component';
@@ -22,8 +22,7 @@ function mount(api = new StubApi()): { fixture: ComponentFixture<AppSwitcherComp
   TestBed.configureTestingModule({
     imports: [AppSwitcherComponent],
     providers: [
-      { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+      { provide: SdkService, useValue: sdkFromApi(api) },
       { provide: LangService, useValue: { current: signal('en'), set: vi.fn(), translate: (key: string) => key } },
     ],
   });

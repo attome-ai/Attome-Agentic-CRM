@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import { firstValueFrom, of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -19,8 +19,7 @@ describe('ModelService.formPlan (Y14-T2)', () => {
     api = { getIfChanged: vi.fn().mockReturnValue(of({ body: PLAN, etag: '"v1"' })) };
     TestBed.configureTestingModule({
       providers: [
-        { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi(api) },
         { provide: PlanStore, useValue: store },
       ],
     });

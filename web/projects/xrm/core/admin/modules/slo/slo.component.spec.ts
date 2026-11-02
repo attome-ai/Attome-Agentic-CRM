@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -28,8 +28,7 @@ describe('SloComponent (AA13-T11)', () => {
     TestBed.configureTestingModule({
       imports: [SloComponent],
       providers: [
-        { provide: ApiService, useValue: { get, put, delete: vi.fn(() => of(undefined)) } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get, put, delete: vi.fn(() => of(undefined)) }) },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en') } },
       ],
     });

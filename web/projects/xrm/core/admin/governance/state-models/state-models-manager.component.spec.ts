@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { ConfirmService } from '@attome/base/dialog';
 import { signal } from '@angular/core';
 import { AdminService, ChangesetContextService, StateModelsService } from '@attome/xrm/core/admin/data';
@@ -38,8 +38,7 @@ describe('StateModelsManagerComponent', () => {
         provideRouter([]),
         { provide: StateModelsService, useValue: svc },
         // Z11-T14: the expression editor loads the entity's fields and the function list.
-        { provide: ApiService, useValue: { get: () => of({}), post: vi.fn() } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get: () => of({}), post: vi.fn() }) },
         { provide: AdminService, useValue: admin },
         { provide: ConfirmService, useValue: confirm },
         // The owner-layer badge (D-785) reads the editing layer from here.

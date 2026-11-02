@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService, SdkService } from '@attome/base';
+import { LangService, SdkService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -32,8 +32,7 @@ describe('DerivedEntitiesComponent (A26-T5)', () => {
     TestBed.configureTestingModule({
       imports: [DerivedEntitiesComponent],
       providers: [
-        { provide: ApiService, useValue: { getAllPages, post, put, delete: del } },
-        { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ getAllPages, post, put, delete: del }) },
         {
           provide: LangService,
           useValue: { translate: (k: string) => k, current: signal('en'), isRtl: signal(false) },

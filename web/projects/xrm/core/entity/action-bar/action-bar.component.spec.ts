@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActionBarComponent, appliesTo } from './action-bar.component';
@@ -34,8 +34,7 @@ describe('action bar (AE1-T5)', () => {
     TestBed.configureTestingModule({
       imports: [ActionBarComponent],
       providers: [
-        { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi(api) },
         { provide: LangService, useValue: { intlLocale: () => 'en-US', translate: (key: string) => key } },
       ],
     });

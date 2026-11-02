@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { EntityService } from '@attome/xrm/core/entity';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -39,8 +39,7 @@ describe('my queues (G4-T3)', () => {
   it('counts each bulk move, a refusal as failed', async () => {
     TestBed.configureTestingModule({
       providers: [
-        { provide: ApiService, useValue: {} },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({}) },
         { provide: EntityService, useValue: {} },
       ],
     });
@@ -62,8 +61,7 @@ describe('my queues (G4-T3)', () => {
       imports: [MyQueuesComponent],
       providers: [
         provideRouter([]),
-        { provide: ApiService, useValue: { post } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ post }) },
         { provide: EntityService, useValue: { list, create: createRecord } },
         {
           provide: LangService,

@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryBackend, OfflineStore, uuidv7 } from './offline-store';
@@ -27,8 +27,7 @@ describe('B18-T10 sync status and offline files', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: OFFLINE_STORE, useFactory: () => new OfflineStore(backend) },
-        { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi(api) },
         { provide: OFFLINE_FILE_UPLOADER, useValue: { upload } },
         { provide: LangService, useValue: {
           translate: (key: string, params?: Record<string, unknown>) => params ? `${key} ${JSON.stringify(params)}` : key,

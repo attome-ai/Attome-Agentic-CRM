@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { ModelService } from '../model.service';
 import { DependencyEditorComponent, isAllowed, toggleCell } from './dependency-editor.component';
 import { sdkFromApi } from '../../testing/sdk-from-api';
@@ -38,8 +38,7 @@ describe('DependencyEditorComponent (A6-T4)', () => {
       imports: [DependencyEditorComponent],
       providers: [
         { provide: ModelService, useValue: model },
-        { provide: ApiService, useValue: { get } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get }) },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },
       ],
     });

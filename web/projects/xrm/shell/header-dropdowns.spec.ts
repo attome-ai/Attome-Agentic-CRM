@@ -1,7 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, AuthService, LangService, ThemeService, SdkService } from '@attome/base';
+import { AuthService, LangService, ThemeService, SdkService } from '@attome/base';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotificationBellComponent } from './notification-bell/notification-bell.component';
@@ -43,13 +43,12 @@ function mount(): {
     imports: [HeaderHostComponent],
     providers: [
       provideRouter([]),
-      { provide: ApiService, useValue: {
+      { provide: SdkService, useValue: sdkFromApi({
         post: () => of({ notifications: [], unread_count: 0 }),
         // D-404 / M83 Phase 1: ProfileMenuComponent's timezone-preference fetch
-        // (EntityService.get -> ApiService.get) needs this mocked too.
+        // (EntityService.get -> SdkService.get) needs this mocked too.
         get: () => of({ data: {} }),
-      } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+      }) },
       { provide: AuthService, useValue: { userId: signal('user-id'), logout: () => of(undefined) } },
       {
         provide: ThemeService,

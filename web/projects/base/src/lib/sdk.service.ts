@@ -115,6 +115,15 @@ class AppSessionAuth implements AuthProvider {
   }
 }
 
+/**
+ * The status an `ApiError` reports: `0` for an answer that never arrived (the
+ * fetch adapter carries it as `599`, the highest status a `Response` takes),
+ * as `ApiService` reported it. Pure.
+ */
+function statusOf(status: number): number {
+  return status === 599 ? 0 : status;
+}
+
 /** A request's query as `HttpParams` take it, unset values left out. */
 function queryObject(query: RequestOptions['query']): Record<string, string | number | boolean> {
   const out: Record<string, string | number | boolean> = {};
@@ -183,7 +192,7 @@ export class SdkService {
   /**
    * AA7-T11 through the SDK, as `ApiService` revalidates: a schema read or a
    * stored-query run whose last answer is remembered in `ConditionalCache`
-   * (shared with `ApiService`, so its `clearConditionalCache` clears both)
+   * (the one root instance, so whoever clears it clears this too)
    * sends that answer's ETag as `If-None-Match`, and a `304` returns the
    * remembered body. A `200` with an ETag replaces the entry; one without
    * drops it. A `304` with nothing remembered is the error it is.
@@ -237,7 +246,7 @@ export class SdkService {
             return;
           }
           subscriber.error(err instanceof SdkApiError
-            ? apiErrorOf(err.status, err.body, err.requestId ?? null)
+            ? apiErrorOf(statusOf(err.status), err.body, err.requestId ?? null)
             : err);
         },
       );
@@ -303,7 +312,7 @@ export class SdkService {
             return;
           }
           subscriber.error(err instanceof SdkApiError
-            ? apiErrorOf(err.status, err.body, err.requestId ?? null)
+            ? apiErrorOf(statusOf(err.status), err.body, err.requestId ?? null)
             : err);
         },
       );

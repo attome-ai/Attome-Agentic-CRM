@@ -1,6 +1,6 @@
 import { signal, WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, AuthService } from '@attome/base';
+import { SdkService, AuthService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AccessService } from './access.service';
@@ -15,8 +15,7 @@ describe('AccessService (NGB-1.2)', () => {
     get = vi.fn(() => of({ is_admin: false, privileges: ['dashboard.update'] }));
     TestBed.configureTestingModule({
       providers: [
-        { provide: ApiService, useValue: { get } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get }) },
         { provide: AuthService, useValue: { userId } },
       ],
     });

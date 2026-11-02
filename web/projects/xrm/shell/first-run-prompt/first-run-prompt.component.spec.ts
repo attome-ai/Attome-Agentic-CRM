@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { Observable, of, throwError } from 'rxjs';
 import { describe, expect, it } from 'vitest';
 
@@ -14,8 +14,7 @@ describe('FirstRunPromptComponent (X12-T3)', () => {
       imports: [FirstRunPromptComponent],
       providers: [
         provideRouter([]),
-        { provide: ApiService, useValue: { get: () => answer } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get: () => answer }) },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('ar') } },
       ],
     });

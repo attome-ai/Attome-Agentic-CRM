@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { AdminService } from '@attome/xrm/core/admin/data';
 import { QueryService } from '@attome/xrm/core/query/data';
 import { of, throwError } from 'rxjs';
@@ -56,8 +56,7 @@ describe('RollupEditorComponent (A10-T6)', () => {
           listEntities: () => of([{ id: 'i', logicalname: 'invoice', name: 'Invoice' }]),
           createAttribute,
         } },
-        { provide: ApiService, useValue: { get: vi.fn(() => of(INVOICE)) } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ get: vi.fn(() => of(INVOICE)) }) },
         { provide: QueryService, useValue: { execute: vi.fn(() => of({ data: { total: 2500, records: [] } })) } },
         { provide: LangService, useValue: {
           translate: (k: string, p?: Record<string, unknown>) => (p ? `${k}:${JSON.stringify(p)}` : k),

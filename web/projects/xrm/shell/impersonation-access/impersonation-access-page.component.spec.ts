@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ImpersonationAccessPageComponent } from './impersonation-access-page.component';
@@ -19,8 +19,7 @@ describe('ImpersonationAccessPageComponent', () => {
     TestBed.configureTestingModule({
       imports: [ImpersonationAccessPageComponent],
       providers: [
-        { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi(api) },
         { provide: LangService, useValue: { translate: (k: string) => k, errorText: (e: { message: string }) => e.message, intlLocale: () => 'en' } },
       ],
     });

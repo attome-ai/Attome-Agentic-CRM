@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { EntityService } from '@attome/xrm/core/entity';
 import { xrmAr } from '@attome/xrm/core/i18n-ar';
 import { of, throwError } from 'rxjs';
@@ -53,8 +53,7 @@ function mount(options: { cards?: SalesBattlecard[] | 'missing'; arabic?: boolea
     imports: [BattlecardPanelComponent],
     providers: [
       provideRouter([]),
-      { provide: ApiService, useValue: { get, post } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+      { provide: SdkService, useValue: sdkFromApi({ get, post }) },
       { provide: EntityService, useValue: { list, get: vi.fn(() => of({ data: { name: 'Rival' } })) } },
       { provide: LangService, useValue: { translate, current: signal(options.arabic ? 'ar' : 'en') } },
     ],

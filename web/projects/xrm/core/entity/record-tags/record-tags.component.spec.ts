@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { Observable, of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { RecordTag, RecordTagsComponent } from './record-tags.component';
@@ -30,8 +30,7 @@ function setup() {
   TestBed.configureTestingModule({
     imports: [RecordTagsComponent],
     providers: [
-      { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+      { provide: SdkService, useValue: sdkFromApi(api) },
       { provide: LangService, useValue: { current: signal('en'), translate: (k: string) => k, errorText: () => 'error' } },
     ],
   });

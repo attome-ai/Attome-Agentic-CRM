@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ATTOME_CONFIG, ApiService, SdkService, LangService, LiveChannel, LiveRecords } from '@attome/base';
+import { ATTOME_CONFIG, SdkService, LangService, LiveChannel, LiveRecords } from '@attome/base';
 import { QueryService } from '@attome/xrm/core/query/data';
 import { Subject, of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -90,8 +90,7 @@ describe('ResourceBoardComponent (I3-T1)', () => {
     TestBed.configureTestingModule({
       imports: [ResourceBoardComponent],
       providers: [
-        { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi(api) },
         { provide: QueryService, useValue: { execute } },
         { provide: EntityService, useValue: { update } },
         { provide: LiveChannel, useValue: live },

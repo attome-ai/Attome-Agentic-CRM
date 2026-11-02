@@ -3,7 +3,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService, authInterceptor, ATTOME_CONFIG } from '@attome/base';
+import { SdkService, authInterceptor, ATTOME_CONFIG } from '@attome/base';
 import { STEP_UP_NAVIGATE, StepUpService, isSafeReturnUrl } from './step-up.service';
 
 /** The SDK sends after a promise turn (Y9-T3). */
@@ -43,7 +43,7 @@ interface Outcome {
 
 describe('StepUpService (D-510)', () => {
   let service: StepUpService;
-  let api: ApiService;
+  let api: SdkService;
   let httpMock: HttpTestingController;
   let navigate: ReturnType<typeof vi.fn>;
   let routerNavigate: ReturnType<typeof vi.fn>;
@@ -62,7 +62,7 @@ describe('StepUpService (D-510)', () => {
       ],
     });
     service  = TestBed.inject(StepUpService);
-    api      = TestBed.inject(ApiService);
+    api      = TestBed.inject(SdkService);
     httpMock = TestBed.inject(HttpTestingController);
     sessionStorage.clear();
   });
@@ -76,7 +76,7 @@ describe('StepUpService (D-510)', () => {
 
   async function createKey(): Promise<Outcome> {
     const outcome: Outcome = { values: [], error: undefined, completed: false };
-    service.run('api_key_create', () => api.post(KEYS_PATH, { name: 'k' })).subscribe({
+    service.run('api_key_create', () => api.post(KEYS_PATH, { body: { name: 'k' } })).subscribe({
       next:     v => outcome.values.push(v),
       error:    e => { outcome.error = e; },
       complete: () => { outcome.completed = true; },
@@ -264,7 +264,7 @@ describe('StepUpService (D-510)', () => {
 
   it('passes other errors, and a reauth_required for another operation, straight through', async () => {
     let forbidden: unknown;
-    service.run('api_key_create', () => api.post(KEYS_PATH, {})).subscribe({ error: e => { forbidden = e; } });
+    service.run('api_key_create', () => api.post(KEYS_PATH, { body: {} })).subscribe({ error: e => { forbidden = e; } });
     await tick();
     httpMock.expectOne(KEYS).flush({ error: 'forbidden', message: 'no' }, { status: 403, statusText: 'Forbidden' });
     await tick();
@@ -272,7 +272,7 @@ describe('StepUpService (D-510)', () => {
     expect(forbidden).toMatchObject({ kind: 'forbidden' });
 
     let other: unknown;
-    service.run('api_key_create', () => api.post(KEYS_PATH, {})).subscribe({ error: e => { other = e; } });
+    service.run('api_key_create', () => api.post(KEYS_PATH, { body: {} })).subscribe({ error: e => { other = e; } });
     await tick();
     httpMock.expectOne(KEYS).flush(reauth('identity_link', ['password']), UNAUTHORIZED);
     await tick();

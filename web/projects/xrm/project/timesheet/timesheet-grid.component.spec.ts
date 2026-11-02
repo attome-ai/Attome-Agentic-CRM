@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, AuthService, LangService } from '@attome/base';
+import { SdkService, AuthService, LangService } from '@attome/base';
 import { EntityService } from '@attome/xrm/core/entity';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -45,8 +45,7 @@ describe('TimesheetGridComponent (V3-T1)', () => {
       imports: [TimesheetGridComponent],
       providers: [
         { provide: EntityService, useValue: entities },
-        { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi(api) },
         { provide: ProjectService, useValue: project },
         { provide: AuthService, useValue: { userId: signal(USER) } },
         {

@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, AuthService, ChangesetState, LangService, type ApiError } from '@attome/base';
+import { SdkService, AuthService, ChangesetState, LangService, type ApiError } from '@attome/base';
 import { AccessService } from '@attome/xrm/core/access/data';
 import { type ChangesetSummary } from '@attome/xrm/core/admin/data';
 import { of, throwError, type Observable } from 'rxjs';
@@ -25,8 +25,7 @@ function mount(opts: { admin: boolean; list: () => Observable<unknown> }) {
   };
   TestBed.configureTestingModule({
     providers: [
-      { provide: ApiService, useValue: api },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+      { provide: SdkService, useValue: sdkFromApi(api) },
       { provide: ChangesetState, useValue: state },
       { provide: AuthService, useValue: { userId: signal('me') } },
       { provide: AccessService, useValue: { ready: () => of(undefined), hasPrivilege: () => opts.admin } },

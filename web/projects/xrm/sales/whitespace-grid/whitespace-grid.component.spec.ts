@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -38,8 +38,7 @@ describe('account plan whitespace (D27-T2)', () => {
     TestBed.configureTestingModule({
       imports: [WhitespaceGridComponent],
       providers: [
-        { provide: ApiService, useValue: { post, patch } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ post, patch }) },
         {
           provide: LangService,
           useValue: { translate: (k: string) => k, current: signal('ar'), errorText: () => 'error', intlLocale: () => 'ar-SA' },

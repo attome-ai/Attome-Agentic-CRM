@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, SdkService, LangService } from '@attome/base';
+import { SdkService, LangService } from '@attome/base';
 import { AdminService } from '@attome/xrm/core/admin/data';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -19,8 +19,7 @@ describe('CustomerTestEditorComponent (Z15-T15)', () => {
     TestBed.configureTestingModule({
       imports: [CustomerTestEditorComponent],
       providers: [
-        { provide: ApiService, useValue: { post, patch } },
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        { provide: SdkService, useValue: sdkFromApi({ post, patch }) },
         { provide: AdminService, useValue: { listEntities: () => of(ENTITIES), getEntity } },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },
       ],
