@@ -65,6 +65,8 @@ pub mod identity_assist;
 /// A23-T11: agent tools for file imports.
 pub mod import;
 pub mod inbox;
+/// E8-T12: drafting a journey, explaining a person's path and suggesting changes.
+pub mod journey;
 pub mod knowledge;
 pub mod knowledge_answer;
 /// Y11-T8: an agent's proposal for an upgrade conflict.
@@ -242,6 +244,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(billing_subscription::descriptors());
     all.extend(deliverability::descriptors());
     all.extend(segment::descriptors());
+    all.extend(journey::descriptors());
     all.extend(sales_dialer::descriptors());
     all.extend(sales_orgchart::descriptors());
     all.extend(sales_team::descriptors());
@@ -355,6 +358,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(billing_subscription::executors());
     all.extend(deliverability::executors());
     all.extend(segment::executors());
+    all.extend(journey::executors());
     all.extend(sales_dialer::executors());
     all.extend(sales_orgchart::executors());
     all.extend(sales_team::executors());

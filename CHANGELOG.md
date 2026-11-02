@@ -14,6 +14,14 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Nurture drips (E9-T3): the journey step `marketing.nurture_run` puts a person in a nurture
+  programme on the track that fits them and waits until they leave it; a tick every minute (job
+  `marketing_nurture_tick`) sends each person the next email of their track they have neither seen
+  nor been sent, through the journey rules, one per the programme's `cadence_days`. Opening or
+  clicking an email from a saved design marks it seen. Migration 0367.
+- Agent tools `journey.draft`, `journey.explain_person` and `journey.suggest` (E8-T12): a drafted
+  journey graph with its diff and the call that saves it as a draft (nothing saved or published), a
+  person's path explained, and where a journey loses people or gets blocked.
 - A marketing list's form has a Segment tab (E7-T12): the estimated size, an exact count on request,
   how many can be emailed for a consent purpose, a sample of up to 20 people with why each is in or
   out, and the sends, programmes and journeys that use the list, in English and Arabic.

@@ -54,7 +54,7 @@ impl PrivilegeKey for JourneyUpdate {
 }
 
 /// The workflow definition behind journey `journey`, or 404.
-async fn definition_of(state: &EngineState, journey: Uuid) -> Result<Uuid, AppError> {
+pub async fn definition_of(state: &EngineState, journey: Uuid) -> Result<Uuid, AppError> {
     sqlx::query_scalar(
         "SELECT d.id FROM marketing_journey j \
            JOIN workflow_definition d ON d.logicalname = j.workflow_definition_logicalname \

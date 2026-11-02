@@ -215,6 +215,14 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   manual change, an import, a form or a flow); counts only, for a list the caller may read.
   `segment.lookalike` suggests conditions for a look-alike segment: choice values clearly more common
   among the list's members (those the caller may read) than among all records, saving nothing.
+- Journeys (marketing): `journey.draft` drafts a journey's steps from a description and returns the
+  graph, a diff against the current draft, any problems (one trigger, known steps, only waits,
+  branches and registered marketing steps, never a record write or an outside call) and the
+  workflow call that saves it as a draft; nothing is saved and nothing publishes.
+  `journey.explain_person` says where one person went, where and why they were blocked and how
+  each run ended (a person the caller may not read is not found); `journey.suggest` names the step
+  most people leave at and the most common block reasons. There is no agent action to publish a
+  journey or enrol anyone.
 - Org charts (sales; no manager is set): `sales.orgchart.read` reads an account's chart,
   `sales.committee.read` a deal's buying committee (influence and attitude only through the Deal
   Attitude profile) and `sales.coverage.gaps` just its gaps; `sales.orgchart.propose` queues

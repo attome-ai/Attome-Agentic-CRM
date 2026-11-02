@@ -122,11 +122,13 @@ pub fn comment_call(metric_id: Uuid, period_start: &str, body: &str) -> Value {
     })
 }
 
-/// One model call with the shared admission, budget and approval rules.
-async fn generate(
+/// One model call with the shared admission, budget and approval rules,
+/// recorded under `prompt_version`.
+pub(crate) async fn generate(
     state: &EngineState,
     ctx: &ActionContext,
     action: &str,
+    prompt_version: &str,
     system: String,
     facts: String,
 ) -> Result<(String, Option<Provenance>), AppError> {
@@ -153,7 +155,7 @@ async fn generate(
     grant.settle(state, &generated.usage).await;
     let provenance = Some(Provenance {
         model_id: generated.usage.model_id.clone(),
-        prompt_version: DRAFT_PROMPT_VERSION.to_owned(),
+        prompt_version: prompt_version.to_owned(),
         suggestion_id: None,
     });
     Ok((generated.text, provenance))
@@ -219,8 +221,15 @@ impl Action for DraftDefinition {
                 fields given."
                 .to_owned();
             let facts = json!({ "sentence": args.sentence, "entities": catalogue }).to_string();
-            let (text, provenance) =
-                generate(state, ctx, METRIC_DRAFT_DEFINITION, system, facts).await?;
+            let (text, provenance) = generate(
+                state,
+                ctx,
+                METRIC_DRAFT_DEFINITION,
+                DRAFT_PROMPT_VERSION,
+                system,
+                facts,
+            )
+            .await?;
             let spec: MetricSpec = serde_json::from_str(strip_fence(&text)).map_err(|e| {
                 AppError::Validation(format!("the drafted metric is not a builder spec: {e}"))
             })?;
@@ -327,8 +336,15 @@ impl Action for DraftCommentary {
                 "periods_newest_first": history,
             })
             .to_string();
-            let (text, provenance) =
-                generate(state, ctx, METRIC_DRAFT_COMMENTARY, system, facts).await?;
+            let (text, provenance) = generate(
+                state,
+                ctx,
+                METRIC_DRAFT_COMMENTARY,
+                DRAFT_PROMPT_VERSION,
+                system,
+                facts,
+            )
+            .await?;
             let body = text.trim().to_owned();
             Ok(ActionResult {
                 value: json!({
