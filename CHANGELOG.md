@@ -14,6 +14,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Fulfilment (F6): `/api/v1/fulfilment/*` (orders, pick lists, packages, release, holds, backorders,
+  sourcing override, shipment booking, tracking, out-for-delivery and proof) and the portal's
+  `/{keyword}/api/v1/fulfilment/orders/{order_id}`, with a money-path test from a confirmed order to one
+  invoice request after delivery. Stock availability needs inventory (I6); booking a carrier needs that
+  carrier's account configured as an integration system.
 - Revenue screens (F11-T13, ledger pack changeset `0006`): list views and a Revenue menu for the revenue
   records, Arabic labels for their statuses and kinds, and the contract change preview page
   (`@attome/xrm/ledger/revrec`, `/xrm/admin/revrec/changes/{id}`) with Apply and Discard.
