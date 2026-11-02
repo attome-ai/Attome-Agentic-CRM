@@ -98968,6 +98968,218 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/ledger/revrec/close": {
+      "post": {
+        "tags": [
+          "ledger"
+        ],
+        "summary": "Close a month of revenue",
+        "description": "Opens the close of `fiscal_period` (`YYYY-MM`): a job recognises the month's planned schedule lines\nand writes each contract's deferred and unbilled balance, then asks the controller to approve.\nAnswers the month's open close when there is one.",
+        "operationId": "revrec_close_start",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The close",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloseRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks revrec_close_run.create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Revenue recognition is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The month is being closed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not YYYY-MM, or the ledger period is closed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ledger",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/ledger/revrec/close/{id}/post": {
+      "post": {
+        "tags": [
+          "ledger"
+        ],
+        "summary": "Post an approved close",
+        "description": "Once the close's approval is approved, posts the month's recognised revenue (one journal entry per\nproduct, through the `revrec_close` posting rule) and locks the month's lines. A rejected approval\nmarks the close failed.",
+        "operationId": "revrec_close_post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The close",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Posted, or failed by a rejection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClosePosted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks revrec_close_run.create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such close, or revenue recognition is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not approved yet, posted already, or the month is being closed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No posting rule for revrec_close, or the ledger period is closed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ledger",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/ledger/revrec/contracts/combine": {
       "post": {
         "tags": [
@@ -159159,6 +159371,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "coupon",
+            "in": "query",
+            "description": "A coupon code.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -159193,7 +159414,7 @@
             }
           },
           "409": {
-            "description": "The cart is being checked out already",
+            "description": "The cart is being checked out already, or the coupon is used up or busy",
             "content": {
               "application/json": {
                 "schema": {
@@ -159203,7 +159424,7 @@
             }
           },
           "422": {
-            "description": "The cart is empty, or a product is no longer on sale",
+            "description": "The cart is empty, a product is no longer on sale, or the coupon does not apply",
             "content": {
               "application/json": {
                 "schema": {
@@ -159410,6 +159631,237 @@
         "x-risk": "low"
       }
     },
+    "/{keyword}/api/v1/shop/guest/confirm": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "Confirm a guest checkout",
+        "description": "F8-T7: with the texted code, places the order: prices, offers, shipping and VAT recomputed here. The\nsame `Idempotency-Key` again returns the same order.",
+        "operationId": "portal_shop_guest_confirm",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "One key per order",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Confirm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuestOrder"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Wrong, expired or exhausted code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not from the portal's own origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Guest checkout is off, or the portal has no service user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The code was used already, or the order is being placed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No Idempotency-Key, a product no longer on sale, a shipping rate that does not apply, or a coupon that does not",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many tries from the address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/{keyword}/api/v1/shop/guest/start": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "Start a guest checkout",
+        "description": "F8-T7: keeps the lines and texts a 6-digit code to the phone; the code works for 10 minutes.",
+        "operationId": "portal_shop_guest_start",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuestStart"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The code was sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Started"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not from the portal's own origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Guest checkout is off, or no such portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a phone number, a product not on sale, or no SMS provider",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many codes for the phone or the address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "F8-T7: keeps an unconfirmed guest basket and texts its code; nothing is ordered until confirm, which is audited",
+          "reason": "user_preference",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/{keyword}/api/v1/shop/orders": {
       "get": {
         "tags": [
@@ -159455,6 +159907,269 @@
           },
           "404": {
             "description": "The shop is off, or the person has no account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/{keyword}/api/v1/shop/products/{product_id}/reviews": {
+      "get": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "A product's reviews",
+        "description": "F8-T8: the published reviews of a product, newest first, without names.",
+        "operationId": "portal_shop_product_reviews",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "product_id",
+            "in": "path",
+            "description": "The product",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Published reviews",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicReview"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The shop is off, or no such portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/{keyword}/api/v1/shop/reviews": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "Review a product",
+        "description": "F8-T8: a portal member reviews a product they received (a fulfilled order of it); the review waits\nfor a store person to publish it.",
+        "operationId": "portal_shop_review",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Taken, pending",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewTaken"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a buyer of the product",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The shop is off, the person has no account, or the portal has no service user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The product has the person's review already",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Rating not 1 to 5, or the text is too long",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/{keyword}/api/v1/shop/shipping": {
+      "get": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "Shipping options",
+        "description": "F8-T7: the ways to ship an order of `total` to the address, cheapest first; cash on delivery adds each\noption's `cod_fee`.",
+        "operationId": "portal_shop_shipping",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "description": "ISO 3166-1 alpha-2.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "city",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "total",
+            "in": "query",
+            "description": "The order's total, a decimal (for free-over rates).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ShippingOption"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The shop is off, or no such portal",
             "content": {
               "application/json": {
                 "schema": {
@@ -171210,6 +171925,7 @@
         "required": [
           "order_id",
           "total",
+          "discount_total",
           "needs_approval"
         ],
         "properties": {
@@ -171220,6 +171936,10 @@
             ],
             "format": "uuid"
           },
+          "discount_total": {
+            "type": "string",
+            "description": "What the offers took off (F8-T6)."
+          },
           "needs_approval": {
             "type": "boolean",
             "description": "An approval request was submitted for the order."
@@ -171229,7 +171949,8 @@
             "format": "uuid"
           },
           "total": {
-            "type": "string"
+            "type": "string",
+            "description": "What the order comes to after offers."
           }
         }
       },
@@ -172145,6 +172866,45 @@
           }
         }
       },
+      "ClosePosted": {
+        "type": "object",
+        "description": "What posting did.",
+        "required": [
+          "run_id",
+          "status",
+          "entries"
+        ],
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Journal entries, one per product."
+          },
+          "run_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "The run's status after."
+          }
+        }
+      },
+      "CloseRequest": {
+        "type": "object",
+        "required": [
+          "fiscal_period"
+        ],
+        "properties": {
+          "fiscal_period": {
+            "type": "string",
+            "description": "`YYYY-MM`."
+          }
+        }
+      },
       "CloseResponse": {
         "type": "object",
         "description": "`POST /api/v1/admin/changesets/{id}/close`.",
@@ -172167,6 +172927,35 @@
             "items": {
               "$ref": "#/components/schemas/CloseWarning"
             }
+          }
+        }
+      },
+      "CloseRun": {
+        "type": "object",
+        "description": "A close of one month.",
+        "required": [
+          "id",
+          "fiscal_period"
+        ],
+        "properties": {
+          "approval_request_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "fiscal_period": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -173805,6 +174594,57 @@
             "items": {
               "$ref": "#/components/schemas/EffectiveAccessTeamRef"
             }
+          }
+        }
+      },
+      "Confirm": {
+        "type": "object",
+        "description": "What a guest confirms.",
+        "required": [
+          "checkout_id",
+          "code",
+          "name",
+          "address",
+          "country",
+          "shipping_rate_id"
+        ],
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "cash_on_delivery": {
+            "type": "boolean"
+          },
+          "checkout_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "city": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "code": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string",
+            "description": "ISO 3166-1 alpha-2."
+          },
+          "coupon": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "shipping_rate_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A rate from the shipping options."
           }
         }
       },
@@ -188925,6 +189765,24 @@
         },
         "additionalProperties": false
       },
+      "GuestLine": {
+        "type": "object",
+        "description": "A product and how many.",
+        "required": [
+          "product_id",
+          "quantity"
+        ],
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "string",
+            "description": "A decimal in text."
+          }
+        }
+      },
       "GuestLink": {
         "type": "object",
         "description": "A guest link.",
@@ -188953,6 +189811,65 @@
             ],
             "format": "int64",
             "description": "How long the link works, 1 to 90 days (30 by default); never past the\nquote's own expiry."
+          }
+        }
+      },
+      "GuestOrder": {
+        "type": "object",
+        "description": "The order a guest placed.",
+        "required": [
+          "order_id",
+          "subtotal",
+          "discount_total",
+          "shipping",
+          "vat",
+          "total"
+        ],
+        "properties": {
+          "discount_total": {
+            "type": "string"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "payment_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Where to pay, unless cash on delivery (or no link could be made)."
+          },
+          "shipping": {
+            "type": "string"
+          },
+          "subtotal": {
+            "type": "string",
+            "description": "Decimals in text."
+          },
+          "total": {
+            "type": "string"
+          },
+          "vat": {
+            "type": "string"
+          }
+        }
+      },
+      "GuestStart": {
+        "type": "object",
+        "required": [
+          "phone",
+          "lines"
+        ],
+        "properties": {
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuestLine"
+            }
+          },
+          "phone": {
+            "type": "string"
           }
         }
       },
@@ -232779,6 +233696,32 @@
           }
         }
       },
+      "PublicReview": {
+        "type": "object",
+        "description": "A published review, as a shopper sees it.",
+        "properties": {
+          "body": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "rating": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          }
+        }
+      },
       "PublishResponse": {
         "type": "object",
         "required": [
@@ -238205,6 +239148,30 @@
           }
         }
       },
+      "ReviewBody": {
+        "type": "object",
+        "required": [
+          "product_id",
+          "rating"
+        ],
+        "properties": {
+          "body": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rating": {
+            "type": "integer",
+            "format": "int32",
+            "description": "1 to 5."
+          }
+        }
+      },
       "ReviewByBody": {
         "type": "object",
         "description": "Full replace, `null` clears — same convention as `SchedulePageBody`\n(D-452's `review_by`, a plain `Option<NaiveDate>` full-replace, has no\nempty-string-vs-null ambiguity to resolve).",
@@ -238301,6 +239268,24 @@
           "round": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "ReviewTaken": {
+        "type": "object",
+        "description": "The review taken.",
+        "required": [
+          "review_id",
+          "status"
+        ],
+        "properties": {
+          "review_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "Always `pending`: a store person publishes it."
           }
         }
       },
@@ -245307,6 +246292,37 @@
           }
         }
       },
+      "ShippingOption": {
+        "type": "object",
+        "description": "One way to ship a cart.",
+        "required": [
+          "rate_id",
+          "zone",
+          "method",
+          "amount",
+          "cod_fee"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "Decimals in text."
+          },
+          "cod_fee": {
+            "type": "string",
+            "description": "What cash on delivery adds."
+          },
+          "method": {
+            "type": "string"
+          },
+          "rate_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "zone": {
+            "type": "string"
+          }
+        }
+      },
       "ShopOrder": {
         "type": "object",
         "description": "One of the account's orders, as the shop lists it.",
@@ -248252,6 +249268,24 @@
           "system": {
             "type": "string",
             "description": "The integration system that is the source."
+          }
+        }
+      },
+      "Started": {
+        "type": "object",
+        "description": "A started guest checkout.",
+        "required": [
+          "checkout_id",
+          "expires_at"
+        ],
+        "properties": {
+          "checkout_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -258220,7 +259254,6 @@
       "description": "فحوص السلامة والجاهزية والإصدار"
     }
   ],
-  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -258273,5 +259306,6 @@
       }
     }
   },
-  "x-api-version": "2026-10"
+  "x-api-version": "2026-10",
+  "x-version-adapters": []
 }

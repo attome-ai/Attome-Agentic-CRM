@@ -20617,6 +20617,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ledger/revrec/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close a month of revenue
+         * @description Opens the close of `fiscal_period` (`YYYY-MM`): a job recognises the month's planned schedule lines
+         *     and writes each contract's deferred and unbilled balance, then asks the controller to approve.
+         *     Answers the month's open close when there is one.
+         */
+        post: operations["revrec_close_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ledger/revrec/close/{id}/post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post an approved close
+         * @description Once the close's approval is approved, posts the month's recognised revenue (one journal entry per
+         *     product, through the `revrec_close` posting rule) and locks the month's lines. A rejected approval
+         *     marks the close failed.
+         */
+        post: operations["revrec_close_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ledger/revrec/contracts/combine": {
         parameters: {
             query?: never;
@@ -33733,6 +33777,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/{keyword}/api/v1/shop/guest/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm a guest checkout
+         * @description F8-T7: with the texted code, places the order: prices, offers, shipping and VAT recomputed here. The
+         *     same `Idempotency-Key` again returns the same order.
+         */
+        post: operations["portal_shop_guest_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/shop/guest/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a guest checkout
+         * @description F8-T7: keeps the lines and texts a 6-digit code to the phone; the code works for 10 minutes.
+         */
+        post: operations["portal_shop_guest_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/{keyword}/api/v1/shop/orders": {
         parameters: {
             query?: never;
@@ -33745,6 +33830,68 @@ export interface paths {
          * @description F7-T2: the signed-in person's account's orders, newest first.
          */
         get: operations["portal_shop_orders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/shop/products/{product_id}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A product's reviews
+         * @description F8-T8: the published reviews of a product, newest first, without names.
+         */
+        get: operations["portal_shop_product_reviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/shop/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Review a product
+         * @description F8-T8: a portal member reviews a product they received (a fulfilled order of it); the review waits
+         *     for a store person to publish it.
+         */
+        post: operations["portal_shop_review"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/shop/shipping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Shipping options
+         * @description F8-T7: the ways to ship an order of `total` to the address, cheapest first; cash on delivery adds each
+         *     option's `cod_fee`.
+         */
+        get: operations["portal_shop_shipping"];
         put?: never;
         post?: never;
         delete?: never;
@@ -38268,10 +38415,13 @@ export interface components {
         CheckedOut: {
             /** Format: uuid */
             approval_id?: string | null;
+            /** @description What the offers took off (F8-T6). */
+            discount_total: string;
             /** @description An approval request was submitted for the order. */
             needs_approval: boolean;
             /** Format: uuid */
             order_id: string;
+            /** @description What the order comes to after offers. */
             total: string;
         };
         /** @description A person's marks for one run. */
@@ -38601,6 +38751,19 @@ export interface components {
             /** @description Child records the caller cannot read, left behind. */
             skipped: number;
         };
+        /** @description What posting did. */
+        ClosePosted: {
+            /** @description Journal entries, one per product. */
+            entries: string[];
+            /** Format: uuid */
+            run_id: string;
+            /** @description The run's status after. */
+            status: string;
+        };
+        CloseRequest: {
+            /** @description `YYYY-MM`. */
+            fiscal_period: string;
+        };
         /** @description `POST /api/v1/admin/changesets/{id}/close`. */
         CloseResponse: {
             /**
@@ -38614,6 +38777,14 @@ export interface components {
              */
             summary: string;
             warnings: components["schemas"]["CloseWarning"][];
+        };
+        /** @description A close of one month. */
+        CloseRun: {
+            approval_request_id?: string | null;
+            fiscal_period: string;
+            /** Format: uuid */
+            id: string;
+            status?: string | null;
         };
         /** @description One close warning. */
         CloseWarning: {
@@ -39291,6 +39462,24 @@ export interface components {
             organizations: components["schemas"]["EffectiveAccessOrgRef"][];
             position?: null | components["schemas"]["EffectiveAccessRoleRef"];
             teams: components["schemas"]["EffectiveAccessTeamRef"][];
+        };
+        /** @description What a guest confirms. */
+        Confirm: {
+            address: string;
+            cash_on_delivery?: boolean;
+            /** Format: uuid */
+            checkout_id: string;
+            city?: string | null;
+            code: string;
+            /** @description ISO 3166-1 alpha-2. */
+            country: string;
+            coupon?: string | null;
+            name: string;
+            /**
+             * Format: uuid
+             * @description A rate from the shipping options.
+             */
+            shipping_rate_id: string;
         };
         /** @description `202`: a `Consequential` action was submitted for four-eyes approval. */
         ConfirmApprovalRequested: {
@@ -45379,6 +45568,13 @@ export interface components {
             bucket?: null | components["schemas"]["DateBucket"];
             field: string;
         };
+        /** @description A product and how many. */
+        GuestLine: {
+            /** Format: uuid */
+            product_id: string;
+            /** @description A decimal in text. */
+            quantity: string;
+        };
         /** @description A guest link. */
         GuestLink: {
             /** Format: date-time */
@@ -45393,6 +45589,23 @@ export interface components {
              *     quote's own expiry.
              */
             expires_in_days?: number | null;
+        };
+        /** @description The order a guest placed. */
+        GuestOrder: {
+            discount_total: string;
+            /** Format: uuid */
+            order_id: string;
+            /** @description Where to pay, unless cash on delivery (or no link could be made). */
+            payment_url?: string | null;
+            shipping: string;
+            /** @description Decimals in text. */
+            subtotal: string;
+            total: string;
+            vat: string;
+        };
+        GuestStart: {
+            lines: components["schemas"]["GuestLine"][];
+            phone: string;
         };
         /** @description One hand-off. */
         Handoff: {
@@ -62106,6 +62319,14 @@ export interface components {
             seo_title?: string | null;
             title: string;
         };
+        /** @description A published review, as a shopper sees it. */
+        PublicReview: {
+            body?: string | null;
+            /** Format: date-time */
+            created_at?: string | null;
+            /** Format: double */
+            rating?: number | null;
+        };
         PublishResponse: {
             /**
              * @description `true` when `dashboard.publish` is in `approval.required_actions` and
@@ -64228,6 +64449,16 @@ export interface components {
              */
             version_id?: string | null;
         };
+        ReviewBody: {
+            body?: string | null;
+            /** Format: uuid */
+            product_id: string;
+            /**
+             * Format: int32
+             * @description 1 to 5.
+             */
+            rating: number;
+        };
         /**
          * @description Full replace, `null` clears — same convention as `SchedulePageBody`
          *     (D-452's `review_by`, a plain `Option<NaiveDate>` full-replace, has no
@@ -64269,6 +64500,13 @@ export interface components {
             link_id: string;
             /** Format: int32 */
             round: number;
+        };
+        /** @description The review taken. */
+        ReviewTaken: {
+            /** Format: uuid */
+            review_id: string;
+            /** @description Always `pending`: a store person publishes it. */
+            status: string;
         };
         /** @description The version the counterparty reviews. */
         ReviewVersion: {
@@ -66991,6 +67229,17 @@ export interface components {
             shipment_id: string;
             tracking_number: string;
         };
+        /** @description One way to ship a cart. */
+        ShippingOption: {
+            /** @description Decimals in text. */
+            amount: string;
+            /** @description What cash on delivery adds. */
+            cod_fee: string;
+            method: string;
+            /** Format: uuid */
+            rate_id: string;
+            zone: string;
+        };
         /** @description One of the account's orders, as the shop lists it. */
         ShopOrder: {
             currency?: string | null;
@@ -68141,6 +68390,13 @@ export interface components {
             cut_over?: boolean;
             /** @description The integration system that is the source. */
             system: string;
+        };
+        /** @description A started guest checkout. */
+        Started: {
+            /** Format: uuid */
+            checkout_id: string;
+            /** Format: date-time */
+            expires_at: string;
         };
         StatOut: {
             /** Format: double */
@@ -132281,6 +132537,143 @@ export interface operations {
             };
         };
     };
+    revrec_close_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CloseRequest"];
+            };
+        };
+        responses: {
+            /** @description The close */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloseRun"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks revrec_close_run.create */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Revenue recognition is off */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The month is being closed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not YYYY-MM, or the ledger period is closed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    revrec_close_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The close */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Posted, or failed by a rejection */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClosePosted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks revrec_close_run.create */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such close, or revenue recognition is off */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not approved yet, posted already, or the month is being closed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No posting rule for revrec_close, or the ledger period is closed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     revrec_contracts_combine: {
         parameters: {
             query?: never;
@@ -168317,7 +168710,10 @@ export interface operations {
     };
     portal_shop_checkout: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description A coupon code. */
+                coupon?: string;
+            };
             header?: never;
             path: {
                 /** @description The portal */
@@ -168354,7 +168750,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description The cart is being checked out already */
+            /** @description The cart is being checked out already, or the coupon is used up or busy */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -168363,7 +168759,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description The cart is empty, or a product is no longer on sale */
+            /** @description The cart is empty, a product is no longer on sale, or the coupon does not apply */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -168474,6 +168870,153 @@ export interface operations {
             };
         };
     };
+    portal_shop_guest_confirm: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per order */
+                "Idempotency-Key": string;
+            };
+            path: {
+                /** @description The portal */
+                keyword: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Confirm"];
+            };
+        };
+        responses: {
+            /** @description The order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestOrder"];
+                };
+            };
+            /** @description Wrong, expired or exhausted code */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not from the portal's own origin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Guest checkout is off, or the portal has no service user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The code was used already, or the order is being placed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No Idempotency-Key, a product no longer on sale, a shipping rate that does not apply, or a coupon that does not */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many tries from the address */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_shop_guest_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuestStart"];
+            };
+        };
+        responses: {
+            /** @description The code was sent */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Started"];
+                };
+            };
+            /** @description Not from the portal's own origin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Guest checkout is off, or no such portal */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a phone number, a product not on sale, or no SMS provider */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many codes for the phone or the address */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     portal_shop_orders: {
         parameters: {
             query?: never;
@@ -168505,6 +169048,150 @@ export interface operations {
                 };
             };
             /** @description The shop is off, or the person has no account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_shop_product_reviews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+                /** @description The product */
+                product_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Published reviews */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicReview"][];
+                };
+            };
+            /** @description The shop is off, or no such portal */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_shop_review: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewBody"];
+            };
+        };
+        responses: {
+            /** @description Taken, pending */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewTaken"];
+                };
+            };
+            /** @description Not signed in to the portal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a buyer of the product */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The shop is off, the person has no account, or the portal has no service user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The product has the person's review already */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rating not 1 to 5, or the text is too long */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_shop_shipping: {
+        parameters: {
+            query: {
+                /** @description ISO 3166-1 alpha-2. */
+                country: string;
+                city?: string;
+                /** @description The order's total, a decimal (for free-over rates). */
+                total?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The options */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShippingOption"][];
+                };
+            };
+            /** @description The shop is off, or no such portal */
             404: {
                 headers: {
                     [name: string]: unknown;
