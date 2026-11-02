@@ -24221,6 +24221,112 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/derived-entities/{name}/start-flow": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Start a flow on a derived entity's members",
+        "description": "A26-T5: starts the published flow `definition` once per current member\n(up to 10,000, taken at the start), each run correlated to its record\nwith `{entity, record_id}` in its context, in chunks of the batched\nstart; the runs themselves go through the workflow engine's jobs (a\nflow's concurrency cap leaves the rest queued). Automation\nadministrators only. Audited.",
+        "operationId": "derived_entity_start_flow",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The derived entity's name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DerivedStartFlowBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The runs started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DerivedFlowStarted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such derived entity, or its anchor is gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No members, too many, or no published flow of that name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/derived-entities/{name}/trend": {
       "get": {
         "tags": [
@@ -159571,6 +159677,159 @@
         "x-risk": "medium"
       }
     },
+    "/{keyword}/api/v1/me/identities": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "List my linked identities",
+        "description": "G12-T2: the outside identities linked to the signed-in account in this\nportal. A link belongs to one portal's membership; another portal's\naccount is never shown or touched.",
+        "operationId": "portal_list_identities",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "Web portal keyword",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The linked identities",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PortalIdentityItem"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid portal session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/{keyword}/api/v1/me/identities/{id}": {
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Unlink one of my identities",
+        "description": "G12-T2: removes the link, in this portal only. Refused with 409 when it\nis the account's last way to sign in (no password, no other link).",
+        "operationId": "portal_unlink_identity",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "Web portal keyword",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identity link id from the list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Unlinked"
+          },
+          "401": {
+            "description": "No valid portal session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal, or no such link of yours",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "It is the last way to sign in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "credential",
+              "operation": "revoke"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/{keyword}/api/v1/me/password": {
       "post": {
         "tags": [
@@ -184569,6 +184828,19 @@
           }
         }
       },
+      "DerivedFlowStarted": {
+        "type": "object",
+        "description": "The runs a flow start made.",
+        "required": [
+          "started"
+        ],
+        "properties": {
+          "started": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
       "DerivedMassBody": {
         "type": "object",
         "description": "A mass action on a derived entity's current members: the anchor's mass\noperation body (`kind`: `update`, `delete`, `reassign`; `payload`),\nwithout a filter.",
@@ -184724,6 +184996,20 @@
             ]
           }
         }
+      },
+      "DerivedStartFlowBody": {
+        "type": "object",
+        "description": "A flow to start on every current member.",
+        "required": [
+          "definition"
+        ],
+        "properties": {
+          "definition": {
+            "type": "string",
+            "description": "The published workflow's logical name."
+          }
+        },
+        "additionalProperties": false
       },
       "DerivedWeek": {
         "type": "object",
@@ -235000,6 +235286,33 @@
           }
         }
       },
+      "PortalIdentityItem": {
+        "type": "object",
+        "description": "One outside identity linked to the signed-in portal account (G12-T2).",
+        "required": [
+          "id",
+          "provider_key",
+          "issuer",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "provider_key": {
+            "type": "string",
+            "description": "The portal's identity provider key (an OIDC broker, Nafath, UAE Pass)."
+          }
+        }
+      },
       "PortalInvoice": {
         "type": "object",
         "description": "An issued invoice with an amount still open.",
@@ -263225,6 +263538,8 @@
       "description": "فحوص السلامة والجاهزية والإصدار"
     }
   ],
+  "x-api-version": "2026-10",
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -263276,7 +263591,5 @@
         ]
       }
     }
-  },
-  "x-api-version": "2026-10",
-  "x-version-adapters": []
+  }
 }

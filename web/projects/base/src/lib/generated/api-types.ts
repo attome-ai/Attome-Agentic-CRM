@@ -4742,6 +4742,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/derived-entities/{name}/start-flow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a flow on a derived entity's members
+         * @description A26-T5: starts the published flow `definition` once per current member
+         *     (up to 10,000, taken at the start), each run correlated to its record
+         *     with `{entity, record_id}` in its context, in chunks of the batched
+         *     start; the runs themselves go through the workflow engine's jobs (a
+         *     flow's concurrency cap leaves the rest queued). Automation
+         *     administrators only. Audited.
+         */
+        post: operations["derived_entity_start_flow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/derived-entities/{name}/trend": {
         parameters: {
             query?: never;
@@ -33858,6 +33883,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/{keyword}/api/v1/me/identities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List my linked identities
+         * @description G12-T2: the outside identities linked to the signed-in account in this
+         *     portal. A link belongs to one portal's membership; another portal's
+         *     account is never shown or touched.
+         */
+        get: operations["portal_list_identities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/me/identities/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Unlink one of my identities
+         * @description G12-T2: removes the link, in this portal only. Refused with 409 when it
+         *     is the account's last way to sign in (no password, no other link).
+         */
+        delete: operations["portal_unlink_identity"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/{keyword}/api/v1/me/password": {
         parameters: {
             query?: never;
@@ -42926,6 +42994,10 @@ export interface components {
             /** Format: uuid */
             record_id: string;
         };
+        /** @description The runs a flow start made. */
+        DerivedFlowStarted: {
+            started: number;
+        };
         /**
          * @description A mass action on a derived entity's current members: the anchor's mass
          *     operation body (`kind`: `update`, `delete`, `reassign`; `payload`),
@@ -42987,6 +43059,11 @@ export interface components {
             /** Format: uuid */
             id: string;
             name?: string | null;
+        };
+        /** @description A flow to start on every current member. */
+        DerivedStartFlowBody: {
+            /** @description The published workflow's logical name. */
+            definition: string;
         };
         /** @description One week of membership. */
         DerivedWeek: {
@@ -62314,6 +62391,16 @@ export interface components {
         /** @description The portal served on the request's host. */
         PortalHost: {
             keyword: string;
+        };
+        /** @description One outside identity linked to the signed-in portal account (G12-T2). */
+        PortalIdentityItem: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            issuer: string;
+            /** @description The portal's identity provider key (an OIDC broker, Nafath, UAE Pass). */
+            provider_key: string;
         };
         /** @description An issued invoice with an amount still open. */
         PortalInvoice: {
@@ -87925,6 +88012,69 @@ export interface operations {
             };
             /** @description It is not paused */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    derived_entity_start_flow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The derived entity's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DerivedStartFlowBody"];
+            };
+        };
+        responses: {
+            /** @description The runs started */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DerivedFlowStarted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such derived entity, or its anchor is gone */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No members, too many, or no published flow of that name */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -170020,6 +170170,97 @@ export interface operations {
             };
             /** @description No such portal */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_list_identities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Web portal keyword */
+                keyword: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The linked identities */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalIdentityItem"][];
+                };
+            };
+            /** @description No valid portal session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such portal */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_unlink_identity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Web portal keyword */
+                keyword: string;
+                /** @description Identity link id from the list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unlinked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No valid portal session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such portal, or no such link of yours */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description It is the last way to sign in */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

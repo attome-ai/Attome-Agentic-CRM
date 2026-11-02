@@ -6088,6 +6088,159 @@
         "x-risk": "medium"
       }
     },
+    "/{keyword}/api/v1/me/identities": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "List my linked identities",
+        "description": "G12-T2: the outside identities linked to the signed-in account in this\nportal. A link belongs to one portal's membership; another portal's\naccount is never shown or touched.",
+        "operationId": "portal_list_identities",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "Web portal keyword",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The linked identities",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PortalIdentityItem"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No valid portal session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/{keyword}/api/v1/me/identities/{id}": {
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Unlink one of my identities",
+        "description": "G12-T2: removes the link, in this portal only. Refused with 409 when it\nis the account's last way to sign in (no password, no other link).",
+        "operationId": "portal_unlink_identity",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "Web portal keyword",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identity link id from the list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Unlinked"
+          },
+          "401": {
+            "description": "No valid portal session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such portal, or no such link of yours",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "It is the last way to sign in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "credential",
+              "operation": "revoke"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/{keyword}/api/v1/me/password": {
       "post": {
         "tags": [
@@ -11980,6 +12133,33 @@
         "properties": {
           "keyword": {
             "type": "string"
+          }
+        }
+      },
+      "PortalIdentityItem": {
+        "type": "object",
+        "description": "One outside identity linked to the signed-in portal account (G12-T2).",
+        "required": [
+          "id",
+          "provider_key",
+          "issuer",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "provider_key": {
+            "type": "string",
+            "description": "The portal's identity provider key (an OIDC broker, Nafath, UAE Pass)."
           }
         }
       },
