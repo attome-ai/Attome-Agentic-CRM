@@ -716,6 +716,12 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         std::time::Duration::from_secs(60),
     );
 
+    // M17-T1: job extensions with their own schedule, once a minute.
+    crate::jobs::spawn_extension_schedule_sweep_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(60),
+    );
+
     // AH8 (V2-D693): runs actions whose undo window ended. Every 15 seconds,
     // so an action runs close to the time the person was told.
     crate::jobs::spawn_ai_deferred_action_sweep_scheduler(

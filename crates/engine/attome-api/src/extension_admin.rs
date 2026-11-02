@@ -184,6 +184,11 @@ async fn upload(
     }
     let grants: attome_extension::Grants = serde_json::from_value(body.manifest.clone())
         .map_err(|e| AppError::Validation(format!("the manifest: {e}")))?;
+    // M17-T1: a schedule's cron expression and time zone must parse.
+    if let Some(schedule) = &grants.schedule {
+        attome_jobs::schedule::Schedule::cron(&schedule.cron, &schedule.timezone)
+            .map_err(|e| AppError::Validation(format!("the manifest's schedule: {e}")))?;
+    }
     let problems = attome_extension::grants::check(&grants);
     if !problems.is_empty() {
         return Err(AppError::Validation(format!(

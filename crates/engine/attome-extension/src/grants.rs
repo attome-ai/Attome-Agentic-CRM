@@ -41,6 +41,22 @@ pub struct HookDecl {
     pub order: i32,
 }
 
+/// M17-T1: when a job extension runs by itself: a cron expression on a time
+/// zone's wall clock, with the input each run is given.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct JobSchedule {
+    pub cron: String,
+    #[serde(default = "utc")]
+    pub timezone: String,
+    #[serde(default)]
+    pub input: serde_json::Value,
+}
+
+fn utc() -> String {
+    "UTC".to_owned()
+}
+
 /// An extension's declared grants, and the writes it is called on.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -52,6 +68,8 @@ pub struct Grants {
     pub hosts: BTreeSet<String>,
     /// The hook stages it runs at; each needs a read grant on its entity.
     pub hooks: Vec<HookDecl>,
+    /// M17-T1: a job extension's own schedule (`on_job`), if it has one.
+    pub schedule: Option<JobSchedule>,
 }
 
 /// Why a host call was refused.

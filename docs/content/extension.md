@@ -65,6 +65,9 @@ Custom code runs as WebAssembly on Wasmtime inside the server (Y10, V2-D125), in
   user). It answers `"continue"` or `{"records": [{"entity", "id"?, "values"}]}`; each write must be
   granted and is made through the ordinary write path, at most 100 per run. A failed run is not
   retried, because writes made before the failure stay.
+  A job extension can also run by itself: `"schedule": {"cron": "0 6 * * *", "timezone":
+  "Asia/Riyadh", "input": {...}}` in its manifest (checked at upload) runs it once per slot across
+  every worker, as the administrator who uploaded the published version.
 - **Developing.** `attome dev <folder>` watches a Rust extension crate (with its `manifest.json`),
   builds it for `wasm32-unknown-unknown` on every change, prints cargo's errors with their source
   lines, and uploads each good build as a new draft version (`--once` builds one time; `--target`

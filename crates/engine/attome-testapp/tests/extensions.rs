@@ -425,3 +425,62 @@ fn a_job_extension_writes_what_it_answers_as_the_caller() {
         assert_eq!(status, StatusCode::NOT_FOUND);
     });
 }
+
+// feature: M17
+#[test]
+fn a_scheduled_job_extension_is_claimed_through_the_schedule_ledger() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let name = format!("sched_{}", &Uuid::now_v7().simple().to_string()[24..]);
+        let manifest = |cron: &str| {
+            json!({
+                "entities": { "account": { "read": true, "write": true, "attributes": ["name"] } },
+                "schedule": { "cron": cron, "timezone": "Asia/Riyadh", "input": { "since": "yesterday" } }
+            })
+        };
+        let (status, body) = app
+            .request(
+                Method::POST,
+                "/api/v1/admin/extensions",
+                Some(json!({ "name": name, "module_base64": b64(JOB_CREATES_ACCOUNT), "manifest": manifest("not a cron") })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+
+        let (status, body) = app
+            .request(
+                Method::POST,
+                "/api/v1/admin/extensions",
+                Some(json!({ "name": name, "module_base64": b64(JOB_CREATES_ACCOUNT), "manifest": manifest("0 6 * * *") })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::CREATED, "{body}");
+        let (status, _) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/admin/extensions/{name}/versions/1/publish"),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK);
+
+        attome_api::extension_kinds::sweep_schedules(&app.state)
+            .await
+            .unwrap();
+        let ledger: i64 = sqlx::query_scalar("SELECT count(*) FROM job_schedule WHERE name = $1")
+            .bind(format!("extension:{name}"))
+            .fetch_one(app.db())
+            .await
+            .unwrap();
+        assert_eq!(ledger, 1, "the extension's schedule has its ledger row");
+        // A second sweep in the same slot queues nothing more.
+        assert_eq!(
+            attome_api::extension_kinds::sweep_schedules(&app.state)
+                .await
+                .unwrap(),
+            0
+        );
+    });
+}

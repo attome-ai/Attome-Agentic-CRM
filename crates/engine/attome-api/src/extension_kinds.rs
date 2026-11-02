@@ -7,6 +7,12 @@
 //!   ...}` runs the extension's `on_webhook` export with the event, after the
 //!   hook's own signature and replay checks, as the hook's service user.
 //!
+//! - **Schedule.** A manifest's `schedule` (`{cron, timezone, input}`) runs
+//!   the job by itself: [`sweep_schedules`] (a minute sweep) claims each
+//!   published extension's slot once across every worker through the
+//!   schedule ledger (`extension:<name>`) and queues the job as the
+//!   administrator who uploaded the published version.
+//!
 //! Either way the module only answers the records it wants written;
 //! [`run_kind`] holds them to the extension's grants and makes them one by
 //! one through the generic write path, so each is checked, validated and
@@ -38,6 +44,62 @@ pub struct ExtensionJobPayload {
     pub run_as: Uuid,
     #[serde(default)]
     pub input: Value,
+}
+
+/// The minute sweep that queues scheduled job extensions.
+pub const SCHEDULE_SWEEP: attome_jobs::JobType =
+    attome_jobs::JobType::new("extension_schedule_sweep", 1);
+
+/// Claims every published extension's due schedule slot once and queues its
+/// job. Answers how many were queued. A schedule that no longer parses is
+/// skipped with a warning (it was checked at upload).
+pub async fn sweep_schedules(state: &EngineState) -> Result<usize, AppError> {
+    let rows: Vec<(String, Option<Uuid>, Value)> = sqlx::query_as(
+        "SELECT name, created_by, manifest FROM extension \
+          WHERE status = 'published' AND jsonb_typeof(manifest->'schedule') = 'object'",
+    )
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut queued = 0;
+    for (name, created_by, manifest) in rows {
+        let Ok(grants) = serde_json::from_value::<Grants>(manifest) else {
+            continue;
+        };
+        let (Some(schedule), Some(run_as)) = (grants.schedule, created_by) else {
+            continue;
+        };
+        let when = match attome_jobs::schedule::Schedule::cron(&schedule.cron, &schedule.timezone) {
+            Ok(when) => when,
+            Err(error) => {
+                tracing::warn!(extension = %name, %error, "an extension's schedule does not parse; skipped");
+                continue;
+            }
+        };
+        let job = attome_jobs::RegisteredJob {
+            name: EXTENSION_JOB.name.to_owned(),
+            version: EXTENSION_JOB.version,
+            payload: serde_json::to_value(ExtensionJobPayload {
+                name: name.clone(),
+                run_as,
+                input: schedule.input,
+            })
+            .map_err(AppError::internal)?,
+            next: None,
+        };
+        let claimed = attome_jobs::schedule::tick_at(
+            &state.base.db,
+            &format!("extension:{name}"),
+            &when,
+            attome_core::jobs::EngineJob::Registered(job),
+        )
+        .await
+        .map_err(AppError::internal)?;
+        if claimed {
+            queued += 1;
+        }
+    }
+    Ok(queued)
 }
 
 /// Queues a run of the job extension `name`.

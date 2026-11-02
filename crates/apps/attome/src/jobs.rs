@@ -3251,6 +3251,7 @@ const DEDUP_KEY_CALENDAR_SYNC: &str = "calendar-sync";
 /// Z1-T11: integration OAuth tokens renewed before expiry.
 const DEDUP_KEY_OAUTH_REFRESH: &str = "integration-oauth-refresh";
 const DEDUP_KEY_DEAD_LETTER_SWEEP: &str = "dead-letter-sweep";
+const DEDUP_KEY_EXTENSION_SCHEDULE_SWEEP: &str = "extension-schedule-sweep";
 /// M9-T3: approval request steps mailed to their approvers.
 const DEDUP_KEY_APPROVAL_EMAIL_LINKS: &str = "approval-email-links";
 /// L6-T5: scheduled data profiles and snapshot retention.
@@ -4098,6 +4099,21 @@ pub const HEAVY_OP_UNDO_RETENTION: attome_jobs::JobType =
 pub fn register_job_types() {
     static ONCE: std::sync::Once = std::sync::Once::new();
     ONCE.call_once(|| {
+        // M17-T1: the minute sweep that queues scheduled job extensions.
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            attome_api::extension_kinds::SCHEDULE_SWEEP,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let queued = attome_api::extension_kinds::sweep_schedules(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if queued > 0 {
+                    tracing::info!(queued, "extension schedule sweep");
+                }
+                Ok(())
+            },
+        ) {
+            tracing::error!(%error, "extension schedule sweep type was not registered");
+        }
         // M17-T1: a run of a job extension.
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             attome_api::extension_kinds::EXTENSION_JOB,
@@ -6960,6 +6976,11 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == DEAD_LETTER_SWEEP.name => {
             DEDUP_KEY_DEAD_LETTER_SWEEP
         }
+        EngineJob::Registered(job)
+            if job.name == attome_api::extension_kinds::SCHEDULE_SWEEP.name =>
+        {
+            DEDUP_KEY_EXTENSION_SCHEDULE_SWEEP
+        }
         EngineJob::Registered(job) if job.name == APPROVAL_EMAIL_LINKS.name => {
             DEDUP_KEY_APPROVAL_EMAIL_LINKS
         }
@@ -7845,6 +7866,27 @@ pub fn spawn_approval_email_links_scheduler(db: DbPool, interval: std::time::Dur
         job,
         DEDUP_KEY_APPROVAL_EMAIL_LINKS,
         "approval email links",
+    );
+}
+
+/// M17-T1: every minute, the scheduled job extensions that came due.
+pub fn spawn_extension_schedule_sweep_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES
+        .job(attome_api::extension_kinds::SCHEDULE_SWEEP.name, &())
+    {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "extension schedule sweep: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_EXTENSION_SCHEDULE_SWEEP,
+        "extension schedule sweep",
     );
 }
 
