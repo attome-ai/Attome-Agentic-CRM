@@ -19,6 +19,7 @@ import { DeclarativeWidgetRendererComponent } from '../../widget/declarative-wid
 import { WidgetExplainPanelComponent } from '../widget-explain-panel/widget-explain-panel.component';
 import { WidgetRecordsDrawerComponent } from '../widget-records-drawer/widget-records-drawer.component';
 import { DeclarativeWidgetConfig } from '../../widget/declarative-widget-renderer/declarative-widget.types';
+import { type CohortGrid, cohortGrid } from './cohort-grid';
 import { type Timeline, timelineBars } from './timeline-bars';
 
 /** A column plus its resolved click-to-navigate route template — same
@@ -250,12 +251,17 @@ export class DashboardWidgetViewComponent implements OnChanges, OnInit, OnDestro
    * definition does not split them by a field. */
   private measureSeries(s: StructuredData): ChartSeries[] | null {
     const kind = this.chartKind();
-    if (!kind || !MEASURE_KINDS.has(kind) || s.series || s.measures.length < 2) return null;
+    // A correlation matrix of two fields is one measure.
+    const fewest = kind === 'correlation' ? 1 : 2;
+    if (!kind || !MEASURE_KINDS.has(kind) || s.series || s.measures.length < fewest) return null;
     const buckets = s.other ? [...s.buckets, s.other] : s.buckets;
     return s.measures.map((measure, m) => ({
       trackKey: `measure-${m}`,
       name: measure.label || measure.field || measure.aggregation,
       color: COLORS[m % COLORS.length],
+      ...(measure.aggregation === 'corr' && measure.field && measure.paired_field
+        ? { pair: [measure.field, measure.paired_field] as [string, string] }
+        : {}),
       points: buckets.map(b => ({
         trackKey: `${keyIdentity(b.key)}|measure-${m}`,
         label: this.keyLabel(b),
@@ -290,7 +296,8 @@ export class DashboardWidgetViewComponent implements OnChanges, OnInit, OnDestro
       case 'chart_bubble':
       case 'chart_range_area':
       case 'chart_box_plot':
-      case 'chart_candlestick':    return kind.slice('chart_'.length) as ChartKind;
+      case 'chart_candlestick':
+      case 'chart_correlation':    return kind.slice('chart_'.length) as ChartKind;
       default:                     return null;
     }
   });
@@ -469,6 +476,20 @@ export class DashboardWidgetViewComponent implements OnChanges, OnInit, OnDestro
   formatValue(value: number | string | null | undefined): string {
     if (value === null || value === undefined) return '—';
     if (typeof value === 'string') return value;
+    return value.toLocaleString(this.lang.intlLocale(), { maximumFractionDigits: 2 });
+  }
+
+  /** P6-T1: a cohort widget's grid, from the query rows and the widget's
+   * `cohort_key_field`, `period_field` and `value_field`. */
+  readonly cohort = computed<CohortGrid | null>(() => cohortGrid(this.rows(), this.config()));
+
+  /** A cohort or period key: a date in the viewer's locale, anything else as it is. */
+  cohortKey(key: string): string {
+    return /^\d{4}-\d{2}-\d{2}/.test(key) ? this.formatDate(new Date(key)) : key;
+  }
+
+  /** A cohort cell's value, in the viewer's locale. */
+  cohortValue(value: number): string {
     return value.toLocaleString(this.lang.intlLocale(), { maximumFractionDigits: 2 });
   }
 

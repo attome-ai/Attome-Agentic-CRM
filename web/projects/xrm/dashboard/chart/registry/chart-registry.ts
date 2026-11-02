@@ -16,7 +16,8 @@ import { ChartBucket, ChartCategory, ChartSeries, SLICE_COLORS } from '../dashbo
  */
 export type EChartKind =
   | 'stacked_bar' | 'combo' | 'waterfall' | 'treemap' | 'sunburst' | 'sankey' | 'radar' | 'polar'
-  | 'heatmap' | 'calendar_heatmap' | 'pareto' | 'control' | 'scatter' | 'bubble' | 'range_area' | 'box_plot' | 'candlestick';
+  | 'heatmap' | 'calendar_heatmap' | 'pareto' | 'control' | 'scatter' | 'bubble' | 'range_area' | 'box_plot' | 'candlestick'
+  | 'correlation';
 
 export type ChartOption = Record<string, unknown>;
 
@@ -60,6 +61,8 @@ const HEAT_LOW = 'rgba(139, 92, 246, 0.12)';
 const HEAT_HIGH = '#8b5cf6';
 const POSITIVE = '#34d399';
 const NEGATIVE = '#f87171';
+/** No correlation: the diverging scale's neutral middle. */
+const NEUTRAL = 'rgba(128, 128, 128, 0.15)';
 const BUBBLE_MIN = 6;
 const BUBBLE_MAX = 40;
 
@@ -616,6 +619,79 @@ function candlestick(input: ChartInput): ChartOption {
   }]);
 }
 
+export interface CorrelationCell {
+  /** Column and row, indexes into `fields`. */
+  x: number;
+  y: number;
+  value: number;
+  /** The measure's bucket, to drill through; none on the diagonal. */
+  bucket: ChartBucket | null;
+}
+
+/**
+ * P6-T1: a correlation matrix from `corr` measures side by side: one row and
+ * one column per field the measures name, in the order they first appear.
+ * Each measure fills its cell and the mirrored one from its first point; the
+ * diagonal is 1; a pair no measure covers stays empty. Pure.
+ */
+export function correlationCells(series: ChartSeries[]): { fields: string[]; cells: CorrelationCell[] } {
+  const fields: string[] = [];
+  const indexOf = (field: string): number => {
+    const found = fields.indexOf(field);
+    if (found >= 0) return found;
+    fields.push(field);
+    return fields.length - 1;
+  };
+  const cells = new Map<string, CorrelationCell>();
+  for (const s of series) {
+    if (!s.pair) continue;
+    const a = indexOf(s.pair[0]);
+    const b = indexOf(s.pair[1]);
+    const bucket = s.points[0];
+    if (!bucket) continue;
+    cells.set(`${a},${b}`, { x: a, y: b, value: bucket.value, bucket });
+    cells.set(`${b},${a}`, { x: b, y: a, value: bucket.value, bucket });
+  }
+  fields.forEach((_, i) => {
+    if (!cells.has(`${i},${i}`)) cells.set(`${i},${i}`, { x: i, y: i, value: 1, bucket: null });
+  });
+  return { fields, cells: [...cells.values()] };
+}
+
+/** The most fields whose cells show their numbers; past it only the colour. */
+const CORRELATION_LABELS_UP_TO = 8;
+
+/**
+ * P6-T1: the correlation matrix on a diverging scale from -1 (negative) through
+ * 0 (neutral) to 1 (positive), first field at the top; the columns mirror in
+ * Arabic.
+ */
+function correlation(input: ChartInput): ChartOption {
+  const { fields, cells } = correlationCells(input.series);
+  const number = (value: number) =>
+    value.toLocaleString(input.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const labels = { color: input.textColor, hideOverlap: true };
+  return base(input, {
+    grid: plot(),
+    xAxis: { type: 'category', data: fields, inverse: input.rtl, axisLabel: labels },
+    yAxis: { type: 'category', data: fields, inverse: true, position: input.rtl ? 'right' : 'left', axisLabel: labels },
+    visualMap: { show: false, min: -1, max: 1, inRange: { color: [NEGATIVE, NEUTRAL, POSITIVE] } },
+    series: [{
+      type: 'heatmap',
+      label: {
+        show: fields.length <= CORRELATION_LABELS_UP_TO,
+        color: input.textColor,
+        formatter: (item: { value?: number[] }) => number(item.value?.[2] ?? 0),
+      },
+      data: cells.map(c => ({
+        value: [c.x, c.y, c.value],
+        ...(c.bucket ? { bucket: c.bucket } : {}),
+        tip: tip(`${fields[c.y]} · ${fields[c.x]}`, number(c.value)),
+      })),
+    }],
+  });
+}
+
 export const CHART_REGISTRY: Record<EChartKind, ChartAdapter> = {
   stacked_bar:      { minSeries: 1, legend: true,  option: stackedBar },
   combo:            { minSeries: 1, legend: true,  option: combo },
@@ -634,6 +710,7 @@ export const CHART_REGISTRY: Record<EChartKind, ChartAdapter> = {
   range_area:       { minSeries: 2, legend: true,  option: rangeArea },
   box_plot:         { minSeries: 5, legend: false, option: boxPlot },
   candlestick:      { minSeries: 4, legend: false, option: candlestick },
+  correlation:      { minSeries: 1, legend: false, option: correlation },
 };
 
 export function isEChartKind(kind: string): kind is EChartKind {
@@ -641,4 +718,6 @@ export function isEChartKind(kind: string): kind is EChartKind {
 }
 
 /** Kinds whose series are measures side by side, not one measure split by a field. */
-export const MEASURE_KINDS: ReadonlySet<string> = new Set(['combo', 'scatter', 'bubble', 'range_area', 'box_plot', 'candlestick']);
+export const MEASURE_KINDS: ReadonlySet<string> = new Set([
+  'combo', 'scatter', 'bubble', 'range_area', 'box_plot', 'candlestick', 'correlation',
+]);

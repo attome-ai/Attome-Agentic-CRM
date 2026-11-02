@@ -91,6 +91,40 @@
           <div class="xdv-widget-status xdv-widget-empty">{{ 'dashboard.viewer.noRowsReturned' | translate }}</div>
         }
       }
+      @case ('cohort_grid') {
+        @if (cohort(); as g) {
+          <div class="xdv-cohort-scroll">
+            <table class="xdv-cohort" data-testid="cohort-grid">
+              <thead>
+                <tr>
+                  <th scope="col"></th>
+                  @for (p of g.periods; track p) {
+                    <th scope="col" dir="auto">{{ cohortKey(p) }}</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of g.rows; track r.cohort) {
+                  <tr>
+                    <th scope="row" dir="auto">{{ cohortKey(r.cohort) }}</th>
+                    @for (c of r.cells; track $index) {
+                      @if (c === null) {
+                        <td></td>
+                      } @else {
+                        <td [style.background-color]="'color-mix(in srgb, var(--color-primary) ' + g.shade(c) + '%, transparent)'">
+                          {{ cohortValue(c) }}
+                        </td>
+                      }
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="xdv-widget-status xdv-widget-empty">{{ 'dashboard.viewer.noRowsReturned' | translate }}</div>
+        }
+      }
       @case ('table') {
         @if (rows().length === 0) {
           <div class="xdv-widget-status xdv-widget-empty">{{ 'dashboard.viewer.noRowsReturned' | translate }}</div>

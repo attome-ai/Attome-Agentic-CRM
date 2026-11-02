@@ -38,6 +38,8 @@ export interface ChartSeries {
   name:     string;
   color:    string;
   points:   (ChartBucket | null)[];
+  /** P6-T1: the two fields a `corr` measure correlates, for a correlation matrix. */
+  pair?:    [string, string];
 }
 
 export type SvgChartKind = 'bar' | 'line' | 'area' | 'donut' | 'funnel';

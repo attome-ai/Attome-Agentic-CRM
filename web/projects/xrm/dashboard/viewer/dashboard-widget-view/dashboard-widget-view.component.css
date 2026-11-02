@@ -180,3 +180,9 @@ button.xdv-widget-scalar {
 .xdv-timeline-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .xdv-timeline-track { display: flex; block-size: 0.75rem; background: var(--color-bg-alt); border-radius: 2px; }
 .xdv-timeline-bar { display: block; block-size: 100%; background: var(--color-primary); border-radius: 2px; }
+
+/* P6-T1: the cohort grid, one shade of the primary colour from light to dark by value. */
+.xdv-cohort-scroll { overflow-x: auto; }
+.xdv-cohort { border-collapse: collapse; font-size: 0.8125rem; font-variant-numeric: tabular-nums; }
+.xdv-cohort th, .xdv-cohort td { padding: 0.25rem 0.5rem; text-align: center; white-space: nowrap; }
+.xdv-cohort th[scope="row"] { text-align: start; }

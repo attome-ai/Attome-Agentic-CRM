@@ -1326,6 +1326,10 @@ pub struct ExplainedMeasure {
     pub aggregation: MeasureFn,
     pub field: Option<String>,
     pub field_display_name: Option<String>,
+    /// P6-T1: a `corr` measure's second field, by its display name when it
+    /// has one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub paired_field: Option<String>,
     pub label: Option<String>,
     /// The formal form, e.g. `SUM(amount)` or `COUNT(*)`.
     pub expression: String,
@@ -1549,6 +1553,15 @@ pub fn plain_definition(
             format!("Last {field} of {entity} in each period"),
             format!("آخر {field} في {entity} في كل فترة"),
         ),
+        Some(MeasureFn::Corr) => {
+            let paired = measure
+                .and_then(|m| m.paired_field.clone())
+                .unwrap_or_default();
+            (
+                format!("Correlation of {field} with {paired} in {entity}"),
+                format!("الارتباط بين {field} و{paired} في {entity}"),
+            )
+        }
     };
     if !filters.is_empty() {
         let conditions: Vec<(String, String)> = filters
@@ -1803,6 +1816,10 @@ pub async fn explain_widget(
                     aggregation: m.aggregation,
                     field: m.field.clone(),
                     field_display_name: m.field.as_ref().and_then(|f| names.get(f).cloned()),
+                    paired_field: m
+                        .paired_field
+                        .as_ref()
+                        .map(|p| names.get(p).cloned().unwrap_or_else(|| p.clone())),
                     label: m.label.clone(),
                     expression: match (&m.field, m.aggregation) {
                         (_, MeasureFn::Count) => "COUNT(*)".to_owned(),
@@ -1812,6 +1829,10 @@ pub async fn explain_widget(
                         (Some(field), MeasureFn::Median) => format!("MEDIAN({field})"),
                         (Some(field), MeasureFn::Q1) => format!("PERCENTILE_25({field})"),
                         (Some(field), MeasureFn::Q3) => format!("PERCENTILE_75({field})"),
+                        (Some(field), MeasureFn::Corr) => format!(
+                            "CORR({field}, {})",
+                            m.paired_field.as_deref().unwrap_or_default()
+                        ),
                         (Some(field), agg) => format!("{}({field})", agg.as_str().to_uppercase()),
                         (None, agg) => agg.as_str().to_uppercase(),
                     },
@@ -2105,6 +2126,7 @@ mod query_drill_tests {
             aggregation: MeasureFn::Sum,
             field: Some("amount".into()),
             field_display_name: Some("Amount".into()),
+            paired_field: None,
             label: None,
             expression: "SUM(amount)".into(),
         };

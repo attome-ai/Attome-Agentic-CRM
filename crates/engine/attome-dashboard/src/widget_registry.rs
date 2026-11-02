@@ -147,6 +147,12 @@ pub enum RenderKind {
     /// P6-T1: one bar per row of a stored query, from the widget's
     /// `label_field`, `start_field` and `end_field` (Gantt and timeline).
     Timeline,
+    /// P6-T1: a symmetric grid of `corr` measures, one row and one column
+    /// per field they name, -1 to 1 on a diverging scale.
+    ChartCorrelation,
+    /// P6-T1: a stored query's rows as a cohort-by-period grid, from the
+    /// widget's `cohort_key_field`, `period_field` and `value_field`.
+    CohortGrid,
     /// One number (the first measure of an ungrouped definition).
     Scalar,
     /// Rows of a stored query or view.
@@ -293,6 +299,15 @@ const RENDERERS: &[(&str, RenderKind, DataContract)] = &[
         RenderKind::ChartCandlestick,
         DataContract::Structured,
     ),
+    // P6-T1: `corr` measures side by side as a correlation matrix.
+    (
+        "correlation_matrix",
+        RenderKind::ChartCorrelation,
+        DataContract::Structured,
+    ),
+    // P6-T1: a stored query's cohort, period and value columns as a grid.
+    ("cohort", RenderKind::CohortGrid, DataContract::Query),
+    ("cohort_chart", RenderKind::CohortGrid, DataContract::Query),
     // P6-T1: rows of a stored query as bars between two dates.
     ("gantt_chart", RenderKind::Timeline, DataContract::Query),
     ("timeline", RenderKind::Timeline, DataContract::Query),
@@ -450,17 +465,11 @@ impl WidgetRegistry {
     /// rate) renders as a cohort-by-period heatmap grid, same `query_id`
     /// data contract as every other type here — only the three named
     /// columns plus `period_unit` (how the builder buckets/labels the
-    /// period axis) differ from the generic `chart()` schema. Distinct from
-    /// the pre-existing `cohort_chart` (registered above, Phase 6's generic
-    /// chart placeholder with the bare `series_field`/`category_field`
-    /// schema every other `chart()` entry shares): that one predates this
-    /// widget and is kept for compatibility with whatever already
-    /// references it, but carries no cohort-specific schema — a builder
-    /// offering retention analysis should offer this type, not that one.
-    /// `dataviz` skill: a retention grid is a **sequential** encoding
-    /// (magnitude, not identity) — one hue, light-to-dark by retention rate,
-    /// never the categorical palette; the Angular renderer is this crate's
-    /// own concern, out of scope for a registry-only backend change.
+    /// period axis) differ from the generic `chart()` schema. P6-T1:
+    /// `cohort` and `cohort_chart` are both this widget, rendered as
+    /// [`RenderKind::CohortGrid`]. `dataviz` skill: a retention grid is a
+    /// **sequential** encoding (magnitude, not identity) — one hue,
+    /// light-to-dark by retention rate, never the categorical palette.
     fn cohort(type_id: &'static str, display_name: &'static str) -> WidgetDescriptor {
         WidgetDescriptor {
             type_id,
@@ -573,7 +582,7 @@ impl WidgetRegistry {
             Self::chart("range_area_chart", "Range Area Chart"),
             Self::chart("distribution_chart", "Distribution Chart"),
             Self::chart("correlation_matrix", "Correlation Matrix"),
-            Self::chart("cohort_chart", "Cohort Chart"),
+            Self::cohort("cohort_chart", "Cohort Chart"),
             // Phase 3 — text/static.
             Self::text("rich_text", "Rich Text"),
             Self::text("image", "Image"),
@@ -617,7 +626,7 @@ impl WidgetRegistry {
             // above (a stored query the admin points at `service_ticket` filtered
             // by `work_queue_ref`). Distinct from those pre-existing generic
             // types the same way `cohort` is distinct from `cohort_chart`
-            // (see that pair's own doc comment): this one exists so a
+            // by name only: this one exists so a
             // builder can offer "a work queue's board" as its own named
             // choice rather than reusing a same-shaped but differently-named
             // generic type.
@@ -673,8 +682,8 @@ impl WidgetRegistry {
                 serde_json::json!({ "metric_ref": "uuid" }),
                 serde_json::json!({ "metric_ref": null }),
             ),
-            // M26 gap-fill — the retention-grid widget (see `cohort`'s own
-            // doc comment for why it's distinct from `cohort_chart` above).
+            // M26 gap-fill — the retention-grid widget (`cohort_chart` above
+            // is the same widget under its Phase 6 name).
             Self::cohort("cohort", "Cohort Retention Grid"),
         ];
 
@@ -1078,10 +1087,12 @@ mod tests {
             registry().render_kind("candlestick_chart"),
             RenderKind::ChartCandlestick
         );
-        // No definition can produce these yet: a measure over two fields, or
-        // cohorts.
-        for type_id in ["correlation_matrix", "cohort_chart"] {
-            assert_eq!(registry().render_kind(type_id), RenderKind::Unsupported);
+        assert_eq!(
+            registry().render_kind("correlation_matrix"),
+            RenderKind::ChartCorrelation
+        );
+        for type_id in ["cohort", "cohort_chart"] {
+            assert_eq!(registry().render_kind(type_id), RenderKind::CohortGrid);
         }
         assert_eq!(
             registry().render_kind("no_such_type"),
@@ -1090,7 +1101,7 @@ mod tests {
     }
 
     #[test]
-    fn cohort_widget_is_registered_with_its_own_schema_distinct_from_cohort_chart() {
+    fn cohort_and_cohort_chart_share_the_cohort_schema() {
         let cohort = registry().get("cohort").expect("cohort must be registered");
         assert_eq!(cohort.category, WidgetCategory::Chart);
         for field in [
@@ -1108,11 +1119,10 @@ mod tests {
 
         let cohort_chart = registry()
             .get("cohort_chart")
-            .expect("pre-existing cohort_chart must still be registered");
-        assert_ne!(
+            .expect("cohort_chart must still be registered");
+        assert_eq!(
             cohort.schema, cohort_chart.schema,
-            "cohort must carry its own cohort-specific schema, not reuse cohort_chart's \
-             generic series_field/category_field shape"
+            "cohort_chart renders as the cohort grid, so it reads the same fields"
         );
     }
 

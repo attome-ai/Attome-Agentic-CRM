@@ -934,6 +934,84 @@ async fn bins_count_each_range_and_quartiles_measure_it() {
     );
 }
 
+/// P6-T1: `corr` is the Pearson correlation of two number fields over the
+/// rows where both are set: a field that rises with `amount` gives 1, one that
+/// falls as it rises gives -1, and a text field is refused.
+#[tokio::test]
+async fn corr_measures_correlate_two_number_fields() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let (admin_id, _) = seed_user(&system, true).await;
+    let db = system.state().base.db.clone();
+    let (deals, entity_id) = provision_deals(&system).await;
+    for name in ["discount", "margin"] {
+        attome_metadata::provision::ensure_attribute(
+            &db, entity_id, name, name, "number", false, false, true, true, None, None,
+        )
+        .await
+        .expect("provision number attribute");
+    }
+    sync_registry(&system).await;
+    for amount in [1.0, 2.0, 4.0, 8.0] {
+        let id = insert_deal(
+            &db,
+            &deals,
+            Some("won"),
+            amount,
+            "2026-01-05T00:00:00Z",
+            None,
+            Some(true),
+        )
+        .await;
+        sqlx::query(&format!(
+            "UPDATE \"{deals}\" SET discount = $2, margin = $3 WHERE id = $1"
+        ))
+        .bind(id)
+        .bind(amount * 2.0 + 1.0)
+        .bind(100.0 - amount * 3.0)
+        .execute(&db)
+        .await
+        .expect("set the paired fields");
+    }
+    let ctx = admin_ctx(&system, admin_id).await;
+    let matrix = attome_search::run_structured_aggregate(
+        system.state(),
+        &ctx,
+        &definition(json!({
+            "source": deals,
+            "measures": [
+                { "aggregation": "corr", "field": "amount", "paired_field": "discount" },
+                { "aggregation": "corr", "field": "amount", "paired_field": "margin" },
+                { "aggregation": "corr", "field": "discount", "paired_field": "margin" }
+            ]
+        })),
+        &[],
+        chrono_tz::UTC,
+    )
+    .await
+    .unwrap();
+    let values: Vec<f64> = matrix.buckets[0]
+        .values
+        .iter()
+        .map(|v| v.expect("a correlation"))
+        .collect();
+    for (got, want) in values.iter().zip([1.0, -1.0, -1.0]) {
+        assert!((got - want).abs() < 1e-9, "{values:?}");
+    }
+
+    let text = attome_search::run_structured_aggregate(
+        system.state(),
+        &ctx,
+        &definition(json!({
+            "source": deals,
+            "measures": [{ "aggregation": "corr", "field": "amount", "paired_field": "region" }]
+        })),
+        &[],
+        chrono_tz::UTC,
+    )
+    .await;
+    assert!(text.is_err());
+}
+
 /// P6-T1: `first` and `last` take the value at the earliest and latest time
 /// in each time bucket, a candlestick's open and close; without a time
 /// bucket they are refused.

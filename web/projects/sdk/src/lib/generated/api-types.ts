@@ -45484,6 +45484,11 @@ export interface components {
             field?: string | null;
             field_display_name?: string | null;
             label?: string | null;
+            /**
+             * @description P6-T1: a `corr` measure's second field, by its display name when it
+             *     has one.
+             */
+            paired_field?: string | null;
         };
         ExplainedMetric: {
             formula?: string | null;
@@ -49487,6 +49492,11 @@ export interface components {
             /** @description Required unless `aggregation` is `count`. */
             field?: string | null;
             label?: string | null;
+            /**
+             * @description P6-T1: the second number field of a `corr` measure, the one `field`
+             *     is correlated with. Required for `corr`, refused for any other.
+             */
+            paired_field?: string | null;
         };
         /** @description P7-T7: the date field and grain a number is bucketed by. */
         MeasureBasis: {
@@ -49494,7 +49504,7 @@ export interface components {
             grain: components["schemas"]["DateBucket"];
         };
         /** @enum {string} */
-        MeasureFn: "count" | "count_distinct" | "sum" | "avg" | "min" | "max" | "median" | "q1" | "q3" | "first" | "last";
+        MeasureFn: "count" | "count_distinct" | "sum" | "avg" | "min" | "max" | "median" | "q1" | "q3" | "first" | "last" | "corr";
         /** @description A created meeting. */
         Meeting: {
             /** @description The provider's id for it. */
@@ -65344,7 +65354,7 @@ export interface components {
          *     state (and is reported by health).
          * @enum {string}
          */
-        RenderKind: "chart_bar" | "chart_line" | "chart_area" | "chart_donut" | "chart_funnel" | "chart_stacked_bar" | "chart_combo" | "chart_waterfall" | "chart_treemap" | "chart_sunburst" | "chart_sankey" | "chart_radar" | "chart_polar" | "chart_heatmap" | "chart_calendar_heatmap" | "chart_pareto" | "chart_control" | "chart_scatter" | "chart_bubble" | "chart_range_area" | "chart_box_plot" | "chart_candlestick" | "timeline" | "scalar" | "table" | "declarative" | "kpi_scorecard" | "kpi_trendline" | "text" | "divider" | "unsupported";
+        RenderKind: "chart_bar" | "chart_line" | "chart_area" | "chart_donut" | "chart_funnel" | "chart_stacked_bar" | "chart_combo" | "chart_waterfall" | "chart_treemap" | "chart_sunburst" | "chart_sankey" | "chart_radar" | "chart_polar" | "chart_heatmap" | "chart_calendar_heatmap" | "chart_pareto" | "chart_control" | "chart_scatter" | "chart_bubble" | "chart_range_area" | "chart_box_plot" | "chart_candlestick" | "timeline" | "chart_correlation" | "cohort_grid" | "scalar" | "table" | "declarative" | "kpi_scorecard" | "kpi_trendline" | "text" | "divider" | "unsupported";
         /** @description `POST /api/v1/docgen/templates/{id}/render-labels`. */
         RenderLabelsBody: {
             /** @description The records to print, 1 to 500, in order; a repeated id prints once. */

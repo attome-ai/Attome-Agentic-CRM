@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { init } from '../../echarts/public-api';
 import type { ChartBucket, ChartCategory, ChartSeries } from '../dashboard-chart/dashboard-chart.component';
 import {
-  CHART_REGISTRY, ChartInput, ChartOption, EChartKind, boxRows, calendarDays, controlLimits, isEChartKind, paretoRows,
-  rangeBand, tip, waterfallSteps,
+  CHART_REGISTRY, ChartInput, ChartOption, EChartKind, boxRows, calendarDays, controlLimits, correlationCells, isEChartKind,
+  paretoRows, rangeBand, tip, waterfallSteps,
 } from './chart-registry';
 
 const KINDS = Object.keys(CHART_REGISTRY) as EChartKind[];
@@ -14,11 +14,13 @@ const categories: ChartCategory[] = [
   { trackKey: 'c', label: '2026-01-03', date: '2026-01-03' },
 ];
 
+/** A series; its `pair` (read only by the correlation matrix) correlates `amount` with its name. */
 function series(name: string, numbers: (number | null)[], color = '#8b5cf6'): ChartSeries {
   return {
     trackKey: name,
     name,
     color,
+    pair: ['amount', name],
     points: numbers.map((value, i): ChartBucket | null => value === null ? null : {
       trackKey: `${categories[i].trackKey}|${name}`, label: categories[i].label, value, key: null,
     }),
@@ -55,7 +57,7 @@ function seriesOf(option: ChartOption): Record<string, unknown>[] {
 
 describe('the chart registry', () => {
   it('registers an adapter per kind and nothing else', () => {
-    expect(KINDS).toHaveLength(17);
+    expect(KINDS).toHaveLength(18);
     expect(isEChartKind('sankey')).toBe(true);
     expect(isEChartKind('bar')).toBe(false);
   });
@@ -164,6 +166,32 @@ describe('what an adapter computes', () => {
     expect(data[2]).toEqual(['-', '-', '-', '-', '-']);
     expect(draw(CHART_REGISTRY.box_plot.option(input({ series: five })))).toMatch(/<path\b/);
     expect(boxRows(input())).toEqual([]);
+  });
+
+  it('lays corr measures out as a symmetric matrix with 1 on the diagonal', () => {
+    const corr = (name: string, pair: [string, string], value: number): ChartSeries => ({
+      ...series(name, [value]), pair,
+    });
+    const { fields, cells } = correlationCells([
+      corr('a·b', ['amount', 'discount'], 0.5),
+      corr('a·c', ['amount', 'margin'], -0.25),
+      { ...series('no pair', [9]), pair: undefined },
+    ]);
+    expect(fields).toEqual(['amount', 'discount', 'margin']);
+    const at = (x: number, y: number) => cells.find(c => c.x === x && c.y === y);
+    expect(at(0, 1)?.value).toBe(0.5);
+    expect(at(1, 0)?.value).toBe(0.5);
+    expect(at(2, 0)?.value).toBe(-0.25);
+    expect(at(1, 1)).toEqual({ x: 1, y: 1, value: 1, bucket: null });
+    expect(at(1, 2)).toBeUndefined();
+    expect(at(0, 1)?.bucket?.trackKey).toBe('a|a·b');
+
+    const option = CHART_REGISTRY.correlation.option(input({ series: [corr('a·b', ['amount', 'discount'], 0.5)] }));
+    expect((option['visualMap'] as ChartOption)['min']).toBe(-1);
+    expect((option['visualMap'] as ChartOption)['max']).toBe(1);
+    const [heat] = seriesOf(option);
+    expect((heat['data'] as ChartOption[]).filter(d => 'bucket' in d)).toHaveLength(2);
+    expect(draw(option)).toMatch(/<path\b/);
   });
 
   it('draws a candle per category from open, close, low and high', () => {

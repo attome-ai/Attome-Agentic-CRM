@@ -535,6 +535,22 @@ fn measure_sql(scope: &AggregateScope, definition: &DataDefinition) -> Result<St
                              FILTER (WHERE {column} IS NOT NULL AND {at} IS NOT NULL))[1]"
                         )
                     }
+                    MeasureFn::Corr => {
+                        let Some(paired) = measure.paired_field.as_deref() else {
+                            return Err(AppError::Validation(
+                                "measure corr needs a paired_field".into(),
+                            ));
+                        };
+                        let paired_type = scope.require_field(paired, "measure")?;
+                        if scope.is_multi_choice(paired)
+                            || parameter_cast(paired_type) != Some("numeric")
+                        {
+                            return Err(AppError::Validation(format!(
+                                "measure paired_field {paired} must be a single number field"
+                            )));
+                        }
+                        format!("corr({column}::float8, t.{}::float8)", quote_ident(paired))
+                    }
                     MeasureFn::Count => unreachable!("matched above"),
                 }
             }
@@ -1255,6 +1271,9 @@ pub async fn run_structured_records(
     for measure in &definition.measures {
         if let Some(field) = &measure.field {
             add(field);
+        }
+        if let Some(paired) = &measure.paired_field {
+            add(paired);
         }
     }
     add("created_at");

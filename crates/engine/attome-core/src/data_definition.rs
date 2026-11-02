@@ -132,6 +132,10 @@ pub enum MeasureFn {
     /// P6-T1: the value at the latest time in a time bucket (a candlestick's
     /// close). Needs a time-bucketed group.
     Last,
+    /// P6-T1: the Pearson correlation of `field` with `paired_field`, from
+    /// -1 to 1, over the rows where both are set (a correlation matrix's
+    /// cell).
+    Corr,
 }
 
 impl MeasureFn {
@@ -153,6 +157,7 @@ impl MeasureFn {
                 | Self::Q3
                 | Self::First
                 | Self::Last
+                | Self::Corr
         )
     }
 
@@ -175,6 +180,7 @@ impl MeasureFn {
             Self::Q3 => "q3",
             Self::First => "first",
             Self::Last => "last",
+            Self::Corr => "corr",
         }
     }
 }
@@ -186,6 +192,10 @@ pub struct Measure {
     /// Required unless `aggregation` is `count`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub field: Option<String>,
+    /// P6-T1: the second number field of a `corr` measure, the one `field`
+    /// is correlated with. Required for `corr`, refused for any other.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub paired_field: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
 }
@@ -391,6 +401,22 @@ impl DataDefinition {
                 }
                 _ => {}
             }
+            match (
+                &measure.paired_field,
+                measure.aggregation == MeasureFn::Corr,
+            ) {
+                (None, true) => {
+                    errors.push(format!("measures[{i}].paired_field is required for corr"))
+                }
+                (Some(_), false) => errors.push(format!(
+                    "measures[{i}].paired_field is only for corr, not {}",
+                    measure.aggregation.as_str()
+                )),
+                (Some(paired), true) if !is_safe_identifier(paired) => errors.push(format!(
+                    "measures[{i}].paired_field must be a field logical name"
+                )),
+                _ => {}
+            }
             if measure
                 .label
                 .as_ref()
@@ -559,6 +585,15 @@ impl DataDefinition {
                         "measures[{i}].field {field} is a multi-select field"
                     ));
                 }
+            }
+            if let Some(paired) = &measure.paired_field
+                && let Some((field_type, multi)) =
+                    lookup(paired, &format!("measures[{i}].paired_field"), &mut errors)
+                && (multi || !is_numeric(&field_type))
+            {
+                errors.push(format!(
+                    "measures[{i}].paired_field {paired} must be a single number field"
+                ));
             }
         }
         if let Some(group) = &self.group
@@ -798,6 +833,27 @@ mod tests {
             "presentation": {"limit": 201}
         });
         assert!(DataDefinition::parse(&raw, &meta()).is_err());
+    }
+
+    #[test]
+    fn corr_needs_a_paired_number_field_and_nothing_else_takes_one() {
+        let with = |measure: serde_json::Value| {
+            DataDefinition::parse(&json!({"source": "deal", "measures": [measure]}), &meta())
+        };
+        assert!(
+            with(json!({"aggregation": "corr", "field": "amount", "paired_field": "amount"}))
+                .is_ok()
+        );
+        for refused in [
+            json!({"aggregation": "corr", "field": "amount"}),
+            json!({"aggregation": "corr", "field": "amount", "paired_field": "name"}),
+            json!({"aggregation": "corr", "field": "amount", "paired_field": "tags"}),
+            json!({"aggregation": "corr", "field": "amount", "paired_field": "missing"}),
+            json!({"aggregation": "corr", "field": "amount", "paired_field": "bad name"}),
+            json!({"aggregation": "sum", "field": "amount", "paired_field": "amount"}),
+        ] {
+            assert!(with(refused.clone()).is_err(), "{refused} must be refused");
+        }
     }
 
     #[test]
