@@ -29876,6 +29876,264 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/exit/delete": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Ask to delete the deployment",
+        "description": "After a finished export whose SHA-256 the caller repeats, asks two other\nadministrators to approve deleting every record, file and piece of\nmetadata (Y5-T5). Nothing is deleted until they do. Administrators only.\nAudited.",
+        "operationId": "request_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The approval the deletion waits on",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteRequested"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such export",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A deletion of this export is already asked for",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The export is not finished, the hash does not match, or there are not two other administrators",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "submitted"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/exit/export": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Start a clean-exit export",
+        "description": "Queues an export of every record, the metadata, the audit log and every\nfile into one archive (Y5-T5). Administrators only. Audited.",
+        "operationId": "start_export",
+        "responses": {
+          "202": {
+            "description": "The export, queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExitExportView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "An export is already queued or running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "export"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/exit/export/{id}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Read a clean-exit export",
+        "description": "Progress, and once done the archive's SHA-256, size and a download link\nvalid for a day; after a deletion, its certificate. Administrators only.",
+        "operationId": "get_export",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The export",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The export",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExitExportView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such export",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/expressions/spec": {
       "get": {
         "tags": [
@@ -39419,6 +39677,94 @@
           },
           "403": {
             "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/metadata/versions/{version}/diff": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Compares two recorded metadata versions (U7-T1): what the path's version\nhas that `against` lacks (`added`), lacks (`removed`) and has cooked\ndifferently (`changed`). Changes nothing.",
+        "description": "Compares two recorded metadata versions by artefact: added, removed and changed going from `against` to the path's version (U7-T1). Changes nothing.",
+        "operationId": "diff_metadata_versions",
+        "parameters": [
+          {
+            "name": "version",
+            "in": "path",
+            "description": "A published metadata version",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "against",
+            "in": "query",
+            "description": "The version to compare from (older or newer).",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What differs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionPreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Either version was never published",
             "content": {
               "application/json": {
                 "schema": {
@@ -181707,6 +182053,24 @@
           }
         }
       },
+      "DeleteBody": {
+        "type": "object",
+        "description": "`POST /api/v1/admin/exit/delete`.",
+        "required": [
+          "export_id",
+          "export_sha256"
+        ],
+        "properties": {
+          "export_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "export_sha256": {
+            "type": "string",
+            "description": "The SHA-256 of the downloaded archive, as the export reported it."
+          }
+        }
+      },
       "DeleteImpact": {
         "type": "object",
         "description": "What deleting the records would do (A18-T4), counted without changing\nanything.",
@@ -181763,6 +182127,24 @@
               "format": "uuid"
             },
             "description": "The records about to be deleted, at most 500."
+          }
+        }
+      },
+      "DeleteRequested": {
+        "type": "object",
+        "description": "The approval a deletion waits on.",
+        "required": [
+          "approval_id",
+          "approvals_needed"
+        ],
+        "properties": {
+          "approval_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "approvals_needed": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -187208,6 +187590,71 @@
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "ExitExportView": {
+        "type": "object",
+        "description": "An export as the routes show it.",
+        "required": [
+          "id",
+          "status",
+          "entities_total",
+          "entities_done",
+          "files_done"
+        ],
+        "properties": {
+          "bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "certificate": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "download_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A link to the archive, valid for a day, once it is done."
+          },
+          "entities_done": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "entities_total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "files_done": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sha256": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "`queued`, `running`, `done`, `failed`, `deleting` or `deleted`."
           }
         }
       },
@@ -260186,6 +260633,8 @@
       "description": "فحوص السلامة والجاهزية والإصدار"
     }
   ],
+  "x-api-version": "2026-10",
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -260237,7 +260686,5 @@
         ]
       }
     }
-  },
-  "x-api-version": "2026-10",
-  "x-version-adapters": []
+  }
 }

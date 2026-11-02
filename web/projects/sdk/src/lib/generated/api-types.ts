@@ -5855,6 +5855,71 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/exit/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask to delete the deployment
+         * @description After a finished export whose SHA-256 the caller repeats, asks two other
+         *     administrators to approve deleting every record, file and piece of
+         *     metadata (Y5-T5). Nothing is deleted until they do. Administrators only.
+         *     Audited.
+         */
+        post: operations["request_delete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/exit/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a clean-exit export
+         * @description Queues an export of every record, the metadata, the audit log and every
+         *     file into one archive (Y5-T5). Administrators only. Audited.
+         */
+        post: operations["start_export"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/exit/export/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a clean-exit export
+         * @description Progress, and once done the archive's SHA-256, size and a download link
+         *     valid for a day; after a deletion, its certificate. Administrators only.
+         */
+        get: operations["get_export"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/expressions/spec": {
         parameters: {
             query?: never;
@@ -7904,6 +7969,28 @@ export interface paths {
          * @description Lists the recorded metadata versions, newest first, with the current one and how many nodes serve each (Y8-T12).
          */
         get: operations["list_metadata_versions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/metadata/versions/{version}/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compares two recorded metadata versions (U7-T1): what the path's version
+         *     has that `against` lacks (`added`), lacks (`removed`) and has cooked
+         *     differently (`changed`). Changes nothing.
+         * @description Compares two recorded metadata versions by artefact: added, removed and changed going from `against` to the path's version (U7-T1). Changes nothing.
+         */
+        get: operations["diff_metadata_versions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -42166,6 +42253,13 @@ export interface components {
             /** Format: uuid */
             delegation_id: string;
         };
+        /** @description `POST /api/v1/admin/exit/delete`. */
+        DeleteBody: {
+            /** Format: uuid */
+            export_id: string;
+            /** @description The SHA-256 of the downloaded archive, as the export reported it. */
+            export_sha256: string;
+        };
         /**
          * @description What deleting the records would do (A18-T4), counted without changing
          *     anything.
@@ -42189,6 +42283,13 @@ export interface components {
         DeleteImpactRequest: {
             /** @description The records about to be deleted, at most 500. */
             ids: string[];
+        };
+        /** @description The approval a deletion waits on. */
+        DeleteRequested: {
+            /** Format: uuid */
+            approval_id: string;
+            /** Format: int32 */
+            approvals_needed: number;
         };
         /** @description One deleted record. */
         DeletedRecord: {
@@ -44467,6 +44568,26 @@ export interface components {
             outcome: components["schemas"]["ActionOutcome"];
             /** Format: int64 */
             row_version: number;
+            status: string;
+        };
+        /** @description An export as the routes show it. */
+        ExitExportView: {
+            /** Format: int64 */
+            bytes?: number | null;
+            certificate?: Record<string, never> | null;
+            /** @description A link to the archive, valid for a day, once it is done. */
+            download_url?: string | null;
+            /** Format: int32 */
+            entities_done: number;
+            /** Format: int32 */
+            entities_total: number;
+            error?: string | null;
+            /** Format: int32 */
+            files_done: number;
+            /** Format: uuid */
+            id: string;
+            sha256?: string | null;
+            /** @description `queued`, `running`, `done`, `failed`, `deleting` or `deleted`. */
             status: string;
         };
         /**
@@ -90504,6 +90625,172 @@ export interface operations {
             };
         };
     };
+    request_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeleteBody"];
+            };
+        };
+        responses: {
+            /** @description The approval the deletion waits on */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteRequested"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such export */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A deletion of this export is already asked for */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The export is not finished, the hash does not match, or there are not two other administrators */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    start_export: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The export, queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExitExportView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An export is already queued or running */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_export: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The export */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The export */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExitExportView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such export */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     expression_spec: {
         parameters: {
             query?: never;
@@ -96399,6 +96686,59 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    diff_metadata_versions: {
+        parameters: {
+            query: {
+                /** @description The version to compare from (older or newer). */
+                against: number;
+            };
+            header?: never;
+            path: {
+                /** @description A published metadata version */
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What differs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionPreview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Either version was never published */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
