@@ -7,6 +7,9 @@ import {
   IMPERSONATION_HEADER, ImpersonationService, impersonationInterceptor,
 } from './impersonation.service';
 
+/** The SDK sends after a promise turn (Y9-T3). */
+const tick = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
 const BASE = 'http://localhost:7865';
 
 describe('impersonationInterceptor (Q13-T2)', () => {
@@ -33,42 +36,53 @@ describe('impersonationInterceptor (Q13-T2)', () => {
     sessionStorage.clear();
   });
 
-  function startView(): void {
+  async function startView(): Promise<void> {
     service.start('u1', 'view', 'ticket 41', 'sara@example.com').subscribe();
+    await tick();
     const start = httpMock.expectOne(`${BASE}/api/v1/admin/security/impersonation`);
     expect(start.request.headers.has(IMPERSONATION_HEADER)).toBe(false);
     start.flush({
       id: 's1', subject_id: 'u1', mode: 'view',
       expires_at: new Date(Date.now() + 30 * 60_000).toISOString(),
     });
+    await tick();
+    await tick();
   }
 
-  it('names no session until one starts', () => {
+  it('names no session until one starts', async () => {
     http.get(`${BASE}/api/v1/contact`).subscribe();
+    await tick();
     expect(httpMock.expectOne(`${BASE}/api/v1/contact`).request.headers.has(IMPERSONATION_HEADER)).toBe(false);
   });
 
-  it('names the session on API requests but not on the session routes', () => {
-    startView();
+  it('names the session on API requests but not on the session routes', async () => {
+    await startView();
     expect(service.session()?.subject_label).toBe('sara@example.com');
     http.get(`${BASE}/api/v1/contact`).subscribe();
+    await tick();
     expect(httpMock.expectOne(`${BASE}/api/v1/contact`).request.headers.get(IMPERSONATION_HEADER)).toBe('s1');
 
     service.end().subscribe();
+    await tick();
     const end = httpMock.expectOne(`${BASE}/api/v1/admin/security/impersonation/s1`);
     expect(end.request.method).toBe('DELETE');
     expect(end.request.headers.has(IMPERSONATION_HEADER)).toBe(false);
     end.flush(null);
+    await tick();
+    await tick();
     expect(service.active()).toBe(false);
   });
 
-  it('forgets the session when the server says it has ended', () => {
-    startView();
+  it('forgets the session when the server says it has ended', async () => {
+    await startView();
     http.get(`${BASE}/api/v1/contact`).subscribe({ error: () => undefined });
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/contact`).flush(
       { error: 'validation', message: 'impersonation_ended: the session has ended' },
       { status: 422, statusText: 'Unprocessable Entity' },
     );
+    await tick();
+    await tick();
     expect(service.active()).toBe(false);
   });
 });

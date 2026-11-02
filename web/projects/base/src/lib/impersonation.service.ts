@@ -1,8 +1,8 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, catchError, tap, throwError } from 'rxjs';
-import { ApiService } from './api.service';
 import { ATTOME_CONFIG } from './config';
+import { SdkService } from './sdk.service';
 
 /**
  * Q13-T1: the request header naming a view-as or act-as session
@@ -34,7 +34,7 @@ const STORAGE_KEY = 'attome-impersonation';
  */
 @Injectable({ providedIn: 'root' })
 export class ImpersonationService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly current = signal<ImpersonationSession | null>(read());
   private timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -48,7 +48,7 @@ export class ImpersonationService {
 
   /** Starts a session as `subjectId` and works in it. */
   start(subjectId: string, mode: 'view' | 'act', reason: string, subjectLabel?: string): Observable<ImpersonationSession> {
-    return this.api.post<ImpersonationSession>(IMPERSONATION_ROUTES, { subject_id: subjectId, mode, reason }).pipe(
+    return this.sdk.post<ImpersonationSession>(IMPERSONATION_ROUTES, { body: { subject_id: subjectId, mode, reason } }).pipe(
       tap(session => this.set({ ...session, subject_label: subjectLabel })),
     );
   }
@@ -58,7 +58,7 @@ export class ImpersonationService {
     const id = this.current()?.id;
     this.set(null);
     if (!id) return new Observable<void>(o => { o.next(); o.complete(); });
-    return this.api.delete(`${IMPERSONATION_ROUTES}/${id}`);
+    return this.sdk.delete(`${IMPERSONATION_ROUTES}/${id}`);
   }
 
   /** Forgets the session here only (the server already ended it). */

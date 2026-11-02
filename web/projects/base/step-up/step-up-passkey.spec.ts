@@ -6,6 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ATTOME_CONFIG, PASSKEY_BROWSER } from '@attome/base';
 import { STEP_UP_NAVIGATE, StepUpService } from './step-up.service';
 
+/** The SDK sends, and answers, a promise turn later (Y9-T3). */
+const tick = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
 /** Q6-T1: a passkey answers the step-up prompt. */
 
 const BASE = 'http://localhost:7865';
@@ -66,12 +69,16 @@ describe('StepUpService passkey (Q6-T1)', () => {
     setUp();
     const verified = service.elevate('passkey_manage', ['passkey']);
     service.submitPasskey();
+    await tick();
     httpMock.expectOne(START).flush({ options: { challenge: 'abc' } });
+    await tick();
     await settle();
     expect(browser.get).toHaveBeenCalledWith({ challenge: 'abc' });
+    await tick();
     const req = httpMock.expectOne(VERIFY);
     expect(req.request.body).toEqual({ response: { id: 'cred' } });
     req.flush({ operation: 'passkey_manage', elevated_until: 'x' });
+    await tick();
     await expect(verified).resolves.toBe(true);
   });
 
@@ -80,7 +87,9 @@ describe('StepUpService passkey (Q6-T1)', () => {
     setUp();
     void service.elevate('passkey_manage', ['passkey']);
     service.submitPasskey();
+    await tick();
     httpMock.expectOne(START).flush({ options: { challenge: 'abc' } });
+    await tick();
     await settle();
     expect(service.prompt()?.busy).toBe(false);
     expect(service.prompt()?.error).toBeNull();
@@ -90,12 +99,16 @@ describe('StepUpService passkey (Q6-T1)', () => {
     setUp();
     void service.elevate('passkey_manage', ['passkey']);
     service.submitPasskey();
+    await tick();
     httpMock.expectOne(START).flush({ options: { challenge: 'abc' } });
+    await tick();
     await settle();
+    await tick();
     httpMock.expectOne(VERIFY).flush(
       { error: 'reauth_required', message: 'no', operation: 'passkey_manage', acceptable_factors: ['passkey'] },
       { status: 401, statusText: 'Unauthorized' },
     );
+    await tick();
     expect(service.prompt()?.error).toBe('stepUp.failed');
   });
 });

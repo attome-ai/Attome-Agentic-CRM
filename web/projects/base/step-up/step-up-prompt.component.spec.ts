@@ -7,6 +7,9 @@ import { ATTOME_CONFIG, LangService, pushModal } from '@attome/base';
 import { StepUpPromptComponent } from './step-up-prompt.component';
 import { STEP_UP_NAVIGATE, StepUpService } from './step-up.service';
 
+/** The SDK sends, and answers, a promise turn later (Y9-T3). */
+const tick = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
 vi.setConfig({ testTimeout: 30_000 });
 
 const BASE = 'http://localhost:7865';
@@ -89,27 +92,33 @@ describe('StepUpPromptComponent', () => {
     el.querySelector('form')!.dispatchEvent(new Event('submit'));
     fixture.detectChanges();
 
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/step-up/identity_link`)
       .flush({ challenge_id: 'c-1', operation: 'identity_link', acceptable_factors: ['password'], expires_in_secs: 300 });
+    await tick();
     const verifyReq = httpMock.expectOne(`${BASE}/api/v1/auth/step-up/identity_link/verify`);
     expect(verifyReq.request.body).toEqual({ challenge_id: 'c-1', factor: 'password', credential: 'pw' });
     verifyReq.flush({ operation: 'identity_link', elevated_until: '2026-09-15T12:05:00Z' });
+    await tick();
 
     await expect(verified).resolves.toBe(true);
     fixture.detectChanges();
     expect(el.querySelector('[role="dialog"]')).toBeNull();
   });
 
-  it('shows the generic failure text after a refused verify and keeps the prompt open', () => {
+  it('shows the generic failure text after a refused verify and keeps the prompt open', async () => {
     const el = mount();
     service.elevate('identity_link', ['password']);
     fixture.detectChanges();
     service.submit('password', 'wrong');
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/step-up/identity_link`)
       .flush({ challenge_id: 'c-1', operation: 'identity_link', acceptable_factors: ['password'], expires_in_secs: 300 });
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/step-up/identity_link/verify`)
       .flush({ error: 'reauth_required', message: 'x', operation: 'identity_link', acceptable_factors: ['password'] },
         { status: 401, statusText: 'Unauthorized' });
+    await tick();
     fixture.detectChanges();
 
     expect(el.querySelector('[role="alert"]')?.textContent).toContain('stepUp.failed');

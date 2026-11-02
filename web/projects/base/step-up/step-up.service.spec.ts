@@ -6,6 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiService, authInterceptor, ATTOME_CONFIG } from '@attome/base';
 import { STEP_UP_NAVIGATE, StepUpService, isSafeReturnUrl } from './step-up.service';
 
+/** The SDK sends after a promise turn (Y9-T3). */
+const tick = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
 /**
  * D-510 step-up UX (attome-auth 2.1d). Runs under the real `authInterceptor`, so
  * `httpMock.verify()` also proves a `reauth_required` 401 never triggers a
@@ -71,31 +74,38 @@ describe('StepUpService (D-510)', () => {
     sessionStorage.clear();
   });
 
-  function createKey(): Outcome {
+  async function createKey(): Promise<Outcome> {
     const outcome: Outcome = { values: [], error: undefined, completed: false };
     service.run('api_key_create', () => api.post(KEYS_PATH, { name: 'k' })).subscribe({
       next:     v => outcome.values.push(v),
       error:    e => { outcome.error = e; },
       complete: () => { outcome.completed = true; },
     });
+    await tick();
     return outcome;
   }
 
-  function answerStart(operation: string, challengeId: string): void {
+  async function answerStart(operation: string, challengeId: string): Promise<void> {
+    await tick();
     const req = httpMock.expectOne(start(operation));
     expect(req.request.method).toBe('POST');
     req.flush(
       { challenge_id: challengeId, operation, acceptable_factors: ['password'], expires_in_secs: 300 },
       CREATED,
     );
+    await tick();
+    await tick();
   }
 
-  it('reads the elevation endpoint for an operation', () => {
+  it('reads the elevation endpoint for an operation', async () => {
     let status: unknown;
     service.status('identity_link').subscribe(s => { status = s; });
+    await tick();
     const req = httpMock.expectOne(start('identity_link'));
     expect(req.request.method).toBe('GET');
     req.flush({ operation: 'identity_link', elevated: false, elevated_until: null, acceptable_factors: ['totp'] });
+    await tick();
+    await tick();
     expect(status).toMatchObject({ elevated: false, acceptable_factors: ['totp'] });
   });
 
@@ -104,8 +114,11 @@ describe('StepUpService (D-510)', () => {
     ['totp',          '123456'],
     ['recovery_code', 'abcd-efgh-ijkl'],
   ] as const)('completes a %s step-up and retries the original request exactly once', async (factor, credential) => {
-    const outcome = createKey();
+    const outcome = await createKey();
+    await tick();
     httpMock.expectOne(KEYS).flush(reauth('api_key_create', ['totp', 'recovery_code', 'password']), UNAUTHORIZED);
+    await tick();
+    await tick();
 
     expect(service.prompt()).toMatchObject({
       operation: 'api_key_create',
@@ -118,14 +131,20 @@ describe('StepUpService (D-510)', () => {
 
     service.submit(factor, credential);
     expect(service.prompt()?.busy).toBe(true);
-    answerStart('api_key_create', 'c-1');
+    await answerStart('api_key_create', 'c-1');
+    await tick();
     const verifyReq = httpMock.expectOne(verify('api_key_create'));
     expect(verifyReq.request.body).toEqual({ challenge_id: 'c-1', factor, credential });
     verifyReq.flush({ operation: 'api_key_create', elevated_until: '2026-09-15T12:15:00Z' });
+    await tick();
+    await tick();
     expect(service.prompt()).toBeNull();
 
     await settle();
+    await tick();
     httpMock.expectOne(KEYS).flush({ id: 'k1', secret: 'atk_sec_x' }, CREATED);
+    await tick();
+    await tick();
 
     expect(outcome.values).toEqual([{ id: 'k1', secret: 'atk_sec_x' }]);
     expect(outcome.completed).toBe(true);
@@ -133,8 +152,11 @@ describe('StepUpService (D-510)', () => {
   });
 
   it('errors with the original ApiError and never retries when the prompt is cancelled', async () => {
-    const outcome = createKey();
+    const outcome = await createKey();
+    await tick();
     httpMock.expectOne(KEYS).flush(reauth('api_key_create', ['password']), UNAUTHORIZED);
+    await tick();
+    await tick();
 
     service.cancel();
     await settle();
@@ -144,64 +166,95 @@ describe('StepUpService (D-510)', () => {
       status: 401, kind: 'reauth_required', operation: 'api_key_create', acceptableFactors: ['password'],
     });
     expect(outcome.values).toEqual([]);
+    await tick();
     httpMock.expectNone(KEYS);
   });
 
   it('shows an error after a refused verify, does not retry, and starts a fresh challenge for the next attempt', async () => {
-    const outcome = createKey();
+    const outcome = await createKey();
+    await tick();
     httpMock.expectOne(KEYS).flush(reauth('api_key_create', ['password']), UNAUTHORIZED);
+    await tick();
+    await tick();
 
     service.submit('password', 'wrong');
-    answerStart('api_key_create', 'c-1');
+    await answerStart('api_key_create', 'c-1');
+    await tick();
     httpMock.expectOne(verify('api_key_create')).flush(reauth('api_key_create', ['password']), UNAUTHORIZED);
+    await tick();
+    await tick();
 
     await settle();
     expect(service.prompt()).toMatchObject({ busy: false, error: 'stepUp.failed' });
+    await tick();
     httpMock.expectNone(KEYS);
     expect(outcome.values).toEqual([]);
     expect(outcome.error).toBeUndefined();
 
     service.submit('password', 'right');
-    answerStart('api_key_create', 'c-2');
+    await answerStart('api_key_create', 'c-2');
+    await tick();
     const verifyReq = httpMock.expectOne(verify('api_key_create'));
     expect(verifyReq.request.body).toEqual({ challenge_id: 'c-2', factor: 'password', credential: 'right' });
     verifyReq.flush({ operation: 'api_key_create', elevated_until: '2026-09-15T12:15:00Z' });
+    await tick();
+    await tick();
 
     await settle();
+    await tick();
     httpMock.expectOne(KEYS).flush({ id: 'k1' }, CREATED);
+    await tick();
+    await tick();
     expect(outcome.values).toEqual([{ id: 'k1' }]);
     expect(outcome.completed).toBe(true);
   });
 
   it('never loops: a retry that is refused again errors without a second prompt', async () => {
-    const outcome = createKey();
+    const outcome = await createKey();
+    await tick();
     httpMock.expectOne(KEYS).flush(reauth('api_key_create', ['password']), UNAUTHORIZED);
+    await tick();
+    await tick();
     service.submit('password', 'right');
-    answerStart('api_key_create', 'c-1');
+    await answerStart('api_key_create', 'c-1');
+    await tick();
     httpMock.expectOne(verify('api_key_create')).flush({ operation: 'api_key_create', elevated_until: 'x' });
+    await tick();
+    await tick();
 
     await settle();
+    await tick();
     httpMock.expectOne(KEYS).flush(reauth('api_key_create', ['password']), UNAUTHORIZED);
+    await tick();
+    await tick();
 
     expect(service.prompt()).toBeNull();
     expect(outcome.error).toMatchObject({ kind: 'reauth_required' });
   });
 
-  it('sends no credential when the prompt is cancelled while its challenge is starting', () => {
-    createKey();
+  it('sends no credential when the prompt is cancelled while its challenge is starting', async () => {
+    await createKey();
+    await tick();
     httpMock.expectOne(KEYS).flush(reauth('api_key_create', ['password']), UNAUTHORIZED);
+    await tick();
+    await tick();
     service.submit('password', 'pw');
     service.cancel();
-    answerStart('api_key_create', 'c-1');
+    await answerStart('api_key_create', 'c-1');
+    await tick();
     httpMock.expectNone(verify('api_key_create'));
   });
 
   it('shows the enrollment message for totp_enrollment_required and starts no challenge', async () => {
-    const outcome = createKey();
+    const outcome = await createKey();
+    await tick();
     httpMock.expectOne(KEYS).flush(reauth('api_key_create', ['totp_enrollment_required']), UNAUTHORIZED);
+    await tick();
+    await tick();
 
     expect(service.prompt()).toMatchObject({ enrollmentRequired: true, localFactors: [], federated: false });
     service.submit('totp', '123456');
+    await tick();
     httpMock.expectNone(start('api_key_create'));
 
     service.cancel();
@@ -209,15 +262,21 @@ describe('StepUpService (D-510)', () => {
     expect(outcome.error).toMatchObject({ kind: 'reauth_required' });
   });
 
-  it('passes other errors, and a reauth_required for another operation, straight through', () => {
+  it('passes other errors, and a reauth_required for another operation, straight through', async () => {
     let forbidden: unknown;
     service.run('api_key_create', () => api.post(KEYS_PATH, {})).subscribe({ error: e => { forbidden = e; } });
+    await tick();
     httpMock.expectOne(KEYS).flush({ error: 'forbidden', message: 'no' }, { status: 403, statusText: 'Forbidden' });
+    await tick();
+    await tick();
     expect(forbidden).toMatchObject({ kind: 'forbidden' });
 
     let other: unknown;
     service.run('api_key_create', () => api.post(KEYS_PATH, {})).subscribe({ error: e => { other = e; } });
+    await tick();
     httpMock.expectOne(KEYS).flush(reauth('identity_link', ['password']), UNAUTHORIZED);
+    await tick();
+    await tick();
     expect(other).toMatchObject({ kind: 'reauth_required', operation: 'identity_link' });
     expect(service.prompt()).toBeNull();
   });
@@ -229,25 +288,33 @@ describe('StepUpService (D-510)', () => {
 
     const verified = service.elevate('identity_link', ['password']);
     service.submit('password', 'pw');
-    answerStart('identity_link', 'c-1');
+    await answerStart('identity_link', 'c-1');
+    await tick();
     httpMock.expectOne(verify('identity_link')).flush({ operation: 'identity_link', elevated_until: 'x' });
+    await tick();
+    await tick();
     await expect(verified).resolves.toBe(true);
   });
 
-  it('lists only linked OIDC providers, stores the pending return and navigates to the federated start', () => {
+  it('lists only linked OIDC providers, stores the pending return and navigates to the federated start', async () => {
     service.elevate('identity_link', ['totp', 'federated'], {
       returnUrl: '/settings/security',
       pendingAction: { kind: 'link', protocol: 'oidc', key: 'adfs' },
     });
     expect(service.prompt()).toMatchObject({ federated: true, providersLoading: true, localFactors: ['totp'] });
 
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/identity-links`).flush([
       { provider_key: 'okta',   email: 'a@example.com', linked_at: '2026-08-01T00:00:00Z' },
       { provider_key: 'google', email: 'a@gmail.com',   linked_at: null },
     ]);
+    await tick();
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/oidc/providers`).flush([
       { key: 'okta', display_name: 'Okta' }, { key: 'unlinked', display_name: 'Other' },
     ]);
+    await tick();
+    await tick();
 
     const providers = service.prompt()!.providers;
     expect(providers).toEqual([
@@ -256,7 +323,7 @@ describe('StepUpService (D-510)', () => {
     expect(service.prompt()!.providersLoading).toBe(false);
 
     service.startFederated(providers[0]);
-    answerStart('identity_link', 'c-9 /x');
+    await answerStart('identity_link', 'c-9 /x');
 
     expect(navigate).toHaveBeenCalledWith(
       `${BASE}/api/v1/auth/step-up/identity_link/oidc/okta?challenge_id=c-9%20%2Fx`,
@@ -270,16 +337,22 @@ describe('StepUpService (D-510)', () => {
     expect(service.consumePendingReturn()).toBeNull();
   });
 
-  it('defaults the federated return to the current route and ignores a provider it did not list', () => {
+  it('defaults the federated return to the current route and ignores a provider it did not list', async () => {
     service.elevate('api_key_create', ['federated']);
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/identity-links`).flush([{ provider_key: 'okta', email: 'a', linked_at: null }]);
+    await tick();
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/oidc/providers`).flush([{ key: 'okta', display_name: 'Okta' }]);
+    await tick();
+    await tick();
 
     service.startFederated({ key: 'evil', displayName: 'Evil', protocol: 'oidc' });
+    await tick();
     httpMock.expectNone(start('api_key_create'));
 
     service.startFederated(service.prompt()!.providers[0]);
-    answerStart('api_key_create', 'c-1');
+    await answerStart('api_key_create', 'c-1');
     expect(navigate).toHaveBeenCalledWith(`${BASE}/api/v1/auth/step-up/api_key_create/oidc/okta?challenge_id=c-1`);
     expect(service.consumePendingReturn()).toEqual({
       operation: 'api_key_create', returnUrl: '/settings/security?tab=keys',

@@ -1,7 +1,7 @@
 import { Injectable, InjectionToken, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { EMPTY, Observable, catchError, defer, forkJoin, from, of, switchMap, throwError } from 'rxjs';
-import { ApiService, AuthService, ATTOME_CONFIG, PASSKEY_BROWSER, isPasskeyCancelled, isSafeReturnUrl } from '@attome/base';
+import { ATTOME_CONFIG, AuthService, isPasskeyCancelled, isSafeReturnUrl, PASSKEY_BROWSER, SdkService } from '@attome/base';
 import type { ApiError, IdentityLinkInfo, OidcProviderInfo, StepUpChallenge, StepUpElevation, StepUpStatus, StepUpVerifyRequest } from '@attome/base';
 
 /**
@@ -106,7 +106,7 @@ function isReauthRequiredFor(err: unknown, operation: string): err is ApiError {
  */
 @Injectable({ providedIn: 'root' })
 export class StepUpService {
-  private readonly api      = inject(ApiService);
+  private readonly sdk      = inject(SdkService);
   private readonly auth     = inject(AuthService);
   private readonly router   = inject(Router);
   private readonly config   = inject(ATTOME_CONFIG);
@@ -124,7 +124,7 @@ export class StepUpService {
 
   /** Whether the caller's own session could perform `operation` right now. */
   status(operation: string): Observable<StepUpStatus> {
-    return this.api.get<StepUpStatus>(`/api/v1/auth/step-up/${encodeURIComponent(operation)}`);
+    return this.sdk.get<StepUpStatus>(`/api/v1/auth/step-up/${encodeURIComponent(operation)}`);
   }
 
   run<T>(operation: string, request: () => Observable<T>, pending?: StepUpPendingOptions): Observable<T> {
@@ -181,12 +181,12 @@ export class StepUpService {
 
     // Every attempt starts its own challenge: a refused verify may have spent
     // the previous one, and the server never says which.
-    this.api.post<StepUpChallenge>(`/api/v1/auth/step-up/${operation}`, {}).pipe(
+    this.sdk.post<StepUpChallenge>(`/api/v1/auth/step-up/${operation}`, { body: {} }).pipe(
       switchMap(challenge => {
         // Cancelled while the challenge was starting: send no credential.
         if (!this.isCurrent(id)) return EMPTY;
         const body: StepUpVerifyRequest = { challenge_id: challenge.challenge_id, factor, credential };
-        return this.api.post<StepUpElevation>(`/api/v1/auth/step-up/${operation}/verify`, body);
+        return this.sdk.post<StepUpElevation>(`/api/v1/auth/step-up/${operation}/verify`, { body });
       }),
     ).subscribe({
       next:  () => { if (this.isCurrent(id)) this.finish(true); },
@@ -206,11 +206,11 @@ export class StepUpService {
     const operation = encodeURIComponent(state.operation);
     this.patch({ busy: true, error: null });
 
-    this.api.post<{ options: unknown }>(`/api/v1/auth/step-up/${operation}/passkey`, {}).pipe(
+    this.sdk.post<{ options: unknown }>(`/api/v1/auth/step-up/${operation}/passkey`, { body: {} }).pipe(
       switchMap(started => (this.isCurrent(id) ? from(this.passkeys.get(started.options)) : EMPTY)),
       switchMap(response => {
         if (!this.isCurrent(id)) return EMPTY;
-        return this.api.post<StepUpElevation>(`/api/v1/auth/step-up/${operation}/passkey/verify`, { response });
+        return this.sdk.post<StepUpElevation>(`/api/v1/auth/step-up/${operation}/passkey/verify`, { body: { response } });
       }),
     ).subscribe({
       next:  () => { if (this.isCurrent(id)) this.finish(true); },
@@ -232,7 +232,7 @@ export class StepUpService {
     const pending = this.pending;
     this.patch({ busy: true, error: null });
 
-    this.api.post<StepUpChallenge>(`/api/v1/auth/step-up/${encodeURIComponent(operation)}`, {}).subscribe({
+    this.sdk.post<StepUpChallenge>(`/api/v1/auth/step-up/${encodeURIComponent(operation)}`, { body: {} }).subscribe({
       next: challenge => {
         if (!this.isCurrent(id)) return;
         const returnUrl = [pending?.returnUrl, this.router.url].find(isSafeReturnUrl) ?? '/';
