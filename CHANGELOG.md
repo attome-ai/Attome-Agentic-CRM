@@ -89,9 +89,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   upload, with what is off by default and how to switch each on.
 - Segment housekeeping (E7-T10): a scheduled or live marketing list unused for 90 days is paused
   nightly (job `marketing_list_pause_unused`) and resumes when a list route reads it. Marketing pack
-  changeset 0015 seeds four starter segments over contacts (engaged in the last 90 days, new this
-  month, unengaged for 6 months, customers with a won opportunity); a list's `query_id` may now name
-  its stored query as `<entity>/<name>`. A starter list refreshes once it has an owner.
+  changeset 0015 ships four starter stored queries over contacts (engaged in the last 90 days, new
+  this month, unengaged for 6 months, customers by lifecycle stage) to build segment lists from; a
+  list's `query_id` may now name its stored query as `<entity>/<name>`.
 - Agent tools `segment.explain_change` and `segment.lookalike` (E7-T11): why a marketing list's size
   changed between two dates (entered and left grouped by reason), and look-alike conditions from the
   choice values clearly more common among its members than overall.

@@ -1,8 +1,8 @@
 {
   "author": "packs",
-  "checksum": "sha256:b3b3557566028c14d16af4e89601eae50049d65a97a76201f7ced1557d4e08ff",
+  "checksum": "sha256:72b79adf3ab3b3ed22b6c0edb9f49a410e0fe4315f171f7308ac770672f793fe",
   "closed_at": "2026-11-01T00:00:00Z",
-  "description": "Starter segments (E7-T10): four stored queries over contacts (engaged in the last 90 days, new this month, unengaged for 6 months, customers (lifecycle stage customer: a contact-scoped segment may not read opportunities, as its record filter covers contacts only)) and a daily segment list for each, naming its query as <entity>/<name>. A starter list refreshes once an owner is set (it runs with its owner's access).",
+  "description": "Starter segments (E7-T10): four stored queries over contacts (engaged in the last 90 days, new this month, unengaged for 6 months, and customers by lifecycle stage), to build a segment list from. The lists themselves are not shipped: writing them by key would need marketing_list to declare a business key, and a unique list name would stop the pack installing where two lists share a name.",
   "format": "attome-changeset/v1",
   "id": "01a19821-32ac-7a15-8768-eee979a5388b",
   "layer": "product",
@@ -91,106 +91,6 @@
       "target": {
         "entity": "contact",
         "query": "Customers"
-      }
-    },
-    {
-      "args": {
-        "key_fields": [
-          "name"
-        ],
-        "values": {
-          "description": "Starter segment. تفاعلوا خلال آخر 90 يومًا",
-          "kind": "segment",
-          "name": "Engaged in the last 90 days",
-          "query_id": "contact/Engaged in the last 90 days",
-          "refresh_interval": "daily",
-          "refresh_mode": "scheduled",
-          "target_entity": "contact"
-        }
-      },
-      "op": "upsert_record",
-      "phase": "expand",
-      "seq": 5,
-      "target": {
-        "entity": "marketing_list",
-        "key": {
-          "name": "Engaged in the last 90 days"
-        }
-      }
-    },
-    {
-      "args": {
-        "key_fields": [
-          "name"
-        ],
-        "values": {
-          "description": "Starter segment. جدد هذا الشهر",
-          "kind": "segment",
-          "name": "New this month",
-          "query_id": "contact/New this month",
-          "refresh_interval": "daily",
-          "refresh_mode": "scheduled",
-          "target_entity": "contact"
-        }
-      },
-      "op": "upsert_record",
-      "phase": "expand",
-      "seq": 6,
-      "target": {
-        "entity": "marketing_list",
-        "key": {
-          "name": "New this month"
-        }
-      }
-    },
-    {
-      "args": {
-        "key_fields": [
-          "name"
-        ],
-        "values": {
-          "description": "Starter segment. لم يتفاعلوا منذ 6 أشهر",
-          "kind": "segment",
-          "name": "Unengaged for 6 months",
-          "query_id": "contact/Unengaged for 6 months",
-          "refresh_interval": "daily",
-          "refresh_mode": "scheduled",
-          "target_entity": "contact"
-        }
-      },
-      "op": "upsert_record",
-      "phase": "expand",
-      "seq": 7,
-      "target": {
-        "entity": "marketing_list",
-        "key": {
-          "name": "Unengaged for 6 months"
-        }
-      }
-    },
-    {
-      "args": {
-        "key_fields": [
-          "name"
-        ],
-        "values": {
-          "description": "Starter segment. العملاء",
-          "kind": "segment",
-          "name": "Customers",
-          "query_id": "contact/Customers",
-          "refresh_interval": "daily",
-          "refresh_mode": "scheduled",
-          "target_entity": "contact"
-        }
-      },
-      "op": "upsert_record",
-      "phase": "expand",
-      "seq": 8,
-      "target": {
-        "entity": "marketing_list",
-        "key": {
-          "name": "Customers"
-        }
       }
     }
   ],

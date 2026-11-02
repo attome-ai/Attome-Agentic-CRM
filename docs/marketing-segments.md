@@ -91,5 +91,7 @@ rather than run as anyone else. Readers of a wide list still see only the people
 
 ## Starter segments
 
-The marketing pack seeds four segments over contacts: engaged in the last 90 days, new this month,
-unengaged for six months, and customers with a won opportunity. Each refreshes once it has an owner.
+The marketing pack ships four stored queries over contacts to build segments from: engaged in the
+last 90 days, new this month, unengaged for six months, and customers (lifecycle stage `customer`).
+Create a segment list naming one as its query (`contact/<query name>`); it refreshes once it has an
+owner. The lists are not shipped ready-made, so a pack install never forces list names to be unique.
