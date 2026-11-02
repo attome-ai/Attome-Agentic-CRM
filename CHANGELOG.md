@@ -14,6 +14,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- The subscription money path is tested end to end (F3-T15): create, amend mid-period, plan and run
+  billing, cancel at term end, the churn event, the licence gate and the price-amendment privilege.
 - The portal shop pages (F7-T2, `/shop/{keyword}`, `@attome/xrm/portal/store`): products with search,
   quick order by SKU, the cart and checkout, and My orders with tracking, in English and Arabic;
   `GET /{keyword}/api/v1/shop/orders` lists the account's orders.
@@ -490,6 +492,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   when `ATTOME_KMS` is set; the node does not start when it cannot unwrap. See `docs/secrets.md`.
 
 ### Fixed
+- A billing run puts a mid-period proration on the same invoice request as the period's other charges:
+  charges are grouped by the period they end with, not the day they start (F3-T15).
 - A website's repeated blocks (a related-links panel, a newsletter box seen on most of its pages) are left
   out of each page's main content: every crawl counts the blocks it sees and the next crawl drops those on
   more than half the pages (migration 0358, K6-T5).

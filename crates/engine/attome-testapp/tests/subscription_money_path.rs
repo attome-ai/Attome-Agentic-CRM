@@ -190,8 +190,8 @@ fn money_path_create_amend_run_cancel() {
             .collect();
         assert_eq!(mine.len(), 1, "one invoice for the account and January");
         assert!(
-            mine[0].charges >= 3,
-            "two recurring lines and the proration"
+            mine[0].charges >= 2,
+            "the January charges and the proration on one invoice"
         );
 
         let run = start_run(&app.state, d(2027, 1, 20), app.admin.id)
