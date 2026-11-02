@@ -3,7 +3,7 @@
 A marketing list is the set of people a send, a journey or a nurture programme reaches. Lists are
 records of the `marketing_list` entity (marketing pack), created and edited on their generic form or
 through the entity API; the routes below add what a form cannot do. Route shapes are in
-`docs/api/openapi.json`.
+`openapi.json`.
 
 ## Static lists and segments
 

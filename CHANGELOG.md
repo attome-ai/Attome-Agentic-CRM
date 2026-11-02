@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Marketing lists and segments are documented in `docs/marketing-segments.md` (E7-T14), with the list
+  routes: `/api/v1/marketing/lists/{id}/` `members`, `members/remove`, `imports`, `refresh`, `count`,
+  `sample`, `explain/{person_id}`, `members-as-of` and `usage`.
 - Nurture drips (E9-T3): the journey step `marketing.nurture_run` puts a person in a nurture
   programme on the track that fits them and waits until they leave it; a tick every minute (job
   `marketing_nurture_tick`) sends each person the next email of their track they have neither seen
