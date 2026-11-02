@@ -236,10 +236,7 @@ pub type StepCheck<'a> = &'a dyn Fn(&str, &Value) -> Option<Result<(), String>>;
 /// draft (the workflow API checks it again when it is). `step` answers for
 /// a module step's handler key: `None` when no marketing step has that key,
 /// otherwise the step's verdict on its configuration. Pure.
-pub fn problems(
-    graph: &DraftGraph,
-    step: StepCheck<'_>,
-) -> Vec<String> {
+pub fn problems(graph: &DraftGraph, step: StepCheck<'_>) -> Vec<String> {
     let mut out = Vec::new();
     if graph.nodes.is_empty() {
         out.push("the journey has no steps".to_owned());

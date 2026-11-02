@@ -33,6 +33,7 @@
               "catalog.ask", "catalog.describe_asset", "catalog.draft_descriptions", "catalog.search",
               "changes.since",
               "code.generate", "collections.record_promise", "collections.send_reminder",
+              "commerce.draft_product_description", "commerce.order_track", "commerce.product_answer",
               "commission.draft_plan_from_policy", "commission.explain_line", "dashboard.explain_number", "deliverability.explain",
               "deliverability.propose_segment", "document.extract", "duplicates.check", "duplicates.list",
               "duplicates.merge", "duplicates.propose_rules", "email.draft", "email.send", "expression.spec",

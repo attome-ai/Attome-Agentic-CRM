@@ -38,6 +38,8 @@ pub mod changes;
 pub mod claim_check;
 pub mod classify;
 pub mod collections;
+/// F8-T11: commerce.product_answer, commerce.order_track, commerce.draft_product_description.
+pub mod commerce;
 pub mod commission;
 /// W1-T12: contract.review_against_playbook, contract.summarise, contract.answer.
 pub mod contract;
@@ -254,6 +256,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(scan::descriptors());
     all.extend(workforce::descriptors());
     all.extend(fulfilment::descriptors());
+    all.extend(commerce::descriptors());
     all.extend(crate::meeting::brief::descriptors());
     all.extend(crate::meeting::notes::descriptors());
     all.extend(meeting::descriptors());
@@ -369,6 +372,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(scan::executors());
     all.extend(workforce::executors());
     all.extend(fulfilment::executors());
+    all.extend(commerce::executors());
     all.extend(crate::meeting::brief::executors());
     all.extend(crate::meeting::notes::executors());
     all.extend(meeting::executors());

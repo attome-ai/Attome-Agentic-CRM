@@ -116,6 +116,11 @@ pub fn all_versions() -> Vec<PromptEntry> {
             text: crate::actions::timeline::summarize_system_prompt("the language of the events"),
         },
         PromptEntry {
+            action_id: crate::actions::commerce::DRAFT_DESCRIPTION,
+            version: crate::actions::commerce::DRAFT_PROMPT_VERSION,
+            text: crate::actions::commerce::draft_system_prompt(),
+        },
+        PromptEntry {
             action_id: crate::actions::brand_draft::BRAND_DRAFT,
             version: crate::actions::brand_draft::BRAND_DRAFT_PROMPT_VERSION,
             text: crate::actions::brand_draft::system_prompt(),

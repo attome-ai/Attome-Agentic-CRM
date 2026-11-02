@@ -231,6 +231,11 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   `nurture.draft_summary` writes a hand-off's summary in the person's language (saving nothing), and
   `nurture.find_stalls` names tracks waiting more than twice the programme's median. No tool creates,
   accepts or returns a hand-off.
+- Commerce (sales): `commerce.product_answer` finds orderable products by name or SKU, read with the
+  caller's own access; `commerce.order_track` tells a shopper an order's status only when the phone or
+  email they give is the order's contact's (the caller also needs `order.read`; a mismatch answers like
+  an unknown number); `commerce.draft_product_description` drafts an Arabic and an English description
+  for a person to review, saving nothing. No tool changes a price, an offer, a refund or an order.
 - Org charts (sales; no manager is set): `sales.orgchart.read` reads an account's chart,
   `sales.committee.read` a deal's buying committee (influence and attitude only through the Deal
   Attitude profile) and `sales.coverage.gaps` just its gaps; `sales.orgchart.propose` queues

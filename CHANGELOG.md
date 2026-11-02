@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Commerce agent actions (F8-T11, V2-D1595): `commerce.product_answer`, `commerce.order_track`
+  (shopper-verified by phone or email) and `commerce.draft_product_description` (Arabic and English, nothing
+  saved), all read-only, on the default agent.
 - Product reviews and risky orders (F8-T8, V2-D1595): verified-buyer reviews through
   `POST /{keyword}/api/v1/shop/reviews`, every one pending until a person publishes it, published ones at
   `GET /{keyword}/api/v1/shop/products/{product_id}/reviews`; risk signals (cash on delivery above
