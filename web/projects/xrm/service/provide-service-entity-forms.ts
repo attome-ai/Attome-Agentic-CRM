@@ -16,6 +16,9 @@ import { ServiceOfferingVersionFormComponent } from './forms/offering-version-fo
 import { ServiceRequestItemFormComponent } from './forms/request-item-form/service-request-item-form.component';
 import { ServiceFulfilmentTaskFormComponent } from './forms/fulfilment-task-form/service-fulfilment-task-form.component';
 import { ServiceOrderGuideFormComponent } from './forms/order-guide-form/service-order-guide-form.component';
+import { ServiceCaseLinkFormComponent } from './forms/case-link-form/service-case-link-form.component';
+import { ServiceQualityReviewFormComponent } from './forms/quality-review-form/service-quality-review-form.component';
+import { WorkItemFormComponent } from './forms/work-item-form/work-item-form.component';
 import { SlaBadgeCellComponent } from './sla/sla-badge-cell/sla-badge-cell.component';
 
 // service module had no form registration at all before this — all 7
@@ -48,4 +51,7 @@ export function registerServiceEntityForms(registry: EntityRouteRegistry): void 
   registry.register('service_request_item', { formComponent: ServiceRequestItemFormComponent });
   registry.register('service_fulfilment_task', { formComponent: ServiceFulfilmentTaskFormComponent });
   registry.register('service_order_guide', { formComponent: ServiceOrderGuideFormComponent });
+  registry.register('service_case_link', { formComponent: ServiceCaseLinkFormComponent });
+  registry.register('service_quality_review', { formComponent: ServiceQualityReviewFormComponent });
+  registry.register('work_item', { formComponent: WorkItemFormComponent });
 }
