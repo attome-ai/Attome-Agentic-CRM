@@ -23,6 +23,8 @@
 //! Module layout:
 //! - [`model`] — shared row/wire types (`FeatureDescriptor`, `ModelArtifact`,
 //!   `PredictionModelRow`).
+//! - [`generic`] — O1-T3: models from a definition ([`model_def`]),
+//!   trained and scored over any entity through the secured query compiler.
 //! - [`features`] — ticket feature extraction, identical code path for
 //!   training and scoring (train/serve consistency).
 //! - [`train`] — the training job: builds the labeled set, fits a
@@ -36,6 +38,7 @@
 pub mod admin;
 pub mod causal;
 pub mod features;
+pub mod generic;
 pub mod model;
 /// O1-T1: generic model definitions compiled through the secured compiler.
 pub mod model_def;

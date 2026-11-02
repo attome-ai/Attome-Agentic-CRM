@@ -96,6 +96,10 @@ pub struct ModelDef {
     pub algorithm: Algorithm,
     #[serde(default)]
     pub min_rows: Option<u32>,
+    /// O1-T3: a number attribute of the entity each score is also written
+    /// to (0 to 100), for views, rules and forms.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub score_attribute: Option<String>,
 }
 
 impl ModelDef {
@@ -146,6 +150,14 @@ pub fn validate(
                 ));
             }
         }
+    }
+    if let Some(attribute) = &def.score_attribute
+        && !matches!(
+            attr_type(&def.entity, attribute),
+            Some(FieldType::Number | FieldType::Currency)
+        )
+    {
+        problems.push(format!("{}.{attribute} is not a number", def.entity));
     }
     if def.features.is_empty() || def.features.len() > MAX_FEATURES {
         problems.push(format!("a model has 1 to {MAX_FEATURES} features"));

@@ -2061,11 +2061,17 @@ async fn dispatch_platform_job(
         // fit itself runs inside `train::run`'s own `spawn_blocking`
         // (guidelines §10).
         EngineJob::PredictTrainModel { model_id } => {
-            attome_predict::train::run(&db, model_id).await?;
+            // O1-T3: a definition model trains through the generic path.
+            attome_predict::generic::run(&attome_state, model_id).await?;
         }
         // M36 Phase 1 — see this variant's doc comment.
         EngineJob::PredictScoringSweep => {
             let stats = attome_predict::score::run_scoring_sweep(&db).await?;
+            // O1-T3: the definition models score their entities' rows.
+            let defined = attome_predict::generic::score_all(&attome_state).await?;
+            if defined > 0 {
+                tracing::info!(scored = defined, "predict: definition models scored");
+            }
             if stats.scored > 0 {
                 tracing::info!(
                     models_considered = stats.models_considered,

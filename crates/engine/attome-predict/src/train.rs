@@ -49,9 +49,28 @@ pub async fn create_and_enqueue(
     name: &str,
     target: &str,
     entity: &str,
+    definition: Option<&crate::model_def::ModelDef>,
     created_by: Uuid,
 ) -> Result<Uuid, AppError> {
-    if target != crate::TARGET_SLA_BREACH || entity != crate::ENTITY_TICKET {
+    // O1-T3: a definition names its own entity and target.
+    let (target, entity) = match definition {
+        Some(def) => {
+            crate::generic::check(state, def)?;
+            (
+                format!("{}{}", crate::generic::TARGET_PREFIX, def.target),
+                def.entity.clone(),
+            )
+        }
+        None => (target.to_owned(), entity.to_owned()),
+    };
+    let (target, entity) = (target.as_str(), entity.as_str());
+    let stored = definition
+        .map(serde_json::to_value)
+        .transpose()
+        .map_err(AppError::internal)?;
+    if definition.is_none()
+        && (target != crate::TARGET_SLA_BREACH || entity != crate::ENTITY_TICKET)
+    {
         return Err(AppError::Validation(format!(
             "unsupported target/entity pair for this deployment's attome-predict build: \
              target={target:?} entity={entity:?} — Phase 1 implements only \
@@ -65,14 +84,15 @@ pub async fn create_and_enqueue(
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let inserted = sqlx::query(
         "INSERT INTO prediction_model \
-            (id, name, target, entity, algorithm, status, created_by) \
-         VALUES ($1, $2, $3, $4, 'logistic_regression', 'training', $5)",
+            (id, name, target, entity, algorithm, status, created_by, definition) \
+         VALUES ($1, $2, $3, $4, 'logistic_regression', 'training', $5, $6)",
     )
     .bind(model_id)
     .bind(name)
     .bind(target)
     .bind(entity)
     .bind(created_by)
+    .bind(stored)
     .execute(&mut *tx)
     .await;
 
@@ -181,7 +201,7 @@ pub async fn enqueue_retrain(
 /// needs `smartcore`'s own `predict`/`predict_proba` at scoring time (there
 /// is no `predict_proba` in this smartcore version at all — see
 /// `ModelArtifact::predict_proba`'s doc comment), just the fitted scalars.
-fn fit(features: &[Vec<f64>], labels: &[i32]) -> Result<ModelArtifact, String> {
+pub(crate) fn fit(features: &[Vec<f64>], labels: &[i32]) -> Result<ModelArtifact, String> {
     use smartcore::linalg::basic::arrays::Array;
     use smartcore::linalg::basic::matrix::DenseMatrix;
     use smartcore::linear::logistic_regression::LogisticRegression;

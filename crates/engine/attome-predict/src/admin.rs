@@ -37,11 +37,20 @@ const MODEL_COLUMNS: &str = "id, name, target, entity, features, algorithm, trai
 /// actually runs (`model::FeatureDescriptor`'s own doc comment), and
 /// `algorithm` is always `logistic_regression` — so accepting either here
 /// would just be a client-supplied value this crate silently ignores.
+/// O1-T3: a `definition` carries its own entity, target and features.
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateModelBody {
     pub name: String,
+    /// Ignored with a `definition`.
+    #[serde(default)]
     pub target: String,
+    /// Ignored with a `definition`.
+    #[serde(default)]
     pub entity: String,
+    /// A model from a definition; its target is stored as `def:<target>`.
+    #[serde(default)]
+    #[schema(value_type = Option<Object>)]
+    pub definition: Option<crate::model_def::ModelDef>,
 }
 
 fn validate_name(name: &str) -> Result<String, AppError> {
@@ -143,9 +152,15 @@ async fn create_model(
     Json(body): Json<CreateModelBody>,
 ) -> Result<(StatusCode, Json<ModelSummary>), AppError> {
     let name = validate_name(&body.name)?;
-    let model_id =
-        crate::train::create_and_enqueue(&state, &name, &body.target, &body.entity, ctx.user_id)
-            .await?;
+    let model_id = crate::train::create_and_enqueue(
+        &state,
+        &name,
+        &body.target,
+        &body.entity,
+        body.definition.as_ref(),
+        ctx.user_id,
+    )
+    .await?;
     Ok((
         StatusCode::CREATED,
         Json(fetch_summary(&state, model_id).await?),

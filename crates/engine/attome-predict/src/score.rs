@@ -39,7 +39,7 @@ pub async fn run_scoring_sweep(db: &DbPool) -> Result<ScoringSweepStats, AppErro
                 model_artifact, status, created_by, organization_ref, created_at, updated_at, \
                 row_version, is_deleted \
          FROM prediction_model \
-         WHERE is_deleted = false AND status = 'active'",
+         WHERE is_deleted = false AND status = 'active' AND definition IS NULL",
     )
     .fetch_all(db)
     .await
@@ -207,6 +207,7 @@ pub async fn fill_outcomes(db: &DbPool) -> Result<OutcomeFillStats, AppError> {
         "SELECT id, model_ref, regarding_id, score, label, predicted_at FROM prediction \
           WHERE is_deleted = false AND outcome_ref IS NULL AND horizon_at < NOW() \
             AND regarding_entity = 'service_ticket' \
+            AND model_ref IN (SELECT id FROM prediction_model WHERE definition IS NULL) \
           ORDER BY horizon_at ASC LIMIT $1",
     )
     .bind(OUTCOME_FILL_BATCH_SIZE)
