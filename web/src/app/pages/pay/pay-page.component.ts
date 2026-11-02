@@ -2,7 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy, Component, ElementRef, OnInit, computed, inject, input, signal, viewChild,
 } from '@angular/core';
-import { ApiService, LangService, TranslatePipe } from '@attome/base';
+import { LangService, SdkService, TranslatePipe } from '@attome/base';
 
 /** `GET /api/v1/pay/{token}`: what the payer is asked to pay. */
 export interface PayView {
@@ -124,7 +124,7 @@ type Stage = 'loading' | 'ready' | 'starting' | 'widget' | 'missing' | 'failed';
   `],
 })
 export class PayPageComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   protected readonly lang = inject(LangService);
   private readonly doc = inject(DOCUMENT);
 
@@ -142,7 +142,7 @@ export class PayPageComponent implements OnInit {
   private readonly widgetHost = viewChild<ElementRef<HTMLElement>>('widgetHost');
 
   ngOnInit(): void {
-    this.api.get<PayView>(`/api/v1/pay/${encodeURIComponent(this.token())}`).subscribe({
+    this.sdk.get<PayView>(`/api/v1/pay/${encodeURIComponent(this.token())}`).subscribe({
       next: view => {
         this.view.set(view);
         if (view.locale && view.locale !== this.lang.current()) {
@@ -162,7 +162,7 @@ export class PayPageComponent implements OnInit {
 
   pay(): void {
     this.stage.set('starting');
-    this.api.post<CheckoutStarted>(`/api/v1/pay/${encodeURIComponent(this.token())}/checkout`, {}).subscribe({
+    this.sdk.post<CheckoutStarted>(`/api/v1/pay/${encodeURIComponent(this.token())}/checkout`, { body: {} }).subscribe({
       next: started => {
         if (started.redirect_url) {
           this.doc.location.assign(started.redirect_url);

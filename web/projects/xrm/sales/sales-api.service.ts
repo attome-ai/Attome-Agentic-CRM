@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import { map, Observable } from 'rxjs';
 
 /** One opportunity line (`GET /api/v1/sales/opportunities/{id}/lines`); amounts are decimal text. */
@@ -60,57 +60,56 @@ export interface SyncResult {
 /** D6-T10: the opportunity line routes (D6-T4) and the product picker (D6-T5). */
 @Injectable({ providedIn: 'root' })
 export class SalesApiService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** The opportunity's row (its `row_version`, currency and price list). */
   opportunity(id: string): Observable<OpportunityHead> {
-    return this.api.get<OpportunityHead>(`/api/v1/opportunity/${encodeURIComponent(id)}`);
+    return this.sdk.get<OpportunityHead>(`/api/v1/opportunity/${encodeURIComponent(id)}`);
   }
 
   /** Whether `flag` is on for the caller (`GET /api/v1/features`). */
   featureOn(flag: string): Observable<boolean> {
-    return this.api
+    return this.sdk
       .get<{ flags: Record<string, boolean> }>('/api/v1/features')
       .pipe(map(r => r.flags?.[flag] === true));
   }
 
   lines(opportunity: string): Observable<SalesLine[]> {
-    return this.api
-      .get<{ items: SalesLine[] }>(`/api/v1/sales/opportunities/${encodeURIComponent(opportunity)}/lines`, {
+    return this.sdk
+      .get<{ items: SalesLine[] }>(`/api/v1/sales/opportunities/${encodeURIComponent(opportunity)}/lines`, { query: {
         page_size: '500',
-      })
+      } })
       .pipe(map(r => r.items ?? []));
   }
 
   addLine(opportunity: string, rowVersion: number, body: { product_ref: string } & SalesLinePatch): Observable<SalesLinesChanged> {
-    return this.api.post<SalesLinesChanged>(
+    return this.sdk.post<SalesLinesChanged>(
       `/api/v1/sales/opportunities/${encodeURIComponent(opportunity)}/lines`,
-      body,
+      { body },
       { ifMatch: rowVersion },
     );
   }
 
   updateLine(opportunity: string, line: string, rowVersion: number, patch: SalesLinePatch): Observable<SalesLinesChanged> {
-    return this.api.patch<SalesLinesChanged>(
+    return this.sdk.patch<SalesLinesChanged>(
       `/api/v1/sales/opportunities/${encodeURIComponent(opportunity)}/lines/${encodeURIComponent(line)}`,
-      patch,
-      rowVersion,
+      { body: patch, ifMatch: rowVersion },
     );
   }
 
   products(priceList: string, q: string): Observable<ProductPrice[]> {
-    return this.api
-      .get<{ items: ProductPrice[] }>(`/api/v1/sales/price-lists/${encodeURIComponent(priceList)}/products`, {
+    return this.sdk
+      .get<{ items: ProductPrice[] }>(`/api/v1/sales/price-lists/${encodeURIComponent(priceList)}/products`, { query: {
         q,
         page_size: '20',
-      })
+      } })
       .pipe(map(r => r.items ?? []));
   }
 
   sync(opportunity: string, direction: 'from_quote' | 'to_quote', force: boolean): Observable<SyncResult> {
-    return this.api.post<SyncResult>(
+    return this.sdk.post<SyncResult>(
       `/api/v1/sales/opportunities/${encodeURIComponent(opportunity)}/sync`,
-      { direction, force },
+      { body: { direction, force } },
     );
   }
 }

@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, Routes } from '@angular/router';
 import { catchError, map, of } from 'rxjs';
-import { ApiService, AuthService, authGuard, layerCatalogsReady } from '@attome/base';
+import { authGuard, AuthService, layerCatalogsReady, SdkService } from '@attome/base';
 import { provideXrmI18n } from '@attome/xrm/core/i18n';
 import { RECORD_LINK_ROUTE } from './record-link.route';
 
@@ -19,7 +19,7 @@ const xrmEntryGuard: CanActivateFn = () => {
 // G12-T3: on a web portal's own domain, `/` opens that portal; anywhere
 // else (or when the lookup fails) it opens the staff app as before.
 const rootGuard: CanActivateFn = () => {
-  const api    = inject(ApiService);
+  const api    = inject(SdkService);
   const router = inject(Router);
   return api.get<{ keyword: string }>('/api/v1/portal-host').pipe(
     map(host => router.createUrlTree(['/p', host.keyword])),

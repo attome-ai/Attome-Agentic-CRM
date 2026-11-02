@@ -1,6 +1,6 @@
 import { computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { LangService, SdkService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -24,7 +24,7 @@ function create(answer: 'view' | 'missing', locale: 'en' | 'ar' = 'en') {
   TestBed.configureTestingModule({
     imports: [PayPageComponent],
     providers: [
-      { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, useValue: { get, post } },
       {
         provide: LangService,
         useValue: {
@@ -77,7 +77,7 @@ describe('PayPageComponent (F5-T15)', () => {
     const { fixture, el, post } = create('view');
     (el.querySelector('.pay-button') as HTMLButtonElement).click();
     fixture.detectChanges();
-    expect(post).toHaveBeenCalledWith('/api/v1/pay/pub.secret/checkout', {});
+    expect(post).toHaveBeenCalledWith('/api/v1/pay/pub.secret/checkout', { body: {} });
   });
 
   it('formats three-decimal currencies with three decimals', () => {
