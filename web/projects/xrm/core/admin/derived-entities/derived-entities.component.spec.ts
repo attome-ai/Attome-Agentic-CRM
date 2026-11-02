@@ -1,0 +1,84 @@
+import { signal } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
+import { ApiService, LangService, SdkService } from '@attome/base';
+import { of } from 'rxjs';
+import { describe, expect, it, vi } from 'vitest';
+
+import { DerivedEntitiesComponent, type DerivedEntityDef } from './derived-entities.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
+
+const ITEMS: DerivedEntityDef[] = [
+  { name: 'big_open_deal', anchor: 'deal', condition: 'amount > 100000', mode: 'stored' },
+  { name: 'vip_account', anchor: 'account', condition: 'tier == "vip"', mode: 'live' },
+];
+
+const PREVIEW = { matching: 42, entering: 5, leaving: 2, sample: [{ id: 'd1', name: 'Tower deal' }] };
+
+describe('DerivedEntitiesComponent (A26-T5)', () => {
+  function create() {
+    const getAllPages = vi.fn((_: string) => of(ITEMS));
+    const post = vi.fn((path: string, _body: unknown) =>
+      of(path.endsWith('/preview') ? PREVIEW : { entered: 3, left: 1 }));
+    const put = vi.fn((_: string, _body: unknown) => of(ITEMS[0]));
+    const del = vi.fn(() => of(undefined));
+    TestBed.configureTestingModule({
+      imports: [DerivedEntitiesComponent],
+      providers: [
+        { provide: ApiService, useValue: { getAllPages, post, put, delete: del } },
+        { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
+        {
+          provide: LangService,
+          useValue: { translate: (k: string) => k, current: signal('en'), isRtl: signal(false) },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(DerivedEntitiesComponent);
+    fixture.detectChanges();
+    return { fixture, getAllPages, post, put, del };
+  }
+
+  it('lists derived entities from the API', () => {
+    const { fixture, getAllPages } = create();
+    expect(getAllPages).toHaveBeenCalledWith('/api/v1/admin/derived-entities');
+    const rows = fixture.nativeElement.querySelectorAll('tr[data-derived]');
+    expect(rows.length).toBe(2);
+    expect(rows[0].textContent).toContain('amount > 100000');
+    // Only a stored one can be resumed.
+    expect(rows[0].textContent).toContain('derivedEntitiesPage.resume');
+    expect(rows[1].textContent).not.toContain('derivedEntitiesPage.resume');
+  });
+
+  it('previews a condition with its cost', () => {
+    const { fixture, post } = create();
+    const c = fixture.componentInstance;
+    c.edit(ITEMS[0]);
+    c.set('condition', 'amount > 50000');
+    c.previewDraft();
+    fixture.detectChanges();
+    expect(post).toHaveBeenCalledWith('/api/v1/admin/derived-entities/preview', {
+      name: 'big_open_deal', anchor: 'deal', condition: 'amount > 50000',
+    });
+    const cost = fixture.nativeElement.querySelector('[data-testid="de-cost"]') as HTMLElement;
+    expect(cost.textContent).toContain('derivedEntitiesPage.matching');
+    expect(cost.textContent).toContain('derivedEntitiesPage.costStored');
+    expect(cost.textContent).toContain('Tower deal');
+    // Changing the draft drops a stale preview.
+    c.set('anchor', 'account');
+    expect(c.preview()).toBeNull();
+  });
+
+  it('saves, deletes and resumes', () => {
+    const { fixture, put, del, post } = create();
+    const c = fixture.componentInstance;
+    c.edit(ITEMS[1]);
+    c.save();
+    expect(put).toHaveBeenCalledWith('/api/v1/admin/derived-entities/vip_account', {
+      anchor: 'account', condition: 'tier == "vip"', mode: 'live',
+    });
+    c.remove(ITEMS[1]);
+    expect(del).toHaveBeenCalledWith('/api/v1/admin/derived-entities/vip_account');
+    c.resume(ITEMS[0]);
+    expect(post).toHaveBeenCalledWith('/api/v1/admin/derived-entities/big_open_deal/resume', null);
+    expect(c.notice()).toContain('+3');
+  });
+});

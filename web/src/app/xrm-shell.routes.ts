@@ -801,6 +801,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.EventsMonitorComponent),
           },
           {
+            // A26-T5: derived entities — define, preview, resume.
+            path: 'derived-entities',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/derived-entities').then(m => m.DerivedEntitiesComponent),
+          },
+          {
             // Z15-T15: customer tests — write, run and read results.
             path: 'customer-tests',
             canActivate: [authGuard],
