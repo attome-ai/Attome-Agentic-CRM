@@ -64,6 +64,8 @@ pub mod uae_pass;
 pub mod user_mail_sync;
 /// J7-T1: Teams, Google Meet, Zoom and Jitsi meetings.
 pub mod video;
+/// L8-T2: virtual entity sources: an outside Postgres table and an OData set.
+pub mod virtual_sources;
 /// J6-T1: Twilio Voice and an Asterisk PBX.
 pub mod voice;
 /// AJ4-T1: Wathq commercial registration lookups mapped to accounts.

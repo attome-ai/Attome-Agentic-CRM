@@ -20,3 +20,21 @@ them.
 Record ids are UUIDs: a provider maps its own keys to them (a UUIDv5 of the external key, for
 example). List answers are cached on each server for 30 seconds per query; a create or update
 through the entity clears that entity's answers on the server that made it.
+
+## Sources
+
+`attome_integration::connector::adapters::virtual_sources` has two ready providers (L8-T2), both
+read-only:
+
+- **`PostgresSource::new(url, table, key, columns)`**: a table or view of another Postgres database.
+  Give it a read-only user; its sessions are read-only too. The key column must be a `uuid` (it is the
+  record id). Filters on the listed columns (`eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `contains`,
+  `starts_with`, `is_null`, `is_not_null`) are bound and cast to each column's own type.
+- **`ODataSource::new(base_url, entity_set, key, fields, headers)`**: an OData v4 entity set, through
+  `$filter`, `$orderby`, `$top`, `$skip` and `$select`; `headers` carries its authorization. A key that
+  is not a GUID becomes a stable UUID for the record.
+
+Register one for an entity in the operator's boot code with the address from the deployment's secrets:
+`attome_records::virtual_entity::register("erp_customer", Arc::new(source))`. SQL Server has no
+provider yet.
+
