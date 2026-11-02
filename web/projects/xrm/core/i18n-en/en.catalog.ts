@@ -2058,6 +2058,8 @@ export const xrmEn = {
     passwordNote: 'A password field: the step keeps the secret named password, not what you type.',
     typeLabel: 'Text for the last clicked field', type: 'Type', pressEnter: 'Press Enter',
     screenshot: 'Add a screenshot step',
+    describe: 'Describe the steps', describeHint: 'For example: sign in, open the order, read its status',
+    draft: 'Draft', useDraft: 'Use these steps', discard: 'Discard',
   },
   workflowStepField: {
     integration: {

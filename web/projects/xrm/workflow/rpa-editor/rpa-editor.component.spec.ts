@@ -12,6 +12,12 @@ const PNG = 'iVBORw0KGgo=';
 describe('RpaEditorComponent (M16-T3)', () => {
   function create(steps: RpaStep[] = []) {
     const post = vi.fn((path: string, body: Record<string, unknown>) => {
+      if (path.endsWith('/invoke')) {
+        return of({ status: 'completed', result: {
+          steps: [{ kind: 'goto', url: 'https://portal.example.com' }, { kind: 'fill', selector: '#p', value: '{{secret:password}}' }],
+          valid: true, issue: null,
+        } });
+      }
       if (path.endsWith('/record')) {
         return of({ session: '0190a0b0-0000-7000-8000-000000000001', step: { kind: 'goto', url: body['url'] }, password: false, png_base64: PNG });
       }
@@ -99,6 +105,21 @@ describe('RpaEditorComponent (M16-T3)', () => {
     c.stop();
     expect(del).toHaveBeenCalledWith('/api/v1/admin/integrations/rpa/portal/record/0190a0b0-0000-7000-8000-000000000001');
     expect(c.session()).toBeNull();
+  });
+
+  it('drafts steps from a description for review before using them', () => {
+    const { fixture, post, emitted } = create();
+    const c = fixture.componentInstance;
+    c.draft(' sign in and read the status ');
+    expect(post).toHaveBeenCalledWith('/api/v1/actions/rpa.draft_steps/invoke', {
+      args: { description: 'sign in and read the status', allowed_hosts: ['portal.example.com'] },
+    });
+    expect(emitted.length).toBe(0);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="rpa-proposal"]')).not.toBeNull();
+    c.useProposal();
+    expect(emitted.at(-1)!.map(s => s.kind)).toEqual(['goto', 'fill']);
+    expect(c.proposal()).toBeNull();
   });
 
   it('maps points and describes steps', () => {

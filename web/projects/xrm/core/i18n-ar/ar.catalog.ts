@@ -2016,6 +2016,8 @@ export const xrmAr = {
     passwordNote: 'حقل كلمة مرور: تحفظ الخطوة السر المسمى password، لا ما تكتبه.',
     typeLabel: 'نص لآخر حقل نُقر عليه', type: 'اكتب', pressEnter: 'اضغط Enter',
     screenshot: 'أضف خطوة لقطة شاشة',
+    describe: 'صف الخطوات', describeHint: 'مثلًا: سجّل الدخول، افتح الطلب، اقرأ حالته',
+    draft: 'صياغة', useDraft: 'استخدم هذه الخطوات', discard: 'تجاهل',
   },
   workflowStepField: {
     integration: {

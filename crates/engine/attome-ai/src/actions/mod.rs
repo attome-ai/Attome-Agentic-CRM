@@ -118,6 +118,8 @@ pub mod record_write;
 /// F11-T12: revrec.explain_period, revrec.propose_revenue_rule, revrec.draft_disclosure.
 pub mod revrec;
 pub mod route_classify;
+/// M16-T3: drafting RPA steps from a description.
+pub mod rpa_draft;
 pub mod sales_competitors;
 /// D21-T9: draft call lists, reorder a list, draft call notes. Nothing dials.
 pub mod sales_dialer;
@@ -181,6 +183,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(layer_conflict_propose::descriptor());
     all.push(dashboard_explain::descriptor());
     all.extend(metric_draft::descriptors());
+    all.extend(rpa_draft::descriptors());
     all.extend(search_ask::descriptors());
     all.extend(catalog::descriptors());
     all.extend(timeline::descriptors());
@@ -299,6 +302,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(layer_conflict_propose::ProposeConflictResolution));
     all.push(Box::new(dashboard_explain::DashboardExplain));
     all.extend(metric_draft::executors());
+    all.extend(rpa_draft::executors());
     all.extend(search_ask::executors());
     all.extend(catalog::executors());
     all.extend(timeline::executors());

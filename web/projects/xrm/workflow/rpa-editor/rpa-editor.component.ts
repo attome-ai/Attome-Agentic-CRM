@@ -18,6 +18,13 @@ export interface RecordFrame {
   png_base64: string;
 }
 
+/** What `rpa.draft_steps` answers. */
+export interface DraftedSteps {
+  steps: RpaStep[];
+  valid: boolean;
+  issue: string | null;
+}
+
 /** The recorder's view, in the browser service's pixels. */
 export const RECORD_VIEW = { width: 1280, height: 800 };
 
@@ -50,6 +57,8 @@ export function framePoint(
  * screenshot, and turns each click on it, text typed for the last clicked
  * field, and Enter into a step appended to the list. A password field's
  * text is typed into the page but recorded as the secret named `password`.
+ * Steps can also be described: `rpa.draft_steps` drafts them, and the
+ * person reviews the draft before it joins the list.
  * Logical CSS only.
  */
 @Component({
@@ -110,6 +119,24 @@ export function framePoint(
             <button type="button" (click)="stop()">{{ 'rpaEditor.stop' | translate }}</button>
           </form>
         }
+        <h6>{{ 'rpaEditor.describe' | translate }}</h6>
+        <form class="rpa-row" (submit)="$event.preventDefault(); draft(said.value)">
+          <textarea #said dir="auto" rows="2" [attr.aria-label]="'rpaEditor.describe' | translate"
+                    [placeholder]="'rpaEditor.describeHint' | translate"></textarea>
+          <button type="submit" [disabled]="busy() || allowedHosts().length === 0">{{ 'rpaEditor.draft' | translate }}</button>
+        </form>
+        @if (proposal(); as p) {
+          <div class="rpa-proposal" data-testid="rpa-proposal">
+            @if (p.issue) { <p class="error-msg">{{ p.issue }}</p> }
+            <ol class="rpa-steps">
+              @for (s of p.steps; track $index) { <li><code dir="ltr">{{ describe(s) }}</code></li> }
+            </ol>
+            <span class="rpa-row">
+              <button type="button" (click)="useProposal()" [disabled]="!p.valid">{{ 'rpaEditor.useDraft' | translate }}</button>
+              <button type="button" (click)="proposal.set(null)">{{ 'rpaEditor.discard' | translate }}</button>
+            </span>
+          </div>
+        }
         @if (error(); as e) { <p class="error-msg" role="alert">{{ e }}</p> }
       }
     </section>
@@ -123,6 +150,8 @@ export function framePoint(
     .rpa-view { padding: 0; border: 1px solid var(--color-border); background: none; cursor: crosshair; inline-size: 100%; }
     .rpa-view img { display: block; inline-size: 100%; block-size: auto; }
     .rpa-hint { margin: 0; color: var(--color-text-secondary); }
+    .rpa-row textarea { flex: 1 1 16rem; }
+    .rpa-proposal { display: grid; gap: 0.25rem; padding: 0.5rem; border: 1px dashed var(--color-border); }
   `],
 })
 export class RpaEditorComponent {
@@ -141,6 +170,8 @@ export class RpaEditorComponent {
   readonly password = signal(false);
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
+  /** Steps drafted from a description, waiting for the person's review. */
+  readonly proposal = signal<DraftedSteps | null>(null);
 
   describe(step: RpaStep): string {
     return describeStep(step);
@@ -209,6 +240,36 @@ export class RpaEditorComponent {
     if (to < 0 || to >= steps.length) return;
     [steps[index], steps[to]] = [steps[to], steps[index]];
     this.stepsChange.emit(steps);
+  }
+
+  /**
+   * Asks `rpa.draft_steps` to draft steps from a description
+   * (`POST /api/v1/actions/rpa.draft_steps/invoke`); nothing is used until
+   * the person takes the draft.
+   */
+  draft(description: string): void {
+    if (!description.trim()) return;
+    this.busy.set(true);
+    this.error.set(null);
+    this.sdk.post<{ status: string; result?: DraftedSteps }>(
+      '/api/v1/actions/rpa.draft_steps/invoke',
+      { body: { args: { description: description.trim(), allowed_hosts: this.allowedHosts() } } },
+    ).subscribe({
+      next: outcome => {
+        this.busy.set(false);
+        if (outcome.status === 'completed' && outcome.result) this.proposal.set(outcome.result);
+        else this.error.set(outcome.status);
+      },
+      error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
+    });
+  }
+
+  /** Appends the reviewed draft to the steps. */
+  useProposal(): void {
+    const p = this.proposal();
+    if (!p?.valid) return;
+    this.stepsChange.emit([...this.steps(), ...p.steps]);
+    this.proposal.set(null);
   }
 
   private act(body: Record<string, unknown>): void {
