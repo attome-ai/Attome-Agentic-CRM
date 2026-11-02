@@ -957,11 +957,19 @@ dependencies = [
 name = "attome-callintel"
 version = "0.1.0"
 dependencies = [
+ "attome-ai",
  "attome-core",
+ "attome-db",
+ "attome-jobs",
  "attome-modules",
  "attome-rules",
+ "attome-types",
  "axum",
+ "chrono",
  "serde",
+ "serde_json",
+ "sqlx",
+ "tracing",
  "utoipa",
  "uuid",
 ]
@@ -2581,6 +2589,7 @@ dependencies = [
  "attome-auth",
  "attome-billing",
  "attome-cache",
+ "attome-callintel",
  "attome-commission",
  "attome-compliance",
  "attome-config",

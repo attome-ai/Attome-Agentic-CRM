@@ -14,6 +14,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Call analysis (D22-T5, V2-D1588, migration `0372`): with `callintel.enabled` on, a call's finished
+  transcript gets a redacted copy (emails, phones and IBANs masked) and one analysis per transcript version
+  in the background: talk patterns and exact-term tracker hits, for calls whose speakers are labelled staff
+  and customer (others are skipped). Transcript segments now keep the speech endpoint's speaker label.
+  See `docs/call-analysis.md`.
 - The Work item base is a platform entity and the service ticket extends it (G1-T1, V2-D1588, platform
   changesets `0087` and `0088`): the ticket's `description` becomes rich text, its title, status, priority
   and description are the base's copies and it gains `due_date`, so "all my work items" lists cases too.

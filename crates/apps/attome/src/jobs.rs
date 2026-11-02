@@ -803,6 +803,14 @@ async fn dispatch_platform_job(
         // N22-T2 — see this variant's doc comment.
         EngineJob::TranscribeRecording { document_id } => {
             attome_document::transcribe::process(&attome_state, document_id).await?;
+            // D22-T5: the finished transcript of a call goes to call
+            // analysis; a failure here never redoes the transcription.
+            if let Err(error) =
+                attome_callintel::analysis::job::on_transcript_final(&attome_state, document_id)
+                    .await
+            {
+                tracing::warn!(%document_id, %error, "call analysis not queued");
+            }
         }
         EngineJob::PruneExpiredUploadSessions => {
             attome_document::files_scan::prune_expired_sessions(&attome_state).await?;
@@ -3826,6 +3834,10 @@ pub const FULFILMENT_EXCEPTIONS: attome_jobs::JobType =
 pub const FULFILMENT_TRACKING: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_fulfilment::tracking::JOB, 1);
 
+/// D22-T5: one call analysis over a redacted transcript.
+pub const CALLINTEL_ANALYSE: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_callintel::analysis::job::JOB, 3);
+
 /// F6-T15: shipment steps and late orders told to the customer.
 pub const FULFILMENT_CUSTOMER_UPDATES: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_fulfilment::customer_updates::JOB, 1);
@@ -5256,6 +5268,26 @@ pub fn register_job_types() {
                 if moved > 0 {
                     tracing::info!(moved, "fulfilment shipments tracked");
                 }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            CALLINTEL_ANALYSE,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                if !state
+                    .modules
+                    .load()
+                    .has(attome_modules::MODULE_CALLINTEL)
+                {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let payload: attome_callintel::analysis::job::AnalysePayload = job.payload()?;
+                let status = attome_callintel::analysis::job::run(&state, payload.analysis_id)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(analysis = %payload.analysis_id, status, "call analysed");
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {

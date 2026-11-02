@@ -240,7 +240,9 @@ pub fn area(key: &str) -> &'static str {
         Some("customer_tests") => "data",
         Some("limits") => "operations",
         Some("compliance") => "security",
-        Some("email" | "mail_capture" | "voice" | "service" | "marketing") => "channels",
+        Some("email" | "mail_capture" | "voice" | "callintel" | "service" | "marketing") => {
+            "channels"
+        }
         Some("scan" | "search" | "integration" | "catalog") => "data",
         Some("i18n" | "maps" | "geocode") => "general",
         Some("notification") => "channels",
@@ -580,6 +582,9 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
         }
         "fulfilment.customer_updates" => {
             "هل يُبلَّغ جهة اتصال التحديثات في الطلب عند خروج الشحنة وخروجها للتسليم وتسليمها، وعند تأخر الطلب، بالبريد الإلكتروني والرسائل النصية عبر قوالب الإشعارات fulfilment.*، وفقط بموافقته على order_updates. متوقف افتراضيًا."
+        }
+        "callintel.enabled" => {
+            "هل تُحلَّل نصوص المكالمات بعد اكتمالها: تُحفظ نسخة منقّحة (تُخفى فيها عناوين البريد وأرقام الهواتف وأرقام الآيبان) وتُحسب منها أنماط الحديث ومطابقات المتتبعات، للمكالمات التي وُسم متحدثوها بالموظف والعميل. متوقف افتراضيًا."
         }
         "billing.portal.payments" => {
             "هل يرى مستخدمو البوابة فواتير حسابهم المفتوحة ووسائل الدفع المحفوظة (دون أي رمز دفع). متوقف افتراضيًا، ويجيب المساران بـ 404."

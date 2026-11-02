@@ -44,6 +44,11 @@ pub struct Segment {
     pub start: f64,
     pub end: f64,
     pub text: String,
+    /// D22-T5: who spoke, when the server labels speakers (a diarising
+    /// server, or a dual-channel recording's channel roles); absent
+    /// otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub speaker: Option<String>,
 }
 
 /// A transcription client over `inference.speech`.

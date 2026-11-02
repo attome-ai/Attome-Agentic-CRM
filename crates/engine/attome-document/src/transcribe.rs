@@ -200,7 +200,20 @@ pub fn segments_json(segments: &[Segment]) -> serde_json::Value {
     serde_json::Value::Array(
         segments
             .iter()
-            .map(|s| serde_json::json!({"start": s.start, "end": s.end, "text": s.text.trim()}))
+            .map(|s| {
+                let mut segment =
+                    serde_json::json!({"start": s.start, "end": s.end, "text": s.text.trim()});
+                // D22-T5: the speaker, when the server labelled one.
+                if let Some(speaker) = s
+                    .speaker
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|v| !v.is_empty())
+                {
+                    segment["speaker"] = serde_json::Value::String(speaker.to_owned());
+                }
+                segment
+            })
             .collect(),
     )
 }
@@ -388,14 +401,18 @@ mod tests {
                 start: 0.0,
                 end: 2.5,
                 text: " Hello ".into(),
+                speaker: Some("staff".into()),
             },
             Segment {
                 start: 2.5,
                 end: 4.0,
                 text: "مرحبا".into(),
+                speaker: None,
             },
         ]);
         assert_eq!(stored[0]["text"], "Hello");
+        assert_eq!(stored[0]["speaker"], "staff");
+        assert!(stored[1].get("speaker").is_none());
         assert_eq!(stored[1]["start"], 2.5);
         assert_eq!(stored.as_array().map(Vec::len), Some(2));
     }

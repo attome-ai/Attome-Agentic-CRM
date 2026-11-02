@@ -747,6 +747,17 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(false),
         ),
+        // D22-T5: call analysis.
+        SettingDescriptor::new(
+            "callintel.enabled",
+            "Whether a call's finished transcript is analysed: a redacted copy (emails, phone numbers \
+         and IBANs masked) is kept and talk patterns and tracker hits are computed from it, for \
+         calls whose speakers are labelled staff and customer (D22-T5). Off by default.",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
         // F3-T13: subscriptions on the portal.
         SettingDescriptor::new(
             "billing.portal.subscriptions",
