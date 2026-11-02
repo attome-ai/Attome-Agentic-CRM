@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Revenue recognition routes under `/api/v1/ledger/revrec` (F11): `ssp`, `contracts/combine`, `changes`,
+  `changes/{id}/apply`, `changes/{id}/discard`, `close` and `close/{id}/post`; the policy guide
+  `docs/revenue-recognition.md` for finance and auditors (F11-T15).
 - Predictive models from a definition (O1-T3, D18-T2): any entity's yes/no or choice attribute,
   trained through the secured query compiler and scored nightly with the top three factors;
   lead conversion once 500 leads have closed. `docs/predictive-models.md`; migration 0378.
