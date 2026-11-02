@@ -1,0 +1,131 @@
+{
+  "app": "marketing",
+  "kind": "flow_template",
+  "name": "journey-re-engagement",
+  "schema_version": 1,
+  "doc": {
+    "description_en": "Journey: win back people who stopped engaging; a last email to those who still do not open.",
+    "description_ar": "رحلة: استعادة من توقفوا عن التفاعل؛ رسالة أخيرة لمن لم يفتحوا بعد.",
+    "parameters": [
+      {
+        "name": "purpose",
+        "type": "text",
+        "label_en": "Consent purpose",
+        "label_ar": "غرض الموافقة",
+        "default": "marketing"
+      },
+      {
+        "name": "miss_you_design",
+        "type": "text",
+        "label_en": "Win-back email design",
+        "label_ar": "تصميم رسالة الاستعادة"
+      },
+      {
+        "name": "check_after",
+        "type": "number",
+        "label_en": "Wait before checking opens (seconds)",
+        "label_ar": "الانتظار قبل التحقق من الفتح (بالثواني)",
+        "default": 604800
+      },
+      {
+        "name": "final_design",
+        "type": "text",
+        "label_en": "Last email design",
+        "label_ar": "تصميم الرسالة الأخيرة"
+      }
+    ],
+    "graph": {
+      "nodes": [
+        {
+          "id": "start",
+          "type": "trigger",
+          "config": {
+            "trigger_type": "manual"
+          }
+        },
+        {
+          "id": "miss_you",
+          "type": "module_step",
+          "config": {
+            "handler": "marketing.send_email",
+            "config": {
+              "design_id": "{{miss_you_design}}",
+              "purpose": "{{purpose}}",
+              "on_blocked": "skip"
+            }
+          }
+        },
+        {
+          "id": "wait_check",
+          "type": "wait",
+          "config": {
+            "delay_seconds": "{{check_after}}"
+          }
+        },
+        {
+          "id": "opened",
+          "type": "module_step",
+          "config": {
+            "handler": "marketing.engagement",
+            "config": {
+              "node_id": "miss_you",
+              "event": "opened"
+            }
+          }
+        },
+        {
+          "id": "came_back",
+          "type": "condition",
+          "config": {
+            "field": "engaged",
+            "op": "truthy"
+          }
+        },
+        {
+          "id": "final",
+          "type": "module_step",
+          "config": {
+            "handler": "marketing.send_email",
+            "config": {
+              "design_id": "{{final_design}}",
+              "purpose": "{{purpose}}",
+              "on_blocked": "skip"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from_node": "start",
+          "from_port": "out",
+          "to_node": "miss_you",
+          "to_port": "input"
+        },
+        {
+          "from_node": "miss_you",
+          "from_port": "output",
+          "to_node": "wait_check",
+          "to_port": "in"
+        },
+        {
+          "from_node": "wait_check",
+          "from_port": "out",
+          "to_node": "opened",
+          "to_port": "input"
+        },
+        {
+          "from_node": "opened",
+          "from_port": "output",
+          "to_node": "came_back",
+          "to_port": "value"
+        },
+        {
+          "from_node": "came_back",
+          "from_port": "false",
+          "to_node": "final",
+          "to_port": "input"
+        }
+      ]
+    }
+  }
+}

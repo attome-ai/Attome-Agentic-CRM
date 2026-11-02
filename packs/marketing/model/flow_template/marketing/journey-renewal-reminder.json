@@ -1,0 +1,144 @@
+{
+  "app": "marketing",
+  "kind": "flow_template",
+  "name": "journey-renewal-reminder",
+  "schema_version": 1,
+  "doc": {
+    "description_en": "Journey: remind a customer of a coming renewal three times, closer each time.",
+    "description_ar": "رحلة: تذكير العميل بالتجديد القادم ثلاث مرات تقترب كل مرة.",
+    "parameters": [
+      {
+        "name": "purpose",
+        "type": "text",
+        "label_en": "Consent purpose",
+        "label_ar": "غرض الموافقة",
+        "default": "marketing"
+      },
+      {
+        "name": "notice_design",
+        "type": "text",
+        "label_en": "Renewal notice design",
+        "label_ar": "تصميم إشعار التجديد"
+      },
+      {
+        "name": "reminder_after",
+        "type": "number",
+        "label_en": "Wait before the reminder (seconds)",
+        "label_ar": "الانتظار قبل التذكير (بالثواني)",
+        "default": 1209600
+      },
+      {
+        "name": "reminder_design",
+        "type": "text",
+        "label_en": "Reminder email design",
+        "label_ar": "تصميم رسالة التذكير"
+      },
+      {
+        "name": "final_after",
+        "type": "number",
+        "label_en": "Wait before the last reminder (seconds)",
+        "label_ar": "الانتظار قبل التذكير الأخير (بالثواني)",
+        "default": 604800
+      },
+      {
+        "name": "final_design",
+        "type": "text",
+        "label_en": "Last reminder design",
+        "label_ar": "تصميم التذكير الأخير"
+      }
+    ],
+    "graph": {
+      "nodes": [
+        {
+          "id": "start",
+          "type": "trigger",
+          "config": {
+            "trigger_type": "manual"
+          }
+        },
+        {
+          "id": "notice",
+          "type": "module_step",
+          "config": {
+            "handler": "marketing.send_email",
+            "config": {
+              "design_id": "{{notice_design}}",
+              "purpose": "{{purpose}}",
+              "on_blocked": "skip"
+            }
+          }
+        },
+        {
+          "id": "wait_reminder",
+          "type": "wait",
+          "config": {
+            "delay_seconds": "{{reminder_after}}"
+          }
+        },
+        {
+          "id": "reminder",
+          "type": "module_step",
+          "config": {
+            "handler": "marketing.send_email",
+            "config": {
+              "design_id": "{{reminder_design}}",
+              "purpose": "{{purpose}}",
+              "on_blocked": "skip"
+            }
+          }
+        },
+        {
+          "id": "wait_final",
+          "type": "wait",
+          "config": {
+            "delay_seconds": "{{final_after}}"
+          }
+        },
+        {
+          "id": "final",
+          "type": "module_step",
+          "config": {
+            "handler": "marketing.send_email",
+            "config": {
+              "design_id": "{{final_design}}",
+              "purpose": "{{purpose}}",
+              "on_blocked": "skip"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from_node": "start",
+          "from_port": "out",
+          "to_node": "notice",
+          "to_port": "input"
+        },
+        {
+          "from_node": "notice",
+          "from_port": "output",
+          "to_node": "wait_reminder",
+          "to_port": "in"
+        },
+        {
+          "from_node": "wait_reminder",
+          "from_port": "out",
+          "to_node": "reminder",
+          "to_port": "input"
+        },
+        {
+          "from_node": "reminder",
+          "from_port": "output",
+          "to_node": "wait_final",
+          "to_port": "in"
+        },
+        {
+          "from_node": "wait_final",
+          "from_port": "out",
+          "to_node": "final",
+          "to_port": "input"
+        }
+      ]
+    }
+  }
+}

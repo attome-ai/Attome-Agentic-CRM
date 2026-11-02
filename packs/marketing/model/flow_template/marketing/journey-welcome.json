@@ -1,0 +1,100 @@
+{
+  "app": "marketing",
+  "kind": "flow_template",
+  "name": "journey-welcome",
+  "schema_version": 1,
+  "doc": {
+    "description_en": "Journey: welcome a new subscriber with a first email, then tips a few days later.",
+    "description_ar": "رحلة: ترحيب بالمشترك الجديد برسالة أولى، ثم نصائح بعد أيام.",
+    "parameters": [
+      {
+        "name": "purpose",
+        "type": "text",
+        "label_en": "Consent purpose",
+        "label_ar": "غرض الموافقة",
+        "default": "marketing"
+      },
+      {
+        "name": "welcome_design",
+        "type": "text",
+        "label_en": "Welcome email design",
+        "label_ar": "تصميم رسالة الترحيب"
+      },
+      {
+        "name": "tips_after",
+        "type": "number",
+        "label_en": "Wait before the tips (seconds)",
+        "label_ar": "الانتظار قبل النصائح (بالثواني)",
+        "default": 259200
+      },
+      {
+        "name": "tips_design",
+        "type": "text",
+        "label_en": "Tips email design",
+        "label_ar": "تصميم رسالة النصائح"
+      }
+    ],
+    "graph": {
+      "nodes": [
+        {
+          "id": "start",
+          "type": "trigger",
+          "config": {
+            "trigger_type": "manual"
+          }
+        },
+        {
+          "id": "welcome",
+          "type": "module_step",
+          "config": {
+            "handler": "marketing.send_email",
+            "config": {
+              "design_id": "{{welcome_design}}",
+              "purpose": "{{purpose}}",
+              "on_blocked": "skip"
+            }
+          }
+        },
+        {
+          "id": "wait_tips",
+          "type": "wait",
+          "config": {
+            "delay_seconds": "{{tips_after}}"
+          }
+        },
+        {
+          "id": "tips",
+          "type": "module_step",
+          "config": {
+            "handler": "marketing.send_email",
+            "config": {
+              "design_id": "{{tips_design}}",
+              "purpose": "{{purpose}}",
+              "on_blocked": "skip"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from_node": "start",
+          "from_port": "out",
+          "to_node": "welcome",
+          "to_port": "input"
+        },
+        {
+          "from_node": "welcome",
+          "from_port": "output",
+          "to_node": "wait_tips",
+          "to_port": "in"
+        },
+        {
+          "from_node": "wait_tips",
+          "from_port": "out",
+          "to_node": "tips",
+          "to_port": "input"
+        }
+      ]
+    }
+  }
+}

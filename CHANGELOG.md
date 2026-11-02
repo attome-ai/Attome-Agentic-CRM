@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Seven starter journeys in the marketing pack (E8-T11), as flow templates: welcome, onboarding, event
+  reminder, abandoned form, re-engagement, renewal reminder and post-purchase feedback, in English and
+  Arabic; each becomes a draft once its email designs are named.
 - Marketing lists and segments are documented in `docs/marketing-segments.md` (E7-T14), with the list
   routes: `/api/v1/marketing/lists/{id}/` `members`, `members/remove`, `imports`, `refresh`, `count`,
   `sample`, `explain/{person_id}`, `members-as-of` and `usage`.

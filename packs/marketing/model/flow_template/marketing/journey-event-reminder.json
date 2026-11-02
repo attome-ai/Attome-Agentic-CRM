@@ -1,0 +1,100 @@
+{
+  "app": "marketing",
+  "kind": "flow_template",
+  "name": "journey-event-reminder",
+  "schema_version": 1,
+  "doc": {
+    "description_en": "Journey: confirm an event registration, then remind before the event.",
+    "description_ar": "رحلة: تأكيد التسجيل في فعالية، ثم التذكير قبل موعدها.",
+    "parameters": [
+      {
+        "name": "purpose",
+        "type": "text",
+        "label_en": "Consent purpose",
+        "label_ar": "غرض الموافقة",
+        "default": "marketing"
+      },
+      {
+        "name": "confirmation_design",
+        "type": "text",
+        "label_en": "Confirmation email design",
+        "label_ar": "تصميم رسالة التأكيد"
+      },
+      {
+        "name": "reminder_after",
+        "type": "number",
+        "label_en": "Wait before the reminder (seconds)",
+        "label_ar": "الانتظار قبل التذكير (بالثواني)",
+        "default": 518400
+      },
+      {
+        "name": "reminder_design",
+        "type": "text",
+        "label_en": "Reminder email design",
+        "label_ar": "تصميم رسالة التذكير"
+      }
+    ],
+    "graph": {
+      "nodes": [
+        {
+          "id": "start",
+          "type": "trigger",
+          "config": {
+            "trigger_type": "manual"
+          }
+        },
+        {
+          "id": "confirm",
+          "type": "module_step",
+          "config": {
+            "handler": "marketing.send_email",
+            "config": {
+              "design_id": "{{confirmation_design}}",
+              "purpose": "{{purpose}}",
+              "on_blocked": "skip"
+            }
+          }
+        },
+        {
+          "id": "wait_reminder",
+          "type": "wait",
+          "config": {
+            "delay_seconds": "{{reminder_after}}"
+          }
+        },
+        {
+          "id": "remind",
+          "type": "module_step",
+          "config": {
+            "handler": "marketing.send_email",
+            "config": {
+              "design_id": "{{reminder_design}}",
+              "purpose": "{{purpose}}",
+              "on_blocked": "skip"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from_node": "start",
+          "from_port": "out",
+          "to_node": "confirm",
+          "to_port": "input"
+        },
+        {
+          "from_node": "confirm",
+          "from_port": "output",
+          "to_node": "wait_reminder",
+          "to_port": "in"
+        },
+        {
+          "from_node": "wait_reminder",
+          "from_port": "out",
+          "to_node": "remind",
+          "to_port": "input"
+        }
+      ]
+    }
+  }
+}

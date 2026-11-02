@@ -1,0 +1,151 @@
+{
+  "app": "marketing",
+  "kind": "flow_template",
+  "name": "journey-post-purchase-feedback",
+  "schema_version": 1,
+  "doc": {
+    "description_en": "Journey: ask for feedback after a purchase, and once more if the link was not clicked.",
+    "description_ar": "رحلة: طلب رأي العميل بعد الشراء، ومرة أخرى إن لم يُنقر الرابط.",
+    "parameters": [
+      {
+        "name": "purpose",
+        "type": "text",
+        "label_en": "Consent purpose",
+        "label_ar": "غرض الموافقة",
+        "default": "marketing"
+      },
+      {
+        "name": "ask_after",
+        "type": "number",
+        "label_en": "Wait before asking (seconds)",
+        "label_ar": "الانتظار قبل الطلب (بالثواني)",
+        "default": 259200
+      },
+      {
+        "name": "feedback_design",
+        "type": "text",
+        "label_en": "Feedback request design",
+        "label_ar": "تصميم طلب الرأي"
+      },
+      {
+        "name": "check_after",
+        "type": "number",
+        "label_en": "Wait before checking clicks (seconds)",
+        "label_ar": "الانتظار قبل التحقق من النقر (بالثواني)",
+        "default": 432000
+      },
+      {
+        "name": "reminder_design",
+        "type": "text",
+        "label_en": "Reminder email design",
+        "label_ar": "تصميم رسالة التذكير"
+      }
+    ],
+    "graph": {
+      "nodes": [
+        {
+          "id": "start",
+          "type": "trigger",
+          "config": {
+            "trigger_type": "manual"
+          }
+        },
+        {
+          "id": "wait_ask",
+          "type": "wait",
+          "config": {
+            "delay_seconds": "{{ask_after}}"
+          }
+        },
+        {
+          "id": "ask",
+          "type": "module_step",
+          "config": {
+            "handler": "marketing.send_email",
+            "config": {
+              "design_id": "{{feedback_design}}",
+              "purpose": "{{purpose}}",
+              "on_blocked": "skip"
+            }
+          }
+        },
+        {
+          "id": "wait_check",
+          "type": "wait",
+          "config": {
+            "delay_seconds": "{{check_after}}"
+          }
+        },
+        {
+          "id": "clicked",
+          "type": "module_step",
+          "config": {
+            "handler": "marketing.engagement",
+            "config": {
+              "node_id": "ask",
+              "event": "clicked"
+            }
+          }
+        },
+        {
+          "id": "answered",
+          "type": "condition",
+          "config": {
+            "field": "engaged",
+            "op": "truthy"
+          }
+        },
+        {
+          "id": "ask_again",
+          "type": "module_step",
+          "config": {
+            "handler": "marketing.send_email",
+            "config": {
+              "design_id": "{{reminder_design}}",
+              "purpose": "{{purpose}}",
+              "on_blocked": "skip"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from_node": "start",
+          "from_port": "out",
+          "to_node": "wait_ask",
+          "to_port": "in"
+        },
+        {
+          "from_node": "wait_ask",
+          "from_port": "out",
+          "to_node": "ask",
+          "to_port": "input"
+        },
+        {
+          "from_node": "ask",
+          "from_port": "output",
+          "to_node": "wait_check",
+          "to_port": "in"
+        },
+        {
+          "from_node": "wait_check",
+          "from_port": "out",
+          "to_node": "clicked",
+          "to_port": "input"
+        },
+        {
+          "from_node": "clicked",
+          "from_port": "output",
+          "to_node": "answered",
+          "to_port": "value"
+        },
+        {
+          "from_node": "answered",
+          "from_port": "false",
+          "to_node": "ask_again",
+          "to_port": "input"
+        }
+      ]
+    }
+  }
+}

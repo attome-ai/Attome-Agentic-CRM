@@ -1,0 +1,120 @@
+{
+  "app": "marketing",
+  "kind": "flow_template",
+  "name": "journey-abandoned-form",
+  "schema_version": 1,
+  "doc": {
+    "description_en": "Journey: follow up a form left unfinished, then once more before giving up.",
+    "description_ar": "رحلة: متابعة نموذج لم يُستكمل، ثم مرة أخيرة قبل التوقف.",
+    "parameters": [
+      {
+        "name": "purpose",
+        "type": "text",
+        "label_en": "Consent purpose",
+        "label_ar": "غرض الموافقة",
+        "default": "marketing"
+      },
+      {
+        "name": "first_after",
+        "type": "number",
+        "label_en": "Wait before the first follow-up (seconds)",
+        "label_ar": "الانتظار قبل المتابعة الأولى (بالثواني)",
+        "default": 86400
+      },
+      {
+        "name": "nudge_design",
+        "type": "text",
+        "label_en": "Follow-up email design",
+        "label_ar": "تصميم رسالة المتابعة"
+      },
+      {
+        "name": "last_after",
+        "type": "number",
+        "label_en": "Wait before the last follow-up (seconds)",
+        "label_ar": "الانتظار قبل المتابعة الأخيرة (بالثواني)",
+        "default": 259200
+      },
+      {
+        "name": "last_design",
+        "type": "text",
+        "label_en": "Last follow-up email design",
+        "label_ar": "تصميم رسالة المتابعة الأخيرة"
+      }
+    ],
+    "graph": {
+      "nodes": [
+        {
+          "id": "start",
+          "type": "trigger",
+          "config": {
+            "trigger_type": "manual"
+          }
+        },
+        {
+          "id": "wait_first",
+          "type": "wait",
+          "config": {
+            "delay_seconds": "{{first_after}}"
+          }
+        },
+        {
+          "id": "nudge",
+          "type": "module_step",
+          "config": {
+            "handler": "marketing.send_email",
+            "config": {
+              "design_id": "{{nudge_design}}",
+              "purpose": "{{purpose}}",
+              "on_blocked": "skip"
+            }
+          }
+        },
+        {
+          "id": "wait_last",
+          "type": "wait",
+          "config": {
+            "delay_seconds": "{{last_after}}"
+          }
+        },
+        {
+          "id": "last_chance",
+          "type": "module_step",
+          "config": {
+            "handler": "marketing.send_email",
+            "config": {
+              "design_id": "{{last_design}}",
+              "purpose": "{{purpose}}",
+              "on_blocked": "skip"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from_node": "start",
+          "from_port": "out",
+          "to_node": "wait_first",
+          "to_port": "in"
+        },
+        {
+          "from_node": "wait_first",
+          "from_port": "out",
+          "to_node": "nudge",
+          "to_port": "input"
+        },
+        {
+          "from_node": "nudge",
+          "from_port": "output",
+          "to_node": "wait_last",
+          "to_port": "in"
+        },
+        {
+          "from_node": "wait_last",
+          "from_port": "out",
+          "to_node": "last_chance",
+          "to_port": "input"
+        }
+      ]
+    }
+  }
+}

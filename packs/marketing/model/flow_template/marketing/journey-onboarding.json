@@ -1,0 +1,199 @@
+{
+  "app": "marketing",
+  "kind": "flow_template",
+  "name": "journey-onboarding",
+  "schema_version": 1,
+  "doc": {
+    "description_en": "Journey: onboard a new customer over a week; those who opened get the next step, the rest a reminder.",
+    "description_ar": "رحلة: تهيئة العميل الجديد خلال أسبوع؛ من فتح الرسالة يتلقى الخطوة التالية والبقية تذكيرًا.",
+    "parameters": [
+      {
+        "name": "purpose",
+        "type": "text",
+        "label_en": "Consent purpose",
+        "label_ar": "غرض الموافقة",
+        "default": "marketing"
+      },
+      {
+        "name": "first_design",
+        "type": "text",
+        "label_en": "First email design",
+        "label_ar": "تصميم الرسالة الأولى"
+      },
+      {
+        "name": "second_after",
+        "type": "number",
+        "label_en": "Wait before the second email (seconds)",
+        "label_ar": "الانتظار قبل الرسالة الثانية (بالثواني)",
+        "default": 172800
+      },
+      {
+        "name": "second_design",
+        "type": "text",
+        "label_en": "Second email design",
+        "label_ar": "تصميم الرسالة الثانية"
+      },
+      {
+        "name": "check_after",
+        "type": "number",
+        "label_en": "Wait before checking opens (seconds)",
+        "label_ar": "الانتظار قبل التحقق من الفتح (بالثواني)",
+        "default": 432000
+      },
+      {
+        "name": "advanced_design",
+        "type": "text",
+        "label_en": "Next-step email design",
+        "label_ar": "تصميم رسالة الخطوة التالية"
+      },
+      {
+        "name": "reminder_design",
+        "type": "text",
+        "label_en": "Reminder email design",
+        "label_ar": "تصميم رسالة التذكير"
+      }
+    ],
+    "graph": {
+      "nodes": [
+        {
+          "id": "start",
+          "type": "trigger",
+          "config": {
+            "trigger_type": "manual"
+          }
+        },
+        {
+          "id": "day0",
+          "type": "module_step",
+          "config": {
+            "handler": "marketing.send_email",
+            "config": {
+              "design_id": "{{first_design}}",
+              "purpose": "{{purpose}}",
+              "on_blocked": "skip"
+            }
+          }
+        },
+        {
+          "id": "wait_second",
+          "type": "wait",
+          "config": {
+            "delay_seconds": "{{second_after}}"
+          }
+        },
+        {
+          "id": "day2",
+          "type": "module_step",
+          "config": {
+            "handler": "marketing.send_email",
+            "config": {
+              "design_id": "{{second_design}}",
+              "purpose": "{{purpose}}",
+              "on_blocked": "skip"
+            }
+          }
+        },
+        {
+          "id": "wait_check",
+          "type": "wait",
+          "config": {
+            "delay_seconds": "{{check_after}}"
+          }
+        },
+        {
+          "id": "opened",
+          "type": "module_step",
+          "config": {
+            "handler": "marketing.engagement",
+            "config": {
+              "node_id": "day2",
+              "event": "opened"
+            }
+          }
+        },
+        {
+          "id": "did_open",
+          "type": "condition",
+          "config": {
+            "field": "engaged",
+            "op": "truthy"
+          }
+        },
+        {
+          "id": "advanced",
+          "type": "module_step",
+          "config": {
+            "handler": "marketing.send_email",
+            "config": {
+              "design_id": "{{advanced_design}}",
+              "purpose": "{{purpose}}",
+              "on_blocked": "skip"
+            }
+          }
+        },
+        {
+          "id": "reminder",
+          "type": "module_step",
+          "config": {
+            "handler": "marketing.send_email",
+            "config": {
+              "design_id": "{{reminder_design}}",
+              "purpose": "{{purpose}}",
+              "on_blocked": "skip"
+            }
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from_node": "start",
+          "from_port": "out",
+          "to_node": "day0",
+          "to_port": "input"
+        },
+        {
+          "from_node": "day0",
+          "from_port": "output",
+          "to_node": "wait_second",
+          "to_port": "in"
+        },
+        {
+          "from_node": "wait_second",
+          "from_port": "out",
+          "to_node": "day2",
+          "to_port": "input"
+        },
+        {
+          "from_node": "day2",
+          "from_port": "output",
+          "to_node": "wait_check",
+          "to_port": "in"
+        },
+        {
+          "from_node": "wait_check",
+          "from_port": "out",
+          "to_node": "opened",
+          "to_port": "input"
+        },
+        {
+          "from_node": "opened",
+          "from_port": "output",
+          "to_node": "did_open",
+          "to_port": "value"
+        },
+        {
+          "from_node": "did_open",
+          "from_port": "true",
+          "to_node": "advanced",
+          "to_port": "input"
+        },
+        {
+          "from_node": "did_open",
+          "from_port": "false",
+          "to_node": "reminder",
+          "to_port": "input"
+        }
+      ]
+    }
+  }
+}

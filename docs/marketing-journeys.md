@@ -95,6 +95,14 @@ sending or writing anything. `POST /api/v1/marketing/journeys/{id}/publish` with
 `move_matching`, as above) and makes a draft journey live. When the journey names a `publish_role`, only
 its holders (and administrators) may publish.
 
+## Starter journeys
+
+The marketing pack ships seven starter journeys as flow templates (`flow_template` objects of app
+`marketing`): welcome, onboarding, event reminder, abandoned form, re-engagement, renewal reminder and
+post-purchase feedback. Each asks for its email designs and consent purpose (and has default waits),
+and becomes a draft through `POST /api/v1/admin/model/flow_template/{id}/instantiate`, saved as the
+journey's draft version. Nothing is live until someone publishes it.
+
 ## In the workflow editor
 
 A journey is edited on the workflow canvas. Its picker lists the marketing steps under "Steps from
