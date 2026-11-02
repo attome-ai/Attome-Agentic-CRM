@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpEvent } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import type { ApiComponents } from '@attome/base';
 
 // Mirrors the wire shapes of crates/engine/attome-api/src/files.rs's
@@ -85,7 +85,7 @@ export interface DownloadTarget {
 
 @Injectable({ providedIn: 'root' })
 export class FileUploadService {
-  private readonly api  = inject(ApiService);
+  private readonly sdk  = inject(SdkService);
   private readonly http = inject(HttpClient);
 
   createSession(
@@ -94,14 +94,14 @@ export class FileUploadService {
     fieldName:  string,
     req:        UploadSessionRequest,
   ): Observable<UploadSessionResponse> {
-    return this.api.post<UploadSessionResponse>(
+    return this.sdk.post<UploadSessionResponse>(
       `/api/v1/${entityName}/${recordId}/files/${fieldName}/upload-session`,
-      req,
+      { body: req },
     );
   }
 
   // Goes straight to the object store's own presigned URL, never through
-  // ApiService: it targets a different origin than this app's API and must
+  // SdkService: it targets a different origin than this app's API and must
   // not carry `withCredentials`/an extra unsigned header — the presign only
   // signs (method, path, expiry) (attome-storage/src/presign.rs), so anything
   // this client adds beyond the raw PUT body is outside what was signed.
@@ -128,24 +128,24 @@ export class FileUploadService {
     fieldName:  string,
     req:        UploadSessionRequest,
   ): Observable<MultipartStarted> {
-    return this.api.post<MultipartStarted>(
+    return this.sdk.post<MultipartStarted>(
       `/api/v1/${entityName}/${recordId}/files/${fieldName}/multipart`,
-      req,
+      { body: req },
     );
   }
 
   /** A presigned PUT for part `n` (1-based). */
   partUrl(sessionId: string, n: number): Observable<PartUpload> {
-    return this.api.put<PartUpload>(`/api/v1/files/uploads/${sessionId}/parts/${n}`, {});
+    return this.sdk.put<PartUpload>(`/api/v1/files/uploads/${sessionId}/parts/${n}`, { body: {} });
   }
 
   /** The upload's state and the parts that arrived — ask before resuming. */
   multipartStatus(sessionId: string): Observable<MultipartStatus> {
-    return this.api.get<MultipartStatus>(`/api/v1/files/uploads/${sessionId}`);
+    return this.sdk.get<MultipartStatus>(`/api/v1/files/uploads/${sessionId}`);
   }
 
   completeMultipart(sessionId: string): Observable<MultipartAssembled> {
-    return this.api.post<MultipartAssembled>(`/api/v1/files/uploads/${sessionId}/complete`, {});
+    return this.sdk.post<MultipartAssembled>(`/api/v1/files/uploads/${sessionId}/complete`, { body: {} });
   }
 
   /** Same uncredentialed presigned PUT as {@link putToStorage}, for one part. */
@@ -163,9 +163,9 @@ export class FileUploadService {
     fieldName:  string,
     sessionId:  string,
   ): Observable<FinalizeResponse> {
-    return this.api.post<FinalizeResponse>(
+    return this.sdk.post<FinalizeResponse>(
       `/api/v1/${entityName}/${recordId}/files/${fieldName}/upload-session/${sessionId}/finalize`,
-      {},
+      { body: {} },
     );
   }
 
@@ -175,7 +175,7 @@ export class FileUploadService {
     fieldName:  string,
     sessionId:  string,
   ): Observable<SessionStatusResponse> {
-    return this.api.get<SessionStatusResponse>(
+    return this.sdk.get<SessionStatusResponse>(
       `/api/v1/${entityName}/${recordId}/files/${fieldName}/upload-session/${sessionId}`,
     );
   }
@@ -198,7 +198,7 @@ export class FileUploadService {
     if (version !== undefined && version !== null) params.push(`version=${encodeURIComponent(String(version))}`);
     else if (key) params.push(`key=${encodeURIComponent(key)}`);
     const suffix = params.length ? `?${params.join('&')}` : '';
-    return this.api.get<DownloadUrlResponse>(
+    return this.sdk.get<DownloadUrlResponse>(
       `/api/v1/${entityName}/${recordId}/files/${fieldName}/download-url${suffix}`,
     );
   }
@@ -209,7 +209,7 @@ export class FileUploadService {
 
   /** Every version recorded for this field, newest first, in one page. */
   listVersions(entityName: string, recordId: string, fieldName: string): Observable<FileVersionPage> {
-    return this.api.get<FileVersionPage>(
+    return this.sdk.get<FileVersionPage>(
       `/api/v1/${entityName}/${recordId}/files/${fieldName}/versions`,
     );
   }
@@ -220,9 +220,9 @@ export class FileUploadService {
   restoreVersion(
     entityName: string, recordId: string, fieldName: string, versionNo: number,
   ): Observable<RestoreVersionResponse> {
-    return this.api.post<RestoreVersionResponse>(
+    return this.sdk.post<RestoreVersionResponse>(
       `/api/v1/${entityName}/${recordId}/files/${fieldName}/versions/${versionNo}/restore`,
-      {},
+      { body: {} },
     );
   }
 
@@ -231,7 +231,7 @@ export class FileUploadService {
   purgeVersion(
     entityName: string, recordId: string, fieldName: string, versionNo: number,
   ): Observable<void> {
-    return this.api.delete(
+    return this.sdk.delete(
       `/api/v1/${entityName}/${recordId}/files/${fieldName}/versions/${versionNo}`,
     );
   }
