@@ -64,8 +64,12 @@ pub(crate) async fn resolve_record_level_context(
     } else {
         Default::default()
     };
-    // Q14-T2: a sharing rule may share with a unit's members.
-    let own_units = if own_units_only.is_empty() && !crate::sharing_rules::targets_units() {
+    // Q14-T2: a sharing rule may share with a unit's members. A31-T1: a
+    // unit-owned entity's user and team levels reach the own units.
+    let own_units = if own_units_only.is_empty()
+        && !crate::sharing_rules::targets_units()
+        && !crate::ownership::any_unit()
+    {
         Vec::new()
     } else {
         crate::db::resolve_own_org_ids(db, user_id).await?

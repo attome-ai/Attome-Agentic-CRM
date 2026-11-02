@@ -30,6 +30,7 @@ pub mod my_roles;
 pub mod oidc_mapping;
 /// Q5-T5: delivers sign-in one-time codes.
 pub mod otp_sender;
+pub mod ownership;
 pub mod parent_access;
 pub mod permission_sets;
 pub mod reconcile;

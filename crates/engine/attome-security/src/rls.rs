@@ -489,10 +489,32 @@ fn build_predicate(
         None
     };
     let scope_entity = parent.as_ref().map_or(entity_ref, |link| link.parent);
+    // A31-T1: the entity's ownership model, on a real table of an entity
+    // with its own access. An organisation entity is not filtered for a
+    // person whose role reaches it; a unit entity's records belong to their
+    // unit, so the owner arm grants nothing and the user and team levels
+    // reach the person's own units.
+    let ownership = if allow_bu_tier && parent.is_none() {
+        crate::ownership::model_for(entity_ref)
+    } else {
+        crate::ownership::Ownership::UserOrTeam
+    };
+    if ownership == crate::ownership::Ownership::Organisation && access_level != AccessLevel::None {
+        return None;
+    }
+    let unit_owned = ownership == crate::ownership::Ownership::Unit;
+    let owner_counts = ownership == crate::ownership::Ownership::UserOrTeam;
+    let owner_visible = owner_visible && owner_counts;
+    let tier_level = if unit_owned && access_level == AccessLevel::Team {
+        AccessLevel::BusinessUnit
+    } else {
+        access_level
+    };
     // A17-T3: the owner arm also reaches the caller's position subtree when
     // a role turns it on for one of these operations. A real table only,
     // which has the owner columns.
     let subtree = (allow_bu_tier
+        && owner_counts
         && operations
             .iter()
             .any(|op| ctx.unit_scope.reaches_subtree(scope_entity, op)))
@@ -550,7 +572,7 @@ fn build_predicate(
                 allow_bu_tier,
                 owner_visible,
                 subtree,
-                access_level,
+                tier_level,
                 required,
                 &ph,
             );
@@ -558,10 +580,11 @@ fn build_predicate(
         }
     };
 
-    let own_units_only = access_level == AccessLevel::BusinessUnit
-        && operations
-            .iter()
-            .any(|op| ctx.unit_scope.excludes_children(scope_entity, op));
+    let own_units_only = (unit_owned && access_level == AccessLevel::Team)
+        || (access_level == AccessLevel::BusinessUnit
+            && operations
+                .iter()
+                .any(|op| ctx.unit_scope.excludes_children(scope_entity, op)));
     let org_ids = if own_units_only {
         &ctx.unit_scope.own_org_ids
     } else {
@@ -2431,5 +2454,71 @@ mod tests {
              with — the deny check, not sit outside it: {}",
             pred.sql
         );
+    }
+
+    /// A31-T1: an organisation entity is not filtered for a role that reaches
+    /// it; a unit entity drops the owner arm and its team level reaches the
+    /// person's own units; an entity left at the default is unchanged. One
+    /// test, because the model set is one process-wide registry.
+    #[test]
+    fn ownership_model_shapes_the_filter() {
+        use crate::ownership::{Ownership, install, model_for};
+        let (org_entity, unit_entity, plain) = (Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7());
+        install([
+            (org_entity, Ownership::Organisation),
+            (unit_entity, Ownership::Unit),
+        ]);
+        assert_eq!(model_for(plain), Ownership::UserOrTeam);
+        let mut c = ctx(false);
+        let own_unit = Uuid::now_v7();
+        c.unit_scope.own_org_ids = vec![own_unit];
+
+        for level in [AccessLevel::Team, AccessLevel::BusinessUnit] {
+            assert!(
+                rls_predicate(&c, org_entity, "t", level, Capability::View, 2).is_none(),
+                "an organisation entity is not filtered at {level:?}"
+            );
+        }
+        let shares_only =
+            rls_predicate(&c, org_entity, "t", AccessLevel::None, Capability::View, 2).unwrap();
+        assert!(
+            !shares_only.sql.contains("t.owner_ref ="),
+            "{}",
+            shares_only.sql
+        );
+
+        let team =
+            rls_predicate(&c, unit_entity, "t", AccessLevel::Team, Capability::View, 2).unwrap();
+        assert!(
+            team.sql.contains("t.organization_ref = ANY($6::uuid[])"),
+            "{}",
+            team.sql
+        );
+        assert!(
+            !team.sql.contains("t.owner_ref ="),
+            "owning grants nothing: {}",
+            team.sql
+        );
+        assert_eq!(team.binds.accessible_org_ids, vec![own_unit]);
+        let unit = rls_predicate(
+            &c,
+            unit_entity,
+            "t",
+            AccessLevel::BusinessUnit,
+            Capability::View,
+            2,
+        )
+        .unwrap();
+        assert_eq!(unit.binds.accessible_org_ids, c.accessible_org_ids);
+
+        let default =
+            rls_predicate(&c, plain, "t", AccessLevel::Team, Capability::View, 2).unwrap();
+        assert!(default.sql.contains("t.owner_ref ="), "{}", default.sql);
+        assert!(
+            !default.sql.contains("t.organization_ref = ANY"),
+            "{}",
+            default.sql
+        );
+        install([]);
     }
 }

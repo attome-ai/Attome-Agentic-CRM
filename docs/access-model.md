@@ -106,6 +106,25 @@ followed further. The lookup is checked when the settings are saved and again wh
 one that no longer resolves is left out (the entity keeps its own access) and named in the log. Search and
 audit lists, which filter many entities at once, apply the child's own levels: they show less, never more.
 
+## Ownership models
+
+An entity's settings pick who its records belong to for access:
+`"access": { "mode": "own", "ownership": "organisation" }`.
+
+| Model | A record belongs to | What the levels reach |
+|---|---|---|
+| `user_or_team` (default) | its owner | User/Team: the person's own and their teams' records; Business unit: the units' records; Global: all. |
+| `organisation` | the organisation | Any level a role grants: every record. With no role, only what is shared. |
+| `unit` | its unit (`organization_ref`) | User/Team: records of the person's own units; Business unit: those units and the units below; Global: all. Owning a record grants nothing by itself. |
+
+Shares, sharing rules and deny shares still apply to `unit` entities; an `organisation` entity reached
+through a role is not filtered at all, as at Global level. Only the record filter of the entity's own
+lists and records follows the model: search and audit lists keep the default rules, so for an
+`organisation` entity they show less, and for a `unit` entity they still show the records a person owns.
+Ownership applies to an entity with its own access, not one controlled by its parent. A change takes
+effect when the metadata version is published; a person's access resolved before an entity became
+`unit` reaches none of its records at User/Team level until it is resolved again.
+
 ## Fields
 
 A sensitive field needs a **field-security** grant: a profile, assigned to roles, that grants `can_read`

@@ -20,6 +20,15 @@
 //! makes the entity's records follow the parent record that one of its
 //! many-to-one lookups names (`attome_security::parent_access`); `"own"`, the
 //! default, keeps the entity's own access.
+//!
+//! A31-T1: `"access": { "mode": "own", "ownership": "organisation" }` picks
+//! who a record belongs to for access (`attome_security::ownership`):
+//! `user_or_team` (the default: the owner and the role levels), `organisation`
+//! (the owner columns play no part: a role that reaches the entity at any
+//! level sees every record) or `unit` (a record belongs to its
+//! `organization_ref`: the user level reaches the person's own units, the unit
+//! level their units and the units below, and owning a record grants
+//! nothing).
 
 use std::collections::BTreeMap;
 
@@ -53,6 +62,18 @@ pub const PRESETS: [&str; 3] = ["light", "standard", "full"];
 
 /// Q14-T3: the access modes.
 pub const ACCESS_MODES: [&str; 2] = ["own", "controlled_by_parent"];
+
+/// A31-T1: the ownership models.
+pub const OWNERSHIP_MODELS: [&str; 3] = ["user_or_team", "organisation", "unit"];
+
+/// A31-T1: the entity and its ownership model, from cooked entity settings
+/// whose model is not the default `user_or_team`.
+pub fn ownership(cooked: &Value) -> Option<(Uuid, String)> {
+    let model = cooked["access"]["ownership"].as_str()?;
+    (model != "user_or_team" && OWNERSHIP_MODELS.contains(&model))
+        .then(|| Some((uuid_at(&cooked["entity"])?, model.to_owned())))
+        .flatten()
+}
 
 /// Q14-T3: the entity and its parent lookup attribute, from cooked entity
 /// settings whose records are controlled by a parent.
@@ -128,7 +149,7 @@ fn check_access(access: &Value, issues: &mut Vec<Issue>) {
         return;
     };
     for key in object.keys() {
-        if !matches!(key.as_str(), "mode" | "lookup") {
+        if !matches!(key.as_str(), "mode" | "lookup" | "ownership") {
             issues.push(Issue::new(
                 format!("/access/{key}"),
                 "unknown_property",
@@ -142,6 +163,18 @@ fn check_access(access: &Value, issues: &mut Vec<Issue>) {
             "/access/mode",
             "unknown_value",
             format!("access mode is one of {}", ACCESS_MODES.join(", ")),
+        ));
+    }
+    let ownership = &access["ownership"];
+    if !ownership.is_null()
+        && !ownership
+            .as_str()
+            .is_some_and(|m| OWNERSHIP_MODELS.contains(&m))
+    {
+        issues.push(Issue::new(
+            "/access/ownership",
+            "unknown_value",
+            format!("ownership is one of {}", OWNERSHIP_MODELS.join(", ")),
         ));
     }
     let lookup = &access["lookup"];
@@ -339,6 +372,16 @@ impl Kind for EntitySettingsKind {
                         "lookup": input.doc["access"]["lookup"],
                     });
                 }
+                // A31-T1: likewise only an ownership other than the default.
+                if let Some(model) = input.doc["access"]["ownership"]
+                    .as_str()
+                    .filter(|m| *m != "user_or_team")
+                {
+                    if plan.get("access").is_none() {
+                        plan["access"] = json!({ "mode": "own" });
+                    }
+                    plan["access"]["ownership"] = json!(model);
+                }
                 let text = crate::canonical::canonicalize(&plan).map_err(AppError::Validation)?;
                 Ok(Artefact {
                     kind: ENTITY_SETTINGS,
@@ -435,6 +478,49 @@ mod tests {
         let plan: Value = serde_json::from_slice(&plain[0].payload).unwrap();
         assert!(plan.get("access").is_none(), "own access is not cooked");
         assert_eq!(parent_lookup(&plan), None);
+    }
+
+    #[test]
+    fn ownership_model_is_checked_and_cooked() {
+        let entity = Uuid::now_v7();
+        for (model, ok) in [
+            ("user_or_team", true),
+            ("organisation", true),
+            ("unit", true),
+            ("team", false),
+        ] {
+            let doc = json!({
+                "entity": entity.to_string(),
+                "access": { "mode": "own", "ownership": model }
+            });
+            assert_eq!(
+                EntitySettingsKind.validate_shape(&doc).is_ok(),
+                ok,
+                "{model}"
+            );
+        }
+        let cook = |model: &str| {
+            let doc = json!({
+                "entity": entity.to_string(),
+                "access": { "mode": "own", "ownership": model }
+            });
+            let out = EntitySettingsKind
+                .cook(&[CookInput {
+                    id: ObjectId(Uuid::now_v7()),
+                    name: "account".into(),
+                    doc,
+                }])
+                .unwrap();
+            serde_json::from_slice::<Value>(&out[0].payload).unwrap()
+        };
+        assert_eq!(ownership(&cook("unit")), Some((entity, "unit".to_owned())));
+        assert_eq!(
+            ownership(&cook("organisation")),
+            Some((entity, "organisation".to_owned()))
+        );
+        let default = cook("user_or_team");
+        assert!(default.get("access").is_none(), "the default is not cooked");
+        assert_eq!(ownership(&default), None);
     }
 
     #[test]

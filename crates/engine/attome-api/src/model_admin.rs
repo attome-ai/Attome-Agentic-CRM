@@ -232,7 +232,8 @@ pub(crate) async fn ensure_cooked(state: &EngineState) -> Result<(), AppError> {
     Ok(())
 }
 
-/// Q14-T3: hands the loaded version's controlled-by-parent entities to the
+/// Q14-T3: hands the loaded version's controlled-by-parent entities (and,
+/// A31-T1, every entity's ownership model) to the
 /// record filter, each resolved to its lookup column and parent table. On a
 /// database error the previous set stays, and the next load retries.
 pub(crate) async fn load_parent_access(db: &attome_db::DbPool) {
@@ -249,6 +250,23 @@ pub(crate) async fn load_parent_access(db: &attome_db::DbPool) {
         })
         .filter_map(|doc| attome_model::kinds::entity_settings::parent_lookup(&doc))
         .collect();
+    // A31-T1: each entity's ownership model, from the same artefacts.
+    let ownership: Vec<(uuid::Uuid, attome_security::ownership::Ownership)> = snapshot
+        .manifest
+        .artefacts
+        .keys()
+        .filter(|key| key.starts_with(&prefix))
+        .filter_map(|key| {
+            cooked.get::<serde_json::Value>(attome_model::kinds::ENTITY_SETTINGS.0, key)
+        })
+        .filter_map(|doc| attome_model::kinds::entity_settings::ownership(&doc))
+        .filter_map(|(entity, model)| {
+            attome_security::ownership::Ownership::parse(&model).map(|m| (entity, m))
+        })
+        .collect();
+    let owned = ownership.len();
+    attome_security::ownership::install(ownership);
+    tracing::info!(owned, "entity ownership models loaded");
     match attome_security::parent_access::resolve(db, &pairs).await {
         Ok(links) => {
             let parent_controlled = links.len();
