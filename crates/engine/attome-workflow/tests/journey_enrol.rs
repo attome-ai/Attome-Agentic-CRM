@@ -525,3 +525,57 @@ async fn batch_of_2500_starts_2500_instances() {
     assert_eq!(instances, 2_500);
     assert_eq!(entry_runs, 2_500);
 }
+
+/// E8-T14: 100,000 contacts enrolled in a live journey start 100,000 runs
+/// within two minutes. The contacts are seeded in one statement; the
+/// timing covers only `enrol` (admission, the enrolments and the runs, in
+/// chunks of 1,000). Run before a release on a throwaway database:
+/// `cargo test -p attome-workflow --test journey_enrol -- --ignored enrol_100k_under_2_minutes`.
+/// Result: not yet measured (no run of the load tier since it was written).
+#[tokio::test]
+#[ignore = "load: run before release"]
+async fn enrol_100k_under_2_minutes() {
+    const PEOPLE: i64 = 100_000;
+    let state = skip_if_no_db!(journey_state().await);
+    let (journey_id, logicalname) = journey(&state, "never", None, None).await;
+    let ids: Vec<Uuid> = sqlx::query_scalar(
+        "INSERT INTO contact (id, email) \
+         SELECT uuidv7(), 'load' || n || '@example.com' FROM generate_series(1, $1) AS n \
+         RETURNING id",
+    )
+    .bind(PEOPLE)
+    .fetch_all(&state.base.db)
+    .await
+    .expect("seed contacts");
+    let people: Vec<PersonRef> = ids
+        .into_iter()
+        .map(|id| PersonRef {
+            id,
+            entity: "contact".into(),
+        })
+        .collect();
+
+    let started = std::time::Instant::now();
+    let outcome = enrol(&state, journey_id, people, "load", false)
+        .await
+        .expect("enrol");
+    let elapsed = started.elapsed();
+
+    assert_eq!(outcome.enrolled, PEOPLE as u64, "{outcome:?}");
+    let runs: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM workflow_instance i \
+           JOIN workflow_definition_version v ON v.id = i.definition_version_id \
+           JOIN workflow_definition d ON d.id = v.definition_id \
+          WHERE d.logicalname = $1",
+    )
+    .bind(&logicalname)
+    .fetch_one(&state.base.db)
+    .await
+    .expect("count runs");
+    assert_eq!(runs, PEOPLE);
+    println!("enrolled {PEOPLE} people in {:.1} s", elapsed.as_secs_f64());
+    assert!(
+        elapsed < std::time::Duration::from_secs(120),
+        "enrolment took {elapsed:?}"
+    );
+}
