@@ -33,7 +33,7 @@ describe('PendingTimersComponent (M10-T4)', () => {
 
   it('lists a record\'s pending timers by what and when', () => {
     const { root, get } = setUp([TIMER], { entity: 'case', recordId: 'r1' });
-    expect(get).toHaveBeenCalledWith('/api/v1/case/r1/timers', undefined);
+    expect(get).toHaveBeenCalledWith('/api/v1/case/r1/timers');
     const row = root.querySelector('[data-pending-timer="t1"]') as HTMLElement;
     expect(row.textContent).toContain('Escalation');
   });

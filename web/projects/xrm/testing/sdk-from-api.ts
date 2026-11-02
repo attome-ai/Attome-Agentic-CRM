@@ -22,25 +22,26 @@ interface SdkOptions {
  * same stand-in, so the spec's spies and answers keep working:
  * `get(path, {query})` -> `get(path, query)`, `post(path, {body}, write)` ->
  * `post(path, body, write)`, `patch(path, {body, ifMatch}, write)` ->
- * `patch(path, body, ifMatch, write)`.
+ * `patch(path, body, ifMatch, write)`. Each call keeps the stand-in as
+ * `this`, so a class-based stand-in's methods work.
  */
 export function sdkFromApi(api: ApiStandIn): unknown {
-  const missing = (): Observable<never> => of() as Observable<never>;
+  const missing = (..._args: unknown[]): Observable<never> => of() as Observable<never>;
   const drop = <T>(args: T[]): T[] => {
     while (args.length > 0 && args[args.length - 1] === undefined) args.pop();
     return args;
   };
   return {
     get: (path: string, opts?: SdkOptions) =>
-      (api.get ?? missing)(...drop([path, opts?.query])),
+      (api.get ?? missing).apply(api, drop([path, opts?.query])),
     delete: (path: string, opts?: SdkOptions) =>
-      (api.delete ?? missing)(...drop([path, opts?.query])),
+      (api.delete ?? missing).apply(api, drop([path, opts?.query])),
     post: (path: string, opts?: SdkOptions, write?: unknown) =>
-      (api.post ?? missing)(...drop([path, opts?.body, write])),
+      (api.post ?? missing).apply(api, drop([path, opts?.body, write])),
     put: (path: string, opts?: SdkOptions, write?: unknown) =>
-      (api.put ?? missing)(...drop([path, opts?.body, write])),
+      (api.put ?? missing).apply(api, drop([path, opts?.body, write])),
     patch: (path: string, opts?: SdkOptions, write?: unknown) =>
-      (api.patch ?? missing)(...drop([path, opts?.body, opts?.ifMatch, write])),
-    getAllPages: (...args: unknown[]) => (api.getAllPages ?? missing)(...args),
+      (api.patch ?? missing).apply(api, drop([path, opts?.body, opts?.ifMatch, write])),
+    getAllPages: (...args: unknown[]) => (api.getAllPages ?? missing).apply(api, args),
   };
 }
