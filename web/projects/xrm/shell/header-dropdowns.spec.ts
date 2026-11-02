@@ -49,6 +49,7 @@ function mount(): {
         // (EntityService.get -> ApiService.get) needs this mocked too.
         get: () => of({ data: {} }),
       } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       { provide: AuthService, useValue: { userId: signal('user-id'), logout: () => of(undefined) } },
       {
         provide: ThemeService,
@@ -147,5 +148,3 @@ describe('profile menu', () => {
     expect(profile.isOpen()).toBe(false);
   });
 });
-,
-      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi }
