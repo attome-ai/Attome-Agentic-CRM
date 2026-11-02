@@ -5009,6 +5009,281 @@
         "x-risk": "medium"
       }
     },
+    "/{keyword}/api/v1/billing/invoices/open": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "My open invoices",
+        "description": "F5-T14: the signed-in person's own account's issued invoices with an amount still open, oldest\ndue first.",
+        "operationId": "portal_billing_open_invoices",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The account's open invoices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PortalInvoice"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The route is off, or the person has no account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/{keyword}/api/v1/billing/payment-methods": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "My payment methods",
+        "description": "F5-T14: the signed-in person's own account's saved payment methods: brand, last four digits,\nexpiry and which is the default. Never a token.",
+        "operationId": "portal_billing_payment_methods",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The account's saved payment methods",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PortalPaymentMethod"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The route is off, or the person has no account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/{keyword}/api/v1/billing/subscriptions": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "My subscriptions",
+        "description": "F3-T13: the signed-in person's own account's subscriptions, with the lines in force today and\nthe charges still to come.",
+        "operationId": "portal_billing_subscriptions",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The account's subscriptions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PortalSubscription"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The route is off, or the person has no account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/{keyword}/api/v1/fulfilment/orders/{order_id}": {
+      "get": {
+        "tags": [
+          "fulfilment"
+        ],
+        "summary": "Where is my order",
+        "description": "F6-T15: one of the signed-in person's own account's orders, line by line, with the shipments\nand tracking numbers carrying each line.",
+        "operationId": "portal_fulfilment_order",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "order_id",
+            "in": "path",
+            "description": "The sales order",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The order's lines and shipments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderFulfilment"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such order of the person's account, or the route is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/{keyword}/api/v1/me": {
       "get": {
         "tags": [
@@ -8695,6 +8970,115 @@
           }
         }
       },
+      "LineRollup": {
+        "type": "object",
+        "description": "One line's fulfilment.",
+        "required": [
+          "line_id",
+          "fulfilment_order_id",
+          "ordered",
+          "shipped",
+          "delivered",
+          "backordered",
+          "shipments"
+        ],
+        "properties": {
+          "backordered": {
+            "type": "number",
+            "format": "double"
+          },
+          "delivered": {
+            "type": "number",
+            "format": "double"
+          },
+          "fulfilment_order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "line_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order_line_ref": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ordered": {
+            "type": "number",
+            "format": "double"
+          },
+          "product_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "promised_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "shipments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineShipment"
+            }
+          },
+          "shipped": {
+            "type": "number",
+            "format": "double"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "LineShipment": {
+        "type": "object",
+        "description": "A shipment carrying a line.",
+        "required": [
+          "shipment_id"
+        ],
+        "properties": {
+          "carrier": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "quantity": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "shipment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tracking_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "LockedField": {
         "type": "object",
         "description": "One field a business rule locks for the writer (D-789 §3.5): `effect` is\n`hidden` or `disabled`. No value is ever echoed.",
@@ -8886,6 +9270,26 @@
             "type": "string"
           },
           "pending": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "OrderFulfilment": {
+        "type": "object",
+        "description": "A sales order's fulfilment.",
+        "required": [
+          "order_id",
+          "lines"
+        ],
+        "properties": {
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineRollup"
+            }
+          },
+          "order_id": {
             "type": "string",
             "format": "uuid"
           }
@@ -9694,6 +10098,39 @@
           }
         }
       },
+      "PortalCharge": {
+        "type": "object",
+        "description": "A charge still to come.",
+        "properties": {
+          "amount": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "As stored, a decimal in text."
+          },
+          "kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "period_end": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "period_start": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "PortalCodeBody": {
         "type": "object",
         "required": [
@@ -9924,6 +10361,95 @@
           }
         }
       },
+      "PortalInvoice": {
+        "type": "object",
+        "description": "An issued invoice with an amount still open.",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "due_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "grand_total": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "As stored, decimals in text."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "invoice_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "issued_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "open_total": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "payment_status": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`open`, `partly_paid` or `overdue`."
+          }
+        }
+      },
+      "PortalLine": {
+        "type": "object",
+        "description": "A line in force today.",
+        "required": [
+          "line_id"
+        ],
+        "properties": {
+          "line_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "product": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "quantity": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "As stored, a decimal in text."
+          },
+          "unit_price": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "PortalMe": {
         "type": "object",
         "required": [
@@ -10004,6 +10530,51 @@
           },
           "name": {
             "type": "string"
+          }
+        }
+      },
+      "PortalPaymentMethod": {
+        "type": "object",
+        "description": "A saved payment method, without its token.",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "brand": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expiry_month": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "expiry_year": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "is_default": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "last4": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -10151,6 +10722,85 @@
           "row_version": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "PortalSubscription": {
+        "type": "object",
+        "description": "One subscription as the customer sees it.",
+        "required": [
+          "id",
+          "lines",
+          "coming_charges"
+        ],
+        "properties": {
+          "billing_frequency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cancel_effective": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When a cancellation takes effect, if one was made."
+          },
+          "coming_charges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortalCharge"
+            }
+          },
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "end_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortalLine"
+            }
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "renewal_mode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },

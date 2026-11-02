@@ -4548,6 +4548,95 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/marketing/tracking/report": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "A site's visits report.",
+        "description": "Visits over the last `days` (30 by default, at most 365), how many were\nby a known contact or lead, and the top ten sources, landing pages and\ncampaigns. Bots are left out.",
+        "operationId": "get_tracking_report",
+        "parameters": [
+          {
+            "name": "site",
+            "in": "query",
+            "description": "The site's key.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "description": "Days back from now, 1 to 365 (30 by default).",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "maximum": 365,
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The site's visits over the window",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackingReport"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_tracked_site.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No site key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/marketing/unsubscribe/{token}": {
       "get": {
         "tags": [
@@ -7487,6 +7576,23 @@
           }
         }
       },
+      "ReportRow": {
+        "type": "object",
+        "description": "One row of a top list.",
+        "required": [
+          "label",
+          "visits"
+        ],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "visits": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "ResolveBody": {
         "type": "object",
         "required": [
@@ -7887,6 +7993,59 @@
               "null"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "TrackingReport": {
+        "type": "object",
+        "description": "A site's visits over the window.",
+        "required": [
+          "site",
+          "days",
+          "visits",
+          "identified",
+          "sources",
+          "landing_pages",
+          "campaigns"
+        ],
+        "properties": {
+          "campaigns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportRow"
+            },
+            "description": "By UTM campaign; sessions without one are left out."
+          },
+          "days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "identified": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Sessions by a known contact or lead."
+          },
+          "landing_pages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportRow"
+            },
+            "description": "By landing page, without its query or fragment."
+          },
+          "site": {
+            "type": "string"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportRow"
+            },
+            "description": "By UTM source, else the referrer's host, else `direct`."
+          },
+          "visits": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Sessions in the window."
           }
         }
       },

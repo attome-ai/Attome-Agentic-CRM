@@ -22014,6 +22014,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/marketing/tracking/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A site's visits report.
+         * @description Visits over the last `days` (30 by default, at most 365), how many were
+         *     by a known contact or lead, and the top ten sources, landing pages and
+         *     campaigns. Bots are left out.
+         */
+        get: operations["get_tracking_report"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/marketing/unsubscribe/{token}": {
         parameters: {
             query?: never;
@@ -32863,6 +32885,90 @@ export interface paths {
          *     An invalid, used or expired link, or a portal whose signup closed, is 422.
          */
         post: operations["portal_signup_verify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/billing/invoices/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My open invoices
+         * @description F5-T14: the signed-in person's own account's issued invoices with an amount still open, oldest
+         *     due first.
+         */
+        get: operations["portal_billing_open_invoices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/billing/payment-methods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My payment methods
+         * @description F5-T14: the signed-in person's own account's saved payment methods: brand, last four digits,
+         *     expiry and which is the default. Never a token.
+         */
+        get: operations["portal_billing_payment_methods"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/billing/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My subscriptions
+         * @description F3-T13: the signed-in person's own account's subscriptions, with the lines in force today and
+         *     the charges still to come.
+         */
+        get: operations["portal_billing_subscriptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/fulfilment/orders/{order_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Where is my order
+         * @description F6-T15: one of the signed-in person's own account's orders, line by line, with the shipments
+         *     and tracking numbers carrying each line.
+         */
+        get: operations["portal_fulfilment_order"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -60495,6 +60601,16 @@ export interface components {
         PortalAck: {
             ok: boolean;
         };
+        /** @description A charge still to come. */
+        PortalCharge: {
+            /** @description As stored, a decimal in text. */
+            amount?: string | null;
+            kind?: string | null;
+            /** Format: date-time */
+            period_end?: string | null;
+            /** Format: date-time */
+            period_start?: string | null;
+        };
         PortalCodeBody: {
             code: string;
         };
@@ -60585,6 +60701,29 @@ export interface components {
         PortalHost: {
             keyword: string;
         };
+        /** @description An issued invoice with an amount still open. */
+        PortalInvoice: {
+            currency?: string | null;
+            due_date?: string | null;
+            /** @description As stored, decimals in text. */
+            grand_total?: string | null;
+            /** Format: uuid */
+            id: string;
+            invoice_number?: string | null;
+            issued_date?: string | null;
+            open_total?: string | null;
+            /** @description `open`, `partly_paid` or `overdue`. */
+            payment_status?: string | null;
+        };
+        /** @description A line in force today. */
+        PortalLine: {
+            /** Format: uuid */
+            line_id: string;
+            product?: string | null;
+            /** @description As stored, a decimal in text. */
+            quantity?: string | null;
+            unit_price?: string | null;
+        };
         PortalMe: {
             /** @description D-777: optional when the account has a username. */
             email?: string | null;
@@ -60625,6 +60764,18 @@ export interface components {
             page_type: string;
             title_ar?: string | null;
             title_en?: string | null;
+        };
+        /** @description A saved payment method, without its token. */
+        PortalPaymentMethod: {
+            brand?: string | null;
+            /** Format: int32 */
+            expiry_month?: number | null;
+            /** Format: int32 */
+            expiry_year?: number | null;
+            /** Format: uuid */
+            id: string;
+            is_default?: boolean | null;
+            last4?: string | null;
         };
         /**
          * @description A record as a portal sees it: only allowlisted fields, no owner,
@@ -60701,6 +60852,27 @@ export interface components {
             resolved_entity_name?: string | null;
             status: string;
             title: string;
+        };
+        /** @description One subscription as the customer sees it. */
+        PortalSubscription: {
+            billing_frequency?: string | null;
+            /**
+             * Format: date-time
+             * @description When a cancellation takes effect, if one was made.
+             */
+            cancel_effective?: string | null;
+            coming_charges: components["schemas"]["PortalCharge"][];
+            currency?: string | null;
+            /** Format: date-time */
+            end_date?: string | null;
+            /** Format: uuid */
+            id: string;
+            lines: components["schemas"]["PortalLine"][];
+            name?: string | null;
+            renewal_mode?: string | null;
+            /** Format: date-time */
+            start_date?: string | null;
+            status?: string | null;
         };
         /**
          * @description `webportal.portal_type`.
@@ -63249,6 +63421,12 @@ export interface components {
             values?: Record<string, never> | null;
             /** @description The values exist but the caller may not read the field. */
             values_hidden: boolean;
+        };
+        /** @description One row of a top list. */
+        ReportRow: {
+            label: string;
+            /** Format: int64 */
+            visits: number;
         };
         /** @description The stored request. */
         RequestAccepted: {
@@ -69045,6 +69223,28 @@ export interface components {
             /** Format: uuid */
             shipment_id: string;
             status?: string | null;
+        };
+        /** @description A site's visits over the window. */
+        TrackingReport: {
+            /** @description By UTM campaign; sessions without one are left out. */
+            campaigns: components["schemas"]["ReportRow"][];
+            /** Format: int32 */
+            days: number;
+            /**
+             * Format: int64
+             * @description Sessions by a known contact or lead.
+             */
+            identified: number;
+            /** @description By landing page, without its query or fragment. */
+            landing_pages: components["schemas"]["ReportRow"][];
+            site: string;
+            /** @description By UTM source, else the referrer's host, else `direct`. */
+            sources: components["schemas"]["ReportRow"][];
+            /**
+             * Format: int64
+             * @description Sessions in the window.
+             */
+            visits: number;
         };
         /** @description A recording's transcript. */
         TranscriptView: {
@@ -135332,6 +135532,58 @@ export interface operations {
             };
         };
     };
+    get_tracking_report: {
+        parameters: {
+            query: {
+                /** @description The site's key. */
+                site: string;
+                /** @description Days back from now, 1 to 365 (30 by default). */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The site's visits over the window */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrackingReport"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_tracked_site.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No site key */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     show_email_unsubscribe: {
         parameters: {
             query?: never;
@@ -165378,6 +165630,172 @@ export interface operations {
             };
             /** @description The link is invalid, used or expired, or signup is no longer open */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_billing_open_invoices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The account's open invoices */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalInvoice"][];
+                };
+            };
+            /** @description Not signed in to the portal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The route is off, or the person has no account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_billing_payment_methods: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The account's saved payment methods */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalPaymentMethod"][];
+                };
+            };
+            /** @description Not signed in to the portal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The route is off, or the person has no account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_billing_subscriptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The account's subscriptions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalSubscription"][];
+                };
+            };
+            /** @description Not signed in to the portal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The route is off, or the person has no account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_fulfilment_order: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+                /** @description The sales order */
+                order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The order's lines and shipments */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderFulfilment"];
+                };
+            };
+            /** @description Not signed in to the portal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such order of the person's account, or the route is off */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

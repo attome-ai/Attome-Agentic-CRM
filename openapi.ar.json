@@ -105154,6 +105154,95 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/marketing/tracking/report": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "A site's visits report.",
+        "description": "Visits over the last `days` (30 by default, at most 365), how many were\nby a known contact or lead, and the top ten sources, landing pages and\ncampaigns. Bots are left out.",
+        "operationId": "get_tracking_report",
+        "parameters": [
+          {
+            "name": "site",
+            "in": "query",
+            "description": "The site's key.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "description": "Days back from now, 1 to 365 (30 by default).",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "maximum": 365,
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The site's visits over the window",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackingReport"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_tracked_site.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No site key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/marketing/unsubscribe/{token}": {
       "get": {
         "tags": [
@@ -155162,6 +155251,281 @@
         "x-privilege": "public",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/{keyword}/api/v1/billing/invoices/open": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "My open invoices",
+        "description": "F5-T14: the signed-in person's own account's issued invoices with an amount still open, oldest\ndue first.",
+        "operationId": "portal_billing_open_invoices",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The account's open invoices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PortalInvoice"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The route is off, or the person has no account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/{keyword}/api/v1/billing/payment-methods": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "My payment methods",
+        "description": "F5-T14: the signed-in person's own account's saved payment methods: brand, last four digits,\nexpiry and which is the default. Never a token.",
+        "operationId": "portal_billing_payment_methods",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The account's saved payment methods",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PortalPaymentMethod"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The route is off, or the person has no account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/{keyword}/api/v1/billing/subscriptions": {
+      "get": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "My subscriptions",
+        "description": "F3-T13: the signed-in person's own account's subscriptions, with the lines in force today and\nthe charges still to come.",
+        "operationId": "portal_billing_subscriptions",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The account's subscriptions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PortalSubscription"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The route is off, or the person has no account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/{keyword}/api/v1/fulfilment/orders/{order_id}": {
+      "get": {
+        "tags": [
+          "fulfilment"
+        ],
+        "summary": "Where is my order",
+        "description": "F6-T15: one of the signed-in person's own account's orders, line by line, with the shipments\nand tracking numbers carrying each line.",
+        "operationId": "portal_fulfilment_order",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "order_id",
+            "in": "path",
+            "description": "The sales order",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The order's lines and shipments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderFulfilment"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such order of the person's account, or the route is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     },
     "/{keyword}/api/v1/me": {
@@ -228147,6 +228511,39 @@
           }
         }
       },
+      "PortalCharge": {
+        "type": "object",
+        "description": "A charge still to come.",
+        "properties": {
+          "amount": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "As stored, a decimal in text."
+          },
+          "kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "period_end": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "period_start": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "PortalCodeBody": {
         "type": "object",
         "required": [
@@ -228395,6 +228792,95 @@
           }
         }
       },
+      "PortalInvoice": {
+        "type": "object",
+        "description": "An issued invoice with an amount still open.",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "due_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "grand_total": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "As stored, decimals in text."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "invoice_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "issued_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "open_total": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "payment_status": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`open`, `partly_paid` or `overdue`."
+          }
+        }
+      },
+      "PortalLine": {
+        "type": "object",
+        "description": "A line in force today.",
+        "required": [
+          "line_id"
+        ],
+        "properties": {
+          "line_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "product": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "quantity": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "As stored, a decimal in text."
+          },
+          "unit_price": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "PortalMe": {
         "type": "object",
         "required": [
@@ -228499,6 +228985,51 @@
             ]
           },
           "title_en": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "PortalPaymentMethod": {
+        "type": "object",
+        "description": "A saved payment method, without its token.",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "brand": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expiry_month": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "expiry_year": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "is_default": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "last4": {
             "type": [
               "string",
               "null"
@@ -228688,6 +229219,85 @@
           },
           "title": {
             "type": "string"
+          }
+        }
+      },
+      "PortalSubscription": {
+        "type": "object",
+        "description": "One subscription as the customer sees it.",
+        "required": [
+          "id",
+          "lines",
+          "coming_charges"
+        ],
+        "properties": {
+          "billing_frequency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cancel_effective": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When a cancellation takes effect, if one was made."
+          },
+          "coming_charges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortalCharge"
+            }
+          },
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "end_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortalLine"
+            }
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "renewal_mode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -235037,6 +235647,23 @@
           }
         ],
         "description": "One item, with a conflict's values when the caller may read them."
+      },
+      "ReportRow": {
+        "type": "object",
+        "description": "One row of a top list.",
+        "required": [
+          "label",
+          "visits"
+        ],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "visits": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
       },
       "RequestAccepted": {
         "type": "object",
@@ -250185,6 +250812,59 @@
           }
         }
       },
+      "TrackingReport": {
+        "type": "object",
+        "description": "A site's visits over the window.",
+        "required": [
+          "site",
+          "days",
+          "visits",
+          "identified",
+          "sources",
+          "landing_pages",
+          "campaigns"
+        ],
+        "properties": {
+          "campaigns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportRow"
+            },
+            "description": "By UTM campaign; sessions without one are left out."
+          },
+          "days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "identified": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Sessions by a known contact or lead."
+          },
+          "landing_pages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportRow"
+            },
+            "description": "By landing page, without its query or fragment."
+          },
+          "site": {
+            "type": "string"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportRow"
+            },
+            "description": "By UTM source, else the referrer's host, else `direct`."
+          },
+          "visits": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Sessions in the window."
+          }
+        }
+      },
       "TranscriptView": {
         "type": "object",
         "description": "A recording's transcript.",
@@ -256000,8 +256680,6 @@
       "description": "فحوص السلامة والجاهزية والإصدار"
     }
   ],
-  "x-api-version": "2026-10",
-  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -256053,5 +256731,7 @@
         ]
       }
     }
-  }
+  },
+  "x-api-version": "2026-10",
+  "x-version-adapters": []
 }
