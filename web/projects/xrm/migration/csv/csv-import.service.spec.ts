@@ -80,6 +80,7 @@ describe('CsvImportService', () => {
 
   it('lists only resumable CSV projects and reads the schema in the active locale', async () => {
     const list = firstValueFrom(svc.listProjects('contact'));
+    await tick();
     http
       .expectOne(r => r.url === `${API}/api/v1/admin/migration-projects` && r.params.get('target_entity') === 'contact')
       .flush({
@@ -90,7 +91,7 @@ describe('CsvImportService', () => {
         ],
         total: 3, page: 1, page_size: 200,
       });
-      await tick();
+    await tick();
     expect((await list).map(p => p.id)).toEqual(['a']);
 
     const schema = firstValueFrom(svc.schema('contact'));
