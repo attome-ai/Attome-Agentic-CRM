@@ -339,8 +339,9 @@ async fn apply_platform_definitions(state: &EngineState) {
     // (the marketing pack's nurture tracks look them up), contract versions
     // (the contract pack's views read them), call trackers and analyses (call
     // intelligence), AI personalities (the agent definition looks them up),
-    // and the metric definitions with their governance fields (the metric
-    // tests read `dimension_attributes`).
+    // and the metric governance fields (the metric tests read
+    // `dimension_attributes`; the engine system applies the metric and
+    // glossary definitions it builds on).
     for module in [
         "attome-docgen",
         "attome-search-saved-search",
@@ -348,8 +349,6 @@ async fn apply_platform_definitions(state: &EngineState) {
         "attome-contract",
         "attome-callintel",
         "attome-ai-personality",
-        "attome-metric",
-        "attome-api-glossary",
         "attome-metric-governance",
     ] {
         attome_api::changeset::boot::apply_platform_definition(state, module)
