@@ -549,6 +549,14 @@ pub async fn run_cli(args: &[String]) -> u8 {
             return EXIT_USAGE;
         }
     };
+    // AB9-T3: the steady-state checks' own arguments.
+    let (steady, args) = match super::chaos_steady::take_args(&args) {
+        Ok(split) => split,
+        Err(message) => {
+            eprintln!("attome drill chaos: {message}");
+            return EXIT_USAGE;
+        }
+    };
     let args = match parse_args(&args) {
         Ok(args) => args,
         Err(message) => {
@@ -597,6 +605,20 @@ pub async fn run_cli(args: &[String]) -> u8 {
             inject: steps,
             undo,
         } => {
+            use super::chaos_steady as steady_state;
+            // AB9-T3: the load runs before, during and after the fault.
+            let load = match steady.as_ref().map(steady_state::Load::start) {
+                Some(Ok(load)) => Some(load),
+                Some(Err(error)) => {
+                    eprintln!("attome drill chaos: the load could not start: {error}");
+                    return EXIT_USAGE;
+                }
+                None => None,
+            };
+            if let Some(load) = &load {
+                tokio::time::sleep(steady_state::PHASE).await;
+                steady_state::print_phase("before", steady_state::Stats::of(&load.take()));
+            }
             let mut system = System;
             let guard = match inject(&mut system, &steps, undo) {
                 Ok(guard) => guard,
@@ -607,13 +629,56 @@ pub async fn run_cli(args: &[String]) -> u8 {
                     return EXIT_FAILED;
                 }
             };
-            hold(args.duration).await;
+            let mut checks_ok = true;
+            match (&load, &steady) {
+                (Some(load), Some(steady)) => {
+                    let (stats, auto_stopped, probes) =
+                        steady_state::during(load, steady, args.duration).await;
+                    steady_state::print_phase("during", stats);
+                    if auto_stopped {
+                        println!(
+                            "auto_stopped: Fail (the limits were passed three windows in a row)"
+                        );
+                        checks_ok = false;
+                    }
+                    for probe in &probes {
+                        match probe {
+                            Ok(true) => {}
+                            Ok(false) => {
+                                println!(
+                                    "fail_closed: Fail (a reused idempotency key was accepted)"
+                                );
+                                checks_ok = false;
+                            }
+                            Err(error) => println!("fail_closed: not checked ({error})"),
+                        }
+                    }
+                }
+                _ => hold(args.duration).await,
+            }
             let failures = guard.finish();
             for failure in &failures {
                 eprintln!("attome drill chaos: undo failed: {failure}. {}", spec.undo);
             }
+            if let Some(load) = load {
+                tokio::time::sleep(steady_state::PHASE).await;
+                steady_state::print_phase("after", steady_state::Stats::of(&load.take()));
+                load.finish().await;
+                if let Some(url) = steady.as_ref().and_then(|s| s.database_url.as_deref()) {
+                    match steady_state::audit_chain_failures(url).await {
+                        Ok(failed) if failed.is_empty() => println!("audit_chain: Pass"),
+                        Ok(failed) => {
+                            println!("audit_chain: Fail ({})", failed.join(", "));
+                            checks_ok = false;
+                        }
+                        Err(error) => println!("audit_chain: not checked ({error})"),
+                    }
+                }
+            }
             if failures.is_empty() {
                 println!("undone");
+            }
+            if failures.is_empty() && checks_ok {
                 EXIT_OK
             } else {
                 EXIT_FAILED

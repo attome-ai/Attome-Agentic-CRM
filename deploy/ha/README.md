@@ -53,6 +53,13 @@ and `tc netem` on `--iface` for `network-delay` (Linux, with `--allow-net-admin`
 `ai-failing` and `email-down`, boot the target with the lines `--fake-endpoints` prints, then run the
 fault. A deployment whose profile is `production` is refused.
 
+Add `--steady-url <address> --api-key <public:secret>` to measure the steady state around the fault: ten
+workers read a list page of `--steady-entity` (`account`) throughout; the run prints requests, error rate
+and p95 before, during and after; during the fault it stops itself after three 10-second windows past
+`--max-error-rate` (0.05) or `--max-p95-ms` (2000), and every 5 seconds checks that a reused idempotency
+key with a different body is refused. With `--database-url` it verifies the audit chain afterwards. Any
+of these failing makes the run fail.
+
 ## Standby region
 
 `patroni-standby.yml.example` and [README-standby.md](README-standby.md): a second cluster in
