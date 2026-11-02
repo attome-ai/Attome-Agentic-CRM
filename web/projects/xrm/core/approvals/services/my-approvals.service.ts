@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import type { ApiComponents, ApiError } from '@attome/base';
 
 type Schemas = ApiComponents['schemas'];
@@ -56,12 +56,12 @@ export const DECISION_COMMENT_MAX = 2000;
  */
 @Injectable({ providedIn: 'root' })
 export class MyApprovalsService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   list(cursor?: string | null, limit = 50): Observable<MyWorkPage> {
     const params: Record<string, string> = { limit: String(limit) };
     if (cursor) params['cursor'] = cursor;
-    return this.api.get<MyWorkPage>('/api/v1/my-work/approvals', params);
+    return this.sdk.get<MyWorkPage>('/api/v1/my-work/approvals', { query: params });
   }
 
   /**
@@ -83,7 +83,7 @@ export class MyApprovalsService {
     const body: ApprovalDecisionBody = { decision, row_version: rowVersion };
     const note = comment?.trim();
     if (note) body.comment = note;
-    return this.api.post<ApprovalDecisionResponse>(action.route, body);
+    return this.sdk.post<ApprovalDecisionResponse>(action.route, { body: body });
   }
 
   /** Z10-T10: decides up to 100 requests the same way, each on its own. */
@@ -96,26 +96,29 @@ export class MyApprovalsService {
     };
     const note = comment?.trim();
     if (note) body.comment = note;
-    return this.api.post<{ results: BulkDecideResult[] }>('/api/v1/approvals/bulk-decide', body);
+    return this.sdk.post<{ results: BulkDecideResult[] }>('/api/v1/approvals/bulk-decide', { body: body });
   }
 
   /** Z10-T10: the requester takes a pending request back to change it. */
   recall(id: string, rowVersion: number): Observable<unknown> {
-    return this.api.post<unknown>(
-      `/api/v1/approvals/${encodeURIComponent(id)}/recall`, {}, { ifMatch: rowVersion },
+    return this.sdk.post<unknown>(
+      `/api/v1/approvals/${encodeURIComponent(id)}/recall`,
+      { body: {} },
+      { ifMatch: rowVersion },
     );
   }
 
   /** Z10-T10: the corrected request after a recall. */
   resubmit(id: string, payload: unknown): Observable<{ id: string }> {
-    return this.api.post<{ id: string }>(
-      `/api/v1/approvals/${encodeURIComponent(id)}/resubmit`, { payload },
+    return this.sdk.post<{ id: string }>(
+      `/api/v1/approvals/${encodeURIComponent(id)}/resubmit`,
+      { body: { payload } },
     );
   }
 
   /** Z10-T11: what approvers and their agents recommend, oldest first. */
   recommendations(id: string): Observable<{ items: ApprovalRecommendation[] }> {
-    return this.api.get<{ items: ApprovalRecommendation[] }>(
+    return this.sdk.get<{ items: ApprovalRecommendation[] }>(
       `/api/v1/approvals/${encodeURIComponent(id)}/recommendations`,
     );
   }
