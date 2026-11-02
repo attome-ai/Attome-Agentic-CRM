@@ -13,6 +13,7 @@ import {
   FlowCoverage, Graph, GraphEdge, GraphNode, NODE_TYPES, NodeConfigField, NodeTypeSpec, SimulateResponse,
   StepHandlerInfo, VersionDetail, WorkflowAdminService, nodeConfigFields, nodeTypeSpec, schemaFields,
 } from '../../../services/workflow-admin.service';
+import { RpaEditorComponent, type RpaStep } from '../../../rpa-editor/rpa-editor.component';
 
 type JourneyModule = typeof import('@attome/xrm/marketing/journey');
 
@@ -100,7 +101,7 @@ interface TypeMenu { x: number; y: number; source?: { nodeId: string; port: stri
   selector:   'attome-workflow-graph-editor',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports:    [FormsModule, NgComponentOutlet, RouterLink, TranslatePipe],
+  imports:    [FormsModule, NgComponentOutlet, RouterLink, TranslatePipe, RpaEditorComponent],
   host: {
     '(window:mousemove)': 'onWindowMouseMove($event)',
     '(window:mouseup)':   'onWindowMouseUp()',
@@ -593,6 +594,37 @@ export class WorkflowGraphEditorComponent implements OnInit {
     if (buffered !== undefined) return buffered;
     const v = this.stepRaw(f.key);
     return v === undefined ? '' : JSON.stringify(v, null, 2);
+  }
+
+  /** M16-T3: whether the selected node is an RPA step, edited by the recorder. */
+  readonly isRpaStep = computed(() => {
+    const n = this.selectedNode();
+    return n?.type === 'module_step' && n.config?.['handler'] === 'integration.rpa';
+  });
+
+  rpaSystem(): string {
+    const v = this.stepRaw('system');
+    return typeof v === 'string' ? v : '';
+  }
+
+  rpaHosts(): string[] {
+    const v = this.stepRaw('allowed_hosts');
+    return Array.isArray(v) ? v.filter((h): h is string => typeof h === 'string') : [];
+  }
+
+  rpaSteps(): RpaStep[] {
+    const v = this.stepRaw('steps');
+    return Array.isArray(v) ? (v as RpaStep[]) : [];
+  }
+
+  /** The recorder's step list replaces the node's, and the JSON box shows it. */
+  setRpaSteps(steps: RpaStep[]): void {
+    this.jsonText.update(b => {
+      const next = { ...b };
+      delete next['step:steps'];
+      return next;
+    });
+    this.setStepConfig('steps', steps);
   }
 
   /** Writes one key of the step's settings; `undefined` deletes it. */

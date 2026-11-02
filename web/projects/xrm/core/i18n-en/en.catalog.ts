@@ -2050,6 +2050,15 @@ export const xrmEn = {
       list_remove: 'Remove from list', campaign_add: 'Add to campaign',
     },
   },
+  rpaEditor: {
+    title: 'Steps', none: 'No steps yet.', up: 'Up', down: 'Down', remove: 'Remove',
+    record: 'Record by showing', noSystem: 'Choose the browser service (integration system) first.',
+    url: 'Start address', start: 'Start', stop: 'Stop', view: 'The recorded page',
+    clickHint: 'Click the page to record a click.',
+    passwordNote: 'A password field: the step keeps the secret named password, not what you type.',
+    typeLabel: 'Text for the last clicked field', type: 'Type', pressEnter: 'Press Enter',
+    screenshot: 'Add a screenshot step',
+  },
   workflowStepField: {
     integration: {
       rpa: { system: 'Browser service', allowed_hosts: 'Allowed hosts', timeout_ms: 'Time limit (ms)', steps: 'Browser steps' },

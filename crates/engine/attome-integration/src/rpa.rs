@@ -195,6 +195,57 @@ pub fn request_body(config: &Value, secrets: &Value, input: &Value) -> Result<Va
     }))
 }
 
+/// The browser service an integration system names.
+pub struct Service {
+    pub base_url: String,
+    pub token: String,
+    /// The sealed credential: the token and the secrets steps refer to.
+    pub secrets: Value,
+}
+
+impl std::fmt::Debug for Service {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Service")
+            .field("base_url", &self.base_url)
+            .finish_non_exhaustive()
+    }
+}
+
+/// The browser service of the active integration system called `name`:
+/// its address, and its token and secrets from the sealed credential.
+/// `None` when no active system has that name.
+pub async fn service_for(state: &EngineState, name: &str) -> Result<Option<Service>, AppError> {
+    let id: Option<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM integration_system WHERE name = $1 AND status = 'active' \
+           AND (is_active IS NULL OR is_active = true)",
+    )
+    .bind(name)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let system = match id {
+        Some(id) => crate::system::load(&state.base.db, id).await?,
+        None => None,
+    };
+    let Some(system) = system else {
+        return Ok(None);
+    };
+    let secrets = crate::connector::adapters::social::secrets(state, &system).await?;
+    let token = secrets
+        .get(TOKEN_FIELD)
+        .and_then(Value::as_str)
+        .filter(|t| !t.is_empty())
+        .ok_or_else(|| {
+            AppError::Validation(format!("{name}: the credential has no {TOKEN_FIELD}"))
+        })?
+        .to_owned();
+    Ok(Some(Service {
+        base_url: system.base_url,
+        token,
+        secrets,
+    }))
+}
+
 /// Calls the browser service at `base_url` with `body`; its answer.
 pub async fn call_service(
     base_url: &str,
@@ -202,19 +253,37 @@ pub async fn call_service(
     body: &Value,
     timeout: Duration,
 ) -> Result<Value, String> {
+    call_service_at(base_url, token, "/run", Some(body), timeout).await
+}
+
+/// M16-T3: calls the browser service's `path`, a POST with `body` or a
+/// DELETE without one; its JSON answer (`null` for an empty one).
+pub async fn call_service_at(
+    base_url: &str,
+    token: &str,
+    path: &str,
+    body: Option<&Value>,
+    timeout: Duration,
+) -> Result<Value, String> {
     let purpose = attome_outbound::http::Purpose::public("rpa-browser")
         .with_private_urls(std::iter::once(base_url))
         .no_redirects();
     let http = attome_outbound::http::client(purpose, |b| b.timeout(timeout))
         .map_err(|e| format!("the browser service address: {e}"))?;
-    let answer = http
-        .post(format!("{}/run", base_url.trim_end_matches('/')))
+    let url = format!("{}{path}", base_url.trim_end_matches('/'));
+    let request = match body {
+        Some(body) => http.post(url).json(body),
+        None => http.delete(url),
+    };
+    let answer = request
         .header("X-Rpa-Token", token)
-        .json(body)
         .send()
         .await
         .map_err(|_| "the browser service did not answer".to_owned())?;
     let status = answer.status();
+    if status == reqwest::StatusCode::NO_CONTENT {
+        return Ok(Value::Null);
+    }
     let value: Value = answer
         .json()
         .await
@@ -291,33 +360,17 @@ impl WorkflowStepHandler for RpaStep {
                 })));
             }
             let name = inv.config["system"].as_str().unwrap_or_default();
-            let id: Option<Uuid> = sqlx::query_scalar(
-                "SELECT id FROM integration_system WHERE name = $1 AND status = 'active' \
-                   AND (is_active IS NULL OR is_active = true)",
-            )
-            .bind(name)
-            .fetch_optional(&state.base.db)
-            .await
-            .map_err(AppError::internal)?;
-            let system = match id {
-                Some(id) => crate::system::load(&state.base.db, id).await?,
-                None => None,
-            };
-            let Some(system) = system else {
+            let Some(Service {
+                base_url,
+                token,
+                secrets,
+            }) = service_for(state, name).await?
+            else {
                 return Ok(StepOutcome::Blocked {
                     reason: format!("no active integration system is named {name}"),
                     continue_after: false,
                 });
             };
-            let secrets = crate::connector::adapters::social::secrets(state, &system).await?;
-            let token = secrets
-                .get(TOKEN_FIELD)
-                .and_then(Value::as_str)
-                .filter(|t| !t.is_empty())
-                .ok_or_else(|| {
-                    AppError::Validation(format!("{name}: the credential has no {TOKEN_FIELD}"))
-                })?
-                .to_owned();
             let body = match request_body(&inv.config, &secrets, &inv.input) {
                 Ok(body) => body,
                 Err(reason) => {
@@ -329,7 +382,7 @@ impl WorkflowStepHandler for RpaStep {
             };
             let timeout_ms = body["timeout_ms"].as_u64().unwrap_or(30_000);
             let answer = match call_service(
-                &system.base_url,
+                &base_url,
                 &token,
                 &body,
                 Duration::from_millis(timeout_ms + 15_000),

@@ -41,6 +41,8 @@ pub mod model;
 pub mod oauth;
 /// M16-T2: the `integration.rpa` flow step over the isolated browser service.
 pub mod rpa;
+/// M16-T3: recording RPA steps by showing.
+pub mod rpa_record;
 /// E13-T10: Google and Bing statistics and IndexNow pings for connected sites.
 pub mod search_console;
 /// J4-T1: SMS sending and delivery receipts.
@@ -73,6 +75,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(connector::adapters::user_mail_sync::openapi_fragment());
     doc.merge(connector::adapters::video::openapi_fragment());
     doc.merge(warehouse_load::openapi_fragment());
+    doc.merge(rpa_record::openapi_fragment());
     doc.merge(whatsapp_templates::openapi_fragment());
     doc
 }

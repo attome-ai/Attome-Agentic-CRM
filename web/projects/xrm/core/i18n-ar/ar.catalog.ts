@@ -2008,6 +2008,15 @@ export const xrmAr = {
       list_remove: 'إزالة من قائمة', campaign_add: 'إضافة إلى حملة',
     },
   },
+  rpaEditor: {
+    title: 'الخطوات', none: 'لا خطوات بعد.', up: 'أعلى', down: 'أسفل', remove: 'إزالة',
+    record: 'التسجيل بالعرض', noSystem: 'اختر خدمة المتصفح (نظام التكامل) أولًا.',
+    url: 'عنوان البدء', start: 'ابدأ', stop: 'إيقاف', view: 'الصفحة المسجلة',
+    clickHint: 'انقر على الصفحة لتسجيل نقرة.',
+    passwordNote: 'حقل كلمة مرور: تحفظ الخطوة السر المسمى password، لا ما تكتبه.',
+    typeLabel: 'نص لآخر حقل نُقر عليه', type: 'اكتب', pressEnter: 'اضغط Enter',
+    screenshot: 'أضف خطوة لقطة شاشة',
+  },
   workflowStepField: {
     integration: {
       rpa: { system: 'خدمة المتصفح', allowed_hosts: 'المضيفون المسموح بهم', timeout_ms: 'المهلة (ملي ثانية)', steps: 'خطوات المتصفح' },

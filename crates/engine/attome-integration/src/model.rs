@@ -46,6 +46,8 @@ impl EngineModel for IntegrationModel {
         crate::admin::routes()
             .merge(crate::webhook::routes())
             .merge(crate::warehouse_load::routes())
+            // M16-T3: recording RPA steps by showing.
+            .merge(crate::rpa_record::routes())
             // D15-T1: a person's own mailbox connection.
             .merge(crate::connector::adapters::user_mail_sync::routes())
             // J7-T1: online meetings.

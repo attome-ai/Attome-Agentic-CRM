@@ -5,7 +5,7 @@ FROM mcr.microsoft.com/playwright:v1.49.0-jammy
 WORKDIR /app
 COPY package.json ./
 RUN npm install --omit=dev --no-audit --no-fund
-COPY steps.mjs server.mjs ./
+COPY steps.mjs recorder.mjs server.mjs ./
 USER pwuser
 ENV PORT=8099
 EXPOSE 8099

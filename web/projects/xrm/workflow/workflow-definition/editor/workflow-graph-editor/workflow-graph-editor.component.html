@@ -334,6 +334,11 @@
           }
         }
 
+        @if (isRpaStep()) {
+          <xrm-rpa-editor [system]="rpaSystem()" [allowedHosts]="rpaHosts()" [steps]="rpaSteps()"
+                          [readonly]="readonly()" (stepsChange)="setRpaSteps($event)" />
+        }
+
         @if (visibleConfigFields().length === 0 && stepFields().length === 0) {
           <p class="cfg-hint">This node type takes no configuration.</p>
         }
