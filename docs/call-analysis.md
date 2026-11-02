@@ -90,3 +90,33 @@ see all that is analysed about them. The notice staff are shown is the setting
 timeline that jumps the player to their second, the redacted transcript with each line right to left when
 it is Arabic, the scorecard (confirming is for managers), the talk patterns as a coaching aid when you may
 see them, and comments at the current moment.
+
+## Settings and what is off by default
+
+| Setting | Default | What it does |
+|---|---|---|
+| `callintel.enabled` | off | Turns analysis on. Until then nothing is analysed and nothing is kept beyond the transcript. |
+| `callintel.staff_notice_text` | a short notice in English and Arabic | What staff are told about the analysis of their calls. |
+
+With the module on, still off until set up: the extraction (questions, objections, next steps, proposed
+scorecard answers) runs only where a generation model answers within the call owner's AI budget;
+trackers exist only as administrators (or the competitor sync) create them; scorecards exist only as
+administrators write them. Talk patterns are shown only to the call's owner and their managers, scores
+are confirmed only by managers, and no staff sentiment is ever scored.
+
+## Agent tools
+
+Three read-only tools, each needing the call analysis module's read privilege: `callintel.search_calls`
+(calls by tracker, finding kind or text), `callintel.deal_highlights` (a deal's call moments, each with a
+link to its second in the call) and `callintel.coaching_brief` (a person's recent calls, for themselves or
+a manager above them; anyone else gets not found).
+
+## Open points
+
+- **Notice or consent.** Staff are told through `callintel.staff_notice_text`; nobody is asked to consent.
+  Whether a notice is enough for analysing staff calls under the laws of Saudi Arabia, the United Arab
+  Emirates and Egypt has **not** been checked by a lawyer. Have it checked before turning analysis on in
+  those countries, and ask customers' consent to record where the law requires it.
+- **Arabic dialects.** Trackers match exact terms after normalisation. How well that finds Gulf, Egyptian,
+  Levantine or Maghrebi phrasings has **not** been measured; list the dialect forms you expect as extra terms.
+

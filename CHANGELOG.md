@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Call analysis routes (D22): `GET /api/v1/callintel/calls/{activity_id}`, `.../recording`,
+  `POST .../comments`, `POST /api/v1/callintel/findings/{id}/task`,
+  `POST /api/v1/callintel/scorecard-answers/{id}/confirm` and `GET /api/v1/callintel/my-analyses`;
+  `docs/call-analysis.md` gains the settings, agent tools and open legal points (D22-T15).
 - The clean exit (Y5-T5): `POST /api/v1/admin/exit/export`, `GET /api/v1/admin/exit/export/{id}` and
   `POST /api/v1/admin/exit/delete` (two other administrators approve; a signed deletion certificate);
   migration 0379. `docs/clean-exit.md`.
