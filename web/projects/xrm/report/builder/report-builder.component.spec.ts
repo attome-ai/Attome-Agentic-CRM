@@ -117,7 +117,7 @@ describe('ReportBuilderComponent (P1-T1)', () => {
 
   it('asks prompts as parameters, saves the report and shares it (P1-T3)', () => {
     const { cmp, post } = setUp({ items: [] });
-    const put = vi.fn(() => of({ query_id: 'q-1', shares: [] }));
+    const put = vi.fn((_path: string, _body: unknown) => of({ query_id: 'q-1', shares: [] }));
     (TestBed.inject(SdkService) as unknown as { put: (path: string, opts?: { body?: unknown }) => unknown }).put =
       (path, opts) => put(path, opts?.body);
     cmp.toggleColumn('name');

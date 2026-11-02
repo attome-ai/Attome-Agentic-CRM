@@ -1,16 +1,11 @@
 import { Observable, of } from 'rxjs';
 
-/** The parts of an `ApiService` stand-in a spec may give. */
-interface ApiStandIn {
-  get?: (...args: unknown[]) => Observable<unknown>;
-  getBackground?: (...args: unknown[]) => Observable<unknown>;
-  getIfChanged?: (...args: unknown[]) => Observable<unknown>;
-  post?: (...args: unknown[]) => Observable<unknown>;
-  put?: (...args: unknown[]) => Observable<unknown>;
-  patch?: (...args: unknown[]) => Observable<unknown>;
-  delete?: (...args: unknown[]) => Observable<unknown>;
-  getAllPages?: (...args: unknown[]) => Observable<unknown>;
-}
+/**
+ * One method of an `ApiService` stand-in. Specs give mocks of every shape
+ * (`vi.fn()`, typed `vi.fn((path: string) => of(..))`, plain functions,
+ * class methods), so the stand-in is read loosely.
+ */
+type StandInMethod = (...args: unknown[]) => unknown;
 
 interface SdkOptions {
   query?: Record<string, unknown>;
@@ -28,8 +23,9 @@ interface SdkOptions {
  * `patch(path, body, ifMatch, write)`. Each call keeps the stand-in as
  * `this`, so a class-based stand-in's methods work.
  */
-export function sdkFromApi(api: ApiStandIn): unknown {
-  const missing = (..._args: unknown[]): Observable<never> => of() as Observable<never>;
+export function sdkFromApi(standIn: object): unknown {
+  const api = standIn as Partial<Record<string, StandInMethod>>;
+  const missing: StandInMethod = (..._args: unknown[]): Observable<never> => of() as Observable<never>;
   const drop = <T>(args: T[]): T[] => {
     while (args.length > 0 && args[args.length - 1] === undefined) args.pop();
     return args;
