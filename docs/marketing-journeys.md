@@ -43,10 +43,23 @@ Steps the marketing engine adds to the workflow:
 - **Control:** wait for working time or a Hijri month, check engagement with an earlier send, split the
   audience. Waiting for a duration, a date or an event uses the workflow's own wait nodes.
 - **Actions:** add to or remove from a static list, add to a campaign.
+- **Nurture:** `marketing.nurture_run` (`purpose`, optionally `program_id`; otherwise the nurture
+  programme whose journey this is) puts the person in the programme on the track that fits them and
+  waits there. Every minute the drip sends each person the next email of their track, by position,
+  that they have neither seen (opened or clicked from another send of the same saved design) nor been
+  sent by the programme, through the same rules, one per the programme's `cadence_days`. When the
+  person leaves the programme (handed to sales, a customer leaving an acquisition programme, a retired
+  programme), the step completes and the journey goes on. Only email content is sent.
+
+Every step a module contributes, with the JSON Schema of its settings, is listed by
+`GET /api/v1/workflow/step-handlers`; an engine adds one through `WorkflowStepHandler`
+(`config_schema` and `available` describe it to the editor).
 
 ## Publishing a new version
 
-When a new version is published, people already in the journey either finish on the version they
+`GET /api/v1/marketing/journeys/{id}/versions/{version_id}/preview` shows, before publishing, how many
+people wait at each node, whether the new version keeps it and how many a move would move. When a new
+version is published, people already in the journey either finish on the version they
 started (`finish_on_old`) or move to the new one where they wait (`move_matching`). Only a waiting run
 whose waiting nodes exist in the new version, and which has already passed every node the new version
 puts before them, moves; everyone else finishes on the old version.
@@ -73,7 +86,7 @@ Reading needs `marketing_journey.read`; enrolling, removing, pausing and resumin
 Erasing a person (a data subject request, a direct erasure, or a replayed one) also deletes their
 journey enrolments, blocks and message log, and cancels their running journeys, in the same transaction.
 
-## Not built yet
+## Simulating and publishing
 
 `POST /api/v1/marketing/journeys/{id}/simulate` runs the newest published version for up to 20 sample
 people, each person's record as the trigger, and returns every step of each run without waiting,
@@ -81,3 +94,20 @@ sending or writing anything. `POST /api/v1/marketing/journeys/{id}/publish` with
 (the workflow's own publish checks run), places the people already in the journey (`finish_on_old` or
 `move_matching`, as above) and makes a draft journey live. When the journey names a `publish_role`, only
 its holders (and administrators) may publish.
+
+## In the workflow editor
+
+A journey is edited on the workflow canvas. Its picker lists the marketing steps under "Steps from
+modules", each with a settings form built from its schema. For a journey the canvas also shows each
+step's live counts (read every ten seconds), replays one person's path step by step, and on Publish asks
+what happens to the people already in it, showing the preview. In Arabic the canvas runs right to left,
+node types are named in Arabic, and a wait shows its Hijri date.
+
+## Agent tools
+
+`journey.draft` drafts a journey's graph from a description and returns it with a diff against the
+current draft and the call that saves it as a draft; nothing is saved or published, and a draft may use
+only waits, branches and registered marketing steps. `journey.explain_person` explains one person's path;
+`journey.suggest` names the step most people leave at and the most common block reasons. No agent tool
+publishes a journey or enrols anyone.
+
