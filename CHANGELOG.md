@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Paying and removing a card on the portal (F5-T14, V2-D1588): as the portal's service user,
+  `POST /{keyword}/api/v1/billing/invoices/{id}/pay` makes a payment link for an open invoice of the
+  account and `DELETE /{keyword}/api/v1/billing/payment-methods/{id}` removes a saved method; the audit
+  names the portal user.
 - Subscription changes on the portal (F3-T13, V2-D1588): a portal's service user
   (`webportal.service_user_ref`, platform changeset `0086`, set through the portal admin PATCH) runs
   `POST /{keyword}/api/v1/billing/subscriptions/{id}/quantity` (within the line's new

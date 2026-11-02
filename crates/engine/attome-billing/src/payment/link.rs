@@ -243,6 +243,17 @@ pub async fn create_link(
     ctx: &SecurityContext,
     req: &LinkRequest,
 ) -> Result<LinkCreated, AppError> {
+    create_link_on_behalf(state, ctx, req, None).await
+}
+
+/// [`create_link`], made by a portal's service user for `behalf`
+/// (V2-D1588 (1)), whom the audit event names.
+pub async fn create_link_on_behalf(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    req: &LinkRequest,
+    behalf: Option<&str>,
+) -> Result<LinkCreated, AppError> {
     ctx.require("payment_link", "create")?;
     let hours = req.expires_in_hours.unwrap_or(DEFAULT_EXPIRY_HOURS);
     if !(1..=MAX_EXPIRY_HOURS).contains(&hours) {
@@ -252,7 +263,7 @@ pub async fn create_link(
     }
     let (account, amount, currency) = target(state, ctx, req).await?;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
-    let created = insert_link_in_tx(
+    let created = insert_link_in_tx_noted(
         &mut tx,
         state,
         NewLink {
@@ -264,6 +275,7 @@ pub async fn create_link(
             hours,
         },
         ctx.user_id,
+        behalf,
     )
     .await?;
     attome_db::tx::commit(tx).await?;
@@ -288,6 +300,18 @@ pub async fn insert_link_in_tx(
     state: &EngineState,
     new: NewLink,
     actor: Uuid,
+) -> Result<LinkCreated, AppError> {
+    insert_link_in_tx_noted(tx, state, new, actor, None).await
+}
+
+/// [`insert_link_in_tx`], its audit event naming whom the link was made
+/// for.
+async fn insert_link_in_tx_noted(
+    tx: &mut attome_db::Tx<'_>,
+    state: &EngineState,
+    new: NewLink,
+    actor: Uuid,
+    behalf: Option<&str>,
 ) -> Result<LinkCreated, AppError> {
     let public_id = Uuid::now_v7();
     // 244 random bits, never stored: only its peppered hash is.
@@ -323,17 +347,19 @@ pub async fn insert_link_in_tx(
         "billing.payment_link.created",
     )
     .await?;
-    attome_audit::write_business_event_in_tx(
-        tx,
-        &attome_audit::audit_service(state),
-        attome_audit::BusinessEvent::new(
+    attome_audit::write_business_event_in_tx(tx, &attome_audit::audit_service(state), {
+        let event = attome_audit::BusinessEvent::new(
             "payment_link",
             link,
             attome_audit::AuditOperation::Create,
             "billing.payment_link_created",
             actor,
-        ),
-    )
+        );
+        match behalf {
+            Some(behalf) => event.comment(format!("on behalf of {behalf}")),
+            None => event,
+        }
+    })
     .await?;
     Ok(LinkCreated {
         link_id: link,

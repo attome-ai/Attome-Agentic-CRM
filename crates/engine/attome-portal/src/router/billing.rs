@@ -22,6 +22,10 @@
 //! user (`webportal.service_user_ref`, V2-D1588 (1)), the audit event naming
 //! the portal user. 404 while `billing.portal.subscriptions` is off, for
 //! another account's subscription, and while the portal has no service user.
+//!
+//! `POST /{keyword}/api/v1/billing/invoices/{id}/pay` (a payment link for
+//! an open invoice of the account) and `DELETE /{keyword}/api/v1/billing/
+//! payment-methods/{id}` run the same way, behind `billing.portal.payments`.
 
 use attome_billing::payment::portal::{PortalInvoice, PortalPaymentMethod};
 use attome_billing::subscription::portal::PortalSubscription;
@@ -31,7 +35,7 @@ use axum::{
     Json, Router,
     extract::{Path, State},
     http::HeaderMap,
-    routing::{get, post},
+    routing::{delete, get, post},
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -191,10 +195,9 @@ async fn acting(
     state: &EngineState,
     keyword: &str,
     headers: &HeaderMap,
+    open: fn(&EngineState) -> bool,
 ) -> Result<Acting, AppError> {
-    if !state.modules.load().has(attome_modules::MODULE_BILLING)
-        || !attome_billing::subscription::portal::portal_on(state)
-    {
+    if !state.modules.load().has(attome_modules::MODULE_BILLING) || !open(state) {
         return Err(AppError::NotFound);
     }
     let portal = portal_for(state, keyword).await?;
@@ -238,7 +241,13 @@ async fn change_quantity(
     headers: HeaderMap,
     Json(body): Json<QuantityChange>,
 ) -> Result<Json<QuantityChanged>, AppError> {
-    let (account, behalf, ctx) = acting(&state, &keyword, &headers).await?;
+    let (account, behalf, ctx) = acting(
+        &state,
+        &keyword,
+        &headers,
+        attome_billing::subscription::portal::portal_on,
+    )
+    .await?;
     let quantity = attome_billing::subscription::portal::parse_quantity(&body.quantity)?;
     let done = attome_billing::subscription::portal::change_quantity(
         &state,
@@ -285,7 +294,13 @@ async fn cancel(
     headers: HeaderMap,
     Json(body): Json<PortalCancel>,
 ) -> Result<Json<PortalCancelled>, AppError> {
-    let (account, behalf, ctx) = acting(&state, &keyword, &headers).await?;
+    let (account, behalf, ctx) = acting(
+        &state,
+        &keyword,
+        &headers,
+        attome_billing::subscription::portal::portal_on,
+    )
+    .await?;
     let ends_on = attome_billing::subscription::portal::cancel_at_term_end(
         &state,
         &ctx,
@@ -296,6 +311,78 @@ async fn cancel(
     )
     .await?;
     Ok(Json(PortalCancelled { ends_on }))
+}
+
+/// Pay an open invoice
+///
+/// F5-T14: a payment link for one of the signed-in person's own account's open invoices; the
+/// customer pays on the hosted payment page it opens.
+#[utoipa::path(
+    post,
+    path = "/{keyword}/api/v1/billing/invoices/{id}/pay",
+    operation_id = "portal_billing_pay_invoice",
+    tag = "billing",
+    params(
+        ("keyword" = String, Path, description = "The portal"),
+        ("id" = Uuid, Path, description = "The invoice"),
+    ),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Create)])))),
+    responses(
+        (status = 200, description = "The payment link", body = attome_billing::payment::link::LinkCreated),
+        (status = 401, description = "Not signed in to the portal", body = ErrorResponse),
+        (status = 404, description = "No such open invoice of the person's account, or the route is off", body = ErrorResponse),
+    ),
+)]
+async fn pay_invoice(
+    State(state): State<EngineState>,
+    Path((keyword, id)): Path<(String, Uuid)>,
+    headers: HeaderMap,
+) -> Result<Json<attome_billing::payment::link::LinkCreated>, AppError> {
+    let (account, behalf, ctx) = acting(
+        &state,
+        &keyword,
+        &headers,
+        attome_billing::payment::portal::portal_on,
+    )
+    .await?;
+    Ok(Json(
+        attome_billing::payment::portal::pay_invoice(&state, &ctx, &behalf, account, id).await?,
+    ))
+}
+
+/// Remove a saved payment method
+///
+/// F5-T14: deletes one of the signed-in person's own account's saved payment methods.
+#[utoipa::path(
+    delete,
+    path = "/{keyword}/api/v1/billing/payment-methods/{id}",
+    operation_id = "portal_billing_remove_payment_method",
+    tag = "billing",
+    params(
+        ("keyword" = String, Path, description = "The portal"),
+        ("id" = Uuid, Path, description = "The saved payment method"),
+    ),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::SoftDelete)])))),
+    responses(
+        (status = 204, description = "Removed"),
+        (status = 401, description = "Not signed in to the portal", body = ErrorResponse),
+        (status = 404, description = "No such method of the person's account, or the route is off", body = ErrorResponse),
+    ),
+)]
+async fn remove_method(
+    State(state): State<EngineState>,
+    Path((keyword, id)): Path<(String, Uuid)>,
+    headers: HeaderMap,
+) -> Result<axum::http::StatusCode, AppError> {
+    let (account, behalf, ctx) = acting(
+        &state,
+        &keyword,
+        &headers,
+        attome_billing::payment::portal::portal_on,
+    )
+    .await?;
+    attome_billing::payment::portal::remove_method(&state, &ctx, &behalf, account, id).await?;
+    Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
 pub(super) fn routes() -> Router<EngineState> {
@@ -311,6 +398,14 @@ pub(super) fn routes() -> Router<EngineState> {
         .route(
             "/{keyword}/api/v1/billing/payment-methods",
             get(my_payment_methods),
+        )
+        .route(
+            "/{keyword}/api/v1/billing/payment-methods/{id}",
+            delete(remove_method),
+        )
+        .route(
+            "/{keyword}/api/v1/billing/invoices/{id}/pay",
+            post(pay_invoice),
         )
         .route(
             "/{keyword}/api/v1/billing/subscriptions/{id}/quantity",
@@ -329,7 +424,9 @@ pub(super) fn routes() -> Router<EngineState> {
         my_open_invoices,
         my_payment_methods,
         change_quantity,
-        cancel
+        cancel,
+        pay_invoice,
+        remove_method
     ),
     components(schemas(
         PortalSubscription,

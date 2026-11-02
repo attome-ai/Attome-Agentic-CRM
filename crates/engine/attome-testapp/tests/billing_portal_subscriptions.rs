@@ -188,3 +188,108 @@ fn payment_portal_other_account_404() {
         );
     });
 }
+
+// feature: F5
+// negative: POST /{keyword}/api/v1/billing/invoices/{id}/pay
+#[test]
+fn portal_pays_only_own_open_invoice() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        install(&app).await;
+        let mine = account(&app, "Payer").await;
+        let other = account(&app, "Someone else").await;
+        let invoice: Uuid = sqlx::query_scalar(
+            "INSERT INTO invoice (id, account_ref, currency, status, payment_status, \
+                 invoice_number, grand_total, open_total, is_active, row_version) \
+             VALUES ($1, $2, 'SAR', 'issued', 'open', 'INV-9', 100, 100, true, 0) RETURNING id",
+        )
+        .bind(Uuid::now_v7())
+        .bind(mine)
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        let service = attome_security::resolve_uncached(app.db(), app.admin.id)
+            .await
+            .unwrap();
+
+        let refused = attome_billing::payment::portal::pay_invoice(
+            &app.state,
+            &service,
+            "portal user p4",
+            other,
+            invoice,
+        )
+        .await;
+        assert!(
+            matches!(refused, Err(attome_types::AppError::NotFound)),
+            "{refused:?}"
+        );
+        let link = attome_billing::payment::portal::pay_invoice(
+            &app.state,
+            &service,
+            "portal user p4",
+            mine,
+            invoice,
+        )
+        .await
+        .unwrap();
+        assert!(link.url.contains("/pay/"));
+    });
+}
+
+// feature: F5
+// negative: DELETE /{keyword}/api/v1/billing/payment-methods/{id}
+#[test]
+fn portal_removes_only_own_method() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        install(&app).await;
+        let mine = account(&app, "Card holder").await;
+        let other = account(&app, "Someone else").await;
+        let method: Uuid = sqlx::query_scalar(
+            "INSERT INTO saved_payment_method (id, account_ref, gateway_system_ref, token, brand, \
+                 last4, is_active, row_version) \
+             VALUES ($1, $2, 'gw', 'tok_x', 'visa', '1111', true, 0) RETURNING id",
+        )
+        .bind(Uuid::now_v7())
+        .bind(mine)
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        let service = attome_security::resolve_uncached(app.db(), app.admin.id)
+            .await
+            .unwrap();
+
+        let refused = attome_billing::payment::portal::remove_method(
+            &app.state,
+            &service,
+            "portal user p5",
+            other,
+            method,
+        )
+        .await;
+        assert!(
+            matches!(refused, Err(attome_types::AppError::NotFound)),
+            "{refused:?}"
+        );
+        attome_billing::payment::portal::remove_method(
+            &app.state,
+            &service,
+            "portal user p5",
+            mine,
+            method,
+        )
+        .await
+        .unwrap();
+        assert!(
+            attome_billing::payment::portal::payment_methods(&app.state, mine)
+                .await
+                .unwrap()
+                .is_empty()
+        );
+    });
+}

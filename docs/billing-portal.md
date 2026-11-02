@@ -33,5 +33,10 @@ With the setting `billing.portal.payments` on (off by default), the same portal 
 - `GET /{keyword}/api/v1/billing/payment-methods`: the account's saved payment methods (brand, last
   four digits, expiry, which is the default). A method's token and gateway are never read for the portal.
 
-Both answer 404 while the setting or the billing module is off. Paying an invoice and removing a saved method from the portal are still to come; until then, send the
-customer a payment link (`POST /api/v1/billing/payment-links`).
+Both answer 404 while the setting or the billing module is off. Two changes run, like the subscription
+changes, as the portal's service user (which also needs `payment_link.create` and
+`saved_payment_method.delete`), the audit naming the portal user:
+
+- `POST /{keyword}/api/v1/billing/invoices/{id}/pay`: a payment link for one of the account's open
+  invoices; the customer pays on the hosted payment page it opens.
+- `DELETE /{keyword}/api/v1/billing/payment-methods/{id}`: removes one of the account's saved methods.

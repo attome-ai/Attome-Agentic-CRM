@@ -5,12 +5,17 @@
 //! invoices/open` and `GET /{keyword}/api/v1/billing/payment-methods`)
 //! answer only while [`PORTAL_SETTING`] is on, and only for the portal
 //! user's own account, from their contact. A saved method's `token` and
-//! gateway are never read here, so they cannot reach the portal. Paying an
-//! invoice and removing a method from the portal are not here: they write
-//! as a staff user today, and how a portal user acts through the billing
-//! engine is still open.
+//! gateway are never read here, so they cannot reach the portal.
+//!
+//! Changes (V2-D1588 (1)) run as the portal's service user, the audit event
+//! naming the portal user: [`pay_invoice`] makes a payment link for an open
+//! invoice of the account (the customer pays on the hosted page, F5-T8), and
+//! [`remove_method`] deletes one of the account's saved methods through the
+//! record engine.
 
 use attome_core::EngineState;
+use attome_security::SecurityContextExt;
+use attome_server::security::SecurityContext;
 use attome_types::AppError;
 use serde::Serialize;
 use utoipa::ToSchema;
@@ -98,6 +103,70 @@ pub async fn payment_methods(
     .fetch_all(&state.base.db)
     .await
     .map_err(AppError::internal)
+}
+
+/// A payment link for `invoice` of `account` (an issued invoice with an
+/// amount open), made as the portal's service user `ctx` for `behalf`.
+pub async fn pay_invoice(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    behalf: &str,
+    account: Uuid,
+    invoice: Uuid,
+) -> Result<super::link::LinkCreated, AppError> {
+    let open = open_invoices(state, account).await?;
+    if !open.iter().any(|i| i.id == invoice) {
+        return Err(AppError::NotFound);
+    }
+    super::link::create_link_on_behalf(
+        state,
+        ctx,
+        &super::link::LinkRequest {
+            invoice_id: Some(invoice),
+            ..Default::default()
+        },
+        Some(behalf),
+    )
+    .await
+}
+
+/// Deletes `method`, a saved payment method of `account`, as the portal's
+/// service user `ctx` for `behalf`.
+pub async fn remove_method(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    behalf: &str,
+    account: Uuid,
+    method: Uuid,
+) -> Result<(), AppError> {
+    let mine: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM saved_payment_method \
+                         WHERE id = $1 AND account_ref = $2 \
+                           AND (is_active IS NULL OR is_active = true))",
+    )
+    .bind(method)
+    .bind(account)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if !mine {
+        return Err(AppError::NotFound);
+    }
+    ctx.require("saved_payment_method", "delete")?;
+    let mut origin = attome_records::entity_mutation::DeleteOrigin::new(
+        attome_records::entity_mutation::DeleteKind::Portal,
+    );
+    origin.reason = Some(format!("on behalf of {behalf}"));
+    attome_records::entity_crud::delete_record_for(
+        state,
+        ctx,
+        ctx.user_id,
+        "saved_payment_method",
+        method,
+        None,
+        &origin,
+    )
+    .await
 }
 
 #[cfg(test)]
