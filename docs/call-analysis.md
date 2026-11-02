@@ -46,3 +46,12 @@ owner) into `call_daily_aggregate`: the number of calls, the average staff talk 
 questions per call, the share of scorecard answers that are yes, and each tracker's hits. A day's rows are
 rebuilt whole, so running it again gives the same rows. Three stored queries read them: **Call trackers by
 week**, **Call talk share by team** and **Call scorecard results by team** (`call_daily_aggregate.read`).
+
+## Competitors and other engines
+
+Every competitor in the sales pack (`competitor`) that is tracked becomes a call tracker of its own, its
+English and Arabic names as the exact terms; renaming the competitor updates the tracker (a new tracker
+version), and deleting it or turning off `is_tracked` turns the tracker off while keeping its hits. This
+runs every five minutes from the change feed. When an analysis is done it writes the event
+`callintel.analysis_done` on the `call_analysis` record, which deal health, competitive intelligence and
+conversation signals read; the event carries no transcript text.

@@ -228,3 +228,83 @@ fn nightly_aggregate_is_rerunnable() {
         );
     });
 }
+
+// feature: D22
+#[test]
+fn competitor_becomes_tracker() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        for pack in ["crm", "sales"] {
+            let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../../packs")
+                .join(pack)
+                .join("changesets");
+            let mut files: Vec<_> = std::fs::read_dir(&dir)
+                .unwrap()
+                .flatten()
+                .map(|e| e.path())
+                .collect();
+            files.sort();
+            for file in &files {
+                let value: Value =
+                    serde_json::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
+                attome_api::changeset::boot::apply_pack_document(&app.state, &value)
+                    .await
+                    .unwrap_or_else(|e| panic!("{}: {e}", file.display()));
+            }
+        }
+        let installed: bool = sqlx::query_scalar("SELECT to_regclass('competitor') IS NOT NULL")
+            .fetch_one(app.db())
+            .await
+            .unwrap();
+        if !installed {
+            println!("skipped: the competitor entity is not provisioned");
+            return;
+        }
+        let competitor: Uuid = sqlx::query_scalar(
+            "INSERT INTO competitor (name, name_ar, is_tracked) VALUES ('Acme', 'أكمي', true) \
+             RETURNING id",
+        )
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        attome_callintel::analysis::signals::sync_competitor(&app.state, competitor)
+            .await
+            .unwrap();
+        attome_callintel::analysis::signals::sync_competitor(&app.state, competitor)
+            .await
+            .unwrap();
+        let trackers: Vec<(Option<String>, Option<bool>)> = sqlx::query_as(
+            "SELECT exact_terms, enabled FROM call_tracker WHERE competitor_ref = $1",
+        )
+        .bind(competitor.to_string())
+        .fetch_all(app.db())
+        .await
+        .unwrap();
+        assert_eq!(trackers.len(), 1, "one tracker however often it syncs");
+        assert_eq!(trackers[0].0.as_deref(), Some("Acme\nأكمي"));
+        assert_eq!(trackers[0].1, Some(true));
+
+        sqlx::query("UPDATE competitor SET is_tracked = false WHERE id = $1")
+            .bind(competitor)
+            .execute(app.db())
+            .await
+            .unwrap();
+        attome_callintel::analysis::signals::sync_competitor(&app.state, competitor)
+            .await
+            .unwrap();
+        let enabled: Option<bool> =
+            sqlx::query_scalar("SELECT enabled FROM call_tracker WHERE competitor_ref = $1")
+                .bind(competitor.to_string())
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        assert_eq!(
+            enabled,
+            Some(false),
+            "an untracked competitor's tracker is off"
+        );
+    });
+}

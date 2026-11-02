@@ -305,6 +305,15 @@ async fn analyse(state: &EngineState, analysis: Uuid) -> Result<&'static str, Ap
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
+    // D22-T11: other engines read the done analysis from the record.
+    attome_core::change_feed::emit_named(
+        &mut tx,
+        "call_analysis",
+        analysis,
+        attome_core::ChangeOperation::Update,
+        super::signals::ANALYSIS_DONE_EVENT,
+    )
+    .await?;
     attome_db::tx::commit(tx).await?;
     Ok("done")
 }

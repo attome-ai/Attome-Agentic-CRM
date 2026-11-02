@@ -4,7 +4,9 @@
 pub mod extract;
 /// D22-T5: one analysis per finished transcript, over its redacted copy.
 pub mod job;
+/// D22-T9: nightly trend aggregates.
+/// D22-T11: the analysis-done event and competitors as trackers.
+pub mod signals;
 pub mod talk;
 pub mod trackers;
-/// D22-T9: nightly trend aggregates.
 pub mod trends;

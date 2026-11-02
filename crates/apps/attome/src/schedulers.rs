@@ -297,6 +297,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(7 * 24 * 60 * 60),
     );
+    // D22-T11: competitors followed as call trackers, every five minutes.
+    crate::jobs::spawn_callintel_competitors_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(5 * 60),
+    );
     // D22-T9: call trend aggregates, nightly.
     crate::jobs::spawn_callintel_aggregate_scheduler(
         db.clone(),

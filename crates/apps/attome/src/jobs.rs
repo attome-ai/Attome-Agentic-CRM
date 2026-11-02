@@ -3364,6 +3364,8 @@ const DEDUP_KEY_FULFILMENT_TRACKING: &str = "fulfilment-tracking";
 const DEDUP_KEY_FULFILMENT_CUSTOMER_UPDATES: &str = "fulfilment-customer-updates";
 /// D22-T9: the nightly call trend aggregates (a registered job type).
 const DEDUP_KEY_CALLINTEL_AGGREGATE: &str = "callintel-aggregate";
+/// D22-T11: competitors followed as call trackers (a registered job type).
+const DEDUP_KEY_CALLINTEL_COMPETITORS: &str = "callintel-competitors";
 /// G1-T4: the weekly quality review sample (a registered job type).
 const DEDUP_KEY_SERVICE_QUALITY_SAMPLE: &str = "service-quality-sample";
 /// F8-T9: the abandoned cart sweep (a registered job type).
@@ -3849,6 +3851,10 @@ pub const COMMERCE_ABANDONED_CART: attome_jobs::JobType =
 /// G1-T4: the weekly quality review sample.
 pub const SERVICE_QUALITY_SAMPLE: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_service::quality_review::JOB, 1);
+
+/// D22-T11: competitors followed as call trackers.
+pub const CALLINTEL_COMPETITORS: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_callintel::analysis::signals::JOB, 1);
 
 /// D22-T9: yesterday's call trend aggregates.
 pub const CALLINTEL_AGGREGATE: attome_jobs::JobType =
@@ -5341,6 +5347,27 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            CALLINTEL_COMPETITORS,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state
+                    .modules
+                    .load()
+                    .has(attome_modules::MODULE_CALLINTEL)
+                {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let written = attome_callintel::analysis::signals::drain(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if written > 0 {
+                    tracing::info!(written, "competitor trackers synced");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             CALLINTEL_AGGREGATE,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 if !state
@@ -6801,6 +6828,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == CALLINTEL_AGGREGATE.name => {
             DEDUP_KEY_CALLINTEL_AGGREGATE
         }
+        EngineJob::Registered(job) if job.name == CALLINTEL_COMPETITORS.name => {
+            DEDUP_KEY_CALLINTEL_COMPETITORS
+        }
         EngineJob::Registered(job) if job.name == SERVICE_QUALITY_SAMPLE.name => {
             DEDUP_KEY_SERVICE_QUALITY_SAMPLE
         }
@@ -7103,6 +7133,7 @@ pub const SCHEDULE_MODULES: &[(&str, &str)] = &[
     ("fulfilment-tracking", "fulfilment"),
     ("fulfilment-customer-updates", "fulfilment"),
     ("callintel-aggregate", "callintel"),
+    ("callintel-competitors", "callintel"),
     ("service-quality-sample", "service"),
     ("commerce-abandoned-cart", "sales"),
     ("revrec-rollforward", "ledger"),
@@ -8535,6 +8566,21 @@ pub fn spawn_service_quality_sample_scheduler(db: DbPool, interval: std::time::D
             "quality review sample",
         ),
         Err(error) => tracing::error!(%error, "quality review sample: not scheduled"),
+    }
+}
+
+/// D22-T11: every five minutes, competitors followed as call trackers.
+pub fn spawn_callintel_competitors_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(CALLINTEL_COMPETITORS.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_CALLINTEL_COMPETITORS,
+            "competitor trackers",
+        ),
+        Err(error) => tracing::error!(%error, "competitor trackers: not scheduled"),
     }
 }
 

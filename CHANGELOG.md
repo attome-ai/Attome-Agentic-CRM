@@ -14,6 +14,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Call analysis signals (D22-T11): a `callintel.analysis_done` change-feed event when an analysis is done,
+  and every tracked competitor followed as a call tracker.
 - Subscriptions (F3): `/api/v1/billing/subscriptions*` (create, read, amendments and their reversal, pause,
   resume, cancel), `/api/v1/billing/usage`, `/api/v1/billing/runs` and `/runs/preview`, and
   `/api/v1/billing/metrics/recurring`. See `docs/subscriptions.md`.
