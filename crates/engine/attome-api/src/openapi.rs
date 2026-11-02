@@ -82,6 +82,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         (crate::exit::openapi_fragment(), "core"),
         (crate::ownership_change::openapi_fragment(), "core"),
         (crate::derived_admin::openapi_fragment(), "core"),
+        (crate::extension_admin::openapi_fragment(), "core"),
         (crate::data_mapping_admin::openapi_fragment(), "core"),
         (crate::data_profile_admin::openapi_fragment(), "core"),
         (crate::migration::openapi_fragment(), "core"),

@@ -149,6 +149,8 @@ pub mod email_domains;
 mod email_webhooks;
 /// Z11-T12: expression validate and spec for editors and agents.
 pub mod expression_admin;
+/// Y10-T5: publishing, versioning and switching off extensions.
+pub mod extension_admin;
 /// `pub` only for the two re-exports below (`read_record`,
 /// `resolve_entity_public`), which `attome-ai` calls so a read action reuses
 /// this crate's own authorization path instead of growing a second one. Every

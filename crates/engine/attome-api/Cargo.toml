@@ -32,6 +32,7 @@ attome-integration.workspace  = true
 attome-marketing.workspace    = true
 attome-jobs.workspace         = true
 attome-metadata.workspace     = true
+attome-extension.workspace    = true
 attome-model.workspace        = true
 attome-metric.workspace       = true
 attome-modules.workspace      = true

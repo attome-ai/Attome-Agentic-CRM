@@ -254,6 +254,13 @@ impl EngineSystem {
                 )),
             )
             .merge(
+                // Y10-T5: extension versions and the kill switch.
+                crate::extension_admin::routes().layer(middleware::from_fn_with_state(
+                    self.state.clone(),
+                    attome_security::strict_authz::strict_authz,
+                )),
+            )
+            .merge(
                 // A26-T1: derived entity definitions.
                 crate::derived_admin::routes().layer(middleware::from_fn_with_state(
                     self.state.clone(),
