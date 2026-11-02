@@ -1,0 +1,37 @@
+# U1-T2: the Linux packages, .deb and .rpm, from one description (nfpm).
+# Built by .github/workflows/release.yml from the folder the release job
+# assembles in `package/`:
+#   VERSION=1.2.3 nfpm package --config packaging/linux/nfpm.yaml --packager deb --target .
+#   VERSION=1.2.3 nfpm package --config packaging/linux/nfpm.yaml --packager rpm --target .
+# The binary goes to /usr/bin/attome; the web app, packs and the example
+# configuration to /usr/share/attome. Nothing starts on install: `attome init`
+# sets the deployment up and installs the service when asked.
+name: attome
+arch: amd64
+platform: linux
+version: ${VERSION}
+version_schema: semver
+maintainer: Attome <info@attome.com>
+description: The agentic CRM platform, self-hosted from one binary.
+vendor: Attome
+homepage: https://attome.com
+license: AGPL-3.0-only
+contents:
+  - src: package/attome
+    dst: /usr/bin/attome
+    file_info:
+      mode: 0755
+  - src: package/web/
+    dst: /usr/share/attome/web/
+    type: tree
+  - src: package/packs/
+    dst: /usr/share/attome/packs/
+    type: tree
+  - src: package/config.example.json
+    dst: /usr/share/attome/config.example.json
+  - src: package/LICENSE
+    dst: /usr/share/doc/attome/LICENSE
+  - src: package/NOTICE
+    dst: /usr/share/doc/attome/NOTICE
+  - src: package/README.md
+    dst: /usr/share/doc/attome/README.md

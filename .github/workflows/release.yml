@@ -6,6 +6,11 @@ name: release
 # the `attome` binary and the built web app in `web/`, which `attome serve`
 # serves itself. Attached to the GitHub release of that tag with a SHA-256
 # file per archive.
+#
+# U1-T2: the same files also as a Windows installer (packaging/windows,
+# WiX; signed with Authenticode when the AUTHENTICODE_PFX secret is set,
+# AC7) with its winget manifests (packaging/winget), and as .deb and .rpm
+# packages for Linux (packaging/linux, nfpm).
 
 on:
   push:
@@ -71,6 +76,17 @@ jobs:
           cp -r packs package/packs
           tar -czf attome-linux-x86_64.tar.gz -C package .
           sha256sum attome-linux-x86_64.tar.gz > attome-linux-x86_64.tar.gz.sha256
+      - name: deb and rpm (Linux)
+        if: matrix.os == 'linux'
+        run: |
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.41.0
+          VERSION="${GITHUB_REF_NAME#v}"
+          case "$VERSION" in [0-9]*.[0-9]*.[0-9]*) ;; *) VERSION=0.0.0 ;; esac
+          export VERSION
+          "$(go env GOPATH)/bin/nfpm" package --config packaging/linux/nfpm.yaml --packager deb --target attome-linux-amd64.deb
+          "$(go env GOPATH)/bin/nfpm" package --config packaging/linux/nfpm.yaml --packager rpm --target attome-linux-x86_64.rpm
+          sha256sum attome-linux-amd64.deb > attome-linux-amd64.deb.sha256
+          sha256sum attome-linux-x86_64.rpm > attome-linux-x86_64.rpm.sha256
       - name: package (Windows)
         if: matrix.os == 'windows'
         shell: pwsh
@@ -81,10 +97,40 @@ jobs:
           Compress-Archive -Path package/* -DestinationPath attome-windows-x86_64.zip
           $hash = (Get-FileHash attome-windows-x86_64.zip -Algorithm SHA256).Hash.ToLower()
           "$hash  attome-windows-x86_64.zip" | Out-File -Encoding ascii attome-windows-x86_64.zip.sha256
+      - name: installer and winget manifests (Windows)
+        if: matrix.os == 'windows'
+        shell: pwsh
+        env:
+          AUTHENTICODE_PFX: ${{ secrets.AUTHENTICODE_PFX }}
+          AUTHENTICODE_PASSWORD: ${{ secrets.AUTHENTICODE_PASSWORD }}
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          $version = "$env:GITHUB_REF_NAME".TrimStart('v')
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { $version = '0.0.0' }
+          wix build packaging/windows/attome.wxs -arch x64 -d Version=$version -d SourceDir=package -o attome-windows-x86_64.msi
+          if ($env:AUTHENTICODE_PFX) {
+            $pfx = Join-Path $env:RUNNER_TEMP 'authenticode.pfx'
+            [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:AUTHENTICODE_PFX))
+            $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe |
+              Where-Object { $_.FullName -match 'x64' } | Select-Object -Last 1
+            & $signtool.FullName sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /f $pfx /p $env:AUTHENTICODE_PASSWORD attome-windows-x86_64.msi
+            if ($LASTEXITCODE -ne 0) { throw 'signing the MSI failed' }
+            Remove-Item $pfx
+          } else {
+            Write-Host '::warning::AUTHENTICODE_PFX is not set: the MSI is not signed (AC7-T5).'
+          }
+          $msiHash = (Get-FileHash attome-windows-x86_64.msi -Algorithm SHA256).Hash.ToLower()
+          "$msiHash  attome-windows-x86_64.msi" | Out-File -Encoding ascii attome-windows-x86_64.msi.sha256
+          $url = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:GITHUB_REF_NAME/attome-windows-x86_64.msi"
+          node packaging/winget/generate.mjs $version $url $msiHash winget
+          Compress-Archive -Path winget/* -DestinationPath attome-winget-manifests.zip
       - uses: actions/upload-artifact@v4
         with:
           name: attome-${{ matrix.os }}
-          path: attome-${{ matrix.os }}-x86_64.*
+          path: |
+            attome-${{ matrix.os }}-x86_64.*
+            attome-${{ matrix.os }}-amd64.*
+            attome-winget-manifests.zip
 
   publish:
     name: publish the release
@@ -103,3 +149,10 @@ jobs:
             attome-linux-x86_64.tar.gz.sha256
             attome-windows-x86_64.zip
             attome-windows-x86_64.zip.sha256
+            attome-windows-x86_64.msi
+            attome-windows-x86_64.msi.sha256
+            attome-winget-manifests.zip
+            attome-linux-amd64.deb
+            attome-linux-amd64.deb.sha256
+            attome-linux-x86_64.rpm
+            attome-linux-x86_64.rpm.sha256

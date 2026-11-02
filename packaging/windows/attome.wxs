@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  U1-T2: the Windows installer (WiX v5). Installs attome.exe, the built web
+  app and the packs into Program Files\Attome and adds that folder to the
+  system PATH. It starts nothing: `attome init` sets the deployment up and
+  installs the service when the operator asks for it.
+
+  Built by .github/workflows/release.yml:
+    wix build packaging/windows/attome.wxs -arch x64 -d Version=1.2.3 -d SourceDir=package -o attome-windows-x86_64.msi
+  `SourceDir` is the folder the release job assembles (attome.exe, web\,
+  packs\, LICENSE, NOTICE, README.md, config.example.json).
+
+  The UpgradeCode never changes: a newer MSI replaces an older one.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Attome"
+           Manufacturer="Attome"
+           Version="$(var.Version)"
+           UpgradeCode="e99d562c-4adf-4d18-af2c-94b3409354f3"
+           Scope="perMachine"
+           Compressed="yes">
+    <SummaryInformation Description="Attome, the agentic CRM platform" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Attome is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Attome" />
+    </StandardDirectory>
+
+    <Feature Id="Main" Title="Attome" Level="1">
+      <ComponentGroupRef Id="AttomeFiles" />
+      <ComponentRef Id="AttomePath" />
+    </Feature>
+  </Package>
+
+  <Fragment>
+    <!-- Everything the release job assembled, with its folders. -->
+    <ComponentGroup Id="AttomeFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(var.SourceDir)\**" />
+    </ComponentGroup>
+
+    <!-- The install folder on the system PATH, removed again on uninstall. -->
+    <Component Id="AttomePath" Directory="INSTALLFOLDER" Guid="5b1f8c2e-6d0a-4c47-9e57-2f0c1a7d3b61">
+      <RegistryValue Root="HKLM" Key="Software\Attome" Name="InstallPath" Type="string" Value="[INSTALLFOLDER]" KeyPath="yes" />
+      <Environment Id="AttomeOnPath" Name="PATH" Value="[INSTALLFOLDER]" Part="last" Action="set" System="yes" Permanent="no" />
+    </Component>
+  </Fragment>
+</Wix>

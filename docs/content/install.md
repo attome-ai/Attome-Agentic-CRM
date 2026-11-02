@@ -121,3 +121,18 @@ such a configuration too.
 
 `attome service install --dry-run` prints the steps without doing them. `attome sovereignty report`
 lists where copies of the data live and every outside destination the configuration names.
+
+## Packages
+
+Each release also ships as an operating system package, with the same files as the archive
+(U1-T2). None of them starts anything on install: run `attome init` afterwards, as with the archive.
+
+| System | File | Installs to |
+|---|---|---|
+| Windows | `attome-windows-x86_64.msi` (signed with Authenticode when the release has a certificate) | `C:\Program Files\Attome`, added to the system `PATH` |
+| Windows (winget) | `attome-winget-manifests.zip` holds the manifests submitted to winget as `Attome.Attome` | as the MSI |
+| Debian, Ubuntu | `attome-linux-amd64.deb` (`sudo apt install ./attome-linux-amd64.deb`) | `/usr/bin/attome`, `/usr/share/attome` |
+| RHEL, Fedora | `attome-linux-x86_64.rpm` (`sudo dnf install ./attome-linux-x86_64.rpm`) | `/usr/bin/attome`, `/usr/share/attome` |
+
+Each file has a `.sha256` beside it on the release page; check it before installing.
+
