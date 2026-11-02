@@ -386,9 +386,9 @@ fn validate_attribute_options(
                 "polymorphic.pair must name the entity attribute".into(),
             ));
         }
-        if poly.targets.is_empty() && poly.extends.is_none() {
+        if poly.targets.is_empty() && poly.extends.is_none() && !poly.any {
             return Err(AppError::Validation(
-                "polymorphic needs targets or extends".into(),
+                "polymorphic needs targets, extends or any".into(),
             ));
         }
         // A8-T2: a delete rule per target entity (or "*").

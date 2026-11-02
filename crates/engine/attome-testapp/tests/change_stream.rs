@@ -289,11 +289,23 @@ fn secret_attribute_never_in_payload() {
                 &reader.cookie,
                 Method::POST,
                 &format!("/api/v1/{entity}"),
-                Some(json!({ "code": "S1", "secret": "s3cr3t-value" })),
+                Some(json!({ "code": "S1" })),
             )
             .await;
         assert_eq!(status, StatusCode::CREATED, "{created}");
         let id = created["id"].clone();
+        // The reader may not write the sensitive field either; an
+        // administrator sets it on the reader's record.
+        let version = format!("\"{}\"", created["row_version"]);
+        let (status, patched) = app
+            .request_with(
+                Method::PATCH,
+                &format!("/api/v1/{entity}/{}", id.as_str().unwrap_or_default()),
+                &[("if-match", version.as_str())],
+                Some(json!({ "secret": "s3cr3t-value" })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{patched}");
 
         let mut delta = Value::Null;
         for _ in 0..50 {
