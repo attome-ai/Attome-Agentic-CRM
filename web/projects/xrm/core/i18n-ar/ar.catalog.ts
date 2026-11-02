@@ -650,6 +650,7 @@ export const xrmAr = {
     preview: 'معاينة', save: 'حفظ', new: 'جديد', edit: 'تعديل', delete: 'حذف', resume: 'استئناف',
     actions: 'الإجراءات', none: 'لم يُعرَّف أي كيان مشتق بعد.',
     act: 'إجراء على الأعضاء', reassignTo: 'إسناد كل الأعضاء إلى الفريق', teamName: 'اسم الفريق',
+    startFlow: 'تشغيل هذا التدفق على كل الأعضاء', flow: 'التدفق',
     run: 'تشغيل', cancel: 'إلغاء',
     matching: '{count, plural, zero {لا يطابق أي سجل الآن} one {يطابق سجل واحد الآن} two {يطابق سجلان الآن} few {يطابق # سجلات الآن} many {يطابق # سجلًا الآن} other {يطابق # سجل الآن}}',
     entering: '{count, plural, zero {لن يدخل أي سجل} one {سيدخل سجل واحد} two {سيدخل سجلان} few {ستدخل # سجلات} many {سيدخل # سجلًا} other {سيدخل # سجل}}',

@@ -726,6 +726,7 @@ export const xrmEn = {
     preview: 'Preview', save: 'Save', new: 'New', edit: 'Edit', delete: 'Delete', resume: 'Resume',
     actions: 'Actions', none: 'No derived entity is defined yet.',
     act: 'Act on members', reassignTo: 'Reassign every member to the team', teamName: 'Team name',
+    startFlow: 'Start this flow on every member', flow: 'Flow',
     run: 'Run', cancel: 'Cancel',
     matching: '{count, plural, one {# record matches now} other {# records match now}}',
     entering: '{count, plural, one {# would enter} other {# would enter}}',

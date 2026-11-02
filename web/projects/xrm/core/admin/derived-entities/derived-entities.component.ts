@@ -10,6 +10,14 @@ export interface DerivedEntityDef {
   mode: string;
 }
 
+/** A workflow as `/api/v1/workflow/definitions` lists it. */
+export interface FlowItem {
+  logicalname: string;
+  name: string;
+  is_active: boolean;
+  published_version: number | null;
+}
+
 /** What a condition selects (`POST .../preview`). */
 export interface DerivedPreview {
   matching: number;
@@ -102,7 +110,7 @@ export interface DerivedPreview {
                 <td>{{ (d.mode === 'stored' ? 'derivedEntitiesPage.modeStored' : 'derivedEntitiesPage.modeLive') | translate }}</td>
                 <td class="de-actions">
                   <button type="button" (click)="edit(d)">{{ 'derivedEntitiesPage.edit' | translate }}</button>
-                  <button type="button" (click)="acting.set(d.name)">{{ 'derivedEntitiesPage.act' | translate }}</button>
+                  <button type="button" (click)="openAct(d.name)">{{ 'derivedEntitiesPage.act' | translate }}</button>
                   @if (d.mode === 'stored') {
                     <button type="button" (click)="resume(d)" [disabled]="busy()">{{ 'derivedEntitiesPage.resume' | translate }}</button>
                   }
@@ -117,6 +125,15 @@ export interface DerivedPreview {
                            [placeholder]="'derivedEntitiesPage.teamName' | translate" />
                     <button type="submit" [disabled]="busy()">{{ 'derivedEntitiesPage.run' | translate }}</button>
                     <button type="button" (click)="acting.set(null)">{{ 'derivedEntitiesPage.cancel' | translate }}</button>
+                  </form>
+                  <form class="de-act" data-testid="de-flow" (submit)="$event.preventDefault(); startFlow(d, flow.value)">
+                    <span>{{ 'derivedEntitiesPage.startFlow' | translate }}</span>
+                    <select #flow [attr.aria-label]="'derivedEntitiesPage.flow' | translate">
+                      @for (f of flows(); track f.logicalname) {
+                        <option [value]="f.logicalname">{{ f.name }}</option>
+                      }
+                    </select>
+                    <button type="submit" [disabled]="busy() || !flows().length">{{ 'derivedEntitiesPage.run' | translate }}</button>
                   </form>
                 </td></tr>
               }
@@ -159,6 +176,8 @@ export class DerivedEntitiesComponent implements OnInit {
   readonly busy = signal(false);
   /** The derived entity whose members the act form is open for. */
   readonly acting = signal<string | null>(null);
+  /** The published, active flows a member run can start. */
+  readonly flows = signal<FlowItem[]>([]);
 
   ngOnInit(): void {
     this.load();
@@ -236,6 +255,38 @@ export class DerivedEntitiesComponent implements OnInit {
         this.busy.set(false);
         this.acting.set(null);
         this.notice.set(`${def.name}: ${run.operation.status} (${run.operation.rows_done})`);
+      },
+      error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
+    });
+  }
+
+  /** Opens the act form, loading the published flows the first time. */
+  openAct(name: string): void {
+    this.acting.set(name);
+    if (this.flows().length) return;
+    this.sdk.getAllPages<FlowItem>('/api/v1/workflow/definitions').subscribe({
+      next: items => this.flows.set(items.filter(f => f.is_active && f.published_version != null)),
+      error: (e: ApiError) => this.error.set(e.message),
+    });
+  }
+
+  /**
+   * Starts a published flow once per current member
+   * (`POST /api/v1/admin/derived-entities/{name}/start-flow`); emailing the
+   * members is such a flow's email step.
+   */
+  startFlow(def: DerivedEntityDef, definition: string): void {
+    if (!definition) return;
+    this.busy.set(true);
+    this.error.set(null);
+    this.sdk.post<{ started: number }>(
+      `/api/v1/admin/derived-entities/${encodeURIComponent(def.name)}/start-flow`,
+      { body: { definition } },
+    ).subscribe({
+      next: r => {
+        this.busy.set(false);
+        this.acting.set(null);
+        this.notice.set(`${def.name}: ${definition} × ${r.started}`);
       },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });

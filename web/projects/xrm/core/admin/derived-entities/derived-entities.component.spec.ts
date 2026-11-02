@@ -12,14 +12,20 @@ const ITEMS: DerivedEntityDef[] = [
   { name: 'vip_account', anchor: 'account', condition: 'tier == "vip"', mode: 'live' },
 ];
 
+const FLOWS = [
+  { logicalname: 'welcome_mail', name: 'Welcome mail', is_active: true, published_version: 2 },
+  { logicalname: 'draft_flow', name: 'Draft', is_active: true, published_version: null },
+];
+
 const PREVIEW = { matching: 42, entering: 5, leaving: 2, sample: [{ id: 'd1', name: 'Tower deal' }] };
 
 describe('DerivedEntitiesComponent (A26-T5)', () => {
   function create() {
-    const getAllPages = vi.fn((_: string) => of(ITEMS));
+    const getAllPages = vi.fn((path: string) => of<unknown[]>(path.startsWith('/api/v1/workflow') ? FLOWS : ITEMS));
     const post = vi.fn((path: string, _body: unknown) =>
       of(path.endsWith('/preview') ? PREVIEW
         : path.endsWith('/mass') ? { operation: { id: 'op1', status: 'queued', rows_done: 0 } }
+        : path.endsWith('/start-flow') ? { started: 7 }
         : { entered: 3, left: 1 }));
     const put = vi.fn((_: string, _body: unknown) => of(ITEMS[0]));
     const del = vi.fn(() => of(undefined));
@@ -96,5 +102,23 @@ describe('DerivedEntitiesComponent (A26-T5)', () => {
     });
     expect(c.acting()).toBeNull();
     expect(c.notice()).toContain('queued');
+  });
+
+  it('starts a published flow on every member', () => {
+    const { fixture, post, getAllPages } = create();
+    const c = fixture.componentInstance;
+    c.openAct('big_open_deal');
+    fixture.detectChanges();
+    expect(getAllPages).toHaveBeenCalledWith('/api/v1/workflow/definitions');
+    // Only published flows are offered.
+    const options = fixture.nativeElement.querySelectorAll('[data-testid="de-flow"] option');
+    expect(options.length).toBe(1);
+    expect(options[0].textContent).toContain('Welcome mail');
+    c.startFlow(ITEMS[0], 'welcome_mail');
+    expect(post).toHaveBeenCalledWith('/api/v1/admin/derived-entities/big_open_deal/start-flow', {
+      definition: 'welcome_mail',
+    });
+    expect(c.acting()).toBeNull();
+    expect(c.notice()).toContain('7');
   });
 });
