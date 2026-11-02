@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Commerce records (F8-T1, sales pack changeset `0030`): `shop_connection` and `shop_sync_map` (unique by
+  connection, kind and source id), `promotion`, `coupon` (unique code) and `coupon_redemption` (once per
+  coupon and order), `shipping_zone`, `shipping_rate`, `product_review` and `risky_order_review`, with
+  Arabic labels; promotions, coupons, shipping rates and products are audited. No card data is stored.
 - Call extraction (D22-T6): after a call is analysed, one model call over the redacted transcript proposes
   its questions, objections, next steps, price mentions and scorecard answers (proposed only), each tied to
   a moment the transcript has; within the AI budget; the analysis keeps the model's id.

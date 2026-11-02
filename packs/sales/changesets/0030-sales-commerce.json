@@ -1,0 +1,2462 @@
+{
+  "author": "packs",
+  "checksum": "sha256:6dc5490529c76274cb1f05580536234a480dae9249e0e4fb0a4a345c84822548",
+  "closed_at": "2026-11-02T00:00:00Z",
+  "description": "Commerce (F8-T1): shop connections and their sync map, promotions, coupons and their redemptions, shipping zones and rates, product reviews and risky order reviews. No card number or wallet token is stored; payments stay with the gateway (F5).",
+  "format": "attome-changeset/v1",
+  "id": "01a19c40-0000-7f08-8000-000000000030",
+  "layer": "product",
+  "name": "sales-commerce",
+  "opened_at": "2026-11-02T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Shop Connection",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "shop_connection",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "shop_connection"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "shop_connection",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Platform",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "platform",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "salla",
+              "zid",
+              "shopify",
+              "woocommerce"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "shop_connection",
+        "field": "platform"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Credential",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "integration_credential_ref",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "shop_connection",
+        "field": "integration_credential_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Sync orders",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "sync_orders",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "shop_connection",
+        "field": "sync_orders"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Sync customers",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "sync_customers",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "shop_connection",
+        "field": "sync_customers"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Product direction",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "product_direction",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "shop_to_attome",
+              "attome_to_shop",
+              "none"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "shop_connection",
+        "field": "product_direction"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Stock direction",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "stock_direction",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "shop_to_attome",
+              "attome_to_shop",
+              "none"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "shop_connection",
+        "field": "stock_direction"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Last sync",
+          "field_type": "date_time",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "last_sync_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "shop_connection",
+        "field": "last_sync_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "active",
+              "paused",
+              "error"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "shop_connection",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ربط متجر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "locale": "ar",
+        "object_key": "shop_connection",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "locale": "ar",
+        "object_key": "shop_connection.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المنصة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "locale": "ar",
+        "object_key": "shop_connection.platform",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بيانات الاعتماد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "locale": "ar",
+        "object_key": "shop_connection.integration_credential_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مزامنة الطلبات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "locale": "ar",
+        "object_key": "shop_connection.sync_orders",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مزامنة العملاء"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "locale": "ar",
+        "object_key": "shop_connection.sync_customers",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "اتجاه المنتجات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "locale": "ar",
+        "object_key": "shop_connection.product_direction",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "اتجاه المخزون"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "locale": "ar",
+        "object_key": "shop_connection.stock_direction",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "آخر مزامنة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "locale": "ar",
+        "object_key": "shop_connection.last_sync_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "locale": "ar",
+        "object_key": "shop_connection.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Shop Sync Map",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "shop_sync_map",
+          "primary_name_attribute": "source_id"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "shop_sync_map"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Shop connection",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "shop_connection_ref",
+          "lookup_entity": "shop_connection",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "shop_sync_map",
+        "field": "shop_connection_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Source kind",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "source_kind",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "order",
+              "customer",
+              "product"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "shop_sync_map",
+        "field": "source_kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Source id",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "source_id",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "shop_sync_map",
+        "field": "source_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Target entity",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "target_entity",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "shop_sync_map",
+        "field": "target_entity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Target id",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "target_id",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "shop_sync_map",
+        "field": "target_id"
+      }
+    },
+    {
+      "args": {
+        "changed": [
+          "business_key"
+        ],
+        "definition": {
+          "business_key": [
+            "shop_connection_ref",
+            "source_kind",
+            "source_id"
+          ],
+          "category": "Other",
+          "display_name": "Shop Sync Map",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "shop_sync_map",
+          "primary_name_attribute": "source_id"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "shop_sync_map"
+      }
+    },
+    {
+      "args": {
+        "display_name": "خريطة مزامنة المتجر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "locale": "ar",
+        "object_key": "shop_sync_map",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ربط المتجر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "locale": "ar",
+        "object_key": "shop_sync_map.shop_connection_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نوع المصدر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "locale": "ar",
+        "object_key": "shop_sync_map.source_kind",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "معرّف المصدر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "locale": "ar",
+        "object_key": "shop_sync_map.source_id",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الكيان المستهدف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "locale": "ar",
+        "object_key": "shop_sync_map.target_entity",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المعرّف المستهدف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "locale": "ar",
+        "object_key": "shop_sync_map.target_id",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Promotion",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "promotion",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "promotion"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "promotion",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Kind",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "kind",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "percent",
+              "amount",
+              "buy_x_get_y",
+              "free_shipping",
+              "bundle"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "promotion",
+        "field": "kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Value",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "value",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "promotion",
+        "field": "value"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Starts on",
+          "field_type": "date_time",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "starts_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "promotion",
+        "field": "starts_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Ends on",
+          "field_type": "date_time",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "ends_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "promotion",
+        "field": "ends_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Eligibility rule",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "eligibility_rule",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "promotion",
+        "field": "eligibility_rule"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Maximum uses",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "max_uses",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "promotion",
+        "field": "max_uses"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Maximum uses per customer",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "max_uses_per_customer",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "promotion",
+        "field": "max_uses_per_customer"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Enabled",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_enabled",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "promotion",
+        "field": "is_enabled"
+      }
+    },
+    {
+      "args": {
+        "display_name": "عرض ترويجي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "locale": "ar",
+        "object_key": "promotion",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "locale": "ar",
+        "object_key": "promotion.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "النوع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "locale": "ar",
+        "object_key": "promotion.kind",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "القيمة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "locale": "ar",
+        "object_key": "promotion.value",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "يبدأ في"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "locale": "ar",
+        "object_key": "promotion.starts_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ينتهي في"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "locale": "ar",
+        "object_key": "promotion.ends_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "شرط الأهلية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "locale": "ar",
+        "object_key": "promotion.eligibility_rule",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أقصى عدد للاستخدام"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "locale": "ar",
+        "object_key": "promotion.max_uses",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أقصى استخدام لكل عميل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "locale": "ar",
+        "object_key": "promotion.max_uses_per_customer",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مفعّل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "locale": "ar",
+        "object_key": "promotion.is_enabled",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Coupon",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "coupon",
+          "primary_name_attribute": "code"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "entity": "coupon"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Code",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "code",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "entity": "coupon",
+        "field": "code"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Promotion",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "promotion_ref",
+          "lookup_entity": "promotion",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "entity": "coupon",
+        "field": "promotion_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Uses",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "uses_count",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "entity": "coupon",
+        "field": "uses_count"
+      }
+    },
+    {
+      "args": {
+        "changed": [
+          "business_key"
+        ],
+        "definition": {
+          "business_key": [
+            "code"
+          ],
+          "category": "Other",
+          "display_name": "Coupon",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "coupon",
+          "primary_name_attribute": "code"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "entity": "coupon"
+      }
+    },
+    {
+      "args": {
+        "display_name": "قسيمة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "locale": "ar",
+        "object_key": "coupon",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الرمز"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "locale": "ar",
+        "object_key": "coupon.code",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "العرض الترويجي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "locale": "ar",
+        "object_key": "coupon.promotion_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مرات الاستخدام"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "locale": "ar",
+        "object_key": "coupon.uses_count",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Coupon Redemption",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "coupon_redemption"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "entity": "coupon_redemption"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Coupon",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "coupon_ref",
+          "lookup_entity": "coupon",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "entity": "coupon_redemption",
+        "field": "coupon_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Order",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "order_ref",
+          "lookup_entity": "order",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "entity": "coupon_redemption",
+        "field": "order_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Contact",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "contact_ref",
+          "lookup_entity": "contact",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "entity": "coupon_redemption",
+        "field": "contact_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Redeemed at",
+          "field_type": "date_time",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "redeemed_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "entity": "coupon_redemption",
+        "field": "redeemed_at"
+      }
+    },
+    {
+      "args": {
+        "changed": [
+          "business_key"
+        ],
+        "definition": {
+          "business_key": [
+            "coupon_ref",
+            "order_ref"
+          ],
+          "category": "Other",
+          "display_name": "Coupon Redemption",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "coupon_redemption"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "entity": "coupon_redemption"
+      }
+    },
+    {
+      "args": {
+        "display_name": "استخدام قسيمة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "locale": "ar",
+        "object_key": "coupon_redemption",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "القسيمة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "locale": "ar",
+        "object_key": "coupon_redemption.coupon_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الطلب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "locale": "ar",
+        "object_key": "coupon_redemption.order_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "جهة الاتصال"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "locale": "ar",
+        "object_key": "coupon_redemption.contact_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "وقت الاستخدام"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "locale": "ar",
+        "object_key": "coupon_redemption.redeemed_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Shipping Zone",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "shipping_zone",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "entity": "shipping_zone"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "entity": "shipping_zone",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Countries",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "countries",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "entity": "shipping_zone",
+        "field": "countries"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Cities",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "cities",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "entity": "shipping_zone",
+        "field": "cities"
+      }
+    },
+    {
+      "args": {
+        "display_name": "منطقة شحن"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "locale": "ar",
+        "object_key": "shipping_zone",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "locale": "ar",
+        "object_key": "shipping_zone.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الدول"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 80,
+      "target": {
+        "locale": "ar",
+        "object_key": "shipping_zone.countries",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المدن"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 81,
+      "target": {
+        "locale": "ar",
+        "object_key": "shipping_zone.cities",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Shipping Rate",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "shipping_rate"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 82,
+      "target": {
+        "entity": "shipping_rate"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Shipping zone",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "shipping_zone_ref",
+          "lookup_entity": "shipping_zone",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 83,
+      "target": {
+        "entity": "shipping_rate",
+        "field": "shipping_zone_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Method",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "method",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "flat",
+              "by_weight",
+              "free_over",
+              "carrier_live"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 84,
+      "target": {
+        "entity": "shipping_rate",
+        "field": "method"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Amount",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 85,
+      "target": {
+        "entity": "shipping_rate",
+        "field": "amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Minimum weight",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "min_weight",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 86,
+      "target": {
+        "entity": "shipping_rate",
+        "field": "min_weight"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Maximum weight",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "max_weight",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 87,
+      "target": {
+        "entity": "shipping_rate",
+        "field": "max_weight"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Free over",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "free_over_amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 88,
+      "target": {
+        "entity": "shipping_rate",
+        "field": "free_over_amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Cash on delivery fee",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "cod_fee",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 89,
+      "target": {
+        "entity": "shipping_rate",
+        "field": "cod_fee"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سعر شحن"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 90,
+      "target": {
+        "locale": "ar",
+        "object_key": "shipping_rate",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "منطقة الشحن"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 91,
+      "target": {
+        "locale": "ar",
+        "object_key": "shipping_rate.shipping_zone_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الطريقة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 92,
+      "target": {
+        "locale": "ar",
+        "object_key": "shipping_rate.method",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المبلغ"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 93,
+      "target": {
+        "locale": "ar",
+        "object_key": "shipping_rate.amount",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أدنى وزن"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 94,
+      "target": {
+        "locale": "ar",
+        "object_key": "shipping_rate.min_weight",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أقصى وزن"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 95,
+      "target": {
+        "locale": "ar",
+        "object_key": "shipping_rate.max_weight",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مجاني فوق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 96,
+      "target": {
+        "locale": "ar",
+        "object_key": "shipping_rate.free_over_amount",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رسوم الدفع عند الاستلام"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 97,
+      "target": {
+        "locale": "ar",
+        "object_key": "shipping_rate.cod_fee",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Product Review",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "product_review"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 98,
+      "target": {
+        "entity": "product_review"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Product",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "product_ref",
+          "lookup_entity": "product",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 99,
+      "target": {
+        "entity": "product_review",
+        "field": "product_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Contact",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "contact_ref",
+          "lookup_entity": "contact",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 100,
+      "target": {
+        "entity": "product_review",
+        "field": "contact_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Order",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "order_ref",
+          "lookup_entity": "order",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 101,
+      "target": {
+        "entity": "product_review",
+        "field": "order_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Rating",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "rating",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 102,
+      "target": {
+        "entity": "product_review",
+        "field": "rating"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Review",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "body",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 103,
+      "target": {
+        "entity": "product_review",
+        "field": "body"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "pending",
+              "published",
+              "held",
+              "rejected"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 104,
+      "target": {
+        "entity": "product_review",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Moderation reason",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "moderation_reason",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 105,
+      "target": {
+        "entity": "product_review",
+        "field": "moderation_reason"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تقييم منتج"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 106,
+      "target": {
+        "locale": "ar",
+        "object_key": "product_review",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المنتج"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 107,
+      "target": {
+        "locale": "ar",
+        "object_key": "product_review.product_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "جهة الاتصال"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 108,
+      "target": {
+        "locale": "ar",
+        "object_key": "product_review.contact_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الطلب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 109,
+      "target": {
+        "locale": "ar",
+        "object_key": "product_review.order_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التقييم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 110,
+      "target": {
+        "locale": "ar",
+        "object_key": "product_review.rating",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المراجعة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 111,
+      "target": {
+        "locale": "ar",
+        "object_key": "product_review.body",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 112,
+      "target": {
+        "locale": "ar",
+        "object_key": "product_review.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سبب الإشراف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 113,
+      "target": {
+        "locale": "ar",
+        "object_key": "product_review.moderation_reason",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Risky Order Review",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "risky_order_review"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 114,
+      "target": {
+        "entity": "risky_order_review"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Order",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "order_ref",
+          "lookup_entity": "order",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 115,
+      "target": {
+        "entity": "risky_order_review",
+        "field": "order_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reasons",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reasons",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 116,
+      "target": {
+        "entity": "risky_order_review",
+        "field": "reasons"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "open",
+              "released",
+              "cancelled"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 117,
+      "target": {
+        "entity": "risky_order_review",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Decided by",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "decided_by",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 118,
+      "target": {
+        "entity": "risky_order_review",
+        "field": "decided_by"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مراجعة طلب عالي المخاطر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 119,
+      "target": {
+        "locale": "ar",
+        "object_key": "risky_order_review",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الطلب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 120,
+      "target": {
+        "locale": "ar",
+        "object_key": "risky_order_review.order_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الأسباب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 121,
+      "target": {
+        "locale": "ar",
+        "object_key": "risky_order_review.reasons",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 122,
+      "target": {
+        "locale": "ar",
+        "object_key": "risky_order_review.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "قرّره"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 123,
+      "target": {
+        "locale": "ar",
+        "object_key": "risky_order_review.decided_by",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "changed": [
+          "is_audited"
+        ],
+        "definition": {
+          "category": "Other",
+          "display_name": "Product",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "product",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 124,
+      "target": {
+        "entity": "product"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 30,
+  "title": "Pack: commerce records"
+}
