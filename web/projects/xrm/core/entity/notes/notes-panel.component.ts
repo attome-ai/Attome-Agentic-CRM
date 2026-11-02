@@ -10,6 +10,7 @@ import {
   ApiError, ApiService, AuthService, MentionCandidate, MentionPickerComponent, MentionSearch, TranslatePipe,
 } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
+import { NativeService } from '@attome/base/native';
 import { EntityService } from '../services/entity.service';
 import { FileUploadService } from '../field/file-upload.service';
 import { UploadPipeline } from '../field/upload-pipeline';
@@ -668,6 +669,56 @@ export class NotesPanelComponent implements OnInit {
   /** The icon class of a toolbar mark. */
   markIcon(mark: NoteMark): string {
     return { bold: 'las la-bold', italic: 'las la-italic', code: 'las la-code', list: 'las la-list-ul', quote: 'las la-comment-dots' }[mark];
+  }
+
+  // B17-T7 — a photo or a voice note from the device, attached like any file.
+  private readonly native = inject(NativeService);
+  /** Which composer is recording a voice note, if any. */
+  readonly recordingFor = signal<'note' | 'reply' | null>(null);
+  private recorder: MediaRecorder | null = null;
+
+  /** Whether this browser or phone can record a voice note. */
+  canRecordVoice(): boolean {
+    return typeof MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
+  }
+
+  /** Takes a photo (the phone's camera, else the file picker) and attaches it. */
+  async takePhoto(which: 'note' | 'reply'): Promise<void> {
+    const photo = await this.native.takePhoto();
+    if (photo?.file) {
+      this.addFiles(which, [photo.file]);
+    } else if (photo?.dataUrl) {
+      const blob = await (await fetch(photo.dataUrl)).blob();
+      const type = blob.type || 'image/jpeg';
+      this.addFiles(which, [new File([blob], `photo-${Date.now()}.${type.includes('png') ? 'png' : 'jpg'}`, { type })]);
+    }
+    this.cdr.markForCheck();
+  }
+
+  /** Starts recording a voice note, or stops and attaches the one being recorded. */
+  async toggleVoiceNote(which: 'note' | 'reply'): Promise<void> {
+    if (this.recorder) {
+      this.recorder.stop();
+      return;
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const type = MediaRecorder.isTypeSupported?.('audio/webm') ? 'audio/webm' : 'audio/mp4';
+    const recorder = new MediaRecorder(stream, { mimeType: type });
+    const chunks: Blob[] = [];
+    recorder.addEventListener('dataavailable', event => {
+      if (event.data.size > 0) chunks.push(event.data);
+    });
+    recorder.addEventListener('stop', () => {
+      stream.getTracks().forEach(track => track.stop());
+      const extension = type === 'audio/webm' ? 'webm' : 'm4a';
+      this.addFiles(which, [new File(chunks, `voice-note-${Date.now()}.${extension}`, { type })]);
+      this.recorder = null;
+      this.recordingFor.set(null);
+      this.cdr.markForCheck();
+    });
+    this.recorder = recorder;
+    this.recordingFor.set(which);
+    recorder.start();
   }
 
   private addFiles(which: 'note' | 'reply', files: File[]): void {

@@ -1034,3 +1034,29 @@
         max-height: 220px;
       }
     }
+
+/* B17-T7: device capture buttons under the dropzone. */
+.xnp-capture {
+  display: flex;
+  gap: 8px;
+  margin-block-start: 8px;
+}
+
+.xnp-capture-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-block: 6px;
+  padding-inline: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.xnp-capture-btn[aria-pressed='true'] {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+

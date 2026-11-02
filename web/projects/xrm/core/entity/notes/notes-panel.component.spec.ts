@@ -232,6 +232,41 @@ describe('NotesPanelComponent', () => {
     };
     const file = () => new File(['hello'], 'contract.pdf', { type: 'application/pdf' });
 
+    it('voice note uploads through pipeline', async () => {
+      const run = vi.fn().mockResolvedValue({ kind: 'clean', finalKey: 'note/note-2/files/voice' });
+      stubPipeline(run);
+      entityService.create.mockReturnValue(of({ id: 'note-2', row_version: 3 }));
+      class FakeRecorder extends EventTarget {
+        static isTypeSupported = () => true;
+        start = vi.fn();
+        stop = (): void => {
+          const data = new Event('dataavailable') as Event & { data: Blob };
+          data.data = new Blob(['voice'], { type: 'audio/webm' });
+          this.dispatchEvent(data);
+          this.dispatchEvent(new Event('stop'));
+        };
+      }
+      vi.stubGlobal('MediaRecorder', FakeRecorder);
+      Object.defineProperty(navigator, 'mediaDevices', {
+        configurable: true,
+        value: { getUserMedia: vi.fn(async () => ({ getTracks: () => [] })) },
+      });
+
+      component.startCreateNote();
+      component.formNoteTitle = 'Visit';
+      component.formNoteText = 'Spoke on site';
+      await component.toggleVoiceNote('note');
+      expect(component.recordingFor()).toBe('note');
+      await component.toggleVoiceNote('note');
+      expect(component.pendingFiles()[0].type).toBe('audio/webm');
+      component.saveFormNote();
+
+      await vi.waitFor(() => expect(run).toHaveBeenCalled());
+      expect(run).toHaveBeenCalledWith(
+        { entityName: 'note', recordId: 'note-2', fieldName: 'files' }, expect.any(File));
+      vi.unstubAllGlobals();
+    });
+
     it("uploads a new note's files against the created note and stores their keys", async () => {
       const run = vi.fn().mockResolvedValue({ kind: 'clean', finalKey: 'note/note-2/files/k1' });
       stubPipeline(run);

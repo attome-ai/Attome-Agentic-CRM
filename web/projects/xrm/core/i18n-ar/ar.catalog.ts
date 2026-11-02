@@ -1603,6 +1603,7 @@ export const xrmAr = {
   },
   notes: {
     format: 'التنسيق', dropHint: 'انقر للرفع، أو اسحب الملفات إلى هنا أو الصقها في النص',
+    takePhoto: 'التقاط صورة', voiceNote: 'ملاحظة صوتية', stopRecording: 'إيقاف وإرفاق',
     dropKinds: 'صور وملفات PDF ومستندات وأرشيفات',
     marks: { bold: 'غامق', italic: 'مائل', code: 'رمز', list: 'قائمة', quote: 'اقتباس' },
     thread: {
