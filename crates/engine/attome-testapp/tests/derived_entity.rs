@@ -417,3 +417,124 @@ fn derived_refresh_fills_and_heals_stored_membership() {
         assert!(again.is_empty(), "{again:?}");
     });
 }
+
+// feature: A26
+// op: preview_derived_entity
+// op: explain_derived_membership
+// op: derived_entity_trend
+#[test]
+fn derived_explain_preview_and_trend() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let dir =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../packs/crm/changesets");
+        let mut files: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.path())
+            .collect();
+        files.sort();
+        for file in &files {
+            let value: Value =
+                serde_json::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
+            attome_api::changeset::boot::apply_pack_document(&app.state, &value)
+                .await
+                .unwrap_or_else(|e| panic!("{}: {e}", file.display()));
+        }
+        let prefix = format!("Explain {}", Uuid::now_v7().simple());
+        let mut ids = Vec::new();
+        for label in [
+            format!("{prefix} A"),
+            format!("{prefix} B"),
+            "Other".to_owned(),
+        ] {
+            let id: Uuid = sqlx::query_scalar(
+                "INSERT INTO account (name, owner_ref, owner_type) VALUES ($1, $2, 0) RETURNING id",
+            )
+            .bind(&label)
+            .bind(app.admin.id)
+            .fetch_one(app.db())
+            .await
+            .unwrap();
+            ids.push(id);
+        }
+        let condition = format!("startswith(name, \"{prefix}\")");
+
+        // Preview with nothing saved: two match, both would enter.
+        let (status, body) = app
+            .request(
+                Method::POST,
+                "/api/v1/admin/derived-entities/preview",
+                Some(json!({ "anchor": "account", "condition": condition })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["matching"], 2);
+        assert_eq!(body["entering"], 2);
+        assert!(body["leaving"].is_null());
+        assert_eq!(body["sample"].as_array().unwrap().len(), 2);
+
+        let name = format!("dv_ex_{}", &Uuid::now_v7().simple().to_string()[24..]);
+        let (status, body) = app
+            .request(
+                Method::PUT,
+                &format!("/api/v1/admin/derived-entities/{name}"),
+                Some(json!({ "anchor": "account", "condition": condition })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        // Narrowing it to A: none enter, one leaves.
+        let (status, body) = app
+            .request(
+                Method::POST,
+                "/api/v1/admin/derived-entities/preview",
+                Some(json!({
+                    "name": name,
+                    "anchor": "account",
+                    "condition": format!("name == \"{prefix} A\""),
+                })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["matching"], 1);
+        assert_eq!(body["entering"], 0);
+        assert_eq!(body["leaving"], 1);
+
+        // Explain: a member, and a record that is not one.
+        let (status, body) = app
+            .request(
+                Method::GET,
+                &format!("/api/v1/derived-entities/{name}/explain/{}", ids[0]),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["member"], true);
+        assert_eq!(body["parts"][0]["holds"], true);
+        assert_eq!(body["parts"][0]["values"]["name"], format!("{prefix} A"));
+        let (status, body) = app
+            .request(
+                Method::GET,
+                &format!("/api/v1/derived-entities/{name}/explain/{}", ids[2]),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["member"], false);
+        assert_eq!(body["parts"][0]["holds"], false);
+        assert_eq!(body["parts"][0]["values"]["name"], "Other");
+
+        // A live derived entity's trend is this week's count.
+        let (status, body) = app
+            .request(
+                Method::GET,
+                &format!("/api/v1/admin/derived-entities/{name}/trend"),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["items"][0]["members"], 2);
+    });
+}

@@ -536,6 +536,342 @@ pub async fn refresh(
     Ok(total)
 }
 
+// ── A26-T4: preview, explain, trend ───────────────────────────────────────
+
+/// How long a preview or explanation may run.
+const READ_TIMEOUT: &str = "SET LOCAL statement_timeout = '30s'";
+/// Members a preview shows.
+pub const PREVIEW_SAMPLE: i64 = 20;
+/// The most weeks a trend covers.
+pub const MAX_TREND_WEEKS: i64 = 104;
+
+/// The parts of a condition joined by `and` at its top, in order: each is
+/// explained on its own. Pure.
+pub fn condition_parts(expr: &attome_rules::Expr) -> Vec<&attome_rules::Expr> {
+    match expr {
+        attome_rules::Expr::Binary {
+            op: attome_rules::BinaryOp::And,
+            lhs,
+            rhs,
+        } => {
+            let mut parts = condition_parts(lhs);
+            parts.extend(condition_parts(rhs));
+            parts
+        }
+        other => vec![other],
+    }
+}
+
+/// The anchor's own fields `expr` reads, in name order. Pure.
+pub fn fields_read(expr: &attome_rules::Expr) -> std::collections::BTreeSet<String> {
+    fn walk(expr: &attome_rules::Expr, out: &mut std::collections::BTreeSet<String>) {
+        use attome_rules::Expr;
+        match expr {
+            Expr::FieldRef(field) if field.hop.is_none() => {
+                out.insert(field.base.clone());
+            }
+            Expr::ListLit(items) | Expr::Call { args: items, .. } => {
+                items.iter().for_each(|e| walk(e, out));
+            }
+            Expr::Unary { expr, .. } => walk(expr, out),
+            Expr::Binary { lhs, rhs, .. } => {
+                walk(lhs, out);
+                walk(rhs, out);
+            }
+            Expr::Lambda { body, .. } => walk(body, out),
+            _ => {}
+        }
+    }
+    let mut out = std::collections::BTreeSet::new();
+    walk(expr, &mut out);
+    out
+}
+
+/// One member of a preview.
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+pub struct SampleMember {
+    pub id: Uuid,
+    /// The anchor's primary name, when it has a readable one.
+    pub name: Option<String>,
+}
+
+/// What publishing `def` would do.
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+pub struct Preview {
+    /// Live anchor rows matching the condition now.
+    pub matching: i64,
+    /// Of those, the ones not members of the current version (all of them
+    /// when there is none, or it reads another anchor).
+    pub entering: i64,
+    /// Members of the current version that would no longer match; `None`
+    /// when there is no current version on this anchor.
+    pub leaving: Option<i64>,
+    pub sample: Vec<SampleMember>,
+}
+
+/// Counts what `def` selects now and, against `current` (the saved version
+/// of the same name, if any), how many would enter and leave; with up to
+/// [`PREVIEW_SAMPLE`] members. Reads only, under a 30-second limit.
+pub async fn preview(
+    db: &DbPool,
+    def: &DerivedEntity,
+    anchor: &EntityMeta,
+    current: Option<&DerivedEntity>,
+) -> Result<Preview, AppError> {
+    let new = predicate(def, anchor, "a")?;
+    let old = match current {
+        Some(cur) if cur.anchor == def.anchor => Some(members_predicate(cur, anchor, "a")?),
+        _ => None,
+    };
+    let live = live_row_predicate("a", anchor.is_append_only).unwrap_or_else(|| "TRUE".into());
+    let from = quote_ident(&anchor.logicalname);
+    let new_holds = format!("COALESCE(({new}), false)");
+    let old_holds = old
+        .as_ref()
+        .map(|o| format!("COALESCE(({o}), false)"))
+        .unwrap_or_else(|| "false".into());
+    let mut tx = attome_db::tx::begin(db).await?;
+    sqlx::query(READ_TIMEOUT)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    let (matching, entering, leaving): (i64, i64, i64) = sqlx::query_as(&format!(
+        "SELECT count(*) FILTER (WHERE {new_holds}), \
+                count(*) FILTER (WHERE {new_holds} AND NOT {old_holds}), \
+                count(*) FILTER (WHERE {old_holds} AND NOT {new_holds}) \
+           FROM {from} a WHERE {live}"
+    ))
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let name_column = anchor
+        .primary_name_attribute
+        .as_deref()
+        .filter(|p| condition_fields(anchor).contains_key(*p))
+        .map(|p| format!("a.{}::text", quote_ident(p)))
+        .unwrap_or_else(|| "NULL::text".into());
+    let sample: Vec<(Uuid, Option<String>)> = sqlx::query_as(&format!(
+        "SELECT a.\"id\", {name_column} FROM {from} a \
+          WHERE {live} AND {new_holds} ORDER BY a.\"id\" LIMIT $1"
+    ))
+    .bind(PREVIEW_SAMPLE)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    attome_db::tx::commit(tx).await?;
+    Ok(Preview {
+        matching,
+        entering,
+        leaving: old.is_some().then_some(leaving),
+        sample: sample
+            .into_iter()
+            .map(|(id, name)| SampleMember { id, name })
+            .collect(),
+    })
+}
+
+/// One part of a condition, explained for one record.
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+pub struct PartExplained {
+    /// The part as written (`amount > 100000`).
+    pub part: String,
+    /// Whether it holds; `None` when it cannot be decided (a field is
+    /// empty, so the comparison is unknown, which counts as not holding).
+    pub holds: Option<bool>,
+    /// The record's value of each field the part reads.
+    pub values: serde_json::Map<String, serde_json::Value>,
+}
+
+/// Why a record is, or is not, a member.
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+pub struct Explanation {
+    pub record_id: Uuid,
+    /// Whether it is a member now (stored: in the membership table).
+    pub member: bool,
+    /// Whether the record is live (a deleted record is never a member).
+    pub live: bool,
+    /// Whether the whole condition holds now (for a stored entity, the
+    /// membership may lag it by a few seconds).
+    pub matches: bool,
+    pub parts: Vec<PartExplained>,
+}
+
+/// Explains `def` for the anchor record `record_id`: each top-level part
+/// of the condition with whether it holds and the record's values of the
+/// fields it reads. `None` when the anchor has no such record.
+pub async fn explain(
+    db: &DbPool,
+    def: &DerivedEntity,
+    anchor: &EntityMeta,
+    record_id: Uuid,
+) -> Result<Option<Explanation>, AppError> {
+    let expr = attome_rules::parse(&def.condition)
+        .map_err(|e| AppError::Validation(format!("the condition does not parse: {e}")))?;
+    let fields = condition_fields(anchor);
+    let parts = condition_parts(&expr);
+    let mut part_sql = Vec::with_capacity(parts.len());
+    for part in &parts {
+        let sql = attome_core::rules_sql::to_sql_inline(part, &fields, "a")
+            .map_err(|e| AppError::Validation(e.to_string()))?;
+        part_sql.push(format!("({sql})"));
+    }
+    let read: std::collections::BTreeSet<String> = parts
+        .iter()
+        .flat_map(|p| fields_read(p))
+        .filter(|f| fields.contains_key(f))
+        .collect();
+    let values_sql = if read.is_empty() {
+        "'{}'::jsonb".to_owned()
+    } else {
+        format!(
+            "jsonb_build_object({})",
+            read.iter()
+                .map(|f| format!("'{f}', a.{}", quote_ident(f)))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    };
+    let live = live_row_predicate("a", anchor.is_append_only).unwrap_or_else(|| "TRUE".into());
+    let member_sql = match def.mode {
+        DerivedMode::Live => format!(
+            "({live}) AND COALESCE(({}), false)",
+            predicate(def, anchor, "a")?
+        ),
+        DerivedMode::Stored => format!(
+            "EXISTS (SELECT 1 FROM {} m WHERE m.anchor_id = a.\"id\")",
+            quote_ident(&def.membership_name())
+        ),
+    };
+    let mut tx = attome_db::tx::begin(db).await?;
+    sqlx::query(READ_TIMEOUT)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    let row: Option<(bool, bool, bool, serde_json::Value, serde_json::Value)> =
+        sqlx::query_as(&format!(
+            "SELECT {member_sql}, ({live}), COALESCE(({}), false), jsonb_build_array({}), {values_sql} \
+               FROM {} a WHERE a.\"id\" = $1",
+            predicate(def, anchor, "a")?,
+            part_sql.join(", "),
+            quote_ident(&anchor.logicalname),
+        ))
+        .bind(record_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    attome_db::tx::commit(tx).await?;
+    let Some((member, live, matches, holds, values)) = row else {
+        return Ok(None);
+    };
+    let holds = holds.as_array().cloned().unwrap_or_default();
+    let values = values.as_object().cloned().unwrap_or_default();
+    Ok(Some(Explanation {
+        record_id,
+        member,
+        live,
+        matches: live && matches,
+        parts: parts
+            .iter()
+            .enumerate()
+            .map(|(i, part)| PartExplained {
+                part: part.to_string(),
+                holds: holds.get(i).and_then(serde_json::Value::as_bool),
+                values: fields_read(part)
+                    .into_iter()
+                    .filter_map(|f| values.get(&f).cloned().map(|v| (f, v)))
+                    .collect(),
+            })
+            .collect(),
+    }))
+}
+
+/// One week of a membership trend.
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+pub struct WeekCount {
+    /// The Monday the week starts on (UTC).
+    pub week: chrono::NaiveDate,
+    pub entered: i64,
+    pub left: i64,
+    /// Members at the end of the week.
+    pub members: i64,
+}
+
+/// The members at the end of each week, oldest first, from today's count
+/// and each week's entries and exits: a week's end is today's count less
+/// what every later week added. Pure.
+pub fn week_series(current: i64, weeks: &[(chrono::NaiveDate, i64, i64)]) -> Vec<WeekCount> {
+    let mut members = current;
+    let mut out: Vec<WeekCount> = Vec::with_capacity(weeks.len());
+    for (week, entered, left) in weeks.iter().rev() {
+        out.push(WeekCount {
+            week: *week,
+            entered: *entered,
+            left: *left,
+            members,
+        });
+        members -= entered - left;
+    }
+    out.reverse();
+    out
+}
+
+/// Weekly membership of stored `def` over the last `weeks` weeks (this one
+/// included, at most [`MAX_TREND_WEEKS`]), from its history; a week with no
+/// change is listed with zero. A live derived entity keeps no history, so
+/// its trend is this week's count alone.
+pub async fn trend(
+    db: &DbPool,
+    def: &DerivedEntity,
+    anchor: &EntityMeta,
+    weeks: i64,
+) -> Result<Vec<WeekCount>, AppError> {
+    let weeks = weeks.clamp(1, MAX_TREND_WEEKS);
+    let this_week: chrono::NaiveDate = sqlx::query_scalar("SELECT date_trunc('week', now())::date")
+        .fetch_one(db)
+        .await
+        .map_err(AppError::internal)?;
+    if def.mode == DerivedMode::Live {
+        let preview = preview(db, def, anchor, None).await?;
+        return Ok(vec![WeekCount {
+            week: this_week,
+            entered: 0,
+            left: 0,
+            members: preview.matching,
+        }]);
+    }
+    let current: i64 = sqlx::query_scalar(&format!(
+        "SELECT count(*) FROM {}",
+        quote_ident(&def.membership_name())
+    ))
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)?;
+    let rows: Vec<(chrono::NaiveDate, i64, i64)> = sqlx::query_as(
+        "SELECT date_trunc('week', at)::date AS week, \
+                count(*) FILTER (WHERE change = 'enter'), \
+                count(*) FILTER (WHERE change = 'leave') \
+           FROM derived_entity_history \
+          WHERE name = $1 AND at >= date_trunc('week', now()) - ($2 - 1) * interval '1 week' \
+          GROUP BY 1 ORDER BY 1",
+    )
+    .bind(&def.name)
+    .bind(weeks)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let by_week: std::collections::HashMap<chrono::NaiveDate, (i64, i64)> =
+        rows.into_iter().map(|(w, e, l)| (w, (e, l))).collect();
+    let all: Vec<(chrono::NaiveDate, i64, i64)> = (0..weeks)
+        .rev()
+        .map(|back| {
+            let week = this_week - chrono::Duration::weeks(back);
+            let (entered, left) = by_week.get(&week).copied().unwrap_or((0, 0));
+            (week, entered, left)
+        })
+        .collect();
+    Ok(week_series(current, &all))
+}
+
 /// The names of the paused definitions.
 pub async fn paused(db: &DbPool) -> Result<std::collections::HashSet<String>, AppError> {
     Ok(
@@ -754,6 +1090,31 @@ mod derived_entity_tests {
         assert_eq!(change.leave, vec![ids[2]]);
         assert_eq!(change.len(), 2);
         assert!(membership_change(&[], &matching, &members).is_empty());
+    }
+
+    #[test]
+    fn derived_explain_splits_the_condition_into_parts() {
+        let expr = attome_rules::parse("amount > 100 and stage == \"open\" and (a or b)").unwrap();
+        let parts = condition_parts(&expr);
+        assert_eq!(parts.len(), 3);
+        assert_eq!(
+            fields_read(parts[0]).into_iter().collect::<Vec<_>>(),
+            vec!["amount".to_owned()]
+        );
+        assert_eq!(fields_read(parts[2]).len(), 2);
+        let single = attome_rules::parse("amount > 1").unwrap();
+        assert_eq!(condition_parts(&single).len(), 1);
+    }
+
+    #[test]
+    fn derived_trend_counts_back_from_today() {
+        let day = |d: u32| chrono::NaiveDate::from_ymd_opt(2026, 10, d).unwrap();
+        let series = week_series(10, &[(day(5), 4, 0), (day(12), 0, 0), (day(19), 3, 1)]);
+        let members: Vec<i64> = series.iter().map(|w| w.members).collect();
+        // Today 10; the last week added 2, so 8 before it; the week
+        // before changed nothing; the first added 4.
+        assert_eq!(members, vec![8, 8, 10]);
+        assert_eq!(series[0].entered, 4);
     }
 
     #[test]

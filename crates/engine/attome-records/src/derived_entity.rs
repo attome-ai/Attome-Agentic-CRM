@@ -48,6 +48,39 @@ pub async fn for_read(state: &EngineState, entity: &str) -> Result<Option<Derive
     }))
 }
 
+/// A26-T4: why the anchor record `record_id` is, or is not, a member of
+/// the derived entity `entity`, for a caller who may read that record: the
+/// derived entity's read privilege (the route's extractor), the anchor's,
+/// and the record itself (record-level security, as a record read). A
+/// record the caller may not read is a 404, as for any read.
+pub async fn explain_for(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    entity: &str,
+    record_id: uuid::Uuid,
+) -> Result<derived_entity::Explanation, AppError> {
+    use attome_security::SecurityContextExt;
+    let read = for_read(state, entity).await?.ok_or(AppError::NotFound)?;
+    ctx.require(&read.anchor, "read")?;
+    let anchor = state
+        .entities
+        .load()
+        .get(&read.anchor)
+        .cloned()
+        .ok_or(AppError::NotFound)?;
+    crate::entity_crud::require_record_read(
+        state,
+        ctx,
+        anchor.entity_id,
+        &anchor.logicalname,
+        record_id,
+    )
+    .await?;
+    derived_entity::explain(&state.base.db, &read.definition, &anchor, record_id)
+        .await?
+        .ok_or(AppError::NotFound)
+}
+
 /// 405 when `entity` is a derived entity: nothing writes to one.
 pub async fn refuse_write(state: &EngineState, entity: &str) -> Result<(), AppError> {
     if definition(state, entity).await?.is_some() {

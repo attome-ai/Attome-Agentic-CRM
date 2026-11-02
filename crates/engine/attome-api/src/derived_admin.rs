@@ -183,6 +183,233 @@ async fn delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// A condition to preview, against the saved version of `name` if any.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DerivedPreviewBody {
+    /// The derived entity's name, to compare with its saved version.
+    #[serde(default)]
+    pub name: Option<String>,
+    pub anchor: String,
+    pub condition: String,
+}
+
+/// A member in a preview.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct DerivedSampleMember {
+    pub id: uuid::Uuid,
+    pub name: Option<String>,
+}
+
+/// What saving a condition would select.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct DerivedPreview {
+    /// Live anchor records matching now.
+    pub matching: i64,
+    /// Of those, the ones not members of the saved version.
+    pub entering: i64,
+    /// Members of the saved version that would leave; absent with no saved
+    /// version on this anchor.
+    pub leaving: Option<i64>,
+    pub sample: Vec<DerivedSampleMember>,
+}
+
+/// Preview a derived entity
+///
+/// A26-T4: how many live anchor records the condition selects now, up to
+/// 20 of them, and against the saved version of `name`, how many would
+/// enter and leave. Writes nothing. Data-model administrators.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/derived-entities/preview",
+    operation_id = "preview_derived_entity",
+    tag = "admin",
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::DryRun,
+        None,
+        "counts what a derived entity condition selects; writes nothing"
+    )))),
+    request_body = DerivedPreviewBody,
+    responses(
+        (status = 200, description = "What the condition selects", body = DerivedPreview),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such anchor entity", body = ErrorResponse),
+        (status = 422, description = "The condition does not parse or reads past the anchor's own fields", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn preview(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
+    Json(body): Json<DerivedPreviewBody>,
+) -> Result<Json<DerivedPreview>, AppError> {
+    let anchor = state
+        .entities
+        .load()
+        .get(&body.anchor)
+        .cloned()
+        .ok_or(AppError::NotFound)?;
+    let current = match body.name.as_deref() {
+        Some(name) => derived_entity::find(&state.base.db, name).await?,
+        None => None,
+    };
+    let def = DerivedEntity {
+        name: body.name.unwrap_or_default(),
+        anchor: body.anchor,
+        condition: body.condition,
+        mode: DerivedMode::Live,
+    };
+    let p = derived_entity::preview(&state.base.db, &def, &anchor, current.as_ref()).await?;
+    Ok(Json(DerivedPreview {
+        matching: p.matching,
+        entering: p.entering,
+        leaving: p.leaving,
+        sample: p
+            .sample
+            .into_iter()
+            .map(|m| DerivedSampleMember {
+                id: m.id,
+                name: m.name,
+            })
+            .collect(),
+    }))
+}
+
+/// One part of a condition for one record.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct DerivedPartExplained {
+    /// The part as written.
+    pub part: String,
+    /// Whether it holds; absent when a field it reads is empty.
+    pub holds: Option<bool>,
+    /// The record's value of each field the part reads.
+    #[schema(value_type = Object)]
+    pub values: serde_json::Map<String, serde_json::Value>,
+}
+
+/// Why a record is, or is not, a member.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct DerivedExplanation {
+    pub record_id: uuid::Uuid,
+    pub member: bool,
+    pub live: bool,
+    pub matches: bool,
+    pub parts: Vec<DerivedPartExplained>,
+}
+
+/// Explain a derived entity's membership
+///
+/// A26-T4: each part of the condition with whether it holds for the record
+/// and the record's values. Needs the derived entity's read privilege, the
+/// anchor's, and access to the record itself.
+#[utoipa::path(
+    get,
+    path = "/api/v1/derived-entities/{entity}/explain/{record_id}",
+    operation_id = "explain_derived_membership",
+    tag = "records",
+    params(
+        ("entity" = String, Path, description = "The derived entity"),
+        ("record_id" = uuid::Uuid, Path, description = "An anchor record"),
+    ),
+    responses(
+        (status = 200, description = "Why it is or is not a member", body = DerivedExplanation),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such derived entity, or a record the caller may not read", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn explain(
+    State(state): State<EngineState>,
+    ctx: Authorized<attome_server::authz::RecordScoped<attome_security::record_action::Read>>,
+    Path((entity, record_id)): Path<(String, uuid::Uuid)>,
+) -> Result<Json<DerivedExplanation>, AppError> {
+    let e = attome_records::derived_entity::explain_for(&state, &ctx, &entity, record_id).await?;
+    Ok(Json(DerivedExplanation {
+        record_id: e.record_id,
+        member: e.member,
+        live: e.live,
+        matches: e.matches,
+        parts: e
+            .parts
+            .into_iter()
+            .map(|p| DerivedPartExplained {
+                part: p.part,
+                holds: p.holds,
+                values: p.values,
+            })
+            .collect(),
+    }))
+}
+
+/// How many weeks a trend covers.
+#[derive(Debug, Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct TrendQuery {
+    /// 1 to 104; 12 by default.
+    pub weeks: Option<i64>,
+}
+
+/// One week of membership.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct DerivedWeek {
+    /// The Monday the week starts on.
+    pub week: chrono::NaiveDate,
+    pub entered: i64,
+    pub left: i64,
+    /// Members at the end of the week.
+    pub members: i64,
+}
+
+/// A derived entity's membership over time
+///
+/// A26-T4: weekly entries, exits and members, oldest first, from the
+/// stored membership's history (a live one has only this week's count).
+/// Data-model administrators.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/derived-entities/{name}/trend",
+    operation_id = "derived_entity_trend",
+    tag = "admin",
+    params(("name" = String, Path, description = "The derived entity's name"), TrendQuery),
+    responses(
+        (status = 200, description = "Weekly membership", body = PaginatedResponse<DerivedWeek>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such derived entity, or its anchor is gone", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn trend(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
+    Path(name): Path<String>,
+    axum::extract::Query(q): axum::extract::Query<TrendQuery>,
+) -> Result<Json<PaginatedResponse<DerivedWeek>>, AppError> {
+    let def = derived_entity::find(&state.base.db, &name)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    let anchor = state
+        .entities
+        .load()
+        .get(&def.anchor)
+        .cloned()
+        .ok_or(AppError::NotFound)?;
+    let weeks = derived_entity::trend(&state.base.db, &def, &anchor, q.weeks.unwrap_or(12)).await?;
+    let items: Vec<DerivedWeek> = weeks
+        .into_iter()
+        .map(|w| DerivedWeek {
+            week: w.week,
+            entered: w.entered,
+            left: w.left,
+            members: w.members,
+        })
+        .collect();
+    let total = items.len() as i64;
+    Ok(Json(PaginatedResponse::new(items, total, 1, total.max(1))))
+}
+
 /// What resuming a paused derived entity moved.
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct DerivedResumed {
@@ -277,10 +504,19 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/derived-entities/{name}/resume",
             axum::routing::post(resume),
         )
+        .route(
+            "/api/v1/admin/derived-entities/preview",
+            axum::routing::post(preview),
+        )
+        .route("/api/v1/admin/derived-entities/{name}/trend", get(trend))
+        .route(
+            "/api/v1/derived-entities/{entity}/explain/{record_id}",
+            get(explain),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list, put, delete, resume))]
+#[openapi(paths(list, put, delete, resume, preview, explain, trend))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
