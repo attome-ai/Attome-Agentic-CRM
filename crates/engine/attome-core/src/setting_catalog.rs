@@ -786,6 +786,21 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(0),
         ),
+        // D22-T13: what staff are told about call analysis.
+        SettingDescriptor::new(
+            "callintel.staff_notice_text",
+            "The notice staff see about call analysis: that their calls are transcribed and \
+         analysed, what is kept and who sees it, in Arabic and English (D22-T13).",
+            || json!({"type": "object", "properties": {"en": {"type": "string"}, "ar": {"type": "string"}}}),
+            &[SettingScope::Deployment],
+            false,
+            || {
+                json!({
+                    "en": "Your calls are transcribed and analysed for coaching. You and your managers see the analysis; you can see every analysis of your own calls.",
+                    "ar": "تُفرَّغ مكالماتك وتُحلَّل لأغراض التدريب. ترى أنت ومديروك التحليل، ويمكنك الاطلاع على كل تحليل لمكالماتك."
+                })
+            },
+        ),
         // F11-T8: where the revenue close posts.
         SettingDescriptor::new(
             "revrec.posting_target",

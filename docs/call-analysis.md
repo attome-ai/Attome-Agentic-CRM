@@ -77,3 +77,9 @@ conversation signals read; the event carries no transcript text.
   (`{at_ms, body, parent_id}`): the coaching steps above.
 
 All need `call_analysis.read` and are hidden while the call analysis module is off.
+
+## Staff privacy
+
+`GET /api/v1/callintel/my-analyses` lists every analysis of the caller's own calls, newest first, so staff
+see all that is analysed about them. The notice staff are shown is the setting
+`callintel.staff_notice_text` (English and Arabic). No analysis scores staff sentiment.

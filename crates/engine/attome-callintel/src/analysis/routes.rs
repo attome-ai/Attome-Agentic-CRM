@@ -18,10 +18,10 @@
 use attome_audit::{AuditOperation, BusinessEvent, audit_service, write_business_event_in_tx};
 use attome_core::EngineState;
 use attome_server::authz::{Authorized, Privilege, PrivilegeKey};
-use attome_types::{AppError, ErrorResponse};
+use attome_types::{AppError, ErrorResponse, OnePageQuery, PageWindow, PaginatedResponse};
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
@@ -170,6 +170,68 @@ async fn call_page(
             })
             .collect(),
     }))
+}
+
+/// One analysis about the caller's own call.
+#[derive(Debug, Serialize, ToSchema, sqlx::FromRow)]
+pub struct MyAnalysis {
+    pub analysis_id: Uuid,
+    pub activity_id: Option<String>,
+    pub status: Option<String>,
+    pub analysed_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub staff_talk_share: Option<f64>,
+    pub staff_questions: Option<f64>,
+}
+
+/// The analyses about my calls
+///
+/// D22-T13: every analysis whose call the caller owns, newest first: staff see all that is analysed
+/// about them. No analysis carries a sentiment for staff.
+#[utoipa::path(
+    get,
+    path = "/api/v1/callintel/my-analyses",
+    tag = "callintel",
+    params(OnePageQuery),
+    responses(
+        (status = 200, description = "The caller's analyses", body = PaginatedResponse<MyAnalysis>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn my_analyses(
+    State(state): State<EngineState>,
+    ctx: Authorized<attome_server::authz::SelfService>,
+    Query(paging): Query<OnePageQuery>,
+) -> Result<Json<PaginatedResponse<MyAnalysis>>, AppError> {
+    let PageWindow {
+        page,
+        page_size,
+        offset,
+        ..
+    } = paging.window();
+    let total: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM call_analysis WHERE owner_user = $1 \
+           AND (is_active IS NULL OR is_active = true)",
+    )
+    .bind(ctx.user_id)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let items: Vec<MyAnalysis> = sqlx::query_as(
+        "SELECT id AS analysis_id, activity_id, status::text AS status, analysed_at, \
+                staff_talk_share::float8 AS staff_talk_share, \
+                staff_questions::float8 AS staff_questions \
+           FROM call_analysis WHERE owner_user = $1 \
+            AND (is_active IS NULL OR is_active = true) \
+          ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3",
+    )
+    .bind(ctx.user_id)
+    .bind(page_size)
+    .bind(offset)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
 }
 
 /// A recording to play.
@@ -413,6 +475,7 @@ pub(crate) fn routes() -> Router<EngineState> {
             post(comment),
         )
         .route("/api/v1/callintel/findings/{id}/task", post(finding_task))
+        .route("/api/v1/callintel/my-analyses", get(my_analyses))
         .route(
             "/api/v1/callintel/scorecard-answers/{id}/confirm",
             post(confirm),
@@ -421,8 +484,16 @@ pub(crate) fn routes() -> Router<EngineState> {
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(call_page, recording, finding_task, confirm, comment),
-    components(schemas(CallPage, Recording, TaskMade, ConfirmBody, CommentBody, CommentMade))
+    paths(call_page, recording, finding_task, confirm, comment, my_analyses),
+    components(schemas(
+        CallPage,
+        Recording,
+        TaskMade,
+        ConfirmBody,
+        CommentBody,
+        CommentMade,
+        MyAnalysis
+    ))
 )]
 struct ApiDocFragment;
 

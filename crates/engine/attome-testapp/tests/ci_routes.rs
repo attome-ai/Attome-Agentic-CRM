@@ -154,3 +154,38 @@ fn unlicensed_module_returns_404() {
         assert_eq!(body["error"], "feature_hidden", "{body}");
     });
 }
+
+// feature: D22
+#[test]
+fn no_sentiment_field_for_staff() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let (activity, _) = analysed_call(&app, app.admin.id).await;
+        let (status, page) = app
+            .request(
+                Method::GET,
+                &format!("/api/v1/callintel/calls/{activity}"),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{page}");
+        let (status, mine) = app
+            .request(Method::GET, "/api/v1/callintel/my-analyses", None)
+            .await;
+        assert_eq!(status, StatusCode::OK, "{mine}");
+        assert!(
+            mine["items"].as_array().is_some_and(|items| items
+                .iter()
+                .any(|i| i["activity_id"] == activity.to_string())),
+            "the caller sees the analysis of their own call: {mine}"
+        );
+        for body in [&page, &mine] {
+            assert!(
+                !body.to_string().to_lowercase().contains("sentiment"),
+                "no staff sentiment anywhere: {body}"
+            );
+        }
+    });
+}

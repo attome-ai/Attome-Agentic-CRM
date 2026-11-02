@@ -14,6 +14,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Staff privacy for call analysis (D22-T13): `GET /api/v1/callintel/my-analyses` and the setting
+  `callintel.staff_notice_text`; no response carries staff sentiment.
 - Call page routes (D22-T8): `GET /api/v1/callintel/calls/{activity_id}` and `/recording` (every playback
   audited), `POST /api/v1/callintel/findings/{id}/task`, `/scorecard-answers/{id}/confirm` and
   `/calls/{activity_id}/comments`.
