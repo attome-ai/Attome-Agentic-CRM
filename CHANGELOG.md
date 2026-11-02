@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Case links (G1-T1 in part, platform changeset `0085`): `service_case_link` ties a case to another as
+  `parent`, `related`, `duplicate_of` or `caused_by`, with Arabic labels. Moving the ticket onto the Work item
+  base still waits on where `work_item` lives, and `resolution_article_ref` on a knowledge-article entity.
 - Payments on the portal (F5-T14, read part): with `billing.portal.payments` on, a portal user sees their
   account's open invoices (`GET /{keyword}/api/v1/billing/invoices/open`) and saved payment methods without
   their tokens (`GET /{keyword}/api/v1/billing/payment-methods`). See `docs/billing-portal.md`.

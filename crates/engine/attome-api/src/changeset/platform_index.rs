@@ -498,6 +498,13 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
             "../../../../../changesets/platform/0084-attome-webcrawl-item-versions.json"
         ),
     },
+    PlatformChangeset {
+        file: "0085-attome-service-case-links.json",
+        name: "attome-service-case-links",
+        json: include_str!(
+            "../../../../../changesets/platform/0085-attome-service-case-links.json"
+        ),
+    },
 ];
 
 #[cfg(test)]

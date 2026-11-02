@@ -1275,6 +1275,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-default-list-views",
         // K6-T4: a crawled knowledge item's version and needs-review flag.
         "attome-webcrawl-item-versions",
+        // G1-T1: links between cases.
+        "attome-service-case-links",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

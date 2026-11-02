@@ -39,6 +39,8 @@ impl EngineModel for ServiceModel {
         &[
             "service_work_request",
             "service_ticket",
+            // G1-T1: `platform-bundles/attome-service-case-links.json`.
+            "service_case_link",
             "service_sla_policy",
             "service_offering",
             "service_sla_clock",
