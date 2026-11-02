@@ -75,7 +75,7 @@ export class CaseSummaryComponent {
     const recordId = this.recordId();
     if (!entity || !recordId) return;
     this.loading.set(true);
-    this.api
+    this.sdk
       .post<SummaryOutcome>('/api/v1/actions/record.summarize/invoke', { body: {
         args: { entity, record_id: recordId },
       } })

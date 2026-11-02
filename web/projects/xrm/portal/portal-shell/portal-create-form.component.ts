@@ -150,7 +150,7 @@ export class PortalCreateFormComponent {
   }
 
   private loadChoices(keyword: string, field: PortalField): void {
-    this.api
+    this.sdk
       .get<Page<{ id: string; data: Record<string, unknown> }>>(
         `${this.base(keyword)}/records/${encodeURIComponent(field.lookup_entity ?? '')}`, { query: { page: '1', page_size: '50' } })
       .subscribe({

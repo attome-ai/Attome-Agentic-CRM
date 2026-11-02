@@ -70,7 +70,7 @@ export class SalesTeamApiService {
   private readonly sdk = inject(SdkService);
 
   private list(entity: string, params: Record<string, string>): Observable<Record<string, unknown>[]> {
-    return this.api
+    return this.sdk
       .get<{ items: Record<string, unknown>[] }>(`/api/v1/${entity}`, { query: { page_size: '200', ...params } })
       .pipe(map(r => r.items ?? []));
   }

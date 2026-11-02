@@ -228,7 +228,7 @@ export class S2sAdminService {
   }
 
   listTrusts(clientId: string): Observable<TrustItem[]> {
-    return this.api
+    return this.sdk
       .get<{ items: TrustItem[] }>(`/api/v1/admin/s2s/clients/${clientId}/trusts`)
       .pipe(map(page => page.items));
   }
