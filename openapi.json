@@ -85400,6 +85400,545 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/callintel/calls/{activity_id}": {
+      "get": {
+        "tags": [
+          "callintel"
+        ],
+        "summary": "A call's analysis",
+        "description": "D22-T8: the latest analysis of a call with its findings and scorecard answers; talk patterns only\nfor the call's owner and their managers.",
+        "operationId": "call_page",
+        "parameters": [
+          {
+            "name": "activity_id",
+            "in": "path",
+            "description": "The call (activity)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The call page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks call_analysis.read or cannot read the call",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such call, or not analysed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "callintel",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/callintel/calls/{activity_id}/comments": {
+      "post": {
+        "tags": [
+          "callintel"
+        ],
+        "summary": "Comment on a call",
+        "description": "D22-T8: the owner, their managers or a peer holding call_comment.create comments at a moment of\nthe call; the owner is notified.",
+        "operationId": "comment",
+        "parameters": [
+          {
+            "name": "activity_id",
+            "in": "path",
+            "description": "The call (activity)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The comment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentMade"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed to comment on this call",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such call, or not analysed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An empty or too long comment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "callintel",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/callintel/calls/{activity_id}/recording": {
+      "get": {
+        "tags": [
+          "callintel"
+        ],
+        "summary": "Play a call's recording",
+        "description": "D22-T8: a short-lived URL of the call's recording; each playback is audited.",
+        "operationId": "recording",
+        "parameters": [
+          {
+            "name": "activity_id",
+            "in": "path",
+            "description": "The call (activity)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Where to play it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recording"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks call_analysis.read or cannot read the call or recording",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such call, or no recording",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "callintel",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/callintel/findings/{id}/task": {
+      "post": {
+        "tags": [
+          "callintel"
+        ],
+        "summary": "Make a task from a finding",
+        "description": "D22-T8: a next step (or any finding) as a task for the call's owner, made once.",
+        "operationId": "finding_task",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The finding",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The task",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskMade"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks call_analysis.read or activity.create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such finding",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A task is being made from it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "callintel",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/callintel/my-analyses": {
+      "get": {
+        "tags": [
+          "callintel"
+        ],
+        "summary": "The analyses about my calls",
+        "description": "D22-T13: every analysis whose call the caller owns, newest first: staff see all that is analysed\nabout them. No analysis carries a sentiment for staff.",
+        "operationId": "my_analyses",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The caller's analyses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_MyAnalysis"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "callintel",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/callintel/scorecard-answers/{id}/confirm": {
+      "post": {
+        "tags": [
+          "callintel"
+        ],
+        "summary": "Confirm a scorecard answer",
+        "description": "D22-T8: a manager of the call's owner confirms an answer.",
+        "operationId": "confirm",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The scorecard answer",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Confirmed"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a manager of the call's owner",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such answer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The answer changed since it was read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not yes, no or unclear",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "callintel",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/catalog/access-requests/{id}/decide": {
       "post": {
         "tags": [
@@ -93225,6 +93764,109 @@
         ],
         "x-audit-exempt": {
           "note": "the route only enqueues renders; each job writes its entity and export events in its completion transaction",
+          "reason": "delegated",
+          "via": "EngineJob::DocgenRender"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "docgen",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/docgen/templates/{id}/render-labels": {
+      "post": {
+        "tags": [
+          "docgen"
+        ],
+        "summary": "Print labels",
+        "description": "B16-T12: renders the template once per record, in order, into one PDF (a label sheet), as the\ncaller: a record the caller cannot see is left out. Codes are drawn with `qr_<field>` and\n`barcode_<field>` in the template.",
+        "operationId": "render_labels",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The template's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenderLabelsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The label sheet is queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelsQueued"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such template",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No records, more than 500, or a template that cannot render",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "the route only enqueues the render; the job writes its entity and export events in its completion transaction",
           "reason": "delegated",
           "via": "EngineJob::DocgenRender"
         },
@@ -169478,6 +170120,59 @@
           }
         }
       },
+      "CallPage": {
+        "type": "object",
+        "description": "A call page.",
+        "required": [
+          "activity_id",
+          "analysis_id",
+          "findings",
+          "scorecard",
+          "transcript"
+        ],
+        "properties": {
+          "activity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "analysis_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "scorecard": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "talk": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Only for the call's owner and their managers."
+          },
+          "transcript": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "D22-T12: the redacted transcript, `[{start_ms, end_ms, speaker, text}]`."
+          }
+        }
+      },
       "CampaignCredit": {
         "type": "object",
         "description": "One campaign's credit.",
@@ -173386,6 +174081,43 @@
           }
         }
       },
+      "CommentBody": {
+        "type": "object",
+        "required": [
+          "at_ms",
+          "body"
+        ],
+        "properties": {
+          "at_ms": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The moment of the call, in milliseconds."
+          },
+          "body": {
+            "type": "string"
+          },
+          "parent_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "CommentMade": {
+        "type": "object",
+        "description": "A comment made.",
+        "required": [
+          "comment_id"
+        ],
+        "properties": {
+          "comment_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "CommissionAdjustmentBody": {
         "type": "object",
         "required": [
@@ -174663,6 +175395,24 @@
           "outcome": {
             "type": "string",
             "description": "Always `\"approval_requested\"`."
+          }
+        }
+      },
+      "ConfirmBody": {
+        "type": "object",
+        "required": [
+          "value",
+          "row_version"
+        ],
+        "properties": {
+          "row_version": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The answer's `row_version` as read."
+          },
+          "value": {
+            "type": "string",
+            "description": "`yes`, `no` or `unclear`."
           }
         }
       },
@@ -176500,21 +177250,28 @@
       },
       "CreateModelBody": {
         "type": "object",
-        "description": "`POST /api/v1/admin/predict/models` body. No `features`/`algorithm` field:\nPhase 1 has no per-model configurable feature set yet — `features` is\nderived and overwritten from `features::FEATURE_KEYS` once training\nactually runs (`model::FeatureDescriptor`'s own doc comment), and\n`algorithm` is always `logistic_regression` — so accepting either here\nwould just be a client-supplied value this crate silently ignores.",
+        "description": "`POST /api/v1/admin/predict/models` body. No `features`/`algorithm` field:\nPhase 1 has no per-model configurable feature set yet — `features` is\nderived and overwritten from `features::FEATURE_KEYS` once training\nactually runs (`model::FeatureDescriptor`'s own doc comment), and\n`algorithm` is always `logistic_regression` — so accepting either here\nwould just be a client-supplied value this crate silently ignores.\nO1-T3: a `definition` carries its own entity, target and features.",
         "required": [
-          "name",
-          "target",
-          "entity"
+          "name"
         ],
         "properties": {
+          "definition": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "A model from a definition; its target is stored as `def:<target>`."
+          },
           "entity": {
-            "type": "string"
+            "type": "string",
+            "description": "Ignored with a `definition`."
           },
           "name": {
             "type": "string"
           },
           "target": {
-            "type": "string"
+            "type": "string",
+            "description": "Ignored with a `definition`."
           }
         }
       },
@@ -193826,6 +194583,25 @@
           }
         }
       },
+      "LabelsQueued": {
+        "type": "object",
+        "description": "A queued label sheet.",
+        "required": [
+          "render_id",
+          "records"
+        ],
+        "properties": {
+          "records": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "render_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The render; `GET /api/v1/docgen/renders/{id}` shows it and its file."
+          }
+        }
+      },
       "LandingStats": {
         "type": "object",
         "description": "One landing page's results over a period.",
@@ -199368,6 +200144,52 @@
           "status": {
             "type": "string",
             "description": "`open`, `assembled` or `aborted`."
+          }
+        }
+      },
+      "MyAnalysis": {
+        "type": "object",
+        "description": "One analysis about the caller's own call.",
+        "required": [
+          "analysis_id"
+        ],
+        "properties": {
+          "activity_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "analysed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "analysis_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "staff_questions": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "staff_talk_share": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -217776,6 +218598,86 @@
                 "updated_at": {
                   "type": "string",
                   "format": "date-time"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_MyAnalysis": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One analysis about the caller's own call.",
+              "required": [
+                "analysis_id"
+              ],
+              "properties": {
+                "activity_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "analysed_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "analysis_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "staff_questions": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "format": "double"
+                },
+                "staff_talk_share": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "format": "double"
+                },
+                "status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 }
               }
             }
@@ -236466,19 +237368,19 @@
       },
       "Recording": {
         "type": "object",
-        "description": "A meeting's recording.",
+        "description": "A recording to play.",
         "required": [
-          "url"
+          "download_url",
+          "expires_in_secs"
         ],
         "properties": {
-          "kind": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "url": {
+          "download_url": {
             "type": "string"
+          },
+          "expires_in_secs": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           }
         }
       },
@@ -237627,6 +238529,23 @@
           "divider",
           "unsupported"
         ]
+      },
+      "RenderLabelsBody": {
+        "type": "object",
+        "description": "`POST /api/v1/docgen/templates/{id}/render-labels`.",
+        "required": [
+          "record_ids"
+        ],
+        "properties": {
+          "record_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The records to print, 1 to 500, in order; a repeated id prints once."
+          }
+        }
       },
       "RenderStatusResponse": {
         "type": "object",
@@ -252161,6 +253080,19 @@
           "watch_only": {
             "type": "boolean",
             "description": "K6-T1: watch for changes and report them, import nothing."
+          }
+        }
+      },
+      "TaskMade": {
+        "type": "object",
+        "description": "A task made from a finding.",
+        "required": [
+          "task_id"
+        ],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },

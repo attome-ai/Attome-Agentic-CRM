@@ -522,21 +522,28 @@
     "schemas": {
       "CreateModelBody": {
         "type": "object",
-        "description": "`POST /api/v1/admin/predict/models` body. No `features`/`algorithm` field:\nPhase 1 has no per-model configurable feature set yet — `features` is\nderived and overwritten from `features::FEATURE_KEYS` once training\nactually runs (`model::FeatureDescriptor`'s own doc comment), and\n`algorithm` is always `logistic_regression` — so accepting either here\nwould just be a client-supplied value this crate silently ignores.",
+        "description": "`POST /api/v1/admin/predict/models` body. No `features`/`algorithm` field:\nPhase 1 has no per-model configurable feature set yet — `features` is\nderived and overwritten from `features::FEATURE_KEYS` once training\nactually runs (`model::FeatureDescriptor`'s own doc comment), and\n`algorithm` is always `logistic_regression` — so accepting either here\nwould just be a client-supplied value this crate silently ignores.\nO1-T3: a `definition` carries its own entity, target and features.",
         "required": [
-          "name",
-          "target",
-          "entity"
+          "name"
         ],
         "properties": {
+          "definition": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "A model from a definition; its target is stored as `def:<target>`."
+          },
           "entity": {
-            "type": "string"
+            "type": "string",
+            "description": "Ignored with a `definition`."
           },
           "name": {
             "type": "string"
           },
           "target": {
-            "type": "string"
+            "type": "string",
+            "description": "Ignored with a `definition`."
           }
         }
       },

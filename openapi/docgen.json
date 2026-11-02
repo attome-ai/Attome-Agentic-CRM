@@ -466,6 +466,109 @@
         "x-rate-class": "api",
         "x-risk": "medium"
       }
+    },
+    "/api/v1/docgen/templates/{id}/render-labels": {
+      "post": {
+        "tags": [
+          "docgen"
+        ],
+        "summary": "Print labels",
+        "description": "B16-T12: renders the template once per record, in order, into one PDF (a label sheet), as the\ncaller: a record the caller cannot see is left out. Codes are drawn with `qr_<field>` and\n`barcode_<field>` in the template.",
+        "operationId": "render_labels",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The template's id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenderLabelsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The label sheet is queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelsQueued"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such template",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No records, more than 500, or a template that cannot render",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "the route only enqueues the render; the job writes its entity and export events in its completion transaction",
+          "reason": "delegated",
+          "via": "EngineJob::DocgenRender"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "docgen",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
     }
   },
   "components": {
@@ -684,6 +787,25 @@
           }
         }
       },
+      "LabelsQueued": {
+        "type": "object",
+        "description": "A queued label sheet.",
+        "required": [
+          "render_id",
+          "records"
+        ],
+        "properties": {
+          "records": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "render_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The render; `GET /api/v1/docgen/renders/{id}` shows it and its file."
+          }
+        }
+      },
       "LockedField": {
         "type": "object",
         "description": "One field a business rule locks for the writer (D-789 §3.5): `effect` is\n`hidden` or `disabled`. No value is ever echoed.",
@@ -860,6 +982,23 @@
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "RenderLabelsBody": {
+        "type": "object",
+        "description": "`POST /api/v1/docgen/templates/{id}/render-labels`.",
+        "required": [
+          "record_ids"
+        ],
+        "properties": {
+          "record_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The records to print, 1 to 500, in order; a repeated id prints once."
           }
         }
       },

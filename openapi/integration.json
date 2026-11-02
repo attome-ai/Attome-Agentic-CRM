@@ -3193,19 +3193,19 @@
       },
       "Recording": {
         "type": "object",
-        "description": "A meeting's recording.",
+        "description": "A recording to play.",
         "required": [
-          "url"
+          "download_url",
+          "expires_in_secs"
         ],
         "properties": {
-          "kind": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "url": {
+          "download_url": {
             "type": "string"
+          },
+          "expires_in_secs": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           }
         }
       },

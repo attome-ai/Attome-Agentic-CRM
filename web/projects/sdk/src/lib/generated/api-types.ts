@@ -17537,6 +17537,129 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/callintel/calls/{activity_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A call's analysis
+         * @description D22-T8: the latest analysis of a call with its findings and scorecard answers; talk patterns only
+         *     for the call's owner and their managers.
+         */
+        get: operations["call_page"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/callintel/calls/{activity_id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Comment on a call
+         * @description D22-T8: the owner, their managers or a peer holding call_comment.create comments at a moment of
+         *     the call; the owner is notified.
+         */
+        post: operations["comment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/callintel/calls/{activity_id}/recording": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Play a call's recording
+         * @description D22-T8: a short-lived URL of the call's recording; each playback is audited.
+         */
+        get: operations["recording"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/callintel/findings/{id}/task": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Make a task from a finding
+         * @description D22-T8: a next step (or any finding) as a task for the call's owner, made once.
+         */
+        post: operations["finding_task"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/callintel/my-analyses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The analyses about my calls
+         * @description D22-T13: every analysis whose call the caller owns, newest first: staff see all that is analysed
+         *     about them. No analysis carries a sentiment for staff.
+         */
+        get: operations["my_analyses"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/callintel/scorecard-answers/{id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm a scorecard answer
+         * @description D22-T8: a manager of the call's owner confirms an answer.
+         */
+        post: operations["confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/access-requests/{id}/decide": {
         parameters: {
             query?: never;
@@ -19343,6 +19466,28 @@ export interface paths {
          *     `GET /api/v1/docgen/batches/{id}` shows its progress.
          */
         post: operations["render_batch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/docgen/templates/{id}/render-labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Print labels
+         * @description B16-T12: renders the template once per record, in order, into one PDF (a label sheet), as the
+         *     caller: a record the caller cannot see is left out. Codes are drawn with `qr_<field>` and
+         *     `barcode_<field>` in the template.
+         */
+        post: operations["render_labels"];
         delete?: never;
         options?: never;
         head?: never;
@@ -37498,6 +37643,20 @@ export interface components {
             /** Format: uuid */
             record_id: string;
         };
+        /** @description A call page. */
+        CallPage: {
+            /** Format: uuid */
+            activity_id: string;
+            /** Format: uuid */
+            analysis_id: string;
+            findings: Record<string, never>[];
+            scorecard: Record<string, never>[];
+            status?: string | null;
+            /** @description Only for the call's owner and their managers. */
+            talk?: Record<string, never> | null;
+            /** @description D22-T12: the redacted transcript, `[{start_ms, end_ms, speaker, text}]`. */
+            transcript: Record<string, never>[];
+        };
         /** @description One campaign's credit. */
         CampaignCredit: {
             /** Format: double */
@@ -38964,6 +39123,21 @@ export interface components {
             /** Format: int64 */
             version_no: number;
         };
+        CommentBody: {
+            /**
+             * Format: int64
+             * @description The moment of the call, in milliseconds.
+             */
+            at_ms: number;
+            body: string;
+            /** Format: uuid */
+            parent_id?: string | null;
+        };
+        /** @description A comment made. */
+        CommentMade: {
+            /** Format: uuid */
+            comment_id: string;
+        };
         CommissionAdjustmentBody: {
             /** @description Decimal text; negative takes pay away. */
             amount: string;
@@ -39487,6 +39661,15 @@ export interface components {
             approval_request_id: string;
             /** @description Always `"approval_requested"`. */
             outcome: string;
+        };
+        ConfirmBody: {
+            /**
+             * Format: int64
+             * @description The answer's `row_version` as read.
+             */
+            row_version: number;
+            /** @description `yes`, `no` or `unclear`. */
+            value: string;
         };
         /**
          * @description A confirm or reject that did not run anything: the standard error body
@@ -40181,11 +40364,16 @@ export interface components {
          *     actually runs (`model::FeatureDescriptor`'s own doc comment), and
          *     `algorithm` is always `logistic_regression` — so accepting either here
          *     would just be a client-supplied value this crate silently ignores.
+         *     O1-T3: a `definition` carries its own entity, target and features.
          */
         CreateModelBody: {
-            entity: string;
+            /** @description A model from a definition; its target is stored as `def:<target>`. */
+            definition?: Record<string, never> | null;
+            /** @description Ignored with a `definition`. */
+            entity?: string;
             name: string;
-            target: string;
+            /** @description Ignored with a `definition`. */
+            target?: string;
         };
         /** @description What to add. */
         CreateOidcDomainBody: {
@@ -47193,6 +47381,15 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /** @description A queued label sheet. */
+        LabelsQueued: {
+            records: number;
+            /**
+             * Format: uuid
+             * @description The render; `GET /api/v1/docgen/renders/{id}` shows it and its file.
+             */
+            render_id: string;
+        };
         /** @description One landing page's results over a period. */
         LandingStats: {
             /**
@@ -49238,6 +49435,19 @@ export interface components {
             session_id: string;
             /** @description `open`, `assembled` or `aborted`. */
             status: string;
+        };
+        /** @description One analysis about the caller's own call. */
+        MyAnalysis: {
+            activity_id?: string | null;
+            /** Format: date-time */
+            analysed_at?: string | null;
+            /** Format: uuid */
+            analysis_id: string;
+            /** Format: double */
+            staff_questions?: number | null;
+            /** Format: double */
+            staff_talk_share?: number | null;
+            status?: string | null;
         };
         /** @description One limit that applies to the caller. */
         MyLimit: {
@@ -56259,6 +56469,32 @@ export interface components {
                 trained_version: number;
                 /** Format: date-time */
                 updated_at: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_MyAnalysis: {
+            items: {
+                activity_id?: string | null;
+                /** Format: date-time */
+                analysed_at?: string | null;
+                /** Format: uuid */
+                analysis_id: string;
+                /** Format: double */
+                staff_questions?: number | null;
+                /** Format: double */
+                staff_talk_share?: number | null;
+                status?: string | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -63395,10 +63631,11 @@ export interface components {
             /** Format: uuid */
             state_model: string;
         };
-        /** @description A meeting's recording. */
+        /** @description A recording to play. */
         Recording: {
-            kind?: string | null;
-            url: string;
+            download_url: string;
+            /** Format: int64 */
+            expires_in_secs: number;
         };
         /** @description A records category. */
         RecordsCategory: {
@@ -63880,6 +64117,11 @@ export interface components {
          * @enum {string}
          */
         RenderKind: "chart_bar" | "chart_line" | "chart_area" | "chart_donut" | "chart_funnel" | "chart_stacked_bar" | "chart_combo" | "chart_waterfall" | "chart_treemap" | "chart_sunburst" | "chart_sankey" | "chart_radar" | "chart_polar" | "chart_heatmap" | "chart_calendar_heatmap" | "chart_pareto" | "chart_control" | "chart_scatter" | "chart_bubble" | "chart_range_area" | "scalar" | "table" | "declarative" | "kpi_scorecard" | "kpi_trendline" | "text" | "divider" | "unsupported";
+        /** @description `POST /api/v1/docgen/templates/{id}/render-labels`. */
+        RenderLabelsBody: {
+            /** @description The records to print, 1 to 500, in order; a repeated id prints once. */
+            record_ids: string[];
+        };
         RenderStatusResponse: {
             attach_error?: string | null;
             attached: boolean;
@@ -69429,6 +69671,11 @@ export interface components {
             url: string;
             /** @description K6-T1: watch for changes and report them, import nothing. */
             watch_only: boolean;
+        };
+        /** @description A task made from a finding. */
+        TaskMade: {
+            /** Format: uuid */
+            task_id: string;
         };
         /**
          * @description The access a member gets to the deal.
@@ -124287,6 +124534,338 @@ export interface operations {
             };
         };
     };
+    call_page: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The call (activity) */
+                activity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The call page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CallPage"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks call_analysis.read or cannot read the call */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such call, or not analysed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    comment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The call (activity) */
+                activity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommentBody"];
+            };
+        };
+        responses: {
+            /** @description The comment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentMade"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not allowed to comment on this call */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such call, or not analysed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An empty or too long comment */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    recording: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The call (activity) */
+                activity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Where to play it */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Recording"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks call_analysis.read or cannot read the call or recording */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such call, or no recording */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    finding_task: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The finding */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The task */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskMade"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks call_analysis.read or activity.create */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such finding */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A task is being made from it */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    my_analyses: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's analyses */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_MyAnalysis"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    confirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The scorecard answer */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmBody"];
+            };
+        };
+        responses: {
+            /** @description Confirmed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a manager of the call's owner */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such answer */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The answer changed since it was read */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not yes, no or unclear */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     catalog_decide_access: {
         parameters: {
             query?: never;
@@ -129058,6 +129637,69 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RenderBatchStatus"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such template */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No records, more than 500, or a template that cannot render */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    render_labels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The template's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RenderLabelsBody"];
+            };
+        };
+        responses: {
+            /** @description The label sheet is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LabelsQueued"];
                 };
             };
             /** @description Missing or invalid credentials */
