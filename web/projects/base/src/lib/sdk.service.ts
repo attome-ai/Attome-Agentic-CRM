@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { AttomeClient, ApiError as SdkApiError, CHANGESET_HEADER } from '@attome/sdk';
 import type { AuthProvider, AuthRequestContext, RequestOptions } from '@attome/sdk';
 import { Observable } from 'rxjs';
-import { ApiService, MAX_ALL_PAGES_ITEMS, apiErrorOf, walkAllPages, writeHeaders } from './api.service';
+import { ApiService, BACKGROUND_HEADER, MAX_ALL_PAGES_ITEMS, apiErrorOf, walkAllPages, writeHeaders } from './api.service';
 import type { Page, WriteOptions } from './api.service';
 import { ATTOME_CONFIG } from './config';
 
@@ -141,6 +141,15 @@ export class SdkService {
 
   get<T>(path: string, opts?: RequestOptions): Observable<T> {
     return this.call(signal => this.client.get<T>(path, { ...opts, signal }));
+  }
+
+  /**
+   * Y9-T3: a poller's read, marked `x-attome-background: 1` (as
+   * `ApiService.getBackground`) so the server does not count it as the
+   * person's activity and an idle session still times out.
+   */
+  getBackground<T>(path: string, query?: Record<string, string>): Observable<T> {
+    return this.get<T>(path, { query, headers: { [BACKGROUND_HEADER]: '1' } });
   }
 
   /**

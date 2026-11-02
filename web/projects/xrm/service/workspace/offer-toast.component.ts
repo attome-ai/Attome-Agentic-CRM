@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ApiError, ApiService, LangService, TranslatePipe, type Page } from '@attome/base';
+import { ApiError, LangService, SdkService, TranslatePipe, type Page } from '@attome/base';
 import { catchError, interval, of, startWith, switchMap } from 'rxjs';
 
 /** `attome_service::router::QueueOffer` (J10-T1). */
@@ -85,7 +85,7 @@ export function currentOffer(offers: readonly WorkOffer[], nowMs: number): WorkO
   `],
 })
 export class OfferToastComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
 
   readonly accepted = output<AcceptedOffer>();
@@ -104,7 +104,7 @@ export class OfferToastComponent {
     const destroy = inject(DestroyRef);
     interval(OFFER_POLL_MS).pipe(
       startWith(0),
-      switchMap(() => this.api.getBackground<Page<WorkOffer>>('/api/v1/queue-offers/mine').pipe(catchError(() => of(null)))),
+      switchMap(() => this.sdk.getBackground<Page<WorkOffer>>('/api/v1/queue-offers/mine').pipe(catchError(() => of(null)))),
       takeUntilDestroyed(destroy),
     ).subscribe(page => {
       if (page) this.offers.set(page.items);
@@ -125,7 +125,7 @@ export class OfferToastComponent {
   accept(o: WorkOffer): void {
     this.busy.set(true);
     this.error.set(null);
-    this.api.post<WorkOffer>(`/api/v1/queue-offers/${encodeURIComponent(o.id)}/accept`, {}).subscribe({
+    this.sdk.post<WorkOffer>(`/api/v1/queue-offers/${encodeURIComponent(o.id)}/accept`, { body: {} }).subscribe({
       next: taken => {
         this.busy.set(false);
         this.offers.update(list => list.filter(x => x.id !== o.id));
@@ -145,7 +145,7 @@ export class OfferToastComponent {
 
   decline(o: WorkOffer): void {
     this.busy.set(true);
-    this.api.post<WorkOffer>(`/api/v1/queue-offers/${encodeURIComponent(o.id)}/decline`, {}).subscribe({
+    this.sdk.post<WorkOffer>(`/api/v1/queue-offers/${encodeURIComponent(o.id)}/decline`, { body: {} }).subscribe({
       next: () => { this.busy.set(false); this.offers.update(list => list.filter(x => x.id !== o.id)); },
       error: () => { this.busy.set(false); this.offers.update(list => list.filter(x => x.id !== o.id)); },
     });

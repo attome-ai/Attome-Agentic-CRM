@@ -3,6 +3,7 @@ import { Observable, of } from 'rxjs';
 /** The parts of an `ApiService` stand-in a spec may give. */
 interface ApiStandIn {
   get?: (...args: unknown[]) => Observable<unknown>;
+  getBackground?: (...args: unknown[]) => Observable<unknown>;
   post?: (...args: unknown[]) => Observable<unknown>;
   put?: (...args: unknown[]) => Observable<unknown>;
   patch?: (...args: unknown[]) => Observable<unknown>;
@@ -34,6 +35,8 @@ export function sdkFromApi(api: ApiStandIn): unknown {
   return {
     get: (path: string, opts?: SdkOptions) =>
       (api.get ?? missing).apply(api, drop([path, opts?.query])),
+    getBackground: (path: string, query?: Record<string, string>) =>
+      (api.getBackground ?? missing).apply(api, drop([path, query])),
     delete: (path: string, opts?: SdkOptions) =>
       (api.delete ?? missing).apply(api, drop([path, opts?.query])),
     post: (path: string, opts?: SdkOptions, write?: unknown) =>
