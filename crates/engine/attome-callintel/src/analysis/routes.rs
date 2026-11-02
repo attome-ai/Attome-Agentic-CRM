@@ -3,7 +3,7 @@
 //! `callintel` module on.
 //!
 //! - `GET /api/v1/callintel/calls/{activity_id}`: the call's latest analysis,
-//!   its findings and scorecard answers; the talk patterns only for the
+//!   its findings, scorecard answers and redacted transcript; the talk patterns only for the
 //!   call's owner and their managers. The caller must be able to read the
 //!   call (`activity`) itself.
 //! - `GET /api/v1/callintel/calls/{activity_id}/recording`: a short-lived
@@ -50,6 +50,9 @@ pub struct CallPage {
     pub findings: Vec<Value>,
     #[schema(value_type = Vec<Object>)]
     pub scorecard: Vec<Value>,
+    /// D22-T12: the redacted transcript, `[{start_ms, end_ms, speaker, text}]`.
+    #[schema(value_type = Vec<Object>)]
+    pub transcript: Vec<Value>,
 }
 
 type AnalysisRow = (
@@ -151,7 +154,18 @@ async fn call_page(
     .fetch_all(&state.base.db)
     .await
     .map_err(AppError::internal)?;
+    let transcript: Option<Value> =
+        sqlx::query_scalar("SELECT segments FROM call_transcript_redacted WHERE analysis_id = $1")
+            .bind(id)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    let transcript = match transcript {
+        Some(Value::Array(segments)) => segments,
+        _ => Vec::new(),
+    };
     Ok(Json(CallPage {
+        transcript,
         activity_id: activity,
         analysis_id: id,
         status,

@@ -4356,6 +4356,26 @@ export const xrmEn = {
   },
   // Solution 7 Phase 2 (design §10) — the release report pages
   // (`@attome/xrm/core/admin/release-reports`).
+  // D22-T12 — the call page (`@attome/xrm/callintel`).
+  callPage: {
+    title: 'Call', loading: 'Loading…', play: 'Play the recording', highlights: 'Highlights',
+    transcript: 'Transcript', noTranscript: 'This call has no transcript.',
+    talk: 'Talk patterns', coachingAid: 'A coaching aid, not a score.',
+    scorecard: 'Scorecard', comments: 'Comments', comment: 'Comment at this moment',
+    commentLabel: 'Your comment', commented: 'Comment added.', makeTask: 'Make a task',
+    kind: {
+      question: 'Question', objection: 'Objection', next_step: 'Next step', tracker_hit: 'Tracker',
+      competitor_mention: 'Competitor', price_mention: 'Price',
+    },
+    speaker: { staff: 'Us', customer: 'Customer' },
+    answer: { yes: 'Yes', no: 'No', unclear: 'Unclear', null: '—' },
+    metric: {
+      staff_talk_share: 'Our share of talk', longest_monologue_s: 'Longest monologue (s)',
+      customer_longest_story_s: 'Customer\'s longest story (s)', interruptions: 'Interruptions',
+      staff_questions: 'Our questions', customer_questions: 'Customer questions',
+      staff_words_per_minute: 'Our words per minute',
+    },
+  },
   // F11-T13 — a revenue contract change's preview (`@attome/xrm/ledger/revrec`).
   revrecChange: {
     title: 'Contract change preview',

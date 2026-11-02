@@ -314,6 +314,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/metadata-versions').then(m => m.MetadataVersionsComponent),
           },
           {
+            // D22-T12 — a call: player, transcript, highlights, coaching.
+            path: 'calls/:activityId',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/callintel').then(m => m.CallPageComponent),
+          },
+          {
             // F11-T13 — a revenue contract change's preview, then apply or
             // discard (the id is the `contract_change` record's).
             path: 'revrec/changes/:changeId',

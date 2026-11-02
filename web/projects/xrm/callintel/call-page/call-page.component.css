@@ -1,0 +1,57 @@
+/*
+ * xrm-call-page — logical properties only, so the page mirrors in Arabic.
+ */
+.cp-player {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-block-end: 1rem;
+}
+
+.cp-timeline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  padding-inline-start: 0;
+  list-style: none;
+  margin-block-end: 1rem;
+}
+
+.cp-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 1.5rem;
+}
+
+.cp-line {
+  margin-block: 0.25rem;
+  text-align: start;
+}
+
+.cp-at {
+  margin-inline-end: 0.5rem;
+}
+
+.cp-muted {
+  color: var(--color-text-secondary);
+}
+
+.cp-answer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-block: 0.4rem;
+  border-block-end: 1px solid var(--color-border);
+}
+
+.cp-comments textarea {
+  inline-size: 100%;
+  min-block-size: 4rem;
+  margin-block: 0.5rem;
+}
+
+.cp-talk dl {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 0.25rem 1rem;
+}

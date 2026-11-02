@@ -83,3 +83,10 @@ All need `call_analysis.read` and are hidden while the call analysis module is o
 `GET /api/v1/callintel/my-analyses` lists every analysis of the caller's own calls, newest first, so staff
 see all that is analysed about them. The notice staff are shown is the setting
 `callintel.staff_notice_text` (English and Arabic). No analysis scores staff sentiment.
+
+## The call page
+
+`/xrm/calls/{activity_id}` shows a call: the recording player (each play is audited), the highlights as a
+timeline that jumps the player to their second, the redacted transcript with each line right to left when
+it is Arabic, the scorecard (confirming is for managers), the talk patterns as a coaching aid when you may
+see them, and comments at the current moment.

@@ -14,6 +14,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- The call page (D22-T12): `@attome/xrm/callintel`, `/xrm/calls/{activity_id}`, and the call page route now
+  returns the redacted transcript.
 - Call agent actions (D22-T10): `callintel.search_calls`, `callintel.deal_highlights` and
   `callintel.coaching_brief` (the person or their manager only), read-only, linking to call moments.
 - Staff privacy for call analysis (D22-T13): `GET /api/v1/callintel/my-analyses` and the setting

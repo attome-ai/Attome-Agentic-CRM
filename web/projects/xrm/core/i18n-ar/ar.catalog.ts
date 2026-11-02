@@ -4270,6 +4270,26 @@ export const xrmAr = {
     layer_mismatch: 'هذا الحقل يتبع طبقة أخرى. غيّره ضمن مجموعة تغييرات لتلك الطبقة.',
     version_conflict: 'غيّر شخص آخر هذا قبلك. حُمّلت أحدث نسخة. راجعها وحاول مرة أخرى.',
   },
+  // D22-T12 — صفحة المكالمة.
+  callPage: {
+    title: 'المكالمة', loading: 'جارٍ التحميل…', play: 'تشغيل التسجيل', highlights: 'أبرز اللحظات',
+    transcript: 'النص', noTranscript: 'لا نص لهذه المكالمة.',
+    talk: 'أنماط الحديث', coachingAid: 'وسيلة تدريب، لا تقييم.',
+    scorecard: 'بطاقة التقييم', comments: 'التعليقات', comment: 'علّق عند هذه اللحظة',
+    commentLabel: 'تعليقك', commented: 'أُضيف التعليق.', makeTask: 'أنشئ مهمة',
+    kind: {
+      question: 'سؤال', objection: 'اعتراض', next_step: 'خطوة تالية', tracker_hit: 'متتبِّع',
+      competitor_mention: 'منافس', price_mention: 'سعر',
+    },
+    speaker: { staff: 'نحن', customer: 'العميل' },
+    answer: { yes: 'نعم', no: 'لا', unclear: 'غير واضح', null: '—' },
+    metric: {
+      staff_talk_share: 'نصيبنا من الحديث', longest_monologue_s: 'أطول حديث متواصل (ث)',
+      customer_longest_story_s: 'أطول حديث للعميل (ث)', interruptions: 'المقاطعات',
+      staff_questions: 'أسئلتنا', customer_questions: 'أسئلة العميل',
+      staff_words_per_minute: 'كلماتنا في الدقيقة',
+    },
+  },
   // F11-T13 — معاينة تغيير عقد الإيراد.
   revrecChange: {
     title: 'معاينة تغيير العقد',

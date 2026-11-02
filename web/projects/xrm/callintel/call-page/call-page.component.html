@@ -1,0 +1,92 @@
+<section class="cp">
+  <h2>{{ 'callPage.title' | translate }}</h2>
+
+  @if (error(); as message) {
+    <p class="error-msg" role="alert">{{ message }}</p>
+  }
+
+  @if (loading()) {
+    <p class="cp-muted">{{ 'callPage.loading' | translate }}</p>
+  } @else if (page(); as p) {
+    <div class="cp-player">
+      @if (audioUrl(); as url) {
+        <audio #player controls [src]="url" data-testid="player"></audio>
+      } @else {
+        <audio #player data-testid="player"></audio>
+        <button type="button" class="btn-primary" (click)="play()" data-testid="play">
+          <i class="las la-play" aria-hidden="true"></i> {{ 'callPage.play' | translate }}
+        </button>
+      }
+    </div>
+
+    <ol class="cp-timeline" [attr.aria-label]="'callPage.highlights' | translate">
+      @for (f of timeline(); track f.id) {
+        <li>
+          <button type="button" class="btn-text" (click)="seek(f.start_ms)" data-testid="highlight">
+            {{ clock(f.start_ms) }} · {{ ('callPage.kind.' + f.kind) | translate }}
+          </button>
+          <span dir="auto">{{ f.text }}</span>
+          @if (f.kind === 'next_step' && !f.task_ref) {
+            <button type="button" class="btn-text" (click)="task(f)">{{ 'callPage.makeTask' | translate }}</button>
+          }
+        </li>
+      }
+    </ol>
+
+    <div class="cp-columns">
+      <section class="cp-transcript">
+        <h3>{{ 'callPage.transcript' | translate }}</h3>
+        @for (s of p.transcript; track $index) {
+          <p class="cp-line" dir="auto" data-testid="segment">
+            <button type="button" class="btn-text cp-at" (click)="seek(s.start_ms)">{{ clock(s.start_ms) }}</button>
+            @if (s.speaker) { <strong>{{ ('callPage.speaker.' + s.speaker) | translate }}</strong> }
+            {{ s.text }}
+          </p>
+        } @empty {
+          <p class="cp-muted">{{ 'callPage.noTranscript' | translate }}</p>
+        }
+      </section>
+
+      <aside class="cp-side">
+        @if (talkRows().length > 0) {
+          <section class="cp-talk" data-testid="talk">
+            <h3>{{ 'callPage.talk' | translate }}</h3>
+            <p class="cp-muted">{{ 'callPage.coachingAid' | translate }}</p>
+            <dl>
+              @for (row of talkRows(); track row[0]) {
+                <dt>{{ ('callPage.metric.' + row[0]) | translate }}</dt>
+                <dd>{{ row[1] | localNumber }}</dd>
+              }
+            </dl>
+          </section>
+        }
+
+        <section class="cp-scorecard">
+          <h3>{{ 'callPage.scorecard' | translate }}</h3>
+          @for (a of p.scorecard; track a.id) {
+            <div class="cp-answer">
+              <span>{{ a.question_key }}</span>
+              <span>{{ ('callPage.answer.' + (a.confirmed_value ?? a.proposed_value)) | translate }}</span>
+              @if (!a.confirmed_value) {
+                <span class="cp-confirm">
+                  @for (v of ['yes', 'no', 'unclear']; track v) {
+                    <button type="button" class="btn-text" (click)="confirm(a, v)">{{ ('callPage.answer.' + v) | translate }}</button>
+                  }
+                </span>
+              }
+            </div>
+          }
+        </section>
+
+        <section class="cp-comments">
+          <h3>{{ 'callPage.comments' | translate }}</h3>
+          <textarea [value]="note()" (input)="onNote($event)" [attr.aria-label]="'callPage.commentLabel' | translate"></textarea>
+          <button type="button" class="btn-primary" (click)="postComment()">{{ 'callPage.comment' | translate }}</button>
+          @if (posted()) {
+            <p class="cp-muted" role="status">{{ 'callPage.commented' | translate }}</p>
+          }
+        </section>
+      </aside>
+    </div>
+  }
+</section>
