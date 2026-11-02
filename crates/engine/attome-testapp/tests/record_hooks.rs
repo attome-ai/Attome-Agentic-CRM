@@ -124,7 +124,7 @@ fn hooks_change_reject_and_follow_the_save() {
         .await;
         assert!(
             matches!(&refused, Err(AppError::Validation(m)) if m == "this name is not allowed"),
-            "{refused:?}"
+            "the hook refuses the save with its message"
         );
         let written: i64 = sqlx::query_scalar("SELECT count(*) FROM account WHERE name = $1")
             .bind(format!("forbidden {tag}"))
