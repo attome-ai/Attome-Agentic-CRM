@@ -29923,6 +29923,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workflow/step-handlers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the module steps
+         * @description The steps engines contribute to workflows (a journey's send email, wait for working time, nurture
+         *     and the rest): each one's key, module, whether this deployment may run it, and the JSON Schema
+         *     of its settings, for the editor's palette and settings form. Automation administrators only.
+         */
+        get: operations["list_workflow_step_handlers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflow/trigger-dead-letters": {
         parameters: {
             query?: never;
@@ -58282,6 +58304,35 @@ export interface components {
             warnings?: components["schemas"]["Warning"][];
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_StepHandlerInfo: {
+            items: {
+                /**
+                 * @description Whether the step can run today (a declared step with no run path
+                 *     yet cannot).
+                 */
+                available: boolean;
+                /** @description Its configuration as a JSON Schema object, or null. */
+                config_schema: Record<string, never>;
+                /** @description The node key a `module_step` names in `config.handler`. */
+                key: string;
+                /** @description Whether this deployment is licensed for that module. */
+                licensed: boolean;
+                /** @description The module that must be licensed for it to run. */
+                module?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
         PaginatedResponse_String: {
             items: string[];
             /** Format: int64 */
@@ -67507,6 +67558,22 @@ export interface components {
             requires_step_up?: boolean;
             /** @description A rules expression; the step runs only when it is true. */
             skip_unless?: string | null;
+        };
+        /** @description E8-T13: a module step an engine registered, as an editor offers it. */
+        StepHandlerInfo: {
+            /**
+             * @description Whether the step can run today (a declared step with no run path
+             *     yet cannot).
+             */
+            available: boolean;
+            /** @description Its configuration as a JSON Schema object, or null. */
+            config_schema: Record<string, never>;
+            /** @description The node key a `module_step` names in `config.handler`. */
+            key: string;
+            /** @description Whether this deployment is licensed for that module. */
+            licensed: boolean;
+            /** @description The module that must be licensed for it to run. */
+            module?: string | null;
         };
         /** @description T7-T4: one step's mark in a person's run of an acceptance script. */
         StepMark: {
@@ -156356,6 +156423,44 @@ export interface operations {
             };
             /** @description No contacts, more than 1,000 named or 10,000 in a list, a list of other records, or the sequence's exits are invalid */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_workflow_step_handlers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every registered step, by key (one page) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_StepHandlerInfo"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

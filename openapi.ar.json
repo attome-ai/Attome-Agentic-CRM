@@ -140414,6 +140414,62 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/workflow/step-handlers": {
+      "get": {
+        "tags": [
+          "workflow"
+        ],
+        "summary": "List the module steps",
+        "description": "The steps engines contribute to workflows (a journey's send email, wait for working time, nurture\nand the rest): each one's key, module, whether this deployment may run it, and the JSON Schema\nof its settings, for the editor's palette and settings form. Automation administrators only.",
+        "operationId": "list_workflow_step_handlers",
+        "responses": {
+          "200": {
+            "description": "Every registered step, by key (one page)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_StepHandlerInfo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "workflow",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/workflow/trigger-dead-letters": {
       "get": {
         "tags": [
@@ -221984,6 +222040,75 @@
           }
         }
       },
+      "PaginatedResponse_StepHandlerInfo": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "E8-T13: a module step an engine registered, as an editor offers it.",
+              "required": [
+                "key",
+                "licensed",
+                "available",
+                "config_schema"
+              ],
+              "properties": {
+                "available": {
+                  "type": "boolean",
+                  "description": "Whether the step can run today (a declared step with no run path\nyet cannot)."
+                },
+                "config_schema": {
+                  "type": "object",
+                  "description": "Its configuration as a JSON Schema object, or null."
+                },
+                "key": {
+                  "type": "string",
+                  "description": "The node key a `module_step` names in `config.handler`."
+                },
+                "licensed": {
+                  "type": "boolean",
+                  "description": "Whether this deployment is licensed for that module."
+                },
+                "module": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The module that must be licensed for it to run."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
       "PaginatedResponse_String": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -245755,6 +245880,41 @@
               "null"
             ],
             "description": "A rules expression; the step runs only when it is true."
+          }
+        }
+      },
+      "StepHandlerInfo": {
+        "type": "object",
+        "description": "E8-T13: a module step an engine registered, as an editor offers it.",
+        "required": [
+          "key",
+          "licensed",
+          "available",
+          "config_schema"
+        ],
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "Whether the step can run today (a declared step with no run path\nyet cannot)."
+          },
+          "config_schema": {
+            "type": "object",
+            "description": "Its configuration as a JSON Schema object, or null."
+          },
+          "key": {
+            "type": "string",
+            "description": "The node key a `module_step` names in `config.handler`."
+          },
+          "licensed": {
+            "type": "boolean",
+            "description": "Whether this deployment is licensed for that module."
+          },
+          "module": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The module that must be licensed for it to run."
           }
         }
       },
