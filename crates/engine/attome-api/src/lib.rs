@@ -153,6 +153,8 @@ pub mod expression_admin;
 pub mod extension_admin;
 /// Y10-T2: published extensions run at the record write hook stages.
 pub mod extension_hooks;
+/// M17-T1: job and webhook extensions.
+pub mod extension_kinds;
 /// `pub` only for the two re-exports below (`read_record`,
 /// `resolve_entity_public`), which `attome-ai` calls so a read action reuses
 /// this crate's own authorization path instead of growing a second one. Every

@@ -8,6 +8,9 @@
 //!   Without it every event creates a record.
 //! - `{"type": "flow", "definition_id": "..."}`: starts the flow's
 //!   published version with the body as context.
+//! - `{"type": "extension", "name": "..."}` (M17-T1): runs the published
+//!   extension's `on_webhook` export with the event; it answers the records
+//!   to write.
 //! - `{"type": "events", "event_type": "/type", "routes": {"order.created":
 //!   <record or flow handler>, ...}, "default": <handler>}`: picks the
 //!   handler by the event type at the `event_type` pointer. An event of a
@@ -53,7 +56,12 @@ fn check_leaf(handler: &Value) -> Result<(), String> {
             .and_then(|s| uuid::Uuid::parse_str(s).ok())
             .map(|_| ())
             .ok_or_else(|| "a flow handler names definition_id".into()),
-        _ => Err("a routed handler's type is record or flow".into()),
+        Some("extension") => handler["name"]
+            .as_str()
+            .filter(|n| !n.is_empty() && n.len() <= 63)
+            .map(|_| ())
+            .ok_or_else(|| "an extension handler names the extension".into()),
+        _ => Err("a routed handler's type is record, flow or extension".into()),
     }
 }
 
@@ -61,8 +69,8 @@ fn check_leaf(handler: &Value) -> Result<(), String> {
 pub fn check_shape(handler: &Value) -> Result<(), String> {
     match handler["type"].as_str() {
         Some("events") => {}
-        Some("record" | "flow") => return check_leaf(handler),
-        _ => return Err("handler.type is record, flow or events".into()),
+        Some("record" | "flow" | "extension") => return check_leaf(handler),
+        _ => return Err("handler.type is record, flow, extension or events".into()),
     }
     let event_pointer = handler["event_type"].as_str().unwrap_or_default();
     if !event_pointer.starts_with('/') || event_pointer.len() > 200 {

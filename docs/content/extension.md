@@ -59,6 +59,12 @@ Custom code runs as WebAssembly on Wasmtime inside the server (Y10, V2-D125), in
   use; nothing else is reachable.
 - **Testing.** `attome_extension::FakeHost` runs the host API in memory (records, logs, secrets,
   stubbed HTTP), held to the same grants, for an extension's unit tests.
+- **Job and webhook extensions.** Besides hooks, a module can export `on_job` (run as a job queued
+  with `POST /api/v1/admin/extensions/{name}/jobs`, as the caller) or `on_webhook` (an inbound hook's
+  handler `{"type": "extension", "name": ...}`, run after the hook's signature checks, as the hook's
+  user). It answers `"continue"` or `{"records": [{"entity", "id"?, "values"}]}`; each write must be
+  granted and is made through the ordinary write path, at most 100 per run. A failed run is not
+  retried, because writes made before the failure stay.
 - **Record and replay.** `attome_extension::Recorder` wraps a host and keeps every host call of a
   run with its result, every secret value masked; `Replayer` answers the same calls from that
   recording, reaching no record, secret or network, and lists where a changed extension's run

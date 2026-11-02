@@ -245,6 +245,15 @@ async fn check_body(
 /// A record handler's entity and attributes exist, and a flow handler's
 /// flow does (the shape is checked already).
 async fn check_leaf_targets(state: &EngineState, leaf: &Value) -> Result<(), AppError> {
+    if leaf["type"].as_str() == Some("extension") {
+        let name = leaf["name"].as_str().unwrap_or_default();
+        return match crate::extension_admin::published(&state.base.db, name).await? {
+            Some(_) => Ok(()),
+            None => Err(AppError::Validation(format!(
+                "no published extension is named {name}"
+            ))),
+        };
+    }
     if leaf["type"].as_str() == Some("flow") {
         let id = leaf["definition_id"]
             .as_str()
@@ -787,6 +796,25 @@ async fn run_handler(
             Ok(HandlerOutcome {
                 record_id: None,
                 instance_id: Some(instance),
+                updated: false,
+                ignored: false,
+            })
+        }
+        Some("extension") => {
+            // M17-T1: the hook's signature and replay checks ran before the
+            // event was queued; the extension answers the records to write.
+            let extension = handler["name"].as_str().unwrap_or_default();
+            let written = crate::extension_kinds::run_kind(
+                state,
+                extension,
+                crate::extension_kinds::WEBHOOK_EXPORT,
+                hook.run_as,
+                &serde_json::json!({ "kind": "webhook", "hook": name, "body": payload }),
+            )
+            .await?;
+            Ok(HandlerOutcome {
+                record_id: written.first().copied(),
+                instance_id: None,
                 updated: false,
                 ignored: false,
             })

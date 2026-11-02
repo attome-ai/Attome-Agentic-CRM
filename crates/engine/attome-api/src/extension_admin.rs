@@ -579,6 +579,63 @@ async fn test_version(
     Ok(Json(PaginatedResponse::new(items, total, 1, total.max(1))))
 }
 
+/// A job extension's input.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct QueueExtensionJob {
+    /// Given to the module's `on_job` export as `input`.
+    #[serde(default)]
+    #[schema(value_type = Object)]
+    pub input: Value,
+}
+
+/// Run a job extension
+///
+/// M17-T1: queues one run of the published extension's `on_job` export with
+/// `input`, as the caller: the records it answers are written as the
+/// caller through the generic write path.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/extensions/{name}/jobs",
+    operation_id = "queue_extension_job",
+    tag = "admin",
+    params(("name" = String, Path, description = "The extension")),
+    request_body = QueueExtensionJob,
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::Delegated,
+        Some("extension_kinds::run_kind -> entity_crud"),
+        "queues the run; every record it writes goes through the audited generic write path \
+         as the caller"
+    )))),
+    responses(
+        (status = 202, description = "Queued"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No published version of that name", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn queue_job(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<area::Automation>>,
+    Path(name): Path<String>,
+    Json(body): Json<QueueExtensionJob>,
+) -> Result<StatusCode, AppError> {
+    if published(&state.base.db, &name).await?.is_none() {
+        return Err(AppError::NotFound);
+    }
+    crate::extension_kinds::queue_job(
+        &state,
+        &crate::extension_kinds::ExtensionJobPayload {
+            name,
+            run_as: ctx.user_id,
+            input: body.input,
+        },
+    )
+    .await?;
+    Ok(StatusCode::ACCEPTED)
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/extensions", get(list).post(upload))
@@ -588,6 +645,7 @@ pub fn routes() -> Router<EngineState> {
         )
         .route("/api/v1/admin/extensions/{name}/off", post(switch_off))
         .route("/api/v1/admin/extensions/{name}/runs", get(runs))
+        .route("/api/v1/admin/extensions/{name}/jobs", post(queue_job))
         .route(
             "/api/v1/admin/extensions/{name}/versions/{version}/test",
             post(test_version),
@@ -595,7 +653,7 @@ pub fn routes() -> Router<EngineState> {
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list, upload, publish, switch_off, runs, test_version))]
+#[openapi(paths(list, upload, publish, switch_off, runs, test_version, queue_job))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

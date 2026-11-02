@@ -12,6 +12,8 @@ pub mod grants;
 pub mod harness;
 /// The host API as a Rust trait, and AE2-T1's in-memory fake host.
 pub mod host;
+/// M17-T1: job and webhook extensions and the writes they ask for.
+pub mod kinds;
 /// AE2-T3: a run's host calls, recorded and replayed.
 pub mod record;
 /// Y10-T1: the engine, the limits and running one export.

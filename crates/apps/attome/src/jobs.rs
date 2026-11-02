@@ -4098,6 +4098,26 @@ pub const HEAVY_OP_UNDO_RETENTION: attome_jobs::JobType =
 pub fn register_job_types() {
     static ONCE: std::sync::Once = std::sync::Once::new();
     ONCE.call_once(|| {
+        // M17-T1: a run of a job extension.
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            attome_api::extension_kinds::EXTENSION_JOB,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: attome_api::extension_kinds::ExtensionJobPayload = job.payload()?;
+                let written = attome_api::extension_kinds::run_kind(
+                    &state,
+                    &payload.name,
+                    attome_api::extension_kinds::JOB_EXPORT,
+                    payload.run_as,
+                    &serde_json::json!({ "kind": "job", "input": payload.input }),
+                )
+                .await
+                .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(extension = %payload.name, written = written.len(), "extension job finished");
+                Ok(())
+            },
+        ) {
+            tracing::error!(%error, "extension job type was not registered");
+        }
         // Y10-T2: the record hooks that run once a write has committed.
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             attome_core::record_hooks::AFTER_COMMIT_JOB,

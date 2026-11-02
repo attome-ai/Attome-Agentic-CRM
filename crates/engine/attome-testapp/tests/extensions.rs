@@ -319,3 +319,109 @@ fn published_extensions_run_at_their_hook_stage() {
         assert_eq!(account_name(app.db(), id).await, format!("Free {name}"));
     });
 }
+
+/// Answers `{"records":[{"entity":"account","values":{"name":"From a job"}}]}`
+/// (65 bytes at 0) from `on_job`.
+const JOB_CREATES_ACCOUNT: &str = r#"(module
+    (memory (export "memory") 1)
+    (data (i32.const 0) "{\"records\":[{\"entity\":\"account\",\"values\":{\"name\":\"From a job\"}}]}")
+    (func (export "alloc") (param i32) (result i32) (i32.const 1024))
+    (func (export "on_job") (param i32 i32) (result i64) (i64.const 65)))"#;
+
+// feature: M17
+// op: queue_extension_job
+#[test]
+fn a_job_extension_writes_what_it_answers_as_the_caller() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let name = format!("job_{}", &Uuid::now_v7().simple().to_string()[24..]);
+        let upload = |manifest: serde_json::Value| {
+            let app = &app;
+            let name = name.clone();
+            async move {
+                app.request(
+                    Method::POST,
+                    "/api/v1/admin/extensions",
+                    Some(json!({ "name": name, "module_base64": b64(JOB_CREATES_ACCOUNT), "manifest": manifest })),
+                )
+                .await
+            }
+        };
+        // Version 1 may only read accounts: its write is refused.
+        let (status, _) = upload(json!({ "entities": { "account": { "read": true } } })).await;
+        assert_eq!(status, StatusCode::CREATED);
+        let (status, _) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/admin/extensions/{name}/versions/1/publish"),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK);
+        let refused = attome_api::extension_kinds::run_kind(
+            &app.state,
+            &name,
+            attome_api::extension_kinds::JOB_EXPORT,
+            app.admin.id,
+            &json!({ "kind": "job", "input": {} }),
+        )
+        .await;
+        assert!(
+            matches!(&refused, Err(attome_types::AppError::Validation(m)) if m.contains("may not write account")),
+            "{refused:?}"
+        );
+
+        // Version 2 may write account names: the account is created as the caller.
+        let (status, _) = upload(
+            json!({ "entities": { "account": { "read": true, "write": true, "attributes": ["name"] } } }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED);
+        let (status, _) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/admin/extensions/{name}/versions/2/publish"),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK);
+        let written = attome_api::extension_kinds::run_kind(
+            &app.state,
+            &name,
+            attome_api::extension_kinds::JOB_EXPORT,
+            app.admin.id,
+            &json!({ "kind": "job", "input": {} }),
+        )
+        .await
+        .unwrap();
+        assert_eq!(written.len(), 1);
+        assert_eq!(account_name(app.db(), written[0]).await, "From a job");
+        let runs: i64 =
+            sqlx::query_scalar("SELECT count(*) FROM extension_run WHERE extension_name = $1")
+                .bind(&name)
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        assert_eq!(runs, 2, "both runs are logged");
+
+        // Queued through the route; an unknown extension is a 404.
+        let (status, _) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/admin/extensions/{name}/jobs"),
+                Some(json!({ "input": { "since": "2026-11-01" } })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::ACCEPTED);
+        let (status, _) = app
+            .request(
+                Method::POST,
+                "/api/v1/admin/extensions/no_such_extension/jobs",
+                Some(json!({})),
+            )
+            .await;
+        assert_eq!(status, StatusCode::NOT_FOUND);
+    });
+}
