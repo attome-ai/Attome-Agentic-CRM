@@ -38,6 +38,8 @@ pub mod list_routes;
 pub mod loyalty;
 pub mod model;
 /// E9-T3: the nurture step and the drip that sends each track on its cadence.
+/// E9-T5: hand-off to sales when a nurtured person's score reaches the programme's threshold.
+pub mod nurture_handoff;
 pub mod nurture_run;
 pub mod nurture_tracks;
 pub mod precheck;

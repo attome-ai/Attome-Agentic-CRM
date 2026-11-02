@@ -1,0 +1,101 @@
+{
+  "author": "packs",
+  "checksum": "sha256:b7e7ee07f39d6c74dac43b979cfcae62005e5a2671732c8ac85b14dedbad66d9",
+  "closed_at": "2026-11-02T00:00:00Z",
+  "description": "Hand-off threshold (E9-T5): the points model whose score hands a nurtured person to sales, and the score that does it; a person is handed off once each time their score rises to it.",
+  "format": "attome-changeset/v1",
+  "id": "01a19c40-0000-7e95-8000-000000000017",
+  "layer": "product",
+  "name": "marketing-handoff-threshold",
+  "opened_at": "2026-11-02T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Hand-off Score Model",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "handoff_score_model",
+          "lookup_entity": null,
+          "max_length": 36,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "marketing_nurture_program",
+        "field": "handoff_score_model"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Hand-off Score",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "handoff_threshold",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "marketing_nurture_program",
+        "field": "handoff_threshold"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نموذج نقاط التسليم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_program.handoff_score_model",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "درجة التسليم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_program.handoff_threshold",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "marketing",
+  "seq": 17,
+  "title": "Pack: hand-off threshold"
+}

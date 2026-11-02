@@ -14,6 +14,7 @@ use std::sync::Arc;
 
 use attome_core::EngineState;
 use attome_core::workflow_step::{StepInvocation, StepOutcome, WorkflowStepHandler};
+use attome_marketing::nurture_handoff;
 use attome_marketing::nurture_run::{self, NurtureRun};
 use attome_testapp::TestApp;
 use axum::http::{Method, StatusCode};
@@ -477,5 +478,122 @@ fn done_event_resumes_instance() {
                 .is_empty()
         );
         assert_eq!(run_to_checkpoint(&state, instance).await, "completed");
+    });
+}
+
+/// E9-T5: a programme that hands people to sales at `threshold` on `model`.
+async fn handoff_programme(app: &TestApp, model: &str, threshold: f64) -> Uuid {
+    let definition = definition(app).await;
+    create(
+        app,
+        "marketing_nurture_program",
+        json!({ "name": "Hand-off drip", "journey_ref": definition, "status": "active",
+                "handoff_score_model": model, "handoff_threshold": threshold }),
+    )
+    .await
+}
+
+/// The person's score on `model` (the platform's `points_score`, or a
+/// stand-in with its columns where this test app does not provision it).
+async fn score(app: &TestApp, model: &str, person: Uuid, value: f64) {
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS points_score (id uuid PRIMARY KEY DEFAULT uuidv7(), \
+            model_id text, record_id text, entity_name text, score numeric, \
+            reasons text, computed_at timestamptz, is_active boolean DEFAULT true)",
+    )
+    .execute(app.db())
+    .await
+    .unwrap();
+    sqlx::query("DELETE FROM points_score WHERE model_id = $1 AND record_id = $2")
+        .bind(model)
+        .bind(person.to_string())
+        .execute(app.db())
+        .await
+        .unwrap();
+    sqlx::query(
+        "INSERT INTO points_score (model_id, record_id, entity_name, score, reasons, computed_at) \
+         VALUES ($1, $2, 'contact', $3, '[]', now())",
+    )
+    .bind(model)
+    .bind(person.to_string())
+    .bind(value)
+    .execute(app.db())
+    .await
+    .unwrap();
+}
+
+async fn handoffs(app: &TestApp, program: Uuid, person: Uuid) -> i64 {
+    sqlx::query_scalar(
+        "SELECT COUNT(*) FROM marketing_handoff WHERE program_id = $1 AND person_id = $2",
+    )
+    .bind(program)
+    .bind(person)
+    .fetch_one(app.db())
+    .await
+    .unwrap()
+}
+
+// feature: E9
+#[test]
+fn handoff_once_per_crossing() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let _serial = SERIAL.lock().await;
+        install(&app).await;
+        let model = Uuid::now_v7().to_string();
+        let program = handoff_programme(&app, &model, 50.0).await;
+        let person = person(&app).await;
+        enter(&app, person, program).await;
+
+        score(&app, &model, person, 72.0).await;
+        let made = nurture_handoff::detect(&app.state).await.unwrap();
+        assert_eq!(made.iter().filter(|h| h.person == person).count(), 1);
+        assert_eq!(handoffs(&app, program, person).await, 1);
+        let status: String = sqlx::query_scalar(
+            "SELECT status FROM marketing_nurture_state WHERE program_id = $1 AND person_id = $2",
+        )
+        .bind(program)
+        .bind(person)
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        assert_eq!(
+            status, "handed_off",
+            "the journey run waiting on it goes on"
+        );
+        let summary: serde_json::Value = sqlx::query_scalar(
+            "SELECT summary FROM marketing_handoff WHERE program_id = $1 AND person_id = $2",
+        )
+        .bind(program)
+        .bind(person)
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        assert_eq!(summary["threshold"], json!(50.0));
+
+        // The same crossing, read again, hands nobody off twice.
+        nurture_handoff::detect(&app.state).await.unwrap();
+        assert_eq!(handoffs(&app, program, person).await, 1);
+    });
+}
+
+// feature: E9
+#[test]
+fn below_threshold_no_handoff() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let _serial = SERIAL.lock().await;
+        install(&app).await;
+        let model = Uuid::now_v7().to_string();
+        let program = handoff_programme(&app, &model, 50.0).await;
+        let person = person(&app).await;
+        enter(&app, person, program).await;
+        score(&app, &model, person, 40.0).await;
+        nurture_handoff::detect(&app.state).await.unwrap();
+        assert_eq!(handoffs(&app, program, person).await, 0);
     });
 }

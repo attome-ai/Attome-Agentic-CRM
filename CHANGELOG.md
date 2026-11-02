@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Hand-off to sales (E9-T5): a nurture programme names a points model and a hand-off score
+  (`handoff_score_model`, `handoff_threshold`, marketing pack 0017); when a nurtured person's score rises
+  to it they are handed off once (a `marketing_handoff` with a summary), qualified, assigned (D4 for a
+  lead), given a due time from the SLA hours and their owner notified. Migration 0368.
 - Five nurture programme journeys (flow templates) and two lifecycle stored queries, leads and contacts
   per lifecycle stage, in the marketing pack (E9-T9, changeset 0016).
 - Seven starter journeys in the marketing pack (E8-T11), as flow templates: welcome, onboarding, event

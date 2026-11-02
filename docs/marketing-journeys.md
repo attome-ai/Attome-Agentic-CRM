@@ -50,6 +50,10 @@ Steps the marketing engine adds to the workflow:
   sent by the programme, through the same rules, one per the programme's `cadence_days`. When the
   person leaves the programme (handed to sales, a customer leaving an acquisition programme, a retired
   programme), the step completes and the journey goes on. Only email content is sent.
+  A programme hands a person to sales when their score on its points model (`handoff_score_model`)
+  rises to `handoff_threshold`: once per rise, with a summary of what they saw, their
+  `lifecycle_stage` set to `sales_qualified`, a lead assigned by the assignment rules, a due time
+  from `sla_business_hours` on the working calendar, and the owner notified.
 
 Every step a module contributes, with the JSON Schema of its settings, is listed by
 `GET /api/v1/workflow/step-handlers`; an engine adds one through `WorkflowStepHandler`

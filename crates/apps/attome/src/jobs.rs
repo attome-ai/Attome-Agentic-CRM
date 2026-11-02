@@ -7562,13 +7562,27 @@ pub fn spawn_journey_counts_scheduler(db: DbPool, interval: std::time::Duration)
     );
 }
 
-/// E9-T3: one nurture pass. Due states get their next email, then the
-/// runs whose state finished are told (`nurture.done:<run>`); a run not yet
+/// E9-T3: one nurture pass. Due states get their next email, people whose
+/// score crossed their programme's hand-off score go to sales (E9-T5), then
+/// the runs whose state finished are told (`nurture.done:<run>`); a run not yet
 /// waiting is told on a later pass.
 async fn nurture_tick(state: &EngineState) -> Result<(), attome_types::AppError> {
     let sent = attome_marketing::nurture_run::tick(state).await?;
     if sent > 0 {
         tracing::info!(sent, "nurture: emails queued");
+    }
+    // E9-T5: people whose score reached their programme's hand-off score go
+    // to sales; a lead is assigned (D4) before its owner is read.
+    for handoff in attome_marketing::nurture_handoff::detect(state).await? {
+        if handoff.entity == "lead"
+            && let Err(error) =
+                attome_workflow::lead_assignment::assign_lead(state, handoff.person).await
+        {
+            tracing::warn!(%error, person = %handoff.person, "hand-off: lead assignment failed");
+        }
+        if let Err(error) = attome_marketing::nurture_handoff::assigned(state, &handoff).await {
+            tracing::warn!(%error, handoff = %handoff.id, "hand-off: follow-up failed");
+        }
     }
     for (program, person, instance, status) in
         attome_marketing::nurture_run::finished(&state.base.db, 500).await?
