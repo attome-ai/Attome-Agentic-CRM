@@ -725,6 +725,8 @@ export const xrmEn = {
     modeLive: 'Live (checked at every read)', modeStored: 'Stored (kept as records change)',
     preview: 'Preview', save: 'Save', new: 'New', edit: 'Edit', delete: 'Delete', resume: 'Resume',
     actions: 'Actions', none: 'No derived entity is defined yet.',
+    act: 'Act on members', reassignTo: 'Reassign every member to the team', teamName: 'Team name',
+    run: 'Run', cancel: 'Cancel',
     matching: '{count, plural, one {# record matches now} other {# records match now}}',
     entering: '{count, plural, one {# would enter} other {# would enter}}',
     leaving: '{count, plural, one {# would leave} other {# would leave}}',

@@ -102,12 +102,24 @@ export interface DerivedPreview {
                 <td>{{ (d.mode === 'stored' ? 'derivedEntitiesPage.modeStored' : 'derivedEntitiesPage.modeLive') | translate }}</td>
                 <td class="de-actions">
                   <button type="button" (click)="edit(d)">{{ 'derivedEntitiesPage.edit' | translate }}</button>
+                  <button type="button" (click)="acting.set(d.name)">{{ 'derivedEntitiesPage.act' | translate }}</button>
                   @if (d.mode === 'stored') {
                     <button type="button" (click)="resume(d)" [disabled]="busy()">{{ 'derivedEntitiesPage.resume' | translate }}</button>
                   }
                   <button type="button" (click)="remove(d)" [disabled]="busy()">{{ 'derivedEntitiesPage.delete' | translate }}</button>
                 </td>
               </tr>
+              @if (acting() === d.name) {
+                <tr class="de-act-row"><td colspan="5">
+                  <form class="de-act" data-testid="de-act" (submit)="$event.preventDefault(); reassign(d, team.value)">
+                    <span>{{ 'derivedEntitiesPage.reassignTo' | translate }}</span>
+                    <input #team dir="auto" [attr.aria-label]="'derivedEntitiesPage.teamName' | translate"
+                           [placeholder]="'derivedEntitiesPage.teamName' | translate" />
+                    <button type="submit" [disabled]="busy()">{{ 'derivedEntitiesPage.run' | translate }}</button>
+                    <button type="button" (click)="acting.set(null)">{{ 'derivedEntitiesPage.cancel' | translate }}</button>
+                  </form>
+                </td></tr>
+              }
             }
           </tbody>
         </table>
@@ -130,6 +142,7 @@ export interface DerivedPreview {
     .de-table th, .de-table td { text-align: start; padding-block: 0.25rem; padding-inline: 0.5rem;
       border-block-end: 1px solid var(--color-border); vertical-align: top; }
     .de-actions { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+    .de-act { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
     .de-muted { color: var(--color-text-secondary); font-size: 0.8125rem; }
     .de-error { color: var(--color-danger); }
     .de-sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
@@ -144,6 +157,8 @@ export class DerivedEntitiesComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly notice = signal<string | null>(null);
   readonly busy = signal(false);
+  /** The derived entity whose members the act form is open for. */
+  readonly acting = signal<string | null>(null);
 
   ngOnInit(): void {
     this.load();
@@ -200,6 +215,28 @@ export class DerivedEntitiesComponent implements OnInit {
     this.busy.set(true);
     this.sdk.delete(`/api/v1/admin/derived-entities/${encodeURIComponent(def.name)}`).subscribe({
       next: () => { this.busy.set(false); this.load(); },
+      error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
+    });
+  }
+
+  /**
+   * Reassigns every current member to a team, as the anchor's mass
+   * operation (`POST /api/v1/derived-entities/{name}/mass`): each record
+   * through its normal path, a large one in the background.
+   */
+  reassign(def: DerivedEntityDef, team: string): void {
+    if (!team.trim()) return;
+    this.busy.set(true);
+    this.error.set(null);
+    this.sdk.post<{ operation: { id: string; status: string; rows_done: number } }>(
+      `/api/v1/derived-entities/${encodeURIComponent(def.name)}/mass`,
+      { body: { kind: 'reassign', payload: { team_name: team.trim() }, reason: `${def.name} members` } },
+    ).subscribe({
+      next: run => {
+        this.busy.set(false);
+        this.acting.set(null);
+        this.notice.set(`${def.name}: ${run.operation.status} (${run.operation.rows_done})`);
+      },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });
   }

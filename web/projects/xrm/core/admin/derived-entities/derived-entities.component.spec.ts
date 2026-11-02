@@ -18,7 +18,9 @@ describe('DerivedEntitiesComponent (A26-T5)', () => {
   function create() {
     const getAllPages = vi.fn((_: string) => of(ITEMS));
     const post = vi.fn((path: string, _body: unknown) =>
-      of(path.endsWith('/preview') ? PREVIEW : { entered: 3, left: 1 }));
+      of(path.endsWith('/preview') ? PREVIEW
+        : path.endsWith('/mass') ? { operation: { id: 'op1', status: 'queued', rows_done: 0 } }
+        : { entered: 3, left: 1 }));
     const put = vi.fn((_: string, _body: unknown) => of(ITEMS[0]));
     const del = vi.fn(() => of(undefined));
     TestBed.configureTestingModule({
@@ -80,5 +82,19 @@ describe('DerivedEntitiesComponent (A26-T5)', () => {
     c.resume(ITEMS[0]);
     expect(post).toHaveBeenCalledWith('/api/v1/admin/derived-entities/big_open_deal/resume', null);
     expect(c.notice()).toContain('+3');
+  });
+
+  it('reassigns the members to a team as a mass operation', () => {
+    const { fixture, post } = create();
+    const c = fixture.componentInstance;
+    c.acting.set('big_open_deal');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="de-act"]')).not.toBeNull();
+    c.reassign(ITEMS[0], ' Key accounts ');
+    expect(post).toHaveBeenCalledWith('/api/v1/derived-entities/big_open_deal/mass', {
+      kind: 'reassign', payload: { team_name: 'Key accounts' }, reason: 'big_open_deal members',
+    });
+    expect(c.acting()).toBeNull();
+    expect(c.notice()).toContain('queued');
   });
 });
