@@ -21,7 +21,7 @@
     reason = "integration test seeds fixtures on the raw pool"
 )]
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use attome_config::AppConfig;
 use attome_core::EngineState;
@@ -149,29 +149,16 @@ async fn test_state() -> Option<EngineState> {
 }
 
 fn ctx(user_id: Uuid, is_admin: bool) -> SecurityContext {
-    SecurityContext {
-        user_id,
-        is_admin,
-        privileges: [
-            "marketing_list.update".to_owned(),
-            "marketing_list.read".to_owned(),
-        ]
-        .into_iter()
-        .collect(),
-        field_grants: HashSet::new(),
-        field_write_grants: HashSet::new(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: HashMap::new(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
-    }
+    let mut built = SecurityContext::human(user_id, Default::default());
+    built.is_admin = is_admin;
+    built.privileges = [
+        "marketing_list.update".to_owned(),
+        "marketing_list.read".to_owned(),
+    ]
+    .into_iter()
+    .collect();
+    built.role_ids = None;
+    built
 }
 
 async fn list(state: &EngineState, kind: &str) -> Uuid {

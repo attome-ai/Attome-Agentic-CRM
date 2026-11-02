@@ -322,24 +322,11 @@ mod tests {
     use uuid::Uuid;
 
     fn ctx() -> SecurityContext {
-        SecurityContext {
-            user_id: Uuid::now_v7(),
-            is_admin: false,
-            privileges: HashSet::new(),
-            field_grants: HashSet::new(),
-            field_write_grants: HashSet::new(),
-            bulk_fields: Default::default(),
-            epoch: 0,
-            accessible_org_ids: vec![Uuid::now_v7()],
-            team_ids: vec![Uuid::now_v7()],
-            position_hierarchy_enabled: false,
-            subordinate_user_ids: Vec::new(),
-            condition_grants: HashMap::new(),
-            role_ids: None,
-            unit_scope: Default::default(),
-            field_masks: Default::default(),
-            service_principal: false,
-        }
+        let mut built = SecurityContext::human(Uuid::now_v7(), Default::default());
+        built.accessible_org_ids = vec![Uuid::now_v7()];
+        built.team_ids = vec![Uuid::now_v7()];
+        built.role_ids = None;
+        built
     }
 
     fn access_map() -> HashMap<String, (Uuid, AccessLevel)> {

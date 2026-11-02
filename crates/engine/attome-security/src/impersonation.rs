@@ -170,31 +170,15 @@ impl ImpersonationStore for PgImpersonationStore {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{HashMap, HashSet};
 
     use axum::http::Method;
 
     use super::*;
 
     fn person() -> SecurityContext {
-        SecurityContext {
-            user_id: Uuid::now_v7(),
-            is_admin: false,
-            privileges: HashSet::new(),
-            field_grants: HashSet::new(),
-            field_write_grants: HashSet::new(),
-            field_masks: Default::default(),
-            bulk_fields: Default::default(),
-            epoch: 0,
-            accessible_org_ids: Vec::new(),
-            team_ids: Vec::new(),
-            position_hierarchy_enabled: false,
-            subordinate_user_ids: Vec::new(),
-            condition_grants: HashMap::new(),
-            role_ids: None,
-            unit_scope: Default::default(),
-            service_principal: false,
-        }
+        let mut built = SecurityContext::human(Uuid::now_v7(), Default::default());
+        built.role_ids = None;
+        built
     }
 
     /// View-as cannot write: the pipeline lets reads through and refuses
@@ -247,17 +231,20 @@ mod tests {
     #[test]
     fn impersonation_refuses_admins_machines_self_and_nesting() {
         let actor = Uuid::now_v7();
-        let admin = SecurityContext {
-            is_admin: true,
-            ..person()
+        let admin = {
+            let mut built = person();
+            built.is_admin = true;
+            built
         };
-        let machine = SecurityContext {
-            service_principal: true,
-            ..person()
+        let machine = {
+            let mut built = person();
+            built.service_principal = true;
+            built
         };
-        let me = SecurityContext {
-            user_id: actor,
-            ..person()
+        let me = {
+            let mut built = person();
+            built.user_id = actor;
+            built
         };
         let view = ImpersonationMode::View;
         assert!(matches!(

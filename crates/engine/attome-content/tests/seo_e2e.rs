@@ -39,7 +39,6 @@ use attome_server::security::SecurityContext;
 use attome_testkit::skip_if_no_db;
 use serde_json::{Value, json};
 use sqlx::PgPool;
-use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 fn test_config() -> AppConfig {
@@ -154,24 +153,9 @@ async fn test_state() -> Option<EngineState> {
 }
 
 fn ctx() -> SecurityContext {
-    SecurityContext {
-        user_id: Uuid::now_v7(),
-        is_admin: false,
-        privileges: HashSet::new(),
-        field_grants: HashSet::new(),
-        field_write_grants: HashSet::new(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: HashMap::new(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
-    }
+    let mut built = SecurityContext::human(Uuid::now_v7(), Default::default());
+    built.role_ids = None;
+    built
 }
 
 /// A space with a domain, so the only thing between a publish and an

@@ -308,24 +308,11 @@ fn every_payload_degrades_a_real_agent_write_to_confirm_first() {
         // message is in the history (I-10); the payload's own content is
         // incidental to this property, so the context below is tainted
         // exactly as the loop would taint it.
-        let security = std::sync::Arc::new(attome_server::security::SecurityContext {
-            user_id: uuid::Uuid::now_v7(),
-            is_admin: true,
-            privileges: std::collections::HashSet::new(),
-            field_grants: std::collections::HashSet::new(),
-            field_write_grants: std::collections::HashSet::new(),
-            bulk_fields: Default::default(),
-            epoch: 0,
-            accessible_org_ids: Vec::new(),
-            team_ids: Vec::new(),
-            position_hierarchy_enabled: false,
-            subordinate_user_ids: Vec::new(),
-            condition_grants: std::collections::HashMap::new(),
-            role_ids: None,
-            unit_scope: Default::default(),
-            field_masks: Default::default(),
-            service_principal: false,
-        });
+        let security =
+            std::sync::Arc::new(attome_server::security::SecurityContext::system_synthetic(
+                uuid::Uuid::now_v7(),
+                "test fixture",
+            ));
         let ctx = ActionContext::agent(security, RiskTier::Reversible).tainted();
 
         let decision = gate::evaluate(descriptor, &ctx, &inputs);

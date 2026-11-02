@@ -38,24 +38,11 @@ async fn pool() -> Option<DbPool> {
 }
 
 fn ctx(user_id: Uuid, privileges: Vec<String>, field_grants: Vec<String>) -> SecurityContext {
-    SecurityContext {
-        user_id,
-        is_admin: false,
-        privileges: privileges.into_iter().collect(),
-        field_grants: field_grants.into_iter().collect(),
-        field_write_grants: Default::default(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: Default::default(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
-    }
+    let mut built = SecurityContext::human(user_id, Default::default());
+    built.privileges = privileges.into_iter().collect();
+    built.field_grants = field_grants.into_iter().collect();
+    built.role_ids = None;
+    built
 }
 
 /// Provisions `evt_probe_{suffix}` with a `title` (ordinary) and

@@ -1640,26 +1640,14 @@ mod tests {
 
     #[test]
     fn route_visible_follows_areas_and_entity_reads() {
-        let mut ctx = SecurityContext {
-            user_id: Uuid::now_v7(),
-            is_admin: false,
-            privileges: ["admin.data_model", "account.read"]
+        let mut ctx = {
+            let mut built = SecurityContext::human(Uuid::now_v7(), Default::default());
+            built.privileges = ["admin.data_model", "account.read"]
                 .into_iter()
                 .map(str::to_owned)
-                .collect(),
-            field_grants: Default::default(),
-            field_write_grants: Default::default(),
-            bulk_fields: Default::default(),
-            epoch: 0,
-            accessible_org_ids: Vec::new(),
-            team_ids: Vec::new(),
-            position_hierarchy_enabled: false,
-            subordinate_user_ids: Vec::new(),
-            condition_grants: Default::default(),
-            role_ids: None,
-            unit_scope: Default::default(),
-            field_masks: Default::default(),
-            service_principal: false,
+                .collect();
+            built.role_ids = None;
+            built
         };
         assert!(route_visible(&ctx, "/xrm/admin/views"));
         assert!(!route_visible(&ctx, "/xrm/admin/secrets"));

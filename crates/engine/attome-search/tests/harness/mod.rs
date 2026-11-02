@@ -82,25 +82,12 @@ pub struct Seeded {
 }
 
 pub fn ctx(orgs: Vec<Uuid>) -> SecurityContext {
-    SecurityContext {
-        user_id: Uuid::now_v7(),
-        // Never an admin. See the module doc.
-        is_admin: false,
-        privileges: HashSet::new(),
-        field_grants: HashSet::new(),
-        field_write_grants: HashSet::new(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: orgs,
-        team_ids: vec![Uuid::now_v7()],
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: HashMap::new(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
-    }
+    // Never an admin. See the module doc.
+    let mut built = SecurityContext::human(Uuid::now_v7(), Default::default());
+    built.accessible_org_ids = orgs;
+    built.team_ids = vec![Uuid::now_v7()];
+    built.role_ids = None;
+    built
 }
 
 /// Every seeded entity at `BusinessUnit`, so the organization fast tier is the
@@ -236,10 +223,9 @@ pub fn legs_for(query: &str) -> Vec<Box<dyn SqlLeg>> {
 /// A context for an explicit user id — the share-only caller's counterpart to
 /// [`ctx`], which mints a fresh id each call.
 pub fn ctx_for(user_id: Uuid, orgs: Vec<Uuid>) -> SecurityContext {
-    SecurityContext {
-        user_id,
-        ..ctx(orgs)
-    }
+    let mut built = ctx(orgs);
+    built.user_id = user_id;
+    built
 }
 
 /// [`run_query`] against an already-built visibility, with an explicit shape.

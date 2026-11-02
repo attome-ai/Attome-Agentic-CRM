@@ -28,7 +28,6 @@
     reason = "test helpers: a failed setup step should panic with its message"
 )]
 
-use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
 use attome_ai::actions::knowledge::SEARCH_KNOWLEDGE;
@@ -293,23 +292,11 @@ async fn seed_user(db: &attome_db::DbPool) -> Uuid {
 
 /// `is_admin` reads every collection; a non-admin with no grants reads none.
 fn security_context(user_id: Uuid, is_admin: bool) -> Arc<SecurityContext> {
-    Arc::new(SecurityContext {
-        user_id,
-        is_admin,
-        privileges: HashSet::new(),
-        field_grants: HashSet::new(),
-        field_write_grants: HashSet::new(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: HashMap::new(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
+    Arc::new({
+        let mut built = SecurityContext::human(user_id, Default::default());
+        built.is_admin = is_admin;
+        built.role_ids = None;
+        built
     })
 }
 

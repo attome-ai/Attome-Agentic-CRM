@@ -172,7 +172,6 @@ fn take() -> Vec<ViewEntry> {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{HashMap, HashSet};
 
     use super::*;
 
@@ -196,24 +195,10 @@ mod tests {
     }
 
     fn ctx(grants: &[&str]) -> SecurityContext {
-        SecurityContext {
-            user_id: Uuid::now_v7(),
-            is_admin: false,
-            privileges: HashSet::new(),
-            field_grants: grants.iter().map(|s| s.to_string()).collect(),
-            field_write_grants: HashSet::new(),
-            field_masks: Default::default(),
-            bulk_fields: Default::default(),
-            epoch: 0,
-            accessible_org_ids: Vec::new(),
-            team_ids: Vec::new(),
-            position_hierarchy_enabled: false,
-            subordinate_user_ids: Vec::new(),
-            condition_grants: HashMap::new(),
-            role_ids: None,
-            unit_scope: Default::default(),
-            service_principal: false,
-        }
+        let mut built = SecurityContext::human(Uuid::now_v7(), Default::default());
+        built.field_grants = grants.iter().map(|s| s.to_string()).collect();
+        built.role_ids = None;
+        built
     }
 
     /// A full read of a confirmed Financial or Health value is logged, once
@@ -247,9 +232,10 @@ mod tests {
         );
         // Seen masked (no read grant): not a full read.
         assert!(full_reads(&ctx(&[]), "employee", &attrs, &records, now).is_empty());
-        let admin = SecurityContext {
-            is_admin: true,
-            ..ctx(&[])
+        let admin = {
+            let mut built = ctx(&[]);
+            built.is_admin = true;
+            built
         };
         assert_eq!(
             full_reads(&admin, "employee", &attrs, &records, now).len(),

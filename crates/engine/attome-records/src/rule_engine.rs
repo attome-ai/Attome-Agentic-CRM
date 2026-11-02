@@ -652,24 +652,10 @@ mod tests {
     }
 
     fn ctx(admin: bool) -> SecurityContext {
-        SecurityContext {
-            user_id: Uuid::nil(),
-            is_admin: admin,
-            privileges: HashSet::new(),
-            field_grants: HashSet::new(),
-            field_write_grants: HashSet::new(),
-            bulk_fields: Default::default(),
-            epoch: 0,
-            accessible_org_ids: Vec::new(),
-            team_ids: Vec::new(),
-            position_hierarchy_enabled: false,
-            subordinate_user_ids: Vec::new(),
-            condition_grants: HashMap::new(),
-            role_ids: None,
-            unit_scope: Default::default(),
-            field_masks: Default::default(),
-            service_principal: false,
-        }
+        let mut built = SecurityContext::human(Uuid::nil(), Default::default());
+        built.is_admin = admin;
+        built.role_ids = None;
+        built
     }
 
     fn formula_attr(name: &str, expr: &str, result_type: &str) -> AttrInfo {

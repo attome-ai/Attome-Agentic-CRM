@@ -40,7 +40,6 @@
 use attome_db::DbPool;
 use attome_server::security::SecurityContext;
 use attome_testkit::skip_if_no_db;
-use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 mod knowledge_harness;
@@ -54,24 +53,7 @@ use knowledge_harness::{
 /// positive control — it proves the query path works before a zero from a
 /// restricted caller is read as a permission result.
 fn admin_ctx() -> SecurityContext {
-    SecurityContext {
-        user_id: Uuid::now_v7(),
-        is_admin: true,
-        privileges: HashSet::new(),
-        field_grants: HashSet::new(),
-        field_write_grants: HashSet::new(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: HashMap::new(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
-    }
+    SecurityContext::system_synthetic(Uuid::now_v7(), "test fixture")
 }
 
 /// A caller with no grants at all: every entity-access lookup resolves to

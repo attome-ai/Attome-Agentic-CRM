@@ -59,24 +59,9 @@ async fn test_db() -> Option<DbPool> {
 }
 
 fn ctx(user_id: Uuid) -> SecurityContext {
-    SecurityContext {
-        user_id,
-        is_admin: false,
-        privileges: HashSet::new(),
-        field_grants: HashSet::new(),
-        field_write_grants: HashSet::new(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: HashMap::new(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
-    }
+    let mut built = SecurityContext::human(user_id, Default::default());
+    built.role_ids = None;
+    built
 }
 
 fn attr(logicalname: &str, lookup_entity_ref: Uuid) -> AttrInfo {

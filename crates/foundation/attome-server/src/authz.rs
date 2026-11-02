@@ -639,7 +639,7 @@ pub mod area {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{HashMap, HashSet};
+    use std::collections::HashSet;
 
     use axum::http::Request;
     use uuid::Uuid;
@@ -647,24 +647,11 @@ mod tests {
     use super::*;
 
     fn ctx(is_admin: bool, privileges: &[&str]) -> SecurityContext {
-        SecurityContext {
-            user_id: Uuid::now_v7(),
-            is_admin,
-            privileges: privileges.iter().map(|p| (*p).to_owned()).collect(),
-            field_grants: HashSet::new(),
-            field_write_grants: HashSet::new(),
-            bulk_fields: Default::default(),
-            epoch: 0,
-            accessible_org_ids: Vec::new(),
-            team_ids: Vec::new(),
-            position_hierarchy_enabled: false,
-            subordinate_user_ids: Vec::new(),
-            condition_grants: HashMap::new(),
-            role_ids: None,
-            unit_scope: Default::default(),
-            field_masks: Default::default(),
-            service_principal: false,
-        }
+        let mut built = SecurityContext::human(Uuid::now_v7(), Default::default());
+        built.is_admin = is_admin;
+        built.privileges = privileges.iter().map(|p| (*p).to_owned()).collect();
+        built.role_ids = None;
+        built
     }
 
     /// D-791 rule 3: only a cookie session is interactive; an API-key or S2S

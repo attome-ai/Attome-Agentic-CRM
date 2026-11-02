@@ -64,24 +64,7 @@ const NODE_RUN_ENTRY_INVARIANT: &str =
     "node_runs entry was inserted by the or_insert_with earlier in this iteration";
 
 fn system_security_context(user_id: Uuid) -> SecurityContext {
-    SecurityContext {
-        user_id,
-        is_admin: true,
-        privileges: HashSet::new(),
-        field_grants: HashSet::new(),
-        field_write_grants: HashSet::new(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: HashMap::new(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
-    }
+    SecurityContext::system_synthetic(user_id, "workflow scheduler")
 }
 
 /// M1-T3: who a flow's nodes act as. The graph's `settings.run_as` is

@@ -31,7 +31,7 @@
     reason = "test helpers: a failed setup step should panic with its message"
 )]
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use attome_config::AppConfig;
@@ -515,25 +515,12 @@ fn ctx(
     privileges: &[String],
     field_grants: &[String],
 ) -> SecurityContext {
-    SecurityContext {
-        user_id,
-        is_admin,
-        privileges: privileges.iter().cloned().collect(),
-        field_grants: field_grants.iter().cloned().collect(),
-        field_write_grants: HashSet::new(),
-        // D-589: the pre-D-589 behaviour (every non-sensitive field on bulk surfaces).
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: HashMap::new(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
-    }
+    let mut built = SecurityContext::human(user_id, Default::default());
+    built.is_admin = is_admin;
+    built.privileges = privileges.iter().cloned().collect();
+    built.field_grants = field_grants.iter().cloned().collect();
+    built.role_ids = None;
+    built
 }
 
 fn admin() -> SecurityContext {

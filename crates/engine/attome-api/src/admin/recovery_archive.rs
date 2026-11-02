@@ -667,24 +667,13 @@ mod tests {
     use serde_json::json;
 
     fn ctx_with(is_admin: bool, grants: &[&str]) -> attome_server::security::SecurityContext {
-        attome_server::security::SecurityContext {
-            user_id: Uuid::now_v7(),
-            is_admin,
-            privileges: std::collections::HashSet::new(),
-            field_grants: grants.iter().map(|s| s.to_string()).collect(),
-            field_write_grants: std::collections::HashSet::new(),
-            bulk_fields: attome_server::security::BulkFields::Legacy,
-            epoch: 0,
-            accessible_org_ids: Vec::new(),
-            team_ids: Vec::new(),
-            position_hierarchy_enabled: false,
-            subordinate_user_ids: Vec::new(),
-            condition_grants: std::collections::HashMap::new(),
-            role_ids: None,
-            unit_scope: Default::default(),
-            field_masks: Default::default(),
-            service_principal: false,
-        }
+        let mut built =
+            attome_server::security::SecurityContext::human(Uuid::now_v7(), Default::default());
+        built.is_admin = is_admin;
+        built.field_grants = grants.iter().map(|s| s.to_string()).collect();
+        built.bulk_fields = attome_server::security::BulkFields::Legacy;
+        built.role_ids = None;
+        built
     }
 
     #[test]

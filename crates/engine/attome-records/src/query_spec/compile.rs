@@ -1095,10 +1095,9 @@ fn cursor_condition(
 
 #[cfg(test)]
 pub(super) mod fixtures {
-    use std::collections::{HashMap, HashSet};
+    use std::collections::HashSet;
 
     use attome_core::{RelationshipCascade, RelationshipDef};
-    use attome_server::security::BulkFields;
 
     use super::*;
 
@@ -1197,27 +1196,15 @@ pub(super) mod fixtures {
     }
 
     pub fn reader() -> SecurityContext {
-        SecurityContext {
-            user_id: Uuid::from_u128(7),
-            is_admin: false,
-            privileges: ["account.read", "contact.read", "team.read", "incident.read"]
-                .into_iter()
-                .map(str::to_owned)
-                .collect::<HashSet<_>>(),
-            field_grants: HashSet::new(),
-            field_write_grants: HashSet::new(),
-            bulk_fields: BulkFields::Legacy,
-            epoch: 0,
-            accessible_org_ids: vec![Uuid::from_u128(8)],
-            team_ids: vec![Uuid::from_u128(9)],
-            position_hierarchy_enabled: false,
-            subordinate_user_ids: Vec::new(),
-            condition_grants: HashMap::new(),
-            role_ids: None,
-            unit_scope: Default::default(),
-            field_masks: Default::default(),
-            service_principal: false,
-        }
+        let mut built = SecurityContext::human(Uuid::from_u128(7), Default::default());
+        built.privileges = ["account.read", "contact.read", "team.read", "incident.read"]
+            .into_iter()
+            .map(str::to_owned)
+            .collect::<HashSet<_>>();
+        built.accessible_org_ids = vec![Uuid::from_u128(8)];
+        built.team_ids = vec![Uuid::from_u128(9)];
+        built.role_ids = None;
+        built
     }
 
     pub fn global() -> Access {

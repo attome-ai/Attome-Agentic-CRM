@@ -1948,23 +1948,11 @@ async fn controlled_by_parent_reader_of_the_account_reads_its_contacts() {
             .expect("resolve the level");
     assert_eq!(level, AccessLevel::Team, "the level on the account");
 
-    let ctx = attome_server::security::SecurityContext {
-        user_id,
-        is_admin: false,
-        privileges: Default::default(),
-        field_grants: Default::default(),
-        field_write_grants: Default::default(),
-        field_masks: Default::default(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: Default::default(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        service_principal: false,
+    let ctx = {
+        let mut built =
+            attome_server::security::SecurityContext::human(user_id, Default::default());
+        built.role_ids = None;
+        built
     };
     let pred = rls_predicate(&ctx, contact, "c", level, Capability::View, 1)
         .expect("a Team level filters");
@@ -2070,23 +2058,12 @@ async fn delegated_admin_never_acts_on_a_full_admin() {
         );
     }
 
-    let delegate = attome_server::security::SecurityContext {
-        user_id: Uuid::now_v7(),
-        is_admin: false,
-        privileges: std::collections::HashSet::from(["admin.users".to_owned()]),
-        field_grants: Default::default(),
-        field_write_grants: Default::default(),
-        field_masks: Default::default(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: Default::default(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        service_principal: false,
+    let delegate = {
+        let mut built =
+            attome_server::security::SecurityContext::human(Uuid::now_v7(), Default::default());
+        built.privileges = std::collections::HashSet::from(["admin.users".to_owned()]);
+        built.role_ids = None;
+        built
     };
     for full_admin in [direct, through_role] {
         assert!(matches!(
@@ -2095,9 +2072,10 @@ async fn delegated_admin_never_acts_on_a_full_admin() {
         ));
     }
     assert!(require_not_above(&db, &delegate, ordinary).await.is_ok());
-    let admin = attome_server::security::SecurityContext {
-        is_admin: true,
-        ..delegate
+    let admin = {
+        let mut built = delegate;
+        built.is_admin = true;
+        built
     };
     assert!(require_not_above(&db, &admin, direct).await.is_ok());
 }

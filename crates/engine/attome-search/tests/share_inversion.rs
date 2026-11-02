@@ -43,24 +43,11 @@ async fn test_db() -> Option<DbPool> {
 }
 
 fn ctx(user_id: Uuid, team_ids: Vec<Uuid>, orgs: Vec<Uuid>) -> SecurityContext {
-    SecurityContext {
-        user_id,
-        is_admin: false,
-        privileges: HashSet::new(),
-        field_grants: HashSet::new(),
-        field_write_grants: HashSet::new(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: orgs,
-        team_ids,
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: HashMap::new(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
-    }
+    let mut built = SecurityContext::human(user_id, Default::default());
+    built.accessible_org_ids = orgs;
+    built.team_ids = team_ids;
+    built.role_ids = None;
+    built
 }
 
 async fn seed_row(db: &DbPool, entity: &str, body: &str) -> Uuid {

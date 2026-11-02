@@ -562,24 +562,7 @@ pub async fn plan_record_sets(
 /// cannot import directly: `attome-workflow` depends on `attome-api`, not the
 /// reverse).
 fn system_security_context(user_id: Uuid) -> SecurityContext {
-    SecurityContext {
-        user_id,
-        is_admin: true,
-        privileges: HashSet::new(),
-        field_grants: HashSet::new(),
-        field_write_grants: HashSet::new(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: HashMap::new(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
-    }
+    SecurityContext::system_synthetic(user_id, "bundle record set apply")
 }
 
 /// Creates or updates one record-set row through the ordinary entity-

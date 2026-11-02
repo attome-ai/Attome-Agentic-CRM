@@ -291,7 +291,6 @@ impl ActionContext {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-    use std::collections::{HashMap, HashSet};
     use uuid::Uuid;
 
     pub(crate) fn security_context() -> Arc<SecurityContext> {
@@ -305,23 +304,12 @@ pub(crate) mod tests {
         is_admin: bool,
         privileges: &[&str],
     ) -> Arc<SecurityContext> {
-        Arc::new(SecurityContext {
-            user_id: Uuid::now_v7(),
-            is_admin,
-            privileges: privileges.iter().map(|p| (*p).to_owned()).collect(),
-            field_grants: HashSet::new(),
-            field_write_grants: HashSet::new(),
-            bulk_fields: Default::default(),
-            epoch: 0,
-            accessible_org_ids: Vec::new(),
-            team_ids: Vec::new(),
-            position_hierarchy_enabled: false,
-            subordinate_user_ids: Vec::new(),
-            condition_grants: HashMap::new(),
-            role_ids: None,
-            unit_scope: Default::default(),
-            field_masks: Default::default(),
-            service_principal: false,
+        Arc::new({
+            let mut built = SecurityContext::human(Uuid::now_v7(), Default::default());
+            built.is_admin = is_admin;
+            built.privileges = privileges.iter().map(|p| (*p).to_owned()).collect();
+            built.role_ids = None;
+            built
         })
     }
 

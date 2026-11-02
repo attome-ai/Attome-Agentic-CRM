@@ -170,27 +170,12 @@ impl ResultsCacheKey {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashSet;
 
     fn ctx(user_id: Uuid, epoch: i64) -> SecurityContext {
-        SecurityContext {
-            user_id,
-            is_admin: false,
-            privileges: HashSet::new(),
-            field_grants: HashSet::new(),
-            field_write_grants: HashSet::new(),
-            bulk_fields: Default::default(),
-            epoch,
-            accessible_org_ids: Vec::new(),
-            team_ids: Vec::new(),
-            position_hierarchy_enabled: false,
-            subordinate_user_ids: Vec::new(),
-            condition_grants: HashMap::new(),
-            role_ids: None,
-            unit_scope: Default::default(),
-            field_masks: Default::default(),
-            service_principal: false,
-        }
+        let mut built = SecurityContext::human(user_id, Default::default());
+        built.epoch = epoch;
+        built.role_ids = None;
+        built
     }
 
     fn map_with(entity: &str) -> AccessMap {

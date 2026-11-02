@@ -45,24 +45,7 @@ use attome_types::ErrorResponse;
 /// construct one — never build this for a value that traces back to an
 /// unauthenticated or ordinary-privilege caller.
 pub fn admin_security_context(user_id: Uuid) -> SecurityContext {
-    SecurityContext {
-        user_id,
-        is_admin: true,
-        privileges: Default::default(),
-        field_grants: Default::default(),
-        field_write_grants: Default::default(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: Default::default(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
-    }
+    SecurityContext::system_synthetic(user_id, "platform merge")
 }
 
 /// `do_merge_core`'s result: the merged record exactly as the pre-D-432

@@ -228,7 +228,15 @@ pub enum BulkFields {
     Listed(HashSet<String>),
 }
 
+/// Who a request or job acts as, and what it may do.
+///
+/// AH3-T1: `#[non_exhaustive]`, so no crate but this one writes a literal.
+/// Build one with [`SecurityContext::human`], [`SecurityContext::service`] or
+/// [`SecurityContext::system_synthetic`] and fill in what the constructor
+/// leaves empty; `tests::no_security_context_literal_outside_this_file`
+/// refuses a new literal anywhere in `crates/`.
 #[derive(Debug, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct SecurityContext {
     pub user_id: Uuid,
     /// True iff `privileges` contains the reserved key `"system.admin"`.
@@ -370,6 +378,56 @@ pub struct SecurityContext {
 }
 
 impl SecurityContext {
+    /// AH3-T1: a person's context, as a resolver starts it: `is_admin`
+    /// follows the reserved [`ADMIN_PRIVILEGE_KEY`], every other grant is
+    /// empty for the caller to fill, and `role_ids` is `Some` (a person,
+    /// never the system writer `None` stands for).
+    pub fn human(user_id: Uuid, privileges: HashSet<String>) -> Self {
+        Self {
+            user_id,
+            is_admin: privileges.contains(ADMIN_PRIVILEGE_KEY),
+            privileges,
+            field_grants: HashSet::new(),
+            field_write_grants: HashSet::new(),
+            field_masks: HashMap::new(),
+            bulk_fields: BulkFields::default(),
+            epoch: 0,
+            accessible_org_ids: Vec::new(),
+            team_ids: Vec::new(),
+            position_hierarchy_enabled: false,
+            subordinate_user_ids: Vec::new(),
+            condition_grants: HashMap::new(),
+            role_ids: Some(Vec::new()),
+            unit_scope: UnitScope::default(),
+            service_principal: false,
+        }
+    }
+
+    /// AH3-T1: an API-key or S2S caller (D-791 rule 3) holding
+    /// `privileges`: [`SecurityContext::human`] marked as a service principal.
+    pub fn service(user_id: Uuid, privileges: HashSet<String>) -> Self {
+        Self {
+            service_principal: true,
+            ..Self::human(user_id, privileges)
+        }
+    }
+
+    /// AH3-T1: no human actor, full trust — a background writer the
+    /// platform runs itself (the workflow scheduler, a bundle's record sets,
+    /// a merge an approval already decided). `is_admin` is set, every grant
+    /// is empty and `role_ids` is `None`, the system writer business-rule
+    /// locks never refuse. `user_id` is who the writes are recorded as;
+    /// `reason` names the writer in the trace. Build one only behind a check
+    /// that already authorised the work.
+    pub fn system_synthetic(user_id: Uuid, reason: &'static str) -> Self {
+        tracing::debug!(%user_id, reason, "system security context");
+        Self {
+            is_admin: true,
+            role_ids: None,
+            ..Self::human(user_id, HashSet::new())
+        }
+    }
+
     /// Z3-T4: one string for everything this context is allowed, the same
     /// for two readers with the same effective permissions in any order:
     /// SHA-256 hex over the admin flag, privileges, field read and write
@@ -983,5 +1041,125 @@ mod tests {
         let handle = SecurityResolverHandle::default_deny();
         handle.store(Arc::new(AllowAllResolver));
         assert!(handle.invalidate_sync(Uuid::now_v7()).await.is_ok());
+    }
+
+    #[test]
+    fn human_follows_the_admin_key_and_starts_empty() {
+        let user = Uuid::now_v7();
+        let reader = SecurityContext::human(user, ["case.read".to_owned()].into());
+        assert_eq!(reader.user_id, user);
+        assert!(!reader.is_admin);
+        assert!(reader.field_grants.is_empty() && reader.accessible_org_ids.is_empty());
+        assert_eq!(
+            reader.role_ids,
+            Some(Vec::new()),
+            "a person, not the system writer"
+        );
+        assert!(!reader.service_principal);
+
+        let admin = SecurityContext::human(user, [ADMIN_PRIVILEGE_KEY.to_owned()].into());
+        assert!(admin.is_admin);
+    }
+
+    #[test]
+    fn service_and_system_synthetic_differ_from_human_only_where_named() {
+        let user = Uuid::now_v7();
+        let service = SecurityContext::service(user, HashSet::new());
+        assert!(service.service_principal);
+        assert!(!service.is_admin);
+        assert_eq!(service.role_ids, Some(Vec::new()));
+
+        let system = SecurityContext::system_synthetic(user, "test");
+        assert!(system.is_admin);
+        assert!(system.privileges.is_empty());
+        assert_eq!(
+            system.role_ids, None,
+            "business-rule locks read None as the system writer"
+        );
+        assert!(!system.service_principal);
+    }
+
+    /// AH3-T1: `#[non_exhaustive]` stops other crates writing a literal; this
+    /// stops one appearing anywhere else in `crates/`, this crate included.
+    /// A context is built with a named constructor, so every place that
+    /// mints authority is a call that can be found and reviewed.
+    #[test]
+    fn no_security_context_literal_outside_this_file() {
+        const IDENT: fn(char) -> bool = |c| c.is_ascii_alphanumeric() || c == '_';
+        // `before` is the line up to `SecurityContext {`: a literal unless it
+        // sits in a string or names the type in a declaration (`struct`,
+        // `impl`, `for`, a return type).
+        fn is_literal(before: &str) -> bool {
+            if before.matches('"').count() % 2 == 1 {
+                return false;
+            }
+            let mut b = before.trim_end();
+            while let Some(rest) = b.strip_suffix("::") {
+                b = rest.trim_end_matches(IDENT);
+            }
+            let b = b.trim_end();
+            let b = b.strip_suffix('&').map_or(b, str::trim_end);
+            if b.ends_with("->") {
+                return false;
+            }
+            let words: Vec<&str> = b.split_whitespace().collect();
+            !words
+                .iter()
+                .any(|w| matches!(*w, "struct" | "impl" | "enum" | "trait"))
+                && words.last() != Some(&"for")
+        }
+        fn walk(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+            let Ok(entries) = std::fs::read_dir(dir) else {
+                return;
+            };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    let name = entry.file_name();
+                    if name != "target" && name != "node_modules" {
+                        walk(&path, out);
+                    }
+                } else if path.extension().is_some_and(|e| e == "rs") {
+                    out.push(path);
+                }
+            }
+        }
+
+        let crates = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let this_file = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/security.rs");
+        let this_file = std::fs::canonicalize(this_file).expect("this file exists");
+        let mut files = Vec::new();
+        walk(&crates, &mut files);
+        assert!(
+            files.len() > 100,
+            "the scan found {} files: wrong root",
+            files.len()
+        );
+
+        let mut found = Vec::new();
+        for file in files {
+            if std::fs::canonicalize(&file).ok().as_deref() == Some(this_file.as_path()) {
+                continue;
+            }
+            let Ok(text) = std::fs::read_to_string(&file) else {
+                continue;
+            };
+            for (no, line) in text.lines().enumerate() {
+                if line.trim_start().starts_with("//") {
+                    continue;
+                }
+                for (at, _) in line.match_indices("SecurityContext {") {
+                    let starts_word = !line[..at].ends_with(IDENT);
+                    if starts_word && is_literal(&line[..at]) {
+                        found.push(format!("{}:{}", file.display(), no + 1));
+                    }
+                }
+            }
+        }
+        assert!(
+            found.is_empty(),
+            "build a SecurityContext with SecurityContext::human, ::service or \
+             ::system_synthetic, not a literal: {found:#?}"
+        );
     }
 }

@@ -647,7 +647,6 @@ pub fn available_transitions<'a>(
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
 
     use super::*;
     use crate::snapshot_source::SnapshotSource;
@@ -661,24 +660,11 @@ mod tests {
     }
 
     fn ctx(privileges: &[&str], is_admin: bool) -> SecurityContext {
-        SecurityContext {
-            user_id: Uuid::nil(),
-            is_admin,
-            privileges: privileges.iter().map(|s| s.to_string()).collect(),
-            field_grants: HashSet::new(),
-            field_write_grants: HashSet::new(),
-            bulk_fields: Default::default(),
-            epoch: 0,
-            accessible_org_ids: Vec::new(),
-            team_ids: Vec::new(),
-            position_hierarchy_enabled: false,
-            subordinate_user_ids: Vec::new(),
-            condition_grants: HashMap::new(),
-            role_ids: None,
-            unit_scope: Default::default(),
-            field_masks: Default::default(),
-            service_principal: false,
-        }
+        let mut built = SecurityContext::human(Uuid::nil(), Default::default());
+        built.is_admin = is_admin;
+        built.privileges = privileges.iter().map(|s| s.to_string()).collect();
+        built.role_ids = None;
+        built
     }
 
     fn model(entity: &str, state_field: &str, initial: &str, is_active: bool) -> StateModelDef {

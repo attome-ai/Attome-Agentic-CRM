@@ -445,7 +445,7 @@ pub fn condition_predicate(
 mod tests {
     use super::*;
     use serde_json::json;
-    use std::collections::{HashMap, HashSet};
+    use std::collections::HashMap;
     use uuid::Uuid;
 
     fn attr(
@@ -473,24 +473,10 @@ mod tests {
     }
 
     fn ctx(condition_grants: HashMap<String, Vec<Vec<GrantCondition>>>) -> SecurityContext {
-        SecurityContext {
-            user_id: Uuid::now_v7(),
-            is_admin: false,
-            privileges: HashSet::new(),
-            field_grants: HashSet::new(),
-            field_write_grants: HashSet::new(),
-            bulk_fields: Default::default(),
-            epoch: 0,
-            accessible_org_ids: Vec::new(),
-            team_ids: Vec::new(),
-            position_hierarchy_enabled: false,
-            subordinate_user_ids: Vec::new(),
-            condition_grants,
-            role_ids: None,
-            unit_scope: Default::default(),
-            field_masks: Default::default(),
-            service_principal: false,
-        }
+        let mut built = SecurityContext::human(Uuid::now_v7(), Default::default());
+        built.condition_grants = condition_grants;
+        built.role_ids = None;
+        built
     }
 
     fn cond(field: &str, op: ConditionOperator, value: serde_json::Value) -> GrantCondition {

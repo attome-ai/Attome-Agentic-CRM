@@ -39,8 +39,6 @@
     reason = "test helpers: a failed setup step should panic with its message"
 )]
 
-use std::collections::{HashMap, HashSet};
-
 use attome_auth::{SessionClaims, TokenType};
 use attome_config::AppConfig;
 use attome_core::EngineState;
@@ -241,24 +239,7 @@ async fn grant_admin(db: &attome_db::DbPool, user_id: Uuid) {
 /// its authorization matrix (already covered by `record_level_security.rs`
 /// and friends).
 fn admin_context(user_id: Uuid) -> SecurityContext {
-    SecurityContext {
-        user_id,
-        is_admin: true,
-        privileges: HashSet::new(),
-        field_grants: HashSet::new(),
-        field_write_grants: HashSet::new(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: HashMap::new(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
-    }
+    SecurityContext::system_synthetic(user_id, "test fixture")
 }
 
 /// A throwaway entity with one plain text field — this suite only needs a

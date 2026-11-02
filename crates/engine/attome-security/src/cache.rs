@@ -160,27 +160,22 @@ impl SecurityCache {
         let (field_grants, field_write_grants, field_masks) =
             crate::db::resolve_field_access(&self.db, user_id).await?;
         let bulk_fields = crate::db::resolve_bulk_fields(&self.db, user_id).await?;
-        let is_admin = privileges.contains(crate::context::ADMIN_PRIVILEGE_KEY);
         let rlc = crate::resolver::resolve_record_level_context(&self.db, user_id).await?;
         let condition_grants = crate::db::resolve_condition_grants(&self.db, user_id).await?;
-        let ctx = SecurityContext {
-            user_id,
-            is_admin,
-            privileges,
-            field_grants,
-            field_write_grants,
-            bulk_fields,
-            epoch,
-            accessible_org_ids: rlc.accessible_org_ids,
-            team_ids: rlc.team_ids,
-            position_hierarchy_enabled: rlc.position_hierarchy_enabled,
-            subordinate_user_ids: rlc.subordinate_user_ids,
-            condition_grants,
-            role_ids: Some(rlc.role_ids),
-            unit_scope: rlc.unit_scope,
-            field_masks,
-            service_principal: false,
-        };
+        // `human` sets `is_admin` from the reserved admin key.
+        let mut ctx = SecurityContext::human(user_id, privileges);
+        ctx.field_grants = field_grants;
+        ctx.field_write_grants = field_write_grants;
+        ctx.field_masks = field_masks;
+        ctx.bulk_fields = bulk_fields;
+        ctx.epoch = epoch;
+        ctx.accessible_org_ids = rlc.accessible_org_ids;
+        ctx.team_ids = rlc.team_ids;
+        ctx.position_hierarchy_enabled = rlc.position_hierarchy_enabled;
+        ctx.subordinate_user_ids = rlc.subordinate_user_ids;
+        ctx.condition_grants = condition_grants;
+        ctx.role_ids = Some(rlc.role_ids);
+        ctx.unit_scope = rlc.unit_scope;
 
         if let Ok(json) = serde_json::to_string(&ctx) {
             let _ = tokio::time::timeout(

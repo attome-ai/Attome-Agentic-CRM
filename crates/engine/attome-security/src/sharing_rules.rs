@@ -231,27 +231,13 @@ mod tests {
     use super::*;
 
     fn ctx(units: &[Uuid], teams: &[Uuid]) -> SecurityContext {
-        SecurityContext {
-            user_id: Uuid::now_v7(),
-            is_admin: false,
-            privileges: Default::default(),
-            field_grants: Default::default(),
-            field_write_grants: Default::default(),
-            bulk_fields: Default::default(),
-            epoch: 0,
-            accessible_org_ids: Vec::new(),
-            team_ids: teams.to_vec(),
-            position_hierarchy_enabled: false,
-            subordinate_user_ids: Vec::new(),
-            condition_grants: Default::default(),
-            role_ids: Some(Vec::new()),
-            unit_scope: attome_server::security::UnitScope {
-                own_org_ids: units.to_vec(),
-                ..Default::default()
-            },
-            field_masks: Default::default(),
-            service_principal: false,
-        }
+        let mut built = SecurityContext::human(Uuid::now_v7(), Default::default());
+        built.team_ids = teams.to_vec();
+        built.unit_scope = attome_server::security::UnitScope {
+            own_org_ids: units.to_vec(),
+            ..Default::default()
+        };
+        built
     }
 
     fn rule(entity: Uuid, source: RuleSource, target: RuleTarget, write: bool) -> SharingRule {

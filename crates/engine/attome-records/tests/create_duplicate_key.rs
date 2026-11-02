@@ -38,7 +38,6 @@
     reason = "test helpers: a failed setup step should panic with its message"
 )]
 
-use std::collections::HashSet;
 use std::sync::Arc;
 
 use attome_auth::{SessionClaims, TokenType};
@@ -195,24 +194,7 @@ async fn seed_user(db: &attome_db::DbPool) -> Uuid {
 /// `RecordScoped<Create>`'s policy) — this suite proves create's own DB-error
 /// classification, not its authorization matrix.
 fn security_context(user_id: Uuid) -> Arc<SecurityContext> {
-    Arc::new(SecurityContext {
-        user_id,
-        is_admin: true,
-        privileges: HashSet::new(),
-        field_grants: HashSet::new(),
-        field_write_grants: HashSet::new(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: std::collections::HashMap::new(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
-    })
+    Arc::new(SecurityContext::system_synthetic(user_id, "test fixture"))
 }
 
 /// Provisions a throwaway entity with one plain text field (`email`), then

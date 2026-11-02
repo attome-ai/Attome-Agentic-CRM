@@ -309,27 +309,13 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashSet;
 
     fn ctx(user_id: Uuid, org_ids: &[Uuid], team_ids: &[Uuid]) -> SecurityContext {
-        SecurityContext {
-            user_id,
-            is_admin: false,
-            privileges: HashSet::new(),
-            field_grants: HashSet::new(),
-            field_write_grants: HashSet::new(),
-            bulk_fields: Default::default(),
-            epoch: 0,
-            accessible_org_ids: org_ids.to_vec(),
-            team_ids: team_ids.to_vec(),
-            position_hierarchy_enabled: false,
-            subordinate_user_ids: Vec::new(),
-            condition_grants: HashMap::new(),
-            role_ids: None,
-            unit_scope: Default::default(),
-            field_masks: Default::default(),
-            service_principal: false,
-        }
+        let mut built = SecurityContext::human(user_id, Default::default());
+        built.accessible_org_ids = org_ids.to_vec();
+        built.team_ids = team_ids.to_vec();
+        built.role_ids = None;
+        built
     }
 
     /// Z11-T16: a variable's expression reads the variables resolved before

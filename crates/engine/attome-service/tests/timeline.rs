@@ -37,7 +37,7 @@ use attome_db::DbPool;
 use attome_server::AppState;
 use attome_server::security::SecurityContext;
 use attome_testkit::skip_if_no_db;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use uuid::Uuid;
 
 fn test_config() -> AppConfig {
@@ -426,24 +426,10 @@ async fn share_record(
 }
 
 fn ctx_for(user_id: Uuid, privileges: &[&str]) -> SecurityContext {
-    SecurityContext {
-        user_id,
-        is_admin: false,
-        privileges: privileges.iter().map(|s| s.to_string()).collect(),
-        field_grants: HashSet::new(),
-        field_write_grants: HashSet::new(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: HashMap::new(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
-    }
+    let mut built = SecurityContext::human(user_id, Default::default());
+    built.privileges = privileges.iter().map(|s| s.to_string()).collect();
+    built.role_ids = None;
+    built
 }
 
 /// The checklist's explicit requirement: "tests: hidden sources excluded."
@@ -516,9 +502,10 @@ async fn admin_sees_every_communication_on_the_ticket() {
     let comm_b = insert_communication(db, ticket_id, "Second").await;
 
     let admin_ctx = ctx_for(Uuid::now_v7(), &[]);
-    let admin_ctx = SecurityContext {
-        is_admin: true,
-        ..admin_ctx
+    let admin_ctx = {
+        let mut built = admin_ctx;
+        built.is_admin = true;
+        built
     };
 
     let timeline = attome_service::timeline::build_timeline(&state, &admin_ctx, ticket_id)
@@ -681,9 +668,10 @@ async fn ticket_timeline_returns_the_same_entries_as_the_legacy_merge() {
         "fixture: 1 header, 1 transition, 2 communications, 1 decision"
     );
 
-    let admin_ctx = SecurityContext {
-        is_admin: true,
-        ..ctx_for(Uuid::now_v7(), &[])
+    let admin_ctx = {
+        let mut built = ctx_for(Uuid::now_v7(), &[]);
+        built.is_admin = true;
+        built
     };
     let timeline = attome_service::timeline::build_timeline(&state, &admin_ctx, ticket_id)
         .await

@@ -130,32 +130,27 @@ pub async fn resolve_uncached(db: &DbPool, user_id: Uuid) -> Result<SecurityCont
     let (field_grants, field_write_grants, field_masks) =
         crate::db::resolve_field_access(db, user_id).await?;
     let bulk_fields = crate::db::resolve_bulk_fields(db, user_id).await?;
-    let is_admin = privileges.contains(crate::context::ADMIN_PRIVILEGE_KEY);
     let rlc = resolve_record_level_context(db, user_id).await?;
     let condition_grants = crate::db::resolve_condition_grants(db, user_id).await?;
-    Ok(SecurityContext {
-        user_id,
-        is_admin,
-        privileges,
-        field_grants,
-        field_write_grants,
-        bulk_fields,
-        // This path bypasses every cache layer (L1/L2 and the epoch check
-        // alike) and always reads Postgres directly, so it's already
-        // maximally fresh — the epoch is only meaningful as a staleness
-        // marker for a *cached* value, which this never is.
-        epoch: 0,
-        accessible_org_ids: rlc.accessible_org_ids,
-        team_ids: rlc.team_ids,
-        position_hierarchy_enabled: rlc.position_hierarchy_enabled,
-        subordinate_user_ids: rlc.subordinate_user_ids,
-        condition_grants,
-        // D-789 §4.3: a resolved user is never a system writer.
-        role_ids: Some(rlc.role_ids),
-        unit_scope: rlc.unit_scope,
-        field_masks,
-        service_principal: false,
-    })
+    // `human` sets `is_admin` from the reserved admin key, as the cached
+    // path does. The epoch stays 0: this path bypasses every cache layer
+    // (L1/L2 and the epoch check alike) and always reads Postgres directly,
+    // so it's already maximally fresh — the epoch is only meaningful as a
+    // staleness marker for a *cached* value, which this never is.
+    let mut ctx = SecurityContext::human(user_id, privileges);
+    ctx.field_grants = field_grants;
+    ctx.field_write_grants = field_write_grants;
+    ctx.field_masks = field_masks;
+    ctx.bulk_fields = bulk_fields;
+    ctx.accessible_org_ids = rlc.accessible_org_ids;
+    ctx.team_ids = rlc.team_ids;
+    ctx.position_hierarchy_enabled = rlc.position_hierarchy_enabled;
+    ctx.subordinate_user_ids = rlc.subordinate_user_ids;
+    ctx.condition_grants = condition_grants;
+    // D-789 §4.3: a resolved user is never a system writer.
+    ctx.role_ids = Some(rlc.role_ids);
+    ctx.unit_scope = rlc.unit_scope;
+    Ok(ctx)
 }
 
 /// The real `SecurityResolver` — injected into `attome_server::AppState` by

@@ -1040,24 +1040,12 @@ mod tests {
     use std::collections::HashSet;
 
     fn ctx(is_admin: bool) -> SecurityContext {
-        SecurityContext {
-            user_id: Uuid::now_v7(),
-            is_admin,
-            privileges: HashSet::new(),
-            field_grants: HashSet::new(),
-            field_write_grants: HashSet::new(),
-            bulk_fields: Default::default(),
-            epoch: 0,
-            accessible_org_ids: vec![Uuid::now_v7()],
-            team_ids: vec![Uuid::now_v7()],
-            position_hierarchy_enabled: false,
-            subordinate_user_ids: Vec::new(),
-            condition_grants: HashMap::new(),
-            role_ids: None,
-            unit_scope: Default::default(),
-            field_masks: Default::default(),
-            service_principal: false,
-        }
+        let mut built = SecurityContext::human(Uuid::now_v7(), Default::default());
+        built.is_admin = is_admin;
+        built.accessible_org_ids = vec![Uuid::now_v7()];
+        built.team_ids = vec![Uuid::now_v7()];
+        built.role_ids = None;
+        built
     }
 
     /// Q14-T2: a published rule adds an allow arm for the people it shares
@@ -1076,9 +1064,10 @@ mod tests {
         }]);
         let arm = format!("t.organization_ref = ANY('{{{unit}}}'::uuid[])");
 
-        let member = SecurityContext {
-            team_ids: vec![team],
-            ..ctx(false)
+        let member = {
+            let mut built = ctx(false);
+            built.team_ids = vec![team];
+            built
         };
         let pred = rls_predicate(&member, entity, "t", AccessLevel::Team, Capability::View, 1)
             .expect("a Team tier filters");
@@ -1279,11 +1268,10 @@ mod tests {
     /// subordinate set — the shape every position-hierarchy-specific test
     /// below needs instead of `ctx`'s default (disabled, empty).
     fn ctx_with_subordinates(subordinate_user_ids: Vec<Uuid>) -> SecurityContext {
-        SecurityContext {
-            position_hierarchy_enabled: true,
-            subordinate_user_ids,
-            ..ctx(false)
-        }
+        let mut built = ctx(false);
+        built.position_hierarchy_enabled = true;
+        built.subordinate_user_ids = subordinate_user_ids;
+        built
     }
 
     #[test]
@@ -1711,9 +1699,10 @@ mod tests {
     ) -> SecurityContext {
         let mut condition_grants = HashMap::new();
         condition_grants.insert(privilege_key.to_owned(), vec![vec![condition]]);
-        SecurityContext {
-            condition_grants,
-            ..ctx(false)
+        {
+            let mut built = ctx(false);
+            built.condition_grants = condition_grants;
+            built
         }
     }
 
@@ -1770,9 +1759,10 @@ mod tests {
                 hop: None,
             },
         );
-        let c = SecurityContext {
-            is_admin: true,
-            ..c
+        let c = {
+            let mut built = c;
+            built.is_admin = true;
+            built
         };
         assert!(
             rls_predicate_with_conditions(

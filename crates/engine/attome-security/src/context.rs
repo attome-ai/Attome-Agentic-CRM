@@ -194,7 +194,7 @@ impl SecurityContextExt for SecurityContext {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{HashMap, HashSet};
+    use std::collections::HashSet;
 
     use attome_server::security::SecurityContext;
     use uuid::Uuid;
@@ -202,24 +202,11 @@ mod tests {
     use super::*;
 
     fn ctx(is_admin: bool, field_write_grants: HashSet<String>) -> SecurityContext {
-        SecurityContext {
-            user_id: Uuid::now_v7(),
-            is_admin,
-            privileges: HashSet::new(),
-            field_grants: HashSet::new(),
-            field_write_grants,
-            bulk_fields: Default::default(),
-            epoch: 0,
-            accessible_org_ids: Vec::new(),
-            team_ids: Vec::new(),
-            position_hierarchy_enabled: false,
-            subordinate_user_ids: Vec::new(),
-            condition_grants: HashMap::new(),
-            role_ids: None,
-            unit_scope: Default::default(),
-            field_masks: Default::default(),
-            service_principal: false,
-        }
+        let mut built = SecurityContext::human(Uuid::now_v7(), Default::default());
+        built.is_admin = is_admin;
+        built.field_write_grants = field_write_grants;
+        built.role_ids = None;
+        built
     }
 
     /// P-audit-item-17: `require_admin`/`require`/`require_key` are the actual
@@ -309,23 +296,11 @@ mod tests {
     /// nothing about the other (P-field-write-security, D-141).
     #[test]
     fn read_grant_alone_does_not_imply_write_grant() {
-        let c = SecurityContext {
-            user_id: Uuid::now_v7(),
-            is_admin: false,
-            privileges: HashSet::new(),
-            field_grants: HashSet::from(["employee.salary".to_owned()]),
-            field_write_grants: HashSet::new(),
-            bulk_fields: Default::default(),
-            epoch: 0,
-            accessible_org_ids: Vec::new(),
-            team_ids: Vec::new(),
-            position_hierarchy_enabled: false,
-            subordinate_user_ids: Vec::new(),
-            condition_grants: HashMap::new(),
-            role_ids: None,
-            unit_scope: Default::default(),
-            field_masks: Default::default(),
-            service_principal: false,
+        let c = {
+            let mut built = SecurityContext::human(Uuid::now_v7(), Default::default());
+            built.field_grants = HashSet::from(["employee.salary".to_owned()]);
+            built.role_ids = None;
+            built
         };
         assert!(c.has_field_read_grant("employee", "salary"));
         assert!(!c.has_field_write_grant("employee", "salary"));

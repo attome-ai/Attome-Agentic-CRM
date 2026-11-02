@@ -157,31 +157,17 @@ pub fn is_legacy(ctx: &SecurityContext) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{HashMap, HashSet};
 
     use uuid::Uuid;
 
     use super::*;
 
     fn ctx(bulk_fields: BulkFields, sensitive_grants: &[&str]) -> SecurityContext {
-        SecurityContext {
-            user_id: Uuid::now_v7(),
-            is_admin: false,
-            privileges: HashSet::new(),
-            field_grants: sensitive_grants.iter().map(|s| s.to_string()).collect(),
-            field_write_grants: HashSet::new(),
-            bulk_fields,
-            epoch: 0,
-            accessible_org_ids: Vec::new(),
-            team_ids: Vec::new(),
-            position_hierarchy_enabled: false,
-            subordinate_user_ids: Vec::new(),
-            condition_grants: HashMap::new(),
-            role_ids: None,
-            unit_scope: Default::default(),
-            field_masks: Default::default(),
-            service_principal: false,
-        }
+        let mut built = SecurityContext::human(Uuid::now_v7(), Default::default());
+        built.field_grants = sensitive_grants.iter().map(|s| s.to_string()).collect();
+        built.bulk_fields = bulk_fields;
+        built.role_ids = None;
+        built
     }
 
     fn sensitive_attr(name: &str) -> AttrInfo {
@@ -350,9 +336,10 @@ mod tests {
             projection(&full, "account", &card, None, Surface::Interactive),
             ColumnAccess::Full
         );
-        let admin = SecurityContext {
-            is_admin: true,
-            ..ctx(BulkFields::Legacy, &[])
+        let admin = {
+            let mut built = ctx(BulkFields::Legacy, &[]);
+            built.is_admin = true;
+            built
         };
         assert_eq!(field_mask(&admin, "account", "card_number"), None);
         assert_eq!(

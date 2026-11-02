@@ -18,7 +18,6 @@
     reason = "test helpers: a failed setup step should panic with its message"
 )]
 
-use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use attome_ai::actions::agent_supervise::AGENT_PAUSE;
@@ -252,24 +251,7 @@ async fn open_agent_session(db: &attome_db::DbPool, owner: Uuid) -> Uuid {
 }
 
 fn security_context(user_id: Uuid) -> Arc<SecurityContext> {
-    Arc::new(SecurityContext {
-        user_id,
-        is_admin: true,
-        privileges: HashSet::new(),
-        field_grants: HashSet::new(),
-        field_write_grants: HashSet::new(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: HashMap::new(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
-    })
+    Arc::new(SecurityContext::system_synthetic(user_id, "test fixture"))
 }
 
 fn all_on_gate_inputs(ai: &attome_config::AiEnablement) -> GateInputs<'_> {

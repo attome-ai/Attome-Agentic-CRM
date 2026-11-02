@@ -33,7 +33,6 @@ use attome_server::AppState;
 use attome_server::security::SecurityContext;
 use attome_testkit::skip_if_no_db;
 use chrono::{Duration, Utc};
-use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 fn test_config() -> AppConfig {
@@ -325,24 +324,10 @@ async fn share_record(
 }
 
 fn ctx_for(user_id: Uuid, privileges: &[&str]) -> SecurityContext {
-    SecurityContext {
-        user_id,
-        is_admin: false,
-        privileges: privileges.iter().map(|s| s.to_string()).collect(),
-        field_grants: HashSet::new(),
-        field_write_grants: HashSet::new(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: HashMap::new(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
-    }
+    let mut built = SecurityContext::human(user_id, Default::default());
+    built.privileges = privileges.iter().map(|s| s.to_string()).collect();
+    built.role_ids = None;
+    built
 }
 
 fn query_for(regarding_id: Uuid) -> PredictionListQuery {

@@ -1792,24 +1792,8 @@ mod tests {
 
     #[test]
     fn audiences_come_from_the_principal() {
-        let mut ctx = attome_server::security::SecurityContext {
-            user_id: Uuid::nil(),
-            is_admin: true,
-            privileges: Default::default(),
-            field_grants: Default::default(),
-            field_write_grants: Default::default(),
-            bulk_fields: Default::default(),
-            epoch: 0,
-            accessible_org_ids: Vec::new(),
-            team_ids: Vec::new(),
-            position_hierarchy_enabled: false,
-            subordinate_user_ids: Vec::new(),
-            condition_grants: Default::default(),
-            role_ids: None,
-            unit_scope: Default::default(),
-            field_masks: Default::default(),
-            service_principal: false,
-        };
+        let mut ctx =
+            attome_server::security::SecurityContext::system_synthetic(Uuid::nil(), "test fixture");
         assert_eq!(audience(&Principal::Staff(&ctx)), RuleAudience::System);
         ctx.role_ids = Some(Vec::new());
         assert!(audience(&Principal::Staff(&ctx)).subject_to_locks());

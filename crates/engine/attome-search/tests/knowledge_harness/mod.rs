@@ -17,7 +17,6 @@ use attome_server::security::SecurityContext;
 use serde_json::json;
 use sqlx::Executor;
 use sqlx::postgres::PgPoolOptions;
-use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 /// The pool the suites seed through, with `statement_timeout` raised per
@@ -45,24 +44,9 @@ pub async fn test_db() -> Option<DbPool> {
 /// short-circuits the record predicate, so an admin-run check measures a query
 /// the product does not execute for ordinary users.
 pub fn caller_ctx(user_id: Uuid) -> SecurityContext {
-    SecurityContext {
-        user_id,
-        is_admin: false,
-        privileges: HashSet::new(),
-        field_grants: HashSet::new(),
-        field_write_grants: HashSet::new(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: HashMap::new(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
-    }
+    let mut built = SecurityContext::human(user_id, Default::default());
+    built.role_ids = None;
+    built
 }
 
 /// Serializes [`provision_kb`] within one test binary.

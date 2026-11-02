@@ -39,7 +39,7 @@
     reason = "test helpers: a failed setup step should panic with its message"
 )]
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use attome_ai::actions::agent_supervise::AGENT_PAUSE;
@@ -262,23 +262,11 @@ async fn session_paused_at(
 /// `dispatch_approved_agent_action` re-resolves the acting user from the
 /// database, which is the property every test below depends on.
 fn security_context(user_id: Uuid) -> Arc<SecurityContext> {
-    Arc::new(SecurityContext {
-        user_id,
-        is_admin: false,
-        privileges: HashSet::from([SUPERVISE.to_owned()]),
-        field_grants: HashSet::new(),
-        field_write_grants: HashSet::new(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: HashMap::new(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
+    Arc::new({
+        let mut built = SecurityContext::human(user_id, Default::default());
+        built.privileges = HashSet::from([SUPERVISE.to_owned()]);
+        built.role_ids = None;
+        built
     })
 }
 

@@ -426,24 +426,10 @@ async fn dashboard_general_report_queries_are_live_and_executable_after_apply() 
         .find(|(_, name)| name == "General: Active Users Count")
         .expect("'General: Active Users Count' is one of the 7 bundled queries");
 
-    let security = attome_server::security::SecurityContext {
-        user_id: uuid::Uuid::now_v7(),
-        is_admin: true,
-        privileges: std::collections::HashSet::new(),
-        field_grants: std::collections::HashSet::new(),
-        field_write_grants: std::collections::HashSet::new(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: std::collections::HashMap::new(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
-    };
+    let security = attome_server::security::SecurityContext::system_synthetic(
+        uuid::Uuid::now_v7(),
+        "test fixture",
+    );
     let body: attome_records::query_exec::ExecuteQueryRequest =
         serde_json::from_value(serde_json::json!({ "query_id": active_users_id }))
             .expect("ExecuteQueryRequest deserializes from a bare query_id");

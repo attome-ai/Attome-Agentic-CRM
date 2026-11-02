@@ -21,8 +21,6 @@
 )]
 #![allow(dead_code)]
 
-use std::collections::{HashMap, HashSet};
-
 use attome_config::AppConfig;
 use attome_core::EngineState;
 use attome_core::state_registry::{
@@ -233,32 +231,17 @@ pub fn register_bundle_state_models(state: &EngineState) {
 
 /// A non-admin context holding exactly `privileges`.
 pub fn ctx_for(user_id: Uuid, privileges: &[&str]) -> SecurityContext {
-    SecurityContext {
-        user_id,
-        is_admin: false,
-        privileges: privileges.iter().map(|s| s.to_string()).collect(),
-        field_grants: HashSet::new(),
-        field_write_grants: HashSet::new(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: HashMap::new(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
-    }
+    let mut built = SecurityContext::human(user_id, Default::default());
+    built.privileges = privileges.iter().map(|s| s.to_string()).collect();
+    built.role_ids = None;
+    built
 }
 
 /// An administrator context (`system.admin`).
 pub fn admin_ctx(user_id: Uuid) -> SecurityContext {
-    SecurityContext {
-        is_admin: true,
-        ..ctx_for(user_id, &["system.admin"])
-    }
+    let mut built = ctx_for(user_id, &["system.admin"]);
+    built.is_admin = true;
+    built
 }
 
 pub async fn insert_systemuser(db: &DbPool) -> Uuid {

@@ -57,32 +57,19 @@ fn attrs() -> Vec<AttrInfo> {
 }
 
 fn ctx_with(privilege: &str, expression: &str) -> SecurityContext {
-    SecurityContext {
-        user_id: Uuid::now_v7(),
-        is_admin: false,
-        privileges: HashSet::from([privilege.to_owned()]),
-        field_grants: HashSet::new(),
-        field_write_grants: HashSet::new(),
-        field_masks: Default::default(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: HashMap::from([(
-            privilege.to_owned(),
-            vec![vec![GrantCondition {
-                field_logicalname: String::new(),
-                operator: ConditionOperator::Expression,
-                value: serde_json::json!(expression),
-                hop: None,
-            }]],
-        )]),
-        role_ids: None,
-        unit_scope: Default::default(),
-        service_principal: false,
-    }
+    let mut built = SecurityContext::human(Uuid::now_v7(), Default::default());
+    built.privileges = HashSet::from([privilege.to_owned()]);
+    built.condition_grants = HashMap::from([(
+        privilege.to_owned(),
+        vec![vec![GrantCondition {
+            field_logicalname: String::new(),
+            operator: ConditionOperator::Expression,
+            value: serde_json::json!(expression),
+            hop: None,
+        }]],
+    )]);
+    built.role_ids = None;
+    built
 }
 
 /// The ids `ctx` may read from `table` under its `deal.read` condition.

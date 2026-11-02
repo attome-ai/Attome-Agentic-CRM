@@ -23,8 +23,6 @@
     reason = "integration test seeds fixtures on the raw pool"
 )]
 
-use std::collections::{HashMap, HashSet};
-
 use attome_calendar::hijri::{HijriCalendar, HijriDate};
 use attome_config::AppConfig;
 use attome_core::EngineState;
@@ -173,29 +171,16 @@ async fn test_state() -> Option<EngineState> {
 }
 
 fn admin() -> SecurityContext {
-    SecurityContext {
-        user_id: Uuid::now_v7(),
-        is_admin: true,
-        privileges: [
-            "marketing_list.update".to_owned(),
-            "marketing_list.read".to_owned(),
-        ]
-        .into_iter()
-        .collect(),
-        field_grants: HashSet::new(),
-        field_write_grants: HashSet::new(),
-        bulk_fields: Default::default(),
-        epoch: 0,
-        accessible_org_ids: Vec::new(),
-        team_ids: Vec::new(),
-        position_hierarchy_enabled: false,
-        subordinate_user_ids: Vec::new(),
-        condition_grants: HashMap::new(),
-        role_ids: None,
-        unit_scope: Default::default(),
-        field_masks: Default::default(),
-        service_principal: false,
-    }
+    let mut built = SecurityContext::human(Uuid::now_v7(), Default::default());
+    built.is_admin = true;
+    built.privileges = [
+        "marketing_list.update".to_owned(),
+        "marketing_list.read".to_owned(),
+    ]
+    .into_iter()
+    .collect();
+    built.role_ids = None;
+    built
 }
 
 async fn list(state: &EngineState) -> Uuid {
