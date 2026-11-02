@@ -30,3 +30,12 @@ locked schedule lines never change, under any treatment.
 - `POST /api/v1/ledger/revrec/changes/{id}/discard`.
 
 Each step is audited on the contract.
+
+## On screen
+
+`/xrm/admin/revrec/changes/{id}` (the `contract_change` record's id) shows a previewed change: for each
+obligation, every open period's amount before and after and the difference, the periods in the reader's
+calendar (Hijri or Gregorian), with **Apply** and **Discard**. It reads right to left in Arabic. The ledger
+pack's changeset `0006` adds list views (open contracts, obligations to satisfy, this month's planned
+lines, standalone prices, changes to apply, closes, deferred and unbilled balances), a **Revenue** menu
+and Arabic labels for every revenue status and kind.

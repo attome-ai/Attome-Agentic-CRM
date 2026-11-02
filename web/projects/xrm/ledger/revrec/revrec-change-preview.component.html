@@ -1,0 +1,60 @@
+<section class="rcp">
+  <h2>{{ 'revrecChange.title' | translate }}</h2>
+
+  @if (error(); as message) {
+    <p class="error-msg" role="alert">{{ message }}</p>
+  }
+  @if (done(); as outcome) {
+    <p class="rcp-notice" role="status" data-testid="done">{{ ('revrecChange.' + outcome) | translate }}</p>
+  }
+
+  @if (loading()) {
+    <p class="rcp-muted">{{ 'revrecChange.loading' | translate }}</p>
+  } @else if (preview(); as p) {
+    <p class="rcp-muted" data-testid="treatment">
+      {{ 'revrecChange.treatment' | translate: { treatment: p.treatment } }}
+      @if (p.overridden) {
+        <span class="rcp-badge">{{ 'revrecChange.overridden' | translate }}</span>
+      }
+    </p>
+    @for (o of obligations(); track o.preview.obligation_id) {
+      <table class="rcp-table" data-testid="obligation">
+        <caption>
+          {{ 'revrecChange.totals' | translate: { from: o.preview.old_total, to: o.preview.new_total } }}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">{{ 'revrecChange.period' | translate }}</th>
+            <th scope="col">{{ 'revrecChange.from' | translate }}</th>
+            <th scope="col">{{ 'revrecChange.to' | translate }}</th>
+            <th scope="col">{{ 'revrecChange.difference' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of o.rows; track r.period) {
+            <tr data-testid="period-row">
+              <td>{{ r.day | localDate: monthFmt }}</td>
+              <td>{{ r.from | localNumber }}</td>
+              <td>{{ r.to | localNumber }}</td>
+              <td [class]="'rcp-' + r.direction" data-testid="difference">
+                {{ r.difference | localNumber }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+    @if (open()) {
+      <div class="rcp-actions">
+        <button type="button" class="btn-primary" (click)="apply()" [disabled]="busy()" data-testid="apply">
+          {{ 'revrecChange.apply' | translate }}
+        </button>
+        <button type="button" class="btn-text" (click)="discard()" [disabled]="busy()" data-testid="discard">
+          {{ 'revrecChange.discard' | translate }}
+        </button>
+      </div>
+    }
+  } @else {
+    <p class="rcp-muted">{{ 'revrecChange.none' | translate }}</p>
+  }
+</section>

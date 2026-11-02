@@ -314,6 +314,13 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/metadata-versions').then(m => m.MetadataVersionsComponent),
           },
           {
+            // F11-T13 — a revenue contract change's preview, then apply or
+            // discard (the id is the `contract_change` record's).
+            path: 'revrec/changes/:changeId',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/ledger/revrec').then(m => m.RevrecChangePreviewComponent),
+          },
+          {
             // A22-T5 — promotion history, approvals waiting, and a plan of
             // uploaded changesets against this deployment.
             path: 'environments',

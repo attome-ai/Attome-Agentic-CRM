@@ -4356,6 +4356,16 @@ export const xrmEn = {
   },
   // Solution 7 Phase 2 (design §10) — the release report pages
   // (`@attome/xrm/core/admin/release-reports`).
+  // F11-T13 — a revenue contract change's preview (`@attome/xrm/ledger/revrec`).
+  revrecChange: {
+    title: 'Contract change preview',
+    loading: 'Loading…', none: 'This change has no preview.', unreadable: 'The preview could not be read.',
+    treatment: 'Treatment: {treatment}', overridden: 'Chosen by an accountant',
+    totals: 'Total {from} becomes {to}',
+    period: 'Period', from: 'Before', to: 'After', difference: 'Difference',
+    apply: 'Apply', discard: 'Discard',
+    applied: 'The change was applied to the planned lines.', discarded: 'The change was discarded.',
+  },
   // A22-T5 — the environments page (`@attome/xrm/core/admin/environments`).
   environments: {
     title: 'Environments',

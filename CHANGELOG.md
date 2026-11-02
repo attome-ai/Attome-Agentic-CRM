@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Revenue screens (F11-T13, ledger pack changeset `0006`): list views and a Revenue menu for the revenue
+  records, Arabic labels for their statuses and kinds, and the contract change preview page
+  (`@attome/xrm/ledger/revrec`, `/xrm/admin/revrec/changes/{id}`) with Apply and Discard.
 - Environments page (A22-T5, V2-D1595): `/xrm/admin/environments` shows the changeset ledger, the applies
   waiting for approval, and a plan of uploaded changeset files against this deployment; promotion stays in
   `attome promote`.

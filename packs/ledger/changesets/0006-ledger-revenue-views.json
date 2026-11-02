@@ -1,0 +1,1086 @@
+{
+  "author": "packs",
+  "checksum": "sha256:85ed336d15b8a099a8c65246818be9f977327ebde6b64c3a2aad38d6159a47fe",
+  "closed_at": "2026-11-02T00:00:00Z",
+  "description": "F11-T13: list views over stored queries for the revenue records (open contracts, obligations to satisfy, this month's planned lines, standalone prices, changes to apply, closes, deferred and unbilled balances), each run with the reader's record access; a Revenue menu; and Arabic labels for every revenue status and kind.",
+  "format": "attome-changeset/v1",
+  "id": "01a19c40-0000-7f0b-8000-000000000006",
+  "layer": "product",
+  "name": "ledger-revenue-views",
+  "opened_at": "2026-11-02T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "revenue_contract",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Open revenue contracts",
+          "required_privilege": "revenue_contract.read",
+          "sql": "SELECT id, source_kind, source_id, currency, total_price, status FROM \"revenue_contract\" WHERE is_active = true AND status = 'open'",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "revenue_contract",
+        "query": "Open revenue contracts"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "revenue_contract",
+          "icon": "las la-file-contract",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Open revenue contracts",
+          "query": {
+            "entity": "revenue_contract",
+            "name": "Open revenue contracts"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "revenue_contract",
+        "view": "Open revenue contracts"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "performance_obligation",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Obligations to satisfy",
+          "required_privilege": "performance_obligation.read",
+          "sql": "SELECT id, revenue_contract_ref, product_ref, pattern, allocated_amount, status FROM \"performance_obligation\" WHERE is_active = true AND status <> 'satisfied'",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "performance_obligation",
+        "query": "Obligations to satisfy"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "performance_obligation",
+          "icon": "las la-tasks",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Obligations to satisfy",
+          "query": {
+            "entity": "performance_obligation",
+            "name": "Obligations to satisfy"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "performance_obligation",
+        "view": "Obligations to satisfy"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "revenue_schedule_line",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Planned this month",
+          "required_privilege": "revenue_schedule_line.read",
+          "sql": "SELECT id, obligation_ref, fiscal_period, amount_contract_ccy, status FROM \"revenue_schedule_line\" WHERE is_active = true AND status = 'planned' AND fiscal_period = to_char(now(), 'YYYY-MM')",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "revenue_schedule_line",
+        "query": "Planned this month"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "revenue_schedule_line",
+          "icon": "las la-calendar",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Planned this month",
+          "query": {
+            "entity": "revenue_schedule_line",
+            "name": "Planned this month"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "revenue_schedule_line",
+        "view": "Planned this month"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ssp_entry",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Standalone selling prices",
+          "required_privilege": "ssp_entry.read",
+          "sql": "SELECT id, product_ref, amount, currency, period_start, method FROM \"ssp_entry\" WHERE is_active = true AND true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "ssp_entry",
+        "query": "Standalone selling prices"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ssp_entry",
+          "icon": "las la-tags",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Standalone selling prices",
+          "query": {
+            "entity": "ssp_entry",
+            "name": "Standalone selling prices"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "ssp_entry",
+        "view": "Standalone selling prices"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "contract_change",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Changes to apply",
+          "required_privilege": "contract_change.read",
+          "sql": "SELECT id, name, revenue_contract_ref, change_kind, treatment, status FROM \"contract_change\" WHERE is_active = true AND status = 'previewed'",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "contract_change",
+        "query": "Changes to apply"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "contract_change",
+          "icon": "las la-exchange-alt",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Changes to apply",
+          "query": {
+            "entity": "contract_change",
+            "name": "Changes to apply"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "contract_change",
+        "view": "Changes to apply"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "revrec_close_run",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Revenue closes",
+          "required_privilege": "revrec_close_run.read",
+          "sql": "SELECT id, fiscal_period, status, approval_request_id FROM \"revrec_close_run\" WHERE is_active = true AND true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "revrec_close_run",
+        "query": "Revenue closes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "revrec_close_run",
+          "icon": "las la-lock",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Revenue closes",
+          "query": {
+            "entity": "revrec_close_run",
+            "name": "Revenue closes"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "revrec_close_run",
+        "view": "Revenue closes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "revenue_balance_snapshot",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Deferred and unbilled",
+          "required_privilege": "revenue_balance_snapshot.read",
+          "sql": "SELECT id, revenue_contract_ref, fiscal_period, deferred, unbilled, billed_to_date, recognised_to_date FROM \"revenue_balance_snapshot\" WHERE is_active = true AND (deferred > 0 OR unbilled > 0)",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "revenue_balance_snapshot",
+        "query": "Deferred and unbilled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "revenue_balance_snapshot",
+          "icon": "las la-coins",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Deferred and unbilled",
+          "query": {
+            "entity": "revenue_balance_snapshot",
+            "name": "Deferred and unbilled"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "revenue_balance_snapshot",
+        "view": "Deferred and unbilled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 62,
+          "entity": null,
+          "icon": "la-chart-line",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Revenue"
+          ],
+          "privileges": [],
+          "route": null
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "path": "Revenue"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 1,
+          "entity": null,
+          "icon": "la-file-contract",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Revenue",
+            "Contracts"
+          ],
+          "privileges": [
+            "revenue_contract.read"
+          ],
+          "route": "/xrm/entity/revenue_contract/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "path": "Revenue/Contracts"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 2,
+          "entity": null,
+          "icon": "la-tasks",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Revenue",
+            "Obligations"
+          ],
+          "privileges": [
+            "performance_obligation.read"
+          ],
+          "route": "/xrm/entity/performance_obligation/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "path": "Revenue/Obligations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 3,
+          "entity": null,
+          "icon": "la-calendar",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Revenue",
+            "Schedules"
+          ],
+          "privileges": [
+            "revenue_schedule_line.read"
+          ],
+          "route": "/xrm/entity/revenue_schedule_line/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "path": "Revenue/Schedules"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 4,
+          "entity": null,
+          "icon": "la-tags",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Revenue",
+            "Standalone prices"
+          ],
+          "privileges": [
+            "ssp_entry.read"
+          ],
+          "route": "/xrm/entity/ssp_entry/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "path": "Revenue/Standalone prices"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 5,
+          "entity": null,
+          "icon": "la-exchange-alt",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Revenue",
+            "Contract changes"
+          ],
+          "privileges": [
+            "contract_change.read"
+          ],
+          "route": "/xrm/entity/contract_change/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "path": "Revenue/Contract changes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 6,
+          "entity": null,
+          "icon": "la-lock",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Revenue",
+            "Closes"
+          ],
+          "privileges": [
+            "revrec_close_run.read"
+          ],
+          "route": "/xrm/entity/revrec_close_run/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "path": "Revenue/Closes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 7,
+          "entity": null,
+          "icon": "la-coins",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Revenue",
+            "Balances"
+          ],
+          "privileges": [
+            "revenue_balance_snapshot.read"
+          ],
+          "route": "/xrm/entity/revenue_balance_snapshot/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "path": "Revenue/Balances"
+      }
+    },
+    {
+      "args": {
+        "display_name": "عند نقطة زمنية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "locale": "ar",
+        "object_key": "revenue_rule.pattern.point_in_time",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بالتساوي على المدة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "locale": "ar",
+        "object_key": "revenue_rule.pattern.ratable",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "عند المراحل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "locale": "ar",
+        "object_key": "revenue_rule.pattern.milestone",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "حسب الاستخدام"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "locale": "ar",
+        "object_key": "revenue_rule.pattern.usage",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "حسب نسبة الإنجاز"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "locale": "ar",
+        "object_key": "revenue_rule.pattern.percent_complete",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "عند نقطة زمنية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "locale": "ar",
+        "object_key": "performance_obligation.pattern.point_in_time",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بالتساوي على المدة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "locale": "ar",
+        "object_key": "performance_obligation.pattern.ratable",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "عند المراحل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "locale": "ar",
+        "object_key": "performance_obligation.pattern.milestone",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "حسب الاستخدام"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "locale": "ar",
+        "object_key": "performance_obligation.pattern.usage",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "حسب نسبة الإنجاز"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "locale": "ar",
+        "object_key": "performance_obligation.pattern.percent_complete",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "طلب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "locale": "ar",
+        "object_key": "revenue_contract.source_kind.order",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "اشتراك"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "locale": "ar",
+        "object_key": "revenue_contract.source_kind.subscription",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "فاتورة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "locale": "ar",
+        "object_key": "revenue_contract.source_kind.invoice",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مفتوح"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "locale": "ar",
+        "object_key": "revenue_contract.status.open",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مكتمل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "locale": "ar",
+        "object_key": "revenue_contract.status.complete",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "معدّل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "locale": "ar",
+        "object_key": "revenue_contract.status.modified",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مفتوح"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "locale": "ar",
+        "object_key": "performance_obligation.status.open",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مستوفى جزئيًا"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "locale": "ar",
+        "object_key": "performance_obligation.status.partially_satisfied",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مستوفى"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "locale": "ar",
+        "object_key": "performance_obligation.status.satisfied",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مُدخل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "locale": "ar",
+        "object_key": "ssp_entry.method.entered",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "وسيط البيع المنفرد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "locale": "ar",
+        "object_key": "ssp_entry.method.median_standalone",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سعر القائمة ناقص الخصم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "locale": "ar",
+        "object_key": "ssp_entry.method.list_less_discount",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التكلفة زائد هامش"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "locale": "ar",
+        "object_key": "ssp_entry.method.cost_plus",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مخطط"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "locale": "ar",
+        "object_key": "revenue_schedule_line.status.planned",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مُعترف به"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "locale": "ar",
+        "object_key": "revenue_schedule_line.status.recognised",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مقفل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "locale": "ar",
+        "object_key": "revenue_schedule_line.status.locked",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تعديل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "locale": "ar",
+        "object_key": "contract_change.change_kind.amendment",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أمر تغيير"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "locale": "ar",
+        "object_key": "contract_change.change_kind.change_order",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إشعار دائن"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "locale": "ar",
+        "object_key": "contract_change.change_kind.credit_note",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "عقد منفصل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "locale": "ar",
+        "object_key": "contract_change.treatment.separate_contract",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مستقبلي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "locale": "ar",
+        "object_key": "contract_change.treatment.prospective",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تسوية تراكمية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "locale": "ar",
+        "object_key": "contract_change.treatment.cumulative_catch_up",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "معاينة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "locale": "ar",
+        "object_key": "contract_change.status.previewed",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مطبّق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "locale": "ar",
+        "object_key": "contract_change.status.applied",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مستبعد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "locale": "ar",
+        "object_key": "contract_change.status.discarded",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "في الانتظار"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "locale": "ar",
+        "object_key": "revrec_close_run.status.queued",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "قيد التشغيل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "locale": "ar",
+        "object_key": "revrec_close_run.status.running",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بانتظار الاعتماد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "locale": "ar",
+        "object_key": "revrec_close_run.status.awaiting_approval",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مُرحّل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "locale": "ar",
+        "object_key": "revrec_close_run.status.posted",
+        "object_kind": "choice_option"
+      }
+    },
+    {
+      "args": {
+        "display_name": "فشل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "locale": "ar",
+        "object_key": "revrec_close_run.status.failed",
+        "object_kind": "choice_option"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "ledger",
+  "seq": 6,
+  "title": "Pack: revenue views"
+}
