@@ -34,6 +34,7 @@ export function offlineRoute(method: string, url: string, body: unknown):
   | { kind: 'list'; entity: string }
   | { kind: 'get' | 'update' | 'delete'; entity: string; id: string }
   | { kind: 'create'; entity: string }
+  | { kind: 'bulk_create'; entity: string }
   | null {
   let path: string;
   try {
@@ -50,6 +51,12 @@ export function offlineRoute(method: string, url: string, body: unknown):
   }
   if (!/^[a-z][a-z0-9_]*$/.test(parts[0] ?? '')) return null;
   if (parts.length === 1 && method === 'POST') return { kind: 'create', entity: parts[0] };
+  // B16-T14: a bulk create (what continuous scanning writes) is queued as
+  // one offline create per record.
+  if (parts.length === 2 && parts[1] === 'bulk' && method === 'POST'
+      && (body as { operation?: unknown } | null)?.operation === 'create') {
+    return { kind: 'bulk_create', entity: parts[0] };
+  }
   if (parts.length === 2) {
     if (method === 'GET') return { kind: 'get', entity: parts[0], id: parts[1] };
     if (method === 'PATCH') return { kind: 'update', entity: parts[0], id: parts[1] };
@@ -163,6 +170,27 @@ function serveOffline(
 
     const schema = await store.get<EntitySchema>('meta', schemaKey(route.entity));
     const body = ((req.body ?? {}) as Record<string, unknown>);
+    if (route.kind === 'bulk_create') {
+      // B16-T14: each record is checked and queued as its own create, so a
+      // scan made offline syncs like any offline create; one that fails its
+      // check refuses the whole batch before anything is queued.
+      const records = ((req.body as { records?: { data?: Record<string, unknown> }[] } | null)?.records ?? [])
+        .map(r => r.data ?? {});
+      const prepared = records.map(data => {
+        const id = queue.newRecordId();
+        const record: StoredRecord = { ...data, id, row_version: 0 };
+        check(schema, record, lang);
+        for (const f of entity.autonumber_fields ?? []) {
+          if (record[f] === undefined || record[f] === null || record[f] === '') record[f] = lang.translate('offline.pendingNumber');
+        }
+        return { id, data, record };
+      });
+      for (const p of prepared) {
+        await queue.enqueue({ kind: 'create', entity: route.entity, id: p.id, changed: p.data });
+        await store.putRecord(route.entity, p.id, p.record);
+      }
+      return respond({ id: queue.newRecordId(), status: 'queued_offline', total: prepared.length }, 202);
+    }
     if (route.kind === 'create') {
       const id = queue.newRecordId();
       const record: StoredRecord = { ...body, id, row_version: 0 };

@@ -95,6 +95,27 @@ describe('offline data path (B18-T8)', () => {
     expect(queued[0]).toMatchObject({ kind: 'create', entity: 'visit', id: made.id, changed: { outcome: 'lost', reason: 'price' } });
   });
 
+  it('offline scan enqueues instead of posting', async () => {
+    online = false;
+    expect(offlineRoute('POST', '/api/v1/visit/bulk', { operation: 'create', records: [] }))
+      .toEqual({ kind: 'bulk_create', entity: 'visit' });
+    expect(offlineRoute('POST', '/api/v1/visit/bulk', { operation: 'delete', records: [] })).toBeNull();
+    // B16-T14: continuous scanning writes a bulk create; offline, each scan is queued.
+    const answer = await firstValueFrom(http.post<{ status: string; total: number }>('/api/v1/visit/bulk', {
+      operation: 'create',
+      records: [{ data: { outcome: 'won', reason: 'SKU-1' } }, { data: { outcome: 'won', reason: 'SKU-2' } }],
+    }));
+    expect(answer).toMatchObject({ status: 'queued_offline', total: 2 });
+    const queued = await TestBed.inject(OfflineQueueService).pending();
+    expect(queued.map(op => [op.kind, op.changed?.['reason']])).toEqual([['create', 'SKU-1'], ['create', 'SKU-2']]);
+    // A scan that fails a rule refuses the batch before anything is queued.
+    const refused = await firstValueFrom(http.post('/api/v1/visit/bulk', {
+      operation: 'create', records: [{ data: { outcome: 'won' } }, { data: { outcome: 'lost' } }],
+    })).catch((e: HttpErrorResponse) => e);
+    expect((refused as HttpErrorResponse).status).toBe(422);
+    expect(await TestBed.inject(OfflineQueueService).size()).toBe(2);
+  });
+
   it('pending number label', async () => {
     online = false;
     const made = await firstValueFrom(http.post<{ id: string; data: Record<string, unknown> }>('/api/v1/visit', { outcome: 'won' }));
