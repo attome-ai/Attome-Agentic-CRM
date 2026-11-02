@@ -1,0 +1,7 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.Localization.schema.json",
+  "name.short": "أتوم",
+  "name.full": "أتوم لإدارة علاقات العملاء",
+  "description.short": "إشعارات أتوم وطلبات الموافقة وروابط السجلات في Teams.",
+  "description.full": "استقبل إشعارات أتوم وطلبات الموافقة في Teams، وافتح الموافقة من رابطها المخصص لمرة واحدة، واعرض بطاقة لأي رابط سجل من أتوم يُلصق في المحادثة."
+}

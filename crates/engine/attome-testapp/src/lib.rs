@@ -272,6 +272,8 @@ async fn build_with(config: AppConfig) -> Option<TestApp> {
         .register(attome_contract::ContractModel)
         // AH7-T3: the agent activation check, and the action routes.
         .register(attome_ai::ActionModel)
+        // V2-D1532 (7): the inbound integration webhook a Teams bot posts to.
+        .register(attome_integration::model::IntegrationModel)
         // T7-T1: customer tests simulate published workflows.
         .register_workflow_simulator(attome_workflow::simulate::PublishedWorkflowSimulator)
         .build()

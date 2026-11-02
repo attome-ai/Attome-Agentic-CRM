@@ -1,0 +1,10 @@
+{
+  "name": "attome-teams-app",
+  "private": true,
+  "description": "C5-T2: the Attome app package for Microsoft Teams (bot and link unfurling).",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test build.test.mjs"
+  }
+}

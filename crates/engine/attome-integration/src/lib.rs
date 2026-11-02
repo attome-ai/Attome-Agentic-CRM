@@ -14,6 +14,8 @@
 
 pub mod admin;
 /// F6-T9: booking and tracking shipments with a carrier.
+/// V2-D1532 (7): Bot Framework tokens on a Teams bot's inbound activities.
+pub mod botframework;
 pub mod carrier;
 pub mod connection;
 pub mod connector;

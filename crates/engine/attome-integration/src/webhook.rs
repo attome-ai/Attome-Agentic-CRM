@@ -314,6 +314,10 @@ async fn handle_webhook(
     // adapter whose provider signs its own format must map the provider's
     // timestamp/delivery-id fields onto [`admit`]'s window and nonce store —
     // never accept an unbounded replay window (M59 plan §4.1).
+    // V2-D1532 (7): a Teams bot's activities, signed by the Bot Framework.
+    if row.auth_type == crate::botframework::AUTH_TYPE {
+        return teams_activity(&state, &row, &credential, &headers, &body).await;
+    }
     if row.auth_type != "hmac" {
         return Err(AppError::Validation(format!(
             "system auth_type {:?} does not support inbound webhooks in M59 Phase 1 (only \"hmac\")",
@@ -346,6 +350,70 @@ async fn handle_webhook(
     ))
 }
 
+/// A Teams activity: the Bot Framework's token checked
+/// ([`crate::botframework::verify`]), a retried activity accepted without a
+/// second event, and the activity landed as one `teams.<type>` event.
+async fn teams_activity(
+    state: &EngineState,
+    row: &system::IntegrationSystem,
+    credential: &credential::Credential,
+    headers: &HeaderMap,
+    body: &[u8],
+) -> Result<(StatusCode, Json<WebhookAcceptedResponse>), AppError> {
+    let activity: serde_json::Value = serde_json::from_slice(body)
+        .map_err(|_| AppError::Validation("the body is not a Bot Framework activity".into()))?;
+    // The app id is the credential's part before `:`; the secret stays in it.
+    let app_id = credential
+        .with_value(|value| crate::botframework::app_id(value).map(str::to_owned))
+        .ok_or_else(|| {
+            AppError::Validation("the system's credential names no bot app id".into())
+        })?;
+    let authorization = headers
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok());
+    if let Err(error) = crate::botframework::verify(
+        &state.base.redis_coordination,
+        &crate::botframework::http_client(),
+        authorization,
+        &activity,
+        &app_id,
+    )
+    .await
+    {
+        record("rejected");
+        return Err(error);
+    }
+    let redis = &state.base.redis_coordination;
+    if !crate::botframework::first_delivery(redis, row.id, &activity).await? {
+        record("replayed");
+        return Ok((
+            StatusCode::ACCEPTED,
+            Json(WebhookAcceptedResponse { accepted: 0 }),
+        ));
+    }
+    let kind = activity["type"].as_str().unwrap_or("unknown");
+    let event = crate::connector::WebhookEvent {
+        event_type: format!("teams.{kind}"),
+        payload: activity.clone(),
+    };
+    let mut accepted = 0usize;
+    let landed = land(state, row, std::slice::from_ref(&event), &mut accepted).await;
+    if landed.is_err() && accepted == 0 {
+        // Not landed: let Teams' retry through.
+        if let Some(id) = activity["id"].as_str() {
+            let _ = redis
+                .del(crate::botframework::activity_key(row.id, id))
+                .await;
+        }
+    }
+    landed?;
+    record("accepted");
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(WebhookAcceptedResponse { accepted }),
+    ))
+}
+
 /// Decodes the body through the system's adapter and writes each event into
 /// the inbox, counting writes in `accepted` as they commit.
 async fn land_events(
@@ -365,7 +433,17 @@ async fn land_events(
     let events = connector_for(kind)
         .webhook(row, Some(credential), body)
         .await?;
+    land(state, row, &events, accepted).await
+}
 
+/// Writes each event into the inbox as the system's service principal,
+/// counting writes in `accepted` as they commit.
+async fn land(
+    state: &EngineState,
+    row: &system::IntegrationSystem,
+    events: &[crate::connector::WebhookEvent],
+    accepted: &mut usize,
+) -> Result<(), AppError> {
     // D-425 — the per-system service principal, resolved fresh (cached L1/L2,
     // attome-security) rather than trusted from a request-supplied value. This
     // is the identity every write below runs as; it is never the caller (an
@@ -382,7 +460,7 @@ async fn land_events(
     // this is where the webhook is correctly rejected.
     principal_ctx.require(EVENT_ENTITY, "create")?;
 
-    for event in &events {
+    for event in events {
         let record = serde_json::json!({
             "system_ref": row.id.to_string(),
             "event_type": event.event_type,

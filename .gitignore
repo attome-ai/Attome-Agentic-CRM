@@ -27,3 +27,4 @@ Thumbs.db
 # C7-T1: built add-ins, one per deployment.
 /addins/outlook/dist/
 /addins/gmail/dist/
+/addins/teams/dist/

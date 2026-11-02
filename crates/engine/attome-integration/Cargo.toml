@@ -35,6 +35,7 @@ chrono.workspace          = true
 fred.workspace            = true
 futures-util.workspace    = true
 hex.workspace             = true
+jsonwebtoken.workspace    = true
 hmac.workspace            = true
 mail-parser.workspace     = true
 metrics.workspace         = true

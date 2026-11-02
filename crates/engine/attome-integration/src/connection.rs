@@ -25,7 +25,7 @@ use crate::credential::{self, Credential};
 use crate::system::IntegrationSystem;
 
 /// The auth types a connection can apply.
-pub const AUTH_TYPES: [&str; 8] = [
+pub const AUTH_TYPES: [&str; 9] = [
     "api_key",
     "api_key_header",
     "bearer",
@@ -34,6 +34,8 @@ pub const AUTH_TYPES: [&str; 8] = [
     "client_certificate",
     "oauth2_client_credentials",
     "oauth2_refresh_token",
+    // V2-D1532 (7): inbound only, a Teams bot's activities.
+    "botframework",
 ];
 
 /// The header an `api_key_header` connection uses when its config names
@@ -167,6 +169,9 @@ impl Connection {
             }
             // Z1-T11: the token comes from the database, so only
             // `apply_auth` can authorize these.
+            "botframework" => Err(AppError::Validation(
+                "auth_type = botframework receives Teams activities; it does not call out".into(),
+            )),
             "oauth2_client_credentials" | "oauth2_refresh_token" => {
                 Err(AppError::Validation(format!(
                     "auth_type = {} needs its stored token: call the system through a named \

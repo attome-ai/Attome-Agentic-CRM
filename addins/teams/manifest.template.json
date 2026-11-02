@@ -1,0 +1,42 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.0.0",
+  "id": "{{TEAMS_APP_ID}}",
+  "developer": {
+    "name": "{{COMPANY}}",
+    "websiteUrl": "{{URL}}",
+    "privacyUrl": "{{URL}}/privacy",
+    "termsOfUseUrl": "{{URL}}/terms"
+  },
+  "name": { "short": "Attome", "full": "Attome CRM" },
+  "description": {
+    "short": "Attome notifications, approvals and record links in Teams.",
+    "full": "Get Attome notifications and approval requests in Teams, open an approval on its single-use link, and see a card for any Attome record link pasted into a chat."
+  },
+  "localizationInfo": {
+    "defaultLanguageTag": "en-us",
+    "additionalLanguages": [{ "languageTag": "ar", "file": "ar.json" }]
+  },
+  "icons": { "color": "color.png", "outline": "outline.png" },
+  "accentColor": "#1F4E79",
+  "bots": [
+    {
+      "botId": "{{BOT_APP_ID}}",
+      "scopes": ["personal", "team", "groupChat"],
+      "supportsFiles": false,
+      "isNotificationOnly": false
+    }
+  ],
+  "composeExtensions": [
+    {
+      "botId": "{{BOT_APP_ID}}",
+      "commands": [],
+      "messageHandlers": [
+        { "type": "link", "value": { "domains": ["{{HOST}}"] } }
+      ]
+    }
+  ],
+  "permissions": ["identity", "messageTeamMembers"],
+  "validDomains": ["{{HOST}}"]
+}
