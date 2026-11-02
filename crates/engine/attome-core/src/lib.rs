@@ -104,6 +104,8 @@ pub mod defaults_scope;
 pub mod engagement;
 /// A30-T2: environment variables in rules and flows, as `env.<name>`.
 pub mod env_vars;
+/// E8-T9: an engine's own step in erasing a record (`EngineModel::erasure_hooks`).
+pub mod erasure_hook;
 /// T6-T3: A/B variants of a feature flag and their recorded outcomes.
 pub mod experiment;
 /// M95/D-430 — the closed `FeatureFlag` catalogue. Split from
@@ -160,7 +162,6 @@ pub mod quiet_window;
 pub mod reconcile;
 /// W1-T5: save-time checks that read the database (`EngineModel::record_checks`).
 pub mod record_check;
-pub mod erasure_hook;
 /// Solution 7 Phase 2 (D-788 rule 9) — the 30-day encrypted recovery archive.
 pub mod recovery_archive;
 /// M01 Core P3 gap (D-455) — the generic many-to-many relationship-metadata

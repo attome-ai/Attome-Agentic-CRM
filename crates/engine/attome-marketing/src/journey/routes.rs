@@ -241,7 +241,7 @@ async fn post_enrolments(
         (status = 404, description = "No such journey, or no active enrolment with that id in it", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
-    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Delete)])))),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
 )]
 async fn delete_enrolment(
     State(state): State<EngineState>,
@@ -281,7 +281,7 @@ async fn delete_enrolment(
         attome_audit::BusinessEvent::new(
             "marketing_journey",
             journey,
-            attome_audit::AuditOperation::Delete,
+            attome_audit::AuditOperation::Update,
             "marketing_journey.enrolment_removed",
             ctx.user_id,
         )

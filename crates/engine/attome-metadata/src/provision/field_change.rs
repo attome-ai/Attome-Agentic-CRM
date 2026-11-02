@@ -837,7 +837,7 @@ pub fn delete_still_lost(row: &FieldRow) -> String {
 pub async fn drop_column_in_tx(tx: &mut Tx<'_>, row: &FieldRow) -> Result<(), AppError> {
     // Y12-T9: the column is retired, and dropped by the contraction job
     // once the period has passed and every node has switched.
-    super::contract::retire_column_in_tx(&mut **tx, &row.entity, &row.field).await?;
+    super::contract::retire_column_in_tx(tx, &row.entity, &row.field).await?;
     let n = sqlx::query("DELETE FROM attribute_info WHERE id = $1")
         .bind(row.attribute_id)
         .execute(&mut **tx)
@@ -1496,7 +1496,7 @@ pub async fn retype_swap_in_tx(
     }
     // Y12-T9: the old column is retired, not dropped, before the shadow
     // takes its name.
-    super::contract::retire_column_in_tx(&mut **tx, &row.entity, &row.field).await?;
+    super::contract::retire_column_in_tx(tx, &row.entity, &row.field).await?;
     sqlx::query(&format!(
         "ALTER TABLE {table} RENAME COLUMN {} TO {col}",
         quote_ident(&shadow)
