@@ -1911,6 +1911,8 @@ pub fn register_engines(
         .register_workflow_step_handler(attome_workflow::sequence::SendWindowStep)
         // Y7-T5: raise a business event about the run's record.
         .register_workflow_step_handler(attome_api::business_event::RaiseEventStep)
+        // M16-T2: browser steps through the isolated RPA service.
+        .register_workflow_step_handler(attome_integration::rpa::RpaStep)
         // E8-T7: the journey control and action steps.
         .register_workflow_step_handler(attome_marketing::journey::control_step::WaitCalendar)
         .register_workflow_step_handler(attome_marketing::journey::control_step::Engagement)

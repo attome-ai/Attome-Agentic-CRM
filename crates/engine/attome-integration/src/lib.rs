@@ -39,6 +39,8 @@ pub mod mail_capture;
 pub mod model;
 /// Z1-T11: OAuth 2.0 tokens, stored encrypted and renewed before expiry.
 pub mod oauth;
+/// M16-T2: the `integration.rpa` flow step over the isolated browser service.
+pub mod rpa;
 /// E13-T10: Google and Bing statistics and IndexNow pings for connected sites.
 pub mod search_console;
 /// J4-T1: SMS sending and delivery receipts.
