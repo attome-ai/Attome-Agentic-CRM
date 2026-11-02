@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- A marketing list's form has a Segment tab (E7-T12): the estimated size, an exact count on request,
+  how many can be emailed for a consent purpose, a sample of up to 20 people with why each is in or
+  out, and the sends, programmes and journeys that use the list, in English and Arabic.
 - Role grant conditions can name the caller and follow one lookup (V2-D1532 (2)): the values `@me` and
   `@my_teams` compare a lookup with the requesting user or their teams, and a field written
   `lookup.field` (say `partner_account_ref.partner_manager_ref`) matches through the record the lookup

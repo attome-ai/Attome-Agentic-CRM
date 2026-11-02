@@ -232,6 +232,24 @@
   </div>
 }
 
+@if (has('segment')) {
+  <div [id]="panelId('segment')" class="xf-tab-panel" role="tabpanel"
+       [attr.aria-labelledby]="tabId('segment')" [hidden]="activeTab() !== 'segment'"
+       data-testid="segment-tab">
+    @if (recordId()) {
+      @if (activeTab() === 'segment') {
+        @if (segment(); as m) {
+          <ng-container *ngComponentOutlet="m.SegmentInsightPanelComponent; inputs: activityInputs()" />
+        } @else if (segmentLoadFailed()) {
+          <p class="xf-hint" role="alert">{{ 'segmentInsight.loadFailed' | translate }}</p>
+        }
+      }
+    } @else {
+      <p class="xf-hint">{{ 'segmentInsight.saveFirst' | translate }}</p>
+    }
+  </div>
+}
+
 @if (has('team')) {
   <div [id]="panelId('team')" class="xf-tab-panel" role="tabpanel"
        [attr.aria-labelledby]="tabId('team')" [hidden]="activeTab() !== 'team'"

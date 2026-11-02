@@ -39,6 +39,7 @@ type ApprovalsModule = typeof import('@attome/xrm/core/approvals');
 type MasterDataModule = typeof import('@attome/xrm/core/admin/governance/master-data');
 type FulfilmentModule = typeof import('@attome/xrm/fulfilment');
 type SalesModule = typeof import('@attome/xrm/sales');
+type SegmentModule = typeof import('@attome/xrm/marketing/segment');
 
 @Component({
   selector: 'xrm-record-tab-panels',
@@ -95,6 +96,10 @@ export class RecordTabPanelsComponent {
   readonly sales = signal<SalesModule | null>(null);
   readonly salesLoadFailed = signal(false);
   private salesRequested = false;
+  /** E7-T12: the segment entry point, once a marketing list's Segment tab has asked for it. */
+  readonly segment = signal<SegmentModule | null>(null);
+  readonly segmentLoadFailed = signal(false);
+  private segmentRequested = false;
 
   constructor() {
     effect(() => {
@@ -142,6 +147,15 @@ export class RecordTabPanelsComponent {
         import('@attome/xrm/fulfilment').then(
           m => this.fulfilment.set(m),
           () => this.fulfilmentLoadFailed.set(true),
+        );
+      }
+    });
+    effect(() => {
+      if (this.activeTab() === 'segment' && this.recordId() && !this.segmentRequested) {
+        this.segmentRequested = true;
+        import('@attome/xrm/marketing/segment').then(
+          m => this.segment.set(m),
+          () => this.segmentLoadFailed.set(true),
         );
       }
     });

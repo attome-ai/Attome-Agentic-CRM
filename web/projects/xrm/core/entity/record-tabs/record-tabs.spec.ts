@@ -17,16 +17,19 @@ describe('recordTabDefs', () => {
     // D3-T3: Convert is a lead's only.
     const opportunityOnly = ['lines', 'team', 'splits'];
     expect(recordTabDefs('contact', echo).map(t => t.id))
-      .toEqual(RECORD_TAB_IDS.filter(id => id !== 'fulfilment' && id !== 'convert' && id !== 'whitespace' && !opportunityOnly.includes(id)));
+      .toEqual(RECORD_TAB_IDS.filter(id => id !== 'fulfilment' && id !== 'convert' && id !== 'whitespace' && id !== 'segment' && !opportunityOnly.includes(id)));
     expect(recordTabDefs('order', echo).map(t => t.id))
-      .toEqual(RECORD_TAB_IDS.filter(id => id !== 'convert' && id !== 'whitespace' && !opportunityOnly.includes(id)));
+      .toEqual(RECORD_TAB_IDS.filter(id => id !== 'convert' && id !== 'whitespace' && id !== 'segment' && !opportunityOnly.includes(id)));
     // D6-T10: the Lines tab is an opportunity's only.
     expect(recordTabDefs('opportunity', echo).map(t => t.id))
-      .toEqual(RECORD_TAB_IDS.filter(id => id !== 'fulfilment' && id !== 'convert' && id !== 'whitespace'));
+      .toEqual(RECORD_TAB_IDS.filter(id => id !== 'fulfilment' && id !== 'convert' && id !== 'whitespace' && id !== 'segment'));
     expect(recordTabDefs('lead', echo).map(t => t.id))
-      .toEqual(RECORD_TAB_IDS.filter(id => id !== 'fulfilment' && id !== 'whitespace' && !opportunityOnly.includes(id)));
+      .toEqual(RECORD_TAB_IDS.filter(id => id !== 'fulfilment' && id !== 'whitespace' && id !== 'segment' && !opportunityOnly.includes(id)));
     // D27-T2: the Whitespace tab is an account plan's only.
     expect(recordTabDefs('account_plan', echo).map(t => t.id)).toContain('whitespace');
+    // E7-T12: the Segment tab is a marketing list's only.
+    expect(recordTabDefs('marketing_list', echo).map(t => t.id)).toContain('segment');
+    expect(recordTabDefs('contact', echo).map(t => t.id)).not.toContain('segment');
   });
 
   it('resolves labels through the translate function', () => {

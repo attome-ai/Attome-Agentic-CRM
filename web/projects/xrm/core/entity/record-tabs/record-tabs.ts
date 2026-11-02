@@ -14,12 +14,12 @@ import type { XrmFormTabDef } from '../base/xrm-form.base';
 export type RecordTabId =
   'documents' | 'communications' | 'notes' | 'activities' | 'tags' | 'consent' | 'relationships'
   | 'timeline' | 'history' | 'approvals' | 'sharing' | 'golden' | 'fulfilment' | 'lines' | 'team' | 'splits'
-  | 'convert' | 'whitespace';
+  | 'convert' | 'whitespace' | 'segment';
 
 /** Every record tab, in the order the generic form has always shown them. */
 export const RECORD_TAB_IDS: readonly RecordTabId[] = [
   'documents', 'communications', 'notes', 'activities', 'tags', 'consent', 'relationships', 'timeline', 'history',
-  'approvals', 'sharing', 'fulfilment', 'lines', 'team', 'splits', 'convert', 'whitespace',
+  'approvals', 'sharing', 'fulfilment', 'lines', 'team', 'splits', 'convert', 'whitespace', 'segment',
 ];
 
 const ICONS: Record<RecordTabId, string> = {
@@ -41,6 +41,7 @@ const ICONS: Record<RecordTabId, string> = {
   splits:         'las la-chart-pie',
   convert:        'las la-arrow-right',
   whitespace:     'las la-th',
+  segment:        'las la-filter',
 };
 
 const LABEL_KEYS: Record<RecordTabId, string> = {
@@ -62,6 +63,7 @@ const LABEL_KEYS: Record<RecordTabId, string> = {
   splits:         'xrmForm.tabs.splits',
   convert:        'xrmForm.tabs.convert',
   whitespace:     'xrmForm.tabs.whitespace',
+  segment:        'xrmForm.tabs.segment',
 };
 
 /**
@@ -89,6 +91,8 @@ function hiddenOn(tab: RecordTabId, entityName: string): boolean {
     case 'convert':    return entityName !== 'lead';
     // D27-T2: an account plan's whitespace grid.
     case 'whitespace': return entityName !== 'account_plan';
+    // E7-T12: a marketing list's counts, sample and uses.
+    case 'segment':    return entityName !== 'marketing_list';
     default:          return false;
   }
 }
