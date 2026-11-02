@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src https: http://127.0.0.1:*; img-src 'self' data:; media-src 'self' blob: mediastream:"
+    />
+    <title>Attome</title>
+    <style>
+      :root {
+        --bg: #ffffff;
+        --text: #1a1a1a;
+        --muted: #5f6368;
+        --border: #c4c7c5;
+        --accent: #0b57d0;
+        --danger: #b3261e;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #121212;
+          --text: #e8eaed;
+          --muted: #9aa0a6;
+          --border: #5f6368;
+          --accent: #8ab4f8;
+          --danger: #f2b8b5;
+        }
+      }
+      body {
+        margin: 0;
+        padding: 24px 16px;
+        background: var(--bg);
+        color: var(--text);
+        font: 16px/1.5 system-ui, sans-serif;
+      }
+      main { max-width: 420px; margin: 0 auto; }
+      h1 { font-size: 24px; margin-block: 32px 8px; }
+      p { color: var(--muted); margin-block: 0 24px; }
+      label { display: block; font-weight: 600; margin-block-end: 8px; }
+      input {
+        box-sizing: border-box;
+        width: 100%;
+        padding: 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+      }
+      .actions { display: flex; gap: 12px; margin-block-start: 16px; }
+      button {
+        flex: 1;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid var(--accent);
+        font: inherit;
+        font-weight: 600;
+      }
+      #connect { background: var(--accent); color: var(--bg); }
+      #scan { background: transparent; color: var(--accent); }
+      #message { min-height: 1.5em; margin-block-start: 16px; color: var(--danger); }
+      video { width: 100%; margin-block-start: 16px; border-radius: 8px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1 data-text="title">Connect to Attome</h1>
+      <p data-text="intro">Enter your organisation's Attome address, or scan the code your administrator shared.</p>
+      <form id="form" novalidate>
+        <label for="address" data-text="address">Address</label>
+        <input id="address" type="url" inputmode="url" autocomplete="url" placeholder="https://crm.example.com" dir="ltr" required />
+        <div class="actions">
+          <button id="connect" type="submit" data-text="connect">Connect</button>
+          <button id="scan" type="button" data-text="scan">Scan QR</button>
+        </div>
+      </form>
+      <div id="message" role="alert"></div>
+      <video id="camera" hidden playsinline muted></video>
+    </main>
+    <script src="connect.js"></script>
+  </body>
+</html>

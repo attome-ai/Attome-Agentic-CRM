@@ -1,0 +1,21 @@
+{
+  "name": "attome-mobile",
+  "private": true,
+  "version": "0.1.0",
+  "description": "The Attome phone app: a Capacitor shell that connects to a deployment and shows its web app.",
+  "scripts": {
+    "sync": "cap sync",
+    "android": "cap open android",
+    "ios": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "7.0.1",
+    "@capacitor/core": "7.0.1",
+    "@capacitor/ios": "7.0.1",
+    "@capacitor/preferences": "7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "7.0.1",
+    "typescript": "5.7.3"
+  }
+}
