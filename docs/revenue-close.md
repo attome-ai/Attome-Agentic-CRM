@@ -43,3 +43,13 @@ Every night the roll-forward rewrites each contract's balance snapshot for the c
 Roll-forward** (billed, recognised and deferred by period), **Unbilled Balance** (each contract's latest),
 **Remaining Performance Obligations** (planned revenue per contract) and **Recognised vs Billed by
 Customer**.
+
+## Posting to an ERP instead
+
+A deployment that keeps its books in an ERP sets `revrec.posting_target` to `connector:<integration system id>`
+(a REST integration system). Posting an approved close then writes no journal entry here: it locks the
+month's lines, marks the close posted and queues a job that sends the close's entries (one per product,
+debiting and crediting the `revrec_close` posting rule's account codes, dated the month's end) to that
+system, with the `Idempotency-Key` `revrec-close:<close id>`. A refused send is retried with the same key,
+so a system that dedupes by key (`{"supports_idempotency": true}` in its configuration) takes the close
+once. This is the only thing Attome writes back to an ERP.

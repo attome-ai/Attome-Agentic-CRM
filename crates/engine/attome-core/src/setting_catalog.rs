@@ -786,6 +786,16 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(0),
         ),
+        // F11-T8: where the revenue close posts.
+        SettingDescriptor::new(
+            "revrec.posting_target",
+            "Where an approved revenue close posts its journal entries: ledger (Attome's own, the \
+         default) or connector:<integration system id> to send them to an ERP once (F11-T8).",
+            || json!({"type": "string"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!("ledger"),
+        ),
         // F8-T8: risky orders.
         SettingDescriptor::new(
             "commerce.risk.cod_limit",

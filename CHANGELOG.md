@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Revenue close to an ERP (F11-T8, V2-D1610): with `revrec.posting_target = connector:<id>` an approved
+  close sends its balanced entries to that integration system once, keyed by the close, instead of posting
+  them to Attome's ledger.
 - API parity report (Y9-T4, V2-D1610): `cargo test -p attome-ai --test parity_report -- --nocapture` lists the
   API tags no agent action covers and the operations no web screen calls. MCP tools stay the closed action
   registry; nothing is generated from OpenAPI.

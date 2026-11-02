@@ -530,8 +530,9 @@ pub async fn post_close(
             *amounts.entry(key).or_default() += amount;
         }
     }
+    let erp = super::erp::target(state);
     let mut entries = Vec::new();
-    for (product, amount) in &amounts {
+    for (product, amount) in amounts.iter().filter(|_| erp.is_none()) {
         let posted = crate::posting::post_from_rule(
             state,
             ctx,
@@ -560,6 +561,15 @@ pub async fn post_close(
         .execute(&mut *guard)
         .await
         .map_err(AppError::internal)?;
+    // F11-T8: an ERP-posting deployment sends the entries after commit.
+    if erp.is_some() {
+        let job = attome_core::jobs::JOB_TYPES
+            .job(super::erp::JOB, &super::erp::ErpPostPayload { run_id })
+            .map_err(AppError::internal)?;
+        attome_jobs::enqueue_in_tx(&mut guard, attome_core::jobs::EngineJob::Registered(job))
+            .await
+            .map_err(AppError::internal)?;
+    }
     write_business_event_in_tx(
         &mut guard,
         &audit_service(state),
@@ -570,7 +580,11 @@ pub async fn post_close(
             "revrec.close_posted",
             ctx.user_id,
         )
-        .comment(format!("{} entr(ies) for {period}", entries.len())),
+        .comment(if erp.is_some() {
+            format!("{} entr(ies) for {period}, sent to the ERP", amounts.len())
+        } else {
+            format!("{} entr(ies) for {period}", entries.len())
+        }),
     )
     .await?;
     attome_db::tx::commit(guard).await?;

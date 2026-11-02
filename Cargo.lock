@@ -1701,6 +1701,7 @@ dependencies = [
  "attome-audit",
  "attome-core",
  "attome-db",
+ "attome-integration",
  "attome-jobs",
  "attome-modules",
  "attome-records",

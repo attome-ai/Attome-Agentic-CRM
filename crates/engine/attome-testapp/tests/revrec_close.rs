@@ -26,6 +26,19 @@ const PACKS: [&str; 8] = [
 ];
 
 async fn install(app: &TestApp) {
+    // The close and the ERP send are registered jobs; the test runs their
+    // bodies itself, so the types only need to exist.
+    for name in [
+        attome_ledger::revrec::close::JOB,
+        attome_ledger::revrec::erp::JOB,
+    ] {
+        let _ = attome_core::jobs::JOB_TYPES.register(
+            attome_jobs::JobType::new(name, 1),
+            |_state: attome_core::EngineState, _job: attome_jobs::RegisteredJob| async move {
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        );
+    }
     for pack in PACKS {
         let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../../packs")
@@ -299,5 +312,59 @@ fn close_refused_for_locked_ledger_period() {
             .await
             .unwrap();
         assert_eq!(runs, 0);
+    });
+}
+
+// feature: F11
+#[test]
+fn close_for_an_erp_posts_no_ledger_entry() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        install(&app).await;
+        books(&app).await;
+        let (status, body) = app
+            .request(
+                axum::http::Method::PUT,
+                "/api/v1/admin/settings/revrec.posting_target",
+                Some(serde_json::json!({
+                    "scope": "deployment",
+                    "value": format!("connector:{}", Uuid::now_v7()),
+                })),
+            )
+            .await;
+        assert!(status.is_success(), "{status} {body}");
+        let ctx = attome_security::resolve_uncached(app.db(), app.admin.id)
+            .await
+            .unwrap();
+
+        let close = start(&app.state, app.admin.id, "2027-01").await.unwrap();
+        run(&app.state, close.id).await.unwrap();
+        approve(&app, close.id).await;
+        let posted = post_close(&app.state, &ctx, close.id).await.unwrap();
+        assert_eq!(posted.status, "posted");
+        assert!(
+            posted.entries.is_empty(),
+            "the ERP gets the entries, not this ledger"
+        );
+        let entries: i64 =
+            sqlx::query_scalar("SELECT count(*) FROM gl_entry WHERE source_kind = 'revrec_close'")
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        assert_eq!(entries, 0);
+        let locked: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM revenue_schedule_line WHERE fiscal_period = '2027-01' \
+               AND status = 'locked'",
+        )
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        assert_eq!(locked, 1);
+        let amounts = attome_ledger::revrec::erp::amounts(&app.state, "2027-01")
+            .await
+            .unwrap();
+        assert_eq!(amounts.len(), 1, "one entry to send, for the one product");
     });
 }

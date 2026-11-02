@@ -3860,6 +3860,10 @@ pub const CALLINTEL_COMPETITORS: attome_jobs::JobType =
 pub const CALLINTEL_AGGREGATE: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_callintel::analysis::trends::JOB, 1);
 
+/// F11-T8: one revenue close sent to the ERP.
+pub const REVREC_ERP_POST: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_ledger::revrec::erp::JOB, 5);
+
 /// F11-T10: the nightly revenue balance roll-forward.
 pub const REVREC_ROLLFORWARD: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_ledger::revrec::close::ROLLFORWARD_JOB, 1);
@@ -5382,6 +5386,22 @@ pub fn register_job_types() {
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 tracing::info!(%yesterday, rows, "call trends aggregated");
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            REVREC_ERP_POST,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_LEDGER) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let payload: attome_ledger::revrec::erp::ErpPostPayload = job.payload()?;
+                let sent = attome_ledger::revrec::erp::send(&state, payload.run_id)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(run = %payload.run_id, sent, "revenue close sent to the ERP");
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {

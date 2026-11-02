@@ -12,6 +12,8 @@ pub mod change;
 pub mod close;
 /// F11-T3: contracts from orders and subscriptions, and combining them.
 pub mod contract;
+/// F11-T8: a close posted to an ERP's ledger instead.
+pub mod erp;
 /// F11-T9: loyalty points deferred as a material right.
 pub mod loyalty;
 /// F11-T5: the recognition patterns, as amounts per period.
