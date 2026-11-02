@@ -517,6 +517,98 @@ async fn mass(
     Ok((status, Json(run)))
 }
 
+/// The most members one flow start covers.
+pub const MAX_FLOW_MEMBERS: i64 = 10_000;
+
+/// A flow to start on every current member.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DerivedStartFlowBody {
+    /// The published workflow's logical name.
+    pub definition: String,
+}
+
+/// The runs a flow start made.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct DerivedFlowStarted {
+    pub started: usize,
+}
+
+/// Start a flow on a derived entity's members
+///
+/// A26-T5: starts the published flow `definition` once per current member
+/// (up to 10,000, taken at the start), each run correlated to its record
+/// with `{entity, record_id}` in its context, in chunks of the batched
+/// start; the runs themselves go through the workflow engine's jobs (a
+/// flow's concurrency cap leaves the rest queued). Automation
+/// administrators only. Audited.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/derived-entities/{name}/start-flow",
+    operation_id = "derived_entity_start_flow",
+    tag = "admin",
+    params(("name" = String, Path, description = "The derived entity's name")),
+    request_body = DerivedStartFlowBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, AuditOperation::Create)])))),
+    responses(
+        (status = 202, description = "The runs started", body = DerivedFlowStarted),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such derived entity, or its anchor is gone", body = ErrorResponse),
+        (status = 422, description = "No members, too many, or no published flow of that name", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn start_flow(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<area::Automation>>,
+    Path(name): Path<String>,
+    Json(body): Json<DerivedStartFlowBody>,
+) -> Result<(StatusCode, Json<DerivedFlowStarted>), AppError> {
+    let def = derived_entity::find(&state.base.db, &name)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    let anchor = state
+        .entities
+        .load()
+        .get(&def.anchor)
+        .cloned()
+        .ok_or(AppError::NotFound)?;
+    let ids = derived_entity::member_ids(&state.base.db, &def, &anchor, MAX_FLOW_MEMBERS).await?;
+    if ids.is_empty() {
+        return Err(AppError::Validation(format!("{name} has no members now")));
+    }
+    if ids.len() as i64 > MAX_FLOW_MEMBERS {
+        return Err(AppError::Validation(format!(
+            "{name} has more than {MAX_FLOW_MEMBERS} members; start the flow from a narrower derived entity"
+        )));
+    }
+    let items: Vec<(uuid::Uuid, serde_json::Value)> = ids
+        .into_iter()
+        .map(|id| {
+            (
+                id,
+                json!({ "entity": def.anchor, "record_id": id, "derived_entity": name }),
+            )
+        })
+        .collect();
+    let started = attome_workflow::instance_admin::start_instances_batch(
+        &state,
+        body.definition.trim(),
+        Some(ctx.user_id),
+        items,
+    )
+    .await?;
+    tracing::info!(derived = %name, flow = %body.definition, started = started.len(),
+        "flow started on derived entity members");
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(DerivedFlowStarted {
+            started: started.len(),
+        }),
+    ))
+}
+
 /// What resuming a paused derived entity moved.
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct DerivedResumed {
@@ -624,10 +716,14 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/derived-entities/{entity}/mass",
             axum::routing::post(mass),
         )
+        .route(
+            "/api/v1/admin/derived-entities/{name}/start-flow",
+            axum::routing::post(start_flow),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list, put, delete, resume, preview, explain, trend, mass))]
+#[openapi(paths(list, put, delete, resume, preview, explain, trend, mass, start_flow))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
