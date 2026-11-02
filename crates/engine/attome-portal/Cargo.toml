@@ -28,6 +28,7 @@ attome-commission.workspace = true
 attome-partner.workspace    = true
 attome-records.workspace    = true
 attome-s2s.workspace        = true
+attome-sales.workspace      = true
 attome-security.workspace   = true
 attome-server.workspace     = true
 attome-types.workspace      = true

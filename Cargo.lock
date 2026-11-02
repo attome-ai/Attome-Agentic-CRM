@@ -2005,6 +2005,7 @@ dependencies = [
  "attome-partner",
  "attome-records",
  "attome-s2s",
+ "attome-sales",
  "attome-security",
  "attome-server",
  "attome-testkit",

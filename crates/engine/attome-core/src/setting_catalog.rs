@@ -747,6 +747,35 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(false),
         ),
+        // F7-T1: the portal shop.
+        SettingDescriptor::new(
+            "commerce.enabled",
+            "Whether portal members may shop: see the orderable products marked sold on the portal \
+         that have a price for their account, keep a cart and check out into a draft order \
+         (F7-T1). Off by default.",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
+        SettingDescriptor::new(
+            "commerce.currency",
+            "The currency the portal shop prices and orders in, as an ISO 4217 code (F7-T1). SAR by \
+         default.",
+            || json!({"type": "string", "minLength": 3, "maxLength": 3}),
+            &[SettingScope::Deployment],
+            false,
+            || json!("SAR"),
+        ),
+        SettingDescriptor::new(
+            "commerce.approval_limit",
+            "The order total above which a portal checkout asks for approval before staff confirm \
+         the order (F7-T1). 0 by default: no approval is asked.",
+            || json!({"type": "number", "minimum": 0}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(0),
+        ),
         // D22-T5: call analysis.
         SettingDescriptor::new(
             "callintel.enabled",

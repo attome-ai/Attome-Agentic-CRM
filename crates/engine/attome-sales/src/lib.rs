@@ -12,6 +12,8 @@ pub mod booking;
 /// D25-T7: buyer feedback after a close.
 pub mod buyer_feedback;
 pub mod catalogue;
+/// F7-T1: the portal shop: catalogue visibility, cart, checkout to an order.
+pub mod commerce;
 pub mod competitor_drafts;
 pub mod competitor_mentions;
 pub mod competitor_routes;

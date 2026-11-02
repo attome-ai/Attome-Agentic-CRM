@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- The portal shop (F7-T1, migration `0374`, sales pack changeset `0029`): with `commerce.enabled` on,
+  portal members see the orderable products marked `portal_visible` that have a price for their account,
+  keep a cart (`/{keyword}/api/v1/shop/...`) and check out into a draft order written as the portal's
+  service user, with an approval request above `commerce.approval_limit`. See `docs/portal-shop.md`.
 - Revenue contract changes (F11-T6, V2-D1588, migration `0373`): `POST /api/v1/ledger/revrec/changes`
   previews an amendment, change order or credit note as a separate contract, a prospective change or a
   cumulative catch-up (IFRS 15 by change kind, overridable), and `.../{id}/apply` or `.../{id}/discard`
