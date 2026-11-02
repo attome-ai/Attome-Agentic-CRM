@@ -86182,7 +86182,7 @@
         ],
         "summary": "تأكيد التسجيل في التحقق متعدد العوامل",
         "description": "D22-T8: a manager of the call's owner confirms an answer.",
-        "operationId": "confirm",
+        "operationId": "confirm_scorecard_answer",
         "parameters": [
           {
             "name": "id",

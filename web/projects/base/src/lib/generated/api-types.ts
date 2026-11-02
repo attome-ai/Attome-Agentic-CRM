@@ -17740,7 +17740,7 @@ export interface paths {
          * Confirm a scorecard answer
          * @description D22-T8: a manager of the call's owner confirms an answer.
          */
-        post: operations["confirm"];
+        post: operations["confirm_scorecard_answer"];
         delete?: never;
         options?: never;
         head?: never;
@@ -125136,7 +125136,7 @@ export interface operations {
             };
         };
     };
-    confirm: {
+    confirm_scorecard_answer: {
         parameters: {
             query?: never;
             header?: never;

@@ -371,6 +371,7 @@ pub struct ConfirmBody {
 #[utoipa::path(
     post,
     path = "/api/v1/callintel/scorecard-answers/{id}/confirm",
+    operation_id = "confirm_scorecard_answer",
     tag = "callintel",
     params(("id" = Uuid, Path, description = "The scorecard answer")),
     request_body = ConfirmBody,
