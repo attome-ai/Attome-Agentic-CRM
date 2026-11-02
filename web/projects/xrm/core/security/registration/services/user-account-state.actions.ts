@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { concatMap, type Observable } from 'rxjs';
-import { ApiService, AuthService, SdkService } from '@attome/base';
+import { AuthService, SdkService } from '@attome/base';
 import type { SelectionAction } from '@attome/xrm/core/entity';
 
 /**
@@ -67,7 +67,7 @@ function rowId(row: Record<string, unknown>): string | null {
  * delete itself fails, so a delete refused by a `Restrict`-mode dependent
  * does not silently revoke the account anyway.
  *
- * Deliberately calls `ApiService` rather than `SecurityAdminService`:
+ * Deliberately calls `SdkService` rather than `SecurityAdminService`:
  * `provide-xrm-forms.ts` is imported from the xrm route tree's eager
  * `providers:` array, so a static import of `@attome/xrm/security` would pull
  * that entry point's eight admin components into the chunk every `/xrm/*`
