@@ -14,6 +14,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Customer order updates (F6-T15, migration `0371`, fulfilment pack changeset `0009`): with
+  `fulfilment.customer_updates` on, an order's updates contact who granted `order_updates` is told by email
+  and text when a shipment leaves, goes out for delivery or is delivered, and when the order is late,
+  once per step, through the `fulfilment.*` templates in English and Arabic. With `fulfilment.portal`
+  on, `GET /{keyword}/api/v1/fulfilment/orders/{order_id}` shows a portal user their own account's order
+  line by line with shipments and tracking numbers. See `docs/fulfilment-customer-updates.md`.
 - E14: first-party web visitor tracking (script, collection, sessions, identification, visits on the
   timeline, alerts, retention), documented in `docs/marketing-tracking.md`.
 - Website tracking screen (E14-T12, `/xrm/marketing/tracking`, marketing pack changeset `0019`): per

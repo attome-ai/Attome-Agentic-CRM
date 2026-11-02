@@ -20,6 +20,7 @@ attome-core.workspace       = true
 attome-db.workspace         = true
 attome-document.workspace   = true
 attome-email.workspace      = true
+attome-fulfilment.workspace = true
 attome-jobs.workspace       = true
 attome-modules.workspace    = true
 attome-commission.workspace = true

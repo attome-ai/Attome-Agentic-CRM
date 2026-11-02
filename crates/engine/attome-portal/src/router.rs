@@ -65,6 +65,8 @@ use crate::session;
 use crate::telemetry;
 
 mod account;
+/// F6-T15: where is my order.
+mod fulfilment;
 mod metadata;
 mod oidc;
 /// G12-T1: the pages a portal shows.
@@ -2016,6 +2018,7 @@ pub fn routes() -> Router<EngineState> {
             get(download_record_file),
         )
         .merge(account::routes())
+        .merge(fulfilment::routes())
         .merge(metadata::routes())
         .merge(pages::routes())
         .merge(partner_members::routes())
@@ -2049,6 +2052,7 @@ struct ApiDocFragment;
 pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
     let mut doc = <ApiDocFragment as utoipa::OpenApi>::openapi();
     doc.merge(<account::AccountApiDoc as utoipa::OpenApi>::openapi());
+    doc.merge(<fulfilment::FulfilmentApiDoc as utoipa::OpenApi>::openapi());
     doc.merge(<metadata::MetadataApiDoc as utoipa::OpenApi>::openapi());
     doc.merge(<pages::PagesApiDoc as utoipa::OpenApi>::openapi());
     doc.merge(<partner_members::PartnerMembersApiDoc as utoipa::OpenApi>::openapi());

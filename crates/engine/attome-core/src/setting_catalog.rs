@@ -725,6 +725,28 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(false),
         ),
+        // F6-T15: order updates to the customer.
+        SettingDescriptor::new(
+            "fulfilment.customer_updates",
+            "Whether the order's updates contact is told when a shipment leaves, goes out for \
+         delivery or is delivered, and when the order is late, by email and text through the \
+         fulfilment.* notification templates, only with their order_updates consent (F6-T15). \
+         Off by default.",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
+        SettingDescriptor::new(
+            "fulfilment.portal",
+            "Whether portal users see their own account's orders line by line, with shipments and \
+         tracking numbers, at /{keyword}/api/v1/fulfilment/orders/{order_id} (F6-T15). Off by \
+         default: the route answers 404.",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
         // F11-T9: loyalty points as a material right.
         SettingDescriptor::new(
             "revrec.loyalty_point_value",

@@ -42,4 +42,11 @@ impl EngineModel for FulfilmentModel {
             .merge(crate::order_view::routes())
             .merge(crate::sourcing_rules::routes())
     }
+
+    /// F6-T15: an erased contact's update decisions.
+    fn erasure_hooks(&self) -> Vec<std::sync::Arc<dyn attome_core::erasure_hook::ErasureHook>> {
+        vec![std::sync::Arc::new(
+            crate::customer_updates::CustomerUpdateErasure,
+        )]
+    }
 }

@@ -3352,6 +3352,8 @@ const DEDUP_KEY_WEB_VISIT_SUMMARY: &str = "web-visit-summary";
 const DEDUP_KEY_FULFILMENT_EXCEPTIONS: &str = "fulfilment-exceptions";
 /// F6-T10: the carrier tracking poll (a registered job type).
 const DEDUP_KEY_FULFILMENT_TRACKING: &str = "fulfilment-tracking";
+/// F6-T15: order updates to customers (a registered job type).
+const DEDUP_KEY_FULFILMENT_CUSTOMER_UPDATES: &str = "fulfilment-customer-updates";
 /// O1-T2: the weekly drift check of active prediction models.
 const DEDUP_KEY_PREDICT_DRIFT: &str = "predict-drift";
 const DEDUP_KEY_CONTENT_SEO_AUDIT: &str = "content-seo-audit";
@@ -3823,6 +3825,10 @@ pub const FULFILMENT_EXCEPTIONS: attome_jobs::JobType =
 /// F6-T10: booked shipments' status read from their carriers.
 pub const FULFILMENT_TRACKING: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_fulfilment::tracking::JOB, 1);
+
+/// F6-T15: shipment steps and late orders told to the customer.
+pub const FULFILMENT_CUSTOMER_UPDATES: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_fulfilment::customer_updates::JOB, 1);
 
 /// E13-T9: the stored sitemaps of sites whose pages changed, rebuilt.
 pub const CONTENT_SITEMAP: attome_jobs::JobType =
@@ -5256,6 +5262,28 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            FULFILMENT_CUSTOMER_UPDATES,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if state
+                    .modules
+                    .load()
+                    .require(attome_modules::MODULE_FULFILMENT)
+                    .is_err()
+                {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let sent = attome_fulfilment::customer_updates::drain(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if sent > 0 {
+                    tracing::info!(sent, "fulfilment customer updates sent");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             FULFILMENT_SPLIT,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 if state
@@ -6614,6 +6642,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == FULFILMENT_TRACKING.name => {
             DEDUP_KEY_FULFILMENT_TRACKING
         }
+        EngineJob::Registered(job) if job.name == FULFILMENT_CUSTOMER_UPDATES.name => {
+            DEDUP_KEY_FULFILMENT_CUSTOMER_UPDATES
+        }
         EngineJob::Registered(job) if job.name == PREDICT_DRIFT.name => DEDUP_KEY_PREDICT_DRIFT,
         EngineJob::Registered(job) if job.name == CONTENT_SEO_AUDIT.name => {
             DEDUP_KEY_CONTENT_SEO_AUDIT
@@ -6905,6 +6936,7 @@ pub const SCHEDULE_MODULES: &[(&str, &str)] = &[
     ("fulfilment-split", "fulfilment"),
     ("fulfilment-exceptions", "fulfilment"),
     ("fulfilment-tracking", "fulfilment"),
+    ("fulfilment-customer-updates", "fulfilment"),
     ("workforce-intraday", "workforce"),
     ("rfq-open", "procurement"),
     ("grc-policy-sweep", "grc"),
@@ -8288,6 +8320,21 @@ pub fn spawn_fulfilment_tracking_scheduler(db: DbPool, interval: std::time::Dura
             "fulfilment tracking",
         ),
         Err(error) => tracing::error!(%error, "fulfilment tracking: not scheduled"),
+    }
+}
+
+/// F6-T15: every minute, shipment steps and late orders told to customers.
+pub fn spawn_fulfilment_customer_updates_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(FULFILMENT_CUSTOMER_UPDATES.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_FULFILMENT_CUSTOMER_UPDATES,
+            "fulfilment customer updates",
+        ),
+        Err(error) => tracing::error!(%error, "fulfilment customer updates: not scheduled"),
     }
 }
 

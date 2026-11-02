@@ -1,0 +1,344 @@
+{
+  "author": "packs",
+  "checksum": "sha256:35587bbc020284030e906d79cc28977d647c0f3d5e68a5741b1001653b8453ca",
+  "closed_at": "2026-11-02T00:00:00Z",
+  "description": "Customer order updates (F6-T15): the order's updates contact, the order_updates consent purpose, and the shipped, out-for-delivery, delivered and delayed templates in English and Arabic.",
+  "format": "attome-changeset/v1",
+  "id": "01a19c40-0000-7f06-8000-000000000009",
+  "layer": "product",
+  "name": "fulfilment-customer-updates",
+  "opened_at": "2026-11-02T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "changed": [
+          "business_key"
+        ],
+        "definition": {
+          "business_key": [
+            "key"
+          ],
+          "display_name": "Consent Purpose",
+          "is_append_only": false,
+          "logicalname": "audit_consent_purpose",
+          "primary_name_attribute": "key"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "audit_consent_purpose"
+      }
+    },
+    {
+      "args": {
+        "changed": [
+          "business_key"
+        ],
+        "definition": {
+          "business_key": [
+            "template_key",
+            "locale"
+          ],
+          "display_name": "Notification Template",
+          "is_append_only": false,
+          "logicalname": "notification_template",
+          "primary_name_attribute": "template_key"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "notification_template"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Updates contact",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "updates_contact_ref",
+          "lookup_entity": "contact",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "order",
+        "field": "updates_contact_ref"
+      }
+    },
+    {
+      "args": {
+        "display_name": "جهة اتصال التحديثات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "order.updates_contact_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "key"
+        ],
+        "values": {
+          "description": "Messages about the customer's own orders: shipped, out for delivery, delivered and running late (F6-T15).",
+          "is_required": false,
+          "key": "order_updates",
+          "lawful_basis": "consent"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "audit_consent_purpose",
+        "key": {
+          "key": "order_updates"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "template_key",
+          "locale"
+        ],
+        "values": {
+          "body_text": "Your order {{order_number}} has left us with {{carrier}}. Tracking number: {{tracking_number}}.",
+          "consent_purpose_key": "order_updates",
+          "default_channels": "email,sms",
+          "is_mandatory": false,
+          "locale": "en",
+          "subject": "Your order {{order_number}} is on its way",
+          "template_key": "fulfilment.shipped"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "notification_template",
+        "key": {
+          "locale": "en",
+          "template_key": "fulfilment.shipped"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "template_key",
+          "locale"
+        ],
+        "values": {
+          "body_text": "خرج طلبك {{order_number}} مع {{carrier}}. رقم التتبع: {{tracking_number}}.",
+          "consent_purpose_key": "order_updates",
+          "default_channels": "email,sms",
+          "is_mandatory": false,
+          "locale": "ar-SA",
+          "subject": "طلبك {{order_number}} في الطريق إليك",
+          "template_key": "fulfilment.shipped"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "notification_template",
+        "key": {
+          "locale": "ar-SA",
+          "template_key": "fulfilment.shipped"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "template_key",
+          "locale"
+        ],
+        "values": {
+          "body_text": "Your order {{order_number}} is out for delivery today. Tracking number: {{tracking_number}}.",
+          "consent_purpose_key": "order_updates",
+          "default_channels": "email,sms",
+          "is_mandatory": false,
+          "locale": "en",
+          "subject": "Your order {{order_number}} is out for delivery",
+          "template_key": "fulfilment.out_for_delivery"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "notification_template",
+        "key": {
+          "locale": "en",
+          "template_key": "fulfilment.out_for_delivery"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "template_key",
+          "locale"
+        ],
+        "values": {
+          "body_text": "خرج طلبك {{order_number}} للتسليم اليوم. رقم التتبع: {{tracking_number}}.",
+          "consent_purpose_key": "order_updates",
+          "default_channels": "email,sms",
+          "is_mandatory": false,
+          "locale": "ar-SA",
+          "subject": "طلبك {{order_number}} خرج للتسليم",
+          "template_key": "fulfilment.out_for_delivery"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "notification_template",
+        "key": {
+          "locale": "ar-SA",
+          "template_key": "fulfilment.out_for_delivery"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "template_key",
+          "locale"
+        ],
+        "values": {
+          "body_text": "Your order {{order_number}} was delivered. Thank you.",
+          "consent_purpose_key": "order_updates",
+          "default_channels": "email,sms",
+          "is_mandatory": false,
+          "locale": "en",
+          "subject": "Your order {{order_number}} was delivered",
+          "template_key": "fulfilment.delivered"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "notification_template",
+        "key": {
+          "locale": "en",
+          "template_key": "fulfilment.delivered"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "template_key",
+          "locale"
+        ],
+        "values": {
+          "body_text": "تم تسليم طلبك {{order_number}}. شكرًا لك.",
+          "consent_purpose_key": "order_updates",
+          "default_channels": "email,sms",
+          "is_mandatory": false,
+          "locale": "ar-SA",
+          "subject": "تم تسليم طلبك {{order_number}}",
+          "template_key": "fulfilment.delivered"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "notification_template",
+        "key": {
+          "locale": "ar-SA",
+          "template_key": "fulfilment.delivered"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "template_key",
+          "locale"
+        ],
+        "values": {
+          "body_text": "Your order {{order_number}} is taking longer than we promised. We are working on it and will tell you when it ships.",
+          "consent_purpose_key": "order_updates",
+          "default_channels": "email,sms",
+          "is_mandatory": false,
+          "locale": "en",
+          "subject": "Your order {{order_number}} is running late",
+          "template_key": "fulfilment.delayed"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "notification_template",
+        "key": {
+          "locale": "en",
+          "template_key": "fulfilment.delayed"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "template_key",
+          "locale"
+        ],
+        "values": {
+          "body_text": "يستغرق طلبك {{order_number}} وقتًا أطول مما وعدنا. نعمل عليه وسنخبرك عند شحنه.",
+          "consent_purpose_key": "order_updates",
+          "default_channels": "email,sms",
+          "is_mandatory": false,
+          "locale": "ar-SA",
+          "subject": "طلبك {{order_number}} متأخر",
+          "template_key": "fulfilment.delayed"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "notification_template",
+        "key": {
+          "locale": "ar-SA",
+          "template_key": "fulfilment.delayed"
+        }
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "fulfilment",
+  "seq": 9,
+  "title": "Pack: customer order updates"
+}

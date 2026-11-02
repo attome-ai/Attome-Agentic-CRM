@@ -12,6 +12,8 @@ pub mod backorder;
 pub mod billing_trigger;
 /// F6-T9: booking and tracking shipments with a carrier.
 pub mod carrier;
+/// F6-T15: order updates to the customer, and where-is-my-order on the portal.
+pub mod customer_updates;
 /// F6-T11: delivery by the own fleet with proof, a delivery code and cash on delivery.
 pub mod delivery;
 /// F6-T14: late and stuck orders as exceptions.
