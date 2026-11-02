@@ -42,6 +42,8 @@ pub mod generic;
 pub mod model;
 /// O1-T1: generic model definitions compiled through the secured compiler.
 pub mod model_def;
+/// O5-T1: next-best actions ranked by propensity, logged as recommendations.
+pub mod nba;
 pub mod predictions;
 pub mod score;
 pub mod train;
@@ -96,6 +98,7 @@ impl EngineModel for PredictModel {
         Router::new()
             .merge(admin::routes())
             .merge(predictions::routes())
+            .merge(nba::routes())
     }
 
     // Deliberately `&[]` (the default): `prediction_model`/
@@ -115,5 +118,6 @@ impl EngineModel for PredictModel {
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = admin::openapi_fragment();
     doc.merge(predictions::openapi_fragment());
+    doc.merge(nba::openapi_fragment());
     doc
 }

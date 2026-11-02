@@ -399,3 +399,115 @@ fn subscription_churn_scores_renewal_risk() {
         );
     });
 }
+
+// feature: O5
+#[test]
+fn next_actions_rank_and_track_outcomes() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        install(&app).await;
+        let admin = app.admin.id;
+        let ctx = attome_security::resolve_uncached(app.db(), admin)
+            .await
+            .unwrap();
+        let account: uuid::Uuid = sqlx::query_scalar(
+            "INSERT INTO account (name, owner_ref) VALUES ('NBA Co', $1) RETURNING id",
+        )
+        .bind(admin)
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        let deal = |amount: f64| {
+            let db = app.db().clone();
+            async move {
+                sqlx::query_scalar::<_, uuid::Uuid>(
+                    "INSERT INTO opportunity (name, account_ref, amount, owner_ref) \
+                     VALUES ($1, $2, $3, $4) RETURNING id",
+                )
+                .bind(format!("NBA deal {}", uuid::Uuid::now_v7().simple()))
+                .bind(account)
+                .bind(amount)
+                .bind(admin)
+                .fetch_one(&db)
+                .await
+                .unwrap()
+            }
+        };
+        let big = deal(5000.0).await;
+        let small = deal(10.0).await;
+        let suffix = uuid::Uuid::now_v7().simple().to_string();
+        for (name, condition, weight) in [
+            (format!("Book a demo {suffix}"), Some("amount > 1000"), 2.0),
+            (format!("Send the brochure {suffix}"), None, 1.0),
+        ] {
+            sqlx::query(
+                "INSERT INTO nba_action (id, entity, name, condition, weight, action) \
+                 VALUES ($1, 'opportunity', $2, $3, $4, '{\"kind\": \"task\"}')",
+            )
+            .bind(uuid::Uuid::now_v7())
+            .bind(&name)
+            .bind(condition)
+            .bind(weight)
+            .execute(app.db())
+            .await
+            .unwrap();
+        }
+        let mine = |list: Vec<attome_predict::nba::Recommendation>| -> Vec<attome_predict::nba::Recommendation> {
+            list.into_iter().filter(|r| r.name.ends_with(&suffix)).collect()
+        };
+
+        let shown = mine(
+            attome_predict::nba::recommend(&app.state, &ctx, "opportunity", big)
+                .await
+                .unwrap(),
+        );
+        assert_eq!(shown.len(), 2);
+        assert!(
+            shown[0].name.starts_with("Book a demo"),
+            "the heavier action first"
+        );
+        let again = mine(
+            attome_predict::nba::recommend(&app.state, &ctx, "opportunity", big)
+                .await
+                .unwrap(),
+        );
+        assert_eq!(
+            again[0].recommendation_id, shown[0].recommendation_id,
+            "an open recommendation is shown, not logged again"
+        );
+        let small_shown = mine(
+            attome_predict::nba::recommend(&app.state, &ctx, "opportunity", small)
+                .await
+                .unwrap(),
+        );
+        assert_eq!(small_shown.len(), 1, "the demo's condition does not hold");
+
+        let id = shown[0].recommendation_id;
+        attome_predict::nba::decide(&app.state, admin, id, true)
+            .await
+            .unwrap();
+        assert!(matches!(
+            attome_predict::nba::decide(&app.state, admin, id, false).await,
+            Err(attome_types::AppError::Conflict(_))
+        ));
+        assert!(matches!(
+            attome_predict::nba::decide(
+                &app.state,
+                uuid::Uuid::now_v7(),
+                shown[1].recommendation_id,
+                true
+            )
+            .await,
+            Err(attome_types::AppError::NotFound)
+        ));
+        let effectiveness: Option<f64> =
+            sqlx::query_scalar("SELECT effectiveness FROM outcome WHERE id = $1")
+                .bind(id)
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        assert_eq!(effectiveness, Some(1.0));
+    });
+}

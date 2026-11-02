@@ -2050,6 +2050,7 @@ dependencies = [
  "attome-metadata",
  "attome-modules",
  "attome-records",
+ "attome-rules",
  "attome-security",
  "attome-server",
  "attome-storage",

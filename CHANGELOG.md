@@ -14,6 +14,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Next-best actions (O5-T1): `GET`/`POST /api/v1/admin/predict/next-actions`, `DELETE .../{id}`,
+  `GET /api/v1/predict/next-actions` and `POST /api/v1/predict/recommendations/{id}/accept|reject`; migration 0380.
 - Call analysis routes (D22): `GET /api/v1/callintel/calls/{activity_id}`, `.../recording`,
   `POST .../comments`, `POST /api/v1/callintel/findings/{id}/task`,
   `POST /api/v1/callintel/scorecard-answers/{id}/confirm` and `GET /api/v1/callintel/my-analyses`;

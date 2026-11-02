@@ -77,3 +77,15 @@ has passed.
   metrics carry the fixed-feature ticket model's as `metrics.baseline`, to compare. A ticket scored at 0.7
   or above has its waiting queue items moved up one priority, so the router offers it sooner.
 
+## Next-best actions
+
+An AI administrator defines candidate actions per entity (`POST /api/v1/admin/predict/next-actions`:
+`entity`, `name` and `name_ar`, an optional rule-language `condition` such as `amount > 1000`, an
+optional `model_ref` of the same entity, a `weight`, and `action`, free JSON the screen acts on, such as
+`{"kind": "task"}`). `GET /api/v1/predict/next-actions?regarding_entity=&regarding_id=` reads the record as
+the caller, keeps the actions whose condition holds, and ranks them by weight times the record's latest
+score from the action's model (0.5 when the model has not scored it, 1 without a model), five at most.
+Each shown action is logged as an outcome of kind `recommendation`; `POST
+/api/v1/predict/recommendations/{id}/accept` or `/reject` records the decision of the person it was shown
+to, once. The outcome reports read them like any other proposal.
+
