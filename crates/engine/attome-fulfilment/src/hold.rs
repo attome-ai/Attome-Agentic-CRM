@@ -10,7 +10,7 @@
 //!   (invoices do not link to orders yet, so a person clears it once paid);
 //! - `address` when a goods order has no delivery address.
 //!
-//! - `fraud` while the order has an open `risky_order_review` (F8-T8, the
+//! - `fraud_check` while the order has an open `risky_order_review` (F8-T8, the
 //!   shop's risk signals; sales pack changeset 0030).
 //!
 //! Other fraud checks and `manual` holds are opened by people through the
@@ -170,7 +170,10 @@ pub async fn evaluate_holds(
         address.as_deref(),
     );
     if risk_review_open(db, order).await? {
-        wanted.push(("fraud", "the order is waiting for a risk review".to_owned()));
+        wanted.push((
+            "fraud_check",
+            "the order is waiting for a risk review".to_owned(),
+        ));
     }
     let mut opened = Vec::new();
     let mut tx = attome_db::tx::begin(db).await?;

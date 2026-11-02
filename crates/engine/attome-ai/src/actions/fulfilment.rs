@@ -126,7 +126,9 @@ pub fn hold_meaning(kind: &str) -> &'static str {
         "address" => {
             "The order has goods but no delivery address. Add the address, then clear the hold."
         }
-        "fraud" => "The order was flagged for a fraud review. The reviewer clears it.",
+        "fraud" | "fraud_check" => {
+            "The order was flagged for a fraud review. The reviewer clears it."
+        }
         "manual" => "A person put the order on hold; the reason says why.",
         _ => "A hold that stops release until someone with fulfilment_hold.release clears it.",
     }

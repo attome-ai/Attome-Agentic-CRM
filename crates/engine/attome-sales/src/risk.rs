@@ -11,7 +11,7 @@
 //!   both (they carry neither yet, so this never fires today).
 //!
 //! When any fires, a `risky_order_review` (`open`, the reasons) is written
-//! through the record engine. While it is open, fulfilment opens a `fraud`
+//! through the record engine. While it is open, fulfilment opens a `fraud_check`
 //! hold on the order's fulfilment orders, so nothing ships until a person
 //! clears the hold; the person sets the review `released` or `cancelled`
 //! through the generic record API. No agent action changes either.

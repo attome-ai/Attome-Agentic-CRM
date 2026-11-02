@@ -78,7 +78,7 @@ product). Every review waits as `pending`: nothing is published automatically. A
 After an order is placed, its risk signals are checked: cash on delivery above `commerce.risk.cod_limit`
 (0, the default, is off), or 3 or more failed card payments for the account in the last 24 hours. Any
 signal opens a `risky_order_review` (`open`, with the reasons); while it is open, fulfilment puts a
-`fraud` hold on the order's fulfilment orders, so nothing ships until a person clears the hold and sets
+`fraud_check` hold on the order's fulfilment orders, so nothing ships until a person clears the hold and sets
 the review `released` or `cancelled`.
 
 ## Abandoned carts
