@@ -8,6 +8,8 @@
 pub mod allocation;
 /// F11-T6: contract changes, previewed and applied by their IFRS 15 treatment.
 pub mod change;
+/// F11-T7: the monthly close: recognise, balance, approve, post, lock.
+pub mod close;
 /// F11-T3: contracts from orders and subscriptions, and combining them.
 pub mod contract;
 /// F11-T9: loyalty points deferred as a material right.

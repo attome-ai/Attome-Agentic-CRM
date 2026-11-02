@@ -1693,6 +1693,7 @@ dependencies = [
 name = "attome-ledger"
 version = "0.1.0"
 dependencies = [
+ "attome-approval",
  "attome-audit",
  "attome-core",
  "attome-db",

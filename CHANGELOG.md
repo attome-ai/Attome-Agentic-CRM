@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Monthly revenue close (F11-T7): `POST /api/v1/ledger/revrec/close` and `POST /api/v1/ledger/revrec/close/{id}/post`;
+  a job recognises the month's lines and writes deferred and unbilled balances (billed to date from issued
+  invoices for the contract's source), the controller approves, and the revenue posts through the
+  `revrec_close` posting rule, one entry per product, locking the lines. See `docs/revenue-close.md`.
 - Shipping and guest checkout (F8-T7, migration `0375`, sales pack changeset `0033`): shipping zones and
   rates quoted at `GET /{keyword}/api/v1/shop/shipping`; `POST /{keyword}/api/v1/shop/guest/start` texts a
   one-time code and `POST /{keyword}/api/v1/shop/guest/confirm` (with `Idempotency-Key`) places the order with

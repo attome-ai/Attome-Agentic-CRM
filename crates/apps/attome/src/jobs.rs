@@ -3846,6 +3846,10 @@ pub const SERVICE_QUALITY_SAMPLE: attome_jobs::JobType =
 pub const CALLINTEL_AGGREGATE: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_callintel::analysis::trends::JOB, 1);
 
+/// F11-T7: one month's revenue close.
+pub const REVREC_CLOSE: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_ledger::revrec::close::JOB, 3);
+
 /// D22-T5: one call analysis over a redacted transcript.
 pub const CALLINTEL_ANALYSE: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_callintel::analysis::job::JOB, 3);
@@ -5318,6 +5322,22 @@ pub fn register_job_types() {
                     .await
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 tracing::info!(%yesterday, rows, "call trends aggregated");
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            REVREC_CLOSE,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_LEDGER) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let payload: attome_ledger::revrec::close::ClosePayload = job.payload()?;
+                let status = attome_ledger::revrec::close::run(&state, payload.run_id)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(run = %payload.run_id, status, "revenue close ran");
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {
