@@ -37,14 +37,15 @@ fn typescript(dir: &Path, out: &mut String) {
         let path = entry.path();
         let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
         if path.is_dir() {
-            if name != "node_modules" && name != "generated" && name != "dist" {
+            if !matches!(name, "node_modules" | "generated" | "dist") {
                 typescript(&path, out);
             }
-        } else if name.ends_with(".ts") && !name.ends_with(".spec.ts") {
-            if let Ok(text) = std::fs::read_to_string(&path) {
-                out.push_str(&text);
-                out.push('\n');
-            }
+        } else if name.ends_with(".ts")
+            && !name.ends_with(".spec.ts")
+            && let Ok(text) = std::fs::read_to_string(&path)
+        {
+            out.push_str(&text);
+            out.push('\n');
         }
     }
 }
