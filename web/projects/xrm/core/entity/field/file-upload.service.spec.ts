@@ -86,7 +86,7 @@ describe('FileUploadService', () => {
     service.getDownloadUrl('note', 'rec-1', 'files', 'a/b c.pdf').subscribe();
     await tick();
     const req = httpMock.expectOne(
-      `${API}/api/v1/note/rec-1/files/files/download-url?key=a%2Fb%20c.pdf`,
+      r => r.url === `${API}/api/v1/note/rec-1/files/files/download-url` && r.params.get('key') === 'a/b c.pdf',
     );
     req.flush({ download_url: 'http://storage/y', expires_in_secs: 900 });
     await tick();
@@ -96,7 +96,7 @@ describe('FileUploadService', () => {
     service.getDownloadUrl('contact', 'rec-1', 'resume', { version: 3, key: 'ignored' }).subscribe();
     await tick();
     const req = httpMock.expectOne(
-      `${API}/api/v1/contact/rec-1/files/resume/download-url?version=3`,
+      r => r.url === `${API}/api/v1/contact/rec-1/files/resume/download-url` && r.params.get('version') === '3' && !r.params.has('key'),
     );
     expect(req.request.method).toBe('GET');
     req.flush({ download_url: 'http://storage/v3', expires_in_secs: 900 });
