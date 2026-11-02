@@ -25,13 +25,20 @@
 //! Every answer is a JSON object with `ok`. A failure carries `diagnostics`,
 //! each `{code, message, start, end}` with byte offsets into the source, the
 //! shape `POST /api/v1/admin/expressions/validate` returns.
+//!
+//! Z12-T11: [`calendar_add`], [`calendar_between`], [`calendar_next`] and
+//! [`calendar_is_working`] do the business-time math of a calendar in that
+//! same definition (`GET /api/v1/admin/calendars/{id}/expanded` returns it),
+//! so an SLA countdown in the browser equals the server's. Each answers
+//! `{"ok": true, "value": ...}`; a time is RFC 3339 in UTC, a duration whole
+//! minutes.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::sync::Arc;
 
 use attome_calendar::{BusinessCalendar, TimeRange, parse_weekday_code};
 use attome_rules::{Budgets, Context, LanguageVersion, RulesDiagnostic, Schema, Type, Value};
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Duration, NaiveDate, Utc};
 use serde_json::{Map, Value as Json, json};
 use uuid::Uuid;
 use wasm_bindgen::prelude::wasm_bindgen;
@@ -50,6 +57,105 @@ pub fn validate(src: &str, schema_json: &str, version: &str) -> String {
 #[must_use]
 pub fn evaluate(src: &str, schema_json: &str, context_json: &str, version: &str) -> String {
     evaluate_value(src, schema_json, context_json, version).to_string()
+}
+
+/// `minutes` of working time after `from_iso`, as an instant.
+#[wasm_bindgen]
+#[must_use]
+pub fn calendar_add(calendar_json: &str, from_iso: &str, minutes: f64) -> String {
+    calendar_add_value(calendar_json, from_iso, minutes as i64).to_string()
+}
+
+/// The working minutes between `a_iso` and `b_iso`.
+#[wasm_bindgen]
+#[must_use]
+pub fn calendar_between(calendar_json: &str, a_iso: &str, b_iso: &str) -> String {
+    calendar_between_value(calendar_json, a_iso, b_iso).to_string()
+}
+
+/// The next working moment at or after `from_iso`.
+#[wasm_bindgen]
+#[must_use]
+pub fn calendar_next(calendar_json: &str, from_iso: &str) -> String {
+    calendar_next_value(calendar_json, from_iso).to_string()
+}
+
+/// Whether `at_iso` is working time.
+#[wasm_bindgen]
+#[must_use]
+pub fn calendar_is_working(calendar_json: &str, at_iso: &str) -> String {
+    calendar_is_working_value(calendar_json, at_iso).to_string()
+}
+
+/// A calendar operation's input, read.
+fn calendar_of(calendar_json: &str) -> Result<BusinessCalendar, Json> {
+    let raw: Json = serde_json::from_str(calendar_json)
+        .map_err(|e| failure("rules.input.calendar", &e.to_string()))?;
+    let map = raw
+        .as_object()
+        .ok_or_else(|| failure("rules.input.calendar", "the calendar is not an object"))?;
+    parse_calendar(map).map_err(|message| failure("rules.input.calendar", &message))
+}
+
+fn instant(text: &str) -> Result<DateTime<Utc>, Json> {
+    parse_date(text).ok_or_else(|| failure("rules.input.time", "a time is RFC 3339"))
+}
+
+fn answer(result: Result<Json, Json>) -> Json {
+    result.unwrap_or_else(|failed| failed)
+}
+
+fn at_json(at: DateTime<Utc>) -> Json {
+    json!(at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true))
+}
+
+/// [`calendar_add`] as a JSON value.
+#[must_use]
+pub fn calendar_add_value(calendar_json: &str, from_iso: &str, minutes: i64) -> Json {
+    answer((|| {
+        let calendar = calendar_of(calendar_json)?;
+        let from = instant(from_iso)?;
+        calendar
+            .add_business_duration(from, Duration::minutes(minutes))
+            .map(|at| json!({ "ok": true, "value": at_json(at) }))
+            .map_err(|e| failure("rules.calendar", &e.to_string()))
+    })())
+}
+
+/// [`calendar_between`] as a JSON value.
+#[must_use]
+pub fn calendar_between_value(calendar_json: &str, a_iso: &str, b_iso: &str) -> Json {
+    answer((|| {
+        let calendar = calendar_of(calendar_json)?;
+        let (a, b) = (instant(a_iso)?, instant(b_iso)?);
+        calendar
+            .business_duration_between(a, b)
+            .map(|d| json!({ "ok": true, "value": d.num_minutes() }))
+            .map_err(|e| failure("rules.calendar", &e.to_string()))
+    })())
+}
+
+/// [`calendar_next`] as a JSON value.
+#[must_use]
+pub fn calendar_next_value(calendar_json: &str, from_iso: &str) -> Json {
+    answer((|| {
+        let calendar = calendar_of(calendar_json)?;
+        let from = instant(from_iso)?;
+        calendar
+            .next_working_moment(from)
+            .map(|at| json!({ "ok": true, "value": at_json(at) }))
+            .map_err(|e| failure("rules.calendar", &e.to_string()))
+    })())
+}
+
+/// [`calendar_is_working`] as a JSON value.
+#[must_use]
+pub fn calendar_is_working_value(calendar_json: &str, at_iso: &str) -> Json {
+    answer((|| {
+        let calendar = calendar_of(calendar_json)?;
+        let at = instant(at_iso)?;
+        Ok(json!({ "ok": true, "value": calendar.is_working(at) }))
+    })())
 }
 
 /// [`validate`] as a JSON value.
@@ -113,7 +219,7 @@ fn language(version: &str) -> LanguageVersion {
     LanguageVersion::parse(version).unwrap_or(LanguageVersion::LATEST)
 }
 
-fn failure(code: &str, message: &str) -> Json {
+pub fn failure(code: &str, message: &str) -> Json {
     json!({
         "ok": false,
         "diagnostics": [{ "code": code, "message": message, "start": null, "end": null }],
@@ -130,8 +236,8 @@ fn diagnostic(d: &RulesDiagnostic) -> Json {
 }
 
 /// The schema, and the declared types the context's values are read by.
-struct ParsedSchema {
-    schema: Schema,
+pub struct ParsedSchema {
+    pub schema: Schema,
     fields: HashMap<String, Type>,
     related: HashMap<String, HashMap<String, Type>>,
     related_lists: HashMap<String, Vec<(String, Type)>>,
@@ -174,7 +280,7 @@ fn type_map(map: &Map<String, Json>) -> Result<Vec<(String, Type)>, String> {
         .collect()
 }
 
-fn parse_schema(schema_json: &str) -> Result<ParsedSchema, String> {
+pub fn parse_schema(schema_json: &str) -> Result<ParsedSchema, String> {
     let raw: Json = serde_json::from_str(schema_json).map_err(|e| format!("schema: {e}"))?;
     let mut out = ParsedSchema {
         schema: Schema::new(),
@@ -289,7 +395,7 @@ fn to_json(value: &Value) -> Json {
     }
 }
 
-fn parse_context(context_json: &str, schema: &ParsedSchema) -> Result<Context, String> {
+pub fn parse_context(context_json: &str, schema: &ParsedSchema) -> Result<Context, String> {
     let raw: Json = serde_json::from_str(context_json).map_err(|e| format!("context: {e}"))?;
     let now = match raw.get("now").and_then(Json::as_str) {
         Some(text) => parse_date(text).ok_or_else(|| format!("`now` is not a date: {text}"))?,

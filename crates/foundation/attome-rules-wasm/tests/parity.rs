@@ -150,3 +150,116 @@ fn a_bad_context_is_a_diagnostic_not_a_panic() {
         json!("rules.input.schema")
     );
 }
+
+/// Z12-T11: Sunday to Thursday, 09:00 to 17:00 in Riyadh, a holiday and a
+/// short day; the definition the expanded route returns, and the same
+/// calendar built directly, as the server builds it.
+const CALENDAR: &str = r#"{
+    "timezone": "Asia/Riyadh",
+    "working_days": ["sun", "mon", "tue", "wed", "thu"],
+    "hours": {
+        "sun": [{"start_minute": 540, "end_minute": 1020}],
+        "mon": [{"start_minute": 540, "end_minute": 1020}],
+        "tue": [{"start_minute": 540, "end_minute": 1020}],
+        "wed": [{"start_minute": 540, "end_minute": 1020}],
+        "thu": [{"start_minute": 540, "end_minute": 1020}]
+    },
+    "holidays": ["2026-11-04"],
+    "exceptions": {"2026-11-09": [{"start_minute": 600, "end_minute": 720}]}
+}"#;
+
+fn server_calendar() -> attome_calendar::BusinessCalendar {
+    use attome_calendar::{BusinessCalendar, TimeRange};
+    use chrono::{NaiveDate, Weekday};
+    use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+    let days = [
+        Weekday::Sun,
+        Weekday::Mon,
+        Weekday::Tue,
+        Weekday::Wed,
+        Weekday::Thu,
+    ];
+    let hours: HashMap<Weekday, Vec<TimeRange>> = days
+        .iter()
+        .map(|d| (*d, vec![TimeRange::try_new(540, 1020).unwrap()]))
+        .collect();
+    let working: HashSet<Weekday> = days.into_iter().collect();
+    let holidays = BTreeSet::from([NaiveDate::from_ymd_opt(2026, 11, 4).unwrap()]);
+    let exceptions = BTreeMap::from([(
+        NaiveDate::from_ymd_opt(2026, 11, 9).unwrap(),
+        vec![TimeRange::try_new(600, 720).unwrap()],
+    )]);
+    BusinessCalendar::new(
+        chrono_tz::Asia::Riyadh,
+        working,
+        hours,
+        holidays,
+        exceptions,
+    )
+    .unwrap()
+}
+
+fn iso(at: chrono::DateTime<Utc>) -> Json {
+    json!(at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true))
+}
+
+fn parsed(text: &str) -> chrono::DateTime<Utc> {
+    text.parse().unwrap()
+}
+
+/// Twenty fixed calculations: five of each operation.
+#[test]
+fn calendar_parity() {
+    use attome_rules_wasm::{
+        calendar_add_value, calendar_between_value, calendar_is_working_value, calendar_next_value,
+    };
+    let server = server_calendar();
+    let starts = [
+        "2026-11-01T06:00:00Z", // Sunday, on the hour
+        "2026-11-03T13:30:00Z", // Tuesday, near closing
+        "2026-11-04T07:00:00Z", // the holiday
+        "2026-11-06T10:00:00Z", // Friday
+        "2026-11-09T08:30:00Z", // the short day
+    ];
+    let minutes = [30, 240, 480, 1_000, 5];
+    let mut compared = 0;
+    for (start, minutes) in starts.iter().zip(minutes) {
+        let want = server
+            .add_business_duration(parsed(start), chrono::Duration::minutes(minutes))
+            .unwrap();
+        let got = calendar_add_value(CALENDAR, start, minutes);
+        assert_eq!(got["value"], iso(want), "add {minutes} to {start}");
+        compared += 1;
+
+        let end = parsed(start) + chrono::Duration::days(2) + chrono::Duration::minutes(minutes);
+        let end_iso = end.to_rfc3339();
+        let want = server.business_duration_between(parsed(start), end).unwrap();
+        let got = calendar_between_value(CALENDAR, start, &end_iso);
+        assert_eq!(got["value"], json!(want.num_minutes()), "between {start}");
+        compared += 1;
+
+        let want = server.next_working_moment(parsed(start)).unwrap();
+        assert_eq!(
+            calendar_next_value(CALENDAR, start)["value"],
+            iso(want),
+            "next after {start}"
+        );
+        compared += 1;
+
+        assert_eq!(
+            calendar_is_working_value(CALENDAR, start)["value"],
+            json!(server.is_working(parsed(start))),
+            "working at {start}"
+        );
+        compared += 1;
+    }
+    assert_eq!(compared, 20);
+}
+
+#[test]
+fn a_bad_calendar_is_an_answer_not_a_panic() {
+    let got = attome_rules_wasm::calendar_next_value("{}", "2026-11-01T06:00:00Z");
+    assert_eq!(got["ok"], false);
+    let got = attome_rules_wasm::calendar_next_value(CALENDAR, "yesterday");
+    assert_eq!(got["ok"], false);
+}

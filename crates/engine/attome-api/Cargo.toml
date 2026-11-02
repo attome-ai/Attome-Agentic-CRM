@@ -47,6 +47,7 @@ attome-sales.workspace = true
 attome-hr.workspace = true
 attome-records.workspace      = true
 attome-report.workspace       = true
+attome-calendar.workspace     = true
 attome-rules.workspace        = true
 attome-s2s.workspace          = true
 attome-security.workspace     = true

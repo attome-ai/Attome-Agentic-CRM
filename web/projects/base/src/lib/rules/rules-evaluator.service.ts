@@ -56,6 +56,29 @@ interface RulesModule {
   default(init: { module_or_path: string | BufferSource }): Promise<unknown>;
   validate(src: string, schema: string, version: string): string;
   evaluate(src: string, schema: string, context: string, version: string): string;
+  calendar_add(calendar: string, from: string, minutes: number): string;
+  calendar_between(calendar: string, a: string, b: string): string;
+  calendar_next(calendar: string, from: string): string;
+  calendar_is_working(calendar: string, at: string): string;
+}
+
+/**
+ * Z12-T11: a calendar as `GET /api/v1/admin/calendars/{id}/expanded` returns it.
+ * `hours` and `exceptions` hold `{start_minute, end_minute}` ranges.
+ */
+export interface CalendarDefinition {
+  timezone: string;
+  working_days: string[];
+  hours: Record<string, { start_minute: number; end_minute: number }[]>;
+  holidays: string[];
+  exceptions: Record<string, { start_minute: number; end_minute: number }[]>;
+}
+
+/** A calendar calculation's answer; a failure carries `diagnostics`. */
+export interface CalendarAnswer<T> {
+  ok: boolean;
+  value?: T;
+  diagnostics?: RulesDiagnostic[];
 }
 
 /**
@@ -95,5 +118,37 @@ export class RulesEvaluatorService {
     return JSON.parse(
       m.evaluate(src, JSON.stringify(schema), JSON.stringify(context), version),
     ) as RulesAnswer;
+  }
+
+  /** The instant `minutes` of working time after `from` (RFC 3339, UTC). */
+  async calendarAdd(
+    calendar: CalendarDefinition,
+    from: string,
+    minutes: number,
+  ): Promise<CalendarAnswer<string>> {
+    const m = await this.load();
+    return JSON.parse(m.calendar_add(JSON.stringify(calendar), from, minutes)) as CalendarAnswer<string>;
+  }
+
+  /** The working minutes between two instants. */
+  async calendarBetween(
+    calendar: CalendarDefinition,
+    a: string,
+    b: string,
+  ): Promise<CalendarAnswer<number>> {
+    const m = await this.load();
+    return JSON.parse(m.calendar_between(JSON.stringify(calendar), a, b)) as CalendarAnswer<number>;
+  }
+
+  /** The next working moment at or after `from`. */
+  async calendarNext(calendar: CalendarDefinition, from: string): Promise<CalendarAnswer<string>> {
+    const m = await this.load();
+    return JSON.parse(m.calendar_next(JSON.stringify(calendar), from)) as CalendarAnswer<string>;
+  }
+
+  /** Whether `at` is working time. */
+  async calendarIsWorking(calendar: CalendarDefinition, at: string): Promise<CalendarAnswer<boolean>> {
+    const m = await this.load();
+    return JSON.parse(m.calendar_is_working(JSON.stringify(calendar), at)) as CalendarAnswer<boolean>;
   }
 }

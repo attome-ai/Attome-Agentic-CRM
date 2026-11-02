@@ -31,4 +31,20 @@ describe('RulesEvaluatorService', () => {
     expect(answer.ok).toBe(false);
     expect(answer.diagnostics[0]).toMatchObject({ code: 'rules.field.unknown', start: 9, end: 16 });
   });
+
+  it('calendarAdd matches server fixture', async () => {
+    // Sunday to Thursday, 09:00 to 17:00 in Riyadh, with a holiday on Wednesday:
+    // eight working hours from Tuesday 16:30 end on Thursday 16:30, the value
+    // the server's add_business_duration gives (parity.rs compares the two).
+    const hours = [{ start_minute: 540, end_minute: 1020 }];
+    const calendar = {
+      timezone: 'Asia/Riyadh',
+      working_days: ['sun', 'mon', 'tue', 'wed', 'thu'],
+      hours: { sun: hours, mon: hours, tue: hours, wed: hours, thu: hours },
+      holidays: ['2026-11-04'],
+      exceptions: {},
+    };
+    const answer = await service().calendarAdd(calendar, '2026-11-03T13:30:00Z', 480);
+    expect(answer).toEqual({ ok: true, value: '2026-11-05T13:30:00Z' });
+  });
 });

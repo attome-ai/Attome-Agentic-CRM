@@ -11,6 +11,8 @@
 //! copy. The one structural difference: calendars are not entity-scoped, so
 //! every key here is a bare `name` rather than `(entity, name)`.
 
+use std::collections::BTreeMap;
+
 use attome_audit::AuditOperation;
 use attome_core::EngineState;
 use attome_core::calendar::InvalidCalendarDefinition;
@@ -223,6 +225,117 @@ struct ExpandedRules {
     from_year: i32,
     years: i32,
     rules: Vec<ExpandedRule>,
+}
+
+/// One working range, in minutes from local midnight.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ExpandedRange {
+    pub start_minute: u16,
+    pub end_minute: u16,
+}
+
+/// A calendar as the browser's business-time math reads it (Z12-T11).
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ExpandedCalendar {
+    /// The IANA time zone.
+    pub timezone: String,
+    /// `mon` to `sun`.
+    pub working_days: Vec<String>,
+    /// The working ranges of each working day, by the same codes.
+    pub hours: BTreeMap<String, Vec<ExpandedRange>>,
+    /// From a year ago to two years ahead.
+    pub holidays: Vec<NaiveDate>,
+    /// A date's own ranges, in the same window; none closes the date.
+    pub exceptions: BTreeMap<NaiveDate, Vec<ExpandedRange>>,
+}
+
+/// A calendar's expanded definition
+///
+/// The calendar with its inherited layers merged and its holiday rules resolved, from a year ago to two years ahead, for the browser to do business-time math the same way the server does. Administrators of automation only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/calendars/{id}/expanded",
+    operation_id = "get_calendar_expanded",
+    tag = "admin",
+    params(("id" = Uuid, Path, description = "The calendar")),
+    responses(
+        (status = 200, description = "The expanded calendar", body = ExpandedCalendar),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such calendar", body = ErrorResponse),
+        (status = 422, description = "The calendar cannot be resolved", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn expanded_calendar(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<area::Automation>>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<ExpandedCalendar>, AppError> {
+    let exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM calendar WHERE id = $1 AND is_active = true)",
+    )
+    .bind(id)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if !exists {
+        return Err(AppError::NotFound);
+    }
+    let loaded = attome_core::calendar::load_calendar(&state.base.db, id)
+        .await?
+        .map_err(|unresolved| {
+            AppError::Validation(format!("the calendar cannot be used: {unresolved:?}"))
+        })?;
+    let today = chrono::Utc::now().date_naive();
+    let window = (today - chrono::Duration::days(366))..=(today + chrono::Duration::days(731));
+    Ok(Json(expand_calendar(&loaded.calendar, &window)))
+}
+
+fn expanded_ranges(ranges: &[attome_calendar::TimeRange]) -> Vec<ExpandedRange> {
+    ranges
+        .iter()
+        .map(|r| ExpandedRange {
+            start_minute: r.start_minute,
+            end_minute: r.end_minute,
+        })
+        .collect()
+}
+
+/// `calendar` in the wire shape, its dated parts within `window`. Pure.
+fn expand_calendar(
+    calendar: &attome_calendar::BusinessCalendar,
+    window: &std::ops::RangeInclusive<NaiveDate>,
+) -> ExpandedCalendar {
+    use attome_calendar::weekday_code;
+    let mut working_days: Vec<String> = calendar
+        .working_days()
+        .iter()
+        .map(|d| weekday_code(*d).to_owned())
+        .collect();
+    working_days.sort();
+    ExpandedCalendar {
+        timezone: calendar.tz().name().to_owned(),
+        working_days,
+        hours: calendar
+            .hours()
+            .iter()
+            .filter(|(_, ranges)| !ranges.is_empty())
+            .map(|(day, ranges)| (weekday_code(*day).to_owned(), expanded_ranges(ranges)))
+            .collect(),
+        holidays: calendar
+            .holidays()
+            .iter()
+            .filter(|d| window.contains(*d))
+            .copied()
+            .collect(),
+        exceptions: calendar
+            .exceptions()
+            .iter()
+            .filter(|(d, _)| window.contains(*d))
+            .map(|(d, ranges)| (*d, expanded_ranges(ranges)))
+            .collect(),
+    }
 }
 
 /// A calendar's holiday rule dates
@@ -3184,6 +3297,7 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/calendars/{id}/holiday-rules/{rule_id}",
             axum::routing::delete(delete_rule),
         )
+        .route("/api/v1/admin/calendars/{id}/expanded", get(expanded_calendar))
         .route(
             // Z12-T13: static, so it wins over `{rule_id}` (a DELETE only).
             "/api/v1/admin/calendars/{id}/holiday-rules/expanded",
@@ -3468,6 +3582,7 @@ async fn correct_hijri_month(
     create_rule,
     delete_rule,
     expanded_rules,
+    expanded_calendar,
     create_season,
     delete_season,
     confirm_sighting,
