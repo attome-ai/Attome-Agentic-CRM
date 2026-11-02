@@ -2050,6 +2050,9 @@ export const xrmEn = {
     },
   },
   workflowStepField: {
+    integration: {
+      rpa: { system: 'Browser service', allowed_hosts: 'Allowed hosts', timeout_ms: 'Time limit (ms)', steps: 'Browser steps' },
+    },
     marketing: {
       send_email: { design_id: 'Email design', purpose: 'Consent purpose', on_blocked: 'When blocked', send_time: 'Send time' },
       nurture_run: { purpose: 'Consent purpose', program_id: 'Nurture programme' },

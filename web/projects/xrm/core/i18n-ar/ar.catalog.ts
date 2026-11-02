@@ -2008,6 +2008,9 @@ export const xrmAr = {
     },
   },
   workflowStepField: {
+    integration: {
+      rpa: { system: 'خدمة المتصفح', allowed_hosts: 'المضيفون المسموح بهم', timeout_ms: 'المهلة (ملي ثانية)', steps: 'خطوات المتصفح' },
+    },
     marketing: {
       send_email: { design_id: 'تصميم البريد', purpose: 'غرض الموافقة', on_blocked: 'عند الحظر', send_time: 'وقت الإرسال' },
       nurture_run: { purpose: 'غرض الموافقة', program_id: 'برنامج الرعاية' },
