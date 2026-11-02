@@ -773,6 +773,7 @@ dependencies = [
  "tracing-subscriber",
  "utoipa",
  "uuid",
+ "zip",
 ]
 
 [[package]]
@@ -2642,15 +2643,18 @@ dependencies = [
  "axum",
  "base64 0.23.1",
  "chrono",
+ "hex",
  "jsonwebtoken",
  "object_store",
  "rust_decimal",
  "serde_json",
+ "sha2 0.10.9",
  "sqlx",
  "tokio",
  "tower",
  "tracing-subscriber",
  "uuid",
+ "zip",
 ]
 
 [[package]]

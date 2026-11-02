@@ -79,6 +79,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         (attome_records::bulk_edit::openapi_fragment(), "core"),
         (attome_records::mass::openapi_fragment(), "core"),
         (crate::data_export::openapi_fragment(), "core"),
+        (crate::exit::openapi_fragment(), "core"),
         (crate::data_mapping_admin::openapi_fragment(), "core"),
         (crate::data_profile_admin::openapi_fragment(), "core"),
         (crate::migration::openapi_fragment(), "core"),

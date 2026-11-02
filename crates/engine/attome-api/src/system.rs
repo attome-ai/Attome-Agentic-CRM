@@ -244,6 +244,14 @@ impl EngineSystem {
                 attome_security::strict_authz::strict_authz,
             )))
             .merge(
+                // Y5-T5: the clean exit (export, then deletion after two
+                // administrators approve). `system.admin`-gated.
+                crate::exit::routes().layer(middleware::from_fn_with_state(
+                    self.state.clone(),
+                    attome_security::strict_authz::strict_authz,
+                )),
+            )
+            .merge(
                 // M02/D-412 — `/api/v1/admin/settings` (Admin) +
                 // `/api/v1/settings/me` (SelfService) share one bundle/layer,
                 // same shape `crate::sidebar::routes()` uses for its mix of

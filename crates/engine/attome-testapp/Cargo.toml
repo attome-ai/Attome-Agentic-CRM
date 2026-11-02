@@ -77,6 +77,10 @@ attome-webcrawl.workspace = true
 jsonwebtoken.workspace = true
 # W1-T10: the contract file a signing test sends.
 object_store.workspace = true
+# Y5-T5: reading the clean-exit archive and checking its hash.
+hex.workspace = true
+sha2.workspace = true
+zip.workspace = true
 rust_decimal.workspace = true
 tracing-subscriber.workspace = true
 

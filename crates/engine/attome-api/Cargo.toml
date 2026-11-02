@@ -80,6 +80,8 @@ serde_json.workspace          = true
 sha2.workspace                = true
 sqlx.workspace                = true
 tokio.workspace               = true
+# Y5-T5: the clean-exit archive.
+zip.workspace                 = true
 tower.workspace               = true
 tracing.workspace             = true
 utoipa.workspace              = true

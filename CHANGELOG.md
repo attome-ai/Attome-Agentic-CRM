@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- The clean exit (Y5-T5): `POST /api/v1/admin/exit/export`, `GET /api/v1/admin/exit/export/{id}` and
+  `POST /api/v1/admin/exit/delete` (two other administrators approve; a signed deletion certificate);
+  migration 0379. `docs/clean-exit.md`.
 - `GET /api/v1/admin/metadata/versions/{version}/diff?against=` compares two recorded metadata versions (U7-T1).
 - Per-entity ownership models `user_or_team`, `organisation` and `unit` in entity settings (A31-T1).
 - Revenue recognition routes under `/api/v1/ledger/revrec` (F11): `ssp`, `contracts/combine`, `changes`,

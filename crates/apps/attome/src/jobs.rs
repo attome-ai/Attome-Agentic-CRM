@@ -3382,6 +3382,8 @@ const DEDUP_KEY_CALLINTEL_AGGREGATE: &str = "callintel-aggregate";
 const DEDUP_KEY_CALLINTEL_COMPETITORS: &str = "callintel-competitors";
 /// O1-T3: changed records rescored by definition models (a registered job type).
 const DEDUP_KEY_PREDICT_DEFINITION_RESCORE: &str = "predict-definition-rescore";
+/// Y5-T5: approved clean-exit deletions carried out (a registered job type).
+const DEDUP_KEY_EXIT_DELETE: &str = "exit-delete";
 /// G1-T4: the weekly quality review sample (a registered job type).
 const DEDUP_KEY_SERVICE_QUALITY_SAMPLE: &str = "service-quality-sample";
 /// F8-T9: the abandoned cart sweep (a registered job type).
@@ -3871,6 +3873,14 @@ pub const SERVICE_QUALITY_SAMPLE: attome_jobs::JobType =
 /// D22-T11: competitors followed as call trackers.
 pub const CALLINTEL_COMPETITORS: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_callintel::analysis::signals::JOB, 1);
+
+/// Y5-T5: one clean-exit export.
+pub const EXIT_EXPORT: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_api::exit::EXPORT_JOB, 1);
+
+/// Y5-T5: approved clean-exit deletions.
+pub const EXIT_DELETE: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_api::exit::DELETE_JOB, 1);
 
 /// O1-T3: changed records rescored by definition models.
 pub const PREDICT_DEFINITION_RESCORE: attome_jobs::JobType =
@@ -5364,6 +5374,33 @@ pub fn register_job_types() {
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 if opened > 0 {
                     tracing::info!(opened, "quality reviews opened");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            EXIT_EXPORT,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: attome_api::exit::ExportPayload = job.payload()?;
+                let status = attome_api::exit::run_export(&state, payload.export_id)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(export = %payload.export_id, status, "clean-exit export ran");
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            EXIT_DELETE,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let ran = attome_api::exit::run_approved_deletions(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if ran > 0 {
+                    tracing::warn!(ran, "approved clean-exit deletions carried out");
                 }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
@@ -6891,6 +6928,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == PREDICT_DEFINITION_RESCORE.name => {
             DEDUP_KEY_PREDICT_DEFINITION_RESCORE
         }
+        EngineJob::Registered(job) if job.name == EXIT_DELETE.name => DEDUP_KEY_EXIT_DELETE,
         EngineJob::Registered(job) if job.name == SERVICE_QUALITY_SAMPLE.name => {
             DEDUP_KEY_SERVICE_QUALITY_SAMPLE
         }
@@ -7189,6 +7227,7 @@ pub const SCHEDULE_MODULES: &[(&str, &str)] = &[
     ("predict-outcome-fill-sweep", "predict"),
     ("predict-drift", "predict"),
     ("predict-definition-rescore", "predict"),
+    ("exit-delete", "core"),
     ("fulfilment-split", "fulfilment"),
     ("fulfilment-exceptions", "fulfilment"),
     ("fulfilment-tracking", "fulfilment"),
@@ -8627,6 +8666,21 @@ pub fn spawn_service_quality_sample_scheduler(db: DbPool, interval: std::time::D
             "quality review sample",
         ),
         Err(error) => tracing::error!(%error, "quality review sample: not scheduled"),
+    }
+}
+
+/// Y5-T5: every five minutes, approved clean-exit deletions carried out.
+pub fn spawn_exit_delete_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(EXIT_DELETE.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_EXIT_DELETE,
+            "clean-exit deletions",
+        ),
+        Err(error) => tracing::error!(%error, "clean-exit deletions: not scheduled"),
     }
 }
 
