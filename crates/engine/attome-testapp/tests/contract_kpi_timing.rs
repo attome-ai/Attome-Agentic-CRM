@@ -71,6 +71,10 @@ fn kpis_under_300ms_at_100k() {
         let Some(app) = TestApp::start().await else {
             return;
         };
+        // The contract engine's own entities (contract_version) come first.
+        attome_api::changeset::boot::apply_platform_definition(&app.state, "attome-contract")
+            .await
+            .expect("apply the contract platform definition");
         for pack in PACKS {
             for cs in changesets(pack) {
                 attome_api::changeset::boot::apply_pack_document(&app.state, &cs)
@@ -83,9 +87,9 @@ fn kpis_under_300ms_at_100k() {
 
         // A spread of states, dates and deviations, as a deployment has.
         sqlx::query(
-            "INSERT INTO contract (id, title, status, contract_value, end_date, playbook_deviations, \
-                 is_active, row_version, created_at) \
-             SELECT uuidv7(), 'Contract ' || g, \
+            "INSERT INTO contract (id, title, counterparty, status, contract_value, end_date, \
+                 playbook_deviations, is_active, row_version, created_at) \
+             SELECT uuidv7(), 'Contract ' || g, 'Counterparty ' || (g % 500), \
                     (ARRAY['draft', 'review', 'approved', 'active', 'terminated'])[1 + g % 5], \
                     (g % 1000) * 100, now()::date + (g % 720 - 120), \
                     CASE WHEN g % 7 = 0 THEN '[{\"severity\":\"needs_legal\"}]' \

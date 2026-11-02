@@ -150,6 +150,7 @@ fn request_draft_negotiate_approve_sign_renew() {
                 "/api/v1/contract",
                 Some(json!({
                     "title": "Managed services",
+                    "counterparty": "Gulf Services Co",
                     "contract_value": 50000,
                     "end_date": (today + chrono::Duration::days(40)).to_string(),
                     "notice_period_days": 30,
