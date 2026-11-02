@@ -1277,6 +1277,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-webcrawl-item-versions",
         // G1-T1: links between cases.
         "attome-service-case-links",
+        // V2-D1588 (1): the portal's service user for its self-service changes.
+        "attome-portal-service-user",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

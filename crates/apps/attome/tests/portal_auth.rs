@@ -684,6 +684,7 @@ async fn admin_disable_and_portal_deactivation_revoke_sessions_through_the_real_
             is_enabled: Some(false),
             owning_team_ref: None,
             mfa_policy: None,
+            service_user_ref: None,
         },
     )
     .await

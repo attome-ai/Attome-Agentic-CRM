@@ -204,6 +204,9 @@ struct Writer<'a> {
     ctx: &'a SecurityContext,
     stamp: CreateStamp,
     entities: Entities,
+    /// V2-D1588 (1): the portal user a portal's service user acts for,
+    /// named in every audit event.
+    behalf: Option<String>,
 }
 
 impl Writer<'_> {
@@ -310,7 +313,10 @@ impl Writer<'_> {
                 name,
                 self.ctx.user_id,
             )
-            .comment(comment),
+            .comment(match &self.behalf {
+                Some(behalf) => format!("{comment} (on behalf of {behalf})"),
+                None => comment,
+            }),
         )
         .await?;
         Ok(())
@@ -327,6 +333,7 @@ async fn writer<'a>(
         ctx,
         stamp: CreateStamp::staff(ctx.user_id, actor.org_ref),
         entities: Entities::resolve(state).await?,
+        behalf: None,
     })
 }
 
@@ -626,13 +633,26 @@ pub async fn amend(
     subscription: Uuid,
     amendment: Amendment,
 ) -> Result<AmendmentResult, AppError> {
+    amend_on_behalf(state, ctx, subscription, amendment, None).await
+}
+
+/// [`amend`], made by a portal's service user for `behalf` (V2-D1588 (1)),
+/// whom the audit event names.
+pub async fn amend_on_behalf(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    subscription: Uuid,
+    amendment: Amendment,
+    behalf: Option<&str>,
+) -> Result<AmendmentResult, AppError> {
     ctx.require("subscription", "update")?;
     if amendment.changes.is_empty() {
         return Err(AppError::Validation(
             "an amendment changes at least one line".into(),
         ));
     }
-    let w = writer(state, ctx).await?;
+    let mut w = writer(state, ctx).await?;
+    w.behalf = behalf.map(str::to_owned);
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     lock(&mut tx, subscription).await?;
     let t = terms(&mut tx, subscription).await?;
@@ -763,9 +783,24 @@ pub async fn cancel(
     on: NaiveDate,
     reason: &str,
 ) -> Result<NaiveDate, AppError> {
+    cancel_on_behalf(state, ctx, subscription, at_term_end, on, reason, None).await
+}
+
+/// [`cancel`], made by a portal's service user for `behalf` (V2-D1588 (1)),
+/// whom the audit event names.
+pub async fn cancel_on_behalf(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    subscription: Uuid,
+    at_term_end: bool,
+    on: NaiveDate,
+    reason: &str,
+    behalf: Option<&str>,
+) -> Result<NaiveDate, AppError> {
     ctx.require("subscription", "update")?;
     ctx.require("subscription", "cancel")?;
-    let w = writer(state, ctx).await?;
+    let mut w = writer(state, ctx).await?;
+    w.behalf = behalf.map(str::to_owned);
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     lock(&mut tx, subscription).await?;
     let t = terms(&mut tx, subscription).await?;

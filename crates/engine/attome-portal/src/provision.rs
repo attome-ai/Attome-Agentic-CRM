@@ -182,6 +182,12 @@ pub struct PortalSettingsPatch {
     pub owning_team_ref: Option<Option<Uuid>>,
     #[serde(default)]
     pub mfa_policy: Option<MfaPolicy>,
+    /// V2-D1588 (1): the staff user the portal's self-service changes run
+    /// as; absent unchanged, `null` cleared. It needs an active account and
+    /// only the privileges the self-service routes use.
+    #[serde(default, with = "double_option")]
+    #[schema(value_type = Option<Uuid>)]
+    pub service_user_ref: Option<Option<Uuid>>,
 }
 
 /// D-777: at least one of `email` and `username`.
@@ -443,6 +449,30 @@ fn portal_from_row(r: PortalRow) -> Result<PortalDetail, AppError> {
     })
 }
 
+/// V2-D1588 (1): the staff user `portal`'s self-service changes run as, if
+/// one is set.
+pub async fn service_user(db: &attome_db::DbPool, portal: Uuid) -> Result<Option<Uuid>, AppError> {
+    let installed: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM information_schema.columns \
+                         WHERE table_schema = current_schema() \
+                           AND table_name = 'webportal' AND column_name = 'service_user_ref')",
+    )
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)?;
+    if !installed {
+        return Ok(None);
+    }
+    sqlx::query_scalar(
+        "SELECT service_user_ref FROM webportal WHERE id = $1 AND is_active IS NOT FALSE",
+    )
+    .bind(portal)
+    .fetch_optional(db)
+    .await
+    .map(Option::flatten)
+    .map_err(AppError::internal)
+}
+
 /// A live (not soft-deleted) portal, or `NotFound`.
 pub(crate) async fn load_portal(
     conn: &mut PgConnection,
@@ -560,6 +590,28 @@ pub async fn update_portal_settings(
     .await
     .map_err(AppError::internal)?;
     let updated = portal_from_row(row.ok_or(AppError::VersionConflict)?)?;
+    if let Some(service_user) = patch.service_user_ref {
+        if let Some(user) = service_user {
+            let active: bool = sqlx::query_scalar(
+                "SELECT EXISTS (SELECT 1 FROM user_account WHERE id = $1 AND is_active IS NOT FALSE)",
+            )
+            .bind(user)
+            .fetch_one(&mut *conn)
+            .await
+            .map_err(AppError::internal)?;
+            if !active {
+                return Err(AppError::Validation(
+                    "service_user_ref does not name an active user".into(),
+                ));
+            }
+        }
+        sqlx::query("UPDATE webportal SET service_user_ref = $2 WHERE id = $1")
+            .bind(portal_id)
+            .bind(service_user)
+            .execute(&mut *conn)
+            .await
+            .map_err(AppError::internal)?;
+    }
 
     // Disabling a portal, or turning it anonymous (no users), ends every
     // session its users hold.

@@ -505,6 +505,13 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
             "../../../../../changesets/platform/0085-attome-service-case-links.json"
         ),
     },
+    PlatformChangeset {
+        file: "0086-attome-portal-service-user.json",
+        name: "attome-portal-service-user",
+        json: include_str!(
+            "../../../../../changesets/platform/0086-attome-portal-service-user.json"
+        ),
+    },
 ];
 
 #[cfg(test)]

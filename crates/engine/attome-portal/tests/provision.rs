@@ -636,6 +636,7 @@ async fn portal_settings_check_row_version_and_revoke_sessions_when_access_ends(
         is_enabled,
         owning_team_ref: None,
         mfa_policy: None,
+        service_user_ref: None,
     };
 
     // A stale row_version is refused.
@@ -698,6 +699,7 @@ async fn a_keyword_change_is_checked_for_collisions() {
             is_enabled: None,
             owning_team_ref: None,
             mfa_policy: Default::default(),
+            service_user_ref: None,
         },
     )
     .await;

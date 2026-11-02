@@ -1,0 +1,61 @@
+{
+  "author": "attome-portal (V2-D1588)",
+  "checksum": "sha256:d9c37a5b83a9c3ad7e54ead144e9a1f69798db4b39971e7f557b6a268a09fc82",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "V2-D1588 (1): the portal's service user, which its self-service changes run as.",
+  "format": "attome-changeset/v1",
+  "id": "58bcb97e-4021-7b64-a90a-6f8f90d5e1bc",
+  "layer": "platform",
+  "name": "attome-portal-service-user",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Service User",
+          "field_type": "lookup",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "service_user_ref",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "webportal",
+        "field": "service_user_ref"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مستخدم الخدمة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "locale": "ar",
+        "object_key": "webportal.service_user_ref",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "platform",
+  "seq": 86,
+  "title": "Platform definitions: attome-portal-service-user"
+}

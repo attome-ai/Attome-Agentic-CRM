@@ -1,0 +1,100 @@
+{
+  "author": "packs",
+  "checksum": "sha256:551cba8cbd4a6dc1ae1cf81fbf26dc52528f841aa7615e16c6ba158be473bae3",
+  "closed_at": "2026-11-02T00:00:00Z",
+  "description": "Portal self-service (F3-T13): the quantities a customer may choose for a subscription line on the portal; a line without them cannot be changed there.",
+  "format": "attome-changeset/v1",
+  "id": "01a19c40-0000-7f03-8000-000000000025",
+  "layer": "product",
+  "name": "billing-subscription-portal",
+  "opened_at": "2026-11-02T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Portal minimum quantity",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "portal_min_quantity",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "subscription_line",
+        "field": "portal_min_quantity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أقل كمية في البوابة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "locale": "ar",
+        "object_key": "subscription_line.portal_min_quantity",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Portal maximum quantity",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "portal_max_quantity",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "subscription_line",
+        "field": "portal_max_quantity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أكبر كمية في البوابة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "subscription_line.portal_max_quantity",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 25,
+  "title": "Pack: subscription changes on the portal"
+}

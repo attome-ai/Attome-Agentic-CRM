@@ -14,6 +14,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Subscription changes on the portal (F3-T13, V2-D1588): a portal's service user
+  (`webportal.service_user_ref`, platform changeset `0086`, set through the portal admin PATCH) runs
+  `POST /{keyword}/api/v1/billing/subscriptions/{id}/quantity` (within the line's new
+  `portal_min_quantity`/`portal_max_quantity`, billing pack changeset `0025`, from today, prorated) and
+  `.../{id}/cancel` (term end only); the audit event names the portal user.
 - Case links (G1-T1 in part, platform changeset `0085`): `service_case_link` ties a case to another as
   `parent`, `related`, `duplicate_of` or `caused_by`, with Arabic labels. Moving the ticket onto the Work item
   base still waits on where `work_item` lives, and `resolution_article_ref` on a knowledge-article entity.

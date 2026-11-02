@@ -5,7 +5,7 @@
 //! log in where, and only this crate's admin routes may write them:
 //!
 //! - `webportal`: `keyword` (the URL prefix), `portal_type`, `is_enabled`,
-//!   `owning_team_ref` and `mfa_policy`.
+//!   `owning_team_ref`, `mfa_policy` and `service_user_ref` (V2-D1588).
 //! - `webportal_user`: `webportal_ref` (which portal the account belongs
 //!   to), `email` (the login name) and `status`.
 //!
@@ -29,6 +29,8 @@ pub const WEBPORTAL_PROTECTED: &[&str] = &[
     "is_enabled",
     "owning_team_ref",
     "mfa_policy",
+    // V2-D1588 (1): who the portal's self-service changes run as.
+    "service_user_ref",
 ];
 pub const WEBPORTAL_USER_PROTECTED: &[&str] = &["webportal_ref", "email", "username", "status"];
 

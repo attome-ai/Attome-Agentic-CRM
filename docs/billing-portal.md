@@ -7,9 +7,22 @@ date, the lines in force today (product, quantity, unit price) and up to twelve 
 The account is the portal user's contact's account, never one the request names. While the setting or
 the billing module is off, and for a portal user with no account, the route answers 404.
 
-Changing a quantity or cancelling at the end of the term from the portal is not available yet: those
-changes run through the subscription service, which acts as a staff user, and how a portal user may act
-through it is still to be decided. Staff make them as before.
+## Changing a subscription from the portal
+
+A portal user may change two things, both through the subscription service and both running as the
+portal's **service user**: a staff account an administrator names on the portal
+(`PATCH /api/v1/admin/webportals/{id}` with `service_user_ref`; it needs an active account and only the
+`subscription.update` and `subscription.cancel` privileges). Each audit event is the service user's,
+with "on behalf of portal user ..." in its comment. While the portal has no service user, both routes
+answer 404.
+
+- `POST /{keyword}/api/v1/billing/subscriptions/{id}/quantity` `{line_id, quantity}`: from today, at
+  the price in force, prorated for the rest of the period. Only within the line's **Portal minimum
+  quantity** and **Portal maximum quantity** (`portal_min_quantity`, `portal_max_quantity`); a line
+  with neither cannot be changed on the portal.
+- `POST /{keyword}/api/v1/billing/subscriptions/{id}/cancel` `{reason}` (`price`, `product_fit`,
+  `budget`, `switched_vendor` or `other`): at the end of the term only, never at once. A subscription
+  without a term end cannot be cancelled from the portal.
 
 ## Invoices and payment methods on the portal
 
@@ -20,6 +33,5 @@ With the setting `billing.portal.payments` on (off by default), the same portal 
 - `GET /{keyword}/api/v1/billing/payment-methods`: the account's saved payment methods (brand, last
   four digits, expiry, which is the default). A method's token and gateway are never read for the portal.
 
-Both answer 404 while the setting or the billing module is off. Paying an invoice from the portal and
-removing a saved method wait on the same decision as subscription changes; until then, send the customer
-a payment link (`POST /api/v1/billing/payment-links`).
+Both answer 404 while the setting or the billing module is off. Paying an invoice and removing a saved method from the portal are still to come; until then, send the
+customer a payment link (`POST /api/v1/billing/payment-links`).
