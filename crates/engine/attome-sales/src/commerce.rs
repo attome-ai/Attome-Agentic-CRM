@@ -489,33 +489,33 @@ pub async fn checkout(
         }
     };
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
-    if let Some(code) = coupon {
-        if let Err(error) = crate::promotion::redeem_coupon(&mut tx, code, order, contact).await {
-            drop(tx);
-            // The coupon is used up or busy: take the order back and give
-            // the cart back.
-            if let Err(undo) = attome_records::entity_crud::delete_record_for(
-                state,
-                ctx,
-                ctx.user_id,
-                "order",
-                order,
-                None,
-                &attome_records::entity_mutation::DeleteOrigin::new(
-                    attome_records::entity_mutation::DeleteKind::Portal,
-                ),
-            )
-            .await
-            {
-                tracing::error!(%order, error = %undo, "checkout: an order was not taken back");
-            }
-            sqlx::query("UPDATE commerce_cart SET status = 'open' WHERE id = $1")
-                .bind(cart_id)
-                .execute(&state.base.db)
-                .await
-                .map_err(AppError::internal)?;
-            return Err(error);
+    if let Some(code) = coupon
+        && let Err(error) = crate::promotion::redeem_coupon(&mut tx, code, order, contact).await
+    {
+        drop(tx);
+        // The coupon is used up or busy: take the order back and give
+        // the cart back.
+        if let Err(undo) = attome_records::entity_crud::delete_record_for(
+            state,
+            ctx,
+            ctx.user_id,
+            "order",
+            order,
+            None,
+            &attome_records::entity_mutation::DeleteOrigin::new(
+                attome_records::entity_mutation::DeleteKind::Portal,
+            ),
+        )
+        .await
+        {
+            tracing::error!(%order, error = %undo, "checkout: an order was not taken back");
         }
+        sqlx::query("UPDATE commerce_cart SET status = 'open' WHERE id = $1")
+            .bind(cart_id)
+            .execute(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+        return Err(error);
     }
     sqlx::query("UPDATE commerce_cart SET order_id = $2 WHERE id = $1")
         .bind(cart_id)
