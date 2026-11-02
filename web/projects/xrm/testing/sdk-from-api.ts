@@ -22,7 +22,8 @@ interface SdkOptions {
  * Y9-T3: an `SdkService` stand-in for a spec written against an `ApiService`
  * stand-in. Each SDK call becomes the `ApiService` call it replaced, on the
  * same stand-in, so the spec's spies and answers keep working:
- * `get(path, {query})` -> `get(path, query)`, `post(path, {body}, write)` ->
+ * `get(path, {query})` -> `get(path, query)`, `delete(path, opts, write)` ->
+ * `delete(path, write)`, `post(path, {body}, write)` ->
  * `post(path, body, write)`, `patch(path, {body, ifMatch}, write)` ->
  * `patch(path, body, ifMatch, write)`. Each call keeps the stand-in as
  * `this`, so a class-based stand-in's methods work.
@@ -40,8 +41,8 @@ export function sdkFromApi(api: ApiStandIn): unknown {
       (api.getBackground ?? missing).apply(api, drop([path, query])),
     getIfChanged: (path: string, etag: string | null) =>
       (api.getIfChanged ?? missing).apply(api, [path, etag]),
-    delete: (path: string, opts?: SdkOptions) =>
-      (api.delete ?? missing).apply(api, drop([path, opts?.query])),
+    delete: (path: string, _opts?: SdkOptions, write?: unknown) =>
+      (api.delete ?? missing).apply(api, drop([path, write])),
     post: (path: string, opts?: SdkOptions, write?: unknown) =>
       (api.post ?? missing).apply(api, drop([path, opts?.body, write])),
     put: (path: string, opts?: SdkOptions, write?: unknown) =>

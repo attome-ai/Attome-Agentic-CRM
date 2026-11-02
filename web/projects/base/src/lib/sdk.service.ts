@@ -262,8 +262,8 @@ export class SdkService {
     return this.call(signal => this.client.put<T>(path, { ...withWrite(opts, write), signal }));
   }
 
-  delete<T = void>(path: string, opts?: RequestOptions): Observable<T> {
-    return this.call(signal => this.client.delete<T>(path, { ...opts, signal }));
+  delete<T = void>(path: string, opts?: RequestOptions, write?: WriteOptions): Observable<T> {
+    return this.call(signal => this.client.delete<T>(path, { ...withWrite(opts, write), signal }));
   }
 
   /**

@@ -1,7 +1,7 @@
 import { DestroyRef, inject, Injectable } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { catchError, map, Observable, shareReplay, throwError } from 'rxjs';
-import { ApiComponents, ApiService, LangService, ListResponse } from '@attome/base';
+import { ApiComponents, LangService, ListResponse, SdkService } from '@attome/base';
 import { EntityRecord, EntitySchema, ListFilter, ListParams } from '@attome/xrm';
 import { EntityMetadataChangeService } from '@attome/xrm/core/admin/data';
 import { QueryService } from '@attome/xrm/core/query/data';
@@ -81,7 +81,7 @@ export interface DeleteImpact {
 
 @Injectable({ providedIn: 'root' })
 export class EntityService {
-  private readonly api   = inject(ApiService);
+  private readonly sdk   = inject(SdkService);
   private readonly query = inject(QueryService);
   private readonly lang  = inject(LangService);
 
@@ -137,8 +137,8 @@ export class EntityService {
       return hit.schema$;
     }
     const locale = this.lang.intlLocale();
-    const schema$ = this.api
-      .get<EntitySchema>(`/api/v1/schema/${entityName}`, { locale })
+    const schema$ = this.sdk
+      .get<EntitySchema>(`/api/v1/schema/${entityName}`, { query: { locale } })
       .pipe(
         // Evict before the error reaches `shareReplay`, so a transient failure is
         // not replayed to every later caller until the TTL expires.
@@ -205,7 +205,7 @@ export class EntityService {
   }
 
   get(entityName: string, id: string): Observable<EntityRecordResponse> {
-    return this.api.get<EntityRecordResponse>(`/api/v1/${entityName}/${id}`);
+    return this.sdk.get<EntityRecordResponse>(`/api/v1/${entityName}/${id}`);
   }
 
   /** `duplicateReason` (A15-T4): why the save goes ahead though it matches
@@ -215,7 +215,7 @@ export class EntityService {
     data: Record<string, unknown>,
     options: { duplicateReason?: string } = {},
   ): Observable<EntityRecordResponse> {
-    return this.api.post<EntityRecordResponse>(`/api/v1/${entityName}`, data, options);
+    return this.sdk.post<EntityRecordResponse>(`/api/v1/${entityName}`, { body: data }, options);
   }
 
   update(
@@ -225,7 +225,7 @@ export class EntityService {
     rowVersion?: number,
     options: { duplicateReason?: string; mergeAttributes?: boolean } = {},
   ): Observable<EntityRecordResponse> {
-    return this.api.patch<EntityRecordResponse>(`/api/v1/${entityName}/${id}`, patch, rowVersion, options);
+    return this.sdk.patch<EntityRecordResponse>(`/api/v1/${entityName}/${id}`, { body: patch, ifMatch: rowVersion }, options);
   }
 
   /**
@@ -236,17 +236,17 @@ export class EntityService {
   delete(entityName: string, id: string, options: { operationId?: string; reason?: string } = {}): Observable<void> {
     const reason = options.reason?.trim();
     const query = reason ? `?reason=${encodeURIComponent(reason)}` : '';
-    return this.api.delete(`/api/v1/${entityName}/${id}${query}`, { operationId: options.operationId });
+    return this.sdk.delete(`/api/v1/${entityName}/${id}${query}`, undefined, { operationId: options.operationId });
   }
 
   /** A18-T4: what deleting `ids` would cascade to or be blocked by; changes nothing. */
   deleteImpact(entityName: string, ids: string[]): Observable<DeleteImpact> {
-    return this.api.post<DeleteImpact>(`/api/v1/${entityName}/delete-impact`, { ids });
+    return this.sdk.post<DeleteImpact>(`/api/v1/${entityName}/delete-impact`, { body: { ids } });
   }
 
   /** A18: restores every record one delete operation put in the bin. */
   restoreOperation(operationId: string): Observable<{ restored: number; failed: { entity: string; id: string; code: string }[] }> {
-    return this.api.post(`/api/v1/bin/operations/${encodeURIComponent(operationId)}/restore`, {});
+    return this.sdk.post(`/api/v1/bin/operations/${encodeURIComponent(operationId)}/restore`, { body: {} });
   }
 
   /**
@@ -258,20 +258,20 @@ export class EntityService {
     id: string,
     children: readonly { entity: string; field: string }[] = [],
   ): Observable<{ id: string | null }> {
-    return this.api.post<{ id: string | null }>(
+    return this.sdk.post<{ id: string | null }>(
       `/api/v1/${encodeURIComponent(entityName)}/${encodeURIComponent(id)}/clone`,
-      children.length ? { children } : {},
+      { body: children.length ? { children } : {} },
     );
   }
 
   /** B7-T3: a record's child records, counted by relationship. */
   childRecords(entityName: string, id: string): Observable<{ items: { entity: string; field: string; count: number }[] }> {
-    return this.api.get(`/api/v1/${encodeURIComponent(entityName)}/${encodeURIComponent(id)}/children`);
+    return this.sdk.get(`/api/v1/${encodeURIComponent(entityName)}/${encodeURIComponent(id)}/children`);
   }
 
   /** A28-T2: the values a new record of `entityName` starts with, by field. */
   newDefaults(entityName: string): Observable<Record<string, unknown>> {
-    return this.api.get<Record<string, unknown>>(`/api/v1/${encodeURIComponent(entityName)}/new`);
+    return this.sdk.get<Record<string, unknown>>(`/api/v1/${encodeURIComponent(entityName)}/new`);
   }
 
   /** B2-T3: one field's change history on a record, newest first. */
@@ -280,14 +280,14 @@ export class EntityService {
     id: string,
     field: string,
   ): Observable<ApiComponents['schemas']['CursorPage_RecordHistoryChange']> {
-    return this.api.get<ApiComponents['schemas']['CursorPage_RecordHistoryChange']>(
+    return this.sdk.get<ApiComponents['schemas']['CursorPage_RecordHistoryChange']>(
       `/api/v1/${encodeURIComponent(entityName)}/${encodeURIComponent(id)}/history`,
-      { field, page_size: '50' },
+      { query: { field, page_size: '50' } },
     );
   }
 
   restore(entityName: string, id: string): Observable<EntityRecordResponse> {
-    return this.api.post<EntityRecordResponse>(`/api/v1/${entityName}/${id}/restore`, {});
+    return this.sdk.post<EntityRecordResponse>(`/api/v1/${entityName}/${id}/restore`, { body: {} });
   }
 
   // ── State transitions (M07/M64 kanban) ───────────────────────────────────
@@ -295,7 +295,7 @@ export class EntityService {
   /** The transitions THIS caller may apply to THIS record right now — the
    * kanban board's drop targets, and nothing else ever decides that. */
   listTransitions(entityName: string, id: string): Observable<PaginatedAvailableTransitions> {
-    return this.api.get<PaginatedAvailableTransitions>(`/api/v1/${entityName}/${id}/transitions`);
+    return this.sdk.get<PaginatedAvailableTransitions>(`/api/v1/${entityName}/${id}/transitions`);
   }
 
   /** The API enforces the transition (`check_transition`) — a rejected edge
@@ -307,11 +307,11 @@ export class EntityService {
     id: string,
     body: TransitionRequestBody,
   ): Observable<TransitionResult> {
-    return this.api.post<TransitionResult>(`/api/v1/${entityName}/${id}/transition`, body);
+    return this.sdk.post<TransitionResult>(`/api/v1/${entityName}/${id}/transition`, { body });
   }
 
   hardDelete(entityName: string, id: string): Observable<void> {
-    return this.api.delete(`/api/v1/${entityName}/${id}/hard-delete`);
+    return this.sdk.delete(`/api/v1/${entityName}/${id}/hard-delete`);
   }
 
   // ── M:M relationships (M01 Core P3 gap, D-455) ───────────────────────────
@@ -327,24 +327,24 @@ export class EntityService {
     page = 1,
     pageSize = 50,
   ): Observable<{ items: EntityRecordResponse[]; total: number; page: number; page_size: number }> {
-    return this.api.get<{ items: EntityRecordResponse[]; total: number; page: number; page_size: number }>(
+    return this.sdk.get<{ items: EntityRecordResponse[]; total: number; page: number; page_size: number }>(
       `/api/v1/${entityName}/${id}/related/${relationship}`,
-      { page: String(page), page_size: String(pageSize) },
+      { query: { page: String(page), page_size: String(pageSize) } },
     );
   }
 
   /** Idempotent (upsert-by-natural-key): linking an already-linked pair is a
    * no-op, not a conflict. Requires `update` privilege on BOTH sides. */
   linkRelated(entityName: string, id: string, relationship: string, otherId: string): Observable<void> {
-    return this.api.post(`/api/v1/${entityName}/${id}/related/${relationship}`, { id: otherId });
+    return this.sdk.post(`/api/v1/${entityName}/${id}/related/${relationship}`, { body: { id: otherId } });
   }
 
   /** `?id=`, not a request body — `DELETE` conventionally carries none, and
-   * `ApiService.delete` has no body-sending variant (see the Rust handler's
+   * `SdkService.delete` has no body-sending variant (see the Rust handler's
    * own doc comment for why this endpoint took the query-param route
    * instead of growing that capability for one caller). */
   unlinkRelated(entityName: string, id: string, relationship: string, otherId: string): Observable<void> {
-    return this.api.delete(`/api/v1/${entityName}/${id}/related/${relationship}?id=${otherId}`);
+    return this.sdk.delete(`/api/v1/${entityName}/${id}/related/${relationship}?id=${otherId}`);
   }
 
   // ── Bulk operations ───────────────────────────────────────────────────────
@@ -361,36 +361,36 @@ export class EntityService {
    */
   bulkUpdate(entityName: string, records: BulkRecordEnvelope[]): Observable<BulkOperationResponse> {
     const body: ApiComponents['schemas']['BulkRequestBody'] = { operation: 'update', records };
-    return this.api.post<BulkOperationResponse>(`/api/v1/${entityName}/bulk`, body);
+    return this.sdk.post<BulkOperationResponse>(`/api/v1/${entityName}/bulk`, { body });
   }
 
   /** B16-T10: creates `records` in one bulk request (`operation: create`). */
   bulkCreate(entityName: string, records: BulkRecordEnvelope[]): Observable<BulkOperationResponse> {
     const body: ApiComponents['schemas']['BulkRequestBody'] = { operation: 'create', records };
-    return this.api.post<BulkOperationResponse>(`/api/v1/${entityName}/bulk`, body);
+    return this.sdk.post<BulkOperationResponse>(`/api/v1/${entityName}/bulk`, { body });
   }
 
   /** With `includeItems`, one result per item (`ok`, or a `problem` with its code). */
   bulkStatus(entityName: string, bulkOperationId: string, includeItems = false): Observable<BulkOperationStatus> {
     const url = `/api/v1/${entityName}/bulk/${bulkOperationId}`;
     return includeItems
-      ? this.api.get<BulkOperationStatus>(url, { include_items: 'true', page_size: '200' })
-      : this.api.get<BulkOperationStatus>(url);
+      ? this.sdk.get<BulkOperationStatus>(url, { query: { include_items: 'true', page_size: '200' } })
+      : this.sdk.get<BulkOperationStatus>(url);
   }
 
   /** B5-T2: what a bulk edit would change, writing nothing. */
   bulkEditPreview(entityName: string, body: BulkEditRequest): Observable<BulkEditPreview> {
-    return this.api.post<BulkEditPreview>(`/api/v1/${entityName}/bulk-edit/preview`, body);
+    return this.sdk.post<BulkEditPreview>(`/api/v1/${entityName}/bulk-edit/preview`, { body });
   }
 
   /** B5-T1: runs a bulk edit; it returns the undo list to keep. */
   bulkEdit(entityName: string, body: BulkEditRequest): Observable<BulkEditSubmitted> {
-    return this.api.post<BulkEditSubmitted>(`/api/v1/${entityName}/bulk-edit`, body);
+    return this.sdk.post<BulkEditSubmitted>(`/api/v1/${entityName}/bulk-edit`, { body });
   }
 
   /** B5-T3: puts a bulk edit back; a record changed since is reported, not overwritten. */
   bulkEditUndo(entityName: string, undo: BulkEditUndoItem[], quiet = false): Observable<BulkEditSubmitted> {
-    return this.api.post<BulkEditSubmitted>(`/api/v1/${entityName}/bulk-edit/undo`, { undo, quiet });
+    return this.sdk.post<BulkEditSubmitted>(`/api/v1/${entityName}/bulk-edit/undo`, { body: { undo, quiet } });
   }
 
   // ── Export (M12) ─────────────────────────────────────────────────────────
@@ -419,11 +419,11 @@ export class EntityService {
       ...(options.labels ? { labels: true } : {}),
       ...(options.split_rows ? { split_rows: options.split_rows } : {}),
     };
-    return this.api.post<ExportEnqueueResponse>(`/api/v1/${entityName}/export`, body);
+    return this.sdk.post<ExportEnqueueResponse>(`/api/v1/${entityName}/export`, { body });
   }
 
   exportStatus(entityName: string, exportId: string): Observable<ExportStatusResponse> {
-    return this.api.get<ExportStatusResponse>(`/api/v1/${entityName}/export/${exportId}`);
+    return this.sdk.get<ExportStatusResponse>(`/api/v1/${entityName}/export/${exportId}`);
   }
 
   // ── Lookup search ─────────────────────────────────────────────────────────
