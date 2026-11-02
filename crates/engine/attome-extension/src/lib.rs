@@ -12,12 +12,15 @@ pub mod grants;
 pub mod harness;
 /// The host API as a Rust trait, and AE2-T1's in-memory fake host.
 pub mod host;
+/// AE2-T3: a run's host calls, recorded and replayed.
+pub mod record;
 /// Y10-T1: the engine, the limits and running one export.
 pub mod runtime;
 
 pub use grants::{Denied, EntityGrant, Grants, HookDecl, HookPoint};
 pub use harness::{HOOK_EXPORT, HookAnswer, HookInput, call_hook};
 pub use host::{FakeHost, HostApi, Level, Response};
+pub use record::{HostCall, Recorder, Replayer};
 pub use wasmtime::Module;
 
 pub use runtime::{CallCost, ExtensionError, Limits, MAX_OUTPUT_BYTES, Runtime, mask_secrets};

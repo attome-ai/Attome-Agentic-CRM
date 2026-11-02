@@ -59,6 +59,10 @@ Custom code runs as WebAssembly on Wasmtime inside the server (Y10, V2-D125), in
   use; nothing else is reachable.
 - **Testing.** `attome_extension::FakeHost` runs the host API in memory (records, logs, secrets,
   stubbed HTTP), held to the same grants, for an extension's unit tests.
+- **Record and replay.** `attome_extension::Recorder` wraps a host and keeps every host call of a
+  run with its result, every secret value masked; `Replayer` answers the same calls from that
+  recording, reaching no record, secret or network, and lists where a changed extension's run
+  differs.
 
 - **Record hooks.** The record write path calls registered hooks at four stages: before
   validation, before save (a hook may change the values or reject the write), after save (in the
