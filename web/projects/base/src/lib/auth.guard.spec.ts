@@ -97,6 +97,7 @@ describe('authGuard', () => {
     httpMock
       .expectOne(SESSION_URL)
       .error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
+    await tick();
 
     expect(result).not.toBe(true);
     expect(createUrlTree).toHaveBeenCalledWith(['/xrm/login'], {

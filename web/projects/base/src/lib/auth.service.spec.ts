@@ -92,6 +92,7 @@ describe('AuthService', () => {
     httpMock
       .expectOne('http://localhost:7865/api/v1/auth/session')
       .error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
+    await tick();
 
     expect(errored).toBe(false);
     expect(resolved).toBeNull();
