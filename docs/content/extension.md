@@ -43,3 +43,23 @@ service account requests are filed as; the website's origin goes in `cors.allowe
 Themes (`/api/v1/admin/themes`) set colours, fonts and logos per deployment or business unit; the
 built-in wording can be changed per language (`/api/v1/admin/i18n/overrides`) without touching the
 code.
+
+## Code extensions (WebAssembly), in progress
+
+Custom code runs as WebAssembly on Wasmtime inside the server (Y10, V2-D125), in the crate
+`attome-extension`. What exists today:
+
+- **Limits.** Every call runs in a fresh sandbox with a fuel budget (100,000,000 units), 64 MiB of
+  memory and a 500 ms time limit by default; past any of them it stops with a typed error, and the
+  server goes on.
+- **Host API.** `crates/engine/attome-extension/wit/attome.wit`: records (read, update, create)
+  through the record engine with the caller's own access, logs, granted secrets, and HTTP after the
+  transaction commits.
+- **Grants.** A manifest declares the entities (and attributes), secrets and hosts the extension may
+  use; nothing else is reachable.
+- **Testing.** `attome_extension::FakeHost` runs the host API in memory (records, logs, secrets,
+  stubbed HTTP), held to the same grants, for an extension's unit tests.
+
+Not yet: the hook stages in the record write pipeline (Y10-T2), approving grants at publish, and
+uploading extensions. Until then, extend behaviour through rules, flows and packs.
+
