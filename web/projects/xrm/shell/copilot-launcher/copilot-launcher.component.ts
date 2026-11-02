@@ -2,7 +2,8 @@ import {
   ChangeDetectionStrategy, Component, ComponentRef, DestroyRef, ElementRef, ViewContainerRef,
   inject, signal, viewChild,
 } from '@angular/core';
-import { TranslatePipe } from '@attome/base';
+import { LangService, TranslatePipe } from '@attome/base';
+import { SpeechService } from '@attome/base/native';
 import type { CopilotPanelComponent } from '@attome/xrm/ai/chat';
 
 /**
@@ -30,6 +31,30 @@ export class CopilotLauncherComponent {
   private loading = false;
 
   readonly open = signal(false);
+
+  // B17-T10 — a spoken request: heard, shown for editing, then asked.
+  private readonly speech = inject(SpeechService);
+  private readonly lang = inject(LangService);
+  /** Whether a speech engine is there (the button shows only then). */
+  readonly canSpeak = signal(this.speech.available());
+  readonly listening = signal(false);
+  /** What was heard, while it is shown for editing. */
+  readonly transcript = signal<string | null>(null);
+
+  async speak(): Promise<void> {
+    if (this.listening()) return;
+    this.listening.set(true);
+    const heard = await this.speech.listen(this.lang.current());
+    this.listening.set(false);
+    this.transcript.set(heard);
+  }
+
+  /** Sends the (edited) transcript as an ordinary chat turn. */
+  async sendTranscript(text: string): Promise<void> {
+    const request = text.trim();
+    this.transcript.set(null);
+    if (request) await this.ask(request);
+  }
   /** An i18n key when the panel's chunk could not be loaded. */
   readonly loadError = signal<string | null>(null);
 

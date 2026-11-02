@@ -13,4 +13,6 @@ export { PUSH_SUBSCRIPTION_KEY, PushService, approvalIdOf, isAppRoute } from './
 // B17-T9 — the MDM's managed configuration: deployment address, copy block, lock timeout.
 export { ManagedConfigService, managedAddress } from './managed-config.service';
 export type { ManagedConfig } from './managed-config.service';
+// B17-T10 — speech to text for the assistant.
+export { SpeechService, speechLanguage } from './speech.service';
 

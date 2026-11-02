@@ -2531,6 +2531,7 @@ export const xrmEn = {
     launcher: {
       open: 'Assistant',
       loadFailed: 'The assistant could not be loaded.',
+      speak: 'Speak a request', transcriptLabel: 'What you said', send: 'Ask', cancel: 'Cancel',
     },
     panel: {
       title: 'Assistant',

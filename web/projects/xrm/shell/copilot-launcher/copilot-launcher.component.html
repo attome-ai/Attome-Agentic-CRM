@@ -4,6 +4,25 @@
         [title]="'aiChat.launcher.open' | translate">
   <i class="las la-robot" aria-hidden="true"></i>
 </button>
+@if (canSpeak()) {
+  <button type="button" class="icon-btn" data-testid="copilot-speak" [class.active]="listening()"
+          (click)="speak()" [attr.aria-label]="'aiChat.launcher.speak' | translate"
+          [title]="'aiChat.launcher.speak' | translate">
+    <i class="las" [class.la-circle]="!listening()" [class.la-stop-circle]="listening()" aria-hidden="true"></i>
+  </button>
+}
+@if (transcript() !== null) {
+  <div class="launcher-transcript" role="dialog" [attr.aria-label]="'aiChat.launcher.transcriptLabel' | translate">
+    <label class="launcher-transcript-label" for="copilot-transcript">{{ 'aiChat.launcher.transcriptLabel' | translate }}</label>
+    <textarea #heard id="copilot-transcript" rows="3" dir="auto" data-testid="copilot-transcript"
+              [value]="transcript() ?? ''"></textarea>
+    <div class="launcher-transcript-actions">
+      <button type="button" class="btn-primary" data-testid="copilot-transcript-send"
+              (click)="sendTranscript(heard.value)">{{ 'aiChat.launcher.send' | translate }}</button>
+      <button type="button" class="btn-secondary" (click)="transcript.set(null)">{{ 'aiChat.launcher.cancel' | translate }}</button>
+    </div>
+  </div>
+}
 @if (loadError(); as key) {
   <span class="launcher-error" role="alert">{{ key | translate }}</span>
 }

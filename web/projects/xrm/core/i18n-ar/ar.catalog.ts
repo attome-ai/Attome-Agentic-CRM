@@ -2456,6 +2456,7 @@ export const xrmAr = {
     launcher: {
       open: 'المساعد',
       loadFailed: 'تعذّر تحميل المساعد.',
+      speak: 'اطلب بالصوت', transcriptLabel: 'ما قلته', send: 'اسأل', cancel: 'إلغاء',
     },
     panel: {
       title: 'المساعد',

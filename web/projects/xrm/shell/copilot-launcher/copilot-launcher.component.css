@@ -23,3 +23,32 @@
   font-size: 0.75rem;
   color: #b91c1c;
 }
+
+/* B17-T10: what was heard, shown for editing before it is asked. */
+.launcher-transcript {
+  position: absolute;
+  inset-block-start: 100%;
+  inset-inline-end: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  inline-size: min(360px, 90vw);
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-alt);
+}
+
+.launcher-transcript textarea {
+  inline-size: 100%;
+  box-sizing: border-box;
+  font: inherit;
+}
+
+.launcher-transcript-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
