@@ -786,6 +786,16 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(0),
         ),
+        // F8-T8: risky orders.
+        SettingDescriptor::new(
+            "commerce.risk.cod_limit",
+            "Shop orders paid cash on delivery above this total get a risk review and are held from \
+         fulfilment until a person clears them (F8-T8). 0 by default: never.",
+            || json!({"type": "number", "minimum": 0}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(0),
+        ),
         // F8-T9: abandoned carts.
         SettingDescriptor::new(
             "commerce.abandoned_cart.enabled",

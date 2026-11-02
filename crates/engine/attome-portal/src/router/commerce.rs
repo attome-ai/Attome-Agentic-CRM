@@ -268,6 +268,114 @@ pub(super) fn routes() -> Router<EngineState> {
         .route("/{keyword}/api/v1/shop/shipping", get(shipping))
         .route("/{keyword}/api/v1/shop/guest/start", post(guest_start))
         .route("/{keyword}/api/v1/shop/guest/confirm", post(guest_confirm))
+        .route("/{keyword}/api/v1/shop/reviews", post(submit_review))
+        .route(
+            "/{keyword}/api/v1/shop/products/{product_id}/reviews",
+            get(product_reviews),
+        )
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct ReviewBody {
+    pub product_id: Uuid,
+    /// 1 to 5.
+    pub rating: i32,
+    pub body: Option<String>,
+}
+
+/// The review taken.
+#[derive(Debug, serde::Serialize, ToSchema)]
+pub struct ReviewTaken {
+    pub review_id: Uuid,
+    /// Always `pending`: a store person publishes it.
+    pub status: String,
+}
+
+/// Review a product
+///
+/// F8-T8: a portal member reviews a product they received (a fulfilled order of it); the review waits
+/// for a store person to publish it.
+#[utoipa::path(
+    post,
+    path = "/{keyword}/api/v1/shop/reviews",
+    operation_id = "portal_shop_review",
+    tag = "sales",
+    params(("keyword" = String, Path, description = "The portal")),
+    request_body = ReviewBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Create)])))),
+    responses(
+        (status = 200, description = "Taken, pending", body = ReviewTaken),
+        (status = 401, description = "Not signed in to the portal", body = ErrorResponse),
+        (status = 403, description = "Not a buyer of the product", body = ErrorResponse),
+        (status = 404, description = "The shop is off, the person has no account, or the portal has no service user", body = ErrorResponse),
+        (status = 409, description = "The product has the person's review already", body = ErrorResponse),
+        (status = 422, description = "Rating not 1 to 5, or the text is too long", body = ErrorResponse),
+    ),
+)]
+async fn submit_review(
+    State(state): State<EngineState>,
+    Path(keyword): Path<String>,
+    headers: HeaderMap,
+    Json(body): Json<ReviewBody>,
+) -> Result<Json<ReviewTaken>, AppError> {
+    let (portal, user, _) = shopper(&state, &keyword, &headers).await?;
+    let contact: Uuid = sqlx::query_scalar("SELECT contact_ref FROM webportal_user WHERE id = $1")
+        .bind(user)
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(AppError::internal)?
+        .flatten()
+        .ok_or(AppError::Forbidden)?;
+    let service_user = crate::provision::service_user(&state.base.db, portal.id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    let ctx = state.base.security.resolve_strict(service_user).await?;
+    let review_id = attome_sales::review::submit(
+        &state,
+        &ctx,
+        &format!("portal user {user}"),
+        contact,
+        body.product_id,
+        body.rating,
+        body.body.as_deref(),
+    )
+    .await?;
+    Ok(Json(ReviewTaken {
+        review_id,
+        status: "pending".into(),
+    }))
+}
+
+/// A product's reviews
+///
+/// F8-T8: the published reviews of a product, newest first, without names.
+#[utoipa::path(
+    get,
+    path = "/{keyword}/api/v1/shop/products/{product_id}/reviews",
+    operation_id = "portal_shop_product_reviews",
+    tag = "sales",
+    params(
+        ("keyword" = String, Path, description = "The portal"),
+        ("product_id" = Uuid, Path, description = "The product"),
+    ),
+    responses(
+        (status = 200, description = "Published reviews", body = Vec<attome_sales::review::PublicReview>),
+        (status = 404, description = "The shop is off, or no such portal", body = ErrorResponse),
+    ),
+)]
+async fn product_reviews(
+    State(state): State<EngineState>,
+    Path((keyword, product)): Path<(String, Uuid)>,
+) -> Result<Json<Vec<attome_sales::review::PublicReview>>, AppError> {
+    if !state.modules.load().has(attome_modules::MODULE_SALES)
+        || !attome_sales::commerce::enabled(&state)
+    {
+        return Err(AppError::NotFound);
+    }
+    portal_for(&state, &keyword).await?;
+    Ok(Json(
+        attome_sales::review::published(&state, product).await?,
+    ))
 }
 
 /// F8-T7: an open shop on `keyword` for a guest, its per-address budget
@@ -444,9 +552,14 @@ async fn guest_confirm(
         my_orders,
         shipping,
         guest_start,
-        guest_confirm
+        guest_confirm,
+        submit_review,
+        product_reviews
     ),
     components(schemas(
+        ReviewBody,
+        ReviewTaken,
+        attome_sales::review::PublicReview,
         ShippingOption,
         GuestStart,
         GuestLine,

@@ -564,6 +564,8 @@ async fn place(
         }
         return Err(error);
     }
+    // F8-T8: a risky order gets its review (and so a fulfilment hold).
+    crate::risk::assess_logged(state, ctx, order).await;
     // After every write: the payment link, unless cash on delivery.
     let payment_url = if req.cash_on_delivery {
         None

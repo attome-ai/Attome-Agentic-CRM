@@ -51,6 +51,10 @@ pub mod quote_accept;
 /// F2-T1: quote submission under the discount policy.
 pub mod quote_submit;
 pub mod quote_sync;
+/// F8-T8: verified-buyer product reviews, behind a person.
+pub mod review;
+/// F8-T8: risky orders, held for a person.
+pub mod risk;
 pub mod schedules;
 pub mod scoring;
 pub mod scoring_run;

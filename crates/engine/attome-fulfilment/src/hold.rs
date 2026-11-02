@@ -10,8 +10,11 @@
 //!   (invoices do not link to orders yet, so a person clears it once paid);
 //! - `address` when a goods order has no delivery address.
 //!
-//! Fraud checks and `manual` holds are opened by people through the generic
-//! record path. [`release`] (`POST /api/v1/fulfilment/orders/{id}/release`)
+//! - `fraud` while the order has an open `risky_order_review` (F8-T8, the
+//!   shop's risk signals; sales pack changeset 0030).
+//!
+//! Other fraud checks and `manual` holds are opened by people through the
+//! generic record path. [`release`] (`POST /api/v1/fulfilment/orders/{id}/release`)
 //! refuses with 409 while any hold is open and otherwise marks the order
 //! `released`; [`clear_hold`] (`POST /api/v1/fulfilment/holds/{id}/clear`)
 //! needs `fulfilment_hold.release` and records who cleared it and why.
@@ -91,6 +94,28 @@ impl PrivilegeKey for FulfilmentHoldRelease {
     const KEY: &'static str = "fulfilment_hold.release";
 }
 
+/// Whether `order` has an open risk review (F8-T8); false where the sales
+/// pack's commerce records are not installed.
+async fn risk_review_open(db: &attome_db::DbPool, order: Uuid) -> Result<bool, AppError> {
+    let installed: bool =
+        sqlx::query_scalar("SELECT to_regclass('risky_order_review') IS NOT NULL")
+            .fetch_one(db)
+            .await
+            .map_err(AppError::internal)?;
+    if !installed {
+        return Ok(false);
+    }
+    sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM risky_order_review \
+                         WHERE order_ref = $1 AND status::text = 'open' \
+                           AND (is_active IS NULL OR is_active = true))",
+    )
+    .bind(order)
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)
+}
+
 /// Opens the holds `fulfilment_order` should carry and has not; returns
 /// the kinds opened.
 pub async fn evaluate_holds(
@@ -115,7 +140,7 @@ pub async fn evaluate_holds(
     .fetch_optional(db)
     .await
     .map_err(AppError::internal)?;
-    let (_order, account, total, terms, address) = header.ok_or(AppError::NotFound)?;
+    let (order, account, total, terms, address) = header.ok_or(AppError::NotFound)?;
     let has_goods: bool = sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM fulfilment_order_line \
                          WHERE fulfilment_order_ref = $1 AND line_kind::text = 'goods' \
@@ -138,12 +163,15 @@ pub async fn evaluate_holds(
         }
         None => true,
     };
-    let wanted = holds_for(
+    let mut wanted = holds_for(
         credit_allowed,
         terms.as_deref(),
         has_goods,
         address.as_deref(),
     );
+    if risk_review_open(db, order).await? {
+        wanted.push(("fraud", "the order is waiting for a risk review".to_owned()));
+    }
     let mut opened = Vec::new();
     let mut tx = attome_db::tx::begin(db).await?;
     for (kind, reason) in wanted {

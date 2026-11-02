@@ -14,6 +14,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Product reviews and risky orders (F8-T8, V2-D1595): verified-buyer reviews through
+  `POST /{keyword}/api/v1/shop/reviews`, every one pending until a person publishes it, published ones at
+  `GET /{keyword}/api/v1/shop/products/{product_id}/reviews`; risk signals (cash on delivery above
+  `commerce.risk.cod_limit`, repeated failed card payments) open a `risky_order_review`, which holds
+  fulfilment with a `fraud` hold while open.
 - Abandoned carts (F8-T9, migration `0376`): with `commerce.abandoned_cart.enabled`, idle portal carts of
   consenting buyers become one `cart.abandoned` change-feed event for marketing journeys; settings
   `commerce.abandoned_cart.enabled` and `.idle_minutes`.

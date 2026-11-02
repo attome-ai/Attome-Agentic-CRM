@@ -540,6 +540,8 @@ pub async fn checkout(
     )
     .await?;
     attome_db::tx::commit(tx).await?;
+    // F8-T8: a risky order gets its review (and so a fulfilment hold).
+    crate::risk::assess_logged(state, ctx, order).await;
 
     let limit = approval_limit(state);
     let approval_id = if limit > Decimal::ZERO && total > limit {

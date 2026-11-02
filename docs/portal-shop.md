@@ -67,6 +67,20 @@ orders go under (and `commerce.vat_rate`, 0 by default, is the VAT rate on them)
 Both guest routes need the portal's own origin and its service user (`contact.create`, `order.create`,
 `order_line.create`, and `payment_link.create` for paid orders).
 
+## Reviews and risky orders
+
+A portal member reviews a product they received (`POST /{keyword}/api/v1/shop/reviews` `{product_id,
+rating, body}`; refused with 403 without a fulfilled order of the product for their contact, once per
+product). Every review waits as `pending`: nothing is published automatically. A store person sets
+`published`, `held` or `rejected` (with `moderation_reason`) on `product_review` through the record API.
+`GET /{keyword}/api/v1/shop/products/{product_id}/reviews` lists only published reviews, without names.
+
+After an order is placed, its risk signals are checked: cash on delivery above `commerce.risk.cod_limit`
+(0, the default, is off), or 3 or more failed card payments for the account in the last 24 hours. Any
+signal opens a `risky_order_review` (`open`, with the reasons); while it is open, fulfilment puts a
+`fraud` hold on the order's fulfilment orders, so nothing ships until a person clears the hold and sets
+the review `released` or `cancelled`.
+
 ## Abandoned carts
 
 With `commerce.abandoned_cart.enabled` on (off by default), every 15 minutes the open portal carts that
