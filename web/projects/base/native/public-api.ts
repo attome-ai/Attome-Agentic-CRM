@@ -8,4 +8,6 @@ export { NativeService, phoneDigits, whatsAppLink } from './native.service';
 export type { Photo, Position, SharedItem } from './native.service';
 // B17-T5 — biometric unlock after the lock timeout, the wipe check, the privacy screen.
 export { DEFAULT_LOCK_MS, DEVICE_ID_KEY, DeviceSecurityService, mustUnlock, needsPrivacy } from './device-security.service';
+// B17-T8 — push: the token registered with J12, taps opened by route, Approve decided.
+export { PUSH_SUBSCRIPTION_KEY, PushService, approvalIdOf, isAppRoute } from './push.service';
 
