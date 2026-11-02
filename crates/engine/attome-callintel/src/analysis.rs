@@ -4,3 +4,5 @@
 pub mod job;
 pub mod talk;
 pub mod trackers;
+/// D22-T9: nightly trend aggregates.
+pub mod trends;

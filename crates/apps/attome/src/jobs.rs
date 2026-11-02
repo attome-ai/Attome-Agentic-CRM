@@ -3362,6 +3362,8 @@ const DEDUP_KEY_FULFILMENT_EXCEPTIONS: &str = "fulfilment-exceptions";
 const DEDUP_KEY_FULFILMENT_TRACKING: &str = "fulfilment-tracking";
 /// F6-T15: order updates to customers (a registered job type).
 const DEDUP_KEY_FULFILMENT_CUSTOMER_UPDATES: &str = "fulfilment-customer-updates";
+/// D22-T9: the nightly call trend aggregates (a registered job type).
+const DEDUP_KEY_CALLINTEL_AGGREGATE: &str = "callintel-aggregate";
 /// O1-T2: the weekly drift check of active prediction models.
 const DEDUP_KEY_PREDICT_DRIFT: &str = "predict-drift";
 const DEDUP_KEY_CONTENT_SEO_AUDIT: &str = "content-seo-audit";
@@ -3833,6 +3835,10 @@ pub const FULFILMENT_EXCEPTIONS: attome_jobs::JobType =
 /// F6-T10: booked shipments' status read from their carriers.
 pub const FULFILMENT_TRACKING: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_fulfilment::tracking::JOB, 1);
+
+/// D22-T9: yesterday's call trend aggregates.
+pub const CALLINTEL_AGGREGATE: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_callintel::analysis::trends::JOB, 1);
 
 /// D22-T5: one call analysis over a redacted transcript.
 pub const CALLINTEL_ANALYSE: attome_jobs::JobType =
@@ -5274,6 +5280,26 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            CALLINTEL_AGGREGATE,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state
+                    .modules
+                    .load()
+                    .has(attome_modules::MODULE_CALLINTEL)
+                {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let yesterday = chrono::Utc::now().date_naive() - chrono::Duration::days(1);
+                let rows = attome_callintel::analysis::trends::aggregate_day(&state, yesterday)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(%yesterday, rows, "call trends aggregated");
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             CALLINTEL_ANALYSE,
             |state: EngineState, job: attome_jobs::RegisteredJob| async move {
                 if !state
@@ -6677,6 +6703,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == FULFILMENT_CUSTOMER_UPDATES.name => {
             DEDUP_KEY_FULFILMENT_CUSTOMER_UPDATES
         }
+        EngineJob::Registered(job) if job.name == CALLINTEL_AGGREGATE.name => {
+            DEDUP_KEY_CALLINTEL_AGGREGATE
+        }
         EngineJob::Registered(job) if job.name == PREDICT_DRIFT.name => DEDUP_KEY_PREDICT_DRIFT,
         EngineJob::Registered(job) if job.name == CONTENT_SEO_AUDIT.name => {
             DEDUP_KEY_CONTENT_SEO_AUDIT
@@ -6969,6 +6998,7 @@ pub const SCHEDULE_MODULES: &[(&str, &str)] = &[
     ("fulfilment-exceptions", "fulfilment"),
     ("fulfilment-tracking", "fulfilment"),
     ("fulfilment-customer-updates", "fulfilment"),
+    ("callintel-aggregate", "callintel"),
     ("workforce-intraday", "workforce"),
     ("rfq-open", "procurement"),
     ("grc-policy-sweep", "grc"),
@@ -8352,6 +8382,21 @@ pub fn spawn_fulfilment_tracking_scheduler(db: DbPool, interval: std::time::Dura
             "fulfilment tracking",
         ),
         Err(error) => tracing::error!(%error, "fulfilment tracking: not scheduled"),
+    }
+}
+
+/// D22-T9: nightly, yesterday's call trend aggregates.
+pub fn spawn_callintel_aggregate_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(CALLINTEL_AGGREGATE.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_CALLINTEL_AGGREGATE,
+            "call trend aggregates",
+        ),
+        Err(error) => tracing::error!(%error, "call trend aggregates: not scheduled"),
     }
 }
 

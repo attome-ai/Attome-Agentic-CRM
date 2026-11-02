@@ -282,6 +282,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(30 * 60),
     );
+    // D22-T9: call trend aggregates, nightly.
+    crate::jobs::spawn_callintel_aggregate_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
     // F6-T15: customer order updates, every minute.
     crate::jobs::spawn_fulfilment_customer_updates_scheduler(
         db.clone(),

@@ -28,3 +28,11 @@ sides' questions and the staff's words per minute. Tracker hits are `call_findin
 
 Trackers match by their **exact terms** (Arabic and English, compared after normalisation). Matching by
 example phrases needs embeddings, which this analysis does not compute yet.
+
+## Trends
+
+Every night the analysed calls of the day before are summed up per team (the team of the call's activity
+owner) into `call_daily_aggregate`: the number of calls, the average staff talk share, the average
+questions per call, the share of scorecard answers that are yes, and each tracker's hits. A day's rows are
+rebuilt whole, so running it again gives the same rows. Three stored queries read them: **Call trackers by
+week**, **Call talk share by team** and **Call scorecard results by team** (`call_daily_aggregate.read`).

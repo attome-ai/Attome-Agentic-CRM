@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Call trend aggregates (D22-T9, platform changeset `0089`): a nightly job rebuilds yesterday's
+  `call_daily_aggregate` rows per team (calls, talk share, question rate, scorecard yes-rate, tracker
+  hits), read by three stored queries.
 - The subscription money path is tested end to end (F3-T15): create, amend mid-period, plan and run
   billing, cancel at term end, the churn event, the licence gate and the price-amendment privilege.
 - The portal shop pages (F7-T2, `/shop/{keyword}`, `@attome/xrm/portal/store`): products with search,

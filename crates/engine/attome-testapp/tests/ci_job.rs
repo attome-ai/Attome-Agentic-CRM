@@ -168,3 +168,63 @@ fn unlabelled_speakers_are_skipped() {
         assert_eq!(run(&app.state, analysis).await.unwrap(), "skipped");
     });
 }
+
+// feature: D22
+#[test]
+fn nightly_aggregate_is_rerunnable() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        analysis_on(&app).await;
+        let document = call_with_transcript(
+            &app,
+            json!([
+                {"start": 0.0, "end": 3.0, "text": "Any questions?", "speaker": "staff"},
+                {"start": 3.0, "end": 6.0, "text": "What does it cost?", "speaker": "customer"},
+            ]),
+        )
+        .await;
+        let analysis = on_transcript_final(&app.state, document)
+            .await
+            .unwrap()
+            .expect("queued");
+        assert_eq!(run(&app.state, analysis).await.unwrap(), "done");
+
+        let today = chrono::Utc::now().date_naive();
+        let first = attome_callintel::analysis::trends::aggregate_day(&app.state, today)
+            .await
+            .unwrap();
+        let rows = |app: &TestApp| {
+            let db = app.db().clone();
+            async move {
+                sqlx::query_as::<_, (Option<String>, String, f64)>(
+                    "SELECT team_ref, metric, value::float8 FROM call_daily_aggregate \
+                      WHERE day::date = $1 ORDER BY metric, team_ref",
+                )
+                .bind(today)
+                .fetch_all(&db)
+                .await
+                .unwrap()
+            }
+        };
+        let before = rows(&app).await;
+        let second = attome_callintel::analysis::trends::aggregate_day(&app.state, today)
+            .await
+            .unwrap();
+        let after = rows(&app).await;
+        assert_eq!(first, second);
+        assert_eq!(before, after, "a rerun writes the same rows");
+        assert!(
+            before
+                .iter()
+                .any(|(_, metric, value)| metric == "calls" && *value >= 1.0),
+            "{before:?}"
+        );
+        assert!(
+            before
+                .iter()
+                .any(|(_, metric, _)| metric == "question_rate")
+        );
+    });
+}
