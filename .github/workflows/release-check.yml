@@ -36,6 +36,14 @@ env:
   # job's time limit. Panic messages still name the failing test.
   CARGO_PROFILE_DEV_DEBUG: "0"
   CARGO_PROFILE_TEST_DEBUG: "0"
+  # 2026-11-02: with ~160 attome-testapp binaries each linking the whole
+  # engine, the shards ran out of disk again even after the free-disk step
+  # (114 GB free). A CI build is never reused incrementally, and a test
+  # binary's symbol table is a large share of its size; a panic still names
+  # its test and message.
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_STRIP: "symbols"
+  CARGO_PROFILE_TEST_STRIP: "symbols"
 
 jobs:
   linux:
@@ -258,6 +266,12 @@ jobs:
         if: failure()
         shell: bash
         run: bash scripts/ci/summarize-failures.sh tests.log
+      - name: disk use
+        if: failure()
+        shell: bash
+        run: |
+          df -h /
+          du -sh target/debug/deps target/debug/build target/debug/incremental 2>/dev/null || true
       - name: keep the test log
         if: always()
         uses: actions/upload-artifact@v4
