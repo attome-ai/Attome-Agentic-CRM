@@ -170,7 +170,7 @@ describe('DashboardService', () => {
   });
 
   describe('loadPageWidgets', () => {
-    it("reads the page's own sections and widgets through its dashboard's tree", () => {
+    it("reads the page's own sections and widgets through its dashboard's tree", async () => {
       let result: PageWidgetTree | undefined;
       service.loadPageWidgets('page-1').subscribe(t => (result = t));
       await tick();
@@ -243,7 +243,7 @@ describe('DashboardService', () => {
   });
 
   describe('transition', () => {
-    it("posts publish's row_version in the JSON body — this route family has no If-Match support", () => {
+    it("posts publish's row_version in the JSON body — this route family has no If-Match support", async () => {
       let response: unknown;
       service.transition('dash-1', 'publish', 7).subscribe(r => (response = r));
       await tick();
