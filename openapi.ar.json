@@ -23796,6 +23796,518 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/admin/derived-entities": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "List derived entities",
+        "operationId": "list_derived_entities",
+        "responses": {
+          "200": {
+            "description": "Every derived entity, by name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_DerivedEntityView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/derived-entities/preview": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Preview a derived entity",
+        "description": "A26-T4: how many live anchor records the condition selects now, up to\n20 of them, and against the saved version of `name`, how many would\nenter and leave. Writes nothing. Data-model administrators.",
+        "operationId": "preview_derived_entity",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DerivedPreviewBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "What the condition selects",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DerivedPreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such anchor entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The condition does not parse or reads past the anchor's own fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "counts what a derived entity condition selects; writes nothing",
+          "reason": "dry_run",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/derived-entities/{name}": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create or replace a derived entity",
+        "description": "Checks the condition against the anchor's own fields, recreates the\nread-only view (and, when stored, the membership table) and saves the\ndefinition. Audited.",
+        "operationId": "put_derived_entity",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The derived entity's name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DerivedEntityBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The saved definition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DerivedEntityView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such anchor entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A bad name, mode or condition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      },
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Delete a derived entity",
+        "description": "Drops its view, its membership table and its definition. Audited.",
+        "operationId": "delete_derived_entity",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The derived entity's name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such derived entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "hard_delete"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/derived-entities/{name}/resume": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Resume a paused derived entity",
+        "description": "A stored derived entity is paused when one change would move more than\n10,000 members (A26-T2's surge guard). Resuming applies every change held\nsince, then keeps it current again. Audited.",
+        "operationId": "resume_derived_entity",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The derived entity's name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What moved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DerivedResumed"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such derived entity, or its anchor is gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "It is not paused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/derived-entities/{name}/trend": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A derived entity's membership over time",
+        "description": "A26-T4: weekly entries, exits and members, oldest first, from the\nstored membership's history (a live one has only this week's count).\nData-model administrators.",
+        "operationId": "derived_entity_trend",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The derived entity's name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "weeks",
+            "in": "query",
+            "description": "1 to 104; 12 by default.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Weekly membership",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_DerivedWeek"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such derived entity, or its anchor is gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/dev-tools/available": {
       "get": {
         "tags": [
@@ -28340,6 +28852,123 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/entities/{entity_id}/refactor/extract-child": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Extract repeating attributes into a child entity",
+        "description": "Creates the child entity (value, source and lookup fields) and queues\nthe copy of every non-empty value as a durable run\n(`/api/v1/admin/data-step-runs/{id}`). The sources are kept; the answer\nlists the objects that read them. Administrators only. Audited.",
+        "operationId": "extract_child_entity",
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "description": "The parent entity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtractChildBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The child exists and the copy is queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractChildQueued"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The child's name is taken",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Bad sources or names",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/entities/{entity_id}/refactor/option-set-preview": {
       "post": {
         "tags": [
@@ -28537,6 +29166,113 @@
           "note": "evaluates the split over the entity's rows and answers counts and examples; writes nothing",
           "reason": "dry_run",
           "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/entities/{entity_id}/refactor/to-many-to-many": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Turn a lookup into a many-to-many relationship",
+        "description": "Creates the relationship (and its join table) between the entity and\nthe lookup's target, and queues the copy of every set lookup as a link\n(`/api/v1/admin/data-step-runs/{id}`). The lookup is kept; the answer\nlists the objects that read it. Administrators only. Audited.",
+        "operationId": "lookup_to_many_to_many",
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "description": "The entity holding the lookup",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToManyToManyBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The relationship exists and the link copy is queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToManyToManyQueued"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a single-target lookup to another entity, or a bad name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
         },
         "x-cache": "no-store",
         "x-idempotent": "key",
@@ -93949,6 +94685,213 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/derived-entities/{entity}/explain/{record_id}": {
+      "get": {
+        "tags": [
+          "records"
+        ],
+        "summary": "Explain a derived entity's membership",
+        "description": "A26-T4: each part of the condition with whether it holds for the record\nand the record's values. Needs the derived entity's read privilege, the\nanchor's, and access to the record itself.",
+        "operationId": "explain_derived_membership",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The derived entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "record_id",
+            "in": "path",
+            "description": "An anchor record",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Why it is or is not a member",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DerivedExplanation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such derived entity, or a record the caller may not read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/derived-entities/{entity}/mass": {
+      "post": {
+        "tags": [
+          "records"
+        ],
+        "summary": "Act on a derived entity's members",
+        "description": "A26-T5: one change over every current member, as the anchor's mass\noperation (`/api/v1/{entity}/mass`) over the members taken at the\nstart: each record through its normal single-record path (record\naccess, validation, rules, audit), in the background past the inline\nthreshold, with progress, pause, cancel and undo at\n`/api/v1/mass/{id}`. Needs bulk on the derived entity and the anchor.",
+        "operationId": "derived_entity_mass",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The derived entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DerivedMassBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Ran in the request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MassRun"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Queued for the background",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MassRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not make this change in bulk",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such derived entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No members, too many, or an invalid kind or payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "bulk_accepted"
+            },
+            {
+              "category": "entity",
+              "operation": "bulk_completed"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/devices": {
       "post": {
         "tags": [
@@ -114056,6 +114999,169 @@
         "x-cache": "private-revalidate",
         "x-idempotent": "natural",
         "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/ops/chaos/requests": {
+      "post": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Ask for a production chaos run",
+        "description": "AB9-T7: refused while production game days are off. The answer is the\napproval a second `ops.chaos.run` holder must give; the requester can\nnever decide it. Audited.",
+        "operationId": "request_ops_chaos_run",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChaosRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The approval the run waits on",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChaosRequest"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.chaos.run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Game days are off, the duration is past the limit, or no Operations role exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "submitted"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/ops/chaos/requests/{id}": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "A production chaos run's request",
+        "description": "AB9-T7: whether the second person approved it, with the fault and\nduration approved. Needs `ops.chaos.run`.",
+        "operationId": "get_ops_chaos_request",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The approval request",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChaosRequest"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.chaos.run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such chaos request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "low"
@@ -173534,6 +174640,64 @@
           }
         }
       },
+      "ChaosRequest": {
+        "type": "object",
+        "description": "A production chaos run's approval.",
+        "required": [
+          "approval_id",
+          "status",
+          "fault",
+          "duration_secs",
+          "reason"
+        ],
+        "properties": {
+          "approval_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "duration_secs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "fault": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "description": "`pending`, `approved`, `rejected`, ..."
+          }
+        }
+      },
+      "ChaosRequestBody": {
+        "type": "object",
+        "description": "A production chaos run asked for.",
+        "required": [
+          "fault",
+          "duration_secs",
+          "reason"
+        ],
+        "properties": {
+          "duration_secs": {
+            "type": "integer",
+            "format": "int32",
+            "description": "How long the fault lasts, in seconds.",
+            "minimum": 0
+          },
+          "fault": {
+            "type": "string",
+            "description": "A fault of the chaos catalogue (`process-kill`, `redis-down`, ...)."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why, for the approver."
+          }
+        },
+        "additionalProperties": false
+      },
       "ChartCompany": {
         "type": "object",
         "description": "A company in a group chart.",
@@ -183322,6 +184486,275 @@
           }
         }
       },
+      "DerivedEntityBody": {
+        "type": "object",
+        "description": "What `PUT` takes.",
+        "required": [
+          "anchor",
+          "condition"
+        ],
+        "properties": {
+          "anchor": {
+            "type": "string"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "mode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`live` (the default) or `stored`."
+          }
+        },
+        "additionalProperties": false
+      },
+      "DerivedEntityView": {
+        "type": "object",
+        "description": "A derived entity's definition.",
+        "required": [
+          "name",
+          "anchor",
+          "condition",
+          "mode"
+        ],
+        "properties": {
+          "anchor": {
+            "type": "string",
+            "description": "The entity whose rows it selects."
+          },
+          "condition": {
+            "type": "string",
+            "description": "A rule-language condition over the anchor's own fields."
+          },
+          "mode": {
+            "type": "string",
+            "description": "`live` or `stored`."
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "DerivedExplanation": {
+        "type": "object",
+        "description": "Why a record is, or is not, a member.",
+        "required": [
+          "record_id",
+          "member",
+          "live",
+          "matches",
+          "parts"
+        ],
+        "properties": {
+          "live": {
+            "type": "boolean"
+          },
+          "matches": {
+            "type": "boolean"
+          },
+          "member": {
+            "type": "boolean"
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DerivedPartExplained"
+            }
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "DerivedMassBody": {
+        "type": "object",
+        "description": "A mass action on a derived entity's current members: the anchor's mass\noperation body (`kind`: `update`, `delete`, `reassign`; `payload`),\nwithout a filter.",
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "confirm_estimate_rows": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "DerivedPartExplained": {
+        "type": "object",
+        "description": "One part of a condition for one record.",
+        "required": [
+          "part",
+          "values"
+        ],
+        "properties": {
+          "holds": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Whether it holds; absent when a field it reads is empty."
+          },
+          "part": {
+            "type": "string",
+            "description": "The part as written."
+          },
+          "values": {
+            "type": "object",
+            "description": "The record's value of each field the part reads."
+          }
+        }
+      },
+      "DerivedPreview": {
+        "type": "object",
+        "description": "What saving a condition would select.",
+        "required": [
+          "matching",
+          "entering",
+          "sample"
+        ],
+        "properties": {
+          "entering": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Of those, the ones not members of the saved version."
+          },
+          "leaving": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Members of the saved version that would leave; absent with no saved\nversion on this anchor."
+          },
+          "matching": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Live anchor records matching now."
+          },
+          "sample": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DerivedSampleMember"
+            }
+          }
+        }
+      },
+      "DerivedPreviewBody": {
+        "type": "object",
+        "description": "A condition to preview, against the saved version of `name` if any.",
+        "required": [
+          "anchor",
+          "condition"
+        ],
+        "properties": {
+          "anchor": {
+            "type": "string"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The derived entity's name, to compare with its saved version."
+          }
+        },
+        "additionalProperties": false
+      },
+      "DerivedResumed": {
+        "type": "object",
+        "description": "What resuming a paused derived entity moved.",
+        "required": [
+          "name",
+          "entered",
+          "left"
+        ],
+        "properties": {
+          "entered": {
+            "type": "integer",
+            "description": "Members that entered.",
+            "minimum": 0
+          },
+          "left": {
+            "type": "integer",
+            "description": "Members that left.",
+            "minimum": 0
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "DerivedSampleMember": {
+        "type": "object",
+        "description": "A member in a preview.",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "DerivedWeek": {
+        "type": "object",
+        "description": "One week of membership.",
+        "required": [
+          "week",
+          "entered",
+          "left",
+          "members"
+        ],
+        "properties": {
+          "entered": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "left": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "members": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Members at the end of the week."
+          },
+          "week": {
+            "type": "string",
+            "format": "date",
+            "description": "The Monday the week starts on."
+          }
+        }
+      },
       "DescribeBody": {
         "type": "object",
         "required": [
@@ -189042,6 +190475,80 @@
           },
           "value": {
             "type": "object"
+          }
+        }
+      },
+      "ExtractChildBody": {
+        "type": "object",
+        "description": "Repeating attributes to move into a child entity.",
+        "required": [
+          "sources",
+          "child_logicalname",
+          "child_name"
+        ],
+        "properties": {
+          "child_logicalname": {
+            "type": "string",
+            "description": "The child entity's logical name (`contact_phone`)."
+          },
+          "child_name": {
+            "type": "string",
+            "description": "Its display name (`Contact phone`)."
+          },
+          "lookup_field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The child's lookup to the parent (default `<parent>_ref`)."
+          },
+          "source_field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The child's field naming the source attribute (default `source_field`)."
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The repeating attributes, in order (`phone_1`, `phone_2`, ...)."
+          },
+          "value_field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The child's value field (default `value`)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "ExtractChildQueued": {
+        "type": "object",
+        "description": "The queued extraction.",
+        "required": [
+          "run_id",
+          "child_entity_id",
+          "to_review"
+        ],
+        "properties": {
+          "child_entity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "run_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "to_review": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ToReview"
+            },
+            "description": "Objects that read the sources and should move to the child."
           }
         }
       },
@@ -213295,6 +214802,131 @@
                 },
                 "route_template": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_DerivedEntityView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A derived entity's definition.",
+              "required": [
+                "name",
+                "anchor",
+                "condition",
+                "mode"
+              ],
+              "properties": {
+                "anchor": {
+                  "type": "string",
+                  "description": "The entity whose rows it selects."
+                },
+                "condition": {
+                  "type": "string",
+                  "description": "A rule-language condition over the anchor's own fields."
+                },
+                "mode": {
+                  "type": "string",
+                  "description": "`live` or `stored`."
+                },
+                "name": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_DerivedWeek": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One week of membership.",
+              "required": [
+                "week",
+                "entered",
+                "left",
+                "members"
+              ],
+              "properties": {
+                "entered": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "left": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "members": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "Members at the end of the week."
+                },
+                "week": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "The Monday the week starts on."
                 }
               }
             }
@@ -255142,6 +256774,91 @@
           "queue"
         ]
       },
+      "ToManyToManyBody": {
+        "type": "object",
+        "description": "A lookup to turn into a many-to-many relationship.",
+        "required": [
+          "lookup",
+          "name",
+          "role_a",
+          "role_b"
+        ],
+        "properties": {
+          "lookup": {
+            "type": "string",
+            "description": "The lookup attribute of the entity."
+          },
+          "name": {
+            "type": "string",
+            "description": "The relationship's name (`contact_account`)."
+          },
+          "role_a": {
+            "type": "string",
+            "description": "What a record of this entity is to the other (`Contact`)."
+          },
+          "role_b": {
+            "type": "string",
+            "description": "What the other is to a record of this entity (`Account`)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "ToManyToManyQueued": {
+        "type": "object",
+        "description": "The created relationship and the queued link copy.",
+        "required": [
+          "run_id",
+          "relationship_id",
+          "join_table",
+          "to_review"
+        ],
+        "properties": {
+          "join_table": {
+            "type": "string"
+          },
+          "relationship_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "run_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "to_review": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ToReview"
+            },
+            "description": "Objects that read the lookup and should move to the relationship."
+          }
+        }
+      },
+      "ToReview": {
+        "type": "object",
+        "description": "An object that reads a moved attribute.",
+        "required": [
+          "kind",
+          "id",
+          "label",
+          "attribute"
+        ],
+        "properties": {
+          "attribute": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "description": "`query`, `view`, `rule`, `workflow`, `dashboard`, ..."
+          },
+          "label": {
+            "type": "string"
+          }
+        }
+      },
       "TokenBody": {
         "type": "object",
         "description": "An issued access token (RFC 6749 §5.1).",
@@ -261508,7 +263225,6 @@
       "description": "فحوص السلامة والجاهزية والإصدار"
     }
   ],
-  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -261561,5 +263277,6 @@
       }
     }
   },
-  "x-api-version": "2026-10"
+  "x-api-version": "2026-10",
+  "x-version-adapters": []
 }

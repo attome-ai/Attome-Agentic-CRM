@@ -4655,6 +4655,115 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/derived-entities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List derived entities */
+        get: operations["list_derived_entities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/derived-entities/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview a derived entity
+         * @description A26-T4: how many live anchor records the condition selects now, up to
+         *     20 of them, and against the saved version of `name`, how many would
+         *     enter and leave. Writes nothing. Data-model administrators.
+         */
+        post: operations["preview_derived_entity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/derived-entities/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Create or replace a derived entity
+         * @description Checks the condition against the anchor's own fields, recreates the
+         *     read-only view (and, when stored, the membership table) and saves the
+         *     definition. Audited.
+         */
+        put: operations["put_derived_entity"];
+        post?: never;
+        /**
+         * Delete a derived entity
+         * @description Drops its view, its membership table and its definition. Audited.
+         */
+        delete: operations["delete_derived_entity"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/derived-entities/{name}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resume a paused derived entity
+         * @description A stored derived entity is paused when one change would move more than
+         *     10,000 members (A26-T2's surge guard). Resuming applies every change held
+         *     since, then keeps it current again. Audited.
+         */
+        post: operations["resume_derived_entity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/derived-entities/{name}/trend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A derived entity's membership over time
+         * @description A26-T4: weekly entries, exits and members, oldest first, from the
+         *     stored membership's history (a live one has only this week's count).
+         *     Data-model administrators.
+         */
+        get: operations["derived_entity_trend"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/dev-tools/available": {
         parameters: {
             query?: never;
@@ -5558,6 +5667,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/entities/{entity_id}/refactor/extract-child": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Extract repeating attributes into a child entity
+         * @description Creates the child entity (value, source and lookup fields) and queues
+         *     the copy of every non-empty value as a durable run
+         *     (`/api/v1/admin/data-step-runs/{id}`). The sources are kept; the answer
+         *     lists the objects that read them. Administrators only. Audited.
+         */
+        post: operations["extract_child_entity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/entities/{entity_id}/refactor/option-set-preview": {
         parameters: {
             query?: never;
@@ -5596,6 +5728,29 @@ export interface paths {
          *     10,000 rows, with examples. Writes nothing. Administrators only.
          */
         post: operations["preview_split"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/entities/{entity_id}/refactor/to-many-to-many": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Turn a lookup into a many-to-many relationship
+         * @description Creates the relationship (and its join table) between the entity and
+         *     the lookup's target, and queues the copy of every set lookup as a link
+         *     (`/api/v1/admin/data-step-runs/{id}`). The lookup is kept; the answer
+         *     lists the objects that read it. Administrators only. Audited.
+         */
+        post: operations["lookup_to_many_to_many"];
         delete?: never;
         options?: never;
         head?: never;
@@ -19496,6 +19651,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/derived-entities/{entity}/explain/{record_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Explain a derived entity's membership
+         * @description A26-T4: each part of the condition with whether it holds for the record
+         *     and the record's values. Needs the derived entity's read privilege, the
+         *     anchor's, and access to the record itself.
+         */
+        get: operations["explain_derived_membership"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/derived-entities/{entity}/mass": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Act on a derived entity's members
+         * @description A26-T5: one change over every current member, as the anchor's mass
+         *     operation (`/api/v1/{entity}/mass`) over the members taken at the
+         *     start: each record through its normal single-record path (record
+         *     access, validation, rules, audit), in the background past the inline
+         *     threshold, with progress, pause, cancel and undo at
+         *     `/api/v1/mass/{id}`. Needs bulk on the derived entity and the anchor.
+         */
+        post: operations["derived_entity_mass"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/devices": {
         parameters: {
             query?: never;
@@ -24200,6 +24402,49 @@ export interface paths {
          * @description OpenAPI document of this deployment's entities. Any signed-in user.
          */
         get: operations["deployment_openapi"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/chaos/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask for a production chaos run
+         * @description AB9-T7: refused while production game days are off. The answer is the
+         *     approval a second `ops.chaos.run` holder must give; the requester can
+         *     never decide it. Audited.
+         */
+        post: operations["request_ops_chaos_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ops/chaos/requests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A production chaos run's request
+         * @description AB9-T7: whether the second person approved it, with the fault and
+         *     duration approved. Needs `ops.chaos.run`.
+         */
+        get: operations["get_ops_chaos_request"];
         put?: never;
         post?: never;
         delete?: never;
@@ -38773,6 +39018,29 @@ export interface components {
             /** @description `true` granted, `false` withdrawn, `null` never asked. */
             granted?: boolean | null;
         };
+        /** @description A production chaos run's approval. */
+        ChaosRequest: {
+            /** Format: uuid */
+            approval_id: string;
+            /** Format: int32 */
+            duration_secs: number;
+            fault: string;
+            reason: string;
+            /** @description `pending`, `approved`, `rejected`, ... */
+            status: string;
+        };
+        /** @description A production chaos run asked for. */
+        ChaosRequestBody: {
+            /**
+             * Format: int32
+             * @description How long the fault lasts, in seconds.
+             */
+            duration_secs: number;
+            /** @description A fault of the chaos catalogue (`process-kill`, `redis-down`, ...). */
+            fault: string;
+            /** @description Why, for the approver. */
+            reason: string;
+        };
         /** @description A company in a group chart. */
         ChartCompany: {
             /** Format: uuid */
@@ -42632,6 +42900,111 @@ export interface components {
             request_count: number;
             route_template: string;
         };
+        /** @description What `PUT` takes. */
+        DerivedEntityBody: {
+            anchor: string;
+            condition: string;
+            /** @description `live` (the default) or `stored`. */
+            mode?: string | null;
+        };
+        /** @description A derived entity's definition. */
+        DerivedEntityView: {
+            /** @description The entity whose rows it selects. */
+            anchor: string;
+            /** @description A rule-language condition over the anchor's own fields. */
+            condition: string;
+            /** @description `live` or `stored`. */
+            mode: string;
+            name: string;
+        };
+        /** @description Why a record is, or is not, a member. */
+        DerivedExplanation: {
+            live: boolean;
+            matches: boolean;
+            member: boolean;
+            parts: components["schemas"]["DerivedPartExplained"][];
+            /** Format: uuid */
+            record_id: string;
+        };
+        /**
+         * @description A mass action on a derived entity's current members: the anchor's mass
+         *     operation body (`kind`: `update`, `delete`, `reassign`; `payload`),
+         *     without a filter.
+         */
+        DerivedMassBody: {
+            /** Format: int64 */
+            confirm_estimate_rows?: number | null;
+            kind: string;
+            payload?: Record<string, never>;
+            reason?: string | null;
+        };
+        /** @description One part of a condition for one record. */
+        DerivedPartExplained: {
+            /** @description Whether it holds; absent when a field it reads is empty. */
+            holds?: boolean | null;
+            /** @description The part as written. */
+            part: string;
+            /** @description The record's value of each field the part reads. */
+            values: Record<string, never>;
+        };
+        /** @description What saving a condition would select. */
+        DerivedPreview: {
+            /**
+             * Format: int64
+             * @description Of those, the ones not members of the saved version.
+             */
+            entering: number;
+            /**
+             * Format: int64
+             * @description Members of the saved version that would leave; absent with no saved
+             *     version on this anchor.
+             */
+            leaving?: number | null;
+            /**
+             * Format: int64
+             * @description Live anchor records matching now.
+             */
+            matching: number;
+            sample: components["schemas"]["DerivedSampleMember"][];
+        };
+        /** @description A condition to preview, against the saved version of `name` if any. */
+        DerivedPreviewBody: {
+            anchor: string;
+            condition: string;
+            /** @description The derived entity's name, to compare with its saved version. */
+            name?: string | null;
+        };
+        /** @description What resuming a paused derived entity moved. */
+        DerivedResumed: {
+            /** @description Members that entered. */
+            entered: number;
+            /** @description Members that left. */
+            left: number;
+            name: string;
+        };
+        /** @description A member in a preview. */
+        DerivedSampleMember: {
+            /** Format: uuid */
+            id: string;
+            name?: string | null;
+        };
+        /** @description One week of membership. */
+        DerivedWeek: {
+            /** Format: int64 */
+            entered: number;
+            /** Format: int64 */
+            left: number;
+            /**
+             * Format: int64
+             * @description Members at the end of the week.
+             */
+            members: number;
+            /**
+             * Format: date
+             * @description The Monday the week starts on.
+             */
+            week: string;
+        };
         DescribeBody: {
             /**
              * @description The integration system that is the source; its `config.migration`
@@ -44974,6 +45347,30 @@ export interface components {
         ExpressionTraceStep: {
             expr: string;
             value: Record<string, never>;
+        };
+        /** @description Repeating attributes to move into a child entity. */
+        ExtractChildBody: {
+            /** @description The child entity's logical name (`contact_phone`). */
+            child_logicalname: string;
+            /** @description Its display name (`Contact phone`). */
+            child_name: string;
+            /** @description The child's lookup to the parent (default `<parent>_ref`). */
+            lookup_field?: string | null;
+            /** @description The child's field naming the source attribute (default `source_field`). */
+            source_field?: string | null;
+            /** @description The repeating attributes, in order (`phone_1`, `phone_2`, ...). */
+            sources: string[];
+            /** @description The child's value field (default `value`). */
+            value_field?: string | null;
+        };
+        /** @description The queued extraction. */
+        ExtractChildQueued: {
+            /** Format: uuid */
+            child_entity_id: string;
+            /** Format: uuid */
+            run_id: string;
+            /** @description Objects that read the sources and should move to the child. */
+            to_review: components["schemas"]["ToReview"][];
         };
         /** @description One facet value and how many results have it. */
         FacetCount: {
@@ -54281,6 +54678,59 @@ export interface components {
                 /** Format: int64 */
                 request_count: number;
                 route_template: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_DerivedEntityView: {
+            items: {
+                /** @description The entity whose rows it selects. */
+                anchor: string;
+                /** @description A rule-language condition over the anchor's own fields. */
+                condition: string;
+                /** @description `live` or `stored`. */
+                mode: string;
+                name: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_DerivedWeek: {
+            items: {
+                /** Format: int64 */
+                entered: number;
+                /** Format: int64 */
+                left: number;
+                /**
+                 * Format: int64
+                 * @description Members at the end of the week.
+                 */
+                members: number;
+                /**
+                 * Format: date
+                 * @description The Monday the week starts on.
+                 */
+                week: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -70286,6 +70736,36 @@ export interface components {
          * @enum {string}
          */
         ToKind: "agent" | "user" | "queue";
+        /** @description A lookup to turn into a many-to-many relationship. */
+        ToManyToManyBody: {
+            /** @description The lookup attribute of the entity. */
+            lookup: string;
+            /** @description The relationship's name (`contact_account`). */
+            name: string;
+            /** @description What a record of this entity is to the other (`Contact`). */
+            role_a: string;
+            /** @description What the other is to a record of this entity (`Account`). */
+            role_b: string;
+        };
+        /** @description The created relationship and the queued link copy. */
+        ToManyToManyQueued: {
+            join_table: string;
+            /** Format: uuid */
+            relationship_id: string;
+            /** Format: uuid */
+            run_id: string;
+            /** @description Objects that read the lookup and should move to the relationship. */
+            to_review: components["schemas"]["ToReview"][];
+        };
+        /** @description An object that reads a moved attribute. */
+        ToReview: {
+            attribute: string;
+            /** Format: uuid */
+            id: string;
+            /** @description `query`, `view`, `rule`, `workflow`, `dashboard`, ... */
+            kind: string;
+            label: string;
+        };
         /** @description An issued access token (RFC 6749 §5.1). */
         TokenBody: {
             access_token: string;
@@ -87186,6 +87666,327 @@ export interface operations {
             };
         };
     };
+    list_derived_entities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every derived entity, by name */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_DerivedEntityView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_derived_entity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DerivedPreviewBody"];
+            };
+        };
+        responses: {
+            /** @description What the condition selects */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DerivedPreview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such anchor entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The condition does not parse or reads past the anchor's own fields */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_derived_entity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The derived entity's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DerivedEntityBody"];
+            };
+        };
+        responses: {
+            /** @description The saved definition */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DerivedEntityView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such anchor entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A bad name, mode or condition */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_derived_entity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The derived entity's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such derived entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    resume_derived_entity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The derived entity's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What moved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DerivedResumed"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such derived entity, or its anchor is gone */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description It is not paused */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    derived_entity_trend: {
+        parameters: {
+            query?: {
+                /** @description 1 to 104; 12 by default. */
+                weeks?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The derived entity's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Weekly membership */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_DerivedWeek"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such derived entity, or its anchor is gone */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     dev_tools_available: {
         parameters: {
             query?: never;
@@ -89938,6 +90739,78 @@ export interface operations {
             };
         };
     };
+    extract_child_entity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The parent entity */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExtractChildBody"];
+            };
+        };
+        responses: {
+            /** @description The child exists and the copy is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtractChildQueued"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The child's name is taken */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Bad sources or names */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     preview_option_set: {
         parameters: {
             query?: never;
@@ -90054,6 +90927,69 @@ export interface operations {
                 };
             };
             /** @description Not a text source, a bad target or an expression that does not compile */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    lookup_to_many_to_many: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity holding the lookup */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ToManyToManyBody"];
+            };
+        };
+        responses: {
+            /** @description The relationship exists and the link copy is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ToManyToManyQueued"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a single-target lookup to another entity, or a bad name */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -130150,6 +131086,130 @@ export interface operations {
             };
         };
     };
+    explain_derived_membership: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The derived entity */
+                entity: string;
+                /** @description An anchor record */
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Why it is or is not a member */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DerivedExplanation"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such derived entity, or a record the caller may not read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    derived_entity_mass: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The derived entity */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DerivedMassBody"];
+            };
+        };
+        responses: {
+            /** @description Ran in the request */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MassRun"];
+                };
+            };
+            /** @description Queued for the background */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MassRun"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not make this change in bulk */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such derived entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No members, too many, or an invalid kind or payload */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     register_device: {
         parameters: {
             query?: never;
@@ -142209,6 +143269,107 @@ export interface operations {
             };
             /** @description Missing or invalid credentials */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    request_ops_chaos_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChaosRequestBody"];
+            };
+        };
+        responses: {
+            /** @description The approval the run waits on */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChaosRequest"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.chaos.run */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Game days are off, the duration is past the limit, or no Operations role exists */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_ops_chaos_request: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The approval request */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChaosRequest"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ops.chaos.run */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such chaos request */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

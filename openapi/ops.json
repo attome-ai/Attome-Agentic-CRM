@@ -14,6 +14,169 @@
   },
   "x-api-version": "2026-10",
   "paths": {
+    "/api/v1/ops/chaos/requests": {
+      "post": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Ask for a production chaos run",
+        "description": "AB9-T7: refused while production game days are off. The answer is the\napproval a second `ops.chaos.run` holder must give; the requester can\nnever decide it. Audited.",
+        "operationId": "request_ops_chaos_run",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChaosRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The approval the run waits on",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChaosRequest"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.chaos.run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Game days are off, the duration is past the limit, or no Operations role exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "security",
+              "operation": "submitted"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/ops/chaos/requests/{id}": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "A production chaos run's request",
+        "description": "AB9-T7: whether the second person approved it, with the fault and\nduration approved. Needs `ops.chaos.run`.",
+        "operationId": "get_ops_chaos_request",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The approval request",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChaosRequest"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ops.chaos.run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such chaos request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ops",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/ops/cluster": {
       "get": {
         "tags": [
@@ -3611,6 +3774,64 @@
   },
   "components": {
     "schemas": {
+      "ChaosRequest": {
+        "type": "object",
+        "description": "A production chaos run's approval.",
+        "required": [
+          "approval_id",
+          "status",
+          "fault",
+          "duration_secs",
+          "reason"
+        ],
+        "properties": {
+          "approval_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "duration_secs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "fault": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "description": "`pending`, `approved`, `rejected`, ..."
+          }
+        }
+      },
+      "ChaosRequestBody": {
+        "type": "object",
+        "description": "A production chaos run asked for.",
+        "required": [
+          "fault",
+          "duration_secs",
+          "reason"
+        ],
+        "properties": {
+          "duration_secs": {
+            "type": "integer",
+            "format": "int32",
+            "description": "How long the fault lasts, in seconds.",
+            "minimum": 0
+          },
+          "fault": {
+            "type": "string",
+            "description": "A fault of the chaos catalogue (`process-kill`, `redis-down`, ...)."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why, for the approver."
+          }
+        },
+        "additionalProperties": false
+      },
       "ClusterMember": {
         "type": "object",
         "description": "One database node.",
