@@ -70,7 +70,17 @@ pub struct Grants {
     pub hooks: Vec<HookDecl>,
     /// M17-T1: a job extension's own schedule (`on_job`), if it has one.
     pub schedule: Option<JobSchedule>,
+    /// Y10-T2: the messages a hook may reject with by key, each in English
+    /// (required) and any of [`MESSAGE_LANGUAGES`]: `{key: {lang: text}}`,
+    /// `{name}` in a text being filled from the rejection's `args`.
+    pub messages: BTreeMap<String, BTreeMap<String, String>>,
 }
+
+/// The languages a manifest's messages are written in; English is required.
+pub const MESSAGE_LANGUAGES: [&str; 2] = ["en", "ar"];
+
+/// The longest message text a manifest may hold.
+pub const MAX_MESSAGE_CHARS: usize = 500;
 
 /// Why a host call was refused.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -128,7 +138,65 @@ pub fn check(grants: &Grants) -> Vec<String> {
             problems.push(format!("{host} is not a host name"));
         }
     }
+    for (key, texts) in &grants.messages {
+        let key_ok = !key.is_empty()
+            && key.len() <= 63
+            && key
+                .chars()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '.');
+        if !key_ok {
+            problems.push(format!("{key} is not a message key"));
+        }
+        if !texts.contains_key("en") {
+            problems.push(format!("the message {key} has no English text"));
+        }
+        for (lang, text) in texts {
+            if !MESSAGE_LANGUAGES.contains(&lang.as_str()) {
+                problems.push(format!("the message {key} is in {lang}, not en or ar"));
+            }
+            if text.trim().is_empty() || text.chars().count() > MAX_MESSAGE_CHARS {
+                problems.push(format!(
+                    "the message {key} in {lang} is empty or over {MAX_MESSAGE_CHARS} characters"
+                ));
+            }
+        }
+    }
     problems
+}
+
+/// Y10-T2: a rejection's text in each language the manifest writes it in,
+/// English always present: a plain message as given (English only); a key's
+/// texts with each `{name}` replaced by its argument (a string as it is,
+/// anything else as JSON). A key the manifest does not have is its own
+/// English text. Pure.
+pub fn rejection_texts(
+    grants: &Grants,
+    rejection: &crate::harness::Rejection,
+) -> BTreeMap<String, String> {
+    use crate::harness::Rejection;
+    let (key, args) = match rejection {
+        Rejection::Text(message) => return BTreeMap::from([("en".to_owned(), message.clone())]),
+        Rejection::Keyed { key, args } => (key, args),
+    };
+    let Some(texts) = grants.messages.get(key) else {
+        return BTreeMap::from([("en".to_owned(), key.clone())]);
+    };
+    let fill = |template: &str| {
+        args.iter()
+            .fold(template.to_owned(), |text, (name, value)| {
+                let value = match value {
+                    serde_json::Value::String(s) => s.clone(),
+                    other => other.to_string(),
+                };
+                text.replace(&format!("{{{name}}}"), &value)
+            })
+    };
+    let mut out: BTreeMap<String, String> = texts
+        .iter()
+        .map(|(lang, template)| (lang.clone(), fill(template)))
+        .collect();
+    out.entry("en".to_owned()).or_insert_with(|| key.clone());
+    out
 }
 
 impl Grants {
@@ -272,6 +340,50 @@ mod tests {
         ] {
             assert!(g.may_call(url).is_err(), "{url}");
         }
+    }
+
+    #[test]
+    fn keyed_rejections_read_the_manifest_messages_in_each_language() {
+        use crate::harness::Rejection;
+        let g: Grants = serde_json::from_value(serde_json::json!({
+            "messages": {
+                "credit.over_limit": {
+                    "en": "{name} is over its credit limit of {limit}",
+                    "ar": "تجاوز {name} حد الائتمان {limit}"
+                }
+            }
+        }))
+        .unwrap();
+        assert!(check(&g).is_empty(), "{:?}", check(&g));
+        let keyed: Rejection = serde_json::from_value(serde_json::json!({
+            "key": "credit.over_limit", "args": { "name": "Acme", "limit": 5000 }
+        }))
+        .unwrap();
+        let texts = rejection_texts(&g, &keyed);
+        assert_eq!(texts["en"], "Acme is over its credit limit of 5000");
+        assert_eq!(texts["ar"], "تجاوز Acme حد الائتمان 5000");
+
+        let plain: Rejection = serde_json::from_value(serde_json::json!("no")).unwrap();
+        assert_eq!(
+            rejection_texts(&g, &plain),
+            BTreeMap::from([("en".to_owned(), "no".to_owned())])
+        );
+        let unknown = Rejection::Keyed {
+            key: "missing.key".into(),
+            args: Default::default(),
+        };
+        assert_eq!(rejection_texts(&g, &unknown)["en"], "missing.key");
+
+        let bad: Grants = serde_json::from_value(serde_json::json!({
+            "messages": {
+                "Bad Key": { "en": "x" },
+                "no_english": { "ar": "س" },
+                "other_lang": { "en": "x", "fr": "y" },
+                "empty": { "en": " " }
+            }
+        }))
+        .unwrap();
+        assert_eq!(check(&bad).len(), 4, "{:?}", check(&bad));
     }
 
     #[test]

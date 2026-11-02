@@ -12,7 +12,9 @@
 //! is logged as a run (Y10-T6).
 //!
 //! The answer is JSON: `"continue"`, `{"change": {attribute: value}}` (a
-//! `before` stage only) or `{"reject": "message"}`.
+//! `before` stage only) or `{"reject": "message"}`. A rejection may instead
+//! name a key in the manifest's `messages` with `{"reject": {"key": ...,
+//! "args": {...}}}`; the caller then reads it in its own language.
 //!
 //! Cache: no file-store read may happen inside a write's transaction, so the
 //! published extensions and their compiled modules are kept in a process
@@ -30,7 +32,9 @@ use std::sync::{Arc, LazyLock, RwLock};
 use std::time::Duration;
 
 use attome_core::EngineState;
-use attome_core::record_hooks::{HookEvent, HookFuture, HookOutcome, HookStage, RecordHook};
+use attome_core::record_hooks::{
+    HookEvent, HookFuture, HookOutcome, HookRejection, HookStage, RecordHook,
+};
 use attome_extension::{Grants, HookAnswer, HookInput, HookPoint, Limits, Runtime, call_hook};
 use attome_storage::object_store::{ObjectStoreExt, path::Path as ObjectPath};
 use attome_types::AppError;
@@ -313,7 +317,15 @@ impl RecordHook for ExtensionHooks {
                     }
                     Ok(HookAnswer::Continue) => {}
                     Ok(HookAnswer::Change(set)) => changes.extend(set),
-                    Ok(HookAnswer::Reject(message)) => return Ok(HookOutcome::Reject(message)),
+                    Ok(HookAnswer::Reject(rejection)) => {
+                        let mut translations =
+                            attome_extension::grants::rejection_texts(&target.grants, &rejection);
+                        let message = translations.remove("en").unwrap_or_default();
+                        return Ok(HookOutcome::Reject(HookRejection {
+                            message,
+                            translations,
+                        }));
+                    }
                 }
             }
             Ok(if changes.is_empty() {

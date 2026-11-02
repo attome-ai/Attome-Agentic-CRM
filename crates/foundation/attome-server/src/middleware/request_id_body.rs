@@ -102,6 +102,23 @@ pub async fn attach_request_id_to_error_body(req: Request, next: Next) -> Respon
                 .insert(CONTENT_LANGUAGE, HeaderValue::from_static("ar"));
         }
     }
+    // Y10-T2: a refusal written in the caller's language replaces the
+    // English message; the translations themselves never reach a client.
+    if let Some(serde_json::Value::Object(translations)) = obj.remove("translations")
+        && lang == Lang::Ar
+        && let Some(serde_json::Value::String(text)) = translations.get(Lang::Ar.tag())
+    {
+        obj.insert(
+            "message".to_owned(),
+            serde_json::Value::String(text.clone()),
+        );
+        if obj.contains_key("detail") {
+            obj.insert("detail".to_owned(), serde_json::Value::String(text.clone()));
+        }
+        parts
+            .headers
+            .insert(CONTENT_LANGUAGE, HeaderValue::from_static("ar"));
+    }
     let new_bytes = serde_json::to_vec(&value).unwrap_or(bytes.to_vec());
     parts.headers.remove(CONTENT_LENGTH); // body length changed; let the server recompute it
     Response::from_parts(parts, Body::from(new_bytes))

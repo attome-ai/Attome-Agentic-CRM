@@ -88,7 +88,11 @@ Custom code runs as WebAssembly on Wasmtime inside the server (Y10, V2-D125), in
   `record_id`, `is_create`, `values`, `previous`, `actor`; only the attributes the extension may
   read) at the pointer `alloc` answers, and `on_record` answers its output's pointer in the high 32
   bits and its length in the low 32. The output is `"continue"`, `{"change": {...}}` (before
-  stages only; every attribute must be granted for writing) or `{"reject": "message"}`. An
+  stages only; every attribute must be granted for writing) or `{"reject": "message"}`. To
+  refuse in the caller's language, the manifest declares `"messages": {"<key>": {"en": "...",
+  "ar": "..."}}` (English required; `{name}` placeholders) and the hook answers
+  `{"reject": {"key": "<key>", "args": {"name": ...}}}`: a caller sending `Accept-Language: ar`
+  reads the Arabic text, everyone else the English. An
   extension that fails refuses the write. A newly published version runs within five seconds;
   switching one off takes effect at once.
 - **Versions.** `POST /api/v1/admin/extensions` uploads a module and its manifest as the next

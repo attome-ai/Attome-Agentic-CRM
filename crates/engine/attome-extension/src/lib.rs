@@ -20,7 +20,7 @@ pub mod record;
 pub mod runtime;
 
 pub use grants::{Denied, EntityGrant, Grants, HookDecl, HookPoint, JobSchedule};
-pub use harness::{HOOK_EXPORT, HookAnswer, HookInput, call_hook};
+pub use harness::{HOOK_EXPORT, HookAnswer, HookInput, Rejection, call_hook};
 pub use host::{FakeHost, HostApi, Level, Response};
 pub use record::{HostCall, Recorder, Replayer};
 pub use wasmtime::Module;

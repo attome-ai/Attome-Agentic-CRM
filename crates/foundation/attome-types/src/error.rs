@@ -222,6 +222,18 @@ pub enum AppError {
     /// D-789: a business rule's blocking `error` policies raise this too; then
     /// `details` names every one that fired (`details.rules`) and the first
     /// one's field (`details.field`). `None` keeps the pre-D-789 body.
+    /// Y10-T2: a refusal written in more than one language (an extension's
+    /// hook rejecting a save with a message key). Answers `422
+    /// validation_error` as [`AppError::Validation`] does, with the English
+    /// `message`; the body adds `translations` (`{"ar": "…"}`), which
+    /// attome-server's request-id body layer puts in `message` and `detail`
+    /// for a caller who reads that language and removes for every caller.
+    #[error("{message}")]
+    Translated {
+        message: String,
+        translations: std::collections::BTreeMap<String, String>,
+    },
+
     #[error("rule violation: {message}")]
     RuleViolation {
         rule_id: uuid::Uuid,
@@ -412,6 +424,7 @@ impl IntoResponse for AppError {
             AppError::IdempotencyConflict(_) => (StatusCode::CONFLICT, "idempotency_conflict"),
             AppError::Validation(_) => (StatusCode::UNPROCESSABLE_ENTITY, "validation_error"),
             AppError::FieldValidation(_) => (StatusCode::UNPROCESSABLE_ENTITY, "validation_error"),
+            AppError::Translated { .. } => (StatusCode::UNPROCESSABLE_ENTITY, "validation_error"),
             AppError::FeatureUnavailable => {
                 (StatusCode::SERVICE_UNAVAILABLE, "feature_unavailable")
             }
@@ -489,6 +502,11 @@ impl IntoResponse for AppError {
         }
         if let AppError::AttributeNotWritable(field) = &self {
             body["field"] = json!(field);
+        }
+        if let AppError::Translated { translations, .. } = &self
+            && !translations.is_empty()
+        {
+            body["translations"] = json!(translations);
         }
         if let AppError::CustomerTestsFailed(tests) = &self {
             body["tests"] = json!(tests);
@@ -1441,7 +1459,31 @@ mod tests {
             AppError::ResyncNeeded => 33,
             AppError::CascadeRestricted(_) => 34,
             AppError::GovernanceRolesHeld(_) => 35,
+            AppError::Translated { .. } => 36,
         }
+    }
+
+    /// Y10-T2: a translated refusal is a 422 `validation_error` with the
+    /// English message, carrying its other languages for the body layer.
+    #[tokio::test]
+    async fn translated_refusal_is_a_validation_error_with_its_translations() {
+        let error = AppError::Translated {
+            message: "Credit limit is 5000".to_string(),
+            translations: [("ar".to_string(), "حد الائتمان 5000".to_string())].into(),
+        };
+        let resp = error.into_response();
+        assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        let body = body_json(resp).await;
+        assert_eq!(body["error"], "validation_error");
+        assert_eq!(body["message"], "Credit limit is 5000");
+        assert_eq!(body["translations"]["ar"], "حد الائتمان 5000");
+
+        let english_only = AppError::Translated {
+            message: "x".to_string(),
+            translations: Default::default(),
+        };
+        let body = body_json(english_only.into_response()).await;
+        assert!(body.get("translations").is_none());
     }
 
     /// AA9-T4: the body names the limit, its value and the next step; a
@@ -1522,6 +1564,10 @@ mod tests {
             AppError::ResyncNeeded,
             AppError::CascadeRestricted("account -> contact.account_ref".to_string()),
             AppError::GovernanceRolesHeld(vec!["steward of Customers".to_string()]),
+            AppError::Translated {
+                message: "x".to_string(),
+                translations: [("ar".to_string(), "س".to_string())].into(),
+            },
             AppError::IdempotencyOutcomeUnknown,
             AppError::IdempotencyReplayUnavailable,
             AppError::Internal("x".to_string()),
@@ -1576,7 +1622,7 @@ mod tests {
     /// structured variant answers the code its plain sibling already
     /// publishes, so a client handles one code; an undeclared collision still
     /// fails, and so does a pair listed here that no longer shares its code.
-    const DECLARED_CODE_ALIASES: &[(usize, usize)] = &[(4, 22), (6, 21)];
+    const DECLARED_CODE_ALIASES: &[(usize, usize)] = &[(4, 22), (6, 21), (6, 36)];
 
     fn repo_file(relative: &str) -> String {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -1605,7 +1651,7 @@ mod tests {
         indices.sort_unstable();
         assert_eq!(
             indices,
-            (0..=34).collect::<Vec<_>>(),
+            (0..=36).collect::<Vec<_>>(),
             "one_of_each_variant must hold exactly one sample of every variant_index arm"
         );
 

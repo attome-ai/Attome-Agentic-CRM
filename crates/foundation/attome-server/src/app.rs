@@ -973,6 +973,56 @@ mod tests {
         assert_eq!(body["title"], "The resource was not found.");
     }
 
+    /// Y10-T2: a refusal written in Arabic reaches an Arabic caller in Arabic,
+    /// everyone else in English, and its translations reach no one.
+    #[tokio::test]
+    async fn a_translated_refusal_follows_the_callers_language() {
+        use tower::ServiceExt;
+
+        let refuse = || async {
+            AppError::Translated {
+                message: "Over the credit limit".to_owned(),
+                translations: [("ar".to_owned(), "تجاوز حد الائتمان".to_owned())].into(),
+            }
+            .into_response()
+        };
+        for (accept, message, language) in [
+            (Some("ar"), "تجاوز حد الائتمان", Some("ar")),
+            (Some("en-GB"), "Over the credit limit", None),
+            (None, "Over the credit limit", None),
+        ] {
+            let app = apply_outer_layers(
+                Router::new().route("/x", get(refuse)),
+                &outer_stack_config(),
+            );
+            let mut request = Request::builder()
+                .uri("/x")
+                .header(header::ORIGIN, ALLOWED_ORIGIN);
+            if let Some(value) = accept {
+                request = request.header(header::ACCEPT_LANGUAGE, value);
+            }
+            let response = app
+                .oneshot(request.body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+            let got_language = response
+                .headers()
+                .get(header::CONTENT_LANGUAGE)
+                .and_then(|v| v.to_str().ok())
+                .map(str::to_owned);
+            let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+                .await
+                .unwrap();
+            let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+            assert_eq!(body["message"], message, "{accept:?}");
+            assert_eq!(body["detail"], message, "{accept:?}");
+            assert_eq!(body["code"], "validation_error");
+            assert!(body.get("translations").is_none(), "{body}");
+            assert_eq!(got_language.as_deref(), language, "{accept:?}");
+        }
+    }
+
     /// A2 (BSV-F06) — an allowed origin must be able to **read** the headers
     /// the SDK needs (its correlation id, its backoff). The CORS safelist hides
     /// everything else, so this list is the contract.

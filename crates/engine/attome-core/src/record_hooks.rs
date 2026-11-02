@@ -15,7 +15,8 @@
 //!   ([`AFTER_COMMIT_JOB`]) with the stored row; it cannot undo the write, so
 //!   a rejection there is only logged. This is the stage for the network.
 //!
-//! A rejection answers 422 with the hook's message. An in-transaction hook
+//! A rejection answers 422 with the hook's message, in the caller's
+//! language when the hook wrote it in more than one ([`HookRejection`]). An in-transaction hook
 //! must not reach the network (the extension runtime refuses its HTTP calls
 //! there); work after the commit goes through the `after_commit` job.
 
@@ -67,7 +68,49 @@ pub enum HookOutcome {
     /// Values to set (a `before` stage only; ignored after the save).
     Change(Map<String, Value>),
     /// Refuse the save with this message (shown to the person).
-    Reject(String),
+    Reject(HookRejection),
+}
+
+/// Y10-T2: why a hook refused a save: the English message, and the same
+/// message in each other language the hook wrote it in (`ar`), which the
+/// caller reads when that is its language.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct HookRejection {
+    pub message: String,
+    pub translations: std::collections::BTreeMap<String, String>,
+}
+
+impl HookRejection {
+    /// The 422 the save answers: a plain validation error, or one carrying
+    /// its translations.
+    pub fn into_error(self) -> AppError {
+        if self.translations.is_empty() {
+            AppError::Validation(self.message)
+        } else {
+            AppError::Translated {
+                message: self.message,
+                translations: self.translations,
+            }
+        }
+    }
+}
+
+impl From<&str> for HookRejection {
+    fn from(message: &str) -> Self {
+        Self {
+            message: message.to_owned(),
+            translations: Default::default(),
+        }
+    }
+}
+
+impl From<String> for HookRejection {
+    fn from(message: String) -> Self {
+        Self {
+            message,
+            translations: Default::default(),
+        }
+    }
 }
 
 /// Y10-T4: a write made by a hook may run hooks of its own; past this
@@ -155,23 +198,23 @@ pub async fn run_stage(
                     "a hook after the save asked to change values; ignored"
                 );
             }
-            HookOutcome::Reject(message) if stage == HookStage::AfterCommit => {
+            HookOutcome::Reject(rejection) if stage == HookStage::AfterCommit => {
                 // The write is committed; there is nothing to refuse.
                 tracing::warn!(
                     hook = hook.name(),
                     entity = event.entity,
-                    %message,
+                    message = %rejection.message,
                     "an after-commit hook rejected a committed write; ignored"
                 );
             }
-            HookOutcome::Reject(message) => {
+            HookOutcome::Reject(rejection) => {
                 tracing::info!(
                     hook = hook.name(),
                     entity = event.entity,
                     ?stage,
                     "write rejected by a hook"
                 );
-                return Err(AppError::Validation(message));
+                return Err(rejection.into_error());
             }
         }
     }

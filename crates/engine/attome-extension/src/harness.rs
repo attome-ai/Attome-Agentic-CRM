@@ -31,14 +31,35 @@ pub struct HookInput {
     pub actor: Option<String>,
 }
 
-/// What a hook answered: `"continue"`, `{"change": {...}}` or
-/// `{"reject": "message"}`.
+/// What a hook answered: `"continue"`, `{"change": {...}}`,
+/// `{"reject": "message"}` or `{"reject": {"key": ..., "args": {...}}}`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum HookAnswer {
     Continue,
     Change(Map<String, Value>),
-    Reject(String),
+    Reject(Rejection),
+}
+
+/// Y10-T2: why a hook refused a save.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Rejection {
+    /// The message as the extension wrote it.
+    Text(String),
+    /// A key into the manifest's `messages`, its `{name}` placeholders
+    /// filled from `args`, in every language the manifest writes it in.
+    Keyed {
+        key: String,
+        #[serde(default)]
+        args: Map<String, Value>,
+    },
+}
+
+impl From<&str> for Rejection {
+    fn from(message: &str) -> Self {
+        Self::Text(message.to_owned())
+    }
 }
 
 /// Calls `module`'s hook with `input` held to `grants`: the input carries
