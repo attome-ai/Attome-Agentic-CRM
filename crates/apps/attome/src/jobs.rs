@@ -3365,6 +3365,8 @@ const DEDUP_KEY_AGGREGATE_CACHE_MARKS: &str = "aggregate-cache-marks";
 const DEDUP_KEY_ROLLUP_FAST: &str = "rollup-fast";
 /// A26-T2: stored derived entity membership from the change feed.
 const DEDUP_KEY_DERIVED_MAINTAIN: &str = "derived-maintain";
+/// A26-T3: the nightly full refresh of stored derived entities.
+const DEDUP_KEY_DERIVED_REFRESH: &str = "derived-refresh";
 const DEDUP_KEY_ROLLUP_HEAL: &str = "rollup-heal";
 /// Q4-T2: the nightly directory sync (a registered job type).
 const DEDUP_KEY_LDAP_SYNC: &str = "ldap-sync";
@@ -3827,6 +3829,10 @@ pub const ROLLUP_FAST: attome_jobs::JobType =
 /// A26-T2: stored derived entity membership kept from the change feed.
 pub const DERIVED_MAINTAIN: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_api::derived_maintain::JOB, 1);
+
+/// A26-T3: a full refresh of one stored derived entity, or of all of them.
+pub const DERIVED_REFRESH: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_api::derived_maintain::REFRESH_JOB, 3);
 
 /// A10-T4: a rollup filled for its parents, a batch per run.
 pub const ROLLUP_BACKFILL: attome_jobs::JobType =
@@ -5739,6 +5745,19 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            DERIVED_REFRESH,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: attome_api::derived_maintain::RefreshPayload = job.payload()?;
+                let refreshed = attome_api::derived_maintain::run_refresh(&state, &payload)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(refreshed, "derived entities refreshed");
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             DERIVED_MAINTAIN,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let read = attome_api::derived_maintain::tick(&state)
@@ -6958,6 +6977,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == DERIVED_MAINTAIN.name => {
             DEDUP_KEY_DERIVED_MAINTAIN
         }
+        EngineJob::Registered(job) if job.name == DERIVED_REFRESH.name => DEDUP_KEY_DERIVED_REFRESH,
         EngineJob::Registered(job) if job.name == ROLLUP_HEAL.name => DEDUP_KEY_ROLLUP_HEAL,
         EngineJob::Registered(job) if job.name == LDAP_SYNC.name => DEDUP_KEY_LDAP_SYNC,
         EngineJob::Registered(job) if job.name == LEAD_FIRST_TOUCH.name => {
@@ -8557,6 +8577,22 @@ pub fn spawn_derived_maintain_scheduler(db: DbPool, interval: std::time::Duratio
             "derived entity maintenance",
         ),
         Err(error) => tracing::error!(%error, "derived entity maintenance: not scheduled"),
+    }
+}
+
+/// A26-T3: nightly, every stored derived entity fully refreshed.
+pub fn spawn_derived_refresh_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let payload = attome_api::derived_maintain::RefreshPayload::default();
+    match attome_core::jobs::JOB_TYPES.job(DERIVED_REFRESH.name, &payload) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_DERIVED_REFRESH,
+            "derived entity refresh",
+        ),
+        Err(error) => tracing::error!(%error, "derived entity refresh: not scheduled"),
     }
 }
 

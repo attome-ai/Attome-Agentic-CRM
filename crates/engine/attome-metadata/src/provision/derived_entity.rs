@@ -475,6 +475,67 @@ pub async fn reconcile(
     Ok(Reconciled::Applied(change))
 }
 
+/// A26-T3: anchors re-checked per range in a full refresh.
+pub const REFRESH_RANGE: i64 = 5_000;
+
+/// A26-T3: a full refresh of stored `def`: every anchor row re-checked in
+/// id ranges of [`REFRESH_RANGE`] (each range its own short transaction,
+/// through [`reconcile`]), then every member whose anchor row no longer
+/// exists removed. No surge limit: it runs after an administrator saved the
+/// definition, or nightly to heal drift. Idempotent, so a refresh stopped
+/// part-way is simply run again.
+pub async fn refresh(
+    db: &DbPool,
+    def: &DerivedEntity,
+    anchor: &EntityMeta,
+) -> Result<MembershipChange, AppError> {
+    let mut total = MembershipChange::default();
+    if def.mode != DerivedMode::Stored {
+        return Ok(total);
+    }
+    let mut add = |reconciled: Reconciled| {
+        if let Reconciled::Applied(change) = reconciled {
+            total.enter.extend(change.enter);
+            total.leave.extend(change.leave);
+        }
+    };
+    let from = quote_ident(&anchor.logicalname);
+    let mut after = Uuid::nil();
+    loop {
+        let ids: Vec<Uuid> = sqlx::query_scalar(&format!(
+            "SELECT \"id\" FROM {from} WHERE \"id\" > $1 ORDER BY \"id\" LIMIT $2"
+        ))
+        .bind(after)
+        .bind(REFRESH_RANGE)
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?;
+        let Some(last) = ids.last().copied() else {
+            break;
+        };
+        add(reconcile(db, def, anchor, &ids, "refresh", None).await?);
+        after = last;
+    }
+    // Members whose anchor row is gone (a hard delete).
+    let table = quote_ident(&def.membership_name());
+    loop {
+        let gone: Vec<Uuid> = sqlx::query_scalar(&format!(
+            "SELECT m.anchor_id FROM {table} m \
+              WHERE NOT EXISTS (SELECT 1 FROM {from} a WHERE a.\"id\" = m.anchor_id) \
+              LIMIT $1"
+        ))
+        .bind(REFRESH_RANGE)
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?;
+        if gone.is_empty() {
+            break;
+        }
+        add(reconcile(db, def, anchor, &gone, "the record no longer exists", None).await?);
+    }
+    Ok(total)
+}
+
 /// The names of the paused definitions.
 pub async fn paused(db: &DbPool) -> Result<std::collections::HashSet<String>, AppError> {
     Ok(

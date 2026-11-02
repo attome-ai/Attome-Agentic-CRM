@@ -31,6 +31,65 @@ pub const CONSUMER: &str = "attome-metadata/derived-maintain";
 pub const JOB: &str = "derived_maintain";
 /// Events read per tick.
 const BATCH: i64 = 1_000;
+/// A26-T3: the registered job that fully refreshes stored derived
+/// entities (one, after its definition is saved; or all, nightly).
+pub const REFRESH_JOB: &str = "derived_refresh";
+
+/// The refresh job's payload: one derived entity, or every stored one.
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+pub struct RefreshPayload {
+    #[serde(default)]
+    pub name: Option<String>,
+}
+
+/// Queues a full refresh of `name`. A binary that has not registered the
+/// job type (a test binary) queues nothing and logs it; the change feed
+/// still keeps the records that change.
+pub async fn queue_refresh(state: &EngineState, name: &str) -> Result<(), AppError> {
+    let payload = RefreshPayload {
+        name: Some(name.to_owned()),
+    };
+    let job = match attome_core::jobs::JOB_TYPES.job(REFRESH_JOB, &payload) {
+        Ok(job) => job,
+        Err(error) => {
+            tracing::warn!(%error, derived = name, "derived entity refresh not queued");
+            return Ok(());
+        }
+    };
+    attome_jobs::enqueue_on_pool(
+        &state.base.db,
+        attome_core::jobs::EngineJob::Registered(job),
+    )
+    .await
+    .map_err(AppError::internal)
+}
+
+/// The refresh job: `payload.name`, or every stored derived entity that is
+/// not paused (a paused one waits for its resume). How many it refreshed.
+pub async fn run_refresh(state: &EngineState, payload: &RefreshPayload) -> Result<usize, AppError> {
+    let paused = derived_entity::paused(&state.base.db).await?;
+    let defs: Vec<DerivedEntity> = derived_entity::list(&state.base.db)
+        .await?
+        .into_iter()
+        .filter(|d| d.mode == DerivedMode::Stored)
+        .filter(|d| payload.name.as_deref().is_none_or(|n| n == d.name))
+        .filter(|d| !paused.contains(&d.name))
+        .collect();
+    let mut refreshed = 0;
+    for def in &defs {
+        let Some(anchor) = state.entities.load().get(&def.anchor).cloned() else {
+            tracing::warn!(derived = %def.name, anchor = %def.anchor,
+                "derived entity's anchor is not a live entity; not refreshed");
+            continue;
+        };
+        let change = derived_entity::refresh(&state.base.db, def, &anchor).await?;
+        tracing::info!(derived = %def.name, entered = change.enter.len(),
+            left = change.leave.len(), "derived entity refreshed");
+        refreshed += 1;
+    }
+    Ok(refreshed)
+}
+
 /// The notification category of a surge pause.
 const NOTIFY_CATEGORY: &str = "derived_entity";
 

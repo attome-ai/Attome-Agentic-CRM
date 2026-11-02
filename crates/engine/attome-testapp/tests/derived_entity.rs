@@ -317,3 +317,103 @@ fn derived_incremental_enter_leave_and_surge_pause() {
         assert_eq!(status, StatusCode::CONFLICT);
     });
 }
+
+// feature: A26
+#[test]
+fn derived_refresh_fills_and_heals_stored_membership() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let dir =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../packs/crm/changesets");
+        let mut files: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.path())
+            .collect();
+        files.sort();
+        for file in &files {
+            let value: Value =
+                serde_json::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
+            attome_api::changeset::boot::apply_pack_document(&app.state, &value)
+                .await
+                .unwrap_or_else(|e| panic!("{}: {e}", file.display()));
+        }
+        // Rows written straight to the table: no change events, so only a
+        // refresh can find them.
+        let prefix = format!("Refresh {}", Uuid::now_v7().simple());
+        let mut ids = Vec::new();
+        for label in [
+            format!("{prefix} A"),
+            format!("{prefix} B"),
+            "Not it".to_owned(),
+        ] {
+            let id: Uuid = sqlx::query_scalar(
+                "INSERT INTO account (name, owner_ref, owner_type) VALUES ($1, $2, 0) RETURNING id",
+            )
+            .bind(&label)
+            .bind(app.admin.id)
+            .fetch_one(app.db())
+            .await
+            .unwrap();
+            ids.push(id);
+        }
+        let name = format!("dv_rf_{}", &Uuid::now_v7().simple().to_string()[24..]);
+        let (status, body) = app
+            .request(
+                Method::PUT,
+                &format!("/api/v1/admin/derived-entities/{name}"),
+                Some(json!({
+                    "anchor": "account",
+                    "condition": format!("startswith(name, \"{prefix}\")"),
+                    "mode": "stored",
+                })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let payload = attome_api::derived_maintain::RefreshPayload {
+            name: Some(name.clone()),
+        };
+        assert_eq!(
+            attome_api::derived_maintain::run_refresh(&app.state, &payload)
+                .await
+                .unwrap(),
+            1
+        );
+        let members = || {
+            let sql = format!("SELECT anchor_id FROM \"xrm_dm_{name}\" ORDER BY anchor_id");
+            let db = app.db().clone();
+            async move {
+                sqlx::query_scalar::<_, Uuid>(&sql)
+                    .fetch_all(&db)
+                    .await
+                    .unwrap()
+            }
+        };
+        let mut expected = vec![ids[0], ids[1]];
+        expected.sort();
+        assert_eq!(members().await, expected);
+
+        // A hard-deleted anchor row leaves on the next refresh; a second
+        // refresh with nothing changed moves nothing.
+        sqlx::query("DELETE FROM account WHERE id = $1")
+            .bind(ids[0])
+            .execute(app.db())
+            .await
+            .unwrap();
+        attome_api::derived_maintain::run_refresh(&app.state, &payload)
+            .await
+            .unwrap();
+        assert_eq!(members().await, vec![ids[1]]);
+        let def = attome_metadata::provision::derived_entity::find(app.db(), &name)
+            .await
+            .unwrap()
+            .unwrap();
+        let anchor = app.state.entities.load().get("account").cloned().unwrap();
+        let again = attome_metadata::provision::derived_entity::refresh(app.db(), &def, &anchor)
+            .await
+            .unwrap();
+        assert!(again.is_empty(), "{again:?}");
+    });
+}

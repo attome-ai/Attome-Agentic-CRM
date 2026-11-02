@@ -146,6 +146,10 @@ async fn put(
     )
     .await?;
     audit(&state, ctx.user_id, AuditOperation::Update, &def.name).await?;
+    // A26-T3: a stored one is filled from the records it already has.
+    if def.mode == DerivedMode::Stored {
+        crate::derived_maintain::queue_refresh(&state, &def.name).await?;
+    }
     Ok(Json(def.into()))
 }
 
