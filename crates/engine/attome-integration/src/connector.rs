@@ -163,9 +163,10 @@ pub fn connector_for(kind: ConnectorKind) -> &'static dyn Connector {
     static MAILBOX: adapters::mailbox::MailboxAdapter = adapters::mailbox::MailboxAdapter;
     static WEBCHAT: adapters::webchat::WebChatAdapter = adapters::webchat::WebChatAdapter;
     match kind {
-        // A gateway system's health check and base URL use the REST adapter;
-        // payments go through attome-billing's gateway adapters.
-        ConnectorKind::Rest | ConnectorKind::PaymentGateway => &REST,
+        // A gateway or shop system's health check and base URL use the REST
+        // adapter; payments go through attome-billing's gateway adapters and
+        // shop data through `adapters::shop_sync::ShopPlatform`.
+        ConnectorKind::Rest | ConnectorKind::PaymentGateway | ConnectorKind::Commerce => &REST,
         // M53 Phase 1 (D-474): `channel` now has a real adapter — the
         // module plan's own choice of web chat as the first channel, because
         // it needs no third-party credential (`attome-api`'s
