@@ -787,13 +787,13 @@ async fn delete_one(state: &EngineState, approval: Uuid) -> Result<bool, AppErro
 
     // What the certificate needs, read before it is gone.
     let approved_by: Vec<Uuid> = sqlx::query_scalar(
-        "SELECT DISTINCT decided_by FROM approval_grant WHERE request_ref = $1 \
-            AND decided_by IS NOT NULL",
+        "SELECT DISTINCT COALESCE(decided_by, approver_id) FROM approval_grant \
+          WHERE request_id = $1 AND decision = 'approved'",
     )
     .bind(approval)
     .fetch_all(db)
     .await
-    .unwrap_or_default();
+    .map_err(AppError::internal)?;
     let audit_final: Option<String> = sqlx::query_scalar(
         "SELECT event_hash FROM audit_header WHERE event_hash <> '' \
           ORDER BY event_index DESC NULLS LAST, changed_on DESC NULLS LAST LIMIT 1",
