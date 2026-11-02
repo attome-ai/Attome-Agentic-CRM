@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Subscriptions (F3): `/api/v1/billing/subscriptions*` (create, read, amendments and their reversal, pause,
+  resume, cancel), `/api/v1/billing/usage`, `/api/v1/billing/runs` and `/runs/preview`, and
+  `/api/v1/billing/metrics/recurring`. See `docs/subscriptions.md`.
 - Revenue reports (F11-T10, ledger pack changeset `0007`): waterfall, deferred roll-forward, unbilled
   balance, remaining performance obligations and recognised vs billed per customer, kept current by a
   nightly balance roll-forward job.
