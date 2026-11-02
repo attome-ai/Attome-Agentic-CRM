@@ -21,9 +21,14 @@
 //!   its configuration (`attome_ops::standby`). Only when the main region is
 //!   lost: `deploy/ha/README-standby.md`.
 //!
-//! The other scenarios (`restore`, `failover`, `chaos`, `upgrade-check`) are
-//! arms of [`Command`] that later tasks fill in; until then they answer that
-//! the scenario is not in this build.
+//! - `attome drill failover --scenario <leader|router|redis> --confirm <scenario> ...`
+//!   (AB2-T10) breaks one part of a high-availability rig under a write loop
+//!   and writes signed evidence with the recovery time, writes lost and split
+//!   brain (`attome_ops::drill_failover`).
+//!
+//! The other scenarios (`restore`, `chaos`, `upgrade-check`) are arms of
+//! [`Command`] that later tasks fill in; until then they answer that the
+//! scenario is not in this build.
 //!
 //! Exit codes: 0 ok, 1 usage, 2 bad signature, 3 drill failed (or the
 //! verified report says it failed), 4 not ready.
@@ -63,7 +68,8 @@ const USAGE: &str = "usage:
   attome drill verify <file> [--public-key <file>]
   attome drill readiness [--config <path>]
   attome drill standby-promote --cluster <name> --confirm <name>
-  attome drill <restore|failover|chaos|upgrade-check> ...";
+  attome drill failover --scenario <leader|router|redis> --confirm <scenario> --key <file> ...
+  attome drill <restore|chaos|upgrade-check> ...";
 
 /// One parsed `attome drill` command.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -154,6 +160,7 @@ pub fn run(args: &[String]) -> ExitCode {
         Command::Verify { file, public_key } => verify(&file, public_key.as_deref()),
         Command::Readiness { config } => readiness(config),
         Command::StandbyPromote { cluster } => standby_promote(&cluster),
+        Command::Scenario { name, args } if name == "failover" => failover(&args),
         Command::Scenario { name, .. } => {
             eprintln!("attome drill: the `{name}` scenario is not in this build");
             EXIT_USAGE
@@ -208,6 +215,77 @@ async fn standby_promote(cluster: &str) -> u8 {
         }
         Err(error) => {
             eprintln!("attome drill: promotion failed: {error}");
+            EXIT_DRILL_FAILED
+        }
+    }
+}
+
+/// AB2-T10: the failover drill (`attome_ops::drill_failover`). Refuses the
+/// deployment's own database: a drill runs against a rig.
+#[tokio::main]
+async fn failover(args: &[String]) -> u8 {
+    use attome_ops::drill_failover;
+    let args = match drill_failover::parse_args(args) {
+        Ok(args) => args,
+        Err(message) => {
+            eprintln!("attome drill failover: {message}");
+            return EXIT_USAGE;
+        }
+    };
+    if let (Ok(config), Some(url)) = (AppConfig::from_file(), args.database_url.as_deref()) {
+        let own = format!(
+            "{}:{}/{}",
+            config.database.host, config.database.port, config.database.dbname
+        );
+        if url.contains(&own) {
+            eprintln!(
+                "attome drill failover: {own} is this deployment's own database; run the drill against a rig"
+            );
+            return EXIT_USAGE;
+        }
+    }
+    let key = match evidence::read_signing_key(&args.key) {
+        Ok(key) => key,
+        Err(error) => {
+            eprintln!("attome drill failover: {}: {error}", args.key.display());
+            return EXIT_USAGE;
+        }
+    };
+    if let Err(error) = std::fs::create_dir_all(&args.out) {
+        eprintln!("attome drill failover: {}: {error}", args.out.display());
+        return EXIT_USAGE;
+    }
+    let report = match drill_failover::run(&args).await {
+        Ok(report) => report,
+        Err(error) => {
+            eprintln!("attome drill failover: {error}");
+            return EXIT_DRILL_FAILED;
+        }
+    };
+    let path = args.out.join(drill_failover::evidence_file_name(
+        args.scenario,
+        chrono::Utc::now().date_naive(),
+    ));
+    match evidence::write_signed(&path, &report, &key) {
+        Ok(hash) => {
+            println!("wrote {} (sha256 {hash})", path.display());
+            for check in &report.checks {
+                println!(
+                    "{} {:?} {}",
+                    check.name,
+                    check.result,
+                    check.detail.as_deref().unwrap_or("")
+                );
+            }
+            println!("overall_ok {}", report.overall_ok);
+            if report.overall_ok {
+                EXIT_OK
+            } else {
+                EXIT_DRILL_FAILED
+            }
+        }
+        Err(error) => {
+            eprintln!("attome drill failover: {}: {error}", path.display());
             EXIT_DRILL_FAILED
         }
     }

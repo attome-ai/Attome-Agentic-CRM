@@ -24,6 +24,23 @@ loss on failover:
 Point the deployment's `database` section at HAProxy's write port. The `attome drill` commands
 exercise failover; record the recovery point they measure.
 
+## Failover drill
+
+`attome drill failover` proves the cluster fails over without losing acknowledged writes. Run it
+against a rig, never the deployment's own database (the command refuses that one):
+
+```
+attome drill failover --scenario leader --confirm leader --key drill-signing.key   --database-url postgres://drill:...@haproxy:5000/drill   --member-url postgres://drill:...@pg1:5432/drill --member-url ...   --patroni http://pg1:8008 --patroni http://pg2:8008
+```
+
+It writes to `drill_failover_probe` every 50 ms, asks Patroni (`POST /failover`) to move the leader to
+a synchronous replica, and records how long writes failed, how many acknowledged writes are missing
+afterwards and whether more than one member answers as primary. `--scenario router --service <name>`
+stops a local router service instead (and starts it again), and `--scenario redis --sentinel <host:port>
+--sentinel-service <name> --redis-member <host:port> ...` fails Redis over through its sentinel. The
+signed evidence lands in `drill-evidence/failover-drill-evidence-<date>-<scenario>.json`; check it with
+`attome drill verify`. It passes with no write lost, no split brain and writes back within 30 seconds.
+
 ## Standby region
 
 `patroni-standby.yml.example` and [README-standby.md](README-standby.md): a second cluster in
