@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 
 /** `license_admin::UsageResponse`. */
 export interface Usage {
@@ -43,7 +43,7 @@ export const BACKUP_LATE_HOURS = 36;
   styleUrls:       ['./usage.component.css'],
 })
 export class UsageComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly usage = signal<Usage | null>(null);
   readonly error = signal<string | null>(null);
@@ -56,11 +56,11 @@ export class UsageComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.api.get<BackupStatus>('/api/v1/admin/backup').subscribe({
+    this.sdk.get<BackupStatus>('/api/v1/admin/backup').subscribe({
       next: b => this.backup.set(b),
       error: () => this.backup.set(null),
     });
-    this.api.get<Usage>('/api/v1/admin/usage').subscribe({
+    this.sdk.get<Usage>('/api/v1/admin/usage').subscribe({
       next: u => this.usage.set(u),
       error: (e: ApiError) => this.error.set(e.message),
     });

@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AiAgentTrialComponent, percent, type TrialReport } from './agent-trial.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 function report(same: number, different: number): TrialReport {
   return {
@@ -22,6 +23,7 @@ function setup(r: TrialReport) {
     imports: [AiAgentTrialComponent],
     providers: [
       { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       { provide: LangService, useValue: { translate: (key: string) => key, intlLocale: () => 'en-US' } },
     ],
   });

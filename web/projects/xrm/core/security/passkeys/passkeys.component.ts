@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import {
-  ApiError, ApiService, LangService, LocalDatePipe, PASSKEY_BROWSER, TranslatePipe, isPasskeyCancelled,
+  ApiError, SdkService, LangService, LocalDatePipe, PASSKEY_BROWSER, TranslatePipe, isPasskeyCancelled,
 } from '@attome/base';
 import { ConfirmService } from '@attome/base/dialog';
 import { StepUpService } from '@attome/base/step-up';
@@ -92,7 +92,7 @@ export const PASSKEY_MANAGE = 'passkey_manage';
   `,
 })
 export class PasskeysComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
   private readonly confirm = inject(ConfirmService);
   private readonly stepUp = inject(StepUpService);
@@ -112,7 +112,7 @@ export class PasskeysComponent implements OnInit {
 
   load(): void {
     this.loading.set(true);
-    this.api.get<PasskeyPage>('/api/v1/auth/passkeys', { page_size: '200' }).subscribe({
+    this.sdk.get<PasskeyPage>('/api/v1/auth/passkeys', { query: { page_size: '200' } }).subscribe({
       next: (page) => {
         this.passkeys.set(page.items);
         this.loading.set(false);
@@ -129,13 +129,16 @@ export class PasskeysComponent implements OnInit {
     this.begin();
     try {
       const started = await firstValueFrom(this.stepUp.run(PASSKEY_MANAGE, () =>
-        this.api.post<{ options: unknown }>('/api/v1/auth/passkeys/register/start', {})));
+        this.sdk.post<{ options: unknown }>('/api/v1/auth/passkeys/register/start', { body: {} })));
       const response = await this.browser.create(started.options);
       const label = this.label().trim();
-      await firstValueFrom(this.api.post('/api/v1/auth/passkeys/register/finish', {
+      await firstValueFrom(this.sdk.post(
+        '/api/v1/auth/passkeys/register/finish',
+        { body: {
         ...(label ? { label } : {}),
         response,
-      }));
+      } },
+      ));
       this.label.set('');
       this.notice.set(this.lang.translate('passkeys.added'));
       this.load();
@@ -158,7 +161,7 @@ export class PasskeysComponent implements OnInit {
     this.begin();
     try {
       await firstValueFrom(this.stepUp.run(PASSKEY_MANAGE, () =>
-        this.api.delete(`/api/v1/auth/passkeys/${encodeURIComponent(passkey.id)}`)));
+        this.sdk.delete(`/api/v1/auth/passkeys/${encodeURIComponent(passkey.id)}`)));
       this.notice.set(this.lang.translate('passkeys.removed'));
       this.load();
     } catch (e) {

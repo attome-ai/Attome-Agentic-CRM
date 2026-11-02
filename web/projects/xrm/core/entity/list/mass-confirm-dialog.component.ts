@@ -2,7 +2,7 @@ import {
   ChangeDetectionStrategy, Component, computed, inject, input, output, signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 import type { MassCondition } from './mass-condition';
 
 export { filtersToCondition } from './mass-condition';
@@ -91,7 +91,7 @@ export function durationLabel(secs: number): string {
   `],
 })
 export class MassConfirmDialogComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly entity = input.required<string>();
   readonly kind = input<MassKind>('delete');
@@ -116,7 +116,7 @@ export class MassConfirmDialogComponent {
     this.estimate.set(null);
     this.error.set(null);
     this.reason.set('');
-    this.api.post<MassEstimate>(`/api/v1/${this.entity()}/mass/estimate`, this.body()).subscribe({
+    this.sdk.post<MassEstimate>(`/api/v1/${this.entity()}/mass/estimate`, { body: this.body() }).subscribe({
       next: estimate => this.estimate.set(estimate),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -133,11 +133,14 @@ export class MassConfirmDialogComponent {
     this.starting.set(true);
     this.error.set(null);
     const reason = this.reason().trim();
-    this.api.post<MassRun>(`/api/v1/${this.entity()}/mass`, {
+    this.sdk.post<MassRun>(
+      `/api/v1/${this.entity()}/mass`,
+      { body: {
       ...this.body(),
       reason: reason || undefined,
       confirm_estimate_rows: estimate.estimated_rows,
-    }).subscribe({
+    } },
+    ).subscribe({
       next: run => {
         this.starting.set(false);
         this.open.set(false);

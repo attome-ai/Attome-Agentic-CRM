@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { ApiError, ApiService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 import { DeploysComponent } from '../deploys/deploys.component';
 import { MetricInfo, MetricPoint, polyline } from '../metrics/metrics.component';
@@ -127,7 +127,7 @@ interface Chart {
   `],
 })
 export class OpsOverviewComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
   private readonly catalogue = signal<MetricInfo[]>([]);
   private readonly sampled = signal<Set<string>>(new Set());
@@ -155,15 +155,15 @@ export class OpsOverviewComponent implements OnInit {
   }));
 
   ngOnInit(): void {
-    this.api.get<{ items: OpsNode[] }>('/api/v1/admin/ops/nodes').subscribe({
+    this.sdk.get<{ items: OpsNode[] }>('/api/v1/admin/ops/nodes').subscribe({
       next: page => this.nodes.set(page.items),
       error: (e: ApiError) => this.error.set(e.message),
     });
-    this.api.get<{ items: MetricInfo[] }>('/api/v1/admin/ops/metrics/catalogue').subscribe({
+    this.sdk.get<{ items: MetricInfo[] }>('/api/v1/admin/ops/metrics/catalogue').subscribe({
       next: page => { this.catalogue.set(page.items); this.loadArea(); },
       error: (e: ApiError) => this.error.set(e.message),
     });
-    this.api.get<{ items: string[] }>('/api/v1/admin/ops/metrics/names').subscribe({
+    this.sdk.get<{ items: string[] }>('/api/v1/admin/ops/metrics/names').subscribe({
       next: page => { this.sampled.set(new Set(page.items)); this.loadArea(); },
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -190,9 +190,12 @@ export class OpsOverviewComponent implements OnInit {
     for (const info of this.metrics()) {
       if (this.series()[info.name]) continue;
       this.series.update(s => ({ ...s, [info.name]: [] }));
-      this.api.get<{ items: MetricPoint[] }>('/api/v1/admin/ops/metrics/query', {
+      this.sdk.get<{ items: MetricPoint[] }>(
+        '/api/v1/admin/ops/metrics/query',
+        { query: {
         name: info.name, from: from.toISOString(), to: to.toISOString(), step: '60',
-      }).subscribe({
+      } },
+      ).subscribe({
         next: page => this.series.update(s => ({ ...s, [info.name]: page.items })),
         error: () => undefined,
       });

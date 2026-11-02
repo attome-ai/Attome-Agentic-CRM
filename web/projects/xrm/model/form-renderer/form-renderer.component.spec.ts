@@ -1,11 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LiveService } from '../live.service';
 import { ModelService } from '../model.service';
 import { FormRendererComponent, controlFor } from './form-renderer.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const PLAN = {
   id: 'f1', name: 'Contact', entity: 'contact',
@@ -44,6 +45,7 @@ describe('FormRendererComponent', () => {
       providers: [
         { provide: ModelService, useValue: svc },
         { provide: ApiService, useValue: { post: vi.fn().mockReturnValue(of({ status: 'completed', result: { suggestion: 'AI text' } })) } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LiveService, useValue: { connect: vi.fn() } },
         { provide: LangService, useValue: { translate: (key: string) => key } },
       ],

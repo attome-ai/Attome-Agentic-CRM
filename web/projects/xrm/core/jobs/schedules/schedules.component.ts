@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 /** `attome_api::schedules_admin::ScheduleItem`. */
 export interface ScheduleItem {
@@ -146,7 +146,7 @@ export function quietWindowsOf(value: unknown): QuietWindow[] {
   `],
 })
 export class SchedulesComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly kinds = KINDS;
   readonly items = signal<ScheduleItem[]>([]);
@@ -166,11 +166,11 @@ export class SchedulesComponent implements OnInit {
 
   load(): void {
     this.error.set(null);
-    this.api.get<Page<ScheduleItem>>('/api/v1/admin/schedules').subscribe({
+    this.sdk.get<Page<ScheduleItem>>('/api/v1/admin/schedules').subscribe({
       next: page => this.items.set(page.items),
       error: (e: ApiError) => this.error.set(e.message),
     });
-    this.api.get<{ items: SettingRow[] }>('/api/v1/admin/settings').subscribe({
+    this.sdk.get<{ items: SettingRow[] }>('/api/v1/admin/settings').subscribe({
       next: list => this.windows.set(
         quietWindowsOf(list.items.find(s => s.key === QUIET_KEY)?.value).map(w => ({ ...w })),
       ),
@@ -181,8 +181,9 @@ export class SchedulesComponent implements OnInit {
   setPaused(item: ScheduleItem, paused: boolean): void {
     this.busy.set(true);
     const action = paused ? 'pause' : 'resume';
-    this.api.post<unknown>(
-      `/api/v1/admin/schedules/${encodeURIComponent(item.kind)}/${encodeURIComponent(item.id)}/${action}`, {},
+    this.sdk.post<unknown>(
+      `/api/v1/admin/schedules/${encodeURIComponent(item.kind)}/${encodeURIComponent(item.id)}/${action}`,
+      { body: {} },
     ).subscribe({
       next: () => {
         this.busy.set(false);
@@ -204,7 +205,7 @@ export class SchedulesComponent implements OnInit {
     const value = quietWindowsOf(this.windows()).filter(w => w.start !== w.end);
     this.busy.set(true);
     this.notice.set(null);
-    this.api.put<unknown>(`/api/v1/admin/settings/${QUIET_KEY}`, { scope: 'deployment', scope_ref: null, value })
+    this.sdk.put<unknown>(`/api/v1/admin/settings/${QUIET_KEY}`, { body: { scope: 'deployment', scope_ref: null, value } })
       .subscribe({
         next: () => { this.busy.set(false); this.windows.set(value); this.notice.set('schedules.quiet.saved'); },
         error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },

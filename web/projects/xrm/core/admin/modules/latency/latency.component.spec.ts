@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { LatencyComponent } from './latency.component';
+import { sdkFromApi } from '../../../../testing/sdk-from-api';
 
 describe('LatencyComponent (AA1-T7)', () => {
   function create(report: unknown) {
@@ -12,6 +13,7 @@ describe('LatencyComponent (AA1-T7)', () => {
       imports: [LatencyComponent],
       providers: [
         { provide: ApiService, useValue: { get } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (key: string) => key } },
       ],
     });

@@ -1,8 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService, LangService, TemplateRendererService } from '@attome/base';
+import { ApiService, SdkService, LangService, TemplateRendererService } from '@attome/base';
 import { TemplatePreviewComponent } from './template-preview.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const SCHEMA = {
   fields: [
@@ -25,6 +26,7 @@ describe('TemplatePreviewComponent', () => {
       imports: [TemplatePreviewComponent],
       providers: [
         { provide: ApiService, useValue: { get: () => of(SCHEMA), post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: TemplateRendererService, useValue: { render } },
         { provide: LangService, useValue: { intlLocale: () => 'en-US', translate: (k: string) => k } },
       ],

@@ -1,10 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService, UserPreferencesService } from '@attome/base';
+import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AcceptanceScript, AcceptanceScriptsComponent } from './acceptance-scripts.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const SCRIPTS: AcceptanceScript[] = [
   { id: 's1', name: 'Convert a lead', description: null, steps: ['Open a lead', 'Convert it'], last_passed: null, last_run_at: null },
@@ -19,6 +20,7 @@ describe('AcceptanceScriptsComponent (T7-T4)', () => {
       imports: [AcceptanceScriptsComponent],
       providers: [
         { provide: ApiService, useValue: { getAllPages, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },
         { provide: UserPreferencesService, useValue: { timezone: () => 'UTC', calendar: () => null, digits: () => null } },
       ],

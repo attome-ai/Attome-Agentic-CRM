@@ -1,12 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService, UserPreferencesService } from '@attome/base';
+import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { EntityService } from '@attome/xrm/core/entity';
 import { xrmAr } from '@attome/xrm/core/i18n-ar';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { CommissionStatementComponent, StatementRow } from './commission-statement.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const PERIOD = '0190a000-0000-7000-8000-0000000000p1';
 
@@ -44,6 +45,7 @@ function mount(options: { arabic?: boolean; calendar?: 'gregorian' | 'hijri' } =
     imports: [CommissionStatementComponent],
     providers: [
       { provide: ApiService, useValue: { get } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       { provide: EntityService, useValue: { list } },
       {
         provide: LangService,

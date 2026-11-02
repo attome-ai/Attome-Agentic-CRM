@@ -5,7 +5,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgTemplateOutlet } from '@angular/common';
 import { ScrollingModule } from '@angular/cdk/scrolling';
-import { ApiComponents, ApiService, TranslatePipe } from '@attome/base';
+import { ApiComponents, SdkService, TranslatePipe } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { EntityService, EntityRecordResponse } from '../services/entity.service';
 import { FileUploadService } from '../field/file-upload.service';
@@ -156,7 +156,7 @@ export class DocumentFolderBrowserComponent {
   readonly recordId   = input<string | null>(null);
   readonly folder      = input<string | null>(null);
 
-  private readonly api      = inject(ApiService);
+  private readonly sdk      = inject(SdkService);
   private readonly entitySvc = inject(EntityService);
   private readonly fileSvc  = inject(FileUploadService);
   private readonly dialogSvc = inject(DialogService);
@@ -380,7 +380,7 @@ export class DocumentFolderBrowserComponent {
     this.loadingFolderPaths.add(key);
     const params: Record<string, string> = { entity_name: entityName, record_id: recordId };
     if (parentPath) params['folder'] = parentPath;
-    this.api.get<TreeResponse>('/api/v1/documents/tree', params).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.sdk.get<TreeResponse>('/api/v1/documents/tree', { query: params }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: data => {
         const nodes: FolderNode[] = data.folders.map(f => ({
           path: f.folder, label: f.folder.split('/').pop() ?? f.folder, count: f.document_count,
@@ -638,9 +638,12 @@ export class DocumentFolderBrowserComponent {
     const recordId = this.curRecordId();
     if (!entityName || !recordId) return;
     this.busy.set(true);
-    this.api.post<{ id: string; folder: string }>('/api/v1/documents/folders', {
+    this.sdk.post<{ id: string; folder: string }>(
+      '/api/v1/documents/folders',
+      { body: {
       entity_name: entityName, record_id: recordId, folder: targetFolder,
-    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    } },
+    ).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.busy.set(false);
         this.refreshTreeLevel(targetFolder);
@@ -862,7 +865,7 @@ export class DocumentFolderBrowserComponent {
     if (recordId)   params['record_id']   = recordId;
     if (folder)      params['folder']      = folder;
 
-    this.api.get<TreeResponse>('/api/v1/documents/tree', params).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.sdk.get<TreeResponse>('/api/v1/documents/tree', { query: params }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: data => {
         this.treeData.set(data);
         this.loadedOnce.set(true);

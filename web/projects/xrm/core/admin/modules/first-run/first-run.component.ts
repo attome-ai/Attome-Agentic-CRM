@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 
 /** `attome_api::settings_admin::RegionPreset`. */
 export interface RegionPreset {
@@ -144,7 +144,7 @@ export function countryName(preset: RegionPreset, lang: string): string {
   `],
 })
 export class FirstRunComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
 
   readonly languages = LANGUAGES;
@@ -166,7 +166,7 @@ export class FirstRunComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.api.get<RegionSetupView>(SETUP_URL).subscribe({
+    this.sdk.get<RegionSetupView>(SETUP_URL).subscribe({
       next: view => this.show(view),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -188,7 +188,7 @@ export class FirstRunComponent implements OnInit {
     this.busy.set(true);
     this.error.set(null);
     const language = this.language();
-    this.api.post<RegionSetupView>(SETUP_URL, { country, language, calendar: this.calendar() }).subscribe({
+    this.sdk.post<RegionSetupView>(SETUP_URL, { body: { country, language, calendar: this.calendar() } }).subscribe({
       next: view => {
         this.busy.set(false);
         this.view.set(view);

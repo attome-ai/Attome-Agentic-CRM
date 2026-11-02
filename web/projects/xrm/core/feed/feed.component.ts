@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ApiService, AuthService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { SdkService, AuthService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 export type FeedKind = 'post' | 'record_event';
 
@@ -139,7 +139,7 @@ export function feedEventKey(operation: string | null): string {
   `],
 })
 export class FeedComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
   readonly me = inject(AuthService).userId();
 
@@ -183,7 +183,7 @@ export class FeedComponent implements OnInit {
     if (!body || this.posting()) return;
     this.posting.set(true);
     this.postError.set(null);
-    this.api.post<unknown>('/api/v1/feed_post', { body }).subscribe({
+    this.sdk.post<unknown>('/api/v1/feed_post', { body: { body } }).subscribe({
       next: () => {
         this.posting.set(false);
         this.draft.set('');
@@ -206,7 +206,7 @@ export class FeedComponent implements OnInit {
     if (kind) params['kind'] = kind;
     this.loading.set(true);
     this.error.set(false);
-    this.api.get<FeedPage>('/api/v1/feed', params).subscribe({
+    this.sdk.get<FeedPage>('/api/v1/feed', { query: params }).subscribe({
       next: page => {
         this.items.update(items => (cursor ? [...items, ...page.items] : page.items));
         this.nextCursor.set(page.next_cursor ?? null);

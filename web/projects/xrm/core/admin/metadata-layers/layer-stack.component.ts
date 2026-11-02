@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 
 import { showValue } from './metadata-layers.model';
 import type { LayeredKind, PropertyStack, ResetResult } from './metadata-layers.model';
@@ -148,7 +148,7 @@ import type { LayeredKind, PropertyStack, ResetResult } from './metadata-layers.
   `],
 })
 export class LayerStackComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly kind = signal<LayeredKind>('entity');
   readonly key = signal('');
@@ -176,7 +176,7 @@ export class LayerStackComponent {
     this.busy.set(true);
     this.error.set(null);
     this.preview.set(null);
-    this.api.get<{ items: PropertyStack[] }>(`${this.base()}/layers`).subscribe({
+    this.sdk.get<{ items: PropertyStack[] }>(`${this.base()}/layers`).subscribe({
       next: page => { this.busy.set(false); this.stack.set(page.items); this.loaded.set(true); },
       error: (e: ApiError) => { this.busy.set(false); this.loaded.set(false); this.error.set(e.message); },
     });
@@ -189,7 +189,7 @@ export class LayerStackComponent {
     this.undoId.set(null);
     this.previewFor = property === null ? null : [property];
     const body = this.previewFor === null ? {} : { properties: this.previewFor };
-    this.api.post<ResetResult>(`${this.base()}/reset?preview=true`, body).subscribe({
+    this.sdk.post<ResetResult>(`${this.base()}/reset?preview=true`, { body: body }).subscribe({
       next: result => { this.busy.set(false); this.preview.set(result); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });
@@ -202,7 +202,7 @@ export class LayerStackComponent {
   confirmReset(): void {
     const body = this.previewFor === null ? {} : { properties: this.previewFor };
     this.busy.set(true);
-    this.api.post<ResetResult>(`${this.base()}/reset`, body).subscribe({
+    this.sdk.post<ResetResult>(`${this.base()}/reset`, { body: body }).subscribe({
       next: result => {
         this.busy.set(false);
         this.preview.set(null);
@@ -215,7 +215,7 @@ export class LayerStackComponent {
 
   undo(resetId: string): void {
     this.busy.set(true);
-    this.api.post<void>(`/api/v1/admin/metadata/resets/${encodeURIComponent(resetId)}/undo`, null).subscribe({
+    this.sdk.post<void>(`/api/v1/admin/metadata/resets/${encodeURIComponent(resetId)}/undo`, { body: null }).subscribe({
       next: () => { this.busy.set(false); this.undoId.set(null); this.load(); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });

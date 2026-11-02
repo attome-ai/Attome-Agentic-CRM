@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ApiError, ApiService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 import type { ChangedAttribute } from '../request-page/request-page.component';
 import { showValue } from '../request-page/request-page.component';
@@ -82,7 +82,7 @@ export interface ApprovalLinkView {
   `],
 })
 export class ApprovalLinkPageComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -105,7 +105,7 @@ export class ApprovalLinkPageComponent implements OnInit {
       this.invalid.set(true);
       return;
     }
-    this.api.post<ApprovalLinkView>('/api/v1/approvals/email-link', { token: this.token }).subscribe({
+    this.sdk.post<ApprovalLinkView>('/api/v1/approvals/email-link', { body: { token: this.token } }).subscribe({
       next: v => this.view.set(v),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -116,7 +116,7 @@ export class ApprovalLinkPageComponent implements OnInit {
     const note = this.comment.trim();
     if (note) body.comment = note;
     this.busy.set(true);
-    this.api.post<{ request_id: string; status: string }>('/api/v1/approvals/email-link/decide', body).subscribe({
+    this.sdk.post<{ request_id: string; status: string }>('/api/v1/approvals/email-link/decide', { body: body }).subscribe({
       next: r => { this.busy.set(false); this.done.set(r.status); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });

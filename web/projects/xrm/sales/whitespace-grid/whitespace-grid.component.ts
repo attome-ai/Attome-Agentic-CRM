@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 import { Observable, forkJoin, map, of } from 'rxjs';
 
 /** The statuses a whitespace cell takes (sales pack 0005). */
@@ -72,7 +72,7 @@ function field(record: Row, name: string): unknown {
   styleUrl: './whitespace-grid.component.css',
 })
 export class WhitespaceGridComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
 
   readonly entityName = input('account_plan');
@@ -100,9 +100,12 @@ export class WhitespaceGridComponent {
   /** Records of `entity` matching `filters`, through `query/execute` (the
    *  sales entry point must not import the entity screens, which load it). */
   private records(entity: string, filters: unknown[], size: number): Observable<Row[]> {
-    return this.api.post<{ data: { records: Row[] } }>('/api/v1/query/execute', {
+    return this.sdk.post<{ data: { records: Row[] } }>(
+      '/api/v1/query/execute',
+      { body: {
       entity, page: 1, page_size: size, order_by: '', order_dir: 'asc', filters, include_total: false,
-    }).pipe(map(res => res.data?.records ?? []));
+    } },
+    ).pipe(map(res => res.data?.records ?? []));
   }
 
   load(planId: string): void {
@@ -149,10 +152,13 @@ export class WhitespaceGridComponent {
     if (!plan || !status) return;
     const existing = this.cell(product, department);
     const saved = existing
-      ? this.api.patch(`/api/v1/account_whitespace/${encodeURIComponent(existing.id)}`, { status }, existing.row_version)
-      : this.api.post('/api/v1/account_whitespace', {
+      ? this.sdk.patch(`/api/v1/account_whitespace/${encodeURIComponent(existing.id)}`, { body: { status }, ifMatch: existing.row_version })
+      : this.sdk.post(
+        '/api/v1/account_whitespace',
+        { body: {
         account_plan_ref: plan, product_ref: product, department, status,
-      });
+      } },
+      );
     forkJoin([saved, of(plan)]).subscribe({
       next: ([, id]) => this.load(id),
       error: (e: ApiError) => this.error.set(this.lang.errorText(e)),

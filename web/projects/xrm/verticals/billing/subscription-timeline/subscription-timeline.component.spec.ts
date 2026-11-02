@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService, UserPreferencesService } from '@attome/base';
+import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { EntityService } from '@attome/xrm/core/entity';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SubscriptionTimelineComponent, TimelineRow, axis, place } from './subscription-timeline.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const rows: TimelineRow[] = [{
   lineId: 'l1', label: 'Line 1',
@@ -55,6 +56,7 @@ describe('SubscriptionTimelineComponent (F3-T14)', () => {
       imports: [SubscriptionTimelineComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: EntityService, useValue: entities },
         {
           provide: LangService,

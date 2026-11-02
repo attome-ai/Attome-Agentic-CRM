@@ -1,7 +1,7 @@
 import {
   ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked,
 } from '@angular/core';
-import { ApiError, ApiService, LangService, Page, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, Page, TranslatePipe } from '@attome/base';
 import { QueryService } from '@attome/xrm/core/query/data';
 import { catchError, forkJoin, of } from 'rxjs';
 
@@ -178,7 +178,7 @@ export function spanGeometry(start: string, end: string | null, from: string, da
   `],
 })
 export class BookingBoardComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly query = inject(QueryService);
   private readonly entities = inject(EntityService);
   protected readonly lang = inject(LangService);
@@ -297,9 +297,12 @@ export class BookingBoardComponent {
   }
 
   private capacity(from: string, to: string) {
-    return this.api.get<Page<BookingPerson>>('/api/v1/resources/capacity', {
+    return this.sdk.get<Page<BookingPerson>>(
+      '/api/v1/resources/capacity',
+      { query: {
       from, to, page: '1', page_size: '100',
-    });
+    } },
+    );
   }
 
   private refreshCapacity(): void {

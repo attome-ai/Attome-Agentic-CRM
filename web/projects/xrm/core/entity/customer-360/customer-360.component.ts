@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ApiError, ApiService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 import type { QueryExecResponse } from '@attome/xrm/core/query/data';
 
 import { logicalToUrlPath } from '../services/entity-url.utils';
@@ -175,7 +175,7 @@ export const SECTION_ROWS = 5;
   `],
 })
 export class Customer360Component {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
 
   /** `account` or `contact`. */
@@ -198,7 +198,7 @@ export class Customer360Component {
       untracked(() => {
         this.recordPage.set(null);
         // No record page (a 404) leaves the link out.
-        this.api.get<{ id: string }>(`/api/v1/model/entities/${encodeURIComponent(entity)}/record-page`)
+        this.sdk.get<{ id: string }>(`/api/v1/model/entities/${encodeURIComponent(entity)}/record-page`)
           .subscribe({ next: ref => this.recordPage.set(ref.id), error: () => this.recordPage.set(null) });
       });
     });
@@ -230,7 +230,9 @@ export class Customer360Component {
   load(section: Customer360Section): void {
     this.setState(section.key, { status: 'loading', total: 0, rows: [] });
     // The same permission-checked query every entity list runs.
-    this.api.post<QueryExecResponse>('/api/v1/query/execute', {
+    this.sdk.post<QueryExecResponse>(
+      '/api/v1/query/execute',
+      { body: {
       entity: section.entity,
       page: 1,
       page_size: SECTION_ROWS,
@@ -239,7 +241,8 @@ export class Customer360Component {
       order_dir: 'desc',
       filters: section.filters,
       include_total: true,
-    }).subscribe({
+    } },
+    ).subscribe({
       next: res => this.setState(section.key, {
         status: 'ready',
         total: Number(res.data.total ?? 0),
@@ -257,9 +260,9 @@ export class Customer360Component {
     const open = (event.target as HTMLDetailsElement | null)?.open ?? false;
     if (!open || this.timelineLoaded) return;
     this.timelineLoaded = true;
-    this.api.get<{ items: TimelineItem[] }>(
+    this.sdk.get<{ items: TimelineItem[] }>(
       `/api/v1/${encodeURIComponent(this.entity())}/${encodeURIComponent(this.recordId())}/timeline`,
-      { page_size: '10' },
+      { query: { page_size: '10' } },
     ).subscribe({
       next: page => this.timeline.set(page.items ?? []),
       error: (e: ApiError) => this.error.set(this.lang.errorText(e)),
@@ -269,9 +272,9 @@ export class Customer360Component {
   /** The AI summary of the customer (`record.summarize`), on request. */
   summarise(): void {
     this.summarising.set(true);
-    this.api.post<{ status: string; result?: { summary?: string } }>(
+    this.sdk.post<{ status: string; result?: { summary?: string } }>(
       '/api/v1/actions/record.summarize/invoke',
-      { args: { entity: this.entity(), record_id: this.recordId() } },
+      { body: { args: { entity: this.entity(), record_id: this.recordId() } } },
     ).subscribe({
       next: outcome => {
         this.summarising.set(false);

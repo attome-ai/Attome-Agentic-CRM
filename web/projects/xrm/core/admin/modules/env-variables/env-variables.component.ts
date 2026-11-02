@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 /** `attome_api::env_variable_admin::EnvVariable`. */
 export interface EnvVariable {
@@ -169,7 +169,7 @@ export function shown(v: EnvVariable): string {
   `],
 })
 export class EnvVariablesComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly variables = signal<EnvVariable[]>([]);
   readonly error = signal<string | null>(null);
@@ -187,7 +187,7 @@ export class EnvVariablesComponent implements OnInit {
   }
 
   load(): void {
-    this.api.get<{ items: EnvVariable[] }>('/api/v1/admin/env-variables').subscribe({
+    this.sdk.get<{ items: EnvVariable[] }>('/api/v1/admin/env-variables').subscribe({
       next: page => this.variables.set(page.items),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -206,9 +206,12 @@ export class EnvVariablesComponent implements OnInit {
       return;
     }
     this.busy.set(true);
-    this.api.put<void>(`/api/v1/admin/env-variables/${encodeURIComponent(v.name)}`, {
+    this.sdk.put<void>(
+      `/api/v1/admin/env-variables/${encodeURIComponent(v.name)}`,
+      { body: {
       value, row_version: v.row_version,
-    }).subscribe({
+    } },
+    ).subscribe({
       next: () => { this.busy.set(false); this.editing.set(null); this.draft = ''; this.load(); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });
@@ -216,7 +219,7 @@ export class EnvVariablesComponent implements OnInit {
 
   clear(v: EnvVariable): void {
     this.busy.set(true);
-    this.api.delete(`/api/v1/admin/env-variables/${encodeURIComponent(v.name)}`).subscribe({
+    this.sdk.delete(`/api/v1/admin/env-variables/${encodeURIComponent(v.name)}`).subscribe({
       next: () => { this.busy.set(false); this.load(); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });
@@ -229,7 +232,7 @@ export class EnvVariablesComponent implements OnInit {
     }
     this.historyOf.set(v.name);
     this.history.set([]);
-    this.api.get<{ items: EnvVariableChange[] }>(
+    this.sdk.get<{ items: EnvVariableChange[] }>(
       `/api/v1/admin/env-variables/${encodeURIComponent(v.name)}/history`,
     ).subscribe({
       next: page => this.history.set(page.items),

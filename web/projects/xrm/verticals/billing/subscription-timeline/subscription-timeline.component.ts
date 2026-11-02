@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { ApiComponents, ApiError, ApiService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiComponents, ApiError, SdkService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 import { EntityService } from '@attome/xrm/core/entity';
 import { catchError, forkJoin, map, of } from 'rxjs';
 
@@ -115,7 +115,7 @@ export function place(seg: TimelineSegment, start: number, end: number): Placed 
   `],
 })
 export class SubscriptionTimelineComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly entities = inject(EntityService);
   protected readonly lang = inject(LangService);
 
@@ -154,7 +154,7 @@ export class SubscriptionTimelineComponent {
 
   private load(id: string, asOf: string): void {
     this.error.set(null);
-    this.api.get<SubscriptionAsOf>(`/api/v1/billing/subscriptions/${encodeURIComponent(id)}`, { as_of: asOf })
+    this.sdk.get<SubscriptionAsOf>(`/api/v1/billing/subscriptions/${encodeURIComponent(id)}`, { query: { as_of: asOf } })
       .subscribe({
         next: view => {
           this.asOfLines.set(view.lines);

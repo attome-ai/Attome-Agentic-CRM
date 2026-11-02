@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 
 /** `attome_core::change_feed::ConsumerHealth`. */
 export interface ConsumerHealth {
@@ -90,7 +90,7 @@ export function lagText(seconds: number): string {
   `],
 })
 export class EventsMonitorComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly consumers = signal<ConsumerHealth[]>([]);
   readonly error = signal<string | null>(null);
@@ -99,7 +99,7 @@ export class EventsMonitorComponent implements OnInit {
   readonly lag = lagText;
 
   ngOnInit(): void {
-    this.api.get<{ items: ConsumerHealth[] }>('/api/v1/admin/change-feed/consumers').subscribe({
+    this.sdk.get<{ items: ConsumerHealth[] }>('/api/v1/admin/change-feed/consumers').subscribe({
       next: body => this.consumers.set(
         [...body.items].sort((a, b) => Number(isLagging(b)) - Number(isLagging(a)) || b.lag_seconds - a.lag_seconds),
       ),

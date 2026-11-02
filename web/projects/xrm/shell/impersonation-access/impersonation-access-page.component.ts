@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 /** One session about me (`GET /api/v1/me/impersonation-sessions`). */
 export interface SessionAboutMe {
@@ -115,7 +115,7 @@ const CONSENTS = '/api/v1/me/impersonation-consents';
   `,
 })
 export class ImpersonationAccessPageComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
 
   readonly sessions = signal<SessionAboutMe[]>([]);
@@ -131,11 +131,11 @@ export class ImpersonationAccessPageComponent implements OnInit {
   }
 
   private load(): void {
-    this.api.getAllPages<SessionAboutMe>('/api/v1/me/impersonation-sessions').subscribe({
+    this.sdk.getAllPages<SessionAboutMe>('/api/v1/me/impersonation-sessions').subscribe({
       next: rows => this.sessions.set(rows),
       error: (e: ApiError) => this.error.set(this.lang.errorText(e)),
     });
-    this.api.getAllPages<MyConsent>(CONSENTS).subscribe({
+    this.sdk.getAllPages<MyConsent>(CONSENTS).subscribe({
       next: rows => this.consents.set(rows),
       error: (e: ApiError) => this.error.set(this.lang.errorText(e)),
     });
@@ -149,7 +149,7 @@ export class ImpersonationAccessPageComponent implements OnInit {
     }
     this.busy.set(true);
     this.error.set(null);
-    this.api.post<MyConsent>(CONSENTS, { actor_email: email, hours: Number(this.hours) }).subscribe({
+    this.sdk.post<MyConsent>(CONSENTS, { body: { actor_email: email, hours: Number(this.hours) } }).subscribe({
       next: c => {
         this.busy.set(false);
         this.email = '';
@@ -161,7 +161,7 @@ export class ImpersonationAccessPageComponent implements OnInit {
 
   withdraw(c: MyConsent): void {
     this.busy.set(true);
-    this.api.delete(`${CONSENTS}/${c.id}`).subscribe({
+    this.sdk.delete(`${CONSENTS}/${c.id}`).subscribe({
       next: () => {
         this.busy.set(false);
         this.consents.update(list => list.map(x => x.id === c.id ? { ...x, revoked_at: new Date().toISOString() } : x));

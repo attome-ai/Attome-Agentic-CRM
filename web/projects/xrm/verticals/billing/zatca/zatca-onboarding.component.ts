@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 
 /** `attome_einvoice::device::DeviceSummary`. */
 export interface EinvoiceDevice {
@@ -123,7 +123,7 @@ export function canOnboard(device: EinvoiceDevice): boolean {
   `],
 })
 export class ZatcaOnboardingComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
 
   readonly devices = signal<EinvoiceDevice[]>([]);
@@ -146,7 +146,7 @@ export class ZatcaOnboardingComponent implements OnInit {
   }
 
   load(): void {
-    this.api.get<{ items: EinvoiceDevice[] }>('/api/v1/einvoice/devices').subscribe({
+    this.sdk.get<{ items: EinvoiceDevice[] }>('/api/v1/einvoice/devices').subscribe({
       next: page => this.devices.set(page.items),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -166,7 +166,7 @@ export class ZatcaOnboardingComponent implements OnInit {
     if (!this.ready()) return;
     this.busy.set(true);
     this.error.set(null);
-    this.api.post<EinvoiceDevice>('/api/v1/einvoice/devices', this.draft()).subscribe({
+    this.sdk.post<EinvoiceDevice>('/api/v1/einvoice/devices', { body: this.draft() }).subscribe({
       next: () => {
         this.busy.set(false);
         this.draft.update(d => ({ ...d, name: '' }));
@@ -181,7 +181,7 @@ export class ZatcaOnboardingComponent implements OnInit {
     if (!otp) return;
     this.busy.set(true);
     this.error.set(null);
-    this.api.post<EinvoiceDevice>(`/api/v1/einvoice/devices/${encodeURIComponent(device.id)}/onboard`, { otp }).subscribe({
+    this.sdk.post<EinvoiceDevice>(`/api/v1/einvoice/devices/${encodeURIComponent(device.id)}/onboard`, { body: { otp } }).subscribe({
       next: () => {
         this.busy.set(false);
         this.otp.update(o => ({ ...o, [device.id]: '' }));

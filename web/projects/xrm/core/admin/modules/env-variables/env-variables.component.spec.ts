@@ -1,10 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService, UserPreferencesService } from '@attome/base';
+import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { EnvVariable, EnvVariablesComponent, isMissing, parseDraft, shown } from './env-variables.component';
+import { sdkFromApi } from '../../../../testing/sdk-from-api';
 
 const VARS: EnvVariable[] = [
   {
@@ -26,6 +27,7 @@ describe('EnvVariablesComponent (A30-T3)', () => {
       imports: [EnvVariablesComponent],
       providers: [
         { provide: ApiService, useValue: { get, put, delete: vi.fn(() => of(undefined)) } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },
         { provide: UserPreferencesService, useValue: { timezone: () => 'UTC', calendar: () => null, digits: () => null } },
       ],

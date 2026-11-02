@@ -1,10 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SignPageComponent, SignerView, codeComplete } from './sign-page.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const view = (over: Partial<SignerView> = {}): SignerView => ({
   envelope_title: 'NDA', envelope_status: 'sent', signer_name: 'Huda', signer_status: 'notified',
@@ -30,6 +31,7 @@ describe('SignPageComponent (K4-T1)', () => {
       imports: [SignPageComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         {
           provide: LangService,
           useValue: { translate: (k: string) => k, current, errorText: () => 'failed', isRtl: () => current() === 'ar' },

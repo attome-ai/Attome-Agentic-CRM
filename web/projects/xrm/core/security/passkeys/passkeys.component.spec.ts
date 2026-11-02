@@ -1,11 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Observable, of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService, LangService, PASSKEY_BROWSER } from '@attome/base';
+import { ApiService, SdkService, LangService, PASSKEY_BROWSER } from '@attome/base';
 import { ConfirmService } from '@attome/base/dialog';
 import { StepUpService } from '@attome/base/step-up';
 
 import { PASSKEY_MANAGE, PasskeysComponent } from './passkeys.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 vi.setConfig({ testTimeout: 30_000 });
 
@@ -27,6 +28,7 @@ describe('PasskeysComponent', () => {
       imports: [PasskeysComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: PASSKEY_BROWSER, useValue: browser },
         { provide: StepUpService, useValue: stepUp },
         { provide: ConfirmService, useValue: { confirm } },

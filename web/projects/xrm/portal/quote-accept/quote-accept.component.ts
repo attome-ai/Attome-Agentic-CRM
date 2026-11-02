@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiService, LangService, TranslatePipe } from '@attome/base';
+import { SdkService, LangService, TranslatePipe } from '@attome/base';
 
 /** `GET /api/v1/quote-acceptance/{token}`. */
 export interface QuoteView {
@@ -152,7 +152,7 @@ export function money(amount: string | null, currency: string | null, locale: st
   `],
 })
 export class QuoteAcceptComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   protected readonly lang = inject(LangService);
 
   /** The guest link's token, from the route. */
@@ -169,7 +169,7 @@ export class QuoteAcceptComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.api.get<QuoteView>(this.path()).subscribe({
+    this.sdk.get<QuoteView>(this.path()).subscribe({
       next: q => {
         this.quote.set(q);
         this.stage.set('ready');
@@ -189,9 +189,12 @@ export class QuoteAcceptComponent implements OnInit {
   decide(decision: 'accept' | 'reject'): void {
     if (!this.name.trim() || this.stage() === 'sending') return;
     this.stage.set('sending');
-    this.api.post<QuoteView>(this.path(), {
+    this.sdk.post<QuoteView>(
+      this.path(),
+      { body: {
       decision, name: this.name.trim(), note: this.note.trim() || null,
-    }).subscribe({
+    } },
+    ).subscribe({
       next: q => {
         this.quote.set(q);
         this.stage.set('ready');

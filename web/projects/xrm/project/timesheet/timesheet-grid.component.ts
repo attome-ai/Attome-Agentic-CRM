@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
-import { ApiError, ApiService, AuthService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, AuthService, LangService, TranslatePipe } from '@attome/base';
 import type { EntityRecord } from '@attome/xrm';
 import { EntityService } from '@attome/xrm/core/entity';
 import { Observable, catchError, forkJoin, map, of, switchMap } from 'rxjs';
@@ -176,7 +176,7 @@ export function weekDays(start: Date): string[] {
   `,
 })
 export class TimesheetGridComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly auth = inject(AuthService);
   private readonly lang = inject(LangService);
   private readonly entities = inject(EntityService);
@@ -358,11 +358,14 @@ export class TimesheetGridComponent implements OnInit {
     }).pipe(map(res => res.data[0] ?? null));
     // A person without `employee.read`, or a deployment without the HR pack,
     // has no leave to show: the grid opens without it.
-    const away$ = this.api.get<Availability>('/api/v1/hr/availability', {
+    const away$ = this.sdk.get<Availability>(
+      '/api/v1/hr/availability',
+      { query: {
       user_id: user,
       from: days[0],
       to: days[days.length - 1],
-    }).pipe(
+    } },
+    ).pipe(
       map(a => new Set(a.away)),
       catchError(() => of(new Set<string>())),
     );

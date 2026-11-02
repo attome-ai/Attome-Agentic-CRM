@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 
 import { LiveService } from '../live.service';
 import { FormPlan, FormPlanField, ModelService, RecordView } from '../model.service';
@@ -39,7 +39,7 @@ export function controlFor(fieldType: number): FieldControl {
 })
 export class FormRendererComponent {
   private readonly model = inject(ModelService);
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   /** The AI field a suggestion is being fetched for. */
   readonly suggesting = signal<string | null>(null);
 
@@ -154,9 +154,9 @@ export class FormRendererComponent {
     const record = this.record();
     if (!plan || !record) return;
     this.suggesting.set(field.attribute);
-    this.api.post<{ status: string; result?: { suggestion?: string } }>(
+    this.sdk.post<{ status: string; result?: { suggestion?: string } }>(
       '/api/v1/actions/record.ai_field/invoke',
-      { args: { entity: plan.entity, record_id: record.id, field: field.attribute } },
+      { body: { args: { entity: plan.entity, record_id: record.id, field: field.attribute } } },
     ).subscribe({
       next: outcome => {
         this.suggesting.set(null);

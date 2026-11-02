@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService, UserPreferencesService } from '@attome/base';
+import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { MetadataConflictsComponent, PROPOSE_CONFLICT_ACTION } from './conflicts.component';
 import type { LayerConflict } from './metadata-layers.model';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const CONFLICT: LayerConflict = {
   id: 'c1', object_kind: 'attribute', object_key: 'account.name', property: 'max_length',
@@ -22,6 +23,7 @@ describe('MetadataConflictsComponent (Y11-T15)', () => {
       imports: [MetadataConflictsComponent],
       providers: [
         { provide: ApiService, useValue: { getAllPages, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },
         { provide: UserPreferencesService, useValue: { timezone: () => 'UTC', calendar: () => null, digits: () => null } },
       ],

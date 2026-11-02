@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { LayerStackComponent } from './layer-stack.component';
 import type { PropertyStack, ResetResult } from './metadata-layers.model';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const STACK: PropertyStack[] = [
   {
@@ -30,6 +31,7 @@ describe('LayerStackComponent (Y11-T15)', () => {
       imports: [LayerStackComponent],
       providers: [
         { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },
       ],
     });

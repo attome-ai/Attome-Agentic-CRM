@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 
 /** `attome_api::slo_admin::SloTargets`. */
 export interface SloTargets {
@@ -122,7 +122,7 @@ export function effectiveTargets(c: SloClass): { p95: number | null; p99: number
   `],
 })
 export class SloComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
 
   readonly classes = signal<SloClass[]>([]);
@@ -140,7 +140,7 @@ export class SloComponent implements OnInit {
   }
 
   load(): void {
-    this.api.get<{ classes: SloClass[] }>('/api/v1/admin/slo').subscribe({
+    this.sdk.get<{ classes: SloClass[] }>('/api/v1/admin/slo').subscribe({
       next: body => this.classes.set(body.classes),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -160,9 +160,12 @@ export class SloComponent implements OnInit {
 
   save(c: SloClass): void {
     this.busy.set(true);
-    this.api.put<SloOverride>(`/api/v1/admin/slo/targets/${encodeURIComponent(c.id)}`, {
+    this.sdk.put<SloOverride>(
+      `/api/v1/admin/slo/targets/${encodeURIComponent(c.id)}`,
+      { body: {
       p95_ms: this.p95, p99_ms: this.p99, row_version: c.override?.row_version ?? null,
-    }).subscribe({
+    } },
+    ).subscribe({
       next: () => { this.busy.set(false); this.editing.set(null); this.load(); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });
@@ -170,7 +173,7 @@ export class SloComponent implements OnInit {
 
   reset(c: SloClass): void {
     this.busy.set(true);
-    this.api.delete(`/api/v1/admin/slo/targets/${encodeURIComponent(c.id)}`).subscribe({
+    this.sdk.delete(`/api/v1/admin/slo/targets/${encodeURIComponent(c.id)}`).subscribe({
       next: () => { this.busy.set(false); this.load(); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });

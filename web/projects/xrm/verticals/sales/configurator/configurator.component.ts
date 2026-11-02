@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { ApiError, ApiService, LangService, LocalNumberPipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, LocalNumberPipe, TranslatePipe } from '@attome/base';
 import { EntityService } from '@attome/xrm/core/entity';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
@@ -110,7 +110,7 @@ export function listTotal(bundlePrice: number | null, options: OptionChoice[], c
   `],
 })
 export class ConfiguratorComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly entities = inject(EntityService);
   private readonly lang = inject(LangService);
 
@@ -176,8 +176,10 @@ export class ConfiguratorComponent {
   private load(bundle: string, priceList: string | null): void {
     this.error.set(null);
     const prices$ = priceList
-      ? this.api.get<{ items: PricedProduct[] }>(
-          `/api/v1/sales/price-lists/${encodeURIComponent(priceList)}/products`, { page_size: '200' })
+      ? this.sdk.get<{ items: PricedProduct[] }>(
+        `/api/v1/sales/price-lists/${encodeURIComponent(priceList)}/products`,
+        { query: { page_size: '200' } },
+      )
           .pipe(map(page => page.items), catchError(() => of([] as PricedProduct[])))
       : of([] as PricedProduct[]);
     forkJoin({
@@ -228,10 +230,13 @@ export class ConfiguratorComponent {
   private validate(): void {
     const bundle = this.bundleId();
     if (!bundle) return;
-    this.api.post<{ valid: boolean; problems: CpqProblem[] }>('/api/v1/sales/cpq/validate', {
+    this.sdk.post<{ valid: boolean; problems: CpqProblem[] }>(
+      '/api/v1/sales/cpq/validate',
+      { body: {
       bundle_product_id: bundle,
       chosen: [...this.chosen()],
-    }).subscribe({
+    } },
+    ).subscribe({
       next: r => this.problems.set(r.problems),
       error: (e: ApiError) => this.error.set(e.message),
     });

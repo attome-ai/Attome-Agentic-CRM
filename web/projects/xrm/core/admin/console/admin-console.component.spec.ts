@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AdminConsoleComponent } from './admin-console.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const SETTINGS = [
   { key: 'core.locale', area: 'general', description: 'Preferred language and region', description_ar: 'اللغة والمنطقة المفضلة', id: 's-1' },
@@ -25,6 +26,7 @@ describe('AdminConsoleComponent (U10-T3)', () => {
       providers: [
         provideRouter([]),
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         {
           provide: LangService,
           useValue: { translate: (k: string) => k, current: signal(lang), intlLocale: signal('en-US'), errorText: () => 'error' },

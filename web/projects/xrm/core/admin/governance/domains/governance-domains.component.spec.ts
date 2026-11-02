@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { GovernanceDomain, GovernanceDomainsComponent, domainTree } from './governance-domains.component';
+import { sdkFromApi } from '../../../../testing/sdk-from-api';
 
 const DOMAINS: GovernanceDomain[] = [
   { id: 'c', name: 'Customers' },
@@ -45,6 +46,7 @@ describe('GovernanceDomainsComponent (L3-T7)', () => {
       providers: [
         provideRouter([]),
         { provide: ApiService, useValue: { getAllPages } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('ar'), intlLocale: () => 'ar-SA' } },
       ],
     });

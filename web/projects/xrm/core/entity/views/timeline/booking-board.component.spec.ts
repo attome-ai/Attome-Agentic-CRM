@@ -1,11 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { QueryService } from '@attome/xrm/core/query/data';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EntityService } from '@attome/xrm/core/entity';
 import { BookingBoardComponent, addDays, spanGeometry, weekStart } from './booking-board.component';
+import { sdkFromApi } from '../../../../testing/sdk-from-api';
 
 const MONDAY = '2026-10-26';
 
@@ -48,6 +49,7 @@ describe('BookingBoardComponent (V4-T1)', () => {
       imports: [BookingBoardComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: QueryService, useValue: { execute } },
         { provide: EntityService, useValue: { update, create } },
         { provide: LangService, useValue: { translate: (k: string, p?: Record<string, unknown>) => (p ? `${k}:${JSON.stringify(p)}` : k), isRtl: () => false, errorText: () => 'failed' } },

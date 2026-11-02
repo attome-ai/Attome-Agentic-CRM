@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
-import { ApiError, ApiService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 /** `permission_test::Failure`. */
 export interface PermissionFailure {
@@ -55,7 +55,7 @@ interface RunPage {
   styleUrls:       ['./autonomy.component.css'],
 })
 export class AiAgentPermissionsComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly agentId = input.required<string>();
   readonly report  = signal<PermissionReport | null>(null);
@@ -72,8 +72,7 @@ export class AiAgentPermissionsComponent {
   }
 
   loadLast(agentId: string): void {
-    this.api
-      .get<RunPage>(`/api/v1/admin/ai/agents/${encodeURIComponent(agentId)}/permission-tests?page=1&page_size=1`)
+    this.sdk.get<RunPage>(`/api/v1/admin/ai/agents/${encodeURIComponent(agentId)}/permission-tests?page=1&page_size=1`)
       .subscribe({
         next: page => this.lastRun.set(page.items[0] ?? null),
         error: (e: ApiError) => this.error.set(e.message),
@@ -83,7 +82,7 @@ export class AiAgentPermissionsComponent {
   run(): void {
     this.busy.set(true);
     this.error.set(null);
-    this.api.post<PermissionReport>(`${this.base()}/permission-test`, {}).subscribe({
+    this.sdk.post<PermissionReport>(`${this.base()}/permission-test`, { body: {} }).subscribe({
       next: r => {
         this.busy.set(false);
         this.report.set(r);

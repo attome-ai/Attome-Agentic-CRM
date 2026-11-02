@@ -1,10 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ModelService } from '../model.service';
 import { PromptEditorComponent, emptyOverride, overrideCommands, overrideFromDoc } from './prompt-editor.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 describe('prompt overrides (N10-T4)', () => {
   it('reads an override and writes it back with its rollout', () => {
@@ -46,6 +47,7 @@ describe('prompt overrides (N10-T4)', () => {
       imports: [PromptEditorComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: ModelService, useValue: model },
         { provide: LangService, useValue: { translate: (key: string) => key } },
       ],

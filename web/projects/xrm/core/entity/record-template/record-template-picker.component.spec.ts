@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { OfferedTemplate, RecordTemplatePickerComponent, missingAnswers } from './record-template-picker.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const RENEWAL: OfferedTemplate = {
   id: 'tpl-1',
@@ -29,6 +30,7 @@ describe('RecordTemplatePickerComponent (B8-T3)', () => {
       imports: [RecordTemplatePickerComponent],
       providers: [
         { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: Router, useValue: { navigate } },
         {
           provide: LangService,

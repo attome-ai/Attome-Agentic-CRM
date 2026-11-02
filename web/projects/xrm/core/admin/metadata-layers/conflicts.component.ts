@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 import { showValue } from './metadata-layers.model';
 import type { ConflictChoice, ConflictProposal, LayerConflict } from './metadata-layers.model';
@@ -114,7 +114,7 @@ export const PROPOSE_CONFLICT_ACTION = 'metadata.propose_conflict_resolution';
   `],
 })
 export class MetadataConflictsComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly conflicts = signal<LayerConflict[]>([]);
   readonly proposals = signal<Record<string, ConflictProposal>>({});
@@ -132,7 +132,7 @@ export class MetadataConflictsComponent implements OnInit {
   }
 
   load(): void {
-    this.api.getAllPages<LayerConflict>('/api/v1/admin/metadata/conflicts', { status: 'open' }).subscribe({
+    this.sdk.getAllPages<LayerConflict>('/api/v1/admin/metadata/conflicts', { status: 'open' }).subscribe({
       next: conflicts => this.conflicts.set(conflicts),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -157,7 +157,7 @@ export class MetadataConflictsComponent implements OnInit {
     }
     this.busy.set(true);
     this.error.set(null);
-    this.api.post<LayerConflict>(`/api/v1/admin/metadata/conflicts/${encodeURIComponent(conflict.id)}/resolve`, body)
+    this.sdk.post<LayerConflict>(`/api/v1/admin/metadata/conflicts/${encodeURIComponent(conflict.id)}/resolve`, { body: body })
       .subscribe({
         next: () => {
           this.busy.set(false);
@@ -177,9 +177,9 @@ export class MetadataConflictsComponent implements OnInit {
   ask(conflict: LayerConflict): void {
     this.busy.set(true);
     this.error.set(null);
-    this.api.post<{ status: string; result?: ConflictProposal }>(
+    this.sdk.post<{ status: string; result?: ConflictProposal }>(
       `/api/v1/actions/${encodeURIComponent(PROPOSE_CONFLICT_ACTION)}/invoke`,
-      { args: { conflict_id: conflict.id } },
+      { body: { args: { conflict_id: conflict.id } } },
     ).subscribe({
       next: outcome => {
         this.busy.set(false);

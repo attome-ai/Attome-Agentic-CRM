@@ -2,7 +2,7 @@ import {
   ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, output, signal, untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 
 import { EntityService } from '../services/entity.service';
 
@@ -126,7 +126,7 @@ export function composeBody(
   `],
 })
 export class EmailComposerComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly entities = inject(EntityService);
   private readonly lang = inject(LangService);
   private readonly destroyRef = inject(DestroyRef);
@@ -164,9 +164,12 @@ export class EmailComposerComponent {
   }
 
   private load(entity: string, recordId: string): void {
-    this.api.get<{ items: ComposerTemplate[] }>('/api/v1/model/reply-suggestions', {
+    this.sdk.get<{ items: ComposerTemplate[] }>(
+      '/api/v1/model/reply-suggestions',
+      { query: {
       entity, record_id: recordId, channel: 'email',
-    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    } },
+    ).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: page => this.templates.set(page.items),
       error: () => this.templates.set([]),
     });
@@ -191,9 +194,12 @@ export class EmailComposerComponent {
     if (!t) return;
     const current = this.body();
     this.body.set(current.trim() ? `${current.trimEnd()}\n\n${t.reply}` : t.reply);
-    this.api.post<void>(`/api/v1/model/reply-templates/${t.id}/used`, {
+    this.sdk.post<void>(
+      `/api/v1/model/reply-templates/${t.id}/used`,
+      { body: {
       entity: this.entity(), record_id: this.recordId(),
-    }).subscribe({ error: () => undefined });
+    } },
+    ).subscribe({ error: () => undefined });
   }
 
   toggleFile(key: string): void {
@@ -207,7 +213,7 @@ export class EmailComposerComponent {
     this.notice.set(null);
     const later = !!sendAtInstant(this.sendAt());
     const request = composeBody(this.to(), this.subject(), this.body(), this.sendAt(), this.chosen());
-    this.api.post<unknown>(`/api/v1/${this.entity()}/${this.recordId()}/communications`, request).subscribe({
+    this.sdk.post<unknown>(`/api/v1/${this.entity()}/${this.recordId()}/communications`, { body: request }).subscribe({
       next: () => {
         this.sending.set(false);
         this.subject.set('');

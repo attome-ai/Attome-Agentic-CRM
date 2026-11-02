@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { ApiError, ApiService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 /** `attome_server::deploy_event::DeployEvent`. */
 export interface DeployEvent {
@@ -79,13 +79,13 @@ export function durationSeconds(event: DeployEvent): number | null {
   `],
 })
 export class DeploysComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly events = signal<DeployEvent[]>([]);
   readonly error = signal<string | null>(null);
 
   ngOnInit(): void {
-    this.api.get<{ items: DeployEvent[] }>('/api/v1/admin/deploys').subscribe({
+    this.sdk.get<{ items: DeployEvent[] }>('/api/v1/admin/deploys').subscribe({
       next: page => this.events.set(page.items),
       error: (e: ApiError) => this.error.set(e.message),
     });

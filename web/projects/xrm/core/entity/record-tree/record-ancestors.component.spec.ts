@@ -1,10 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { RecordAncestorsComponent, recordLabel } from './record-ancestors.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 describe('RecordAncestorsComponent (A17-T5)', () => {
   function create(get: ReturnType<typeof vi.fn>) {
@@ -13,6 +14,7 @@ describe('RecordAncestorsComponent (A17-T5)', () => {
       providers: [
         provideRouter([]),
         { provide: ApiService, useValue: { get } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k } },
       ],
     });

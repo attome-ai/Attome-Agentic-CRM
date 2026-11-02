@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { ApiError, ApiService, LocalDatePipe, TranslatePipe, type Page } from '@attome/base';
+import { ApiError, SdkService, LocalDatePipe, TranslatePipe, type Page } from '@attome/base';
 
 /** `write_policy::WritePolicy`. */
 export interface WritePolicy {
@@ -49,7 +49,7 @@ export function approvedShare(a: { decisions: number; approved: number }): numbe
   styleUrls:       ['./governance.component.css'],
 })
 export class AiGovernanceComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly policies = signal<WritePolicy[]>([]);
   readonly writeActions = signal<string[]>([]);
@@ -67,18 +67,18 @@ export class AiGovernanceComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadPolicies();
-    this.api.get<{ items: { id: string; risk: string }[] }>('/api/v1/actions').subscribe({
+    this.sdk.get<{ items: { id: string; risk: string }[] }>('/api/v1/actions').subscribe({
       next: r => this.writeActions.set((r.items ?? []).filter(a => a.risk !== 'Read').map(a => a.id)),
       error: () => this.writeActions.set([]),
     });
-    this.api.get<ApprovalMetrics>('/api/v1/admin/approvals/metrics').subscribe({
+    this.sdk.get<ApprovalMetrics>('/api/v1/admin/approvals/metrics').subscribe({
       next: m => this.metrics.set(m),
       error: (e: ApiError) => this.error.set(e.message),
     });
   }
 
   loadPolicies(): void {
-    this.api.get<Page<WritePolicy>>('/api/v1/admin/ai/write-policies').subscribe({
+    this.sdk.get<Page<WritePolicy>>('/api/v1/admin/ai/write-policies').subscribe({
       next: page => this.policies.set(page.items ?? []),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -88,9 +88,12 @@ export class AiGovernanceComponent implements OnInit {
     const action = this.newAction().trim();
     if (!action) return;
     const entity = this.newEntity().trim();
-    this.api.post<WritePolicy>('/api/v1/admin/ai/write-policies', {
+    this.sdk.post<WritePolicy>(
+      '/api/v1/admin/ai/write-policies',
+      { body: {
       action_id: action, ...(entity ? { entity } : {}),
-    }).subscribe({
+    } },
+    ).subscribe({
       next: () => { this.newAction.set(''); this.newEntity.set(''); this.loadPolicies(); },
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -106,7 +109,7 @@ export class AiGovernanceComponent implements OnInit {
     this.exportedRows.set(null);
     const page = (cursor: string | null): void => {
       const params = cursor ? { ...base, cursor } : base;
-      this.api.get<{ items: unknown[]; next_cursor: string | null }>('/api/v1/admin/ai/evidence', params).subscribe({
+      this.sdk.get<{ items: unknown[]; next_cursor: string | null }>('/api/v1/admin/ai/evidence', { query: params }).subscribe({
         next: r => {
           rows.push(...(r.items ?? []));
           if (r.next_cursor) { page(r.next_cursor); return; }
@@ -121,7 +124,7 @@ export class AiGovernanceComponent implements OnInit {
   }
 
   removePolicy(policy: WritePolicy): void {
-    this.api.delete(`/api/v1/admin/ai/write-policies/${encodeURIComponent(policy.id)}`).subscribe({
+    this.sdk.delete(`/api/v1/admin/ai/write-policies/${encodeURIComponent(policy.id)}`).subscribe({
       next: () => this.loadPolicies(),
       error: (e: ApiError) => this.error.set(e.message),
     });

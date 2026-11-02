@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { ApiService, LangService, TranslatePipe } from '@attome/base';
+import { SdkService, LangService, TranslatePipe } from '@attome/base';
 
 /** One channel's state: `true` granted, `false` withdrawn, `null` never asked. */
 export interface ChannelState {
@@ -134,7 +134,7 @@ export function toggledPreferences(
   `],
 })
 export class PreferencesComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly route = inject(ActivatedRoute);
   protected readonly lang = inject(LangService);
 
@@ -154,7 +154,7 @@ export class PreferencesComponent implements OnInit {
       this.stage.set('invalid');
       return;
     }
-    this.api.get<Preferences>('/api/v1/consents/preferences', { token: this.token }).subscribe({
+    this.sdk.get<Preferences>('/api/v1/consents/preferences', { query: { token: this.token } }).subscribe({
       next: prefs => this.load(prefs),
       error: (e: { kind?: string }) =>
         this.stage.set(e?.kind === 'not_found' || e?.kind === 'validation_error' ? 'invalid' : 'failed'),
@@ -180,7 +180,7 @@ export class PreferencesComponent implements OnInit {
     const changes = this.changes();
     if (changes.length === 0) return;
     this.stage.set('saving');
-    this.api.post<Preferences>('/api/v1/consents/preferences', { token: this.token, changes }).subscribe({
+    this.sdk.post<Preferences>('/api/v1/consents/preferences', { body: { token: this.token, changes } }).subscribe({
       next: prefs => {
         this.load(prefs);
         this.stage.set('saved');

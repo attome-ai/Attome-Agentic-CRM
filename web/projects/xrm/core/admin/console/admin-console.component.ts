@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 import type { ApiComponents, Page } from '@attome/base';
 
 type SettingView = ApiComponents['schemas']['SettingValueView'];
@@ -126,7 +126,7 @@ export const ADMIN_SCREENS: readonly AdminScreen[] = [
   `,
 })
 export class AdminConsoleComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
 
   readonly areas = ADMIN_AREAS;
@@ -156,7 +156,7 @@ export class AdminConsoleComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.api.get<{ items: SettingView[] }>('/api/v1/admin/settings').subscribe({
+    this.sdk.get<{ items: SettingView[] }>('/api/v1/admin/settings').subscribe({
       next: res => {
         this.all.set(res.items);
         this.loading.set(false);
@@ -183,9 +183,12 @@ export class AdminConsoleComponent implements OnInit {
     this.history.set([]);
     if (!s.id) return;
     this.historyLoading.set(true);
-    this.api.get<Page<AuditRow>>('/api/v1/admin/audit/search', {
+    this.sdk.get<Page<AuditRow>>(
+      '/api/v1/admin/audit/search',
+      { query: {
       entity_name: 'setting', record_id: s.id, page: '1', page_size: '50',
-    }).subscribe({
+    } },
+    ).subscribe({
       next: page => {
         this.history.set(page.items);
         this.historyLoading.set(false);

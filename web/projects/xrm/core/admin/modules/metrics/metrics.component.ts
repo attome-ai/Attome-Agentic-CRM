@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 
 /** `system_health::MetricPoint`. */
 export interface MetricPoint {
@@ -89,7 +89,7 @@ const HEIGHT = 200;
   `],
 })
 export class OpsMetricsComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
   private readonly catalogue = signal<MetricInfo[]>([]);
 
@@ -120,11 +120,11 @@ export class OpsMetricsComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.api.get<{ items: MetricInfo[] }>('/api/v1/admin/ops/metrics/catalogue').subscribe({
+    this.sdk.get<{ items: MetricInfo[] }>('/api/v1/admin/ops/metrics/catalogue').subscribe({
       next: page => this.catalogue.set(page.items),
       error: () => this.catalogue.set([]),
     });
-    this.api.get<{ items: string[] }>('/api/v1/admin/ops/metrics/names').subscribe({
+    this.sdk.get<{ items: string[] }>('/api/v1/admin/ops/metrics/names').subscribe({
       next: page => this.names.set(page.items),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -146,9 +146,12 @@ export class OpsMetricsComponent implements OnInit {
     const r = RANGES.find(x => x.key === this.range()) ?? RANGES[0];
     const to = new Date();
     const from = new Date(to.getTime() - r.hours * 3_600_000);
-    this.api.get<{ items: MetricPoint[] }>('/api/v1/admin/ops/metrics/query', {
+    this.sdk.get<{ items: MetricPoint[] }>(
+      '/api/v1/admin/ops/metrics/query',
+      { query: {
       name, from: from.toISOString(), to: to.toISOString(), step: String(r.step),
-    }).subscribe({
+    } },
+    ).subscribe({
       next: page => { this.error.set(null); this.points.set(page.items); },
       error: (e: ApiError) => this.error.set(e.message),
     });

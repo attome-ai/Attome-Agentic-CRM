@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { ApiError, ApiService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 /** A pending device grant, as `GET /api/v1/oauth/device` returns it. */
 interface PendingGrant {
@@ -76,7 +76,7 @@ export function normaliseUserCode(code: string): string {
   `],
 })
 export class DeviceApprovalComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
   private readonly route = inject(ActivatedRoute);
 
@@ -102,7 +102,7 @@ export class DeviceApprovalComponent implements OnInit {
     if (!code) return;
     this.busy.set(true);
     this.error.set(null);
-    this.api.get<PendingGrant>('/api/v1/oauth/device', { user_code: code }).subscribe({
+    this.sdk.get<PendingGrant>('/api/v1/oauth/device', { query: { user_code: code } }).subscribe({
       next: grant => { this.busy.set(false); this.grant.set(grant); this.state.set('found'); },
       error: (e: ApiError) => {
         this.busy.set(false);
@@ -117,7 +117,7 @@ export class DeviceApprovalComponent implements OnInit {
     if (!grant) return;
     this.busy.set(true);
     this.error.set(null);
-    this.api.post('/api/v1/oauth/device/approve', { user_code: normaliseUserCode(grant.user_code), approve }).subscribe({
+    this.sdk.post('/api/v1/oauth/device/approve', { body: { user_code: normaliseUserCode(grant.user_code), approve } }).subscribe({
       next: () => { this.busy.set(false); this.approved.set(approve); this.state.set('done'); },
       error: (e: ApiError) => {
         this.busy.set(false);

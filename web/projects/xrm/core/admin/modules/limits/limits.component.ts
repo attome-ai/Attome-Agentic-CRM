@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 import { SettingsService } from '@attome/xrm/core/admin/data';
 
 /** `attome_api::limits_admin::LimitView`. */
@@ -117,7 +117,7 @@ export function inRange(limit: LimitView, value: number | null): boolean {
   `],
 })
 export class LimitsComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly settings = inject(SettingsService);
 
   readonly limits = signal<LimitView[]>([]);
@@ -134,7 +134,7 @@ export class LimitsComponent implements OnInit {
   }
 
   load(): void {
-    this.api.get<{ items: LimitView[] }>('/api/v1/admin/limits').subscribe({
+    this.sdk.get<{ items: LimitView[] }>('/api/v1/admin/limits').subscribe({
       next: body => this.limits.set(body.items),
       error: (e: ApiError) => this.error.set(e.message),
     });

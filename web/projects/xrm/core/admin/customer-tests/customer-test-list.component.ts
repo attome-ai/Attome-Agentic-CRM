@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { ApiError, ApiService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 import { CustomerTestEditorComponent } from './customer-test-editor.component';
 import type { CustomerTest, CustomerTestRunAll, CustomerTestRunResult } from './customer-test.model';
@@ -123,7 +123,7 @@ import type { CustomerTest, CustomerTestRunAll, CustomerTestRunResult } from './
   `],
 })
 export class CustomerTestListComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly tests = signal<CustomerTest[]>([]);
   readonly results = signal<Record<string, CustomerTestRunResult>>({});
@@ -137,7 +137,7 @@ export class CustomerTestListComponent implements OnInit {
   }
 
   load(): void {
-    this.api.getAllPages<CustomerTest>('/api/v1/admin/customer-tests').subscribe({
+    this.sdk.getAllPages<CustomerTest>('/api/v1/admin/customer-tests').subscribe({
       next: tests => this.tests.set(tests),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -155,7 +155,7 @@ export class CustomerTestListComponent implements OnInit {
   run(test: CustomerTest): void {
     this.busy.set(true);
     this.error.set(null);
-    this.api.post<CustomerTestRunResult>(`/api/v1/admin/customer-tests/${test.id}/run`, null).subscribe({
+    this.sdk.post<CustomerTestRunResult>(`/api/v1/admin/customer-tests/${test.id}/run`, { body: null }).subscribe({
       next: result => {
         this.busy.set(false);
         this.results.update(all => ({ ...all, [test.id]: result }));
@@ -168,7 +168,7 @@ export class CustomerTestListComponent implements OnInit {
   runAll(): void {
     this.busy.set(true);
     this.error.set(null);
-    this.api.post<CustomerTestRunAll>('/api/v1/admin/customer-tests/run-all', null).subscribe({
+    this.sdk.post<CustomerTestRunAll>('/api/v1/admin/customer-tests/run-all', { body: null }).subscribe({
       next: all => {
         this.busy.set(false);
         this.summary.set(all);
@@ -181,7 +181,7 @@ export class CustomerTestListComponent implements OnInit {
 
   remove(test: CustomerTest): void {
     this.busy.set(true);
-    this.api.delete(`/api/v1/admin/customer-tests/${test.id}`).subscribe({
+    this.sdk.delete(`/api/v1/admin/customer-tests/${test.id}`).subscribe({
       next: () => { this.busy.set(false); this.load(); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });
@@ -197,9 +197,12 @@ export class CustomerTestListComponent implements OnInit {
     if (!entity.trim() || !recordId.trim()) return;
     this.busy.set(true);
     this.error.set(null);
-    this.api.post<CustomerTest>('/api/v1/admin/customer-tests/from-record', {
+    this.sdk.post<CustomerTest>(
+      '/api/v1/admin/customer-tests/from-record',
+      { body: {
       entity: entity.trim(), record_id: recordId.trim(),
-    }).subscribe({
+    } },
+    ).subscribe({
       next: test => { this.busy.set(false); this.load(); this.editing.set(test); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });

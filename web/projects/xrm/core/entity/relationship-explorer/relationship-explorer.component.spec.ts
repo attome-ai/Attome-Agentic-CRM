@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { GraphEdge, RelationshipExplorerComponent, pathSteps, ringLayout } from './relationship-explorer.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const edge = (from: [string, string], to: [string, string], type: string): GraphEdge => ({
   from_entity: from[0], from_id: from[1], to_entity: to[0], to_id: to[1], edge_type: type,
@@ -42,6 +43,7 @@ describe('relationship explorer (A7-T5)', () => {
       imports: [RelationshipExplorerComponent],
       providers: [
         { provide: ApiService, useValue: { post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: Router, useValue: { navigate: vi.fn() } },
         {
           provide: LangService,

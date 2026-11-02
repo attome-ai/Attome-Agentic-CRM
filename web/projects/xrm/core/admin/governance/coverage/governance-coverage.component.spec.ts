@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, LangService, UserPreferencesService } from '@attome/base';
+import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Coverage, GovernanceCoverageComponent, Scorecard } from './governance-coverage.component';
+import { sdkFromApi } from '../../../../testing/sdk-from-api';
 
 const COVERAGE: Coverage = {
   entities_without_domain: ['lead'],
@@ -35,6 +36,7 @@ describe('GovernanceCoverageComponent (L3-T7)', () => {
       providers: [
         provideRouter([]),
         { provide: ApiService, useValue: { get } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('ar'), intlLocale: () => 'ar-SA' } },
         { provide: UserPreferencesService, useValue: { timezone: () => 'UTC', calendar: () => null, digits: () => null } },
       ],

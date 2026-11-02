@@ -1,13 +1,14 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { ModelService } from '@attome/xrm/model';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AppDesignerComponent } from './app-designer.component';
 import { Navigation, navProblems, navigationOf, saveCommands, toCanvas, uuidv7 } from './app-design.model';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const FORM = '0190f5a4-0000-7000-8000-00000000000a';
 const VIEW = '0190f5a4-0000-7000-8000-00000000000b';
@@ -39,6 +40,7 @@ describe('AppDesignerComponent (A21-T3)', () => {
         provideRouter([]),
         { provide: ModelService, useValue: model },
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         {
           provide: LangService,
           useValue: {

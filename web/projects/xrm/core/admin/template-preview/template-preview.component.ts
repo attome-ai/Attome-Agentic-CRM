@@ -2,7 +2,7 @@ import {
   ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, signal,
 } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { ApiService, LangService, TemplateRendererService, TranslatePipe } from '@attome/base';
+import { SdkService, LangService, TemplateRendererService, TranslatePipe } from '@attome/base';
 import type { RulesSchema } from '@attome/base';
 import type { EntitySchema } from '@attome/xrm';
 import { rulesSchemaOf } from '@attome/xrm/core/admin/expression-editor';
@@ -53,7 +53,7 @@ function sampleOf(type: string, label: string): unknown {
   `],
 })
 export class TemplatePreviewComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly renderer = inject(TemplateRendererService);
   private readonly lang = inject(LangService);
 
@@ -78,7 +78,7 @@ export class TemplatePreviewComponent {
     effect(() => {
       const entity = this.entity();
       if (!entity) return;
-      firstValueFrom(this.api.get<EntitySchema>(`/api/v1/schema/${encodeURIComponent(entity)}`))
+      firstValueFrom(this.sdk.get<EntitySchema>(`/api/v1/schema/${encodeURIComponent(entity)}`))
         .then(schema => this.schemaOfEntity.set(schema))
         .catch(() => this.schemaOfEntity.set(null));
     });
@@ -132,9 +132,9 @@ export class TemplatePreviewComponent {
       return;
     }
     try {
-      const { rendered } = await firstValueFrom(this.api.post<{ rendered: string }>(
+      const { rendered } = await firstValueFrom(this.sdk.post<{ rendered: string }>(
         '/api/v1/admin/templates/preview',
-        { template, entity: this.entity(), record_id, language },
+        { body: { template, entity: this.entity(), record_id, language } },
       ));
       if (run !== this.run) return;
       this.output.set(rendered);

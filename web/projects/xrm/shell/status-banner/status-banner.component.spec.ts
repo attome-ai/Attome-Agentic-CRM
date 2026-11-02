@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { OpsNotice, StatusBannerComponent, SystemStatus } from './status-banner.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 describe('StatusBannerComponent (AB5-T9)', () => {
   function create(status: SystemStatus, notice: OpsNotice | null = null) {
@@ -13,6 +14,7 @@ describe('StatusBannerComponent (AB5-T9)', () => {
         { provide: ApiService, useValue: {
           get: vi.fn((url: string) => of(url.includes('/ops/status/banner') ? notice : status)),
         } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k } },
       ],
     });

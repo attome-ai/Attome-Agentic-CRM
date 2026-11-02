@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AiAgentAutonomyComponent, raisesConsequential, type AutonomyEntry } from './agent-autonomy.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const send: AutonomyEntry = {
   action_id: 'email.send', risk: 'Consequential', effect: 'Write',
@@ -32,6 +33,7 @@ function setup() {
     imports: [AiAgentAutonomyComponent],
     providers: [
       { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       { provide: LangService, useValue: { translate: (key: string) => key, intlLocale: () => 'en-US' } },
     ],
   });

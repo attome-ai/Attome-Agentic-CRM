@@ -1,12 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   OperationSummary, OperationsComponent, controlsFor, progressPercent,
 } from './operations.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 function op(id: string, status: string, extra: Partial<OperationSummary> = {}): OperationSummary {
   return {
@@ -27,6 +28,7 @@ describe('OperationsComponent (AA10-T8)', () => {
       imports: [OperationsComponent],
       providers: [
         { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },
       ],
     });

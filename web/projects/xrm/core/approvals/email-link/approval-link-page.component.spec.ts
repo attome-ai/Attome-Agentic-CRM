@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ApiService, LangService, UserPreferencesService } from '@attome/base';
+import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ApprovalLinkPageComponent, ApprovalLinkView } from './approval-link-page.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const VIEW: ApprovalLinkView = {
   request_id: 'r-1', action_type: 'approval_process', title: 'Large discount', status: 'pending',
@@ -22,6 +23,7 @@ describe('ApprovalLinkPageComponent (M9-T3)', () => {
       imports: [ApprovalLinkPageComponent],
       providers: [
         { provide: ApiService, useValue: { post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: Router, useValue: { navigate } },
         { provide: ActivatedRoute, useValue: { snapshot: { fragment } } },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },

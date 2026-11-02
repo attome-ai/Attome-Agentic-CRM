@@ -2,7 +2,7 @@ import {
   ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 import { ageLabel } from '../lanes/job-lanes.component';
 
 /** `attome_api::jobs_admin::OperationSummary`. */
@@ -157,7 +157,7 @@ export function progressPercent(op: OperationSummary): number | null {
   `],
 })
 export class OperationsComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly items = signal<OperationSummary[]>([]);
   readonly nextCursor = signal<string | null>(null);
@@ -186,7 +186,7 @@ export class OperationsComponent implements OnInit {
     this.stopPolling();
     this.busy.set(true);
     this.error.set(null);
-    this.api.get<OperationsPage>('/api/v1/admin/operations').subscribe({
+    this.sdk.get<OperationsPage>('/api/v1/admin/operations').subscribe({
       next: page => {
         this.items.set(page.items);
         this.nextCursor.set(page.next_cursor ?? null);
@@ -204,7 +204,7 @@ export class OperationsComponent implements OnInit {
     const cursor = this.nextCursor();
     if (!cursor) return;
     this.busy.set(true);
-    this.api.get<OperationsPage>('/api/v1/admin/operations', { cursor }).subscribe({
+    this.sdk.get<OperationsPage>('/api/v1/admin/operations', { query: { cursor } }).subscribe({
       next: page => {
         this.items.update(items => [...items, ...page.items]);
         this.nextCursor.set(page.next_cursor ?? null);
@@ -221,7 +221,7 @@ export class OperationsComponent implements OnInit {
     if (op.row_version === null || op.row_version === undefined) return;
     this.acting.set(op.id);
     this.error.set(null);
-    this.api.post(`/api/v1/mass/${encodeURIComponent(op.id)}/${control}`, {}, { ifMatch: op.row_version }).subscribe({
+    this.sdk.post(`/api/v1/mass/${encodeURIComponent(op.id)}/${control}`, { body: {} }, { ifMatch: op.row_version }).subscribe({
       next: () => {
         this.acting.set(null);
         this.load();

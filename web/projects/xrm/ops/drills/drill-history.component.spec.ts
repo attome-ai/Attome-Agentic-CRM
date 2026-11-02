@@ -1,12 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, ATTOME_CONFIG, LangService, UserPreferencesService } from '@attome/base';
+import { ApiService, SdkService, ATTOME_CONFIG, LangService, UserPreferencesService } from '@attome/base';
 import { AccessService } from '@attome/xrm/core/access/data';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { DrillFreshness, DrillHistoryComponent, DrillRun, DrillSchedule, trendPoints } from './drill-history.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const FRESHNESS: DrillFreshness[] = [
   { kind: 'restore', status: 'stale', last_run_at: '2026-08-01T00:00:00Z', last_ok_run_at: '2026-08-01T00:00:00Z', period_days: 31, failing_checks: [] },
@@ -40,6 +41,7 @@ describe('DrillHistoryComponent (AB4-T11)', () => {
       providers: [
         provideRouter([]),
         { provide: ApiService, useValue: { get, patch } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: AccessService, useValue: { ready: () => of(undefined), hasPrivilege: (k: string) => privileges.includes(k) } },
         { provide: ATTOME_CONFIG, useValue: { apiUrl: 'https://crm.example' } },
         {

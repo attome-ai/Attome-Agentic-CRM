@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ApiError, ApiService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LocalDatePipe, TranslatePipe } from '@attome/base';
 import { GovernanceNavComponent } from '../nav/governance-nav.component';
 
 /** One item of `GET /api/v1/governance/inbox` (L3-T3). */
@@ -66,13 +66,13 @@ export interface InboxItem {
   `,
 })
 export class StewardInboxComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly items = signal<InboxItem[] | null>(null);
   readonly error = signal<string | null>(null);
 
   ngOnInit(): void {
-    this.api.getAllPages<InboxItem>('/api/v1/governance/inbox').subscribe({
+    this.sdk.getAllPages<InboxItem>('/api/v1/governance/inbox').subscribe({
       next: items => this.items.set(items),
       error: (e: ApiError) => this.error.set(e.message),
     });

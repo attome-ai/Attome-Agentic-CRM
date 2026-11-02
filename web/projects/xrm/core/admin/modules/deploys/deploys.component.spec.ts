@@ -1,10 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService, UserPreferencesService } from '@attome/base';
+import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { DeployEvent, DeploysComponent, durationSeconds } from './deploys.component';
+import { sdkFromApi } from '../../../../testing/sdk-from-api';
 
 const EVENTS: DeployEvent[] = [
   {
@@ -24,6 +25,7 @@ describe('DeploysComponent (AB7-T9)', () => {
       imports: [DeploysComponent],
       providers: [
         { provide: ApiService, useValue: { get } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },
         { provide: UserPreferencesService, useValue: { timezone: () => 'UTC', calendar: () => null, digits: () => null } },
       ],

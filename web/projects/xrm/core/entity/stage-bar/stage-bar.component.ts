@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 
 /** One stage of a stage process (`attome_model::kinds::stage_process`). */
 export interface ProcessStage {
@@ -93,7 +93,7 @@ export function missingFor(stage: ProcessStage, values: Readonly<Record<string, 
   `],
 })
 export class StageBarComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly entityName = input.required<string>();
   /** The record's values as the form holds them now. */
@@ -127,7 +127,7 @@ export class StageBarComponent {
     effect(() => {
       const entity = this.entityName();
       this.error.set(null);
-      this.api.get<StageProcessView>(`/api/v1/stage-processes/for/${encodeURIComponent(entity)}`).subscribe({
+      this.sdk.get<StageProcessView>(`/api/v1/stage-processes/for/${encodeURIComponent(entity)}`).subscribe({
         next: p => this.process.set(p),
         error: (e: ApiError) => {
           this.process.set(null);

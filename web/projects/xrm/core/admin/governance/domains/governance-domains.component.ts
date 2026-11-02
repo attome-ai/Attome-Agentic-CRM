@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 import { GovernanceNavComponent } from '../nav/governance-nav.component';
 
 /** One row of `GET /api/v1/admin/governance/domains`. */
@@ -142,7 +142,7 @@ export function domainTree(domains: GovernanceDomain[]): TreeRow[] {
   `,
 })
 export class GovernanceDomainsComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly domains = signal<GovernanceDomain[]>([]);
   readonly tree = computed(() => domainTree(this.domains()));
@@ -152,7 +152,7 @@ export class GovernanceDomainsComponent implements OnInit {
   readonly error = signal<string | null>(null);
 
   ngOnInit(): void {
-    this.api.getAllPages<GovernanceDomain>('/api/v1/admin/governance/domains').subscribe({
+    this.sdk.getAllPages<GovernanceDomain>('/api/v1/admin/governance/domains').subscribe({
       next: d => this.domains.set(d),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -163,11 +163,11 @@ export class GovernanceDomainsComponent implements OnInit {
     this.roles.set([]);
     this.policies.set([]);
     const id = encodeURIComponent(domain.id);
-    this.api.getAllPages<GovernanceRole>(`/api/v1/admin/governance/domains/${id}/roles`).subscribe({
+    this.sdk.getAllPages<GovernanceRole>(`/api/v1/admin/governance/domains/${id}/roles`).subscribe({
       next: r => this.roles.set(r),
       error: (e: ApiError) => this.error.set(e.message),
     });
-    this.api.getAllPages<GovernancePolicy>('/api/v1/admin/governance/policies', { domain: domain.id }).subscribe({
+    this.sdk.getAllPages<GovernancePolicy>('/api/v1/admin/governance/policies', { domain: domain.id }).subscribe({
       next: p => this.policies.set(p),
       error: (e: ApiError) => this.error.set(e.message),
     });

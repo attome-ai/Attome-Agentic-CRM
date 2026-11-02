@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BrandingComponent, ThemeRow } from './branding.component';
+import { sdkFromApi } from '../../../../testing/sdk-from-api';
 
 const published: ThemeRow = {
   id: '0190a0a0-0000-7000-8000-000000000001', scope_kind: 'deployment', scope_ref: '', version: 1,
@@ -24,6 +25,7 @@ describe('BrandingComponent (B13-T9)', () => {
       imports: [BrandingComponent],
       providers: [
         { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (key: string) => key } },
       ],
     });

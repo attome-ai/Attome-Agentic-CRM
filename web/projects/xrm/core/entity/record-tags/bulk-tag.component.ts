@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 
 import { TagSuggestionItem } from './record-tags.component';
 
@@ -53,7 +53,7 @@ export interface BulkTagResult {
   `],
 })
 export class BulkTagComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly entity = input.required<string>();
   readonly recordIds = input.required<readonly string[]>();
@@ -69,7 +69,7 @@ export class BulkTagComponent {
   suggest(typed: string): void {
     const q = typed.trim();
     if (!q) { this.suggestions.set([]); return; }
-    this.api.get<{ items: TagSuggestionItem[] }>('/api/v1/tags/suggest', { q }).subscribe({
+    this.sdk.get<{ items: TagSuggestionItem[] }>('/api/v1/tags/suggest', { query: { q } }).subscribe({
       next: page => this.suggestions.set(page.items.slice(0, 5)),
       error: () => this.suggestions.set([]),
     });
@@ -89,7 +89,7 @@ export class BulkTagComponent {
     this.busy.set(true);
     this.error.set(null);
     const path = `/api/v1/${encodeURIComponent(this.entity())}/tags/bulk`;
-    this.api.post<BulkTagResult>(path, { ids: [...this.recordIds()], ...change }).subscribe({
+    this.sdk.post<BulkTagResult>(path, { body: { ids: [...this.recordIds()], ...change } }).subscribe({
       next: result => { this.busy.set(false); this.result.set(result); this.changed.emit(result); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });

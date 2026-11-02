@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
-import { ApiError, ApiService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LocalDatePipe, TranslatePipe } from '@attome/base';
 import { Observable } from 'rxjs';
 
 /** `recycle_bin::DeletedRecord`. */
@@ -130,7 +130,7 @@ const FAILURE_CODES = new Set(['not_found', 'forbidden', 'conflict', 'invalid'])
   `],
 })
 export class RecycleBinComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** From the route, `/xrm/bin/:entity`. */
   readonly entity = input.required<string>();
@@ -152,7 +152,7 @@ export class RecycleBinComponent {
   }
 
   load(entity = this.entity()): void {
-    this.api.get<{ items: DeletedRecord[] }>(`/api/v1/${encodeURIComponent(entity)}/deleted`, { page: '1', page_size: '100' }).subscribe({
+    this.sdk.get<{ items: DeletedRecord[] }>(`/api/v1/${encodeURIComponent(entity)}/deleted`, { query: { page: '1', page_size: '100' } }).subscribe({
       next: page => { this.records.set(page.items); this.selected.set(new Set()); },
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -171,7 +171,7 @@ export class RecycleBinComponent {
   restoreSelected(): void {
     const entity = this.entity();
     const items = [...this.selected()].map(id => ({ entity, id }));
-    this.run(this.api.post<BinRestoreResult>('/api/v1/bin/restore', { items }));
+    this.run(this.sdk.post<BinRestoreResult>('/api/v1/bin/restore', { body: { items } }));
   }
 
   /**
@@ -181,7 +181,7 @@ export class RecycleBinComponent {
   restoreWithParent(failure: BinRestoreFailure): void {
     if (!failure.parent) return;
     const items = [failure.parent, { entity: failure.entity, id: failure.id }];
-    this.run(this.api.post<BinRestoreResult>('/api/v1/bin/restore', { items }));
+    this.run(this.sdk.post<BinRestoreResult>('/api/v1/bin/restore', { body: { items } }));
   }
 
   /** The record's name as the bin lists it, else its id. */
@@ -199,7 +199,7 @@ export class RecycleBinComponent {
   }
 
   restoreOperation(operationId: string): void {
-    this.run(this.api.post<BinRestoreResult>(`/api/v1/bin/operations/${encodeURIComponent(operationId)}/restore`, {}));
+    this.run(this.sdk.post<BinRestoreResult>(`/api/v1/bin/operations/${encodeURIComponent(operationId)}/restore`, { body: {} }));
   }
 
   private run(request: Observable<BinRestoreResult>): void {

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 import { forkJoin } from 'rxjs';
 
 import { newId } from '../agent-designer/agent-designer.component';
@@ -80,7 +80,7 @@ export function overrideCommands(prompt: string, draft: OverrideDraft): ModelCom
   styleUrls:       ['./prompt-editor.component.css'],
 })
 export class PromptEditorComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly model = inject(ModelService);
 
   readonly prompts  = signal<ShippedPrompt[]>([]);
@@ -98,7 +98,7 @@ export class PromptEditorComponent implements OnInit {
   readonly canPreview = computed(() => this.selected()?.action_id === 'record.summarize');
 
   ngOnInit(): void {
-    this.api.get<{ items: ShippedPrompt[] }>('/api/v1/admin/ai/prompts').subscribe({
+    this.sdk.get<{ items: ShippedPrompt[] }>('/api/v1/admin/ai/prompts').subscribe({
       next: r => this.prompts.set(r.items ?? []),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -187,8 +187,9 @@ export class PromptEditorComponent implements OnInit {
     const record = this.previewRecord().trim();
     if (!entity || !record) return;
     this.preview.set([]);
-    this.api.post<{ messages: { role: string; content: string }[] }>(
-      '/api/v1/admin/ai/preview/summary', { entity, record_id: record },
+    this.sdk.post<{ messages: { role: string; content: string }[] }>(
+      '/api/v1/admin/ai/preview/summary',
+      { body: { entity, record_id: record } },
     ).subscribe({
       next: r => this.preview.set(r.messages ?? []),
       error: (e: ApiError) => this.error.set(e.message),

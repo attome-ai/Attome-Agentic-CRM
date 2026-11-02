@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { ApiError, ApiService, AuthService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, AuthService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 import {
   ApprovalRecommendation, DECISION_COMMENT_MAX, MyApprovalsService,
@@ -212,7 +212,7 @@ export function showValue(value: unknown): string {
   `],
 })
 export class ApprovalRequestPageComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly approvals = inject(MyApprovalsService);
   private readonly auth = inject(AuthService);
   private readonly lang = inject(LangService);
@@ -272,7 +272,7 @@ export class ApprovalRequestPageComponent implements OnInit {
 
   load(): void {
     this.error.set(null);
-    this.api.get<ApprovalDetail>(`/api/v1/approvals/${encodeURIComponent(this.id())}`).subscribe({
+    this.sdk.get<ApprovalDetail>(`/api/v1/approvals/${encodeURIComponent(this.id())}`).subscribe({
       next: d => {
         this.detail.set(d);
         this.payloadText = JSON.stringify(d.payload ?? null, null, 2);
@@ -296,7 +296,7 @@ export class ApprovalRequestPageComponent implements OnInit {
     const note = this.comment.trim();
     if (note) body.comment = note;
     this.busy.set(true);
-    this.api.post<unknown>(`/api/v1/approvals/${encodeURIComponent(d.id)}/decide`, body).subscribe({
+    this.sdk.post<unknown>(`/api/v1/approvals/${encodeURIComponent(d.id)}/decide`, { body: body }).subscribe({
       next: () => { this.busy.set(false); this.comment = ''; this.load(); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });

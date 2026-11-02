@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 /** `attome_events::admin::SubscriptionListItem`. */
 export interface SubscriptionItem {
@@ -218,7 +218,7 @@ function emptyDraft(): SubscriptionDraft {
   `],
 })
 export class WebhookSubscriptionsComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
 
   readonly shapes = PAYLOAD_SHAPES;
@@ -238,7 +238,7 @@ export class WebhookSubscriptionsComponent implements OnInit {
   }
 
   load(): void {
-    this.api.get<{ items: SubscriptionItem[] }>(BASE, { kind: 'webhook', page_size: '200' }).subscribe({
+    this.sdk.get<{ items: SubscriptionItem[] }>(BASE, { query: { kind: 'webhook', page_size: '200' } }).subscribe({
       next: page => this.items.set(page.items),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -247,7 +247,7 @@ export class WebhookSubscriptionsComponent implements OnInit {
   select(item: SubscriptionItem): void {
     this.editing.set(false);
     this.error.set(null);
-    this.api.get<SubscriptionDetail>(`${BASE}/${item.id}`).subscribe({
+    this.sdk.get<SubscriptionDetail>(`${BASE}/${item.id}`).subscribe({
       next: detail => this.selected.set(detail),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -255,7 +255,7 @@ export class WebhookSubscriptionsComponent implements OnInit {
   }
 
   private loadDeliveries(id: string): void {
-    this.api.get<{ items: DeliveryItem[] }>(`${BASE}/${id}/deliveries`, { page_size: '50' }).subscribe({
+    this.sdk.get<{ items: DeliveryItem[] }>(`${BASE}/${id}/deliveries`, { query: { page_size: '50' } }).subscribe({
       next: page => this.deliveries.set(page.items),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -287,7 +287,7 @@ export class WebhookSubscriptionsComponent implements OnInit {
         return;
       }
       this.busy.set(true);
-      this.api.post<CreatedSubscription>(BASE, body).subscribe({
+      this.sdk.post<CreatedSubscription>(BASE, { body: body }).subscribe({
         next: created => {
           this.busy.set(false);
           this.editing.set(false);
@@ -299,10 +299,13 @@ export class WebhookSubscriptionsComponent implements OnInit {
       return;
     }
     this.busy.set(true);
-    this.api.patch<SubscriptionDetail>(`${BASE}/${current.id}`, {
+    this.sdk.patch<SubscriptionDetail>(
+      `${BASE}/${current.id}`,
+      { body: {
       name: this.draft.name, target_url: this.draft.target_url, is_active: this.draft.is_active,
       payload_shape: this.draft.payload_shape, ordered: this.draft.ordered, row_version: current.row_version,
-    }).subscribe({
+    } },
+    ).subscribe({
       next: detail => {
         this.busy.set(false);
         this.editing.set(false);
@@ -317,7 +320,7 @@ export class WebhookSubscriptionsComponent implements OnInit {
     const s = this.selected();
     if (!s) return;
     this.busy.set(true);
-    this.api.post<{ queued: number }>(`${BASE}/${s.id}/test`, {}).subscribe({
+    this.sdk.post<{ queued: number }>(`${BASE}/${s.id}/test`, { body: {} }).subscribe({
       next: () => { this.busy.set(false); this.loadDeliveries(s.id); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });
@@ -328,7 +331,7 @@ export class WebhookSubscriptionsComponent implements OnInit {
     const from = replayFrom(this.replayAt);
     if (!s || !from) return;
     this.busy.set(true);
-    this.api.post<{ queued: number }>(`${BASE}/${s.id}/replay`, { from }).subscribe({
+    this.sdk.post<{ queued: number }>(`${BASE}/${s.id}/replay`, { body: { from } }).subscribe({
       next: result => {
         this.busy.set(false);
         this.notice.set(this.lang.translate('webhooksPage.replayed', { count: result.queued }));

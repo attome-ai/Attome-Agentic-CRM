@@ -1,8 +1,9 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QuoteAcceptComponent, QuoteView, money } from './quote-accept.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const quote: QuoteView = {
   quote_number: 'Q-1447-0012', name: 'Fleet maintenance', currency: 'SAR', valid_from: null,
@@ -25,7 +26,8 @@ describe('QuoteAcceptComponent (D9-T3)', () => {
     };
     TestBed.configureTestingModule({
       imports: [QuoteAcceptComponent],
-      providers: [{ provide: ApiService, useValue: api }, { provide: LangService, useValue: lang }],
+      providers: [{ provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi }, { provide: LangService, useValue: lang }],
     });
   });
 

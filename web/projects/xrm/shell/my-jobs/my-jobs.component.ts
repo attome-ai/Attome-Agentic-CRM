@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 import type { Page } from '@attome/base';
 
 /** M12-T4: one batch job the caller started (`GET /api/v1/jobs`). */
@@ -78,7 +78,7 @@ export const MY_JOBS_REFRESH_MS = 5000;
   `,
 })
 export class MyJobsComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -96,7 +96,7 @@ export class MyJobsComponent implements OnInit {
   }
 
   load(): void {
-    this.api.get<Page<MyJob>>('/api/v1/jobs', { page_size: '50' }).subscribe({
+    this.sdk.get<Page<MyJob>>('/api/v1/jobs', { query: { page_size: '50' } }).subscribe({
       next: page => {
         this.jobs.set(page.items);
         this.loading.set(false);
@@ -111,7 +111,7 @@ export class MyJobsComponent implements OnInit {
 
   cancel(job: MyJob): void {
     this.cancelling.set(job.id);
-    this.api.post<MyJob>(`/api/v1/jobs/${job.id}/cancel`, {}).subscribe({
+    this.sdk.post<MyJob>(`/api/v1/jobs/${job.id}/cancel`, { body: {} }).subscribe({
       next: updated => {
         this.cancelling.set(null);
         this.jobs.update(list => list.map(j => (j.id === updated.id ? { ...j, ...updated } : j)));

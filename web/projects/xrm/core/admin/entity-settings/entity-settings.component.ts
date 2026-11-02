@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 import { ModelService } from '@attome/xrm/model';
 import type { ModelCommand, ObjectSummary } from '@attome/xrm/model';
 import { catchError, forkJoin, map, of, switchMap } from 'rxjs';
@@ -239,7 +239,7 @@ interface LegalHold { id: string; entity_logicalname: string; matter_reference: 
 export class EntitySettingsComponent implements OnInit {
   private readonly admin = inject(AdminService);
   private readonly model = inject(ModelService);
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
 
   readonly boolSwitches = BOOL_SWITCHES;
@@ -292,7 +292,7 @@ export class EntitySettingsComponent implements OnInit {
 
   /** Every published or draft settings object, keyed by the entity it names. */
   private loadObjects(): Observable<Record<string, SettingsObject>> {
-    return this.api.getAllPages<ObjectSummary>('/api/v1/admin/model/entity_settings').pipe(
+    return this.sdk.getAllPages<ObjectSummary>('/api/v1/admin/model/entity_settings').pipe(
       switchMap(summaries => summaries.length
         ? forkJoin(summaries.map(s => this.model.object('entity_settings', s.id).pipe(
           map(v => ({ id: s.id, hash: v.content_hash, doc: (v.doc ?? {}) as EntitySettingsDoc })),
@@ -317,9 +317,9 @@ export class EntitySettingsComponent implements OnInit {
       next: detail => this.attributes.set(detail.attributes),
       error: () => this.attributes.set([]),
     });
-    this.api.getAllPages<RetentionRule>('/api/v1/admin/retention/rules').pipe(catchError(() => of(null)))
+    this.sdk.getAllPages<RetentionRule>('/api/v1/admin/retention/rules').pipe(catchError(() => of(null)))
       .subscribe(rules => this.retention.set(rules ? rules.filter(r => r.entity_logicalname === entity?.logicalname) : null));
-    this.api.getAllPages<LegalHold>('/api/v1/admin/legal-holds').pipe(catchError(() => of(null)))
+    this.sdk.getAllPages<LegalHold>('/api/v1/admin/legal-holds').pipe(catchError(() => of(null)))
       .subscribe(holds => this.holds.set(holds ? holds.filter(h => h.entity_logicalname === entity?.logicalname) : null));
   }
 

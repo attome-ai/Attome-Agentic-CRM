@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 
 /** `recycle_bin::BinSetting`. */
 export interface BinSetting {
@@ -70,7 +70,7 @@ export const RETENTION_CHOICES: readonly (number | null)[] = [null, 7, 30, 365, 
   `],
 })
 export class BinSettingsComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** Entity logical name. */
   readonly entity = input.required<string>();
@@ -89,7 +89,7 @@ export class BinSettingsComponent {
   }
 
   private load(entity: string): void {
-    this.api.get<{ items: BinSetting[] }>('/api/v1/admin/bin-settings').subscribe({
+    this.sdk.get<{ items: BinSetting[] }>('/api/v1/admin/bin-settings').subscribe({
       next: page => this.apply(page.items.find(s => s.entity === entity)),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -109,12 +109,15 @@ export class BinSettingsComponent {
     this.busy.set(true);
     this.saved.set(false);
     this.error.set(null);
-    this.api.put<BinSetting>(`/api/v1/admin/bin-settings/${encodeURIComponent(this.entity())}`, {
+    this.sdk.put<BinSetting>(
+      `/api/v1/admin/bin-settings/${encodeURIComponent(this.entity())}`,
+      { body: {
       require_reason: this.requireReason(),
       retention_days: this.retention(),
       alert_threshold: Number(this.threshold()),
       hard_delete_needs_approval: this.approval(),
-    }).subscribe({
+    } },
+    ).subscribe({
       next: setting => { this.busy.set(false); this.saved.set(true); this.apply(setting); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });

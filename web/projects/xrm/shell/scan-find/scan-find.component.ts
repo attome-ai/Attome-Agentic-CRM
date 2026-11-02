@@ -3,7 +3,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ApiError, ApiService, LangService, Page, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, Page, TranslatePipe } from '@attome/base';
 import { ScanService } from '@attome/base/scan';
 import { entityFormRoute } from '@attome/xrm/core/entity';
 import { Subscription, catchError, of } from 'rxjs';
@@ -73,7 +73,7 @@ export interface ScanHit {
   `],
 })
 export class ScanFindComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly scanner = inject(ScanService);
   private readonly router = inject(Router);
   private readonly lang = inject(LangService);
@@ -123,7 +123,7 @@ export class ScanFindComponent {
     this.busy.set(true);
     this.message.set(null);
     this.hits.set([]);
-    this.api.get<Page<ScanHit>>('/api/v1/scan/find', { value: code }).pipe(
+    this.sdk.get<Page<ScanHit>>('/api/v1/scan/find', { query: { value: code } }).pipe(
       catchError((e: unknown) => {
         this.busy.set(false);
         this.message.set((e as ApiError).status === 404 ? 'shell.scan.off' : this.lang.errorText(e as ApiError));

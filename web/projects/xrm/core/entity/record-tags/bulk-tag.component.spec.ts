@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { BulkTagComponent } from './bulk-tag.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 describe('BulkTagComponent (B4-T4)', () => {
   function create() {
@@ -13,6 +14,7 @@ describe('BulkTagComponent (B4-T4)', () => {
       imports: [BulkTagComponent],
       providers: [
         { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (key: string) => key } },
       ],
     });

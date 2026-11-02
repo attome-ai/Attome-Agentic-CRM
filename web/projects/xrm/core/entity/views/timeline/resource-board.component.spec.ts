@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ATTOME_CONFIG, ApiService, LangService, LiveChannel, LiveRecords } from '@attome/base';
+import { ATTOME_CONFIG, ApiService, SdkService, LangService, LiveChannel, LiveRecords } from '@attome/base';
 import { QueryService } from '@attome/xrm/core/query/data';
 import { Subject, of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -9,6 +9,7 @@ import { MAP_LIBRARY_LOADER } from '../map/points-map.component';
 import {
   BoardJob, BoardTechnician, ResourceBoardComponent, barGeometry, boardPoints, coordinate, lastKnownLocations,
 } from './resource-board.component';
+import { sdkFromApi } from '../../../../testing/sdk-from-api';
 
 const DAY = '2026-10-26';
 
@@ -90,6 +91,7 @@ describe('ResourceBoardComponent (I3-T1)', () => {
       imports: [ResourceBoardComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: QueryService, useValue: { execute } },
         { provide: EntityService, useValue: { update } },
         { provide: LiveChannel, useValue: live },

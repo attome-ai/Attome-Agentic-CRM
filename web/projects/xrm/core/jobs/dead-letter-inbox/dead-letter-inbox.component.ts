@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 /** `attome_api::dead_letter_inbox::DeadLetterGroup`. */
 export interface DeadLetterGroup {
@@ -164,7 +164,7 @@ const BASE = '/api/v1/admin/dead-letters';
   `],
 })
 export class DeadLetterInboxComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly groups = signal<DeadLetterGroup[]>([]);
   readonly warnings = signal<string[]>([]);
@@ -187,7 +187,7 @@ export class DeadLetterInboxComponent implements OnInit {
 
   load(): void {
     this.error.set(null);
-    this.api.get<Page<DeadLetterGroup>>(`${BASE}/groups`, { page_size: '200' }).subscribe({
+    this.sdk.get<Page<DeadLetterGroup>>(`${BASE}/groups`, { query: { page_size: '200' } }).subscribe({
       next: page => { this.groups.set(page.items); this.warnings.set(page.warnings ?? []); },
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -206,7 +206,7 @@ export class DeadLetterInboxComponent implements OnInit {
 
   private loadItems(causeGroup: string): void {
     this.items.set([]);
-    this.api.get<Page<DeadLetterItem>>(BASE, { group: causeGroup, page_size: '200' }).subscribe({
+    this.sdk.get<Page<DeadLetterItem>>(BASE, { query: { group: causeGroup, page_size: '200' } }).subscribe({
       next: page => this.items.set(page.items),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -220,9 +220,12 @@ export class DeadLetterInboxComponent implements OnInit {
     }
     this.busy.set(true);
     this.notice.set(null);
-    this.api.post<GroupReplayStarted>(`${BASE}/groups/replay`, {
+    this.sdk.post<GroupReplayStarted>(
+      `${BASE}/groups/replay`,
+      { body: {
       cause_group: group.cause_group, rate_per_minute: rate,
-    }).subscribe({
+    } },
+    ).subscribe({
       next: started => {
         this.busy.set(false);
         this.notice.set(started.job_id
@@ -236,7 +239,7 @@ export class DeadLetterInboxComponent implements OnInit {
 
   replay(item: DeadLetterItem): void {
     this.busy.set(true);
-    this.api.post<unknown>(`${BASE}/${encodeURIComponent(item.source)}/${encodeURIComponent(item.id)}/replay`, {})
+    this.sdk.post<unknown>(`${BASE}/${encodeURIComponent(item.source)}/${encodeURIComponent(item.id)}/replay`, { body: {} })
       .subscribe({
         next: () => { this.busy.set(false); this.load(); },
         error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
@@ -252,8 +255,9 @@ export class DeadLetterInboxComponent implements OnInit {
     const reason = this.reason.trim();
     if (!reason) return;
     this.busy.set(true);
-    this.api.post<void>(
-      `${BASE}/${encodeURIComponent(item.source)}/${encodeURIComponent(item.id)}/discard`, { reason },
+    this.sdk.post<void>(
+      `${BASE}/${encodeURIComponent(item.source)}/${encodeURIComponent(item.id)}/discard`,
+      { body: { reason } },
     ).subscribe({
       next: () => { this.busy.set(false); this.discarding.set(null); this.reason = ''; this.load(); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },

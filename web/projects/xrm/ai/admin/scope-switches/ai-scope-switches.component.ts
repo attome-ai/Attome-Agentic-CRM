@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { ApiError, ApiService, LocalDatePipe, TranslatePipe, type Page } from '@attome/base';
+import { ApiError, SdkService, LocalDatePipe, TranslatePipe, type Page } from '@attome/base';
 
 /** One switched scope (`scope_switch::ScopeSwitchView`). */
 export interface ScopeSwitch {
@@ -28,7 +28,7 @@ export const SCOPE_KINDS = ['agent', 'model', 'provider', 'tool', 'channel'] as 
   styleUrls:       ['./ai-scope-switches.component.css'],
 })
 export class AiScopeSwitchesComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly kinds    = SCOPE_KINDS;
   readonly switches = signal<ScopeSwitch[]>([]);
@@ -43,7 +43,7 @@ export class AiScopeSwitchesComponent implements OnInit {
   }
 
   load(): void {
-    this.api.get<Page<ScopeSwitch>>('/api/v1/admin/ai/switches').subscribe({
+    this.sdk.get<Page<ScopeSwitch>>('/api/v1/admin/ai/switches').subscribe({
       next: page => this.switches.set(page.items ?? []),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -53,9 +53,9 @@ export class AiScopeSwitchesComponent implements OnInit {
     if (!key.trim()) return;
     this.busy.set(true);
     this.error.set(null);
-    this.api.put<void>(
+    this.sdk.put<void>(
       `/api/v1/admin/ai/switches/${encodeURIComponent(kind)}/${encodeURIComponent(key.trim())}`,
-      { enabled, reason },
+      { body: { enabled, reason } },
     ).subscribe({
       next: () => { this.busy.set(false); this.newKey.set(''); this.newReason.set(''); this.load(); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },

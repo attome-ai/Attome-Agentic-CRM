@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 import { logicalToUrlPath } from '@attome/xrm/core/entity';
 
 /** `attome_ai::followup_routes::AiFollowupItem`. */
@@ -68,7 +68,7 @@ export function ageInDays(createdAt: string, now: Date = new Date()): number {
   `],
 })
 export class AiFollowupsComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly items = signal<AiFollowupItem[]>([]);
   readonly error = signal<string | null>(null);
@@ -84,7 +84,7 @@ export class AiFollowupsComponent implements OnInit {
   }
 
   load(): void {
-    this.api.get<{ items: AiFollowupItem[] }>('/api/v1/ai/follow-ups?page=1&page_size=100').subscribe({
+    this.sdk.get<{ items: AiFollowupItem[] }>('/api/v1/ai/follow-ups?page=1&page_size=100').subscribe({
       next: page => this.items.set(page.items),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -92,8 +92,11 @@ export class AiFollowupsComponent implements OnInit {
 
   dismiss(item: AiFollowupItem): void {
     this.busy.set(true);
-    this.api.post(`/api/v1/ai/follow-ups/${encodeURIComponent(item.id)}/dismiss`, {},
-      { ifMatch: item.row_version }).subscribe({
+    this.sdk.post(
+      `/api/v1/ai/follow-ups/${encodeURIComponent(item.id)}/dismiss`,
+      { body: {} },
+      { ifMatch: item.row_version },
+    ).subscribe({
       next: () => { this.busy.set(false); this.load(); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });

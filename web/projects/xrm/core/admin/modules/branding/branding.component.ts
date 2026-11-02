@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ApiError, ApiService, Page, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, Page, TranslatePipe } from '@attome/base';
 import { Subject, debounceTime, switchMap } from 'rxjs';
 
 /** The colour tokens the editor shows, in `attome_core::theme_tokens::ThemeTokens` order. */
@@ -64,7 +64,7 @@ const HEX = /^#[0-9a-fA-F]{6}$/;
   styleUrls:       ['./branding.component.css'],
 })
 export class BrandingComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly checks = new Subject<ThemeTokens>();
 
@@ -97,7 +97,7 @@ export class BrandingComponent implements OnInit {
   ngOnInit(): void {
     this.checks.pipe(
       debounceTime(300),
-      switchMap(tokens => this.api.post<ContrastReport>('/api/v1/admin/themes/preview-check', { tokens })),
+      switchMap(tokens => this.sdk.post<ContrastReport>('/api/v1/admin/themes/preview-check', { body: { tokens } })),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe({
       next: r => this.report.set(r),
@@ -107,7 +107,7 @@ export class BrandingComponent implements OnInit {
   }
 
   load(): void {
-    this.api.get<Page<ThemeRow>>('/api/v1/admin/themes', { page: '1', page_size: '100' }).subscribe({
+    this.sdk.get<Page<ThemeRow>>('/api/v1/admin/themes', { query: { page: '1', page_size: '100' } }).subscribe({
       next: page => {
         this.versions.set(page.items);
         const current = this.deploymentVersions()[0];
@@ -153,7 +153,7 @@ export class BrandingComponent implements OnInit {
   /** Saves the editor's tokens as a new draft version of the deployment theme. */
   saveDraft(): void {
     this.busy.set(true);
-    this.api.post<ThemeRow>('/api/v1/admin/themes', { scope_kind: 'deployment', scope_ref: '', tokens: this.tokens() }).subscribe({
+    this.sdk.post<ThemeRow>('/api/v1/admin/themes', { body: { scope_kind: 'deployment', scope_ref: '', tokens: this.tokens() } }).subscribe({
       next: row => { this.busy.set(false); this.saved.set(row); this.load(); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });
@@ -164,7 +164,7 @@ export class BrandingComponent implements OnInit {
     const draft = this.saved();
     if (!draft || !file) return;
     this.busy.set(true);
-    this.api.post<unknown>(`/api/v1/admin/themes/${draft.id}/assets?kind=${kind}`, file).subscribe({
+    this.sdk.post<unknown>(`/api/v1/admin/themes/${draft.id}/assets?kind=${kind}`, { body: file }).subscribe({
       next: () => { this.busy.set(false); this.uploaded.update(kinds => [...kinds.filter(k => k !== kind), kind]); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });
@@ -172,7 +172,7 @@ export class BrandingComponent implements OnInit {
 
   publish(row: ThemeRow): void {
     this.busy.set(true);
-    this.api.post<unknown>(`/api/v1/admin/themes/${row.id}/publish`, {}, { ifMatch: row.row_version }).subscribe({
+    this.sdk.post<unknown>(`/api/v1/admin/themes/${row.id}/publish`, { body: {} }, { ifMatch: row.row_version }).subscribe({
       next: () => { this.busy.set(false); this.load(); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });
@@ -180,16 +180,19 @@ export class BrandingComponent implements OnInit {
 
   rollback(row: ThemeRow): void {
     this.busy.set(true);
-    this.api.post<ThemeRow>('/api/v1/admin/themes/rollback', {
+    this.sdk.post<ThemeRow>(
+      '/api/v1/admin/themes/rollback',
+      { body: {
       scope_kind: row.scope_kind, scope_ref: row.scope_ref, version: row.version,
-    }).subscribe({
+    } },
+    ).subscribe({
       next: () => { this.busy.set(false); this.load(); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });
   }
 
   showChanges(row: ThemeRow): void {
-    this.api.get<{ items: TokenChange[] }>(`/api/v1/admin/themes/${row.id}/diff`).subscribe({
+    this.sdk.get<{ items: TokenChange[] }>(`/api/v1/admin/themes/${row.id}/diff`).subscribe({
       next: page => this.changes.set({ version: row.version, changes: page.items }),
       error: (e: ApiError) => this.error.set(e.message),
     });

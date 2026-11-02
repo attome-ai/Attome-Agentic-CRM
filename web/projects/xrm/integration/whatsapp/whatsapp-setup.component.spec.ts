@@ -1,10 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, AuthService, LangService } from '@attome/base';
+import { ApiService, SdkService, AuthService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { WhatsAppSetupComponent, systemBody } from './whatsapp-setup.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const NUMBER = { id: 'n1', name: 'Riyadh support', phone_number_id: '111', waba_id: '222', templates: 0, synced_at: null };
 const TEMPLATE = {
@@ -22,6 +23,7 @@ function setup() {
     imports: [WhatsAppSetupComponent],
     providers: [
       { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       { provide: AuthService, useValue: { userId: signal('u1') } },
       { provide: LangService, useValue: { translate: (key: string) => key, intlLocale: () => 'en-US' } },
     ],

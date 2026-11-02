@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, input, output, signal } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 import { AdminService, type EntityMeta } from '@attome/xrm/core/admin/data';
 
 import {
@@ -166,7 +166,7 @@ import {
   `],
 })
 export class CustomerTestEditorComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly admin = inject(AdminService);
 
   /** The test to change, or none to write a new one. */
@@ -242,8 +242,8 @@ export class CustomerTestEditorComponent implements OnInit {
     this.busy.set(true);
     this.error.set(null);
     const request = existing
-      ? this.api.patch<CustomerTest>(`/api/v1/admin/customer-tests/${existing.id}`, body, existing.row_version)
-      : this.api.post<CustomerTest>('/api/v1/admin/customer-tests', body);
+      ? this.sdk.patch<CustomerTest>(`/api/v1/admin/customer-tests/${existing.id}`, { body: body, ifMatch: existing.row_version })
+      : this.sdk.post<CustomerTest>('/api/v1/admin/customer-tests', { body: body });
     request.subscribe({
       next: test => { this.busy.set(false); this.saved.emit(test); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },

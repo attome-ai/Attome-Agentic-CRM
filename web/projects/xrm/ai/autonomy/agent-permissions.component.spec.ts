@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AiAgentPermissionsComponent, type PermissionReport } from './agent-permissions.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const REPORT: PermissionReport = {
   run_id: 'r1', agent_ref: 'a1', passed: false, cases: 12,
@@ -21,6 +22,7 @@ function setup() {
     imports: [AiAgentPermissionsComponent],
     providers: [
       { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       { provide: LangService, useValue: { translate: (key: string) => key, intlLocale: () => 'en-US' } },
     ],
   });

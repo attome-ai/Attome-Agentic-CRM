@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked, viewChild } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 import { CanvasComponent, valueAt } from '@attome/xrm/canvas';
 import type { EditCommand } from '@attome/xrm/canvas';
 import { ModelService } from '@attome/xrm/model';
@@ -69,7 +69,7 @@ const PROBLEM_KEYS = {
 })
 export class AppDesignerComponent {
   private readonly model = inject(ModelService);
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
   private readonly router = inject(Router);
   private readonly canvas = viewChild(CanvasComponent);
@@ -238,9 +238,9 @@ export class AppDesignerComponent {
     this.dependencies.set(lines);
     lines.forEach((line, index) => {
       if (!(PICKABLE_KINDS as readonly string[]).includes(line.kind) || !line.target) return;
-      this.api.get<{ items: ReferenceView[] }>(
+      this.sdk.get<{ items: ReferenceView[] }>(
         `/api/v1/admin/model/${encodeURIComponent(line.kind)}/${encodeURIComponent(line.target)}/references`,
-        { page_size: '100' },
+        { query: { page_size: '100' } },
       ).subscribe({
         next: page => {
           const uses = (page.items ?? []).map(r => {

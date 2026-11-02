@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService, UserPreferencesService } from '@attome/base';
+import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { AccessService } from '@attome/xrm/core/access/data';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ClusterStatus, ClusterStatusComponent, reasonOk } from './cluster-status.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const SINGLE: ClusterStatus = {
   mode: 'single', leader: 'local', members: [], synchronous_standby: null, last_failover: null,
@@ -33,6 +34,7 @@ describe('ClusterStatusComponent (AB2-T11)', () => {
       imports: [ClusterStatusComponent],
       providers: [
         { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: AccessService, useValue: { ready: () => of(undefined), hasPrivilege: () => canSwitch } },
         {
           provide: LangService,

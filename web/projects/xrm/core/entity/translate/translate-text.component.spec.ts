@@ -1,10 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { TranslateTextComponent } from './translate-text.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 function render(post: ReturnType<typeof vi.fn>) {
   TestBed.resetTestingModule();
@@ -12,6 +13,7 @@ function render(post: ReturnType<typeof vi.fn>) {
     imports: [TranslateTextComponent],
     providers: [
       { provide: ApiService, useValue: { post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       { provide: LangService, useValue: {
         translate: (key: string) => key, current: signal('ar'), isRtl: signal(true), intlLocale: () => 'ar',
       } },

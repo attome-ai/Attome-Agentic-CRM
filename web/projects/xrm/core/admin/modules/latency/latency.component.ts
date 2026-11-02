@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 
 /** `attome_server::metrics::RouteLatency`. */
 export interface RouteLatency {
@@ -33,7 +33,7 @@ export const SLOW_P95_MS = 500;
   styleUrls:       ['./latency.component.css'],
 })
 export class LatencyComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly report = signal<LatencyReport | null>(null);
   readonly error = signal<string | null>(null);
@@ -50,7 +50,7 @@ export class LatencyComponent implements OnInit {
   }
 
   load(): void {
-    this.api.get<LatencyReport>('/api/v1/admin/latency').subscribe({
+    this.sdk.get<LatencyReport>('/api/v1/admin/latency').subscribe({
       next: r => this.report.set(r),
       error: (e: ApiError) => this.error.set(e.message),
     });

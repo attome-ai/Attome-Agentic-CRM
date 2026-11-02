@@ -1,12 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService, UserPreferencesService } from '@attome/base';
+import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
   DeadLetterGroup, DeadLetterInboxComponent, DeadLetterItem, trend, validRate,
 } from './dead-letter-inbox.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const NOW = Date.parse('2026-10-23T12:00:00Z');
 
@@ -34,6 +35,7 @@ describe('DeadLetterInboxComponent (M5-T3)', () => {
       imports: [DeadLetterInboxComponent],
       providers: [
         { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },
         { provide: UserPreferencesService, useValue: { timezone: () => 'UTC', calendar: () => null, digits: () => null } },
       ],

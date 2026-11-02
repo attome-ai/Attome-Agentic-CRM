@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { ApiError, ApiService, AuthService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, AuthService, LangService, TranslatePipe } from '@attome/base';
 import { EntityService, NotesPanelComponent } from '@attome/xrm/core/entity';
 import { PresenceComponent } from '@attome/xrm/service/workspace';
 import { catchError, forkJoin, map, of } from 'rxjs';
@@ -157,7 +157,7 @@ export function toRow(c: InboxConversation, data: Record<string, unknown>, rowVe
   `],
 })
 export class InboxComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly entities = inject(EntityService);
   private readonly auth = inject(AuthService);
   private readonly lang = inject(LangService);
@@ -177,7 +177,7 @@ export class InboxComponent {
   readonly shown = computed(() => filterRows(this.rows(), this.filter(), this.me()));
 
   constructor() {
-    this.api.get<Page<InboxMailbox>>('/api/v1/service/inbox/mailboxes').subscribe({
+    this.sdk.get<Page<InboxMailbox>>('/api/v1/service/inbox/mailboxes').subscribe({
       next: page => {
         this.mailboxes.set(page.items);
         this.loaded.set(true);
@@ -252,7 +252,7 @@ export class InboxComponent {
     const mailbox = this.mailbox();
     if (!mailbox) return;
     this.error.set(null);
-    this.api.get<Page<InboxConversation>>('/api/v1/service/inbox', { mailbox, page_size: '50' }).subscribe({
+    this.sdk.get<Page<InboxConversation>>('/api/v1/service/inbox', { query: { mailbox, page_size: '50' } }).subscribe({
       next: page => {
         if (!page.items.length) {
           this.rows.set([]);

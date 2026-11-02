@@ -1,7 +1,7 @@
 import {
   ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, signal, untracked,
 } from '@angular/core';
-import { ApiError, ApiService, LangService, LiveChannel, LiveRecords, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, LiveChannel, LiveRecords, TranslatePipe } from '@attome/base';
 import { QueryService } from '@attome/xrm/core/query/data';
 import { Observable, catchError, forkJoin, map, of } from 'rxjs';
 
@@ -219,7 +219,7 @@ interface CandidateList { work_order_id: string; rules: string[]; candidates: { 
   `],
 })
 export class ResourceBoardComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly query = inject(QueryService);
   private readonly entities = inject(EntityService);
   protected readonly lang = inject(LangService);
@@ -323,7 +323,7 @@ export class ResourceBoardComponent {
   propose(): void {
     this.busy.set(true);
     this.message.set(null);
-    this.api.post<{ assignments: BoardGhost[]; unassigned: string[] }>('/api/v1/service/day-plans/propose', { date: this.date() }).subscribe({
+    this.sdk.post<{ assignments: BoardGhost[]; unassigned: string[] }>('/api/v1/service/day-plans/propose', { body: { date: this.date() } }).subscribe({
       next: plan => { this.ghosts.set(plan.assignments); this.busy.set(false); },
       error: (e: ApiError) => { this.busy.set(false); this.message.set(this.lang.errorText(e)); },
     });
@@ -332,7 +332,7 @@ export class ResourceBoardComponent {
   private candidatesOf(jobId: string): Observable<CandidateList | null> {
     const cached = this.candidates.get(jobId);
     if (cached) return of(cached);
-    return this.api.get<CandidateList>(`/api/v1/service/work-orders/${encodeURIComponent(jobId)}/candidates`).pipe(
+    return this.sdk.get<CandidateList>(`/api/v1/service/work-orders/${encodeURIComponent(jobId)}/candidates`).pipe(
       map(list => { this.candidates.set(jobId, list); return list; }),
       catchError((e: ApiError) => { this.message.set(this.lang.errorText(e)); return of(null); }),
     );

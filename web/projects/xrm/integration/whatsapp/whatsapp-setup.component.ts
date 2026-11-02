@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, AuthService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, AuthService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 /** `whatsapp_templates::WhatsAppNumber`. */
 export interface WhatsAppNumber {
@@ -166,7 +166,7 @@ const EMPTY: NumberDraft = {
   `,
 })
 export class WhatsAppSetupComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly auth = inject(AuthService);
 
   draft: NumberDraft = { ...EMPTY };
@@ -182,7 +182,7 @@ export class WhatsAppSetupComponent implements OnInit {
   }
 
   private load(): void {
-    this.api.get<Page<WhatsAppNumber>>('/api/v1/admin/integrations/whatsapp/numbers').subscribe({
+    this.sdk.get<Page<WhatsAppNumber>>('/api/v1/admin/integrations/whatsapp/numbers').subscribe({
       next: p => this.numbers.set(p.items),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -193,7 +193,7 @@ export class WhatsAppSetupComponent implements OnInit {
     if (!principal) return;
     this.busy.set(true);
     this.error.set(null);
-    this.api.post('/api/v1/admin/integrations/systems', systemBody(this.draft, principal)).subscribe({
+    this.sdk.post('/api/v1/admin/integrations/systems', { body: systemBody(this.draft, principal) }).subscribe({
       next: () => { this.busy.set(false); this.draft = { ...EMPTY }; this.load(); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });
@@ -202,7 +202,7 @@ export class WhatsAppSetupComponent implements OnInit {
   sync(n: WhatsAppNumber): void {
     this.busy.set(true);
     this.error.set(null);
-    this.api.post<SyncResult>(`/api/v1/admin/integrations/whatsapp/${n.id}/templates/sync`, {}).subscribe({
+    this.sdk.post<SyncResult>(`/api/v1/admin/integrations/whatsapp/${n.id}/templates/sync`, { body: {} }).subscribe({
       next: r => { this.busy.set(false); this.synced.set(r); this.load(); this.open(n); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });
@@ -210,7 +210,7 @@ export class WhatsAppSetupComponent implements OnInit {
 
   open(n: WhatsAppNumber): void {
     this.selected.set(n);
-    this.api.get<Page<WhatsAppTemplate>>(`/api/v1/admin/integrations/whatsapp/${n.id}/templates`).subscribe({
+    this.sdk.get<Page<WhatsAppTemplate>>(`/api/v1/admin/integrations/whatsapp/${n.id}/templates`).subscribe({
       next: p => this.templates.set(p.items),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -226,9 +226,9 @@ export class WhatsAppSetupComponent implements OnInit {
 
   saveMap(t: WhatsAppTemplate): void {
     const current = this.templates().find(x => x.id === t.id) ?? t;
-    this.api.put<WhatsAppTemplate>(
+    this.sdk.put<WhatsAppTemplate>(
       `/api/v1/admin/integrations/whatsapp/templates/${t.id}/variables`,
-      { variable_map: current.variable_map },
+      { body: { variable_map: current.variable_map } },
       { ifMatch: current.row_version },
     ).subscribe({
       next: saved => this.templates.update(ts => ts.map(x => x.id === saved.id ? saved : x)),

@@ -1,10 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Preferences, PreferencesComponent, toggledPreferences } from './preferences.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const PREFS: Preferences = {
   purposes: [
@@ -30,6 +31,7 @@ describe('PreferencesComponent', () => {
       imports: [PreferencesComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: lang },
         {
           provide: ActivatedRoute,

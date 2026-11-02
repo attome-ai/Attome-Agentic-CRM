@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { ApiError, ApiService, LangService, LocalDatePipe, LocalNumberPipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, LocalDatePipe, LocalNumberPipe, TranslatePipe } from '@attome/base';
 import { EntityService } from '@attome/xrm/core/entity';
 
 /** One explanation step: a catalogue key under `commission.` and its values. */
@@ -109,7 +109,7 @@ interface Period {
   `],
 })
 export class CommissionStatementComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly entities = inject(EntityService);
   private readonly lang = inject(LangService);
 
@@ -146,7 +146,7 @@ export class CommissionStatementComponent {
     this.rows.set([]);
     this.error.set(null);
     this.loading.set(true);
-    this.api.get<{ items: StatementRow[] }>('/api/v1/commission/statements/me', { period_id: id, page_size: '200' })
+    this.sdk.get<{ items: StatementRow[] }>('/api/v1/commission/statements/me', { query: { period_id: id, page_size: '200' } })
       .subscribe({
         next: page => { this.loading.set(false); if (this.periodId() === id) this.rows.set(page.items); },
         error: (e: ApiError) => { this.loading.set(false); this.error.set(e.message); },

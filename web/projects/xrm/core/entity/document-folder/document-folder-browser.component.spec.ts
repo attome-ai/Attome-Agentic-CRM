@@ -1,11 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { EntityService } from '../services/entity.service';
 import { FileUploadService } from '../field/file-upload.service';
 import { DocumentFolderBrowserComponent, DOCUMENT_ROW_HEIGHT_PX } from './document-folder-browser.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 /**
  * FE-6 — the tree route has no LIMIT, so a folder with thousands of documents
@@ -39,6 +40,7 @@ describe('DocumentFolderBrowserComponent virtual scrolling (FE-6)', () => {
       imports: [DocumentFolderBrowserComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: EntityService, useValue: { get: vi.fn().mockReturnValue(of({ data: {} })), delete: vi.fn() } },
         { provide: FileUploadService, useValue: {} },
         { provide: DialogService, useValue: { confirm: vi.fn(), prompt: vi.fn(), error: vi.fn() } },

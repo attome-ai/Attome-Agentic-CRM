@@ -1,12 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { AdminService } from '@attome/xrm/core/admin/data';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { CustomerTestEditorComponent } from './customer-test-editor.component';
 import { type CustomerTest, fromTest, parseValue, toDefinition } from './customer-test.model';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const ENTITIES = [{ id: 'e1', logicalname: 'account', name: 'Account' }];
 
@@ -19,6 +20,7 @@ describe('CustomerTestEditorComponent (Z15-T15)', () => {
       imports: [CustomerTestEditorComponent],
       providers: [
         { provide: ApiService, useValue: { post, patch } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: AdminService, useValue: { listEntities: () => of(ENTITIES), getEntity } },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },
       ],

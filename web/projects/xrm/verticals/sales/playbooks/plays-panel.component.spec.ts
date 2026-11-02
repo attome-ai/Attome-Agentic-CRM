@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { xrmAr } from '@attome/xrm/core/i18n-ar';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { PlaysPanelComponent, SalesPlay } from './plays-panel.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const DEAL = '0190a000-0000-7000-8000-000000000001';
 
@@ -38,6 +39,7 @@ function mount(options: { plays?: SalesPlay[] | 'missing'; arabic?: boolean; sta
     imports: [PlaysPanelComponent],
     providers: [
       { provide: ApiService, useValue: { get } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       { provide: LangService, useValue: { translate, current: signal(options.arabic ? 'ar' : 'en') } },
     ],
   });

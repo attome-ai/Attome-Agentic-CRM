@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
-import { ApiService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { SdkService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 /** One shipment carrying a line (`LineShipment`). */
 export interface LineShipment {
@@ -119,7 +119,7 @@ export function trackingUrl(carrier: string | null, tracking: string | null): st
   `],
 })
 export class OrderFulfilmentPanelComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
 
   /** The order's entity name (the record tab passes it; the panel reads orders only). */
@@ -147,7 +147,7 @@ export class OrderFulfilmentPanelComponent {
   private load(orderId: string): void {
     this.loading.set(true);
     this.error.set(false);
-    this.api.get<OrderFulfilment>('/api/v1/fulfilment/orders', { order_id: orderId }).subscribe({
+    this.sdk.get<OrderFulfilment>('/api/v1/fulfilment/orders', { query: { order_id: orderId } }).subscribe({
       next: page => {
         this.lines.set(page.lines ?? []);
         this.loading.set(false);

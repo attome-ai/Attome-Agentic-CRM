@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { QueryBuilderComponent } from './query-builder.component';
 import { buildSpec, emptyState, stateFromFilter } from './query-builder.model';
+import { sdkFromApi } from '../../../../testing/sdk-from-api';
 
 describe('query builder (A14-T3)', () => {
   let get: ReturnType<typeof vi.fn>;
@@ -34,6 +35,7 @@ describe('query builder (A14-T3)', () => {
       imports: [QueryBuilderComponent],
       providers: [
         { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, errorText: () => 'failed', isRtl: () => false } },
       ],
     });

@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 import { switchMap } from 'rxjs';
 
 import { DefinitionListItem, WorkflowAdminService } from '../services/workflow-admin.service';
@@ -148,7 +148,7 @@ const MODEL = '/api/v1/admin/model/flow_template';
   `],
 })
 export class WorkflowTemplateGalleryComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly workflows = inject(WorkflowAdminService);
   private readonly lang = inject(LangService);
   private readonly router = inject(Router);
@@ -176,7 +176,7 @@ export class WorkflowTemplateGalleryComponent implements OnInit {
   templateDescription = '';
 
   ngOnInit(): void {
-    this.api.get<{ items: TemplateSummary[] }>(MODEL, { page_size: '200' }).subscribe({
+    this.sdk.get<{ items: TemplateSummary[] }>(MODEL, { query: { page_size: '200' } }).subscribe({
       next: page => {
         const published = page.items.filter(t => t.state === 'published');
         this.items.set(published);
@@ -191,7 +191,7 @@ export class WorkflowTemplateGalleryComponent implements OnInit {
   }
 
   private loadDoc(id: string): void {
-    this.api.get<{ doc: TemplateDoc }>(`${MODEL}/${id}`).subscribe({
+    this.sdk.get<{ doc: TemplateDoc }>(`${MODEL}/${id}`).subscribe({
       next: v => this.docs.update(all => ({ ...all, [id]: v.doc })),
       error: () => undefined,
     });
@@ -224,7 +224,7 @@ export class WorkflowTemplateGalleryComponent implements OnInit {
     }
     this.busy.set(true);
     this.error.set(null);
-    this.api.post<{ graph: unknown; issues: Issue[] }>(`${MODEL}/${t.id}/instantiate`, { args }).subscribe({
+    this.sdk.post<{ graph: unknown; issues: Issue[] }>(`${MODEL}/${t.id}/instantiate`, { body: { args } }).subscribe({
       next: filled => {
         if (filled.issues.length > 0) {
           this.busy.set(false);
@@ -257,11 +257,14 @@ export class WorkflowTemplateGalleryComponent implements OnInit {
         const newest = [...def.versions].sort((a, b) => b.version_number - a.version_number)[0];
         return this.workflows.getVersion(flowId, newest.id);
       }),
-      switchMap(version => this.api.post<unknown>(`${MODEL}/${id}/commands`, {
+      switchMap(version => this.sdk.post<unknown>(
+        `${MODEL}/${id}/commands`,
+        { body: {
         base_hash: '', name: templateSlug(this.templateName),
         commands: templateCommands(this.templateDescription.trim() || this.templateName.trim(), version.graph, []),
-      })),
-      switchMap(() => this.api.post<unknown>(`${MODEL}/${id}/publish`, {})),
+      } },
+      )),
+      switchMap(() => this.sdk.post<unknown>(`${MODEL}/${id}/publish`, { body: {} })),
     ).subscribe({
       next: () => {
         this.busy.set(false);

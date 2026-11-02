@@ -1,10 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { StageBarComponent, StageProcessView, missingFor } from './stage-bar.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const PROCESS: StageProcessView = {
   id: 'p-1', name: 'Pipeline', entity: 'opportunity',
@@ -23,6 +24,7 @@ describe('StageBarComponent (M7-T2)', () => {
       imports: [StageBarComponent],
       providers: [
         { provide: ApiService, useValue: { get } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },
       ],
     });

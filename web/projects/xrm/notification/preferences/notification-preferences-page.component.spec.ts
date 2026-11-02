@@ -1,10 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import type { ApiError } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotificationPreferences, NotificationPreferencesService } from './notification-preferences.service';
 import { NotificationPreferencesPageComponent, quietHoursValue } from './notification-preferences-page.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 function doc(items: NotificationPreferences['items'] = []): NotificationPreferences {
   return { categories: ['sla_warning', 'reminder'], channels: ['in_app', 'email', 'sms', 'push', 'chat'], items };
@@ -28,6 +29,7 @@ describe('NotificationPreferencesPageComponent', () => {
       providers: [
         { provide: NotificationPreferencesService, useValue: svc },
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         {
           provide: LangService,
           useValue: {

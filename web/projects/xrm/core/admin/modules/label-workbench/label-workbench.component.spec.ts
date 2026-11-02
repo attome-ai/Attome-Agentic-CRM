@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { LabelWorkbenchComponent, oneUnitXliff } from './label-workbench.component';
+import { sdkFromApi } from '../../../../testing/sdk-from-api';
 
 describe('LabelWorkbenchComponent (A20-T3)', () => {
   const rows = [
@@ -18,6 +19,7 @@ describe('LabelWorkbenchComponent (A20-T3)', () => {
       imports: [LabelWorkbenchComponent],
       providers: [
         { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k } },
       ],
     });

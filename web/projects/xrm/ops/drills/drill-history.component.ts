@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { ApiError, ApiService, ATTOME_CONFIG, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, ATTOME_CONFIG, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 import { AccessService } from '@attome/xrm/core/access/data';
 
 /** `attome_ops::freshness::Freshness`. */
@@ -219,7 +219,7 @@ export function trendPoints(
   `],
 })
 export class DrillHistoryComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly access = inject(AccessService);
   private readonly lang = inject(LangService);
   private readonly config = inject(ATTOME_CONFIG);
@@ -254,7 +254,7 @@ export class DrillHistoryComponent implements OnInit {
       this.canManage.set(this.access.hasPrivilege('ops.drill.manage'));
       this.canAudit.set(this.access.hasPrivilege('ops.auditor.read'));
     });
-    this.api.get<Page<DrillFreshness>>('/api/v1/ops/drills/freshness').subscribe({
+    this.sdk.get<Page<DrillFreshness>>('/api/v1/ops/drills/freshness').subscribe({
       next: p => this.freshness.set(p.items ?? []),
       error: (e: ApiError) => this.error.set(this.lang.errorText(e)),
     });
@@ -263,9 +263,12 @@ export class DrillHistoryComponent implements OnInit {
   }
 
   loadRuns(page: number): void {
-    this.api.get<Page<DrillRun>>('/api/v1/ops/drills', {
+    this.sdk.get<Page<DrillRun>>(
+      '/api/v1/ops/drills',
+      { query: {
       page: String(page), page_size: String(PAGE_SIZE),
-    }).subscribe({
+    } },
+    ).subscribe({
       next: p => {
         this.runs.set(p.items ?? []);
         this.total.set(p.total ?? 0);
@@ -276,7 +279,7 @@ export class DrillHistoryComponent implements OnInit {
   }
 
   private loadSchedules(): void {
-    this.api.get<Page<DrillSchedule>>('/api/v1/ops/drill-schedules').subscribe({
+    this.sdk.get<Page<DrillSchedule>>('/api/v1/ops/drill-schedules').subscribe({
       next: p => this.schedules.set(p.items ?? []),
       error: (e: ApiError) => this.error.set(this.lang.errorText(e)),
     });
@@ -286,10 +289,9 @@ export class DrillHistoryComponent implements OnInit {
   toggle(schedule: DrillSchedule): void {
     if (this.busy()) return;
     this.busy.set(true);
-    this.api.patch<DrillSchedule>(
+    this.sdk.patch<DrillSchedule>(
       `/api/v1/ops/drill-schedules/${schedule.id}`,
-      { enabled: !schedule.enabled },
-      schedule.row_version,
+      { body: { enabled: !schedule.enabled }, ifMatch: schedule.row_version },
     ).subscribe({
       next: updated => {
         this.busy.set(false);

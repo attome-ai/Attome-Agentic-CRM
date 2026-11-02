@@ -1,11 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { EntityService } from '@attome/xrm/core/entity';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SequenceBuilderComponent, logicalNameOf, starterGraph } from './sequence-builder.component';
 import type { SequenceSummary } from './sequence-builder.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const LIST = '01900000-0000-7000-8000-0000000000c1';
 
@@ -29,6 +30,7 @@ describe('sequence builder (D17-T2)', () => {
       imports: [SequenceBuilderComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: EntityService, useValue: entities },
         { provide: Router, useValue: router },
         { provide: LangService, useValue: { intlLocale: () => 'en-US', translate: (key: string) => key } },

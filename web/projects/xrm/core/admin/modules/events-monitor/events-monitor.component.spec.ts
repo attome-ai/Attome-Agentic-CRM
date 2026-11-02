@@ -1,10 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ConsumerHealth, EventsMonitorComponent, isLagging, lagText } from './events-monitor.component';
+import { sdkFromApi } from '../../../../testing/sdk-from-api';
 
 const CONSUMERS: ConsumerHealth[] = [
   {
@@ -24,6 +25,7 @@ describe('EventsMonitorComponent (Y7-T6)', () => {
       imports: [EventsMonitorComponent],
       providers: [
         { provide: ApiService, useValue: { get } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en') } },
       ],
     });

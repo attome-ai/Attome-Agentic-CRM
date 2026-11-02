@@ -1,10 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { MY_JOBS_REFRESH_MS, MyJob, MyJobsComponent } from './my-jobs.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const RUNNING: MyJob = {
   id: 'j1', name: 'Import contacts', status: 'running', done: 400, total: 1000,
@@ -28,6 +29,7 @@ describe('MyJobsComponent (M12-T4)', () => {
       imports: [MyJobsComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: signal('en-US'), errorText: () => 'error' } },
       ],
     });

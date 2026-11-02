@@ -1,12 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ReportBuilderComponent } from './report-builder.component';
 import { emptyReport, parameterDecls, pivot, promptValues, ready, reportSpec, summarise } from './report-builder.model';
 import { matrixChart, summaryChart } from './report-chart';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 describe('ReportBuilderComponent (P1-T1)', () => {
   const schema = {
@@ -26,6 +27,7 @@ describe('ReportBuilderComponent (P1-T1)', () => {
       imports: [ReportBuilderComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         {
           provide: LangService,
           useValue: {

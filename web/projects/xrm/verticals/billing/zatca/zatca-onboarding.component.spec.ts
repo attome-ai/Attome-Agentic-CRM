@@ -1,10 +1,11 @@
 import { computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { EinvoiceDevice, ZatcaOnboardingComponent, canOnboard } from './zatca-onboarding.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const DEVICES: EinvoiceDevice[] = [
   {
@@ -26,6 +27,7 @@ describe('ZatcaOnboardingComponent (AG2-T4)', () => {
       imports: [ZatcaOnboardingComponent],
       providers: [
         { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         {
           provide: LangService,
           useValue: { translate: (k: string) => k, current, isRtl: computed(() => current() === 'ar') },

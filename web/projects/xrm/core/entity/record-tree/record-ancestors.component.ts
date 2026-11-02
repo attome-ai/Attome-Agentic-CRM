@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ApiService, TranslatePipe } from '@attome/base';
+import { SdkService, TranslatePipe } from '@attome/base';
 
 import { entityFormRoute } from '../services/entity-url.utils';
 
@@ -57,7 +57,7 @@ export function recordLabel(row: AncestorRow): string {
   `],
 })
 export class RecordAncestorsComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly entity = input.required<string>();
   readonly recordId = input.required<string>();
@@ -77,7 +77,7 @@ export class RecordAncestorsComponent {
 
   private load(entity: string, id: string): void {
     this.steps.set([]);
-    this.api.get<{ items: AncestorRow[] }>(
+    this.sdk.get<{ items: AncestorRow[] }>(
       `/api/v1/${encodeURIComponent(entity)}/${encodeURIComponent(id)}/ancestors`,
     ).subscribe({
       // Nearest first from the server; a path reads from the root.

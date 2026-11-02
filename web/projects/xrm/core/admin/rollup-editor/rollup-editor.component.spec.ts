@@ -1,11 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { AdminService } from '@attome/xrm/core/admin/data';
 import { QueryService } from '@attome/xrm/core/query/data';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RollupEditorComponent, backfillRuns, exactAllowed, fits, resultType } from './rollup-editor.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const field = (name: string, field_type: string, options: unknown = null) =>
   ({ id: name, entity_id: 'i', name, display_name: name, field_type, options, sort_order: 0, is_required: false });
@@ -56,6 +57,7 @@ describe('RollupEditorComponent (A10-T6)', () => {
           createAttribute,
         } },
         { provide: ApiService, useValue: { get: vi.fn(() => of(INVOICE)) } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: QueryService, useValue: { execute: vi.fn(() => of({ data: { total: 2500, records: [] } })) } },
         { provide: LangService, useValue: {
           translate: (k: string, p?: Record<string, unknown>) => (p ? `${k}:${JSON.stringify(p)}` : k),

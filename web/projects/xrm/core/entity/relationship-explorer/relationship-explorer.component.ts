@@ -4,7 +4,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ApiService, LangService, TranslatePipe } from '@attome/base';
+import { SdkService, LangService, TranslatePipe } from '@attome/base';
 import type { ApiComponents } from '@attome/base';
 import { entityFormRoute } from '../services/entity-url.utils';
 
@@ -93,7 +93,7 @@ export class RelationshipExplorerComponent {
   readonly entityName = input.required<string>();
   readonly recordId = input.required<string>();
 
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly router = inject(Router);
   private readonly lang = inject(LangService);
 
@@ -164,7 +164,7 @@ export class RelationshipExplorerComponent {
       limit: 100,
     };
 
-    this.api.post<TraverseResponse>('/api/v1/graph/traverse', body).subscribe({
+    this.sdk.post<TraverseResponse>('/api/v1/graph/traverse', { body: body }).subscribe({
       next: (res) => {
         this.response.set(res);
         this.loading.set(false);
@@ -212,10 +212,13 @@ export class RelationshipExplorerComponent {
     const id = this.targetId().trim();
     if (!entity || !id) return;
     this.pathsLoading.set(true);
-    this.api.post<PathsResponse>('/api/v1/graph/paths', {
+    this.sdk.post<PathsResponse>(
+      '/api/v1/graph/paths',
+      { body: {
       from: { entity: this.entityName(), id: this.recordId() },
       to: { entity, id },
-    }).subscribe({
+    } },
+    ).subscribe({
       next: (res) => {
         this.paths.set(res);
         this.pathsLoading.set(false);

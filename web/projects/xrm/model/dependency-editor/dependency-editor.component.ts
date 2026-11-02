@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 
 import { newId } from '../agent-designer/agent-designer.component';
 import { ModelService, ObjectSummary } from '../model.service';
@@ -151,7 +151,7 @@ export function toggleCell(
 })
 export class DependencyEditorComponent implements OnInit {
   private readonly model = inject(ModelService);
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly items = signal<ObjectSummary[]>([]);
   readonly id = signal<string | null>(null);
@@ -232,7 +232,7 @@ export class DependencyEditorComponent implements OnInit {
   loadSchema(): void {
     const entity = this.entity().trim();
     if (!entity) return;
-    this.api.get<{ fields: SchemaField[] }>(`/api/v1/schema/${encodeURIComponent(entity)}`).subscribe({
+    this.sdk.get<{ fields: SchemaField[] }>(`/api/v1/schema/${encodeURIComponent(entity)}`).subscribe({
       next: schema => this.fields.set(schema.fields ?? []),
       error: (e: ApiError) => { this.fields.set([]); this.issues.set([e.message]); },
     });
@@ -274,7 +274,7 @@ export class DependencyEditorComponent implements OnInit {
   checkImpact(): void {
     const id = this.id();
     if (!id) return;
-    this.api.get<DependencyImpact>(`/api/v1/admin/model/dependency/${encodeURIComponent(id)}/impact`).subscribe({
+    this.sdk.get<DependencyImpact>(`/api/v1/admin/model/dependency/${encodeURIComponent(id)}/impact`).subscribe({
       next: impact => this.impact.set(impact),
       error: (e: ApiError) => this.issues.set([e.message]),
     });

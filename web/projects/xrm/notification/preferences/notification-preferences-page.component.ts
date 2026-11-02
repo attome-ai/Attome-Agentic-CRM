@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 import {
   NotificationPreferences, NotificationPreferencesService, PREFERENCE_CHANNELS, PreferenceChannel,
 } from './notification-preferences.service';
@@ -48,7 +48,7 @@ const EVENT_LABELS: Record<string, string> = {
 export class NotificationPreferencesPageComponent implements OnInit {
   private readonly svc  = inject(NotificationPreferencesService);
   private readonly lang = inject(LangService);
-  private readonly api  = inject(ApiService);
+  private readonly sdk  = inject(SdkService);
 
   readonly digestModes = DIGEST_MODES;
   /** M15-T3: the delivery settings, from `/api/v1/settings/me`. */
@@ -82,7 +82,7 @@ export class NotificationPreferencesPageComponent implements OnInit {
   ngOnInit(): void { this.load(); this.loadDelivery(); }
 
   loadDelivery(): void {
-    this.api.get<{ items: { key: string; value: unknown }[] }>('/api/v1/settings/me').subscribe({
+    this.sdk.get<{ items: { key: string; value: unknown }[] }>('/api/v1/settings/me').subscribe({
       next: doc => {
         for (const item of doc.items) {
           if (item.key === 'notification.digest' && DIGEST_MODES.includes(item.value as DigestMode)) {
@@ -105,8 +105,8 @@ export class NotificationPreferencesPageComponent implements OnInit {
     this.notice.set(null);
     this.error.set(null);
     const quiet = quietHoursValue(this.quietStart, this.quietEnd);
-    this.api.put<unknown>('/api/v1/settings/me/notification.digest', { value: this.digest }).subscribe({
-      next: () => this.api.put<unknown>('/api/v1/settings/me/notification.quiet_hours', { value: quiet }).subscribe({
+    this.sdk.put<unknown>('/api/v1/settings/me/notification.digest', { body: { value: this.digest } }).subscribe({
+      next: () => this.sdk.put<unknown>('/api/v1/settings/me/notification.quiet_hours', { body: { value: quiet } }).subscribe({
         next: () => {
           this.savingDelivery.set(false);
           this.notice.set(this.lang.translate('notificationPrefs.delivery.saved'));

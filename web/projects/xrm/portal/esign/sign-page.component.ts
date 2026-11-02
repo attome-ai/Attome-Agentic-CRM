@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 import { catchError, of } from 'rxjs';
 
 /** A document in the envelope (`EnvelopeDocument`). */
@@ -96,7 +96,7 @@ export function codeComplete(code: string): boolean {
   `],
 })
 export class SignPageComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   protected readonly lang = inject(LangService);
   protected readonly codeComplete = codeComplete;
 
@@ -152,7 +152,7 @@ export class SignPageComponent {
   private post(body: object, then: () => void): void {
     this.error.set(null);
     this.stage.set('working');
-    this.api.post<SignerActionDone>(this.path(), body).pipe(
+    this.sdk.post<SignerActionDone>(this.path(), { body: body }).pipe(
       catchError((e: unknown) => {
         this.error.set(this.lang.errorText(e as ApiError));
         return of(null);
@@ -164,7 +164,7 @@ export class SignPageComponent {
   }
 
   private load(token: string, after: Stage = 'ready'): void {
-    this.api.get<SignerView>(`/api/v1/esign/sign/${encodeURIComponent(token)}`).pipe(
+    this.sdk.get<SignerView>(`/api/v1/esign/sign/${encodeURIComponent(token)}`).pipe(
       catchError(() => of(null)),
     ).subscribe(view => {
       if (!view) {

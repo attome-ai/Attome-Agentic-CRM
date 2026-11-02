@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, ATTOME_CONFIG, LangService, UserPreferencesService } from '@attome/base';
+import { ApiService, SdkService, ATTOME_CONFIG, LangService, UserPreferencesService } from '@attome/base';
 import { AccessService } from '@attome/xrm/core/access/data';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { RecoveryComponent, RecoveryTarget, RpoSource } from './recovery.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const TARGETS: RecoveryTarget[] = [
   {
@@ -35,6 +36,7 @@ describe('RecoveryComponent (AB3-T10)', () => {
       imports: [RecoveryComponent],
       providers: [
         { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: AccessService, useValue: { ready: () => of(undefined), hasPrivilege: (k: string) => privileges.includes(k) } },
         { provide: ATTOME_CONFIG, useValue: { apiUrl: 'https://crm.example' } },
         {

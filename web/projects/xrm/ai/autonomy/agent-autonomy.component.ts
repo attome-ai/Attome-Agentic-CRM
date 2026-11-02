@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
-import { ApiError, ApiService, TranslatePipe, type Page } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe, type Page } from '@attome/base';
 
 /** `autonomy::AutonomyLevel`, lowest first. */
 export const AUTONOMY_LEVELS = ['suggest', 'ask_first', 'act_on_review', 'act_with_undo', 'act_and_report', 'automatic'] as const;
@@ -67,7 +67,7 @@ export function raisesConsequential(entry: AutonomyEntry, level: AutonomyLevel):
   styleUrls:       ['./autonomy.component.css'],
 })
 export class AiAgentAutonomyComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly agentId = input.required<string>();
   readonly levels  = AUTONOMY_LEVELS;
@@ -84,11 +84,11 @@ export class AiAgentAutonomyComponent {
 
   load(agentId: string): void {
     const base = `/api/v1/admin/ai/agents/${encodeURIComponent(agentId)}/autonomy`;
-    this.api.get<Page<AutonomyEntry>>(base).subscribe({
+    this.sdk.get<Page<AutonomyEntry>>(base).subscribe({
       next: page => this.entries.set(page.items ?? []),
       error: (e: ApiError) => this.error.set(e.message),
     });
-    this.api.get<Page<AutonomyProposal>>(`${base}/proposals`).subscribe({
+    this.sdk.get<Page<AutonomyProposal>>(`${base}/proposals`).subscribe({
       next: page => this.proposals.set(page.items ?? []),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -98,8 +98,9 @@ export class AiAgentAutonomyComponent {
   decideProposal(p: AutonomyProposal, accept: boolean): void {
     this.busy.set(p.id);
     this.error.set(null);
-    this.api.post<unknown>(
-      `/api/v1/admin/ai/autonomy/proposals/${encodeURIComponent(p.id)}/${accept ? 'accept' : 'reject'}`, {},
+    this.sdk.post<unknown>(
+      `/api/v1/admin/ai/autonomy/proposals/${encodeURIComponent(p.id)}/${accept ? 'accept' : 'reject'}`,
+      { body: {} },
     ).subscribe({
       next: () => { this.busy.set(null); this.load(this.agentId()); },
       error: (e: ApiError) => { this.busy.set(null); this.error.set(e.message); this.load(this.agentId()); },
@@ -115,7 +116,9 @@ export class AiAgentAutonomyComponent {
     const row = entry.row;
     this.busy.set(entry.action_id);
     this.error.set(null);
-    this.api.put<AutonomyRow>(this.url(entry.action_id), {
+    this.sdk.put<AutonomyRow>(
+      this.url(entry.action_id),
+      { body: {
       level,
       undo_seconds:       undoSeconds ?? row?.undo_seconds ?? null,
       daily_limit:        dailyLimit === undefined ? (row?.daily_limit ?? null) : dailyLimit,
@@ -126,7 +129,8 @@ export class AiAgentAutonomyComponent {
       hours_end:          row?.hours_end ?? null,
       time_zone:          row?.time_zone ?? null,
       row_version:        row?.row_version ?? null,
-    }).subscribe({
+    } },
+    ).subscribe({
       next: () => { this.busy.set(null); this.load(this.agentId()); },
       error: (e: ApiError) => { this.busy.set(null); this.error.set(e.message); },
     });
@@ -135,7 +139,7 @@ export class AiAgentAutonomyComponent {
   clear(entry: AutonomyEntry): void {
     this.busy.set(entry.action_id);
     this.error.set(null);
-    this.api.delete(this.url(entry.action_id)).subscribe({
+    this.sdk.delete(this.url(entry.action_id)).subscribe({
       next: () => { this.busy.set(null); this.load(this.agentId()); },
       error: (e: ApiError) => { this.busy.set(null); this.error.set(e.message); },
     });

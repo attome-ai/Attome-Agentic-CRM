@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 
 /** `attome_api::jobs_admin::JobLane`. */
 export interface JobLane {
@@ -88,7 +88,7 @@ export function rateLabel(rate: number | null | undefined): string {
   `],
 })
 export class JobLanesComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly lanes = signal<JobLane[]>([]);
   readonly busy = signal(false);
@@ -104,7 +104,7 @@ export class JobLanesComponent implements OnInit {
   load(): void {
     this.busy.set(true);
     this.error.set(null);
-    this.api.get<{ items: JobLane[] }>('/api/v1/admin/jobs/lanes').subscribe({
+    this.sdk.get<{ items: JobLane[] }>('/api/v1/admin/jobs/lanes').subscribe({
       next: page => {
         this.lanes.set(page.items);
         this.busy.set(false);

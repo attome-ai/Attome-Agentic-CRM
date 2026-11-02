@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 import type { EntitySchema } from '@attome/xrm';
 import { AdminService, EntityMeta } from '@attome/xrm/core/admin/data';
 import { QueryService } from '@attome/xrm/core/query/data';
@@ -143,7 +143,7 @@ interface ChildField { name: string; label: string; type: string; target: string
 })
 export class RollupEditorComponent {
   private readonly admin = inject(AdminService);
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly query = inject(QueryService);
   private readonly lang = inject(LangService);
 
@@ -214,7 +214,7 @@ export class RollupEditorComponent {
     this.field.set('');
     this.childFields.set([]);
     if (!logicalname) return;
-    this.api.get<EntitySchema>(`/api/v1/schema/${encodeURIComponent(logicalname)}`).subscribe({
+    this.sdk.get<EntitySchema>(`/api/v1/schema/${encodeURIComponent(logicalname)}`).subscribe({
       next: schema => {
         const fields = (schema.fields ?? []).map(f => ({
           name: f.name,

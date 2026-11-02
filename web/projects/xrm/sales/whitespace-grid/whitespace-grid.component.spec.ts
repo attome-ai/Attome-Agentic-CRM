@@ -1,10 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { WhitespaceGridComponent, cellKey, pivot, type WhitespaceCell } from './whitespace-grid.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const cell = (id: string, product: string, department: string, status: string, value: number | null = null): WhitespaceCell => ({
   id, product_ref: product, department, status, estimated_value: value, row_version: 1,
@@ -38,6 +39,7 @@ describe('account plan whitespace (D27-T2)', () => {
       imports: [WhitespaceGridComponent],
       providers: [
         { provide: ApiService, useValue: { post, patch } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         {
           provide: LangService,
           useValue: { translate: (k: string) => k, current: signal('ar'), errorText: () => 'error', intlLocale: () => 'ar-SA' },

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { ApiError, ApiService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 /** One acceptance script as `GET /api/v1/acceptance-scripts` lists it. */
 export interface AcceptanceScript {
@@ -102,7 +102,7 @@ interface ChecklistRunResult { run_id: string; passed: boolean; failures: string
   `],
 })
 export class AcceptanceScriptsComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly scripts = signal<AcceptanceScript[]>([]);
   readonly active = signal<AcceptanceScript | null>(null);
@@ -116,7 +116,7 @@ export class AcceptanceScriptsComponent implements OnInit {
   ngOnInit(): void { this.load(); }
 
   private load(): void {
-    this.api.getAllPages<AcceptanceScript>('/api/v1/acceptance-scripts').subscribe({
+    this.sdk.getAllPages<AcceptanceScript>('/api/v1/acceptance-scripts').subscribe({
       next: scripts => this.scripts.set(scripts),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -145,7 +145,7 @@ export class AcceptanceScriptsComponent implements OnInit {
     this.busy.set(true);
     this.error.set(null);
     const steps = this.marks().map(m => ({ passed: m.passed === true, note: m.note.trim() || null }));
-    this.api.post<ChecklistRunResult>(`/api/v1/acceptance-scripts/${script.id}/runs`, { steps }).subscribe({
+    this.sdk.post<ChecklistRunResult>(`/api/v1/acceptance-scripts/${script.id}/runs`, { body: { steps } }).subscribe({
       next: r => { this.busy.set(false); this.result.set(r); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });

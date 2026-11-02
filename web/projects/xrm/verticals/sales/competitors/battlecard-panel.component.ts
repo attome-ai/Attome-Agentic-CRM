@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 import { EntityService, logicalToUrlPath } from '@attome/xrm/core/entity';
 
 /** `attome_sales::competitor_routes::SalesBattlecard`. */
@@ -139,7 +139,7 @@ function text(record: Record<string, unknown> | null | undefined, field: string)
   `],
 })
 export class BattlecardPanelComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly entities = inject(EntityService);
 
   readonly opportunityId = input<string | null>(null);
@@ -186,7 +186,7 @@ export class BattlecardPanelComponent {
 
   load(id: string): void {
     // A 404 means competitors are not installed: the panel stays hidden.
-    this.api.get<{ items: SalesBattlecard[] }>(`/api/v1/sales/opportunities/${encodeURIComponent(id)}/battlecards`).subscribe({
+    this.sdk.get<{ items: SalesBattlecard[] }>(`/api/v1/sales/opportunities/${encodeURIComponent(id)}/battlecards`).subscribe({
       next: page => {
         const cards = page.items;
         this.cards.set(cards);
@@ -201,7 +201,7 @@ export class BattlecardPanelComponent {
   open(competitorId: string): void {
     this.active.set(competitorId);
     this.card.set(null);
-    this.api.get<CompetitorCard>(`/api/v1/sales/competitors/${encodeURIComponent(competitorId)}/card`).subscribe({
+    this.sdk.get<CompetitorCard>(`/api/v1/sales/competitors/${encodeURIComponent(competitorId)}/card`).subscribe({
       next: card => { if (this.active() === competitorId) this.card.set(card); },
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -211,8 +211,11 @@ export class BattlecardPanelComponent {
     const id = this.opportunityId();
     this.busy.set(true);
     const verb = confirm ? 'confirm' : 'reject';
-    this.api.post(`/api/v1/sales/competitor-mentions/${encodeURIComponent(mention.id)}/${verb}`, {},
-      { ifMatch: mention.row_version }).subscribe({
+    this.sdk.post(
+      `/api/v1/sales/competitor-mentions/${encodeURIComponent(mention.id)}/${verb}`,
+      { body: {} },
+      { ifMatch: mention.row_version },
+    ).subscribe({
       next: () => { this.busy.set(false); if (id) this.load(id); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });

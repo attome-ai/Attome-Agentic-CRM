@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService, UserPreferencesService } from '@attome/base';
+import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { RecycleBinComponent } from './recycle-bin.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 describe('RecycleBinComponent (A18-T9)', () => {
   function create() {
@@ -16,6 +17,7 @@ describe('RecycleBinComponent (A18-T9)', () => {
       imports: [RecycleBinComponent],
       providers: [
         { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (key: string) => key, intlLocale: () => 'en-US' } },
         { provide: UserPreferencesService, useValue: { timezone: () => 'UTC', calendar: () => null, digits: () => null } },
       ],

@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -9,6 +9,7 @@ import { WorkflowAdminService } from '../services/workflow-admin.service';
 import {
   TemplateDoc, WorkflowTemplateGalleryComponent, argumentOf, filterTemplates, templateCommands, templateSlug,
 } from './template-gallery.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const DOC: TemplateDoc = {
   description_en: 'Approve large invoices',
@@ -37,6 +38,7 @@ describe('WorkflowTemplateGalleryComponent (M6-T4)', () => {
       imports: [WorkflowTemplateGalleryComponent],
       providers: [
         { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: WorkflowAdminService, useValue: workflows },
         { provide: Router, useValue: { navigate } },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },

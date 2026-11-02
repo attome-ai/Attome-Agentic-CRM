@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
-import { ApiService, TranslatePipe } from '@attome/base';
+import { SdkService, TranslatePipe } from '@attome/base';
 
 /** `system_health::SystemStatus`. */
 export interface SystemStatus {
@@ -79,7 +79,7 @@ export const OPS_NOTICE_POLL_MS = 60_000;
   `],
 })
 export class StatusBannerComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly status = signal<SystemStatus | null>(null);
@@ -101,7 +101,7 @@ export class StatusBannerComponent implements OnInit {
   /** Reads the status page notice, unless the tab is hidden; nothing (204) clears it. */
   refreshNotice(): void {
     if (typeof document !== 'undefined' && document.hidden) return;
-    this.api.get<OpsNotice | null>('/api/v1/ops/status/banner').subscribe({
+    this.sdk.get<OpsNotice | null>('/api/v1/ops/status/banner').subscribe({
       next: notice => this.notice.set(notice && notice.id ? notice : null),
       error: () => this.notice.set(null),
     });
@@ -109,7 +109,7 @@ export class StatusBannerComponent implements OnInit {
 
   /** Reads the status again; a failed read keeps what was shown. */
   refresh(): void {
-    this.api.get<SystemStatus>('/api/v1/system/status').subscribe({
+    this.sdk.get<SystemStatus>('/api/v1/system/status').subscribe({
       next: status => this.status.set(status),
       error: () => undefined,
     });

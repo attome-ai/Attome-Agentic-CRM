@@ -3,7 +3,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { ApiService, LangService, TranslatePipe } from '@attome/base';
+import { SdkService, LangService, TranslatePipe } from '@attome/base';
 import type { ApiError } from '@attome/base';
 import {
   BUILDER_FUNCS, BUILDER_OPERATORS, BuilderState, DATE_BUCKETS, buildSpec, columnsOf, emptyState,
@@ -53,7 +53,7 @@ interface ParseOutcome {
   templateUrl: './query-builder.component.html',
 })
 export class QueryBuilderComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -94,7 +94,7 @@ export class QueryBuilderComponent {
     const entity = this.entityInput().trim();
     if (!entity) return;
     this.schemaError.set(null);
-    this.api.get<SchemaAnswer>(`/api/v1/schema/${encodeURIComponent(entity)}`)
+    this.sdk.get<SchemaAnswer>(`/api/v1/schema/${encodeURIComponent(entity)}`)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: schema => {
@@ -169,7 +169,7 @@ export class QueryBuilderComponent {
     this.asking.set(true);
     this.declined.set(false);
     this.proposal.set(null);
-    this.api.post<ParseOutcome>('/api/v1/actions/search.parse_filter/invoke', { args: { query } })
+    this.sdk.post<ParseOutcome>('/api/v1/actions/search.parse_filter/invoke', { body: { args: { query } } })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: outcome => {
@@ -203,7 +203,7 @@ export class QueryBuilderComponent {
     if (!this.state().entity) return;
     this.running.set(true);
     this.runError.set(null);
-    this.api.post<RunAnswer>('/api/v1/query/run', { spec: this.spec() })
+    this.sdk.post<RunAnswer>('/api/v1/query/run', { body: { spec: this.spec() } })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: answer => {
@@ -222,7 +222,7 @@ export class QueryBuilderComponent {
   save(): void {
     const name = this.saveName().trim();
     if (!name || !this.state().entity) return;
-    this.api.post('/api/v1/admin/queries', { name, query_spec: this.spec(), parameters: [] })
+    this.sdk.post('/api/v1/admin/queries', { body: { name, query_spec: this.spec(), parameters: [] } })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => this.saved.set(true),

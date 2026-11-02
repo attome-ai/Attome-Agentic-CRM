@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
-import { ApiService, LangService, TranslatePipe } from '@attome/base';
+import { SdkService, LangService, TranslatePipe } from '@attome/base';
 import type { Page } from '@attome/base';
 
 /** A27-T4: one record type the caller may create (`GET /api/v1/{entity}/record-types`). */
@@ -56,7 +56,7 @@ export interface RecordTypeOption {
   `,
 })
 export class RecordTypePickerComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
 
   /** The entity's logical name. */
@@ -75,7 +75,7 @@ export class RecordTypePickerComponent {
     effect(onCleanup => {
       const entity = this.entity();
       this.types.set([]);
-      const sub = this.api.get<Page<RecordTypeOption>>(`/api/v1/${entity}/record-types`).subscribe({
+      const sub = this.sdk.get<Page<RecordTypeOption>>(`/api/v1/${entity}/record-types`).subscribe({
         next: page => this.types.set(page.items),
         // No types to offer (or no right to list them): the plain New button.
         error: () => this.types.set([]),

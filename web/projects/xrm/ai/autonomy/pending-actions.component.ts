@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { ApiError, ApiService, LocalDatePipe, TranslatePipe, type Page } from '@attome/base';
+import { ApiError, SdkService, LocalDatePipe, TranslatePipe, type Page } from '@attome/base';
 
 /** `deferred::DeferredAction`. */
 export interface DeferredAction {
@@ -31,7 +31,7 @@ export interface DeferredAction {
   styleUrls:       ['./autonomy.component.css'],
 })
 export class AiPendingActionsComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly actions = signal<DeferredAction[]>([]);
   readonly error   = signal<string | null>(null);
@@ -57,14 +57,14 @@ export class AiPendingActionsComponent implements OnInit {
   decide(apply: boolean, scope: { agent_session_id: string } | { ids: string[] }, busyKey: string): void {
     this.busy.set(busyKey);
     this.error.set(null);
-    this.api.post<unknown>(`/api/v1/ai/deferred-actions/${apply ? 'apply' : 'discard'}`, scope).subscribe({
+    this.sdk.post<unknown>(`/api/v1/ai/deferred-actions/${apply ? 'apply' : 'discard'}`, { body: scope }).subscribe({
       next: () => { this.busy.set(null); this.load(); },
       error: (e: ApiError) => { this.busy.set(null); this.error.set(e.message); this.load(); },
     });
   }
 
   load(): void {
-    this.api.get<Page<DeferredAction>>('/api/v1/ai/deferred-actions').subscribe({
+    this.sdk.get<Page<DeferredAction>>('/api/v1/ai/deferred-actions').subscribe({
       next: page => this.actions.set(page.items ?? []),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -73,7 +73,7 @@ export class AiPendingActionsComponent implements OnInit {
   cancel(action: DeferredAction): void {
     this.busy.set(action.id);
     this.error.set(null);
-    this.api.post<DeferredAction>(`/api/v1/ai/deferred-actions/${encodeURIComponent(action.id)}/cancel`, {}).subscribe({
+    this.sdk.post<DeferredAction>(`/api/v1/ai/deferred-actions/${encodeURIComponent(action.id)}/cancel`, { body: {} }).subscribe({
       next: () => { this.busy.set(null); this.load(); },
       error: (e: ApiError) => { this.busy.set(null); this.error.set(e.message); this.load(); },
     });

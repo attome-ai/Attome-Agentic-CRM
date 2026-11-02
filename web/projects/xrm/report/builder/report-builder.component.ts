@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ApiService, LangService, TranslatePipe } from '@attome/base';
+import { SdkService, LangService, TranslatePipe } from '@attome/base';
 import type { ApiError } from '@attome/base';
 import { DashboardChartComponent, SLICE_COLORS } from '@attome/xrm/dashboard/chart';
 import {
@@ -85,7 +85,7 @@ const PREVIEW_DELAY_MS = 400;
   styleUrl: './report-builder.component.css',
 })
 export class ReportBuilderComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -167,7 +167,7 @@ export class ReportBuilderComponent {
     const entity = this.entityInput().trim();
     if (!entity) return;
     this.schemaError.set(null);
-    this.api.get<{ fields?: ReportField[] }>(`/api/v1/schema/${encodeURIComponent(entity)}`)
+    this.sdk.get<{ fields?: ReportField[] }>(`/api/v1/schema/${encodeURIComponent(entity)}`)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: schema => {
@@ -257,9 +257,12 @@ export class ReportBuilderComponent {
     if (!name || !this.canRun()) return;
     this.running.set(true);
     this.runError.set(null);
-    this.api.post<{ id: string }>('/api/v1/admin/queries', {
+    this.sdk.post<{ id: string }>(
+      '/api/v1/admin/queries',
+      { body: {
       name, query_spec: this.spec(), parameters: parameterDecls(this.state().prompts),
-    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    } },
+    ).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: saved => {
         this.running.set(false);
         this.savedId.set(saved.id);
@@ -293,7 +296,7 @@ export class ReportBuilderComponent {
       const [principal_type, principal_id] = key.split(':');
       return { principal_type, principal_id, access };
     });
-    this.api.put(`/api/v1/admin/query-shares/${encodeURIComponent(id)}`, { shares })
+    this.sdk.put(`/api/v1/admin/query-shares/${encodeURIComponent(id)}`, { body: { shares } })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => this.shareNotice.set(this.lang.translate('reportBuilder.shareSaved', { count: shares.length })),
@@ -330,7 +333,7 @@ export class ReportBuilderComponent {
     this.runError.set(null);
     const params = this.params();
     const body: Record<string, unknown> = Object.keys(params).length ? { spec, params } : { spec };
-    this.api.post<RunAnswer>('/api/v1/query/run', body)
+    this.sdk.post<RunAnswer>('/api/v1/query/run', { body: body })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: answer => {
@@ -347,7 +350,7 @@ export class ReportBuilderComponent {
 
   private loadPrincipals(): void {
     for (const type of ['role', 'team'] as const) {
-      this.api.get<{ items?: Record<string, unknown>[] }>(`/api/v1/${type}`, { page_size: '200', sort: 'name' })
+      this.sdk.get<{ items?: Record<string, unknown>[] }>(`/api/v1/${type}`, { query: { page_size: '200', sort: 'name' } })
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: page => this.principals.update(all => [

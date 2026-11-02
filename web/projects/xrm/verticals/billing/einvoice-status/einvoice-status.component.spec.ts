@@ -1,10 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { EinvoiceDocument, EinvoiceStatusComponent, zatcaMessages } from './einvoice-status.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const REJECTED: EinvoiceDocument = {
   id: 'd1', invoice_id: 'i1', profile: 'standard', status: 'rejected', icv: 7, invoice_hash: 'h', qr: 'q',
@@ -22,6 +23,7 @@ describe('EinvoiceStatusComponent (AG2-T4)', () => {
       imports: [EinvoiceStatusComponent],
       providers: [
         { provide: ApiService, useValue: { get } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en') } },
       ],
     });

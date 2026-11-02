@@ -1,7 +1,7 @@
 import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, ATTOME_CONFIG, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, ATTOME_CONFIG, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 import { AccessService } from '@attome/xrm/core/access/data';
 
 /** `attome_ops::recovery_targets::RecoveryTarget`. */
@@ -202,7 +202,7 @@ export const ACTIONS = ['switch_site', 'replace_live_data', 'failback'] as const
   `],
 })
 export class RecoveryComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly access = inject(AccessService);
   private readonly lang = inject(LangService);
   private readonly config = inject(ATTOME_CONFIG);
@@ -224,11 +224,11 @@ export class RecoveryComponent implements OnInit {
 
   ngOnInit(): void {
     this.access.ready().subscribe(() => this.canDeclare.set(this.access.hasPrivilege('ops.dr.declare')));
-    this.api.get<Page<RecoveryTarget>>('/api/v1/ops/recovery-targets').subscribe({
+    this.sdk.get<Page<RecoveryTarget>>('/api/v1/ops/recovery-targets').subscribe({
       next: p => this.targets.set(p.items ?? []),
       error: (e: ApiError) => this.error.set(this.lang.errorText(e)),
     });
-    this.api.get<Page<RpoSource>>('/api/v1/ops/rpo').subscribe({
+    this.sdk.get<Page<RpoSource>>('/api/v1/ops/rpo').subscribe({
       next: p => this.rpo.set(p.items ?? []),
       error: (e: ApiError) => this.error.set(this.lang.errorText(e)),
     });
@@ -244,7 +244,7 @@ export class RecoveryComponent implements OnInit {
   }
 
   private loadDisasters(): void {
-    this.api.get<Page<Disaster>>('/api/v1/ops/disasters').subscribe({
+    this.sdk.get<Page<Disaster>>('/api/v1/ops/disasters').subscribe({
       next: p => {
         const items = p.items ?? [];
         this.disasters.set(items);
@@ -255,7 +255,7 @@ export class RecoveryComponent implements OnInit {
   }
 
   private loadActions(id: string): void {
-    this.api.get<Page<DisasterAction>>(`/api/v1/ops/disasters/${id}/actions`).subscribe({
+    this.sdk.get<Page<DisasterAction>>(`/api/v1/ops/disasters/${id}/actions`).subscribe({
       next: p => this.actions.update(all => ({ ...all, [id]: p.items ?? [] })),
       error: (e: ApiError) => this.error.set(this.lang.errorText(e)),
     });
@@ -273,7 +273,7 @@ export class RecoveryComponent implements OnInit {
       return;
     }
     this.busy.set(true);
-    this.api.post<Disaster>('/api/v1/ops/disasters', { scenario: this.scenario, summary: this.summary.trim() }).subscribe({
+    this.sdk.post<Disaster>('/api/v1/ops/disasters', { body: { scenario: this.scenario, summary: this.summary.trim() } }).subscribe({
       next: () => {
         this.busy.set(false);
         this.declaring.set(false);
@@ -289,7 +289,7 @@ export class RecoveryComponent implements OnInit {
   /** Asks for an action; it waits for a second person's approval. */
   requestAction(d: Disaster, action: string): void {
     this.busy.set(true);
-    this.api.post<DisasterAction>(`/api/v1/ops/disasters/${d.id}/actions`, { action }).subscribe({
+    this.sdk.post<DisasterAction>(`/api/v1/ops/disasters/${d.id}/actions`, { body: { action } }).subscribe({
       next: () => {
         this.busy.set(false);
         this.loadActions(d.id);

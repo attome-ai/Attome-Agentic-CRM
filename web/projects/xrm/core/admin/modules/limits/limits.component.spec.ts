@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { SettingsService } from '@attome/xrm/core/admin/data';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { LimitView, LimitsComponent, inRange, peakPercent } from './limits.component';
+import { sdkFromApi } from '../../../../testing/sdk-from-api';
 
 const LIMITS: LimitView[] = [
   {
@@ -28,6 +29,7 @@ describe('LimitsComponent (AA9-T8)', () => {
       imports: [LimitsComponent],
       providers: [
         { provide: ApiService, useValue: { get } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: SettingsService, useValue: { putAdminSetting } },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en') } },
       ],

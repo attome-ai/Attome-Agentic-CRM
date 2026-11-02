@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AiScopeSwitchesComponent } from './ai-scope-switches.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 describe('AiScopeSwitchesComponent (N31-T2)', () => {
   it('lists switched scopes and turns one off and back on', () => {
@@ -18,6 +19,7 @@ describe('AiScopeSwitchesComponent (N31-T2)', () => {
       imports: [AiScopeSwitchesComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (key: string) => key, intlLocale: () => 'en-US' } },
       ],
     });

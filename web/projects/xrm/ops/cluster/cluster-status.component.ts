@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 import { AccessService } from '@attome/xrm/core/access/data';
 
 /** `attome_ops::status::ClusterMember`. */
@@ -198,7 +198,7 @@ export function reasonOk(reason: string): boolean {
   `],
 })
 export class ClusterStatusComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly access = inject(AccessService);
   private readonly lang = inject(LangService);
 
@@ -221,7 +221,7 @@ export class ClusterStatusComponent implements OnInit {
   ngOnInit(): void {
     this.access.ready().subscribe(() =>
       this.canSwitch.set(this.access.hasPrivilege('ops.cluster.switchover')));
-    this.api.get<ClusterStatus>('/api/v1/ops/cluster').subscribe({
+    this.sdk.get<ClusterStatus>('/api/v1/ops/cluster').subscribe({
       next: s => this.status.set(s),
       error: (e: ApiError) => this.error.set(this.lang.errorText(e)),
     });
@@ -235,9 +235,12 @@ export class ClusterStatusComponent implements OnInit {
   }
 
   loadHistory(page: number): void {
-    this.api.get<FailoverPage>('/api/v1/ops/failovers', {
+    this.sdk.get<FailoverPage>(
+      '/api/v1/ops/failovers',
+      { query: {
       page: String(page), page_size: String(PAGE_SIZE),
-    }).subscribe({
+    } },
+    ).subscribe({
       next: p => {
         this.failovers.set(p.items ?? []);
         this.total.set(p.total ?? 0);
@@ -267,7 +270,7 @@ export class ClusterStatusComponent implements OnInit {
     this.formError.set(null);
     this.submitting.set(true);
     const body = { reason: this.reason.trim(), ...(this.candidate ? { candidate: this.candidate } : {}) };
-    this.api.post<SwitchoverApproval>('/api/v1/ops/cluster/switchover', body).subscribe({
+    this.sdk.post<SwitchoverApproval>('/api/v1/ops/cluster/switchover', { body: body }).subscribe({
       next: res => {
         this.submitting.set(false);
         this.approvalId.set(res.approval_id);

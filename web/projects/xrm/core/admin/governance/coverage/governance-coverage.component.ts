@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { ApiError, ApiService, LocalNumberPipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LocalNumberPipe, TranslatePipe } from '@attome/base';
 import { GovernanceNavComponent } from '../nav/governance-nav.component';
 
 interface DomainRef { id: string; name: string }
@@ -112,21 +112,21 @@ export interface Scorecard {
   `,
 })
 export class GovernanceCoverageComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly coverage = signal<Coverage | null>(null);
   readonly scorecard = signal<Scorecard | null>(null);
   readonly error = signal<string | null>(null);
 
   ngOnInit(): void {
-    this.api.get<Coverage>('/api/v1/admin/governance/coverage').subscribe({
+    this.sdk.get<Coverage>('/api/v1/admin/governance/coverage').subscribe({
       next: c => this.coverage.set(c),
       error: (e: ApiError) => this.error.set(e.message),
     });
   }
 
   openScorecard(domainId: string): void {
-    this.api.get<Scorecard>(`/api/v1/admin/governance/domains/${encodeURIComponent(domainId)}/scorecard`).subscribe({
+    this.sdk.get<Scorecard>(`/api/v1/admin/governance/domains/${encodeURIComponent(domainId)}/scorecard`).subscribe({
       next: s => this.scorecard.set(s),
       error: (e: ApiError) => this.error.set(e.message),
     });

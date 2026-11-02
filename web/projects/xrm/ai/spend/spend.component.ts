@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 
 /** One money window (`spend_report::SpendLine`). */
 export interface SpendLine {
@@ -47,7 +47,7 @@ export function forecastOver(line: SpendLine): boolean {
   styleUrls:       ['./spend.component.css'],
 })
 export class AiSpendComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly report = signal<SpendReport | null>(null);
   readonly error  = signal<string | null>(null);
@@ -56,7 +56,7 @@ export class AiSpendComponent implements OnInit {
   readonly forecastOver = forecastOver;
 
   ngOnInit(): void {
-    this.api.get<SpendReport>('/api/v1/admin/ai/spend').subscribe({
+    this.sdk.get<SpendReport>('/api/v1/admin/ai/spend').subscribe({
       next: report => this.report.set(report),
       error: (e: ApiError) => this.error.set(e.message),
     });

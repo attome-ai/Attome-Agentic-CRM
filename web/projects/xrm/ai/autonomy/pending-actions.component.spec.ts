@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AiPendingActionsComponent } from './pending-actions.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 describe('AiPendingActionsComponent (AH8)', () => {
   it('lists held actions and cancels a pending one', () => {
@@ -20,6 +21,7 @@ describe('AiPendingActionsComponent (AH8)', () => {
       imports: [AiPendingActionsComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (key: string) => key, intlLocale: () => 'en-US' } },
       ],
     });
@@ -48,6 +50,7 @@ describe('AiPendingActionsComponent (AH8)', () => {
       imports: [AiPendingActionsComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (key: string) => key, intlLocale: () => 'en-US' } },
       ],
     });

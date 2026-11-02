@@ -1,12 +1,13 @@
 import { Component, input, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, AuthService, LangService } from '@attome/base';
+import { ApiService, SdkService, AuthService, LangService } from '@attome/base';
 import { EntityService, NotesPanelComponent } from '@attome/xrm/core/entity';
 import { PresenceComponent } from '@attome/xrm/service/workspace';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { InboxComponent, InboxRow, filterRows, toRow } from './inbox.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 @Component({ selector: 'xrm-service-presence', standalone: true, template: '' })
 class FakePresence {
@@ -67,6 +68,7 @@ describe('InboxComponent (C8-T1)', () => {
       imports: [InboxComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: EntityService, useValue: entities },
         { provide: AuthService, useValue: { userId: signal('u1') } },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), errorText: () => 'failed' } },

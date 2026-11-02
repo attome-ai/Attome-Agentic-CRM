@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { ApiError, ApiService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 /** `GET /api/v1/admin/ai/status` (`ai_status::AiStatus`). */
 export interface AiStatus {
@@ -39,14 +39,14 @@ export function overall(status: AiStatus): 'down' | 'degraded' | 'up' {
   styleUrls:       ['./status.component.css'],
 })
 export class AiStatusComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly status = signal<AiStatus | null>(null);
   readonly error  = signal<string | null>(null);
   readonly overall = overall;
 
   ngOnInit(): void {
-    this.api.get<AiStatus>('/api/v1/admin/ai/status').subscribe({
+    this.sdk.get<AiStatus>('/api/v1/admin/ai/status').subscribe({
       next: status => this.status.set(status),
       error: (e: ApiError) => this.error.set(e.message),
     });

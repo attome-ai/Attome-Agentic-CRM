@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AiStatus, AiStatusComponent, overall } from './status.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const base: AiStatus = {
   generation_model: 'qwen3', model_approved: true, model_cards: [], switched_off: 0,
@@ -32,6 +33,7 @@ describe('AiStatusComponent (N31-T2)', () => {
       imports: [AiStatusComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (key: string) => key, intlLocale: () => 'en-US' } },
       ],
     });

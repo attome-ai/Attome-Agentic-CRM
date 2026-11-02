@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { ApiError, ApiService, TranslatePipe, type Page } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe, type Page } from '@attome/base';
 
 /** `mcp_client::McpServerView`. */
 export interface McpServer {
@@ -38,7 +38,7 @@ export const MCP_TIERS = ['read', 'reversible', 'consequential'] as const;
   styleUrls:       ['./mcp-servers.component.css'],
 })
 export class AiMcpServersComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly tiers   = MCP_TIERS;
   readonly servers = signal<McpServer[]>([]);
@@ -53,7 +53,7 @@ export class AiMcpServersComponent implements OnInit {
   ngOnInit(): void { this.load(); }
 
   load(): void {
-    this.api.get<Page<McpServer>>('/api/v1/admin/mcp-servers').subscribe({
+    this.sdk.get<Page<McpServer>>('/api/v1/admin/mcp-servers').subscribe({
       next: page => this.servers.set(page.items ?? []),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -66,9 +66,12 @@ export class AiMcpServersComponent implements OnInit {
     this.busy.set(true);
     this.error.set(null);
     const token = this.newToken().trim();
-    this.api.post<McpServer>('/api/v1/admin/mcp-servers', {
+    this.sdk.post<McpServer>(
+      '/api/v1/admin/mcp-servers',
+      { body: {
       name, url, allow_external: this.newExternal(), ...(token ? { credential: token } : {}),
-    }).subscribe({
+    } },
+    ).subscribe({
       next: () => {
         this.busy.set(false);
         this.newName.set(''); this.newUrl.set(''); this.newToken.set(''); this.newExternal.set(false);
@@ -79,7 +82,7 @@ export class AiMcpServersComponent implements OnInit {
   }
 
   loadTools(server: McpServer): void {
-    this.api.get<Page<McpTool>>(`/api/v1/admin/mcp-servers/${encodeURIComponent(server.id)}/tools`).subscribe({
+    this.sdk.get<Page<McpTool>>(`/api/v1/admin/mcp-servers/${encodeURIComponent(server.id)}/tools`).subscribe({
       next: page => this.tools.set({ ...this.tools(), [server.id]: page.items ?? [] }),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -88,7 +91,7 @@ export class AiMcpServersComponent implements OnInit {
   importTools(server: McpServer): void {
     this.busy.set(true);
     this.error.set(null);
-    this.api.post<Page<McpTool>>(`/api/v1/admin/mcp-servers/${encodeURIComponent(server.id)}/import`, {}).subscribe({
+    this.sdk.post<Page<McpTool>>(`/api/v1/admin/mcp-servers/${encodeURIComponent(server.id)}/import`, { body: {} }).subscribe({
       next: page => {
         this.busy.set(false);
         this.tools.set({ ...this.tools(), [server.id]: page.items ?? [] });
@@ -99,9 +102,9 @@ export class AiMcpServersComponent implements OnInit {
   }
 
   setTool(server: McpServer, tool: McpTool, risk: string, enabled: boolean): void {
-    this.api.put<void>(
+    this.sdk.put<void>(
       `/api/v1/admin/mcp-servers/${encodeURIComponent(server.id)}/tools/${encodeURIComponent(tool.name)}`,
-      { risk, enabled },
+      { body: { risk, enabled } },
     ).subscribe({
       next: () => this.loadTools(server),
       error: (e: ApiError) => this.error.set(e.message),

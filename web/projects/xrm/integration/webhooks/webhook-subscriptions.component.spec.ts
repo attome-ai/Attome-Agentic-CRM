@@ -1,12 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService, UserPreferencesService } from '@attome/base';
+import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
   SubscriptionDetail, SubscriptionItem, WebhookSubscriptionsComponent, createBody, replayFrom,
 } from './webhook-subscriptions.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const ITEM: SubscriptionItem = {
   id: 's-1', name: 'ERP', kind: 'webhook', is_active: true, target_url: 'https://erp.test.local/hook',
@@ -36,6 +37,7 @@ describe('WebhookSubscriptionsComponent (M13-T4)', () => {
       imports: [WebhookSubscriptionsComponent],
       providers: [
         { provide: ApiService, useValue: { get, post, patch } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },
         { provide: UserPreferencesService, useValue: { timezone: () => 'UTC', calendar: () => null, digits: () => null } },
       ],

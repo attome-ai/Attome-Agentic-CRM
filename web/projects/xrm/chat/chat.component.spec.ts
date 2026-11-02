@@ -1,10 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, AuthService, LangService } from '@attome/base';
+import { ApiService, SdkService, AuthService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ChatChannel, ChatComponent, ChatMessage, messageParts } from './chat.component';
+import { sdkFromApi } from '../testing/sdk-from-api';
 
 const ME = '01900000-0000-7000-8000-00000000000a';
 
@@ -30,6 +31,7 @@ describe('ChatComponent', () => {
       providers: [
         provideRouter([]),
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: AuthService, useValue: { userId: signal<string | null>(ME) } },
         {
           provide: LangService,

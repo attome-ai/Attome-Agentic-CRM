@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ApiService, TranslatePipe } from '@attome/base';
+import { SdkService, TranslatePipe } from '@attome/base';
 
 /** The part of `GET /api/v1/admin/setup/region` this prompt reads. */
 interface RegionSetupState {
@@ -34,12 +34,12 @@ interface RegionSetupState {
   `],
 })
 export class FirstRunPromptComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly needed = signal(false);
 
   ngOnInit(): void {
-    this.api.get<RegionSetupState>('/api/v1/admin/setup/region').subscribe({
+    this.sdk.get<RegionSetupState>('/api/v1/admin/setup/region').subscribe({
       next: state => this.needed.set(state.country === null && state.pack_available),
       error: () => undefined,
     });

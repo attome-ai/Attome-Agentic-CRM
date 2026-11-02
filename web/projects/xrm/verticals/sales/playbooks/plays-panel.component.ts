@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
-import { ApiService, LangService, TranslatePipe } from '@attome/base';
+import { SdkService, LangService, TranslatePipe } from '@attome/base';
 
 /** `attome_sales::plays::SalesPlayStep`. */
 export interface SalesPlayStep {
@@ -84,7 +84,7 @@ export interface SalesPlay {
   `],
 })
 export class PlaysPanelComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
 
   readonly opportunityId = input<string | null>(null);
@@ -114,7 +114,7 @@ export class PlaysPanelComponent {
 
   private load(id: string): void {
     // A 404 means playbooks are not installed: the panel stays hidden.
-    this.api.get<{ items: SalesPlay[] }>(`/api/v1/sales/opportunities/${encodeURIComponent(id)}/plays`).subscribe({
+    this.sdk.get<{ items: SalesPlay[] }>(`/api/v1/sales/opportunities/${encodeURIComponent(id)}/plays`).subscribe({
       next: page => { if (this.opportunityId() === id) this.plays.set(page.items); },
       error: () => this.plays.set([]),
     });

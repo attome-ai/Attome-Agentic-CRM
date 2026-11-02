@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 import { EntityService } from '@attome/xrm/core/entity';
 import { switchMap } from 'rxjs';
 
@@ -77,7 +77,7 @@ export function starterGraph(exits: readonly ExitOn[]): Record<string, unknown> 
   templateUrl: './sequence-builder.component.html',
 })
 export class SequenceBuilderComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly entities = inject(EntityService);
   private readonly router = inject(Router);
 
@@ -117,8 +117,7 @@ export class SequenceBuilderComponent {
   }
 
   load(): void {
-    this.api
-      .get<{ items: SequenceSummary[] }>('/api/v1/workflow/sequences', { page_size: '200' })
+    this.sdk.get<{ items: SequenceSummary[] }>('/api/v1/workflow/sequences', { query: { page_size: '200' } })
       .subscribe({
         next: r => this.sequences.set(r.items ?? []),
         error: (e: ApiError) => {
@@ -141,11 +140,10 @@ export class SequenceBuilderComponent {
     this.busy.set(true);
     this.outcome.set(null);
     this.error.set(null);
-    this.api
-      .post<EnrolOutcome>(
-        `/api/v1/workflow/sequences/${encodeURIComponent(sequence.logicalname)}/enrolments`,
-        { list_id: list },
-      )
+    this.sdk.post<EnrolOutcome>(
+      `/api/v1/workflow/sequences/${encodeURIComponent(sequence.logicalname)}/enrolments`,
+      { body: { list_id: list } },
+    )
       .subscribe({
         next: outcome => {
           this.busy.set(false);
@@ -168,17 +166,19 @@ export class SequenceBuilderComponent {
     if (!this.canCreate()) return;
     this.creating.set(true);
     this.error.set(null);
-    this.api
-      .post<{ id: string }>('/api/v1/workflow/definitions', {
+    this.sdk.post<{ id: string }>(
+      '/api/v1/workflow/definitions',
+      { body: {
         logicalname: this.newLogicalName(),
         name: this.newName().trim(),
         kind: 'sequence',
-      })
+      } },
+    )
       .pipe(
         switchMap(definition =>
-          this.api.post<{ id: string; definition_id: string }>(
+          this.sdk.post<{ id: string; definition_id: string }>(
             `/api/v1/workflow/definitions/${definition.id}/versions`,
-            { graph: starterGraph(this.newExits()) },
+            { body: { graph: starterGraph(this.newExits()) } },
           ),
         ),
       )

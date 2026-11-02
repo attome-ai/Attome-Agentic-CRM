@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { EntityService } from '@attome/xrm/core/entity';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ConfiguratorComponent, CpqProblem, listTotal } from './configurator.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const BUNDLE = 'b0';
 const LAPTOPS = 'g1';
@@ -45,6 +46,7 @@ function mount(problems: CpqProblem[] = []) {
     imports: [ConfiguratorComponent],
     providers: [
       { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       { provide: EntityService, useValue: { list } },
       {
         provide: LangService,

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 
 /** One message in ZATCA's validation results. */
 export interface ZatcaMessage {
@@ -82,7 +82,7 @@ export function zatcaMessages(doc: EinvoiceDocument): ZatcaMessage[] {
   `],
 })
 export class EinvoiceStatusComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** The invoice; empty for a new record. */
   readonly invoiceId = input<string | null>(null);
@@ -102,7 +102,7 @@ export class EinvoiceStatusComponent {
       this.document.set(null);
       return;
     }
-    this.api.get<EinvoiceDocument>(`/api/v1/billing/invoices/${encodeURIComponent(id)}/einvoice`).subscribe({
+    this.sdk.get<EinvoiceDocument>(`/api/v1/billing/invoices/${encodeURIComponent(id)}/einvoice`).subscribe({
       next: doc => {
         this.document.set(doc);
         this.messages.set(zatcaMessages(doc));

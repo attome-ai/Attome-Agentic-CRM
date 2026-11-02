@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { DeviceApprovalComponent, normaliseUserCode } from './device-approval.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const GRANT = {
   client_id: 'attome-cli', client_name: 'Attome CLI', user_code: 'BCDF-GHJK',
@@ -20,6 +21,7 @@ describe('DeviceApprovalComponent (C7-T1)', () => {
       imports: [DeviceApprovalComponent],
       providers: [
         { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(query) } } },
         {
           provide: LangService,

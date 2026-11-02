@@ -4,7 +4,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { Observable, catchError, forkJoin, map, of } from 'rxjs';
 import {
-  ApiService, AuthService, LangService, LocalDatePipe, MentionCandidate, MentionPickerComponent,
+  SdkService, AuthService, LangService, LocalDatePipe, MentionCandidate, MentionPickerComponent,
   MentionSearch, TranslatePipe,
 } from '@attome/base';
 
@@ -223,7 +223,7 @@ const MAX_BODY = 8000;
   `],
 })
 export class ChatComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
   readonly me = inject(AuthService).userId();
 
@@ -245,20 +245,24 @@ export class ChatComponent implements OnInit {
     const term = query.trim();
     const none = of([] as MentionCandidate[]);
     const lookup = (entity: string, field: string, kind: 'user' | 'team'): Observable<MentionCandidate[]> =>
-      this.api.post<{ data: { records: Record<string, unknown>[] } }>('/api/v1/query/execute', {
+      this.sdk.post<{ data: { records: Record<string, unknown>[] } }>(
+        '/api/v1/query/execute',
+        { body: {
         entity,
         page_size: 5,
         filters: term ? [{ field, op: 'contains', value: term }] : [],
-      }).pipe(
+      } },
+      ).pipe(
         map(res => res.data.records.map(r => ({
           kind, id: String(r['id']), label: String(r[field] || r['email'] || r['id']),
         }))),
         catchError(() => none),
       );
     const records: Observable<MentionCandidate[]> = term.length < 2 ? none
-      : this.api.get<{ items: { entity_logicalname: string; record_id: string; title?: string | null }[] }>(
-          '/api/v1/search', { q: term, page_size: '5' },
-        ).pipe(
+      : this.sdk.get<{ items: { entity_logicalname: string; record_id: string; title?: string | null }[] }>(
+        '/api/v1/search',
+        { query: { q: term, page_size: '5' } },
+      ).pipe(
           map(res => res.items.map(h => ({
             kind: 'record' as const, id: h.record_id, entity: h.entity_logicalname,
             label: h.title || h.record_id, detail: h.entity_logicalname,
@@ -283,13 +287,13 @@ export class ChatComponent implements OnInit {
     this.selectedId.set(c.id);
     this.notice.set(null);
     this.error.set(null);
-    this.api.get<Page<ChatMessage>>(`/api/v1/chat/channels/${c.id}/messages`, { page_size: '50' }).subscribe({
+    this.sdk.get<Page<ChatMessage>>(`/api/v1/chat/channels/${c.id}/messages`, { query: { page_size: '50' } }).subscribe({
       // Newest first from the server; oldest first on screen.
       next: page => this.messages.set([...page.items].reverse()),
       error: () => this.error.set(this.lang.translate('chat.loadFailed')),
     });
     if (c.unread > 0) {
-      this.api.post<void>(`/api/v1/chat/channels/${c.id}/read`, {}).subscribe({
+      this.sdk.post<void>(`/api/v1/chat/channels/${c.id}/read`, { body: {} }).subscribe({
         next: () => this.channels.update(list => list.map(x => (x.id === c.id ? { ...x, unread: 0 } : x))),
         error: () => undefined,
       });
@@ -308,7 +312,7 @@ export class ChatComponent implements OnInit {
     const body = this.draft().trim().slice(0, MAX_BODY);
     if (!channel || !body || this.sending()) return;
     this.sending.set(true);
-    this.api.post<ChatMessage>(`/api/v1/chat/channels/${channel.id}/messages`, { body }).subscribe({
+    this.sdk.post<ChatMessage>(`/api/v1/chat/channels/${channel.id}/messages`, { body: { body } }).subscribe({
       next: message => {
         this.sending.set(false);
         this.draft.set('');
@@ -324,12 +328,15 @@ export class ChatComponent implements OnInit {
   /** Keeps a message as a note on the channel's record. */
   saveToRecord(channel: ChatChannel, message: ChatMessage): void {
     if (channel.kind !== 'record' || !channel.entity_name || !channel.record_id) return;
-    this.api.post<unknown>('/api/v1/note', {
+    this.sdk.post<unknown>(
+      '/api/v1/note',
+      { body: {
       entity_name: channel.entity_name,
       record_id: channel.record_id,
       title: this.lang.translate('chat.noteTitle'),
       note_text: message.body,
-    }).subscribe({
+    } },
+    ).subscribe({
       next: () => this.notice.set(this.lang.translate('chat.saved')),
       error: () => this.error.set(this.lang.translate('chat.saveFailed')),
     });
@@ -339,7 +346,7 @@ export class ChatComponent implements OnInit {
     event.preventDefault();
     const name = this.newName().trim();
     if (!name) return;
-    this.api.post<ChatChannel>('/api/v1/chat/channels', { kind: 'group', name, members: [] }).subscribe({
+    this.sdk.post<ChatChannel>('/api/v1/chat/channels', { body: { kind: 'group', name, members: [] } }).subscribe({
       next: channel => {
         this.newName.set('');
         this.channels.update(list => [channel, ...list.filter(c => c.id !== channel.id)]);
@@ -350,7 +357,7 @@ export class ChatComponent implements OnInit {
   }
 
   private loadChannels(): void {
-    this.api.get<Page<ChatChannel>>('/api/v1/chat/channels', { page_size: '100' }).subscribe({
+    this.sdk.get<Page<ChatChannel>>('/api/v1/chat/channels', { query: { page_size: '100' } }).subscribe({
       next: page => this.channels.set(page.items),
       error: () => this.error.set(this.lang.translate('chat.loadFailed')),
     });

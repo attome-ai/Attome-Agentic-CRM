@@ -1,12 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { ModelService } from '@attome/xrm/model';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AdminService } from '../data/services/admin.service';
 import { EntitySettingsComponent, effective, labelCounts, presetValues, settingsCommands } from './entity-settings.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const ENTITIES = [
   { id: 'e-deal', name: 'Deal', logicalname: 'deal' },
@@ -71,6 +72,7 @@ describe('EntitySettingsComponent (A31-T5)', () => {
           publish,
         } },
         { provide: ApiService, useValue: { getAllPages } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: signal('en-US'), errorText: () => 'error' } },
       ],
     });

@@ -1,12 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, AuthService, LangService } from '@attome/base';
+import { ApiService, SdkService, AuthService, LangService } from '@attome/base';
 import { EntityService } from '@attome/xrm/core/entity';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ProjectService } from '../services/project.service';
 import { TimesheetGridComponent, weekDays, weekStartOf } from './timesheet-grid.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const USER = 'u-1';
 
@@ -45,6 +46,7 @@ describe('TimesheetGridComponent (V3-T1)', () => {
       providers: [
         { provide: EntityService, useValue: entities },
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: ProjectService, useValue: project },
         { provide: AuthService, useValue: { userId: signal(USER) } },
         {

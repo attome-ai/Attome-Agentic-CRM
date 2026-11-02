@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AiSpendComponent, SpendLine, forecastOver, spendState } from './spend.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const line = (percent: number, forecast = 0, cap = 100): SpendLine => ({
   scope: 'spend_feature', key: 'record.summarize', spent: percent, cap, percent, forecast,
@@ -33,6 +34,7 @@ describe('AiSpendComponent (N24-T2)', () => {
       imports: [AiSpendComponent],
       providers: [
         { provide: ApiService, useValue: api },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (key: string) => key, intlLocale: () => 'en-US' } },
       ],
     });

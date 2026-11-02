@@ -1,12 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService, UserPreferencesService } from '@attome/base';
+import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { AdminService } from '@attome/xrm/core/admin/data';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { CustomerTestListComponent } from './customer-test-list.component';
 import type { CustomerTest } from './customer-test.model';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const TESTS: CustomerTest[] = [
   {
@@ -32,6 +33,7 @@ describe('CustomerTestListComponent (Z15-T15)', () => {
       imports: [CustomerTestListComponent],
       providers: [
         { provide: ApiService, useValue: { getAllPages, post, delete: vi.fn(() => of(undefined)) } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: AdminService, useValue: { listEntities: () => of([]), getEntity: vi.fn() } },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },
         { provide: UserPreferencesService, useValue: { timezone: () => 'UTC', calendar: () => null, digits: () => null } },

@@ -1,12 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
   MassConfirmDialogComponent, MassEstimate, durationLabel, filtersToCondition,
 } from './mass-confirm-dialog.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 describe('MassConfirmDialogComponent (AA10-T8)', () => {
   function create(estimate: MassEstimate) {
@@ -19,6 +20,7 @@ describe('MassConfirmDialogComponent (AA10-T8)', () => {
       imports: [MassConfirmDialogComponent],
       providers: [
         { provide: ApiService, useValue: { post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: () => 'en-US' } },
       ],
     });

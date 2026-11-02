@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 
 /** `metadata_label_admin::WorkbenchRow`. */
 export interface WorkbenchRow {
@@ -108,7 +108,7 @@ export function oneUnitXliff(locale: string, row: WorkbenchRow, target: string):
   `],
 })
 export class LabelWorkbenchComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly statuses = WORKBENCH_STATUSES;
   readonly locale = signal('ar-SA');
@@ -126,7 +126,7 @@ export class LabelWorkbenchComponent implements OnInit {
   load(): void {
     const params: Record<string, string> = { locale: this.locale().trim() };
     if (this.status()) params['status'] = this.status();
-    this.api.get<{ items: WorkbenchRow[] }>('/api/v1/admin/entities/labels/workbench', params).subscribe({
+    this.sdk.get<{ items: WorkbenchRow[] }>('/api/v1/admin/entities/labels/workbench', { query: params }).subscribe({
       next: page => { this.error.set(null); this.rows.set(page.items); this.edits.set({}); },
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -149,8 +149,9 @@ export class LabelWorkbenchComponent implements OnInit {
     const target = (this.edits()[row.key] ?? '').trim();
     if (!target) return;
     this.busy.set(true);
-    this.api.post<{ imported: number; errors: string[] }>(
-      '/api/v1/admin/entities/labels/xliff', oneUnitXliff(this.locale().trim(), row, target),
+    this.sdk.post<{ imported: number; errors: string[] }>(
+      '/api/v1/admin/entities/labels/xliff',
+      { body: oneUnitXliff(this.locale().trim(), row, target) },
     ).subscribe({
       next: result => {
         this.busy.set(false);

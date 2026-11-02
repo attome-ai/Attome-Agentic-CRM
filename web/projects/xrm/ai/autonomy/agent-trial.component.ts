@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
-import { ApiError, ApiService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 /** `trial::ActionAgreement`. */
 export interface ActionAgreement {
@@ -52,7 +52,7 @@ export function percent(agreement: number | null): number | null {
   styleUrls:       ['./autonomy.component.css'],
 })
 export class AiAgentTrialComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly agentId      = input.required<string>();
   readonly report       = signal<TrialReport | null>(null);
@@ -72,7 +72,7 @@ export class AiAgentTrialComponent {
   }
 
   load(agentId: string): void {
-    this.api.get<TrialReport>(`/api/v1/admin/ai/agents/${encodeURIComponent(agentId)}/trial-report`).subscribe({
+    this.sdk.get<TrialReport>(`/api/v1/admin/ai/agents/${encodeURIComponent(agentId)}/trial-report`).subscribe({
       next: r => this.report.set(r),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -87,12 +87,15 @@ export class AiAgentTrialComponent {
     const id = encodeURIComponent(this.agentId());
     this.busy.set(true);
     this.error.set(null);
-    this.api.get<{ row_version: number }>(`/api/v1/ai_agent/${id}`).subscribe({
+    this.sdk.get<{ row_version: number }>(`/api/v1/ai_agent/${id}`).subscribe({
       next: record => {
-        this.api.post<TrialReport>(`/api/v1/admin/ai/agents/${id}/go-live`, {
+        this.sdk.post<TrialReport>(
+          `/api/v1/admin/ai/agents/${id}/go-live`,
+          { body: {
           row_version:   record.row_version,
           min_agreement: this.minAgreement() / 100,
-        }).subscribe({
+        } },
+        ).subscribe({
           next: () => { this.busy.set(false); this.wentLive.set(true); },
           error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
         });

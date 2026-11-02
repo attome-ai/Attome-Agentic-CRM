@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, LangService, UserPreferencesService } from '@attome/base';
+import { ApiService, SdkService, LangService, UserPreferencesService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { InboxItem, StewardInboxComponent } from './steward-inbox.component';
+import { sdkFromApi } from '../../../../testing/sdk-from-api';
 
 const ITEMS: InboxItem[] = [
   { source: 'duplicate', id: 'd1', entity: 'account', record_id: 'r1', related_id: 'r2', detail: '0.95', due_at: '2026-10-01T08:00:00Z', link: '/xrm/admin/duplicates' },
@@ -19,6 +20,7 @@ function create(lang: 'en' | 'ar', items: InboxItem[]) {
     providers: [
       provideRouter([]),
       { provide: ApiService, useValue: { getAllPages } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
       { provide: LangService, useValue: { translate: (k: string) => k, current: signal(lang), intlLocale: () => (lang === 'ar' ? 'ar-SA' : 'en-US') } },
       { provide: UserPreferencesService, useValue: { timezone: () => 'UTC', calendar: () => null, digits: () => null } },
     ],

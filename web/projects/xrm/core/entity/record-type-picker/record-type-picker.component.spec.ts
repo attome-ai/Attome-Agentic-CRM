@@ -1,10 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { RecordTypeOption, RecordTypePickerComponent } from './record-type-picker.component';
+import { sdkFromApi } from '../../../testing/sdk-from-api';
 
 const TYPES: RecordTypeOption[] = [
   { code: 'service', label_en: 'Service', label_ar: 'خدمة', form: null, is_default: true },
@@ -17,6 +18,7 @@ describe('RecordTypePickerComponent (A27-T4)', () => {
       imports: [RecordTypePickerComponent],
       providers: [
         { provide: ApiService, useValue: { get: vi.fn(get) } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal(lang) } },
       ],
     });

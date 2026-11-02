@@ -1,11 +1,12 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, SdkService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { IncidentsComponent, canPublish, visibleIncidents } from './incidents.component';
 import type { Incident } from './incidents.component';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const INCIDENT: Incident = {
   id: 'i1', title_en: 'Search is slow', title_ar: 'البحث بطيء', audience: 'internal', state: 'investigating',
@@ -42,6 +43,7 @@ describe('IncidentsComponent (AB11-T9)', () => {
       imports: [IncidentsComponent],
       providers: [
         { provide: ApiService, useValue: { get, post } },
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         { provide: LangService, useValue: { translate: (k: string) => k, current: signal('en'), intlLocale: signal('en-US'), errorText: () => 'error' } },
       ],
     });

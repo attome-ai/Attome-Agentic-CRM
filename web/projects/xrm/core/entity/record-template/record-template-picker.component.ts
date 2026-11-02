@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 import type { Page } from '@attome/base';
 
 import { entityFormRoute } from '../services/entity-url.utils';
@@ -96,7 +96,7 @@ export function missingAnswers(template: OfferedTemplate, answers: Record<string
   `],
 })
 export class RecordTemplatePickerComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
   private readonly router = inject(Router);
 
@@ -119,7 +119,7 @@ export class RecordTemplatePickerComponent {
       this.templates.set([]);
       const params: Record<string, string> = { entity };
       if (type) params['type'] = type;
-      const sub = this.api.get<Page<OfferedTemplate>>('/api/v1/record-templates', params).subscribe({
+      const sub = this.sdk.get<Page<OfferedTemplate>>('/api/v1/record-templates', { query: params }).subscribe({
         next: page => this.templates.set(page.items ?? []),
         // No template offered (or no right to create): nothing to show.
         error: () => this.templates.set([]),
@@ -159,7 +159,7 @@ export class RecordTemplatePickerComponent {
       if (value !== '') answers[p.field] = value;
     }
     this.busy.set(true);
-    this.api.post<{ entity: string; id: string }>(`/api/v1/record-templates/${t.id}/create`, { answers }).subscribe({
+    this.sdk.post<{ entity: string; id: string }>(`/api/v1/record-templates/${t.id}/create`, { body: { answers } }).subscribe({
       next: created => {
         this.busy.set(false);
         this.chosen.set(null);

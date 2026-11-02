@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 /** `attome_ops::incidents::Incident`. */
 export interface Incident {
@@ -169,7 +169,7 @@ export function visibleIncidents(items: Incident[], withResolved: boolean): Inci
   `],
 })
 export class IncidentsComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   readonly lang = inject(LangService);
 
   readonly stages = STAGES;
@@ -193,21 +193,21 @@ export class IncidentsComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
-    this.api.get<{ components: StatusComponent[] }>('/api/v1/ops/status').subscribe({
+    this.sdk.get<{ components: StatusComponent[] }>('/api/v1/ops/status').subscribe({
       next: s => this.components.set(s?.components ?? []),
       error: () => undefined,
     });
   }
 
   load(): void {
-    this.api.get<Page<Incident>>('/api/v1/ops/incidents', { page_size: '100' }).subscribe({
+    this.sdk.get<Page<Incident>>('/api/v1/ops/incidents', { query: { page_size: '100' } }).subscribe({
       next: page => this.items.set(page.items),
       error: (e: ApiError) => this.error.set(this.lang.errorText(e)),
     });
   }
 
   open(id: string): void {
-    this.api.get<Incident & { updates: IncidentUpdate[] }>(`/api/v1/ops/incidents/${encodeURIComponent(id)}`).subscribe({
+    this.sdk.get<Incident & { updates: IncidentUpdate[] }>(`/api/v1/ops/incidents/${encodeURIComponent(id)}`).subscribe({
       next: detail => {
         const { updates, ...incident } = detail;
         this.selected.set(incident);
@@ -224,12 +224,15 @@ export class IncidentsComponent implements OnInit {
 
   create(): void {
     this.busy.set(true);
-    this.api.post<Incident>('/api/v1/ops/incidents', {
+    this.sdk.post<Incident>(
+      '/api/v1/ops/incidents',
+      { body: {
       title_en: this.newTitleEn.trim(),
       title_ar: this.newTitleAr.trim() || null,
       impact: this.newImpact,
       components: this.newComponents(),
-    }).subscribe({
+    } },
+    ).subscribe({
       next: incident => {
         this.busy.set(false);
         this.newTitleEn = '';
@@ -263,12 +266,15 @@ export class IncidentsComponent implements OnInit {
     if (!canPublish(draft)) return;
     this.busy.set(true);
     this.error.set(null);
-    this.api.post<IncidentUpdate>(`/api/v1/ops/incidents/${encodeURIComponent(incidentId)}/updates`, {
+    this.sdk.post<IncidentUpdate>(
+      `/api/v1/ops/incidents/${encodeURIComponent(incidentId)}/updates`,
+      { body: {
       stage: draft.stage,
       body_en: draft.body_en.trim(),
       body_ar: draft.body_ar.trim(),
       corrects_update_id: draft.corrects_update_id,
-    }).subscribe({
+    } },
+    ).subscribe({
       next: () => {
         this.busy.set(false);
         this.load();
