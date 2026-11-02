@@ -1337,6 +1337,305 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/marketing/handoffs": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "List hand-offs",
+        "description": "The caller's own hand-offs, newest first; with `marketing_nurture_program.read` every hand-off of\na person the caller may read.",
+        "operationId": "list_marketing_handoffs",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "path",
+            "description": "`pending`, `accepted`, `returned` or `overdue`.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "in": "path",
+            "description": "One-based.",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of hand-offs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_Handoff"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An unknown status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/marketing/handoffs/{id}/accept": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Accept a hand-off",
+        "description": "Sales takes the person: a pending or overdue hand-off becomes `accepted`. Only its assignee, the\nassignee's manager or an administrator. Audited.",
+        "operationId": "accept_marketing_handoff",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The hand-off",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The hand-off, accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Handoff"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the assignee, their manager or an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such hand-off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already accepted or returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/marketing/handoffs/{id}/return": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Return a hand-off",
+        "description": "Sales gives the person back with a reason: the hand-off becomes `returned` and, when the\nprogramme recycles, the person is nurtured again from `wake_up_on`. Only its assignee, the\nassignee's manager or an administrator. Audited.",
+        "operationId": "return_marketing_handoff",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The hand-off",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReturnBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Returned, and whether the person is nurtured again",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the assignee, their manager or an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such hand-off, or one already returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/marketing/identity/conflicts": {
       "get": {
         "tags": [
@@ -3683,6 +3982,84 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/marketing/nurture/programs/{id}/stats": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Read a nurture programme's statistics",
+        "description": "People per state and per track, conversion to a hand-off by track, the content most often seen\nbefore a hand-off, and the hand-off SLA over the last 90 days.",
+        "operationId": "get_marketing_nurture_program_stats",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The nurture programme",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The programme's statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProgramStats"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_nurture_program.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such programme",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/marketing/o/{token}": {
       "get": {
         "tags": [
@@ -3802,6 +4179,86 @@
           },
           "422": {
             "description": "An unknown model",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "marketing",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/marketing/people/{person_id}/nurture-history": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "summary": "Read a person's nurture history",
+        "description": "The person's nurture states, the content they have seen and their hand-offs, newest first.",
+        "operationId": "get_marketing_nurture_history",
+        "parameters": [
+          {
+            "name": "person_id",
+            "in": "path",
+            "description": "The contact or lead",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "`contact` (the default) or `lead`.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The person's nurture history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NurtureHistory"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "A person the caller may not read",
             "content": {
               "application/json": {
                 "schema": {
@@ -4539,6 +4996,48 @@
           }
         }
       },
+      "ContentBeforeHandoff": {
+        "type": "object",
+        "description": "A piece of content and how many hand-offs saw it first.",
+        "required": [
+          "content_kind",
+          "content_id",
+          "handoffs"
+        ],
+        "properties": {
+          "content_id": {
+            "type": "string"
+          },
+          "content_kind": {
+            "type": "string"
+          },
+          "handoffs": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ContentSeen": {
+        "type": "object",
+        "description": "A piece of content the person has seen.",
+        "required": [
+          "content_kind",
+          "content_id",
+          "first_seen_at"
+        ],
+        "properties": {
+          "content_id": {
+            "type": "string"
+          },
+          "content_kind": {
+            "type": "string"
+          },
+          "first_seen_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "DeliverabilityOverview": {
         "type": "object",
         "description": "The deliverability dashboard's figures.",
@@ -5178,6 +5677,86 @@
           }
         }
       },
+      "Handoff": {
+        "type": "object",
+        "description": "One hand-off.",
+        "required": [
+          "id",
+          "ticket_id",
+          "from_kind",
+          "from_ref",
+          "to_kind",
+          "to_ref",
+          "summary",
+          "reasoning",
+          "status",
+          "created_at",
+          "row_version"
+        ],
+        "properties": {
+          "accepted_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "agent_session_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "from_kind": {
+            "type": "string"
+          },
+          "from_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reasoning": {
+            "type": "string"
+          },
+          "returned_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string",
+            "description": "`pending`, `accepted`, `returned` or `cancelled`."
+          },
+          "summary": {
+            "type": "string"
+          },
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "to_kind": {
+            "type": "string"
+          },
+          "to_ref": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "IncomingEvent": {
         "type": "object",
         "description": "One event sent.",
@@ -5768,6 +6347,81 @@
           }
         }
       },
+      "NurtureHistory": {
+        "type": "object",
+        "required": [
+          "person_id",
+          "states",
+          "content_seen",
+          "handoffs"
+        ],
+        "properties": {
+          "content_seen": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContentSeen"
+            }
+          },
+          "handoffs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Handoff"
+            }
+          },
+          "person_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "states": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NurtureStateItem"
+            }
+          }
+        }
+      },
+      "NurtureStateItem": {
+        "type": "object",
+        "description": "A person's place in one programme.",
+        "required": [
+          "program_id",
+          "status",
+          "position"
+        ],
+        "properties": {
+          "next_due_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "paused_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "position": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "program_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "track_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "PaginatedResponse_DeliverabilityDay": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
@@ -5832,6 +6486,120 @@
                 "sent": {
                   "type": "integer",
                   "format": "int64"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_Handoff": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One hand-off.",
+              "required": [
+                "id",
+                "ticket_id",
+                "from_kind",
+                "from_ref",
+                "to_kind",
+                "to_ref",
+                "summary",
+                "reasoning",
+                "status",
+                "created_at",
+                "row_version"
+              ],
+              "properties": {
+                "accepted_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "agent_session_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "from_kind": {
+                  "type": "string"
+                },
+                "from_ref": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "reasoning": {
+                  "type": "string"
+                },
+                "returned_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`pending`, `accepted`, `returned` or `cancelled`."
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "ticket_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "to_kind": {
+                  "type": "string"
+                },
+                "to_ref": {
+                  "type": "string",
+                  "format": "uuid"
                 }
               }
             }
@@ -6608,6 +7376,63 @@
           }
         }
       },
+      "ProgramStats": {
+        "type": "object",
+        "required": [
+          "program_id",
+          "by_state",
+          "by_track",
+          "content_before_handoff",
+          "accepted",
+          "returned",
+          "overdue"
+        ],
+        "properties": {
+          "accepted": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Hand-offs of the last 90 days: accepted, returned, overdue."
+          },
+          "by_state": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StateCount"
+            }
+          },
+          "by_track": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TrackStats"
+            }
+          },
+          "content_before_handoff": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContentBeforeHandoff"
+            }
+          },
+          "median_minutes_to_decision": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Median minutes from hand-off to decision."
+          },
+          "overdue": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "program_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "returned": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "ProviderDay": {
         "type": "object",
         "description": "One provider's totals on one day.",
@@ -6692,6 +7517,43 @@
           },
           "identifier_value": {
             "type": "string"
+          }
+        }
+      },
+      "ReturnBody": {
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Why sales returns the person."
+          },
+          "wake_up_on": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When nurture starts again; now when absent."
+          }
+        }
+      },
+      "ReturnResult": {
+        "type": "object",
+        "required": [
+          "handoff_id",
+          "recycled"
+        ],
+        "properties": {
+          "handoff_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recycled": {
+            "type": "boolean",
+            "description": "Whether the person is nurtured again (the programme recycles)."
           }
         }
       },
@@ -6922,6 +7784,23 @@
           }
         }
       },
+      "StateCount": {
+        "type": "object",
+        "description": "People of a programme by state.",
+        "required": [
+          "status",
+          "people"
+        ],
+        "properties": {
+          "people": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
       "StaticListImportBody": {
         "type": "object",
         "required": [
@@ -6977,6 +7856,37 @@
           },
           "touchpoint_kind": {
             "type": "string"
+          }
+        }
+      },
+      "TrackStats": {
+        "type": "object",
+        "description": "One track's people and hand-offs.",
+        "required": [
+          "people",
+          "handed_off",
+          "conversion"
+        ],
+        "properties": {
+          "conversion": {
+            "type": "number",
+            "format": "double",
+            "description": "`handed_off / people`."
+          },
+          "handed_off": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "people": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "track_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
           }
         }
       },

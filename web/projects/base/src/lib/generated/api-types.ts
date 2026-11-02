@@ -21227,6 +21227,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/marketing/handoffs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List hand-offs
+         * @description The caller's own hand-offs, newest first; with `marketing_nurture_program.read` every hand-off of
+         *     a person the caller may read.
+         */
+        get: operations["list_marketing_handoffs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/handoffs/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept a hand-off
+         * @description Sales takes the person: a pending or overdue hand-off becomes `accepted`. Only its assignee, the
+         *     assignee's manager or an administrator. Audited.
+         */
+        post: operations["accept_marketing_handoff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/handoffs/{id}/return": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Return a hand-off
+         * @description Sales gives the person back with a reason: the hand-off becomes `returned` and, when the
+         *     programme recycles, the person is nurtured again from `wake_up_on`. Only its assignee, the
+         *     assignee's manager or an administrator. Audited.
+         */
+        post: operations["return_marketing_handoff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/marketing/identity/conflicts": {
         parameters: {
             query?: never;
@@ -21779,6 +21843,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/marketing/nurture/programs/{id}/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a nurture programme's statistics
+         * @description People per state and per track, conversion to a hand-off by track, the content most often seen
+         *     before a hand-off, and the hand-off SLA over the last 90 days.
+         */
+        get: operations["get_marketing_nurture_program_stats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/marketing/o/{token}": {
         parameters: {
             query?: never;
@@ -21814,6 +21899,26 @@ export interface paths {
          *     model, by touch and by campaign; computed nightly.
          */
         get: operations["opportunity_attribution"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/people/{person_id}/nurture-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a person's nurture history
+         * @description The person's nurture states, the content they have seen and their hand-offs, newest first.
+         */
+        get: operations["get_marketing_nurture_history"];
         put?: never;
         post?: never;
         delete?: never;
@@ -38925,6 +39030,20 @@ export interface components {
              */
             visits: number;
         };
+        /** @description A piece of content and how many hand-offs saw it first. */
+        ContentBeforeHandoff: {
+            content_id: string;
+            content_kind: string;
+            /** Format: int64 */
+            handoffs: number;
+        };
+        /** @description A piece of content the person has seen. */
+        ContentSeen: {
+            content_id: string;
+            content_kind: string;
+            /** Format: date-time */
+            first_seen_at: string;
+        };
         /**
          * @description A reusable container of pages — a pure organizational grouping, not a URL
          *     namespace (`url_path` uniqueness stays global across all spaces; see
@@ -49028,6 +49147,26 @@ export interface components {
             channels: string[];
             /** @description The caller's stored rows. A (category, channel) with no row is enabled. */
             items: components["schemas"]["NotificationPreference"][];
+        };
+        NurtureHistory: {
+            content_seen: components["schemas"]["ContentSeen"][];
+            handoffs: components["schemas"]["Handoff"][];
+            /** Format: uuid */
+            person_id: string;
+            states: components["schemas"]["NurtureStateItem"][];
+        };
+        /** @description A person's place in one programme. */
+        NurtureStateItem: {
+            /** Format: date-time */
+            next_due_at?: string | null;
+            paused_reason?: string | null;
+            /** Format: int32 */
+            position: number;
+            /** Format: uuid */
+            program_id: string;
+            status: string;
+            /** Format: uuid */
+            track_id?: string | null;
         };
         /** @description A refused token request (RFC 6749 §5.2). */
         OAuthErrorBody: {
@@ -60927,6 +61066,27 @@ export interface components {
             total_expenses: string;
             total_income: string;
         };
+        ProgramStats: {
+            /**
+             * Format: int64
+             * @description Hand-offs of the last 90 days: accepted, returned, overdue.
+             */
+            accepted: number;
+            by_state: components["schemas"]["StateCount"][];
+            by_track: components["schemas"]["TrackStats"][];
+            content_before_handoff: components["schemas"]["ContentBeforeHandoff"][];
+            /**
+             * Format: double
+             * @description Median minutes from hand-off to decision.
+             */
+            median_minutes_to_decision?: number | null;
+            /** Format: int64 */
+            overdue: number;
+            /** Format: uuid */
+            program_id: string;
+            /** Format: int64 */
+            returned: number;
+        };
         /**
          * @description `GET /api/v1/program/{id}/summary` — same D-368 read-time-rollup rule as
          *     `ProjectSummaryResponse`, one level up: every number here is computed
@@ -63377,6 +63537,21 @@ export interface components {
         /** @description What an app's removal did. */
         RetireAppResponse: {
             retired: number;
+        };
+        ReturnBody: {
+            /** @description Why sales returns the person. */
+            reason: string;
+            /**
+             * Format: date-time
+             * @description When nurture starts again; now when absent.
+             */
+            wake_up_on?: string | null;
+        };
+        ReturnResult: {
+            /** Format: uuid */
+            handoff_id: string;
+            /** @description Whether the person is nurtured again (the programme recycles). */
+            recycled: boolean;
         };
         /** @description The revaluation of one money field. */
         Revaluation: {
@@ -67353,6 +67528,12 @@ export interface components {
             /** Format: double */
             total_ms: number;
         };
+        /** @description People of a programme by state. */
+        StateCount: {
+            /** Format: int64 */
+            people: number;
+            status: string;
+        };
         /**
          * @description M07 Phase 1 (D-405/D-406) — `state_model`, keyed by
          *     `entity_logicalname` (one live model per entity, enforced by a partial
@@ -68796,6 +68977,20 @@ export interface components {
             outcome: string;
             /** @description The tool call that asked for it, when an agent did. */
             tool_call_id?: string | null;
+        };
+        /** @description One track's people and hand-offs. */
+        TrackStats: {
+            /**
+             * Format: double
+             * @description `handed_off / people`.
+             */
+            conversion: number;
+            /** Format: int64 */
+            handed_off: number;
+            /** Format: int64 */
+            people: number;
+            /** Format: uuid */
+            track_id?: string | null;
         };
         /** @description A shipment's status after a tracking read. */
         Tracked: {
@@ -132892,6 +133087,172 @@ export interface operations {
             };
         };
     };
+    list_marketing_handoffs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `pending`, `accepted`, `returned` or `overdue`. */
+                status: string | null;
+                /** @description One-based. */
+                page: number | null;
+                page_size: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of hand-offs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_Handoff"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown status */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    accept_marketing_handoff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The hand-off */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The hand-off, accepted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Handoff"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not the assignee, their manager or an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such hand-off */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already accepted or returned */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    return_marketing_handoff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The hand-off */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReturnBody"];
+            };
+        };
+        responses: {
+            /** @description Returned, and whether the person is nurtured again */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReturnResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not the assignee, their manager or an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such hand-off, or one already returned */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No reason */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_identity_conflicts: {
         parameters: {
             query?: {
@@ -134531,6 +134892,56 @@ export interface operations {
             };
         };
     };
+    get_marketing_nurture_program_stats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The nurture programme */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The programme's statistics */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProgramStats"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_nurture_program.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such programme */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     email_campaign_open: {
         parameters: {
             query?: never;
@@ -134610,6 +135021,49 @@ export interface operations {
             };
             /** @description An unknown model */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_marketing_nurture_history: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The contact or lead */
+                person_id: string;
+                /** @description `contact` (the default) or `lead`. */
+                entity: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The person's nurture history */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NurtureHistory"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A person the caller may not read */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
