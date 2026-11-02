@@ -562,6 +562,21 @@
                   [attr.aria-label]="'notes.attachFiles' | translate">
                   <i class="las la-paperclip"></i>
                 </button>
+                <!-- B17-T7: a photo or a voice note into the reply -->
+                <button type="button" class="xnp-attach-btn" data-testid="reply-take-photo"
+                  (click)="takePhoto('reply')" [title]="'notes.takePhoto' | translate"
+                  [attr.aria-label]="'notes.takePhoto' | translate">
+                  <i class="las la-camera" aria-hidden="true"></i>
+                </button>
+                @if (canRecordVoice()) {
+                  <button type="button" class="xnp-attach-btn" data-testid="reply-voice"
+                    [attr.aria-pressed]="recordingFor() === 'reply'" (click)="toggleVoiceNote('reply')"
+                    [title]="(recordingFor() === 'reply' ? 'notes.stopRecording' : 'notes.voiceNote') | translate"
+                    [attr.aria-label]="(recordingFor() === 'reply' ? 'notes.stopRecording' : 'notes.voiceNote') | translate">
+                    <i class="las" [class.la-circle]="recordingFor() !== 'reply'"
+                      [class.la-stop-circle]="recordingFor() === 'reply'" aria-hidden="true"></i>
+                  </button>
+                }
 
                 <textarea
                   #replyTextarea
