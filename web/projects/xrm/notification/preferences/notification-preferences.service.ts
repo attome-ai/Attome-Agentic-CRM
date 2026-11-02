@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import type { ApiComponents } from '@attome/base';
 
 type Schemas = ApiComponents['schemas'];
@@ -22,13 +22,14 @@ export type PreferenceChannel = (typeof PREFERENCE_CHANNELS)[number];
  */
 @Injectable({ providedIn: 'root' })
 export class NotificationPreferencesService {
-  private readonly api = inject(ApiService);
+  // Y9-T3: through the generated SDK.
+  private readonly sdk = inject(SdkService);
 
   load(): Observable<NotificationPreferences> {
-    return this.api.get<NotificationPreferences>('/api/v1/me/notification-preferences');
+    return this.sdk.get<NotificationPreferences>('/api/v1/me/notification-preferences');
   }
 
   save(items: NotificationPreferenceWrite[]): Observable<NotificationPreferences> {
-    return this.api.put<NotificationPreferences>('/api/v1/me/notification-preferences', { items });
+    return this.sdk.put<NotificationPreferences>('/api/v1/me/notification-preferences', { body: { items } });
   }
 }

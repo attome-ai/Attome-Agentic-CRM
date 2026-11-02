@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService, Page } from '@attome/base';
+import { SdkService, Page } from '@attome/base';
 
 // Wire shapes mirror `crates/engine/attome-project/src/model.rs`'s two aggregation
 // responses (`GET /project/{id}/summary`, `GET /project/{id}/work-items/rollup`)
@@ -136,18 +136,18 @@ export interface GanttView {
 
 @Injectable({ providedIn: 'root' })
 export class ProjectService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   getSummary(projectId: string): Observable<ProjectSummary> {
-    return this.api.get<ProjectSummary>(`/api/v1/project/${projectId}/summary`);
+    return this.sdk.get<ProjectSummary>(`/api/v1/project/${projectId}/summary`);
   }
 
   getWorkItemRollup(projectId: string): Observable<Page<WorkItemRollupRow>> {
-    return this.api.get<Page<WorkItemRollupRow>>(`/api/v1/project/${projectId}/work-items/rollup`);
+    return this.sdk.get<Page<WorkItemRollupRow>>(`/api/v1/project/${projectId}/work-items/rollup`);
   }
 
   getGantt(projectId: string): Observable<GanttView> {
-    return this.api.get<GanttView>(`/api/v1/project/${projectId}/gantt`);
+    return this.sdk.get<GanttView>(`/api/v1/project/${projectId}/gantt`);
   }
 
   /** `POST /project/{id}/baseline` — 200 when a baseline with this label
@@ -155,26 +155,26 @@ export class ProjectService {
    *  body shape is identical either way, so callers that only care about the
    *  resulting snapshot don't need the status code. */
   captureBaseline(projectId: string, req: CaptureBaselineRequest): Observable<CaptureBaselineResponse> {
-    return this.api.post<CaptureBaselineResponse>(`/api/v1/project/${projectId}/baseline`, req);
+    return this.sdk.post<CaptureBaselineResponse>(`/api/v1/project/${projectId}/baseline`, { body: req });
   }
 
   approveChangeRequest(id: string): Observable<ChangeRequestDecisionResponse> {
-    return this.api.post<ChangeRequestDecisionResponse>(`/api/v1/project/change-request/${id}/approve`, {});
+    return this.sdk.post<ChangeRequestDecisionResponse>(`/api/v1/project/change-request/${id}/approve`, { body: {} });
   }
 
   rejectChangeRequest(id: string): Observable<ChangeRequestDecisionResponse> {
-    return this.api.post<ChangeRequestDecisionResponse>(`/api/v1/project/change-request/${id}/reject`, {});
+    return this.sdk.post<ChangeRequestDecisionResponse>(`/api/v1/project/change-request/${id}/reject`, { body: {} });
   }
 
   submitTimesheet(id: string): Observable<TimesheetDecisionResponse> {
-    return this.api.post<TimesheetDecisionResponse>(`/api/v1/project/timesheet/${id}/submit`, {});
+    return this.sdk.post<TimesheetDecisionResponse>(`/api/v1/project/timesheet/${id}/submit`, { body: {} });
   }
 
   approveTimesheet(id: string): Observable<TimesheetDecisionResponse> {
-    return this.api.post<TimesheetDecisionResponse>(`/api/v1/project/timesheet/${id}/approve`, {});
+    return this.sdk.post<TimesheetDecisionResponse>(`/api/v1/project/timesheet/${id}/approve`, { body: {} });
   }
 
   rejectTimesheet(id: string): Observable<TimesheetDecisionResponse> {
-    return this.api.post<TimesheetDecisionResponse>(`/api/v1/project/timesheet/${id}/reject`, {});
+    return this.sdk.post<TimesheetDecisionResponse>(`/api/v1/project/timesheet/${id}/reject`, { body: {} });
   }
 }

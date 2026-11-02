@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 
 /** Mirrors `attome_compliance::consent_admin::WithdrawConsentBody` exactly —
  *  `crates/engine/attome-compliance/src/consent_admin.rs`. */
@@ -28,9 +28,9 @@ export interface ConsentRow {
  */
 @Injectable({ providedIn: 'root' })
 export class ConsentAdminService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   withdraw(body: WithdrawConsentBody): Observable<ConsentRow> {
-    return this.api.post<ConsentRow>('/api/v1/consents/withdraw', body);
+    return this.sdk.post<ConsentRow>('/api/v1/consents/withdraw', { body: body });
   }
 }

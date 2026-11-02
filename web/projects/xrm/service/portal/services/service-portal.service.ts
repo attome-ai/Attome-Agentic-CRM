@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 
 // ── Wire types (mirror attome_service::portal exactly) ────────────────────────
 
@@ -28,13 +28,13 @@ export interface PortalStatus {
  */
 @Injectable({ providedIn: 'root' })
 export class ServicePortalService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   listPublicOfferings(): Observable<PublicOffering[]> {
-    return this.api.get<PublicOffering[]>('/api/v1/service-portal/offerings');
+    return this.sdk.get<PublicOffering[]>('/api/v1/service-portal/offerings');
   }
 
   lookupStatus(token: string): Observable<PortalStatus> {
-    return this.api.get<PortalStatus>('/api/v1/service-portal/status', { token });
+    return this.sdk.get<PortalStatus>('/api/v1/service-portal/status', { query: { token } });
   }
 }

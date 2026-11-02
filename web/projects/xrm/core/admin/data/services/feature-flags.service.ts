@@ -1,7 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 
 /**
  * Mirrors `attome_core::FeatureFlagPolicy` (M95, D-430). Keys of
@@ -50,7 +50,7 @@ export interface EffectiveFeaturesResponse {
  */
 @Injectable({ providedIn: 'root' })
 export class FeatureFlagsService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   private readonly _flags = signal<Record<string, boolean>>({});
   private loaded = false;
@@ -64,7 +64,7 @@ export class FeatureFlagsService {
    * changes a flag to refresh without a full page reload; the initial fetch
    * otherwise happens lazily via `ensureLoaded()`. */
   refresh(): Observable<Record<string, boolean>> {
-    const request = this.api.get<EffectiveFeaturesResponse>('/api/v1/features').pipe(
+    const request = this.sdk.get<EffectiveFeaturesResponse>('/api/v1/features').pipe(
       tap(res => { this._flags.set(res.flags); this.loaded = true; this.inFlight = null; }),
       map(res => res.flags),
     );
@@ -90,10 +90,10 @@ export class FeatureFlagsService {
   // ── Admin surface (Module Management > Feature Flags) ────────────────────
 
   listAdmin(): Observable<FeatureFlagListResponse> {
-    return this.api.get<FeatureFlagListResponse>('/api/v1/admin/features');
+    return this.sdk.get<FeatureFlagListResponse>('/api/v1/admin/features');
   }
 
   putAdmin(key: string, policy: FeatureFlagPolicy): Observable<FeatureFlagView> {
-    return this.api.put<FeatureFlagView>(`/api/v1/admin/features/${encodeURIComponent(key)}`, policy);
+    return this.sdk.put<FeatureFlagView>(`/api/v1/admin/features/${encodeURIComponent(key)}`, { body: policy });
   }
 }

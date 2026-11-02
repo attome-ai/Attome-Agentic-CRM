@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiComponents, ApiService, ATTOME_CONFIG } from '@attome/base';
+import { ApiComponents, SdkService, ATTOME_CONFIG } from '@attome/base';
 
 /**
  * M19 (Audit) gap list — `GET /api/v1/admin/audit/search` and `GET
@@ -34,7 +34,7 @@ export type AuditExportFormat = 'jsonl' | 'cef' | 'csv';
 
 @Injectable({ providedIn: 'root' })
 export class AuditSearchService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly config = inject(ATTOME_CONFIG);
 
   search(
@@ -45,7 +45,7 @@ export class AuditSearchService {
     const params = toParams(filters);
     params['page'] = String(page);
     params['page_size'] = String(pageSize);
-    return this.api.get<AuditSearchResponse>('/api/v1/admin/audit/search', params);
+    return this.sdk.get<AuditSearchResponse>('/api/v1/admin/audit/search', { query: params });
   }
 
   /**
@@ -54,7 +54,7 @@ export class AuditSearchService {
    * (`POST /api/v1/admin/audit/evidence-packs`, at most 2,000 events).
    */
   evidencePack(body: EvidencePackRequest): Observable<EvidencePack> {
-    return this.api.post<EvidencePack>('/api/v1/admin/audit/evidence-packs', body);
+    return this.sdk.post<EvidencePack>('/api/v1/admin/audit/evidence-packs', { body: body });
   }
 
   /**

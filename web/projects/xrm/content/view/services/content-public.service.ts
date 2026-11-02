@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 
 // ── Wire types (mirror attome-content/src/model.rs exactly) ──────────────────
 //
@@ -50,10 +50,10 @@ export interface VoteAck {
  */
 @Injectable({ providedIn: 'root' })
 export class ContentPublicService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   view(path: string): Observable<PublicPageView> {
-    return this.api.get<PublicPageView>('/api/v1/content/view', { path });
+    return this.sdk.get<PublicPageView>('/api/v1/content/view', { query: { path } });
   }
 
   /**
@@ -63,6 +63,6 @@ export class ContentPublicService {
    * while, not retry immediately.
    */
   vote(path: string, useful: boolean): Observable<VoteAck> {
-    return this.api.post<VoteAck>('/api/v1/content/vote', { url_path: path, useful });
+    return this.sdk.post<VoteAck>('/api/v1/content/vote', { body: { url_path: path, useful } });
   }
 }

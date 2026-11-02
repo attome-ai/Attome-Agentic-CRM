@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import {
-  ApiService, AuthService, BrandService, CommandRegistry, IdleSessionService, LangService, ThemeService,
+  ApiService, AuthService, SdkService, BrandService, CommandRegistry, IdleSessionService, LangService, ThemeService,
 } from '@attome/base';
 import { of, Subject } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
@@ -18,6 +18,8 @@ function createComponent() {
     providers: [
       { provide: AuthService, useValue: { userId: signal('user-id'), logout: () => of(undefined) } },
       { provide: ApiService, useValue: { post: () => of({}) } },
+      // Y9-T3: the header search's service sends through the SDK.
+      { provide: SdkService, useValue: { post: () => of({}), get: () => of({}) } },
       { provide: BrandService, useValue: { loadMine: vi.fn() } },
       {
         provide: IdleSessionService,

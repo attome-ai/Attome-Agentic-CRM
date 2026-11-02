@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { ApiComponents, ApiService, Page } from '@attome/base';
+import { ApiComponents, SdkService, Page } from '@attome/base';
 
 /**
  * M12 / L6 data profiles — `GET /api/v1/admin/data/profile` (one-based,
@@ -67,12 +67,12 @@ const LATEST_WINDOW = 10;
 
 @Injectable({ providedIn: 'root' })
 export class DataProfileService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   list(entity: string | undefined, page = 1, pageSize = 50): Observable<Page<DataProfileRow>> {
     const params: Record<string, string> = { page: String(page), page_size: String(pageSize) };
     if (entity) params['entity'] = entity;
-    return this.api.get<Page<DataProfileRow>>('/api/v1/admin/data/profile', params);
+    return this.sdk.get<Page<DataProfileRow>>('/api/v1/admin/data/profile', { query: params });
   }
 
   /** The entity's newest completed profile of its own records (not of a

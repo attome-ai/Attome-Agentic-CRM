@@ -21,20 +21,26 @@ describe('NotificationPreferencesService', () => {
 
   afterEach(() => http.verify());
 
-  it('reads the caller\'s own preferences, naming no user', () => {
+  /** The SDK sends after a promise turn; JSON answers go back as text. */
+  const tick = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+  const json = (body: unknown): string => JSON.stringify(body);
+
+  it('reads the caller\'s own preferences, naming no user', async () => {
     service.load().subscribe();
+    await tick();
     const req = http.expectOne(URL);
     expect(req.request.method).toBe('GET');
     expect(req.request.params.keys()).toEqual([]);
-    req.flush({ categories: [], channels: [], items: [] });
+    req.flush(json({ categories: [], channels: [], items: [] }));
   });
 
-  it('writes the items as the PUT body', () => {
+  it('writes the items as the PUT body', async () => {
     const items = [{ category: 'reminder', channel: 'email', enabled: false, row_version: null }];
     service.save(items).subscribe();
+    await tick();
     const req = http.expectOne(URL);
     expect(req.request.method).toBe('PUT');
-    expect(req.request.body).toEqual({ items });
-    req.flush({ categories: ['reminder'], channels: ['email'], items: [] });
+    expect(JSON.parse(req.request.body as string)).toEqual({ items });
+    req.flush(json({ categories: ['reminder'], channels: ['email'], items: [] }));
   });
 });

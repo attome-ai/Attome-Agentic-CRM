@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService, Page } from '@attome/base';
+import { SdkService, Page } from '@attome/base';
 
 // Wire shape mirrors `crates/engine/attome-project/src/model.rs`'s `CapacityRow`
 // field-for-field, same "hand-mirrored, not imported from the generated
@@ -28,7 +28,7 @@ export interface CapacityQuery {
 
 @Injectable({ providedIn: 'root' })
 export class ResourceCapacityService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** `GET /api/v1/resources/capacity` (M72) — one page of per-resource
    *  capacity/allocated/actual/utilization figures for `[from, to]`. */
@@ -38,6 +38,6 @@ export class ResourceCapacityService {
     if (query.skill) params['skill'] = query.skill;
     if (query.page != null) params['page'] = String(query.page);
     if (query.page_size != null) params['page_size'] = String(query.page_size);
-    return this.api.get<Page<CapacityRow>>('/api/v1/resources/capacity', params);
+    return this.sdk.get<Page<CapacityRow>>('/api/v1/resources/capacity', { query: params });
   }
 }

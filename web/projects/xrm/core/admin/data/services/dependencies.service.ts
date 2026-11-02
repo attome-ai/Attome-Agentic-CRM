@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 
 /** One gated capability, as `GET /health/dependencies` reports it. */
 export interface CapabilityRow {
@@ -34,9 +34,9 @@ export interface DependencyReport {
  */
 @Injectable({ providedIn: 'root' })
 export class DependenciesService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   report(): Observable<DependencyReport> {
-    return this.api.get<DependencyReport>('/health/dependencies');
+    return this.sdk.get<DependencyReport>('/health/dependencies');
   }
 }

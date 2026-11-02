@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import type { ApiComponents } from '@attome/base';
 
 /** `GET /api/v1/search`'s response, straight from the generated contract. */
@@ -36,13 +36,13 @@ export interface HitGroup {
  */
 @Injectable({ providedIn: 'root' })
 export class SearchService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   search(q: string, opts?: { pageSize?: number; audience?: 'human' | 'agent' }): Observable<SearchResponse> {
     const params: Record<string, string> = { q };
     if (opts?.pageSize) params['page_size'] = String(opts.pageSize);
     if (opts?.audience) params['audience'] = opts.audience;
-    return this.api.get<SearchResponse>('/api/v1/search', params);
+    return this.sdk.get<SearchResponse>('/api/v1/search', { query: params });
   }
 }
 

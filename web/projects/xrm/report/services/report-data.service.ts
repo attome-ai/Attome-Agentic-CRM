@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiComponents, ApiService } from '@attome/base';
+import { ApiComponents, SdkService } from '@attome/base';
 import { DateRangeConfig } from '../types';
 
 // Wire shapes come from the generated OpenAPI contract (M26 R-15). S4-T11
@@ -13,7 +13,7 @@ export type AggregateResult = ApiComponents['schemas']['AggregateResult'];
 
 @Injectable({ providedIn: 'root' })
 export class ReportDataService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   // D-479 (M26 R-09) deleted `getWidgetTypes()` along with the backend route
   // it called (`GET /api/v1/report/widget-types`, `attome-report/src/
@@ -24,7 +24,7 @@ export class ReportDataService {
   /** An aggregate QuerySpec through `query/run`: GROUP BY with count, sum,
    * avg, min, max or count_distinct, over the records the caller may read. */
   aggregate(spec: Record<string, unknown>): Observable<AggregateResult> {
-    return this.api.post<AggregateResult>('/api/v1/query/run', { spec });
+    return this.sdk.post<AggregateResult>('/api/v1/query/run', { body: { spec } });
   }
 }
 
