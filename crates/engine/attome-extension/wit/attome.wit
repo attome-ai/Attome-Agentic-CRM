@@ -1,0 +1,47 @@
+// Y10-T1: the host API an Attome extension is written against (V2-D125:
+// one host API in WIT through the Component Model). Every call runs inside
+// the limits the runtime sets (fuel, memory, time) and only within the
+// grants the extension's manifest declares and an administrator approved
+// (Y10-T3).
+package attome:extension@0.1.0;
+
+/// Records, read and written through the record engine with the caller's
+/// own access: an extension never sees more than the person it runs for.
+interface records {
+  /// A record as JSON text, or none when it does not exist or is not readable.
+  get: func(entity: string, id: string) -> option<string>;
+  /// Changes the fields in `changes` (a JSON object) of one record; the
+  /// error is the engine's message (a validation failure, no access).
+  update: func(entity: string, id: string, changes: string) -> result<_, string>;
+  /// Creates a record from `values` (a JSON object); its id.
+  create: func(entity: string, values: string) -> result<string, string>;
+}
+
+/// Structured logs, kept with the run.
+interface log {
+  enum level { debug, info, warn, error }
+  write: func(level: level, message: string);
+}
+
+/// Secrets the manifest was granted, by name; none for any other name.
+interface secrets {
+  get: func(name: string) -> option<string>;
+}
+
+/// Outbound HTTP, to granted hosts only, and only after the transaction
+/// commits (an in-transaction hook has no network, Y10-T2).
+interface http {
+  record response { status: u16, body: string }
+  fetch: func(method: string, url: string, headers: list<tuple<string, string>>, body: option<string>) -> result<response, string>;
+}
+
+/// What a hook extension exports and the host imports to it.
+world hook {
+  import records;
+  import log;
+  import secrets;
+  import http;
+  /// Runs the hook for one event (JSON text: the stage, the record and the
+  /// change); an error message rejects the save at a `before` stage.
+  export run: func(event: string) -> result<_, string>;
+}

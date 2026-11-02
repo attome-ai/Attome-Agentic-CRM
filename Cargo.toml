@@ -52,6 +52,7 @@ members = [
     "crates/engine/attome-procurement",
     "crates/engine/attome-hr",
     "crates/engine/attome-chat",
+    "crates/engine/attome-extension",
     "crates/engine/attome-ledger",
     "crates/engine/attome-ops",
     "crates/engine/attome-dashboard",
@@ -141,6 +142,7 @@ attome-offline   = { path = "crates/engine/attome-offline" }
 attome-procurement = { path = "crates/engine/attome-procurement" }
 attome-hr = { path = "crates/engine/attome-hr" }
 attome-chat = { path = "crates/engine/attome-chat" }
+attome-extension = { path = "crates/engine/attome-extension" }
 attome-ledger = { path = "crates/engine/attome-ledger" }
 attome-ops = { path = "crates/engine/attome-ops" }
 attome-dashboard = { path = "crates/engine/attome-dashboard" }
@@ -240,6 +242,8 @@ sha2          = "0.10"
 smartcore     = { version = "0.6", default-features = false }
 sqlx          = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono", "migrate", "tls-rustls", "json"] }
 thiserror     = "2"
+# Y10-T1 (V2-D125): the extension runtime, WebAssembly components on Wasmtime.
+wasmtime      = "33"
 zeroize       = "1"
 tokio         = { version = "1", features = ["full"] }
 totp-rs       = { version = "6", default-features = false, features = ["gen_secret", "otpauth", "std"] }
