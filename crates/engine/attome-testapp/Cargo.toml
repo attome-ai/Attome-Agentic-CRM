@@ -23,6 +23,11 @@ attome-config.workspace   = true
 attome-contract.workspace = true
 # T7-T1: the workflow simulator customer tests run flows through.
 attome-workflow.workspace = true
+# The metric builder, on-call pages, secured SQL reports and workflow
+# coverage routes their tests call.
+attome-metric.workspace = true
+attome-report.workspace = true
+attome-service.workspace = true
 attome-core.workspace     = true
 attome-db.workspace       = true
 attome-docgen.workspace   = true
@@ -70,8 +75,6 @@ attome-ledger.workspace = true
 attome-marketing.workspace = true
 attome-metadata.workspace = true
 attome-extension.workspace = true
-attome-metric.workspace = true
-attome-service.workspace = true
 # K6-T4: the crawled-item import and update.
 attome-webcrawl.workspace = true
 # V2-D1532 (7): signing a Bot Framework token for the Teams endpoint test.

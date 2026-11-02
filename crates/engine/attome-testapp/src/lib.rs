@@ -274,6 +274,13 @@ async fn build_with(config: AppConfig) -> Option<TestApp> {
         .register(attome_ai::ActionModel)
         // V2-D1532 (7): the inbound integration webhook a Teams bot posts to.
         .register(attome_integration::model::IntegrationModel)
+        // The workflow, service, metric and report engines' routes: workflow
+        // coverage (T7), on-call pages (H7), the metric builder (P9) and
+        // secured SQL reports (P8) are tested through them.
+        .register(attome_workflow::WorkflowModel)
+        .register(attome_service::ServiceModel)
+        .register(attome_metric::MetricModel)
+        .register(attome_report::ReportModel)
         // T7-T1: customer tests simulate published workflows.
         .register_workflow_simulator(attome_workflow::simulate::PublishedWorkflowSimulator)
         .build()

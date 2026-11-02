@@ -2631,6 +2631,7 @@ dependencies = [
  "attome-portal",
  "attome-predict",
  "attome-records",
+ "attome-report",
  "attome-sales",
  "attome-search",
  "attome-security",
