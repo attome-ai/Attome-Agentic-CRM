@@ -37,6 +37,9 @@ pub enum ConnectorKind {
     /// F5-T4: a payment gateway; its calls go through attome-billing's
     /// `PaymentGateway` trait, not pull/push.
     PaymentGateway,
+    /// F8-T2: an online shop (Salla, Zid, Shopify, WooCommerce); its calls
+    /// go through `adapters::shop_sync::ShopPlatform`, not pull/push.
+    Commerce,
 }
 
 impl ConnectorKind {
@@ -49,6 +52,7 @@ impl ConnectorKind {
             Self::Calendar => "calendar",
             Self::FileDrop => "file_drop",
             Self::PaymentGateway => "payment_gateway",
+            Self::Commerce => "commerce",
         }
     }
 
@@ -61,6 +65,7 @@ impl ConnectorKind {
             "calendar" => Some(Self::Calendar),
             "file_drop" => Some(Self::FileDrop),
             "payment_gateway" => Some(Self::PaymentGateway),
+            "commerce" => Some(Self::Commerce),
             _ => None,
         }
     }

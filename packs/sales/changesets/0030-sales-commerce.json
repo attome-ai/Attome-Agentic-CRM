@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:6dc5490529c76274cb1f05580536234a480dae9249e0e4fb0a4a345c84822548",
+  "checksum": "sha256:1c02ba7b798afa04e82ea57a91db6051e920be0fbf6545b1676673a58e74baab",
   "closed_at": "2026-11-02T00:00:00Z",
   "description": "Commerce (F8-T1): shop connections and their sync map, promotions, coupons and their redemptions, shipping zones and rates, product reviews and risky order reviews. No card number or wallet token is stored; payments stay with the gateway (F5).",
   "format": "attome-changeset/v1",
@@ -293,11 +293,36 @@
     },
     {
       "args": {
+        "changed": [
+          "business_key"
+        ],
+        "definition": {
+          "business_key": [
+            "name"
+          ],
+          "category": "Other",
+          "display_name": "Shop Connection",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "shop_connection",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "shop_connection"
+      }
+    },
+    {
+      "args": {
         "display_name": "ربط متجر"
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 11,
+      "seq": 12,
       "target": {
         "locale": "ar",
         "object_key": "shop_connection",
@@ -310,7 +335,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 12,
+      "seq": 13,
       "target": {
         "locale": "ar",
         "object_key": "shop_connection.name",
@@ -323,7 +348,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 13,
+      "seq": 14,
       "target": {
         "locale": "ar",
         "object_key": "shop_connection.platform",
@@ -336,7 +361,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 14,
+      "seq": 15,
       "target": {
         "locale": "ar",
         "object_key": "shop_connection.integration_credential_ref",
@@ -349,7 +374,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 15,
+      "seq": 16,
       "target": {
         "locale": "ar",
         "object_key": "shop_connection.sync_orders",
@@ -362,7 +387,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 16,
+      "seq": 17,
       "target": {
         "locale": "ar",
         "object_key": "shop_connection.sync_customers",
@@ -375,7 +400,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 17,
+      "seq": 18,
       "target": {
         "locale": "ar",
         "object_key": "shop_connection.product_direction",
@@ -388,7 +413,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 18,
+      "seq": 19,
       "target": {
         "locale": "ar",
         "object_key": "shop_connection.stock_direction",
@@ -401,7 +426,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 19,
+      "seq": 20,
       "target": {
         "locale": "ar",
         "object_key": "shop_connection.last_sync_at",
@@ -414,7 +439,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 20,
+      "seq": 21,
       "target": {
         "locale": "ar",
         "object_key": "shop_connection.status",
@@ -435,7 +460,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 21,
+      "seq": 22,
       "target": {
         "entity": "shop_sync_map"
       }
@@ -460,7 +485,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 22,
+      "seq": 23,
       "target": {
         "entity": "shop_sync_map",
         "field": "shop_connection_ref"
@@ -493,7 +518,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 23,
+      "seq": 24,
       "target": {
         "entity": "shop_sync_map",
         "field": "source_kind"
@@ -519,7 +544,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 24,
+      "seq": 25,
       "target": {
         "entity": "shop_sync_map",
         "field": "source_id"
@@ -545,7 +570,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 25,
+      "seq": 26,
       "target": {
         "entity": "shop_sync_map",
         "field": "target_entity"
@@ -571,7 +596,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 26,
+      "seq": 27,
       "target": {
         "entity": "shop_sync_map",
         "field": "target_id"
@@ -599,7 +624,7 @@
       },
       "op": "update_entity",
       "phase": "expand",
-      "seq": 27,
+      "seq": 28,
       "target": {
         "entity": "shop_sync_map"
       }
@@ -610,7 +635,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 28,
+      "seq": 29,
       "target": {
         "locale": "ar",
         "object_key": "shop_sync_map",
@@ -623,7 +648,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 29,
+      "seq": 30,
       "target": {
         "locale": "ar",
         "object_key": "shop_sync_map.shop_connection_ref",
@@ -636,7 +661,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 30,
+      "seq": 31,
       "target": {
         "locale": "ar",
         "object_key": "shop_sync_map.source_kind",
@@ -649,7 +674,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 31,
+      "seq": 32,
       "target": {
         "locale": "ar",
         "object_key": "shop_sync_map.source_id",
@@ -662,7 +687,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 32,
+      "seq": 33,
       "target": {
         "locale": "ar",
         "object_key": "shop_sync_map.target_entity",
@@ -675,7 +700,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 33,
+      "seq": 34,
       "target": {
         "locale": "ar",
         "object_key": "shop_sync_map.target_id",
@@ -696,7 +721,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 34,
+      "seq": 35,
       "target": {
         "entity": "promotion"
       }
@@ -721,7 +746,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 35,
+      "seq": 36,
       "target": {
         "entity": "promotion",
         "field": "name"
@@ -756,7 +781,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 36,
+      "seq": 37,
       "target": {
         "entity": "promotion",
         "field": "kind"
@@ -782,7 +807,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 37,
+      "seq": 38,
       "target": {
         "entity": "promotion",
         "field": "value"
@@ -808,7 +833,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 38,
+      "seq": 39,
       "target": {
         "entity": "promotion",
         "field": "starts_on"
@@ -834,7 +859,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 39,
+      "seq": 40,
       "target": {
         "entity": "promotion",
         "field": "ends_on"
@@ -860,7 +885,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 40,
+      "seq": 41,
       "target": {
         "entity": "promotion",
         "field": "eligibility_rule"
@@ -886,7 +911,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 41,
+      "seq": 42,
       "target": {
         "entity": "promotion",
         "field": "max_uses"
@@ -912,7 +937,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 42,
+      "seq": 43,
       "target": {
         "entity": "promotion",
         "field": "max_uses_per_customer"
@@ -938,7 +963,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 43,
+      "seq": 44,
       "target": {
         "entity": "promotion",
         "field": "is_enabled"
@@ -950,7 +975,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 44,
+      "seq": 45,
       "target": {
         "locale": "ar",
         "object_key": "promotion",
@@ -963,7 +988,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 45,
+      "seq": 46,
       "target": {
         "locale": "ar",
         "object_key": "promotion.name",
@@ -976,7 +1001,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 46,
+      "seq": 47,
       "target": {
         "locale": "ar",
         "object_key": "promotion.kind",
@@ -989,7 +1014,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 47,
+      "seq": 48,
       "target": {
         "locale": "ar",
         "object_key": "promotion.value",
@@ -1002,7 +1027,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 48,
+      "seq": 49,
       "target": {
         "locale": "ar",
         "object_key": "promotion.starts_on",
@@ -1015,7 +1040,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 49,
+      "seq": 50,
       "target": {
         "locale": "ar",
         "object_key": "promotion.ends_on",
@@ -1028,7 +1053,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 50,
+      "seq": 51,
       "target": {
         "locale": "ar",
         "object_key": "promotion.eligibility_rule",
@@ -1041,7 +1066,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 51,
+      "seq": 52,
       "target": {
         "locale": "ar",
         "object_key": "promotion.max_uses",
@@ -1054,7 +1079,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 52,
+      "seq": 53,
       "target": {
         "locale": "ar",
         "object_key": "promotion.max_uses_per_customer",
@@ -1067,7 +1092,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 53,
+      "seq": 54,
       "target": {
         "locale": "ar",
         "object_key": "promotion.is_enabled",
@@ -1088,7 +1113,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 54,
+      "seq": 55,
       "target": {
         "entity": "coupon"
       }
@@ -1113,7 +1138,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 55,
+      "seq": 56,
       "target": {
         "entity": "coupon",
         "field": "code"
@@ -1139,7 +1164,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 56,
+      "seq": 57,
       "target": {
         "entity": "coupon",
         "field": "promotion_ref"
@@ -1165,7 +1190,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 57,
+      "seq": 58,
       "target": {
         "entity": "coupon",
         "field": "uses_count"
@@ -1191,7 +1216,7 @@
       },
       "op": "update_entity",
       "phase": "expand",
-      "seq": 58,
+      "seq": 59,
       "target": {
         "entity": "coupon"
       }
@@ -1202,7 +1227,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 59,
+      "seq": 60,
       "target": {
         "locale": "ar",
         "object_key": "coupon",
@@ -1215,7 +1240,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 60,
+      "seq": 61,
       "target": {
         "locale": "ar",
         "object_key": "coupon.code",
@@ -1228,7 +1253,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 61,
+      "seq": 62,
       "target": {
         "locale": "ar",
         "object_key": "coupon.promotion_ref",
@@ -1241,7 +1266,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 62,
+      "seq": 63,
       "target": {
         "locale": "ar",
         "object_key": "coupon.uses_count",
@@ -1261,7 +1286,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 63,
+      "seq": 64,
       "target": {
         "entity": "coupon_redemption"
       }
@@ -1286,7 +1311,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 64,
+      "seq": 65,
       "target": {
         "entity": "coupon_redemption",
         "field": "coupon_ref"
@@ -1312,7 +1337,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 65,
+      "seq": 66,
       "target": {
         "entity": "coupon_redemption",
         "field": "order_ref"
@@ -1338,7 +1363,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 66,
+      "seq": 67,
       "target": {
         "entity": "coupon_redemption",
         "field": "contact_ref"
@@ -1364,35 +1389,10 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 67,
+      "seq": 68,
       "target": {
         "entity": "coupon_redemption",
         "field": "redeemed_at"
-      }
-    },
-    {
-      "args": {
-        "changed": [
-          "business_key"
-        ],
-        "definition": {
-          "business_key": [
-            "coupon_ref",
-            "order_ref"
-          ],
-          "category": "Other",
-          "display_name": "Coupon Redemption",
-          "is_append_only": false,
-          "is_audited": false,
-          "is_customized": true,
-          "logicalname": "coupon_redemption"
-        }
-      },
-      "op": "update_entity",
-      "phase": "expand",
-      "seq": 68,
-      "target": {
-        "entity": "coupon_redemption"
       }
     },
     {

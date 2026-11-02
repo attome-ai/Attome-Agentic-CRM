@@ -45,6 +45,9 @@ pub mod salesforce;
 pub mod sap_b1;
 /// E13-T10: Search Console, Bing Webmaster Tools and IndexNow codecs.
 pub mod search_console;
+/// F8-T2: what an online shop exchanges with Attome, the same for every
+/// platform.
+pub mod shop_sync;
 /// C6-T1: a Slack app: install, events, approvals, unfurls, `/attome search`.
 pub mod slack;
 /// J4-T1: SMS segments, senders and the provider codecs.

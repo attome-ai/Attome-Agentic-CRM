@@ -48,6 +48,8 @@ pub mod quote_sync;
 pub mod schedules;
 pub mod scoring;
 pub mod scoring_run;
+/// F8-T2: shop orders, customers and products written once per source id.
+pub mod shop_sync;
 pub mod split_store;
 pub mod splits;
 pub mod team;

@@ -14,9 +14,15 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Shop sync (F8-T2, sales pack changeset `0031`): a `commerce` connector kind and the platform-neutral
+  shop order, customer and product with the `ShopPlatform` trait (attome-integration), and
+  `attome_sales::shop_sync::upsert_from_source`, which writes them through the record engine once per source
+  id: customers matched to contacts by E.164 phone or email, products by SKU, orders with `source`
+  `shop:<platform>`, the shop's number and currency, under the contact's account or the connection's new
+  `default_account_ref`. See `docs/shop-sync.md`.
 - Commerce records (F8-T1, sales pack changeset `0030`): `shop_connection` and `shop_sync_map` (unique by
-  connection, kind and source id), `promotion`, `coupon` (unique code) and `coupon_redemption` (once per
-  coupon and order), `shipping_zone`, `shipping_rate`, `product_review` and `risky_order_review`, with
+  connection, kind and source id), `shop_connection` unique by name, `promotion`, `coupon` (unique code) and
+  `coupon_redemption`, `shipping_zone`, `shipping_rate`, `product_review` and `risky_order_review`, with
   Arabic labels; promotions, coupons, shipping rates and products are audited. No card data is stored.
 - Call extraction (D22-T6): after a call is analysed, one model call over the redacted transcript proposes
   its questions, objections, next steps, price mentions and scorecard answers (proposed only), each tied to
