@@ -6,3 +6,6 @@
  */
 export { NativeService, phoneDigits, whatsAppLink } from './native.service';
 export type { Photo, Position, SharedItem } from './native.service';
+// B17-T5 — biometric unlock after the lock timeout, the wipe check, the privacy screen.
+export { DEFAULT_LOCK_MS, DEVICE_ID_KEY, DeviceSecurityService, mustUnlock, needsPrivacy } from './device-security.service';
+
