@@ -14,6 +14,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Call agent actions (D22-T10): `callintel.search_calls`, `callintel.deal_highlights` and
+  `callintel.coaching_brief` (the person or their manager only), read-only, linking to call moments.
 - Staff privacy for call analysis (D22-T13): `GET /api/v1/callintel/my-analyses` and the setting
   `callintel.staff_notice_text`; no response carries staff sentiment.
 - Call page routes (D22-T8): `GET /api/v1/callintel/calls/{activity_id}` and `/recording` (every playback

@@ -31,6 +31,8 @@ pub mod bulk;
 pub mod business;
 /// Z12-T12: holidays an agent lists and proposes.
 pub mod calendar;
+/// D22-T10: callintel.search_calls, callintel.deal_highlights, callintel.coaching_brief.
+pub mod callintel;
 /// L4-T7: the data catalogue tools.
 pub mod catalog;
 /// L7-T8: `changes.since`, catching up from a delta token.
@@ -260,6 +262,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(fulfilment::descriptors());
     all.extend(commerce::descriptors());
     all.extend(revrec::descriptors());
+    all.extend(callintel::descriptors());
     all.extend(crate::meeting::brief::descriptors());
     all.extend(crate::meeting::notes::descriptors());
     all.extend(meeting::descriptors());
@@ -377,6 +380,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(fulfilment::executors());
     all.extend(commerce::executors());
     all.extend(revrec::executors());
+    all.extend(callintel::executors());
     all.extend(crate::meeting::brief::executors());
     all.extend(crate::meeting::notes::executors());
     all.extend(meeting::executors());

@@ -231,6 +231,10 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   `nurture.draft_summary` writes a hand-off's summary in the person's language (saving nothing), and
   `nurture.find_stalls` names tracks waiting more than twice the programme's median. No tool creates,
   accepts or returns a hand-off.
+- Calls (call analysis): `callintel.search_calls` finds calls where a tracker was heard, `callintel.deal_highlights`
+  lists a deal's questions, objections, next steps and competitor and price mentions, each with a link to its
+  moment, and `callintel.coaching_brief` gives one person's talk patterns and scorecards, only to that person
+  or their manager.
 - Revenue (ledger): `revrec.explain_period` explains why an amount of revenue falls in a period (the
   line, its obligation's pattern and dates, the standalone selling price method and version, and the
   product's revenue rule); `revrec.propose_revenue_rule` drafts a rule for a product and
