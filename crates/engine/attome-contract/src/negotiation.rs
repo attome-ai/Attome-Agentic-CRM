@@ -125,10 +125,14 @@ pub struct ReviewActionDone {
     pub version_id: Option<Uuid>,
 }
 
+/// An uploaded file: its name, content type and bytes.
+pub type Upload = (String, &'static str, Vec<u8>);
+
+/// A review entry as stored: kind, body, file name, time.
+type EntryRow = (String, Option<String>, Option<String>, DateTime<Utc>);
+
 /// The file an action carries, checked. Pure.
-pub fn upload_of(
-    action: &ReviewAction,
-) -> Result<Option<(String, &'static str, Vec<u8>)>, AppError> {
+pub fn upload_of(action: &ReviewAction) -> Result<Option<Upload>, AppError> {
     let Some(encoded) = action.content_base64.as_deref() else {
         return Ok(None);
     };
@@ -430,7 +434,7 @@ pub async fn review_view(state: &EngineState, token: &str) -> Result<ReviewView,
         }
         None => None,
     };
-    let entries: Vec<(String, Option<String>, Option<String>, DateTime<Utc>)> = sqlx::query_as(
+    let entries: Vec<EntryRow> = sqlx::query_as(
         "SELECT kind, body, file_name, created_at FROM contract_review_entry \
           WHERE link_id = $1 ORDER BY created_at, id",
     )
