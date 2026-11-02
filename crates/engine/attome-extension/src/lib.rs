@@ -15,4 +15,4 @@ pub mod runtime;
 
 pub use grants::{Denied, EntityGrant, Grants};
 pub use host::{FakeHost, HostApi, Level, Response};
-pub use runtime::{ExtensionError, Limits, Runtime};
+pub use runtime::{CallCost, ExtensionError, Limits, Runtime, mask_secrets};

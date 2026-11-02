@@ -69,6 +69,7 @@ attome-jobs.workspace = true
 attome-ledger.workspace = true
 attome-marketing.workspace = true
 attome-metadata.workspace = true
+attome-extension.workspace = true
 attome-metric.workspace = true
 attome-service.workspace = true
 # K6-T4: the crawled-item import and update.

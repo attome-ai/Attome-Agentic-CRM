@@ -60,6 +60,15 @@ Custom code runs as WebAssembly on Wasmtime inside the server (Y10, V2-D125), in
 - **Testing.** `attome_extension::FakeHost` runs the host API in memory (records, logs, secrets,
   stubbed HTTP), held to the same grants, for an extension's unit tests.
 
-Not yet: the hook stages in the record write pipeline (Y10-T2), approving grants at publish, and
-uploading extensions. Until then, extend behaviour through rules, flows and packs.
+- **Record hooks.** The record write path calls registered hooks at three stages: before
+  validation, before save (a hook may change the values or reject the write) and after save. A hook
+  that writes records runs hooks again, at most eight levels deep.
+- **Versions.** `POST /api/v1/admin/extensions` uploads a module and its manifest as the next
+  version; `.../{name}/versions/{v}/publish` makes one version live (publishing an older one rolls
+  back) and `.../{name}/off` stops every version.
+- **Run logs.** Each run is kept with its version, time, fuel used, result and log lines, every
+  granted secret masked: `GET /api/v1/admin/extensions/{name}/runs`.
+
+Not yet: wiring published extensions into the hook stages, and approving grants at publish. Until
+then, extend behaviour through rules, flows and packs.
 

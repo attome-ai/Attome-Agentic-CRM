@@ -73,6 +73,26 @@ mod millis {
     }
 }
 
+/// Y10-T6: what one call cost.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CallCost {
+    pub fuel_used: u64,
+    pub elapsed: Duration,
+}
+
+/// Y10-T6: `line` with every non-empty secret value replaced by `***`, for
+/// a run log. Pure.
+pub fn mask_secrets(line: &str, secrets: &[&str]) -> String {
+    let mut out = line.to_owned();
+    let mut values: Vec<&str> = secrets.iter().copied().filter(|s| s.len() >= 3).collect();
+    // Longest first, so a secret holding another is masked whole.
+    values.sort_by_key(|s| std::cmp::Reverse(s.len()));
+    for value in values {
+        out = out.replace(value, "***");
+    }
+    out
+}
+
 /// Why a call did not finish.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ExtensionError {
@@ -181,6 +201,18 @@ impl Runtime {
         arg: i32,
         limits: &Limits,
     ) -> Result<i32, ExtensionError> {
+        self.call_i32_measured(module, name, arg, limits).0
+    }
+
+    /// Y10-T6: [`Self::call_i32`] with what the call cost, for its run log.
+    pub fn call_i32_measured(
+        &self,
+        module: &Module,
+        name: &str,
+        arg: i32,
+        limits: &Limits,
+    ) -> (Result<i32, ExtensionError>, CallCost) {
+        let started = std::time::Instant::now();
         let mut store = Store::new(
             &self.engine,
             Guard {
@@ -189,22 +221,30 @@ impl Runtime {
             },
         );
         store.limiter(|guard| guard as &mut dyn ResourceLimiter);
-        store
-            .set_fuel(limits.fuel)
-            .map_err(|e| ExtensionError::Load(e.to_string()))?;
-        let ticks = u64::try_from(limits.timeout.as_millis() / TICK.as_millis())
-            .unwrap_or(u64::MAX)
-            .max(1);
-        store.set_epoch_deadline(ticks);
-        let instance = match Instance::new(&mut store, module, &[]) {
-            Ok(instance) => instance,
-            Err(e) => return Err(classify(e, store.data(), limits)),
+        let result = (|| {
+            store
+                .set_fuel(limits.fuel)
+                .map_err(|e| ExtensionError::Load(e.to_string()))?;
+            let ticks = u64::try_from(limits.timeout.as_millis() / TICK.as_millis())
+                .unwrap_or(u64::MAX)
+                .max(1);
+            store.set_epoch_deadline(ticks);
+            let instance = match Instance::new(&mut store, module, &[]) {
+                Ok(instance) => instance,
+                Err(e) => return Err(classify(e, store.data(), limits)),
+            };
+            let run = instance
+                .get_typed_func::<i32, i32>(&mut store, name)
+                .map_err(|_| ExtensionError::MissingExport(name.to_owned()))?;
+            run.call(&mut store, arg)
+                .map_err(|e| classify(e, store.data(), limits))
+        })();
+        let left = store.get_fuel().unwrap_or(0);
+        let cost = CallCost {
+            fuel_used: limits.fuel.saturating_sub(left),
+            elapsed: started.elapsed(),
         };
-        let run = instance
-            .get_typed_func::<i32, i32>(&mut store, name)
-            .map_err(|_| ExtensionError::MissingExport(name.to_owned()))?;
-        run.call(&mut store, arg)
-            .map_err(|e| classify(e, store.data(), limits))
+        (result, cost)
     }
 }
 
@@ -282,6 +322,26 @@ mod tests {
         assert_eq!(
             rt.call_i32(&module, "run", 0, &Limits::default()),
             Err(ExtensionError::Memory(64 * 1024 * 1024))
+        );
+    }
+
+    #[test]
+    fn a_call_reports_its_cost_and_logs_hide_secrets() {
+        let rt = Runtime::shared().unwrap();
+        let module = rt.compile(SPIN).unwrap();
+        let limits = Limits {
+            fuel: 5_000,
+            ..Limits::default()
+        };
+        let (result, cost) = rt.call_i32_measured(&module, "run", 0, &limits);
+        assert_eq!(result, Err(ExtensionError::OutOfFuel));
+        assert_eq!(cost.fuel_used, 5_000, "a spent budget is all used");
+        assert_eq!(
+            mask_secrets(
+                "token=abc123 user=svc pass=abc12345",
+                &["abc123", "abc12345", ""]
+            ),
+            "token=*** user=svc pass=***"
         );
     }
 

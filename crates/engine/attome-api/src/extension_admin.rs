@@ -370,6 +370,97 @@ async fn switch_off(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Y10-T6: one run of an extension, as logged.
+#[derive(Debug, Clone, Serialize, ToSchema, sqlx::FromRow)]
+pub struct ExtensionRun {
+    pub id: Uuid,
+    pub version: i32,
+    pub started_at: chrono::DateTime<chrono::Utc>,
+    pub duration_ms: i32,
+    pub fuel_used: i64,
+    pub ok: bool,
+    pub error: Option<String>,
+    /// `[{level, message}]`, secrets masked.
+    #[schema(value_type = Object)]
+    pub logs: Value,
+    pub is_test: bool,
+}
+
+/// Y10-T6: logs one run of `name`'s `version`: its cost, result and log
+/// lines, each line with every value of `secrets` masked before it is
+/// written.
+#[allow(clippy::too_many_arguments)]
+pub async fn record_run(
+    db: &attome_db::DbPool,
+    name: &str,
+    version: i32,
+    cost: attome_extension::CallCost,
+    error: Option<&str>,
+    logs: &[(attome_extension::Level, String)],
+    secrets: &[&str],
+    is_test: bool,
+) -> Result<Uuid, AppError> {
+    let lines: Vec<Value> = logs
+        .iter()
+        .map(|(level, line)| {
+            json!({
+                "level": format!("{level:?}").to_lowercase(),
+                "message": attome_extension::mask_secrets(line, secrets),
+            })
+        })
+        .collect();
+    let error = error.map(|e| attome_extension::mask_secrets(e, secrets));
+    sqlx::query_scalar(
+        "INSERT INTO extension_run (extension_name, version, duration_ms, fuel_used, ok, error, logs, is_test) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
+    )
+    .bind(name)
+    .bind(version)
+    .bind(i32::try_from(cost.elapsed.as_millis()).unwrap_or(i32::MAX))
+    .bind(i64::try_from(cost.fuel_used).unwrap_or(i64::MAX))
+    .bind(error.is_none())
+    .bind(&error)
+    .bind(Value::Array(lines))
+    .bind(is_test)
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// An extension's runs
+///
+/// Y10-T6: the latest 200 runs, newest first, with time, fuel, result and
+/// masked log lines.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/extensions/{name}/runs",
+    operation_id = "list_extension_runs",
+    tag = "admin",
+    params(("name" = String, Path, description = "The extension")),
+    responses(
+        (status = 200, description = "The runs", body = PaginatedResponse<ExtensionRun>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn runs(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<area::Automation>>,
+    Path(name): Path<String>,
+) -> Result<Json<PaginatedResponse<ExtensionRun>>, AppError> {
+    let items: Vec<ExtensionRun> = sqlx::query_as(
+        "SELECT id, version, started_at, duration_ms, fuel_used, ok, error, logs, is_test \
+           FROM extension_run WHERE extension_name = $1 ORDER BY started_at DESC LIMIT 200",
+    )
+    .bind(&name)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let total = items.len() as i64;
+    Ok(Json(PaginatedResponse::new(items, total, 1, total.max(1))))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/extensions", get(list).post(upload))
@@ -378,10 +469,11 @@ pub fn routes() -> Router<EngineState> {
             post(publish),
         )
         .route("/api/v1/admin/extensions/{name}/off", post(switch_off))
+        .route("/api/v1/admin/extensions/{name}/runs", get(runs))
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list, upload, publish, switch_off))]
+#[openapi(paths(list, upload, publish, switch_off, runs))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

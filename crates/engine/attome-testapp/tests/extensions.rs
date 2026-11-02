@@ -25,6 +25,7 @@ fn b64(text: &str) -> String {
 // op: upload_extension
 // op: publish_extension
 // op: switch_off_extension
+// op: list_extension_runs
 #[test]
 fn extensions_version_publish_roll_back_and_switch_off() {
     attome_testkit::run_shared(async {
@@ -115,5 +116,37 @@ fn extensions_version_publish_roll_back_and_switch_off() {
                 .await
                 .unwrap();
         assert_eq!(statuses, vec!["off".to_owned(), "off".to_owned()]);
+
+        // Y10-T6: a run is logged with its cost and its lines masked.
+        attome_api::extension_admin::record_run(
+            app.db(),
+            &name,
+            1,
+            attome_extension::CallCost {
+                fuel_used: 1234,
+                elapsed: std::time::Duration::from_millis(7),
+            },
+            None,
+            &[(
+                attome_extension::Level::Info,
+                "called ERP with key s3cr3t-value".to_owned(),
+            )],
+            &["s3cr3t-value"],
+            true,
+        )
+        .await
+        .unwrap();
+        let (status, body) = app
+            .request(
+                Method::GET,
+                &format!("/api/v1/admin/extensions/{name}/runs"),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let run = &body["items"][0];
+        assert_eq!(run["fuel_used"], 1234);
+        assert_eq!(run["ok"], true);
+        assert_eq!(run["logs"][0]["message"], "called ERP with key ***");
     });
 }
