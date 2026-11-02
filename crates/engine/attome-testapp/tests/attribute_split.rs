@@ -13,6 +13,14 @@ use axum::http::{Method, StatusCode};
 use serde_json::json;
 use uuid::Uuid;
 
+/// First, father, grandfather and family name, as split.
+type NameParts = (
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+);
+
 /// An entity with a full name and four name parts, and three rows.
 async fn people(app: &TestApp) -> (String, Uuid) {
     let token = Uuid::now_v7().simple().to_string();
@@ -99,12 +107,7 @@ fn split_full_name_into_four_parts() {
             .await
             .unwrap();
 
-        let rows: Vec<(
-            Option<String>,
-            Option<String>,
-            Option<String>,
-            Option<String>,
-        )> = sqlx::query_as(&format!(
+        let rows: Vec<NameParts> = sqlx::query_as(&format!(
             "SELECT first, father, grandfather, family FROM \"{table}\" \
                   WHERE full_name IS NOT NULL ORDER BY full_name"
         ))

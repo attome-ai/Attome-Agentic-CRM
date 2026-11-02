@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:ac2303069dc0bdee3387e427c54bdd9d33336ece10e8e436db622f61e8763673",
+  "checksum": "sha256:65d9cc8b08a78251cdfb0a37f7649b66e437df16737ba8c07b7598cdc5508db2",
   "closed_at": "2026-11-01T00:00:00Z",
   "description": "Contract views and KPIs (W1-T15): my contracts, active contracts by notice deadline, obligations due and contracts with playbook deviations to review, and the reports cycle time by stage (drafting, negotiation, signature, from the contract's versions) and playbook deviation count, beside the three earlier ones.",
   "format": "attome-changeset/v1",
@@ -204,12 +204,12 @@
     {
       "args": {
         "definition": {
-          "entity": "contract",
+          "entity": null,
           "entity_mappings": [],
           "is_customized": true,
           "is_report": true,
           "name": "Contract: Cycle Time by Stage",
-          "required_privilege": null,
+          "required_privilege": "contract.read",
           "sql": "SELECT s.stage, ROUND(AVG(s.days)::numeric, 1) AS avg_days, COUNT(*) AS contracts FROM (SELECT c.created_at, v.first_draft, v.last_counter, v.signed FROM contract c JOIN (SELECT contract_id, MIN(created_at) FILTER (WHERE source = 'draft') AS first_draft, MAX(created_at) FILTER (WHERE source = 'counterparty_upload') AS last_counter, MIN(created_at) FILTER (WHERE source = 'signed') AS signed FROM contract_version WHERE is_active IS NOT FALSE GROUP BY contract_id) v ON v.contract_id = c.id::text WHERE c.is_active IS NOT FALSE) x CROSS JOIN LATERAL (VALUES ('1 drafting', EXTRACT(EPOCH FROM (x.first_draft - x.created_at)) / 86400), ('2 negotiation', EXTRACT(EPOCH FROM (x.last_counter - x.first_draft)) / 86400), ('3 signature', EXTRACT(EPOCH FROM (x.signed - COALESCE(x.last_counter, x.first_draft))) / 86400)) AS s(stage, days) WHERE s.days IS NOT NULL GROUP BY s.stage ORDER BY s.stage",
           "table_definition": "[]"
         }
@@ -218,7 +218,7 @@
       "phase": "expand",
       "seq": 9,
       "target": {
-        "entity": "contract",
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
         "query": "Contract: Cycle Time by Stage"
       }
     },
