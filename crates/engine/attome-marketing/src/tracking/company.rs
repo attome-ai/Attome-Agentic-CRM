@@ -39,6 +39,7 @@ static COMPANY_SPEC: CacheSpec = CacheSpec {
     name: "marketing:company",
     crate_name: "marketing",
     purpose: "company",
+    source_of_truth: "the customer's IP-to-company provider",
     ttl: Duration::from_secs(24 * 60 * 60),
     jitter_pct: 10,
     l1_capacity: 10_000,
