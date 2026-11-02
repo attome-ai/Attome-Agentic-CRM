@@ -228,6 +228,8 @@ pub async fn run(state: &EngineState, run_id: Uuid) -> Result<String, AppError> 
     }
     let (_, last) = month_bounds(&period).ok_or_else(|| AppError::internal("bad close period"))?;
     let actor = actor.unwrap_or(Uuid::nil());
+    // Obligations from orders and subscriptions get their schedule first.
+    super::obligation_schedule::schedule_open_obligations(state).await?;
     sqlx::query("UPDATE revrec_close_run SET status = 'running' WHERE id = $1")
         .bind(run_id)
         .execute(db)
@@ -397,6 +399,7 @@ async fn snapshot_contract(
 pub async fn refresh_snapshots(state: &EngineState, today: NaiveDate) -> Result<usize, AppError> {
     let period = format!("{:04}-{:02}", today.year(), today.month());
     let (_, last) = month_bounds(&period).ok_or_else(|| AppError::internal("bad period"))?;
+    super::obligation_schedule::schedule_open_obligations(state).await?;
     let db = &state.base.db;
     let mut after = Uuid::nil();
     let mut written = 0;

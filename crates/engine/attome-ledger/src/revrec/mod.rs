@@ -16,6 +16,8 @@ pub mod contract;
 pub mod erp;
 /// F11-T9: loyalty points deferred as a material right.
 pub mod loyalty;
+/// The schedules of obligations built from orders and subscriptions.
+pub mod obligation_schedule;
 /// F11-T5: the recognition patterns, as amounts per period.
 pub mod patterns;
 pub mod schedule;

@@ -13,6 +13,14 @@ revenue is posted to the ledger and the lines locked.
 - The person closing holds `revrec_close_run.create` (Revenue Accountant, Revenue Controller in the
   ledger pack's revenue roles).
 
+## Schedules of contracts from orders and subscriptions
+
+An invoice line gets its schedule when it is invoiced. An obligation of a contract built from an order or a
+subscription gets its schedule when the close (or the nightly roll-forward) first finds it without one: a
+point-in-time obligation in full in the month its order was delivered (nothing until it is), a ratable one
+evenly per day over its start and end dates. Name the ledger periods `YYYY-MM` (`2027-01`): schedules use
+the period names and the close finds a month by its name.
+
 ## Closing a month
 
 1. `POST /api/v1/ledger/revrec/close` `{"fiscal_period": "2027-01"}` opens the close and answers `202`

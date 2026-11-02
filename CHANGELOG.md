@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Revenue schedules for contracts from orders and subscriptions (F11-T14): point-in-time obligations
+  in the month of delivery, ratable ones over their dates, written by the close and the nightly roll-forward;
+  an order-to-posted-close test.
 - The call page (D22-T12): `@attome/xrm/callintel`, `/xrm/calls/{activity_id}`, and the call page route now
   returns the redacted transcript.
 - Call agent actions (D22-T10): `callintel.search_calls`, `callintel.deal_highlights` and
