@@ -1,9 +1,9 @@
 {
   "release": "0.1.0",
-  "operations": 1791,
-  "with_summary": 1791,
-  "with_description": 1791,
+  "operations": 1799,
+  "with_summary": 1799,
+  "with_description": 1798,
   "with_example": 16,
-  "arabic_translated": 218,
+  "arabic_translated": 217,
   "lint_baseline_entries": 29
 }

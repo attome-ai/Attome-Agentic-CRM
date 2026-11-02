@@ -9249,6 +9249,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/predict/next-actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List next-best actions */
+        get: operations["list_actions"];
+        put?: never;
+        /**
+         * Create a next-best action
+         * @description Checks the condition against the entity's fields and the model against the
+         *     entity. AI administrators only. Audited.
+         */
+        post: operations["create_action"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/predict/next-actions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Retire a next-best action
+         * @description It is no longer offered; its past recommendations stay. AI administrators
+         *     only. Audited.
+         */
+        delete: operations["retire_action"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/profiler/stats": {
         parameters: {
             query?: never;
@@ -11274,6 +11317,47 @@ export interface paths {
          * @description Ends a user's membership of a business unit. Administrators only; audited.
          */
         delete: operations["remove_organization_member"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/ownership/{entity}/prepare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Prepare an entity for unit ownership
+         * @description Queues the job that fills each user-owned record's missing unit from its
+         *     owner's home unit. Publish the new model once it is done. Audited.
+         */
+        post: operations["prepare"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/ownership/{entity}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview an ownership model change
+         * @description Counts what switching the entity to `target` changes. Changes nothing.
+         */
+        get: operations["preview"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -25085,6 +25169,67 @@ export interface paths {
         get: operations["portfolio_summary"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/predict/next-actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a record's next-best actions
+         * @description The actions whose condition holds on the record, ranked by weight times
+         *     its propensity score, each logged as a recommendation to accept or reject.
+         */
+        get: operations["next_actions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/predict/recommendations/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept a recommendation
+         * @description Records that the person it was shown to took the action.
+         */
+        post: operations["accept_next_action"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/predict/recommendations/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a recommendation
+         * @description Records that the person it was shown to set the action aside.
+         */
+        post: operations["reject_next_action"];
         delete?: never;
         options?: never;
         head?: never;
@@ -49662,6 +49807,33 @@ export interface components {
          *     ([`CursorPage`]): `next_cursor` is omitted on the last page.
          */
         MyWorkPage: components["schemas"]["CursorPage_MyWorkItem"];
+        /** @description A candidate action. */
+        NbaAction: {
+            action: Record<string, never>;
+            condition?: string | null;
+            entity: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            model_ref?: string | null;
+            name: string;
+            name_ar?: string | null;
+            /** Format: double */
+            weight: number;
+        };
+        /** @description `POST /api/v1/admin/predict/next-actions`. */
+        NbaActionBody: {
+            action?: Record<string, never>;
+            /** @description A rule-language condition over the entity's fields; none: always. */
+            condition?: string | null;
+            entity: string;
+            /** Format: uuid */
+            model_ref?: string | null;
+            name: string;
+            name_ar?: string | null;
+            /** Format: double */
+            weight?: number;
+        };
         /** @description `POST /api/v1/chat/channels`. */
         NewChannel: {
             /** @description A record channel's record. */
@@ -51117,6 +51289,32 @@ export interface components {
             owner_type: string;
             /** Format: uuid */
             record_id: string;
+        };
+        /** @description What switching an entity's ownership model changes. */
+        OwnershipPreview: {
+            entity: string;
+            /**
+             * Format: int64
+             * @description `unit`: of those, the ones their owner's home unit can fill.
+             */
+            fillable: number;
+            /** Format: int64 */
+            owners: number;
+            /** Format: int64 */
+            records: number;
+            /** @description What the switch means, in a sentence. */
+            summary: string;
+            target: string;
+            /**
+             * Format: int64
+             * @description `unit`: records whose unit is not their owner's home unit.
+             */
+            unit_differs_from_owner: number;
+            /**
+             * Format: int64
+             * @description `unit`: records with no unit.
+             */
+            without_unit: number;
         };
         /** @description The packages an order went into. */
         PackBody: {
@@ -56616,6 +56814,33 @@ export interface components {
                 /** Format: double */
                 staff_talk_share?: number | null;
                 status?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_NbaAction: {
+            items: {
+                action: Record<string, never>;
+                condition?: string | null;
+                entity: string;
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                model_ref?: string | null;
+                name: string;
+                name_ar?: string | null;
+                /** Format: double */
+                weight: number;
             }[];
             /** Format: int64 */
             page: number;
@@ -100341,6 +100566,152 @@ export interface operations {
             };
         };
     };
+    list_actions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every active action */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_NbaAction"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_action: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NbaActionBody"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NbaAction"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The entity already has an action of that name */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown entity or model, a condition that does not compile, or a weight not above 0 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    retire_action: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The action */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Retired */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such active action */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     stats: {
         parameters: {
             query?: never;
@@ -106696,6 +107067,116 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    prepare: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview: {
+        parameters: {
+            query: {
+                /** @description `user_or_team`, `organisation` or `unit`. */
+                target: string;
+            };
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the switch changes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnershipPreview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown model */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -144574,6 +145055,152 @@ export interface operations {
             };
             /** @description No such portfolio, or not visible to this caller */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    next_actions: {
+        parameters: {
+            query: {
+                regarding_entity: string;
+                regarding_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The ranked actions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Recommendation"][];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks {regarding_entity}.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, or not one the caller may read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    accept_next_action: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The recommendation */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Recorded */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a recommendation shown to the caller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already decided */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reject_next_action: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The recommendation */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Recorded */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a recommendation shown to the caller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already decided */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

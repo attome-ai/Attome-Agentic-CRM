@@ -42298,6 +42298,181 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/security/ownership/{entity}/prepare": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Prepare an entity for unit ownership",
+        "description": "Queues the job that fills each user-owned record's missing unit from its\nowner's home unit. Publish the new model once it is done. Audited.",
+        "operationId": "prepare",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Queued"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/security/ownership/{entity}/preview": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Preview an ownership model change",
+        "description": "Counts what switching the entity to `target` changes. Changes nothing.",
+        "operationId": "preview",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "target",
+            "in": "query",
+            "description": "`user_or_team`, `organisation` or `unit`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What the switch changes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnershipPreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An unknown model",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/api/v1/admin/security/permission-set-assignments/{id}": {
       "get": {
         "tags": [
@@ -106663,6 +106838,55 @@
           "record_id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "OwnershipPreview": {
+        "type": "object",
+        "description": "What switching an entity's ownership model changes.",
+        "required": [
+          "entity",
+          "target",
+          "records",
+          "owners",
+          "without_unit",
+          "fillable",
+          "unit_differs_from_owner",
+          "summary"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "fillable": {
+            "type": "integer",
+            "format": "int64",
+            "description": "`unit`: of those, the ones their owner's home unit can fill."
+          },
+          "owners": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "records": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "summary": {
+            "type": "string",
+            "description": "What the switch means, in a sentence."
+          },
+          "target": {
+            "type": "string"
+          },
+          "unit_differs_from_owner": {
+            "type": "integer",
+            "format": "int64",
+            "description": "`unit`: records whose unit is not their owner's home unit."
+          },
+          "without_unit": {
+            "type": "integer",
+            "format": "int64",
+            "description": "`unit`: records with no unit."
           }
         }
       },
