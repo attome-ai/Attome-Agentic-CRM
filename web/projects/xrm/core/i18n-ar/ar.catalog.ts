@@ -241,6 +241,7 @@ export const xrmAr = {
       fulfilment: 'التنفيذ', lines: 'البنود', team: 'الفريق', splits: 'التقسيمات', convert: 'التحويل',
       whitespace: 'شبكة الفرص',
       segment: 'الشريحة',
+      nurture: 'الرعاية',
     },
     entity: {
       document: 'مستند', note: 'ملاحظة', organization: 'مؤسسة', privilege: 'صلاحية',
@@ -3006,6 +3007,17 @@ export const xrmAr = {
     blocklisted: 'نطاق أو عنوان إرسال مدرج في قائمة حظر: أوقف الإرسال الجماعي منه، وابحث عن السبب، ثم اطلب إزالته من القائمة.',
     dmarc_failures: 'تضاعفت إخفاقات DMARC: تأكد من أن كل خدمة ترسل باسم هذا النطاق مدرجة في سجل SPF وتوقّع بـ DKIM.',
     reputation_drop: 'تراجعت سمعة المرسل لدى مزود البريد: خفّف الإرسال، وأرسل لأكثر الناس تفاعلاً، وراقب الشكاوى.',
+  },
+  nurturePanel: {
+    title: 'الرعاية', handoffTitle: 'مُسلَّم إلى المبيعات', score: 'الدرجة / درجة التسليم:', seen: 'المحتوى المطّلع عليه:',
+    due: 'القرار قبل:', accept: 'قبول', reason: 'سبب الإعادة', wakeUpOn: 'استئناف الرعاية من',
+    return: 'إعادة إلى التسويق', accepted: 'تم القبول.', returned: 'أُعيد إلى التسويق.',
+    failed: 'تعذّر تغيير التسليم.', historyFailed: 'تعذّر تحميل سجل الرعاية.',
+    programmes: 'برامج الرعاية', notNurtured: 'ليس في أي برنامج رعاية.', paused: 'متوقف مؤقتًا أثناء عمل المبيعات عليه',
+    contentSeen: 'المحتوى المطّلع عليه', nothingSeen: 'لم يطّلع على شيء بعد.', handoffs: 'التسليمات', noHandoffs: 'لا تسليمات بعد.',
+    status: { active: 'نشط', handed_off: 'مُسلَّم إلى المبيعات', exited: 'غادر' },
+    handoffStatus: { pending: 'بانتظار المبيعات', accepted: 'مقبول', returned: 'مُعاد', overdue: 'متأخر' },
+    loadFailed: 'تعذّر تحميل تبويب الرعاية.', saveFirst: 'احفظ السجل لرؤية رعايته.',
   },
   segmentInsight: {
     title: 'الشريحة',

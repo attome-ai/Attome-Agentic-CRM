@@ -14,12 +14,12 @@ import type { XrmFormTabDef } from '../base/xrm-form.base';
 export type RecordTabId =
   'documents' | 'communications' | 'notes' | 'activities' | 'tags' | 'consent' | 'relationships'
   | 'timeline' | 'history' | 'approvals' | 'sharing' | 'golden' | 'fulfilment' | 'lines' | 'team' | 'splits'
-  | 'convert' | 'whitespace' | 'segment';
+  | 'convert' | 'whitespace' | 'segment' | 'nurture';
 
 /** Every record tab, in the order the generic form has always shown them. */
 export const RECORD_TAB_IDS: readonly RecordTabId[] = [
   'documents', 'communications', 'notes', 'activities', 'tags', 'consent', 'relationships', 'timeline', 'history',
-  'approvals', 'sharing', 'fulfilment', 'lines', 'team', 'splits', 'convert', 'whitespace', 'segment',
+  'approvals', 'sharing', 'fulfilment', 'lines', 'team', 'splits', 'convert', 'whitespace', 'segment', 'nurture',
 ];
 
 const ICONS: Record<RecordTabId, string> = {
@@ -42,6 +42,7 @@ const ICONS: Record<RecordTabId, string> = {
   convert:        'las la-arrow-right',
   whitespace:     'las la-th',
   segment:        'las la-filter',
+  nurture:        'las la-paper-plane',
 };
 
 const LABEL_KEYS: Record<RecordTabId, string> = {
@@ -64,6 +65,7 @@ const LABEL_KEYS: Record<RecordTabId, string> = {
   convert:        'xrmForm.tabs.convert',
   whitespace:     'xrmForm.tabs.whitespace',
   segment:        'xrmForm.tabs.segment',
+  nurture:        'xrmForm.tabs.nurture',
 };
 
 /**
@@ -93,6 +95,8 @@ function hiddenOn(tab: RecordTabId, entityName: string): boolean {
     case 'whitespace': return entityName !== 'account_plan';
     // E7-T12: a marketing list's counts, sample and uses.
     case 'segment':    return entityName !== 'marketing_list';
+    // E9-T11: a lead's or contact's nurture and hand-offs.
+    case 'nurture':    return entityName !== 'lead' && entityName !== 'contact';
     default:          return false;
   }
 }

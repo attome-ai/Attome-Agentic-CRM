@@ -264,6 +264,7 @@ export const xrmEn = {
       fulfilment: 'Fulfilment', lines: 'Lines', team: 'Team', splits: 'Splits', convert: 'Convert',
       whitespace: 'Whitespace',
       segment: 'Segment',
+      nurture: 'Nurture',
     },
     entity: {
       document: 'Document', note: 'Note', organization: 'Organization', privilege: 'Privilege',
@@ -3084,6 +3085,17 @@ export const xrmEn = {
     blocklisted: 'A sending domain or address is on a blocklist: pause bulk sends from it, find the cause, then ask the list to remove it.',
     dmarc_failures: 'DMARC failures doubled: check that every service sending as this domain is in its SPF record and signs with DKIM.',
     reputation_drop: "The mailbox provider's view of this sender dropped: slow down, send to your most engaged people, and watch complaints.",
+  },
+  nurturePanel: {
+    title: 'Nurture', handoffTitle: 'Handed to sales', score: 'Score / hand-off score:', seen: 'Content seen:',
+    due: 'Decide by:', accept: 'Accept', reason: 'Reason for returning', wakeUpOn: 'Nurture again from',
+    return: 'Return to marketing', accepted: 'Accepted.', returned: 'Returned to marketing.',
+    failed: 'The hand-off could not be changed.', historyFailed: 'The nurture history could not be loaded.',
+    programmes: 'Nurture programmes', notNurtured: 'Not in any nurture programme.', paused: 'paused while sales works them',
+    contentSeen: 'Content seen', nothingSeen: 'Nothing seen yet.', handoffs: 'Hand-offs', noHandoffs: 'No hand-offs yet.',
+    status: { active: 'Active', handed_off: 'Handed to sales', exited: 'Left' },
+    handoffStatus: { pending: 'Waiting for sales', accepted: 'Accepted', returned: 'Returned', overdue: 'Overdue' },
+    loadFailed: 'The nurture tab could not be loaded.', saveFirst: 'Save the record to see its nurture.',
   },
   segmentInsight: {
     title: 'Segment',

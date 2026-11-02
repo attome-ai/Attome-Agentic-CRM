@@ -40,6 +40,7 @@ type MasterDataModule = typeof import('@attome/xrm/core/admin/governance/master-
 type FulfilmentModule = typeof import('@attome/xrm/fulfilment');
 type SalesModule = typeof import('@attome/xrm/sales');
 type SegmentModule = typeof import('@attome/xrm/marketing/segment');
+type NurtureModule = typeof import('@attome/xrm/marketing/nurture');
 
 @Component({
   selector: 'xrm-record-tab-panels',
@@ -100,6 +101,10 @@ export class RecordTabPanelsComponent {
   readonly segment = signal<SegmentModule | null>(null);
   readonly segmentLoadFailed = signal(false);
   private segmentRequested = false;
+  /** E9-T11: the nurture entry point, once a lead's or contact's Nurture tab has asked for it. */
+  readonly nurture = signal<NurtureModule | null>(null);
+  readonly nurtureLoadFailed = signal(false);
+  private nurtureRequested = false;
 
   constructor() {
     effect(() => {
@@ -156,6 +161,15 @@ export class RecordTabPanelsComponent {
         import('@attome/xrm/marketing/segment').then(
           m => this.segment.set(m),
           () => this.segmentLoadFailed.set(true),
+        );
+      }
+    });
+    effect(() => {
+      if (this.activeTab() === 'nurture' && this.recordId() && !this.nurtureRequested) {
+        this.nurtureRequested = true;
+        import('@attome/xrm/marketing/nurture').then(
+          m => this.nurture.set(m),
+          () => this.nurtureLoadFailed.set(true),
         );
       }
     });

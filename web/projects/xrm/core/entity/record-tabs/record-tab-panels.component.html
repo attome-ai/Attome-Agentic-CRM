@@ -250,6 +250,24 @@
   </div>
 }
 
+@if (has('nurture')) {
+  <div [id]="panelId('nurture')" class="xf-tab-panel" role="tabpanel"
+       [attr.aria-labelledby]="tabId('nurture')" [hidden]="activeTab() !== 'nurture'"
+       data-testid="nurture-tab">
+    @if (recordId()) {
+      @if (activeTab() === 'nurture') {
+        @if (nurture(); as m) {
+          <ng-container *ngComponentOutlet="m.NurtureHistoryPanelComponent; inputs: activityInputs()" />
+        } @else if (nurtureLoadFailed()) {
+          <p class="xf-hint" role="alert">{{ 'nurturePanel.loadFailed' | translate }}</p>
+        }
+      }
+    } @else {
+      <p class="xf-hint">{{ 'nurturePanel.saveFirst' | translate }}</p>
+    }
+  </div>
+}
+
 @if (has('team')) {
   <div [id]="panelId('team')" class="xf-tab-panel" role="tabpanel"
        [attr.aria-labelledby]="tabId('team')" [hidden]="activeTab() !== 'team'"

@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- A lead's and a contact's form have a Nurture tab (E9-T11): a pending hand-off to accept or return
+  (with a reason and a wake-up date, its Hijri date shown), the person's nurture programmes, the content
+  they have seen and their hand-offs, in English and Arabic.
 - Hand-off and nurture routes (E9-T8): `POST /api/v1/marketing/handoffs/{id}/accept` and `.../return`
   (assignee, their manager or an administrator), `GET /api/v1/marketing/handoffs`,
   `GET /api/v1/marketing/people/{person_id}/nurture-history` and
