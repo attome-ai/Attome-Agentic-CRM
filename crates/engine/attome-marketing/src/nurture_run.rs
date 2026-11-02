@@ -227,6 +227,16 @@ impl WorkflowStepHandler for NurtureRun {
     fn module_id(&self) -> ModuleId {
         MODULE_MARKETING
     }
+    fn config_schema(&self) -> Value {
+        json!({
+            "type": "object",
+            "properties": {
+                "purpose": { "type": "string", "title": "Consent purpose" },
+                "program_id": { "type": "string", "format": "uuid", "title": "Nurture programme" }
+            },
+            "required": ["purpose"]
+        })
+    }
     fn validate_config(&self, config: &Value) -> Result<(), String> {
         config_problem(config).map_or(Ok(()), |p| Err(p.to_owned()))
     }
@@ -646,5 +656,38 @@ mod tests {
     fn the_done_event_names_the_run() {
         let run = Uuid::now_v7();
         assert_eq!(done_event(run), format!("nurture.done:{run}"));
+    }
+
+    /// E8-T13: every runnable marketing step describes its settings, each
+    /// required key among its properties; a declared step with no run path
+    /// says it is unavailable.
+    #[test]
+    fn every_marketing_step_describes_its_settings() {
+        use crate::journey::{action_step, control_step, message_step};
+        let runnable: Vec<Box<dyn WorkflowStepHandler>> = vec![
+            Box::new(NurtureRun),
+            Box::new(message_step::SendEmail),
+            Box::new(control_step::WaitCalendar),
+            Box::new(control_step::Engagement),
+            Box::new(control_step::Split),
+            Box::new(action_step::ListMembership { add: true }),
+            Box::new(action_step::ListMembership { add: false }),
+            Box::new(action_step::CampaignMembership),
+        ];
+        for step in runnable {
+            let schema = step.config_schema();
+            assert!(step.available(), "{}", step.key());
+            assert_eq!(schema["type"], json!("object"), "{}", step.key());
+            let properties = schema["properties"].as_object().expect("properties");
+            for key in schema["required"].as_array().into_iter().flatten() {
+                let key = key.as_str().unwrap_or_default();
+                assert!(properties.contains_key(key), "{}: {key}", step.key());
+            }
+        }
+        let declared = message_step::ChannelUnavailable {
+            key: message_step::UNAVAILABLE_CHANNELS[0],
+        };
+        assert!(!declared.available());
+        assert!(declared.config_schema().is_null());
     }
 }

@@ -20,6 +20,23 @@ function version(graph: Graph, status = 'draft'): VersionDetail {
   };
 }
 
+/** E8-T13: the registered steps the editor offers (one not runnable yet). */
+const STEPS = [
+  {
+    key: 'marketing.send_email', module: 'marketing', licensed: true, available: true,
+    config_schema: {
+      type: 'object',
+      properties: {
+        design_id: { type: 'string', format: 'uuid', title: 'Email design' },
+        on_blocked: { type: 'string', enum: ['skip', 'wait'], default: 'skip' },
+        variants: { type: 'array' },
+      },
+      required: ['design_id'],
+    },
+  },
+  { key: 'marketing.send_sms', module: 'marketing', licensed: true, available: false, config_schema: null },
+];
+
 function editor(graph: Graph, status = 'draft') {
   TestBed.configureTestingModule({
     imports: [WorkflowGraphEditorComponent],
@@ -30,6 +47,7 @@ function editor(graph: Graph, status = 'draft') {
         useValue: {
           getVersion:      vi.fn(() => of(version(graph, status))),
           listDefinitions: vi.fn(() => of([{ logicalname: 'onboarding' }])),
+          stepHandlers:    vi.fn(() => of(STEPS)),
           versionCoverage: vi.fn(() => of({
             tests: [{ id: 't1', name: 'Welcome reaches send', blocking: false, passed: true, failures: [] }],
             covered: ['t', 'send'],
@@ -216,6 +234,7 @@ describe('WorkflowGraphEditorComponent config form', () => {
           useValue: {
             getVersion:      vi.fn(() => of(version({ nodes: [node('r1', 'create_record')], edges: [] }))),
             listDefinitions: vi.fn(() => EMPTY),
+            stepHandlers:    vi.fn(() => EMPTY),
           },
         },
         { provide: AdminService, useValue: { listEntities: vi.fn(() => EMPTY) } },
@@ -584,5 +603,48 @@ describe('WorkflowGraphEditorComponent canvas panning', () => {
     // Shift turns a vertical wheel into horizontal movement.
     c.onCanvasWheel(new WheelEvent('wheel', { deltaY: 60, shiftKey: true, cancelable: true }));
     expect(c.panX()).toBe(-60);
+  });
+});
+
+describe('WorkflowGraphEditorComponent module steps (E8-T13)', () => {
+  beforeEach(() => TestBed.resetTestingModule());
+
+  it('offers the runnable registered steps and adds one as a Module Step naming it', () => {
+    const c = editor({ nodes: [], edges: [] });
+    c.typeMenu.set({ x: 10, y: 10 });
+    expect(c.menuSteps().map(h => h.key)).toEqual(['marketing.send_email']);
+    c.menuFilter.set('sms');
+    expect(c.menuSteps()).toEqual([]);
+    c.menuFilter.set('');
+    c.chooseStep('marketing.send_email');
+    const added = c.graph().nodes[0];
+    expect(added.type).toBe('module_step');
+    expect(added.config).toEqual({ handler: 'marketing.send_email' });
+  });
+
+  it("edits the step's own settings from its schema, not the raw config box", () => {
+    const c = editor({ nodes: [node('m1', 'module_step', { handler: 'marketing.send_email' })], edges: [] });
+    c.select('m1');
+    expect(c.stepFields().map(f => [f.key, f.kind])).toEqual([
+      ['design_id', 'text'], ['on_blocked', 'select'], ['variants', 'json'],
+    ]);
+    expect(c.stepFields()[0].required).toBe(true);
+    expect(c.visibleConfigFields().map(f => f.key)).not.toContain('config');
+    expect(c.stepString(c.stepFields()[1])).toBe('skip');
+
+    c.setStepConfig('design_id', 'd-1');
+    c.setStepConfig('on_blocked', 'wait');
+    expect(configOf(c, 'm1')).toEqual({
+      handler: 'marketing.send_email', config: { design_id: 'd-1', on_blocked: 'wait' },
+    });
+    c.setStepConfig('on_blocked', undefined);
+    expect(configOf(c, 'm1')).toEqual({ handler: 'marketing.send_email', config: { design_id: 'd-1' } });
+  });
+
+  it('keeps the raw config box for a step that describes no settings', () => {
+    const c = editor({ nodes: [node('m1', 'module_step', { handler: 'sales.unknown' })], edges: [] });
+    c.select('m1');
+    expect(c.stepFields()).toEqual([]);
+    expect(c.visibleConfigFields().map(f => f.key)).toContain('config');
   });
 });

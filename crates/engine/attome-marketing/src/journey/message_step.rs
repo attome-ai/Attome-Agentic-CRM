@@ -85,6 +85,9 @@ impl WorkflowStepHandler for ChannelUnavailable {
     fn module_id(&self) -> ModuleId {
         MODULE_MARKETING
     }
+    fn available(&self) -> bool {
+        false
+    }
     fn validate_config(&self, _config: &Value) -> Result<(), String> {
         Err("channel_unavailable".into())
     }
@@ -162,6 +165,18 @@ impl WorkflowStepHandler for SendEmail {
     }
     fn module_id(&self) -> ModuleId {
         MODULE_MARKETING
+    }
+    fn config_schema(&self) -> Value {
+        json!({
+            "type": "object",
+            "properties": {
+                "design_id": { "type": "string", "format": "uuid", "title": "Email design" },
+                "purpose": { "type": "string", "title": "Consent purpose" },
+                "on_blocked": { "type": "string", "enum": ["skip", "wait"], "default": "skip", "title": "When blocked" },
+                "send_time": { "type": "string", "enum": ["now", "best"], "default": "now", "title": "Send time" }
+            },
+            "required": ["design_id", "purpose"]
+        })
     }
     fn validate_config(&self, config: &Value) -> Result<(), String> {
         config_problem(config).map_or(Ok(()), |p| Err(p.to_owned()))

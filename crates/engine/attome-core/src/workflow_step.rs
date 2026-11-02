@@ -95,6 +95,19 @@ pub trait WorkflowStepHandler: Send + Sync + 'static {
     fn validate_config(&self, config: &serde_json::Value) -> Result<(), String>;
     /// Runs one node.
     fn run<'a>(&'a self, state: &'a EngineState, inv: StepInvocation) -> StepFuture<'a>;
+    /// E8-T13: the node's configuration as a JSON Schema object
+    /// (`properties` with `type`, `enum`, `format`, `title`; `required`), for
+    /// an editor to build its form from. `Null` when the step describes none;
+    /// [`Self::validate_config`] stays the check.
+    fn config_schema(&self) -> serde_json::Value {
+        serde_json::Value::Null
+    }
+    /// E8-T13: whether the step can run today. A step declared before its
+    /// feature has a run path says no, so an editor leaves it out (publish
+    /// refuses it either way).
+    fn available(&self) -> bool {
+        true
+    }
 }
 
 /// The rules a kind of workflow applies before every node.

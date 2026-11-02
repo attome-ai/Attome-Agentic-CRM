@@ -4,13 +4,13 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { ApiError, TranslatePipe } from '@attome/base';
+import { ApiError, LangService, TranslatePipe } from '@attome/base';
 import { AdminService } from '@attome/xrm/core/admin/data';
 import { entityFormRoute } from '@attome/xrm/core/entity';
 
 import {
   FlowCoverage, Graph, GraphEdge, GraphNode, NODE_TYPES, NodeConfigField, NodeTypeSpec, SimulateResponse,
-  VersionDetail, WorkflowAdminService, nodeConfigFields, nodeTypeSpec,
+  StepHandlerInfo, VersionDetail, WorkflowAdminService, nodeConfigFields, nodeTypeSpec, schemaFields,
 } from '../../../services/workflow-admin.service';
 
 /* ── Node-card geometry ─────────────────────────────────────────────────────
@@ -108,6 +108,7 @@ interface TypeMenu { x: number; y: number; source?: { nodeId: string; port: stri
 export class WorkflowGraphEditorComponent implements OnInit {
   private readonly svc   = inject(WorkflowAdminService);
   private readonly admin = inject(AdminService);
+  private readonly lang  = inject(LangService);
 
   readonly definitionId = input.required<string>();
   readonly versionId    = input.required<string>();
@@ -160,6 +161,12 @@ export class WorkflowGraphEditorComponent implements OnInit {
   readonly typeMenu   = signal<TypeMenu | null>(null);
   readonly menuFilter = signal('');
 
+  /** E8-T13: the steps engines registered for `module_step` nodes (a
+   *  journey's send email, nurture, waits), offered in the picker by name
+   *  and edited through their own settings form. Best-effort: without them a
+   *  Module Step node is still configurable by its handler key. */
+  readonly stepHandlers = signal<StepHandlerInfo[]>([]);
+
   /** Canvas offset. The work surface is bigger than its frame and is moved by
    *  dragging its background instead of by scrollbars. Everything else keeps
    *  working in canvas space: `canvasOffset()` reads the transformed rect, so
@@ -201,6 +208,22 @@ export class WorkflowGraphEditorComponent implements OnInit {
     });
   });
 
+  /** E8-T13: the registered steps the open picker offers, each a
+   *  `module_step` with its handler set; only those this deployment can run,
+   *  and from a `+` only when a Module Step can take that output. */
+  readonly menuSteps = computed<StepHandlerInfo[]>(() => {
+    const menu = this.typeMenu();
+    if (!menu) return [];
+    if (menu.source) {
+      const sourceType = this.portTypeOf(menu.source.nodeId, menu.source.port, false);
+      if (!this.portTypesCompatible(sourceType, 'json')) return [];
+    }
+    const q = this.menuFilter().trim().toLowerCase();
+    return this.stepHandlers().filter(h =>
+      h.available && h.licensed
+      && (q === '' || h.key.includes(q) || this.stepLabel(h.key).toLowerCase().includes(q)));
+  });
+
   constructor() {
     // The picker is keyboard-first: whenever it opens, focus lands in its
     // filter box so a type can be narrowed down without reaching for the mouse.
@@ -208,6 +231,10 @@ export class WorkflowGraphEditorComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.svc.stepHandlers().subscribe({
+      next: handlers => this.stepHandlers.set(handlers),
+      error: () => this.stepHandlers.set([]),
+    });
     this.svc.getVersion(this.definitionId(), this.versionId()).subscribe({
       next: v => {
         this.version.set(v);
@@ -308,6 +335,23 @@ export class WorkflowGraphEditorComponent implements OnInit {
     this.addConnectedNode(type, menu.source.nodeId, menu.source.port);
   }
 
+  /** E8-T13: a picked registered step becomes a Module Step node naming it. */
+  chooseStep(key: string): void {
+    const before = this.selectedNodeId();
+    this.chooseType('module_step');
+    const added = this.selectedNode();
+    if (added && added.id !== before && added.type === 'module_step') {
+      this.setConfig('handler', key);
+    }
+  }
+
+  /** A registered step's name in the user's language, else its key. */
+  stepLabel(key: string): string {
+    const k = `workflowStep.${key}`;
+    const label = this.lang.translate(k);
+    return label === k ? key : label;
+  }
+
   /** Creates `type` to the right of the source node and wires the source
    *  output into the first input of the new node that accepts it — the menu
    *  only offered types for which such an input exists. */
@@ -352,12 +396,31 @@ export class WorkflowGraphEditorComponent implements OnInit {
     this.jsonText.set(buffers);
   }
 
+  /** E8-T13: the selected Module Step's own settings (its `config.config`),
+   *  from the registered step's JSON Schema, labelled in the user's
+   *  language (`workflowStepField.<step>.<key>`, else the schema's title). */
+  readonly stepFields = computed<NodeConfigField[]>(() => {
+    const n = this.selectedNode();
+    if (n?.type !== 'module_step') return [];
+    const key = n.config?.['handler'];
+    const handler = this.stepHandlers().find(h => h.key === key);
+    if (!handler) return [];
+    return schemaFields(handler.config_schema).map(f => {
+      const k = `workflowStepField.${handler.key}.${f.key}`;
+      const label = this.lang.translate(k);
+      return label === k ? f : { ...f, label };
+    });
+  });
+
   /** Schema fields for the selected node, minus those whose `showIf` gate is
-   *  not currently satisfied (e.g. Condition's "Compare to" under `truthy`). */
+   *  not currently satisfied (e.g. Condition's "Compare to" under `truthy`).
+   *  A Module Step whose step has a settings form drops the raw `config`
+   *  JSON box: the form edits that object. */
   readonly visibleConfigFields = computed<NodeConfigField[]>(() => {
     const n = this.selectedNode();
     if (!n) return [];
-    const fields = nodeConfigFields(n.type);
+    const stepForm = this.stepFields().length > 0;
+    const fields = nodeConfigFields(n.type).filter(f => !(stepForm && f.key === 'config'));
     return fields.filter(f => {
       if (!f.showIf) return true;
       const gate = fields.find(g => g.key === f.showIf!.key);
@@ -426,6 +489,58 @@ export class WorkflowGraphEditorComponent implements OnInit {
         return { ...n, config };
       }),
     }));
+  }
+
+  private stepRaw(key: string): unknown {
+    const settings = this.selectedNode()?.config?.['config'];
+    return settings && typeof settings === 'object' ? (settings as Record<string, unknown>)[key] : undefined;
+  }
+
+  stepString(f: NodeConfigField): string {
+    const v = this.stepRaw(f.key);
+    if (v !== undefined && v !== null) return String(v);
+    return f.kind === 'select' && f.default !== undefined ? String(f.default) : '';
+  }
+
+  stepNumber(f: NodeConfigField): number | null {
+    const v = this.stepRaw(f.key);
+    return typeof v === 'number' ? v : null;
+  }
+
+  stepBool(f: NodeConfigField): boolean {
+    return this.stepRaw(f.key) === true;
+  }
+
+  stepJson(f: NodeConfigField): string {
+    const buffered = this.jsonText()[`step:${f.key}`];
+    if (buffered !== undefined) return buffered;
+    const v = this.stepRaw(f.key);
+    return v === undefined ? '' : JSON.stringify(v, null, 2);
+  }
+
+  /** Writes one key of the step's settings; `undefined` deletes it. */
+  setStepConfig(key: string, value: unknown): void {
+    const current = this.selectedNode()?.config?.['config'];
+    const settings: Record<string, unknown> =
+      current && typeof current === 'object' ? { ...(current as Record<string, unknown>) } : {};
+    if (value === undefined) { delete settings[key]; } else { settings[key] = value; }
+    this.setConfig('config', settings);
+  }
+
+  applyStepJson(key: string): void {
+    const text = (this.jsonText()[`step:${key}`] ?? '').trim();
+    if (text === '') {
+      this.jsonError.update(e => ({ ...e, [`step:${key}`]: '' }));
+      this.setStepConfig(key, undefined);
+      return;
+    }
+    try {
+      const parsed: unknown = JSON.parse(text);
+      this.jsonError.update(e => ({ ...e, [`step:${key}`]: '' }));
+      this.setStepConfig(key, parsed);
+    } catch {
+      this.jsonError.update(e => ({ ...e, [`step:${key}`]: 'must be valid JSON' }));
+    }
   }
 
   jsonBuffer(key: string): string { return this.jsonText()[key] ?? ''; }

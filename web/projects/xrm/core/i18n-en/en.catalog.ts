@@ -1995,7 +1995,30 @@ export const xrmEn = {
     editGraph: 'Edit Graph', viewGraph: 'View Graph', publishing: 'Publishing…', publish: 'Publish',
     notes: 'Notes', notesDesc: 'Notes and attachments on this record.',
   },
+  workflowStep: {
+    marketing: {
+      send_email: 'Send email', nurture_run: 'Nurture programme', wait_calendar: 'Wait for working time',
+      engagement: 'Check engagement', split: 'Split audience', list_add: 'Add to list',
+      list_remove: 'Remove from list', campaign_add: 'Add to campaign',
+    },
+  },
+  workflowStepField: {
+    marketing: {
+      send_email: { design_id: 'Email design', purpose: 'Consent purpose', on_blocked: 'When blocked', send_time: 'Send time' },
+      nurture_run: { purpose: 'Consent purpose', program_id: 'Nurture programme' },
+      wait_calendar: {
+        mode: 'Wait for', calendar_id: 'Business calendar', hijri_month: 'Hijri month',
+        after_iftar: 'After iftar', iftar_time: 'Iftar time',
+      },
+      engagement: { node_id: 'Earlier send step', event: 'Event' },
+      split: { variants: 'Branches' },
+      list_add: { list_id: 'Static list' },
+      list_remove: { list_id: 'Static list' },
+      campaign_add: { campaign_id: 'Campaign' },
+    },
+  },
   workflowGraph: {
+    moduleSteps: 'Steps from modules', stepSettings: 'Step settings', required: 'required',
     connectTo: 'Connect to…', addNode: 'Add node…', filterNodeTypes: 'Filter node types',
     noTypeForOutput: 'No node type accepts this output.', noMatchingType: 'No matching node type.',
     canvasEmpty: 'Double-click anywhere to add a node.',

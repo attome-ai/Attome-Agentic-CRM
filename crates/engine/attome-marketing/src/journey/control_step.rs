@@ -45,6 +45,19 @@ impl WorkflowStepHandler for WaitCalendar {
     fn module_id(&self) -> ModuleId {
         MODULE_MARKETING
     }
+    fn config_schema(&self) -> Value {
+        json!({
+            "type": "object",
+            "properties": {
+                "mode": { "type": "string", "enum": ["next_working_time", "hijri_time"], "title": "Wait for" },
+                "calendar_id": { "type": "string", "format": "uuid", "title": "Business calendar" },
+                "hijri_month": { "type": "integer", "minimum": 1, "maximum": 12, "title": "Hijri month" },
+                "after_iftar": { "type": "boolean", "title": "After iftar" },
+                "iftar_time": { "type": "string", "pattern": "^[0-2][0-9]:[0-5][0-9]$", "default": "18:30", "title": "Iftar time" }
+            },
+            "required": ["mode"]
+        })
+    }
     fn validate_config(&self, config: &Value) -> Result<(), String> {
         match config.get("mode").and_then(Value::as_str) {
             Some("next_working_time") => uuid_at(config, "calendar_id")
@@ -170,6 +183,16 @@ impl WorkflowStepHandler for Engagement {
     }
     fn module_id(&self) -> ModuleId {
         MODULE_MARKETING
+    }
+    fn config_schema(&self) -> Value {
+        json!({
+            "type": "object",
+            "properties": {
+                "node_id": { "type": "string", "title": "Earlier send step" },
+                "event": { "type": "string", "enum": ["opened", "clicked", "replied"], "title": "Event" }
+            },
+            "required": ["node_id", "event"]
+        })
     }
     fn validate_config(&self, config: &Value) -> Result<(), String> {
         if !config
@@ -305,6 +328,23 @@ impl WorkflowStepHandler for Split {
     }
     fn module_id(&self) -> ModuleId {
         MODULE_MARKETING
+    }
+    fn config_schema(&self) -> Value {
+        json!({
+            "type": "object",
+            "properties": {
+                "variants": {
+                    "type": "array",
+                    "title": "Branches",
+                    "items": {
+                        "type": "object",
+                        "properties": { "name": { "type": "string" }, "weight": { "type": "number" } },
+                        "required": ["name", "weight"]
+                    }
+                }
+            },
+            "required": ["variants"]
+        })
     }
     fn validate_config(&self, config: &Value) -> Result<(), String> {
         variants(config).map(|_| ())

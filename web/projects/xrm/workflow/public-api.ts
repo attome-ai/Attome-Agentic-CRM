@@ -17,9 +17,9 @@ export type {
   DefinitionListItem, DefinitionDetail, VersionSummary, VersionDetail,
   CreateDefinitionBody, UpdateDefinitionBody, CreateVersionBody, UpdateVersionGraphBody,
   Graph, GraphNode, GraphEdge, NodeTypeSpec, NodeTypePort,
-  NodeConfigField, NodeConfigKind,
+  NodeConfigField, NodeConfigKind, StepHandlerInfo,
   InstanceListItem, InstanceDetail, NodeRunSummary, StartInstanceBody,
 } from './services/workflow-admin.service';
 export {
-  NODE_TYPES, nodeTypeSpec, NODE_CONFIG_SCHEMA, nodeConfigFields,
+  NODE_TYPES, nodeTypeSpec, NODE_CONFIG_SCHEMA, nodeConfigFields, schemaFields,
 } from './services/workflow-admin.service';

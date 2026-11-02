@@ -45,6 +45,13 @@ impl WorkflowStepHandler for ListMembership {
     fn module_id(&self) -> ModuleId {
         MODULE_MARKETING
     }
+    fn config_schema(&self) -> Value {
+        json!({
+            "type": "object",
+            "properties": { "list_id": { "type": "string", "format": "uuid", "title": "Static list" } },
+            "required": ["list_id"]
+        })
+    }
     fn validate_config(&self, config: &Value) -> Result<(), String> {
         list_id(config)
             .map(|_| ())
@@ -99,6 +106,13 @@ impl WorkflowStepHandler for CampaignMembership {
     fn module_id(&self) -> ModuleId {
         MODULE_MARKETING
     }
+    fn config_schema(&self) -> Value {
+        json!({
+            "type": "object",
+            "properties": { "campaign_id": { "type": "string", "format": "uuid", "title": "Campaign" } },
+            "required": ["campaign_id"]
+        })
+    }
     fn validate_config(&self, config: &Value) -> Result<(), String> {
         campaign_id(config)
             .map(|_| ())
@@ -143,6 +157,9 @@ impl WorkflowStepHandler for Unavailable {
     }
     fn module_id(&self) -> ModuleId {
         MODULE_MARKETING
+    }
+    fn available(&self) -> bool {
+        false
     }
     fn validate_config(&self, _config: &Value) -> Result<(), String> {
         Err("feature_unavailable".into())

@@ -1953,7 +1953,30 @@ export const xrmAr = {
     editGraph: 'تعديل المخطط', viewGraph: 'عرض المخطط', publishing: 'جاري النشر…', publish: 'نشر',
     notes: 'الملاحظات', notesDesc: 'الملاحظات والمرفقات على هذا السجل.',
   },
+  workflowStep: {
+    marketing: {
+      send_email: 'إرسال بريد', nurture_run: 'برنامج رعاية', wait_calendar: 'انتظار وقت العمل',
+      engagement: 'التحقق من التفاعل', split: 'تقسيم الجمهور', list_add: 'إضافة إلى قائمة',
+      list_remove: 'إزالة من قائمة', campaign_add: 'إضافة إلى حملة',
+    },
+  },
+  workflowStepField: {
+    marketing: {
+      send_email: { design_id: 'تصميم البريد', purpose: 'غرض الموافقة', on_blocked: 'عند الحظر', send_time: 'وقت الإرسال' },
+      nurture_run: { purpose: 'غرض الموافقة', program_id: 'برنامج الرعاية' },
+      wait_calendar: {
+        mode: 'انتظار', calendar_id: 'تقويم العمل', hijri_month: 'الشهر الهجري',
+        after_iftar: 'بعد الإفطار', iftar_time: 'وقت الإفطار',
+      },
+      engagement: { node_id: 'خطوة الإرسال السابقة', event: 'الحدث' },
+      split: { variants: 'الفروع' },
+      list_add: { list_id: 'قائمة ثابتة' },
+      list_remove: { list_id: 'قائمة ثابتة' },
+      campaign_add: { campaign_id: 'الحملة' },
+    },
+  },
   workflowGraph: {
+    moduleSteps: 'خطوات من الوحدات', stepSettings: 'إعدادات الخطوة', required: 'مطلوب',
     connectTo: 'الاتصال بـ…', addNode: 'إضافة عقدة…', filterNodeTypes: 'تصفية أنواع العقد',
     noTypeForOutput: 'لا يوجد نوع عقدة يقبل هذا المخرج.', noMatchingType: 'لا يوجد نوع عقدة مطابق.',
     canvasEmpty: 'انقر نقراً مزدوجاً في أي مكان لإضافة عقدة.',

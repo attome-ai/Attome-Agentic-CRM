@@ -177,7 +177,14 @@
             @for (t of menuOptions(); track t.type) {
               <button type="button" class="type-menu-item" (click)="chooseType(t.type)">{{ t.label }}</button>
             }
-            @if (menuOptions().length === 0) {
+            @if (menuSteps().length > 0) {
+              <p class="type-menu-section">{{ 'workflowGraph.moduleSteps' | translate }}</p>
+              @for (h of menuSteps(); track h.key) {
+                <button type="button" class="type-menu-item" (click)="chooseStep(h.key)"
+                        data-testid="type-menu-step">{{ stepLabel(h.key) }}</button>
+              }
+            }
+            @if (menuOptions().length === 0 && menuSteps().length === 0) {
               <p class="type-menu-empty">
                 {{ (m.source ? 'workflowGraph.noTypeForOutput' : 'workflowGraph.noMatchingType') | translate }}
               </p>
@@ -256,7 +263,54 @@
           </div>
         }
 
-        @if (visibleConfigFields().length === 0) {
+        @if (stepFields().length > 0) {
+          <h5 class="cfg-step-title">{{ 'workflowGraph.stepSettings' | translate }}</h5>
+          @for (f of stepFields(); track f.key) {
+            <div class="cfg-field" data-testid="step-field">
+              <label [for]="'step-' + f.key">
+                {{ f.label }}
+                @if (f.required) { <span class="cfg-required">{{ 'workflowGraph.required' | translate }}</span> }
+              </label>
+              @switch (f.kind) {
+                @case ('select') {
+                  <select [id]="'step-' + f.key" [disabled]="readonly()"
+                          [ngModel]="stepString(f)" [ngModelOptions]="{ standalone: true }"
+                          (ngModelChange)="setStepConfig(f.key, $event)">
+                    @for (o of f.options ?? []; track o.value) {
+                      <option [value]="o.value">{{ o.label }}</option>
+                    }
+                  </select>
+                }
+                @case ('bool') {
+                  <input type="checkbox" [id]="'step-' + f.key" [disabled]="readonly()"
+                         [ngModel]="stepBool(f)" [ngModelOptions]="{ standalone: true }"
+                         (ngModelChange)="setStepConfig(f.key, $event === true ? true : undefined)" />
+                }
+                @case ('number') {
+                  <input type="number" [id]="'step-' + f.key" [disabled]="readonly()"
+                         [placeholder]="placeholderFor(f)"
+                         [ngModel]="stepNumber(f)" [ngModelOptions]="{ standalone: true }"
+                         (ngModelChange)="setStepConfig(f.key, $event === null || $event === '' ? undefined : $event)" />
+                }
+                @case ('json') {
+                  <textarea [id]="'step-' + f.key" class="cfg-textarea cfg-json" [disabled]="readonly()"
+                            [ngModel]="stepJson(f)" [ngModelOptions]="{ standalone: true }"
+                            (ngModelChange)="setJsonBuffer('step:' + f.key, $event)"
+                            (blur)="applyStepJson(f.key)"></textarea>
+                  @if (jsonError()['step:' + f.key]; as msg) { <p class="error-msg">{{ msg }}</p> }
+                }
+                @default {
+                  <input type="text" [id]="'step-' + f.key" [disabled]="readonly()" dir="auto"
+                         [placeholder]="placeholderFor(f)"
+                         [ngModel]="stepString(f)" [ngModelOptions]="{ standalone: true }"
+                         (ngModelChange)="setStepConfig(f.key, $event === '' ? undefined : $event)" />
+                }
+              }
+            </div>
+          }
+        }
+
+        @if (visibleConfigFields().length === 0 && stepFields().length === 0) {
           <p class="cfg-hint">This node type takes no configuration.</p>
         }
 

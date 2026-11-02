@@ -1275,6 +1275,69 @@ async fn fetch_versions(
         .collect())
 }
 
+// ── Handlers: Module steps ───────────────────────────────────────────────────
+
+/// E8-T13: a module step an engine registered, as an editor offers it.
+#[derive(Debug, Clone, serde::Serialize, utoipa::ToSchema)]
+pub struct StepHandlerInfo {
+    /// The node key a `module_step` names in `config.handler`.
+    pub key: String,
+    /// The module that must be licensed for it to run.
+    pub module: Option<String>,
+    /// Whether this deployment is licensed for that module.
+    pub licensed: bool,
+    /// Whether the step can run today (a declared step with no run path
+    /// yet cannot).
+    pub available: bool,
+    /// Its configuration as a JSON Schema object, or null.
+    #[schema(value_type = Object)]
+    pub config_schema: serde_json::Value,
+}
+
+/// Every registered module step, by key. Pure over the registry.
+pub fn step_handlers(state: &EngineState) -> Vec<StepHandlerInfo> {
+    let modules = state.modules.load();
+    let mut out: Vec<StepHandlerInfo> = state
+        .workflow_step_handlers
+        .iter()
+        .map(|(key, handler)| StepHandlerInfo {
+            key: (*key).to_owned(),
+            module: attome_modules::module_name(handler.module_id()).map(str::to_owned),
+            licensed: modules.has(handler.module_id()),
+            available: handler.available(),
+            config_schema: handler.config_schema(),
+        })
+        .collect();
+    out.sort_by(|a, b| a.key.cmp(&b.key));
+    out
+}
+
+/// List the module steps
+///
+/// The steps engines contribute to workflows (a journey's send email, wait for working time, nurture
+/// and the rest): each one's key, module, whether this deployment may run it, and the JSON Schema
+/// of its settings, for the editor's palette and settings form. Automation administrators only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/workflow/step-handlers",
+    operation_id = "list_workflow_step_handlers",
+    tag = "workflow",
+    responses(
+        (status = 200, description = "Every registered step, by key (one page)", body = PaginatedResponse<StepHandlerInfo>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_step_handlers(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<area::Automation>>,
+) -> Json<PaginatedResponse<StepHandlerInfo>> {
+    let items = step_handlers(&state);
+    let total = items.len() as i64;
+    Json(PaginatedResponse::new(items, total, 1, total.max(1)))
+}
+
 // ── Routes ───────────────────────────────────────────────────────────────────
 
 pub fn routes() -> Router<EngineState> {
@@ -1305,6 +1368,7 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/workflow/definitions/{id}/versions/{version_id}/coverage",
             get(version_coverage),
         )
+        .route("/api/v1/workflow/step-handlers", get(list_step_handlers))
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI document. Separate per file
@@ -1322,7 +1386,8 @@ pub fn routes() -> Router<EngineState> {
     get_version,
     update_version_graph,
     publish_version,
-    version_coverage
+    version_coverage,
+    list_step_handlers
 ))]
 struct ApiDocFragment;
 

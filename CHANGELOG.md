@@ -19,6 +19,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `marketing_nurture_tick`) sends each person the next email of their track they have neither seen
   nor been sent, through the journey rules, one per the programme's `cadence_days`. Opening or
   clicking an email from a saved design marks it seen. Migration 0367.
+- The workflow editor offers the steps modules contribute (E8-T13, part one): `GET
+  /api/v1/workflow/step-handlers` lists each registered step with its module, whether this deployment
+  may run it and the JSON Schema of its settings; the node picker has a "Steps from modules" section
+  (a journey's send email, nurture, waits, splits, list and campaign steps), and a step's settings are
+  edited through a form built from its schema, labelled in English and Arabic.
 - Agent tool `segment.draft` (E7-T11, administrators): a marketing segment's query drafted from a
   description, checked by the stored-query publish checks, with its estimated size and the calls that
   save it; nothing is saved.

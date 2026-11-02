@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { ApiComponents, ApiService } from '@attome/base';
 
 // ── Response types (mirror attome-workflow/src/model.rs exactly) ─────────────────
@@ -424,6 +424,52 @@ export function nodeConfigFields(type: string): NodeConfigField[] {
   return NODE_CONFIG_SCHEMA[type] ?? [];
 }
 
+/**
+ * E8-T13: a step an engine registered for `module_step` nodes
+ * (`GET /api/v1/workflow/step-handlers`): its key, module, whether this
+ * deployment may run it, and its settings as a JSON Schema object.
+ */
+export interface StepHandlerInfo {
+  key: string;
+  module?: string | null;
+  licensed: boolean;
+  available: boolean;
+  config_schema: unknown;
+}
+
+interface SchemaProperty {
+  type?: string;
+  enum?: unknown[];
+  title?: string;
+  default?: unknown;
+}
+
+/**
+ * The form fields for a step's settings, from its JSON Schema: a closed
+ * `enum` is a select, `boolean` a checkbox, `integer`/`number` a number, a
+ * plain string a text box, and anything else (an array, an object) JSON.
+ * The step's `validate_config` stays the check. Pure.
+ */
+export function schemaFields(schema: unknown): NodeConfigField[] {
+  if (!schema || typeof schema !== 'object') return [];
+  const s = schema as { properties?: Record<string, SchemaProperty>; required?: string[] };
+  const required = new Set(s.required ?? []);
+  return Object.entries(s.properties ?? {}).map(([key, p]) => {
+    const kind: NodeConfigKind = Array.isArray(p.enum) ? 'select'
+      : p.type === 'boolean' ? 'bool'
+      : p.type === 'integer' || p.type === 'number' ? 'number'
+      : p.type === 'string' ? 'text'
+      : 'json';
+    const field: NodeConfigField = { key, label: p.title ?? key, kind };
+    if (required.has(key)) field.required = true;
+    if (typeof p.default === 'string' || typeof p.default === 'number' || typeof p.default === 'boolean') {
+      field.default = p.default;
+    }
+    if (Array.isArray(p.enum)) field.options = p.enum.map(v => ({ value: String(v), label: String(v) }));
+    return field;
+  });
+}
+
 // ── Instances (mirrors instance_admin.rs) ───────────────────────────────────────
 
 export interface InstanceListItem {
@@ -531,6 +577,13 @@ export class WorkflowAdminService {
 
   createVersion(definitionId: string, body: CreateVersionBody = {}): Observable<VersionDetail> {
     return this.api.post<VersionDetail>(`/api/v1/workflow/definitions/${definitionId}/versions`, body);
+  }
+
+  /** E8-T13: the module steps engines registered, by key. */
+  stepHandlers(): Observable<StepHandlerInfo[]> {
+    return this.api
+      .get<{ items: StepHandlerInfo[] }>('/api/v1/workflow/step-handlers')
+      .pipe(map(page => page.items ?? []));
   }
 
   getVersion(definitionId: string, versionId: string): Observable<VersionDetail> {
