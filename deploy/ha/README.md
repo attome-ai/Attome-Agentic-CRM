@@ -41,6 +41,18 @@ stops a local router service instead (and starts it again), and `--scenario redi
 signed evidence lands in `drill-evidence/failover-drill-evidence-<date>-<scenario>.json`; check it with
 `attome drill verify`. It passes with no write lost, no split brain and writes back within 30 seconds.
 
+## Chaos faults
+
+`attome drill chaos run --fault <name> [--duration <s>]` injects one fault of the catalogue on a test
+rig and always undoes it, when the time is up, on Ctrl+C, or if anything fails part way. It uses the
+host's own tools: the service manager for `process-kill`, `postgres-restart`, `redis-down` and
+`file-store-down` (`--service`, `--pg-service`, `--redis-service`, `--store-service`), `systemctl kill
+-s STOP/CONT` for the pauses (Linux only), a file in `--fill-dir` for `disk-fill`, a swapped
+`--cert-path` for `cert-expired`, 10,000 no-op jobs into `--database-url`'s queue for `queue-flood`,
+and `tc netem` on `--iface` for `network-delay` (Linux, with `--allow-net-admin`). For `ai-slow`,
+`ai-failing` and `email-down`, boot the target with the lines `--fake-endpoints` prints, then run the
+fault. A deployment whose profile is `production` is refused.
+
 ## Standby region
 
 `patroni-standby.yml.example` and [README-standby.md](README-standby.md): a second cluster in

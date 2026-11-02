@@ -6,6 +6,8 @@ pub mod app_cmd;
 pub mod audit_chainer;
 pub mod bundle_offline;
 pub mod changeset_replay;
+/// AB9-T2: `attome drill chaos run`, a catalogue fault injected and undone.
+pub mod chaos;
 /// U2-T1: `attome cluster plan`, a deployment profile's files.
 pub mod cluster;
 /// U3-T1: `attome cluster create|expand`, a profile installed over SSH.

@@ -26,9 +26,12 @@
 //!   and writes signed evidence with the recovery time, writes lost and split
 //!   brain (`attome_ops::drill_failover`).
 //!
-//! The other scenarios (`restore`, `chaos`, `upgrade-check`) are arms of
-//! [`Command`] that later tasks fill in; until then they answer that the
-//! scenario is not in this build.
+//! - `attome drill chaos run --fault <name> ...` (AB9-T2) injects one fault
+//!   of the catalogue and always undoes it (`super::chaos`).
+//!
+//! The other scenarios (`restore`, `upgrade-check`) are arms of [`Command`]
+//! that later tasks fill in; until then they answer that the scenario is not
+//! in this build.
 //!
 //! Exit codes: 0 ok, 1 usage, 2 bad signature, 3 drill failed (or the
 //! verified report says it failed), 4 not ready.
@@ -69,7 +72,8 @@ const USAGE: &str = "usage:
   attome drill readiness [--config <path>]
   attome drill standby-promote --cluster <name> --confirm <name>
   attome drill failover --scenario <leader|router|redis> --confirm <scenario> --key <file> ...
-  attome drill <restore|chaos|upgrade-check> ...";
+  attome drill chaos run --fault <name> [--duration <s>] [--fake-endpoints] ...
+  attome drill <restore|upgrade-check> ...";
 
 /// One parsed `attome drill` command.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -161,6 +165,7 @@ pub fn run(args: &[String]) -> ExitCode {
         Command::Readiness { config } => readiness(config),
         Command::StandbyPromote { cluster } => standby_promote(&cluster),
         Command::Scenario { name, args } if name == "failover" => failover(&args),
+        Command::Scenario { name, args } if name == "chaos" => super::chaos::run_cli(&args),
         Command::Scenario { name, .. } => {
             eprintln!("attome drill: the `{name}` scenario is not in this build");
             EXIT_USAGE
