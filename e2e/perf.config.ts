@@ -7,11 +7,12 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './perf',
+  timeout: 60_000,
   fullyParallel: false,
   workers: 1,
   forbidOnly: !!process.env['CI'],
   reporter: [['list']],
-  use: { baseURL: 'http://localhost:4199', trace: 'retain-on-failure' },
+  use: { baseURL: 'http://localhost:4198', trace: 'retain-on-failure' },
   projects: [
     {
       name: 'chromium-en',
@@ -19,9 +20,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm --prefix ../web start',
-    url: 'http://localhost:4199',
+    command: 'node perf/serve.mjs',
+    url: 'http://localhost:4198',
     reuseExistingServer: true,
-    timeout: 300_000,
+    timeout: 30_000,
   },
 });

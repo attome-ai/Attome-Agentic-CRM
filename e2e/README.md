@@ -23,7 +23,9 @@ pixels fails.
 
 ## Core Web Vitals
 
-`npx playwright test -c perf.config.ts` opens the record list, a record form and a dashboard over a
+`npm --prefix ../web run build`, then `npx playwright test -c perf.config.ts`, measures the production
+build, served gzipped by `perf/serve.mjs` (the dev server is far larger, so it would say nothing).
+It opens the record list, a record form and a dashboard over a
 throttled "Fast 3G" link with a 4x slower CPU, against the API mock, and fails a screen whose
 largest content paints after 2.5 s (LCP) or whose interaction takes over 200 ms (INP). The numbers
 go to `perf/results.json`. The release gate runs it with `attome release --check --web-vitals` and
