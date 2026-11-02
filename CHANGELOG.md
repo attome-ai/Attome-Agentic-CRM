@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Website tracking screen (E14-T12, `/xrm/marketing/tracking`, marketing pack changeset `0019`): per
+  tracked site, the embed code to copy, visits over 7, 30 or 90 days with how many were by known people
+  and the top sources, landing pages and campaigns (`GET /api/v1/marketing/tracking/report`,
+  `marketing_tracked_site.read`), and who is on the site now. Arabic mirrors the layout.
 - Tracking retention and erasure (E14-T11, migration `0370`): a nightly job rolls each site's page views
   older than its `retention_days` (395 by default) into `marketing_web_daily`, drops whole months of
   `marketing_web_event` once past the longest retention of any site, and deletes sessions past their

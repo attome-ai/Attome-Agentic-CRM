@@ -1,0 +1,51 @@
+{
+  "author": "packs",
+  "checksum": "sha256:ac19a2488eb01ec29c663637ed47315382478f6891235ae9ba9d63e47468c83f",
+  "closed_at": "2026-11-02T00:00:00Z",
+  "description": "E14-T12: the website tracking screen under Marketing (embed code, live visitors, visits report), shown where the marketing module is licensed to people who may read tracked sites.",
+  "format": "attome-changeset/v1",
+  "id": "01a19c40-0000-7e14-8000-000000000019",
+  "layer": "product",
+  "name": "marketing-tracking-screen",
+  "opened_at": "2026-11-02T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 2,
+          "entity": null,
+          "icon": "la-globe",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": "marketing",
+          "path": [
+            "Marketing",
+            "Website tracking"
+          ],
+          "privileges": [
+            "marketing_tracked_site.read"
+          ],
+          "route": "/xrm/marketing/tracking"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "path": "Marketing/Website tracking"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "marketing",
+  "seq": 19,
+  "title": "Pack: website tracking screen"
+}

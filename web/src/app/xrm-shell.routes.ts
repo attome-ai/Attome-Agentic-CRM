@@ -1136,6 +1136,12 @@ export const xrmShellRoutes: Routes = [
               .then(m => m.DeliverabilityDashboardComponent),
           },
           {
+            // E14-T12: website tracking: embed code, visits report, live visitors.
+            path: 'marketing/tracking',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/marketing/tracking').then(m => m.TrackingPageComponent),
+          },
+          {
             // E29-T1: the marketing calendar with budget against actual.
             path: 'marketing/calendar',
             canActivate: [authGuard],
