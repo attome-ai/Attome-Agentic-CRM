@@ -276,6 +276,9 @@ pub struct EngineState {
     pub workflow_kind_guards: Arc<
         std::collections::HashMap<&'static str, Arc<dyn crate::workflow_step::WorkflowKindGuard>>,
     >,
+    /// Y10-T2 — the record write hooks engines registered on the builder,
+    /// frozen at build (`record_hooks.rs`). Empty on a bare state.
+    pub record_hooks: Arc<Vec<Arc<dyn crate::record_hooks::RecordHook>>>,
 }
 
 impl std::fmt::Debug for EngineState {
@@ -373,6 +376,7 @@ impl EngineState {
             search_asker: None,
             catalog_tools: None,
             workflow_step_handlers: Arc::new(std::collections::HashMap::new()),
+            record_hooks: Arc::new(Vec::new()),
             workflow_kind_guards: Arc::new(std::collections::HashMap::new()),
         }
     }

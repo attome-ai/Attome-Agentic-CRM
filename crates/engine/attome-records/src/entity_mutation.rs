@@ -2332,6 +2332,28 @@ pub async fn create_one_as(
     //   4–6. conditions on M2 → locks on the caller's own body, required-but-
     //        locked, `error` policies (so an error judges the stored record).
     // An entity with no rule binding this writer skips straight to formulas.
+    // Y10-T2: hooks before the rules judge the values.
+    let hooked_before_rules;
+    let obj = match attome_core::record_hooks::run_stage(
+        state,
+        attome_core::record_hooks::HookStage::BeforeValidation,
+        attome_core::record_hooks::HookEvent {
+            entity: entity_name,
+            record_id: None,
+            is_create: true,
+            values: obj,
+            previous: None,
+            actor,
+        },
+    )
+    .await?
+    {
+        Some(changed) => {
+            hooked_before_rules = changed;
+            &hooked_before_rules
+        }
+        None => obj,
+    };
     let mut rules =
         crate::business_rules::WritePipeline::new(state, entity_name, attrs, &principal);
     let fired = match rules.as_mut() {
@@ -2369,6 +2391,28 @@ pub async fn create_one_as(
     let obj: &serde_json::Map<String, Value> = &m2;
     let sanitized = sanitize_rich_text_fields(attrs, obj);
     let obj: &serde_json::Map<String, Value> = &sanitized;
+    // Y10-T2: hooks just before the row is written.
+    let hooked_before_save;
+    let obj = match attome_core::record_hooks::run_stage(
+        state,
+        attome_core::record_hooks::HookStage::BeforeSave,
+        attome_core::record_hooks::HookEvent {
+            entity: entity_name,
+            record_id: None,
+            is_create: true,
+            values: obj,
+            previous: None,
+            actor,
+        },
+    )
+    .await?
+    {
+        Some(changed) => {
+            hooked_before_save = sanitize_rich_text_fields(attrs, &changed).into_owned();
+            &hooked_before_save
+        }
+        None => obj,
+    };
 
     // Q19-T1: an encrypted value is bound to its row, so the row's id is known
     // before the insert; business rules and lookups above saw the clear value.
@@ -2510,6 +2554,22 @@ pub async fn create_one_as(
             .write_overrides(tx, record_id, stamp.created_by)
             .await?;
     }
+
+    // Y10-T2: hooks after the row is written, in this transaction.
+    let no_fields = serde_json::Map::new();
+    attome_core::record_hooks::run_stage(
+        state,
+        attome_core::record_hooks::HookStage::AfterSave,
+        attome_core::record_hooks::HookEvent {
+            entity: entity_name,
+            record_id: Some(record_id),
+            is_create: true,
+            values: row.as_object().unwrap_or(&no_fields),
+            previous: None,
+            actor,
+        },
+    )
+    .await?;
 
     // D-787 rule 7: a reference-data create inside a changeset is recorded
     // as `upsert_record` (no-op outside the generic handler's scope).
@@ -3500,6 +3560,28 @@ pub async fn update_one_as(
     // evaluation contexts only; it is never passed to `build_update_binds`,
     // so the SET clause still names only the caller's fields plus computed
     // ones (partial-update semantics).
+    // Y10-T2: hooks before the rules judge the change.
+    let hooked_before_rules;
+    let obj = match attome_core::record_hooks::run_stage(
+        state,
+        attome_core::record_hooks::HookStage::BeforeValidation,
+        attome_core::record_hooks::HookEvent {
+            entity: entity_name,
+            record_id: Some(record_id),
+            is_create: false,
+            values: obj,
+            previous: None,
+            actor: modified_by,
+        },
+    )
+    .await?
+    {
+        Some(changed) => {
+            hooked_before_rules = changed;
+            &hooked_before_rules
+        }
+        None => obj,
+    };
     let mut rules =
         crate::business_rules::WritePipeline::new(state, entity_name, attrs, &principal);
     let has_change_counter = attrs.iter().any(|a| {
@@ -3636,6 +3718,28 @@ pub async fn update_one_as(
     }
     let sanitized = sanitize_rich_text_fields(attrs, &with_computed);
     let obj: &serde_json::Map<String, Value> = &sanitized;
+    // Y10-T2: hooks just before the row is written.
+    let hooked_before_save;
+    let obj = match attome_core::record_hooks::run_stage(
+        state,
+        attome_core::record_hooks::HookStage::BeforeSave,
+        attome_core::record_hooks::HookEvent {
+            entity: entity_name,
+            record_id: Some(record_id),
+            is_create: false,
+            values: obj,
+            previous: None,
+            actor: modified_by,
+        },
+    )
+    .await?
+    {
+        Some(changed) => {
+            hooked_before_save = sanitize_rich_text_fields(attrs, &changed).into_owned();
+            &hooked_before_save
+        }
+        None => obj,
+    };
 
     // Q19-T1: as on insert.
     let sealed = crate::attr_crypto::seal_fields(
@@ -3771,6 +3875,22 @@ pub async fn update_one_as(
         pipeline.apply_tags(tx, record_id, modified_by).await?;
         pipeline.write_overrides(tx, record_id, modified_by).await?;
     }
+
+    // Y10-T2: hooks after the row is written, in this transaction.
+    let no_fields = serde_json::Map::new();
+    attome_core::record_hooks::run_stage(
+        state,
+        attome_core::record_hooks::HookStage::AfterSave,
+        attome_core::record_hooks::HookEvent {
+            entity: entity_name,
+            record_id: Some(record_id),
+            is_create: false,
+            values: new_row.as_object().unwrap_or(&no_fields),
+            previous: old_row.as_ref().and_then(Value::as_object),
+            actor: modified_by,
+        },
+    )
+    .await?;
 
     // D-787 rule 7: a reference-data update inside a changeset is recorded
     // as `upsert_record`, keyed by the record's key before this write.

@@ -162,6 +162,8 @@ pub mod quiet_window;
 pub mod reconcile;
 /// W1-T5: save-time checks that read the database (`EngineModel::record_checks`).
 pub mod record_check;
+/// Y10-T2: hook stages in the record write pipeline.
+pub mod record_hooks;
 /// Solution 7 Phase 2 (D-788 rule 9) — the 30-day encrypted recovery archive.
 pub mod recovery_archive;
 /// M01 Core P3 gap (D-455) — the generic many-to-many relationship-metadata

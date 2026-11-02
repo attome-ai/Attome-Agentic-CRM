@@ -95,6 +95,7 @@ pub struct EngineSystemBuilder {
         &'static str,
         Arc<dyn attome_core::workflow_step::WorkflowStepHandler>,
     >,
+    record_hooks: Vec<Arc<dyn attome_core::record_hooks::RecordHook>>,
     workflow_kind_guards: std::collections::HashMap<
         &'static str,
         Arc<dyn attome_core::workflow_step::WorkflowKindGuard>,
@@ -122,6 +123,7 @@ impl EngineSystem {
             stock_source: None,
             workflow_step_handlers: std::collections::HashMap::new(),
             workflow_kind_guards: std::collections::HashMap::new(),
+            record_hooks: Vec::new(),
         }
     }
 
@@ -939,6 +941,15 @@ impl EngineSystemBuilder {
         self
     }
 
+    /// Y10-T2 — adds a record write hook (`attome_core::record_hooks`).
+    pub fn register_record_hook(
+        mut self,
+        hook: impl attome_core::record_hooks::RecordHook + 'static,
+    ) -> Self {
+        self.record_hooks.push(Arc::new(hook));
+        self
+    }
+
     /// E8-T1 — adds an engine's workflow step handler, keyed by its node
     /// key. A second handler for one key is a programming error found at
     /// boot.
@@ -1033,6 +1044,8 @@ impl EngineSystemBuilder {
         // same way.
         state.workflow_step_handlers = std::sync::Arc::new(self.workflow_step_handlers);
         state.workflow_kind_guards = std::sync::Arc::new(self.workflow_kind_guards);
+        // Y10-T2 — the record write hooks, frozen the same way.
+        state.record_hooks = std::sync::Arc::new(self.record_hooks);
 
         // Loaded here, ahead of the platform-bundle applies below, not in its
         // original later position (next to the audit-signer/security-resolver
