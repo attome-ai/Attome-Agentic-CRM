@@ -747,6 +747,17 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(false),
         ),
+        // F3-T13: subscriptions on the portal.
+        SettingDescriptor::new(
+            "billing.portal.subscriptions",
+            "Whether portal users see their own account's subscriptions, with the lines in force \
+         and the charges still to come, at /{keyword}/api/v1/billing/subscriptions (F3-T13). Off \
+         by default: the route answers 404.",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
         // F11-T9: loyalty points as a material right.
         SettingDescriptor::new(
             "revrec.loyalty_point_value",

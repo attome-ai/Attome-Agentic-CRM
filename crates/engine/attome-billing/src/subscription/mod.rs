@@ -3,6 +3,8 @@
 //! that writes them.
 
 pub mod charge_model;
+/// F3-T13: an account's subscriptions for the portal.
+pub mod portal;
 pub mod routes;
 pub mod schedule;
 pub mod segments;

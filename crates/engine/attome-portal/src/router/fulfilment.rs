@@ -21,8 +21,8 @@ use uuid::Uuid;
 
 use super::{authenticate, portal_for};
 
-/// The account of the portal user's contact.
-async fn account_of(state: &EngineState, user: Uuid) -> Result<Option<Uuid>, AppError> {
+/// The account of the portal user's contact (also the subscriptions route's).
+pub(super) async fn account_of(state: &EngineState, user: Uuid) -> Result<Option<Uuid>, AppError> {
     let installed: bool = sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM information_schema.columns \
                          WHERE table_schema = current_schema() \

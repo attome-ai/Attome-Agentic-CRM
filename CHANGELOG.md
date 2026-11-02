@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Subscriptions on the portal (F3-T13, read part): with `billing.portal.subscriptions` on,
+  `GET /{keyword}/api/v1/billing/subscriptions` shows a portal user their own account's subscriptions with
+  the lines in force and the charges to come. See `docs/billing-portal.md`.
 - Customer order updates (F6-T15, migration `0371`, fulfilment pack changeset `0009`): with
   `fulfilment.customer_updates` on, an order's updates contact who granted `order_updates` is told by email
   and text when a shipment leaves, goes out for delivery or is delivered, and when the order is late,

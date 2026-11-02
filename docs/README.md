@@ -46,6 +46,7 @@
 - [Partners](partners.md): deal registration conflicts, decisions, protection and lapse.
 - [Polymorphic lookups](polymorphic-lookups.md): fields that point at a record of several entities, their targets and per-target delete rules.
 - [Metrics](metrics.md): building a metric from its parts, periods and calendars, dimensions, status bands, KPI trees, versions, backfill, cascading targets, who sees what, scorecards and the drafting actions.
+- [Subscriptions on the portal](billing-portal.md): what a portal user sees of their account's subscriptions, and what they cannot change yet.
 - [Telling customers where their order is](fulfilment-customer-updates.md): consent-checked order updates by email and text, their templates, and the portal's where-is-my-order route.
 - [Delivery by your own drivers](fulfilment-delivery.md): out for delivery, delivery codes, proof, cash on delivery, and where an order ships from (sourcing rules and the override).
 - [Data lineage](lineage.md): the graph of what uses what, impact before a field change, hand-documented links and the OpenLineage export.
