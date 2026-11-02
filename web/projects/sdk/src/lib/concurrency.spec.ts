@@ -7,7 +7,7 @@ describe('concurrency', () => {
     expect(IF_NONE_MATCH_HEADER).toBe('If-None-Match');
   });
 
-  it('formats a row_version as a quoted value, matching @attome/base ApiService', () => {
+  it('formats a row_version as a quoted value, matching @attome/base SdkService', () => {
     expect(ifMatchValue(3)).toBe('"3"');
     expect(ifMatchValue('7')).toBe('"7"');
   });

@@ -70,7 +70,7 @@ six are injected or imported unconditionally, so none is marked optional
 - **Refresh**: one `POST /auth/refresh` in flight per injector
   (`RefreshCoordinator`), only GET/HEAD and idempotency-keyed writes retried
   (NGB-2.5), foreign origins uncredentialed and never refreshed (D-144).
-- **Errors**: `ApiService` rejects with a sanitised `ApiError` — never
+- **Errors**: `SdkService` rejects with a sanitised `ApiError` — never
   `HttpErrorResponse.message`, which embeds the URL. Render it through
   `LangService.errorText(err)`: `errors.<kind>` in the active language, with
   the server's own text kept only for `validation` and `rule_violation`
