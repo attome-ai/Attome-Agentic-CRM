@@ -256,6 +256,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     );
     // A10-T2: fast rollups recomputed from the change feed, every 5 seconds.
     crate::jobs::spawn_rollup_fast_scheduler(db.clone(), std::time::Duration::from_secs(5));
+    // A26-T2: stored derived entities kept current, every 5 seconds.
+    crate::jobs::spawn_derived_maintain_scheduler(db.clone(), std::time::Duration::from_secs(5));
     // A10-T4: rollups verified and healed, nightly.
     crate::jobs::spawn_rollup_heal_scheduler(db.clone(), std::time::Duration::from_secs(86_400));
     // Q4-T2: users and their groups' roles synced from the directory, nightly.

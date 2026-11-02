@@ -130,6 +130,8 @@ pub mod dead_letter_inbox;
 pub mod deployment_openapi;
 /// A26-T1: defining derived entities.
 pub mod derived_admin;
+/// A26-T2: stored derived entities kept current from the change feed.
+pub mod derived_maintain;
 /// D-432 / M13 (Master Data Management, scoped to dedup + survivorship
 /// only) — `/api/v1/admin/data/match-rules`, `/survivorship-rules`,
 /// `/duplicates*`. `pub` only for `ACTION_MDM_AUTO_MERGE`, which

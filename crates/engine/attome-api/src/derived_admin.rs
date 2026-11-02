@@ -179,6 +179,62 @@ async fn delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// What resuming a paused derived entity moved.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct DerivedResumed {
+    pub name: String,
+    /// Members that entered.
+    pub entered: usize,
+    /// Members that left.
+    pub left: usize,
+}
+
+/// Resume a paused derived entity
+///
+/// A stored derived entity is paused when one change would move more than
+/// 10,000 members (A26-T2's surge guard). Resuming applies every change held
+/// since, then keeps it current again. Audited.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/derived-entities/{name}/resume",
+    operation_id = "resume_derived_entity",
+    tag = "admin",
+    params(("name" = String, Path, description = "The derived entity's name")),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "What moved", body = DerivedResumed),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such derived entity, or its anchor is gone", body = ErrorResponse),
+        (status = 409, description = "It is not paused", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn resume(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<area::DataModel>>,
+    Path(name): Path<String>,
+) -> Result<Json<DerivedResumed>, AppError> {
+    let def = derived_entity::find(&state.base.db, &name)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    let anchor = state
+        .entities
+        .load()
+        .get(&def.anchor)
+        .cloned()
+        .ok_or(AppError::NotFound)?;
+    let moved = derived_entity::resume(&state.base.db, &def, &anchor)
+        .await?
+        .ok_or(AppError::Conflict("the derived entity is not paused"))?;
+    audit(&state, ctx.user_id, AuditOperation::Update, &name).await?;
+    Ok(Json(DerivedResumed {
+        name,
+        entered: moved.enter.len(),
+        left: moved.leave.len(),
+    }))
+}
+
 /// The configuration event of a derived entity change. The DDL cannot share
 /// its transaction (it runs on the migrator pool), so it follows the change.
 async fn audit(
@@ -213,10 +269,14 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/derived-entities/{name}",
             axum::routing::put(put).delete(delete),
         )
+        .route(
+            "/api/v1/admin/derived-entities/{name}/resume",
+            axum::routing::post(resume),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list, put, delete))]
+#[openapi(paths(list, put, delete, resume))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

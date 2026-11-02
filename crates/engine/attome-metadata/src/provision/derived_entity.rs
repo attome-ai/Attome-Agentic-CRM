@@ -323,12 +323,263 @@ pub async fn remove(migrator: &DbPool, db: &DbPool, name: &str) -> Result<bool, 
     )
     .await
     .map_err(ddl_error)?;
+    sqlx::query("DELETE FROM derived_entity_pending WHERE name = $1")
+        .bind(name)
+        .execute(db)
+        .await
+        .map_err(AppError::internal)?;
     sqlx::query("DELETE FROM derived_entity WHERE name = $1")
         .bind(name)
         .execute(db)
         .await
         .map_err(AppError::internal)?;
     Ok(true)
+}
+
+// ── A26-T2: keeping stored membership current ─────────────────────────────
+
+/// A change that would move more members than this at once is held for an
+/// administrator (the surge guard).
+pub const SURGE_LIMIT: usize = 10_000;
+/// Anchors re-checked per statement when held changes are applied.
+pub const RESUME_CHUNK: usize = 5_000;
+
+/// Members entering and leaving, as anchor ids.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct MembershipChange {
+    pub enter: Vec<Uuid>,
+    pub leave: Vec<Uuid>,
+}
+
+impl MembershipChange {
+    /// How many members move.
+    pub fn len(&self) -> usize {
+        self.enter.len() + self.leave.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.enter.is_empty() && self.leave.is_empty()
+    }
+}
+
+/// What makes `ids` right: those that match and are not members enter,
+/// those that are members and no longer match leave. Pure.
+pub fn membership_change(
+    ids: &[Uuid],
+    matching: &std::collections::HashSet<Uuid>,
+    members: &std::collections::HashSet<Uuid>,
+) -> MembershipChange {
+    let mut seen = std::collections::HashSet::new();
+    let mut change = MembershipChange::default();
+    for id in ids.iter().filter(|id| seen.insert(**id)) {
+        match (matching.contains(id), members.contains(id)) {
+            (true, false) => change.enter.push(*id),
+            (false, true) => change.leave.push(*id),
+            _ => {}
+        }
+    }
+    change
+}
+
+/// How [`reconcile`] ended.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Reconciled {
+    /// The change was applied (possibly empty).
+    Applied(MembershipChange),
+    /// The change was larger than the limit and nothing was written.
+    Surge(usize),
+}
+
+/// Re-checks the anchors `ids` against stored `def` and makes its
+/// membership right, in one transaction: members entering and leaving, and
+/// a history row each with `reason`. With `limit`, a change moving more
+/// members than it writes nothing and answers [`Reconciled::Surge`]. An id
+/// that is not a live anchor matching the condition is not a member.
+pub async fn reconcile(
+    db: &DbPool,
+    def: &DerivedEntity,
+    anchor: &EntityMeta,
+    ids: &[Uuid],
+    reason: &str,
+    limit: Option<usize>,
+) -> Result<Reconciled, AppError> {
+    if def.mode != DerivedMode::Stored || ids.is_empty() {
+        return Ok(Reconciled::Applied(MembershipChange::default()));
+    }
+    let condition = predicate(def, anchor, "a")?;
+    let live = live_row_predicate("a", anchor.is_append_only).unwrap_or_else(|| "TRUE".into());
+    let table = quote_ident(&def.membership_name());
+    let mut tx = attome_db::tx::begin(db).await?;
+    // The membership rows of these anchors, locked so two ticks cannot
+    // decide on the same member at once.
+    let members: std::collections::HashSet<Uuid> = sqlx::query_scalar(&format!(
+        "SELECT anchor_id FROM {table} WHERE anchor_id = ANY($1) FOR UPDATE"
+    ))
+    .bind(ids)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(AppError::internal)?
+    .into_iter()
+    .collect();
+    let matching: std::collections::HashSet<Uuid> = sqlx::query_scalar(&format!(
+        "SELECT a.\"id\" FROM {} a WHERE a.\"id\" = ANY($1) AND {live} AND {condition}",
+        quote_ident(&anchor.logicalname)
+    ))
+    .bind(ids)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(AppError::internal)?
+    .into_iter()
+    .collect();
+    let change = membership_change(ids, &matching, &members);
+    if let Some(limit) = limit
+        && change.len() > limit
+    {
+        return Ok(Reconciled::Surge(change.len()));
+    }
+    if !change.enter.is_empty() {
+        sqlx::query(&format!(
+            "INSERT INTO {table} (anchor_id, reason) SELECT unnest($1::uuid[]), $2 \
+             ON CONFLICT (anchor_id) DO NOTHING"
+        ))
+        .bind(&change.enter)
+        .bind(reason)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    }
+    if !change.leave.is_empty() {
+        sqlx::query(&format!("DELETE FROM {table} WHERE anchor_id = ANY($1)"))
+            .bind(&change.leave)
+            .execute(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+    }
+    for (kind, list) in [("enter", &change.enter), ("leave", &change.leave)] {
+        if list.is_empty() {
+            continue;
+        }
+        sqlx::query(
+            "INSERT INTO derived_entity_history (name, anchor_id, change, reason) \
+             SELECT $1, unnest($2::uuid[]), $3, $4",
+        )
+        .bind(&def.name)
+        .bind(list)
+        .bind(kind)
+        .bind(reason)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    }
+    attome_db::tx::commit(tx).await?;
+    Ok(Reconciled::Applied(change))
+}
+
+/// The names of the paused definitions.
+pub async fn paused(db: &DbPool) -> Result<std::collections::HashSet<String>, AppError> {
+    Ok(
+        sqlx::query_scalar("SELECT name FROM derived_entity WHERE paused_at IS NOT NULL")
+            .fetch_all(db)
+            .await
+            .map_err(AppError::internal)?
+            .into_iter()
+            .collect(),
+    )
+}
+
+/// Pauses `name` (the surge guard) and holds `ids` for when it resumes.
+/// `true` when this paused it (it was running).
+pub async fn pause(db: &DbPool, name: &str, ids: &[Uuid], reason: &str) -> Result<bool, AppError> {
+    let mut tx = attome_db::tx::begin(db).await?;
+    let paused = sqlx::query(
+        "UPDATE derived_entity SET paused_at = now(), pause_reason = $2 \
+          WHERE name = $1 AND paused_at IS NULL",
+    )
+    .bind(name)
+    .bind(reason)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?
+    .rows_affected()
+        == 1;
+    hold_in(&mut tx, name, ids).await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(paused)
+}
+
+/// Holds `ids` of paused `name` for when it resumes.
+pub async fn hold(db: &DbPool, name: &str, ids: &[Uuid]) -> Result<(), AppError> {
+    let mut tx = attome_db::tx::begin(db).await?;
+    hold_in(&mut tx, name, ids).await?;
+    attome_db::tx::commit(tx).await
+}
+
+async fn hold_in(tx: &mut attome_db::Tx<'_>, name: &str, ids: &[Uuid]) -> Result<(), AppError> {
+    if ids.is_empty() {
+        return Ok(());
+    }
+    sqlx::query(
+        "INSERT INTO derived_entity_pending (name, anchor_id) SELECT $1, unnest($2::uuid[]) \
+         ON CONFLICT DO NOTHING",
+    )
+    .bind(name)
+    .bind(ids)
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
+}
+
+/// Resumes paused `def`: applies every held change, [`RESUME_CHUNK`]
+/// anchors at a time with no surge limit (an administrator approved it),
+/// then clears the pause. `None` when it was not paused.
+pub async fn resume(
+    db: &DbPool,
+    def: &DerivedEntity,
+    anchor: &EntityMeta,
+) -> Result<Option<MembershipChange>, AppError> {
+    let was_paused: Option<bool> =
+        sqlx::query_scalar("SELECT paused_at IS NOT NULL FROM derived_entity WHERE name = $1")
+            .bind(&def.name)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?;
+    if was_paused != Some(true) {
+        return Ok(None);
+    }
+    let mut total = MembershipChange::default();
+    loop {
+        let ids: Vec<Uuid> = sqlx::query_scalar(
+            "SELECT anchor_id FROM derived_entity_pending WHERE name = $1 \
+              ORDER BY anchor_id LIMIT $2",
+        )
+        .bind(&def.name)
+        .bind(RESUME_CHUNK as i64)
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?;
+        if ids.is_empty() {
+            break;
+        }
+        if let Reconciled::Applied(change) =
+            reconcile(db, def, anchor, &ids, "resumed after a surge", None).await?
+        {
+            total.enter.extend(change.enter);
+            total.leave.extend(change.leave);
+        }
+        sqlx::query("DELETE FROM derived_entity_pending WHERE name = $1 AND anchor_id = ANY($2)")
+            .bind(&def.name)
+            .bind(&ids)
+            .execute(db)
+            .await
+            .map_err(AppError::internal)?;
+    }
+    sqlx::query("UPDATE derived_entity SET paused_at = NULL, pause_reason = NULL WHERE name = $1")
+        .bind(&def.name)
+        .execute(db)
+        .await
+        .map_err(AppError::internal)?;
+    Ok(Some(total))
 }
 
 #[cfg(test)]
@@ -426,6 +677,22 @@ mod derived_entity_tests {
             members_predicate(&stored, &deal(), "t").unwrap(),
             "t.\"id\" IN (SELECT anchor_id FROM \"xrm_dm_big_open_deal\")"
         );
+    }
+
+    #[test]
+    fn derived_incremental_enter_and_leave() {
+        let ids: Vec<Uuid> = (0..4).map(|_| Uuid::now_v7()).collect();
+        // 0 matches and is new, 1 matches and is a member, 2 no longer
+        // matches, 3 neither.
+        let matching = [ids[0], ids[1]].into_iter().collect();
+        let members = [ids[1], ids[2]].into_iter().collect();
+        let mut repeated = ids.clone();
+        repeated.push(ids[0]);
+        let change = membership_change(&repeated, &matching, &members);
+        assert_eq!(change.enter, vec![ids[0]]);
+        assert_eq!(change.leave, vec![ids[2]]);
+        assert_eq!(change.len(), 2);
+        assert!(membership_change(&[], &matching, &members).is_empty());
     }
 
     #[test]

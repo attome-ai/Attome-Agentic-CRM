@@ -600,7 +600,7 @@ pub async fn run_export(state: &EngineState, id: Uuid) -> Result<&'static str, A
 
 /// Every active user who holds `system.admin`, directly, through a role or
 /// through a team's role.
-async fn administrators(state: &EngineState) -> Result<Vec<Uuid>, AppError> {
+pub(crate) async fn administrators(state: &EngineState) -> Result<Vec<Uuid>, AppError> {
     sqlx::query_scalar(
         "SELECT DISTINCT u.id FROM user_account u \
           WHERE COALESCE(u.is_active, true) AND u.id IN ( \

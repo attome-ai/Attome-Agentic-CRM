@@ -753,6 +753,8 @@ const INTERNAL_PREFIXES: &[&str] = &[
     "attome-state/",
     // P13-T1: the warehouse export.
     "attome-integration/",
+    // A26-T2: stored derived entity membership.
+    "attome-metadata/",
 ];
 
 /// L7-T1: the lag a new cursor for `consumer` allows.

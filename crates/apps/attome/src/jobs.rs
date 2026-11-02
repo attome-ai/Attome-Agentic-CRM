@@ -3363,6 +3363,8 @@ const DEDUP_KEY_LEAD_ASSIGNMENT: &str = "lead-assignment";
 /// cache (a registered job type).
 const DEDUP_KEY_AGGREGATE_CACHE_MARKS: &str = "aggregate-cache-marks";
 const DEDUP_KEY_ROLLUP_FAST: &str = "rollup-fast";
+/// A26-T2: stored derived entity membership from the change feed.
+const DEDUP_KEY_DERIVED_MAINTAIN: &str = "derived-maintain";
 const DEDUP_KEY_ROLLUP_HEAL: &str = "rollup-heal";
 /// Q4-T2: the nightly directory sync (a registered job type).
 const DEDUP_KEY_LDAP_SYNC: &str = "ldap-sync";
@@ -3821,6 +3823,10 @@ pub const AGGREGATE_CACHE_MARKS: attome_jobs::JobType =
 /// A10-T2: fast rollups recomputed from the change feed.
 pub const ROLLUP_FAST: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_records::rollup_fast::JOB, 1);
+
+/// A26-T2: stored derived entity membership kept from the change feed.
+pub const DERIVED_MAINTAIN: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_api::derived_maintain::JOB, 1);
 
 /// A10-T4: a rollup filled for its parents, a batch per run.
 pub const ROLLUP_BACKFILL: attome_jobs::JobType =
@@ -5733,6 +5739,20 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            DERIVED_MAINTAIN,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let read = attome_api::derived_maintain::tick(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if read > 0 {
+                    tracing::debug!(read, "derived entity maintenance read change events");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             AGGREGATE_CACHE_MARKS,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 let marked = attome_search::aggregate_cache::mark_changes(&state)
@@ -6935,6 +6955,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
             DEDUP_KEY_AGGREGATE_CACHE_MARKS
         }
         EngineJob::Registered(job) if job.name == ROLLUP_FAST.name => DEDUP_KEY_ROLLUP_FAST,
+        EngineJob::Registered(job) if job.name == DERIVED_MAINTAIN.name => {
+            DEDUP_KEY_DERIVED_MAINTAIN
+        }
         EngineJob::Registered(job) if job.name == ROLLUP_HEAL.name => DEDUP_KEY_ROLLUP_HEAL,
         EngineJob::Registered(job) if job.name == LDAP_SYNC.name => DEDUP_KEY_LDAP_SYNC,
         EngineJob::Registered(job) if job.name == LEAD_FIRST_TOUCH.name => {
@@ -8518,6 +8541,22 @@ pub fn spawn_rollup_fast_scheduler(db: DbPool, interval: std::time::Duration) {
             "rollup fast mode",
         ),
         Err(error) => tracing::error!(%error, "rollup fast mode: not scheduled"),
+    }
+}
+
+/// A26-T2: every few seconds, stored derived entities kept current from the
+/// change feed.
+pub fn spawn_derived_maintain_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(DERIVED_MAINTAIN.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_DERIVED_MAINTAIN,
+            "derived entity maintenance",
+        ),
+        Err(error) => tracing::error!(%error, "derived entity maintenance: not scheduled"),
     }
 }
 
