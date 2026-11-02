@@ -2,7 +2,7 @@
   "format": "attome-pack/v1",
   "name": "billing",
   "title": "Billing",
-  "version": "1.25.0",
+  "version": "1.26.0",
   "level": "standard",
   "depends": [
     "contract-management",

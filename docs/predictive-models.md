@@ -31,7 +31,8 @@ target reads `def:<target>`.
 | Field | Meaning |
 |---|---|
 | `target` | A yes/no attribute, or a choice with `positive` and `negative` values. With values, a row with any other value is open: it is not trained on and it is the row that is scored. |
-| `features` | `{ "attribute" }`, `{ "path": "account.industry" }` or `{ "time", "part" }` (`day_of_week`, `month`, `hour`, `age_days`). Rollups are refused at training for now. |
+| `features` | `{ "attribute" }`, `{ "path": "account.industry" }`, `{ "time", "part" }` (`day_of_week`, `month`, `hour`, `age_days`) or `{ "rollup": "<child entity>", "via": "<its lookup>", "func": "count|sum|avg|min|max", "field", "alias" }` (the children of each row, counted or summed, read as the model's creator). |
+| `score` | Optional: the target values whose rows are scored. Without it, the open rows (neither positive nor negative) are scored when there are yes and no values, else every row. |
 | `min_rows` | Labelled rows needed before a model trains (default 200, never below 50). |
 | `score_attribute` | Optional number attribute of the entity that receives the score from 0 to 100. |
 
@@ -58,3 +59,15 @@ its score moved.
 0 when wrong): for a choice target with yes and no values once the record
 closes either way, for a yes/no target once the prediction's 30-day horizon
 has passed.
+
+## Templates
+
+- **Lead conversion** (`attome_predict::generic::lead_conversion`, D18-T2): above.
+- **Subscription churn** (`attome_predict::generic::subscription_churn`, O3-T1): on the billing pack's
+  `subscription`, cancelled against active or paused; scores active, trial and paused subscriptions into
+  `subscription.churn_risk` (0 to 100). Features: billing frequency, renewal mode, term, age, the number
+  of lines and of charges, and the customer's size, payment terms and credit hold. The billing pack's
+  **Renewal risk** view lists the scored subscriptions, highest risk first. Case volume, satisfaction,
+  usage and engagement join as features once those records link to the subscription or the account
+  through a lookup a rollup can follow.
+

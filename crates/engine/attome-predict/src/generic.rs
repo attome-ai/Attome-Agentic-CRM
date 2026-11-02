@@ -16,8 +16,9 @@
 //! `negative` values for a choice, else [`label_of`]). A fifth of the rows is held out;
 //! the inputs are standardized by the training rows' means and spreads, and
 //! the model is kept only when it beats the majority class there, as the
-//! ticket model is. Only `logistic_regression` trains here; rollup features
-//! are not trained yet: such a definition fails with that reason.
+//! ticket model is. Only `logistic_regression` trains here. A rollup feature
+//! is the child entity aggregated per row through its lookup (500 rows at a
+//! time, read as the creator).
 //!
 //! **Score** ([`score`], O1-T3): every row the creator can read gets a
 //! `prediction` (`regarding_entity`, `regarding_id`, the probability, a
@@ -83,6 +84,69 @@ pub fn label(def: &ModelDef, value: &Value) -> Option<i32> {
     }
 }
 
+/// Whether a row whose target is `value` is scored: one of `def.score`
+/// when it names values; else, with yes and no values, an open row (a
+/// closed one is history, not a row to predict); else every row. Pure.
+pub fn scored_row(def: &ModelDef, value: &Value) -> bool {
+    if !def.score.is_empty() {
+        return value
+            .as_str()
+            .is_some_and(|v| def.score.iter().any(|s| s == v));
+    }
+    def.positive.is_empty() || label(def, value).is_none()
+}
+
+/// O3-T1: subscription churn. Cancelled subscriptions against those still
+/// active or paused; the active, trial and paused ones are scored, and the
+/// score (0 to 100) lands on `subscription.churn_risk` for the billing
+/// pack's Renewal risk view. The features are what the platform holds about
+/// a subscription and its customer: how it bills and renews, its term and
+/// age, how many lines it has and how often it was charged, and the
+/// customer's size, payment terms and credit hold. Trains
+/// once 200 subscriptions are labelled.
+pub fn subscription_churn() -> ModelDef {
+    let attribute = |a: &str| Feature::Attribute {
+        attribute: a.to_owned(),
+    };
+    let path = |p: &str| Feature::Path { path: p.to_owned() };
+    ModelDef {
+        entity: "subscription".to_owned(),
+        target: "status".to_owned(),
+        features: vec![
+            attribute("billing_frequency"),
+            attribute("renewal_mode"),
+            attribute("term_months"),
+            Feature::Time {
+                time: "start_date".to_owned(),
+                part: crate::model_def::TimePart::AgeDays,
+            },
+            Feature::Rollup {
+                rollup: "subscription_line".to_owned(),
+                via: "subscription_ref".to_owned(),
+                func: crate::model_def::RollupFunc::Count,
+                field: None,
+                alias: "lines".to_owned(),
+            },
+            Feature::Rollup {
+                rollup: "subscription_charge".to_owned(),
+                via: "subscription_ref".to_owned(),
+                func: crate::model_def::RollupFunc::Count,
+                field: None,
+                alias: "charges".to_owned(),
+            },
+            path("account_ref.employee_band"),
+            path("account_ref.payment_terms_days"),
+            path("account_ref.credit_hold"),
+        ],
+        algorithm: crate::model_def::Algorithm::LogisticRegression,
+        min_rows: Some(200),
+        score_attribute: Some("churn_risk".to_owned()),
+        positive: vec!["cancelled".to_owned()],
+        negative: vec!["active".to_owned(), "paused".to_owned()],
+        score: vec!["active".to_owned(), "trial".to_owned(), "paused".to_owned()],
+    }
+}
+
 /// D18-T2: lead conversion, from the leads converted or disqualified
 /// before. Trains only once 500 leads have closed either way; the open
 /// leads are scored, each with its top factors.
@@ -109,6 +173,7 @@ pub fn lead_conversion() -> ModelDef {
         score_attribute: None,
         positive: vec!["converted".to_owned()],
         negative: vec!["disqualified".to_owned()],
+        score: Vec::new(),
     }
 }
 
@@ -178,7 +243,7 @@ impl Encoder {
                         encoder.categories.insert(col.to_owned(), cats);
                     }
                 }
-                Feature::Rollup { .. } => {}
+                Feature::Rollup { alias, .. } => encoder.names.push(alias.clone()),
             }
         }
         encoder
@@ -211,7 +276,9 @@ impl Encoder {
                         None => out.push(row.get(col).and_then(number).unwrap_or(0.0)),
                     }
                 }
-                Feature::Rollup { .. } => {}
+                Feature::Rollup { alias, .. } => {
+                    out.push(row.get(alias).and_then(number).unwrap_or(0.0));
+                }
             }
         }
         out
@@ -292,7 +359,67 @@ async fn read_rows(
         }
     }
     rows.truncate(MAX_ROWS);
+    attach_rollups(state, ctx, def, &mut rows).await?;
     Ok(rows)
+}
+
+/// Rows a rollup aggregates over at once (the aggregate answer's group cap
+/// is 1,000).
+const ROLLUP_CHUNK: usize = 500;
+
+/// Puts each rollup feature's value on `rows` under its alias: the child
+/// entity grouped by its lookup to these rows, read as `ctx` (so a child
+/// the creator cannot read does not count), 0 for a row with no children.
+async fn attach_rollups(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    def: &ModelDef,
+    rows: &mut [Map<String, Value>],
+) -> Result<(), AppError> {
+    for (alias, spec) in crate::model_def::rollup_specs(def) {
+        let Some(via) = def.features.iter().find_map(|f| match f {
+            Feature::Rollup { via, alias: a, .. } if *a == alias => Some(via.clone()),
+            _ => None,
+        }) else {
+            continue;
+        };
+        for chunk in rows.chunks_mut(ROLLUP_CHUNK) {
+            let ids: Vec<Value> = chunk
+                .iter()
+                .filter_map(|row| row.get("id").cloned())
+                .collect();
+            let mut spec = spec.clone();
+            spec.r#where = Some(attome_records::query_spec::Condition::Compare {
+                field: via.clone(),
+                op: "in".to_owned(),
+                value: Some(Value::Array(ids)),
+            });
+            let answer = attome_records::query_spec::routes::execute_spec(state, ctx, spec).await?;
+            let attome_records::query_spec::routes::RunResponse::Aggregate(result) = answer else {
+                return Err(AppError::internal("a rollup read did not answer groups"));
+            };
+            let by_parent: HashMap<String, Value> = result
+                .groups
+                .into_iter()
+                .filter_map(|group| {
+                    let key = group.keys.get(&via)?.as_str()?.to_owned();
+                    Some((
+                        key,
+                        group.values.get(&alias).cloned().unwrap_or(Value::Null),
+                    ))
+                })
+                .collect();
+            for row in chunk.iter_mut() {
+                let value = row
+                    .get("id")
+                    .and_then(Value::as_str)
+                    .and_then(|id| by_parent.get(id).cloned())
+                    .unwrap_or(json!(0));
+                row.insert(alias.clone(), value);
+            }
+        }
+    }
+    Ok(())
 }
 
 type ModelRow = (Option<Value>, Option<Uuid>, i32);
@@ -366,20 +493,6 @@ pub async fn train(state: &EngineState, model: Uuid) -> Result<(), AppError> {
             model,
             "failed_holdout",
             json!({ "error": "only logistic_regression is trained yet" }),
-            None,
-        )
-        .await;
-    }
-    if def
-        .features
-        .iter()
-        .any(|f| matches!(f, Feature::Rollup { .. }))
-    {
-        return finish(
-            state,
-            model,
-            "failed_holdout",
-            json!({ "error": "rollup features are not trained yet" }),
             None,
         )
         .await;
@@ -548,9 +661,7 @@ async fn score_rows(
         else {
             continue;
         };
-        // With yes and no values, a row that has closed is history, not a
-        // row to predict.
-        if !def.positive.is_empty() && row.get(&def.target).and_then(|v| label(&def, v)).is_some() {
+        if !scored_row(&def, row.get(&def.target).unwrap_or(&Value::Null)) {
             continue;
         }
         let inputs = standardize(
@@ -802,6 +913,34 @@ mod tests {
         assert_eq!(label(&leads, &json!("converted")), Some(1));
         assert_eq!(label(&leads, &json!("disqualified")), Some(0));
         assert_eq!(label(&leads, &json!("qualified")), None, "still open");
+        assert!(scored_row(&leads, &json!("qualified")));
+        assert!(!scored_row(&leads, &json!("converted")));
+        let churn = subscription_churn();
+        assert_eq!(
+            label(&churn, &json!("active")),
+            Some(0),
+            "trained as not churned"
+        );
+        assert!(scored_row(&churn, &json!("active")), "and scored");
+        assert!(!scored_row(&churn, &json!("cancelled")));
+    }
+
+    #[test]
+    fn rollup_features_are_inputs() {
+        let def: ModelDef = serde_json::from_value(json!({
+            "entity": "account", "target": "is_customer", "algorithm": "logistic_regression",
+            "features": [{ "rollup": "case", "via": "account_ref", "func": "count", "alias": "cases" }]
+        }))
+        .unwrap();
+        let rows = vec![
+            json!({ "id": "a", "cases": 3 })
+                .as_object()
+                .unwrap()
+                .clone(),
+        ];
+        let encoder = Encoder::fit(&def, &rows);
+        assert_eq!(encoder.names, ["cases"]);
+        assert_eq!(encoder.encode(&def, &rows[0]), vec![3.0]);
     }
 
     #[test]

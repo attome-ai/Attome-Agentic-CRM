@@ -107,6 +107,11 @@ pub struct ModelDef {
     pub positive: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub negative: Vec<String>,
+    /// O3-T1: the target values whose rows are scored. Empty: the open rows
+    /// (neither positive nor negative) when there are yes and no values,
+    /// else every row.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub score: Vec<String>,
 }
 
 impl ModelDef {

@@ -291,3 +291,111 @@ fn lead_conversion_waits_for_history() {
         );
     });
 }
+
+// feature: O3
+#[test]
+fn subscription_churn_scores_renewal_risk() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        for pack in [
+            "crm",
+            "sales",
+            "finance",
+            "regions",
+            "vendor-supplier",
+            "contract-management",
+            "billing",
+        ] {
+            let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../../packs")
+                .join(pack)
+                .join("changesets");
+            let mut files: Vec<_> = std::fs::read_dir(&dir)
+                .unwrap()
+                .flatten()
+                .map(|e| e.path())
+                .collect();
+            files.sort();
+            for file in &files {
+                let value: Value =
+                    serde_json::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
+                attome_api::changeset::boot::apply_pack_document(&app.state, &value)
+                    .await
+                    .unwrap_or_else(|e| panic!("{}: {e}", file.display()));
+            }
+        }
+        let admin = app.admin.id;
+        let account: uuid::Uuid = sqlx::query_scalar(
+            "INSERT INTO account (name, owner_ref) VALUES ('Churn Co', $1) RETURNING id",
+        )
+        .bind(admin)
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        for i in 0..240_u32 {
+            let leaves = i % 2 == 0;
+            let status = match (leaves, i >= 230) {
+                (true, _) => "cancelled",
+                (false, true) => "trial",
+                (false, false) => "active",
+            };
+            sqlx::query(
+                "INSERT INTO subscription (name, account_ref, currency, status, start_date, \
+                     billing_frequency, renewal_mode, owner_ref) \
+                 VALUES ($1, $2, 'SAR', $3, now() - interval '200 days', $4, $5, $6)",
+            )
+            .bind(format!("Sub {i}"))
+            .bind(account)
+            .bind(status)
+            .bind(if leaves { "monthly" } else { "yearly" })
+            .bind(if leaves { "manual" } else { "auto" })
+            .bind(admin)
+            .execute(app.db())
+            .await
+            .unwrap();
+        }
+
+        let model = attome_predict::train::create_and_enqueue(
+            &app.state,
+            "Subscription churn",
+            "",
+            "",
+            Some(&attome_predict::generic::subscription_churn()),
+            admin,
+        )
+        .await
+        .unwrap();
+        attome_predict::generic::run(&app.state, model)
+            .await
+            .unwrap();
+        let (status, metrics): (String, Option<Value>) =
+            sqlx::query_as("SELECT status, metrics FROM prediction_model WHERE id = $1")
+                .bind(model)
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        assert_eq!(status, "active", "{metrics:?}");
+
+        let scored = attome_predict::generic::score(&app.state, model)
+            .await
+            .unwrap();
+        assert_eq!(
+            scored, 120,
+            "the active and trial subscriptions, not the cancelled"
+        );
+        let (risky, safe): (Option<f64>, Option<f64>) = sqlx::query_as(
+            "SELECT (SELECT churn_risk::float8 FROM subscription WHERE name = 'Sub 231'), \
+                    (SELECT churn_risk::float8 FROM subscription WHERE name = 'Sub 1')",
+        )
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        assert!(risky.is_some() && safe.is_some(), "{risky:?} {safe:?}");
+        assert!(
+            safe.unwrap() < 50.0,
+            "a yearly auto-renewing subscription is not at risk: {safe:?}"
+        );
+    });
+}

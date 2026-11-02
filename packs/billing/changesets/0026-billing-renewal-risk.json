@@ -1,0 +1,95 @@
+{
+  "author": "packs",
+  "checksum": "sha256:134e719db000a976ba1856fad98dfb638360bd4b11545658204ccf3ae6d99d8f",
+  "closed_at": "2026-11-02T00:00:00Z",
+  "description": "Renewal risk (O3-T1): subscription.churn_risk holds the subscription churn model's score from 0 to 100, and the Renewal risk view lists active, trial and paused subscriptions by it, highest first.",
+  "format": "attome-changeset/v1",
+  "id": "01a19c40-0000-7f03-8000-000000000026",
+  "layer": "product",
+  "name": "billing-renewal-risk",
+  "opened_at": "2026-11-02T00:00:00Z",
+  "requires": {
+    "modules": [
+      "billing",
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 26,
+  "title": "Pack: renewal risk",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Churn risk",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "churn_risk",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "subscription",
+        "field": "churn_risk"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "subscription",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Renewal risk",
+          "required_privilege": "subscription.read",
+          "sql": "SELECT id, name, account_ref, status, churn_risk, end_date, renewal_mode, billing_frequency FROM \"subscription\" WHERE is_active IS NOT FALSE AND status IN ('active', 'trial', 'paused') AND churn_risk IS NOT NULL ORDER BY churn_risk DESC, end_date",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "subscription",
+        "query": "Renewal risk"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "subscription",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Renewal risk",
+          "query": {
+            "entity": "subscription",
+            "name": "Renewal risk"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "subscription",
+        "view": "Renewal risk"
+      }
+    }
+  ]
+}
