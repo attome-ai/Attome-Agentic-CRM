@@ -14,6 +14,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- A marketing form can ask for sales (`intent` = `contact_sales`, marketing pack 0018): submitting it hands a
+  nurtured person to sales at once (E9-T5).
 - Marketing nurture is documented in `docs/marketing-nurture.md` (E9-T13).
 - Agent tools `nurture.suggest_content`, `nurture.draft_summary` and `nurture.find_stalls` (E9-T10), for
   programmes with `agent_suggestions_enabled`; read-only.

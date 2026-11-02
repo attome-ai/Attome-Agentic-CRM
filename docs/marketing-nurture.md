@@ -53,6 +53,8 @@ When a nurtured person's score rises to it they are handed off once (a score tha
 hand them off again; falling below and rising again does): the hand-off records the score and the
 content they saw most recently, their `lifecycle_stage` becomes `sales_qualified`, a lead is assigned
 by the lead assignment rules, the hand-off is due after the SLA hours, and the owner is notified.
+A form whose `intent` is `contact_sales` hands a nurtured person off as soon as they submit it
+(once per submission), with a meeting as the suggested next step.
 
 On a lead's or contact's form, the **Nurture** tab shows the pending hand-off with Accept and Return
 (a reason and a wake-up date), then the person's programmes, the content they saw and their past

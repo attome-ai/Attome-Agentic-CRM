@@ -1,0 +1,68 @@
+{
+  "author": "packs",
+  "checksum": "sha256:70b59555658a6f34790e30484d81a37c37df218a9dcf13fd7f554151ffd9eaff",
+  "closed_at": "2026-11-02T00:00:00Z",
+  "description": "Form intent (E9-T5): a form whose intent is contact_sales hands a nurtured person to sales as soon as they submit it.",
+  "format": "attome-changeset/v1",
+  "id": "01a19c40-0000-7e95-8000-000000000018",
+  "layer": "product",
+  "name": "marketing-form-intent",
+  "opened_at": "2026-11-02T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Intent",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "intent",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "none",
+              "contact_sales"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "marketing_form",
+        "field": "intent"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الغرض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_form.intent",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "marketing",
+  "seq": 18,
+  "title": "Pack: form intent"
+}

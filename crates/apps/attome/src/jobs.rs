@@ -7573,7 +7573,10 @@ async fn nurture_tick(state: &EngineState) -> Result<(), attome_types::AppError>
     }
     // E9-T5: people whose score reached their programme's hand-off score go
     // to sales; a lead is assigned (D4) before its owner is read.
-    for handoff in attome_marketing::nurture_handoff::detect(state).await? {
+    // A `contact_sales` form submission hands off at once.
+    let mut handoffs = attome_marketing::nurture_handoff::detect(state).await?;
+    handoffs.extend(attome_marketing::nurture_handoff::form_requests(state).await?);
+    for handoff in handoffs {
         if handoff.entity == "lead"
             && let Err(error) =
                 attome_workflow::lead_assignment::assign_lead(state, handoff.person).await

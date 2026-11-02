@@ -89,9 +89,8 @@ pub async fn detect(state: &EngineState) -> Result<Vec<NewHandoff>, AppError> {
         match crossing(score, threshold, above) {
             Some(true) => {
                 let entity = entity.unwrap_or_else(|| "contact".to_owned());
-                if let Some(id) =
-                    hand_off(state, program, person, &entity, score, threshold).await?
-                {
+                let why = Crossing::Score { score, threshold };
+                if let Some(id) = hand_off(state, program, person, &entity, why).await? {
                     made.push(NewHandoff {
                         id,
                         program,
@@ -132,6 +131,66 @@ pub fn summary(score: f64, threshold: f64, seen: &[(String, String)]) -> Value {
     })
 }
 
+/// Why a person is handed off.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Crossing {
+    /// Their score rose to the programme's hand-off score.
+    Score { score: f64, threshold: f64 },
+    /// They submitted a form whose intent is `contact_sales`; the
+    /// submission's id is the crossing's.
+    ContactSales { submission: Uuid },
+}
+
+/// People in a programme who asked for sales: each `contact_sales` form
+/// submission of the last day by a person with an active nurture state is
+/// handed off at once, the submission's id as the crossing id, so each
+/// submission hands off once. The hand-offs made.
+pub async fn form_requests(state: &EngineState) -> Result<Vec<NewHandoff>, AppError> {
+    let db = &state.base.db;
+    let installed: bool = sqlx::query_scalar(
+        "SELECT to_regclass('marketing_form_submission') IS NOT NULL \
+            AND to_regclass('marketing_nurture_program') IS NOT NULL",
+    )
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)?;
+    if !installed {
+        return Ok(Vec::new());
+    }
+    type Request = (Uuid, Uuid, Uuid, Option<String>, Option<f64>);
+    let requests: Vec<Request> = sqlx::query_as(
+        "SELECT sub.id, s.program_id, s.person_id, s.person_entity, p.sla_business_hours::float8 \
+           FROM marketing_form_submission sub \
+           JOIN marketing_form f ON f.id = sub.form_ref AND f.intent = 'contact_sales' \
+           JOIN marketing_nurture_state s ON s.person_id::text = sub.person_id \
+                                         AND s.status = 'active' \
+           JOIN marketing_nurture_program p ON p.id = s.program_id \
+          WHERE sub.created_at > now() - interval '1 day' \
+            AND NOT EXISTS (SELECT 1 FROM marketing_handoff h \
+                             WHERE h.crossing_event_id = sub.id) \
+          ORDER BY sub.created_at LIMIT $1",
+    )
+    .bind(BATCH)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut made = Vec::new();
+    for (submission, program, person, entity, sla_hours) in requests {
+        let entity = entity.unwrap_or_else(|| "contact".to_owned());
+        let why = Crossing::ContactSales { submission };
+        if let Some(id) = hand_off(state, program, person, &entity, why).await? {
+            made.push(NewHandoff {
+                id,
+                program,
+                person,
+                entity,
+                sla_hours,
+            });
+        }
+    }
+    Ok(made)
+}
+
 /// The crossing's hand-off, in one transaction; `None` when the state had
 /// already moved on (another pass handed it off).
 async fn hand_off(
@@ -139,8 +198,7 @@ async fn hand_off(
     program: Uuid,
     person: Uuid,
     entity: &str,
-    score: f64,
-    threshold: f64,
+    why: Crossing,
 ) -> Result<Option<Uuid>, AppError> {
     let db = &state.base.db;
     let seen: Vec<(String, String)> = sqlx::query_as(
@@ -167,18 +225,44 @@ async fn hand_off(
         attome_db::tx::commit(tx).await?;
         return Ok(None);
     }
-    let id: Uuid = sqlx::query_scalar(
+    let (crossing_id, score, body, comment) = match why {
+        Crossing::Score { score, threshold } => (
+            None,
+            Some(score),
+            summary(score, threshold, &seen),
+            format!("score {score} reached the hand-off score {threshold}"),
+        ),
+        Crossing::ContactSales { submission } => {
+            let mut body = summary(0.0, 0.0, &seen);
+            body["reason"] = json!("contact_sales");
+            body["next_step"] = json!("meeting");
+            (
+                Some(submission),
+                None,
+                body,
+                format!("asked for sales on form submission {submission}"),
+            )
+        }
+    };
+    let id: Option<Uuid> = sqlx::query_scalar(
         "INSERT INTO marketing_handoff \
             (program_id, person_id, crossing_event_id, score, summary, status) \
-         VALUES ($1, $2, uuidv7(), $3, $4, 'pending') RETURNING id",
+         VALUES ($1, $2, COALESCE($3, uuidv7()), $4, $5, 'pending') \
+         ON CONFLICT (crossing_event_id) DO NOTHING RETURNING id",
     )
     .bind(program)
     .bind(person)
+    .bind(crossing_id)
     .bind(score)
-    .bind(summary(score, threshold, &seen))
-    .fetch_one(&mut *tx)
+    .bind(body)
+    .fetch_optional(&mut *tx)
     .await
     .map_err(AppError::internal)?;
+    let Some(id) = id else {
+        // This crossing was handed off already: leave the state as it was.
+        tx.rollback().await.map_err(AppError::internal)?;
+        return Ok(None);
+    };
     attome_audit::write_business_event_in_tx(
         &mut tx,
         &attome_audit::audit_service(state),
@@ -189,9 +273,7 @@ async fn hand_off(
             "marketing.handed_to_sales",
             Uuid::nil(),
         )
-        .comment(format!(
-            "score {score} reached the hand-off score {threshold} (hand-off {id})"
-        )),
+        .comment(format!("{comment} (hand-off {id})")),
     )
     .await?;
     attome_db::tx::commit(tx).await?;
@@ -401,6 +483,22 @@ mod tests {
             "falling below re-arms"
         );
         assert_eq!(crossing(40.0, 50.0, false), None);
+    }
+
+    #[test]
+    fn a_form_crossing_is_named_by_its_submission() {
+        let submission = Uuid::now_v7();
+        assert_eq!(
+            Crossing::ContactSales { submission },
+            Crossing::ContactSales { submission }
+        );
+        assert_ne!(
+            Crossing::Score {
+                score: 1.0,
+                threshold: 1.0
+            },
+            Crossing::ContactSales { submission }
+        );
     }
 
     #[test]

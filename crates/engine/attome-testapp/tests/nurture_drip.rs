@@ -817,3 +817,52 @@ fn history_forbidden_without_read() {
         assert_eq!(body["person_id"], json!(person));
     });
 }
+
+// feature: E9
+#[test]
+fn contact_sales_form_hands_off_now() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let _serial = SERIAL.lock().await;
+        install(&app).await;
+        let definition = definition(&app).await;
+        let (program, _) = programme(&app, definition, &[]).await;
+        let person = person(&app).await;
+        enter(&app, person, program).await;
+        let form = create(
+            &app,
+            "marketing_form",
+            json!({ "name": "Talk to sales", "target_entity": "contact", "field_map": "{}",
+                    "is_published": true, "intent": "contact_sales" }),
+        )
+        .await;
+        let submission = create(
+            &app,
+            "marketing_form_submission",
+            json!({ "form_ref": form, "person_entity": "contact", "person_id": person.to_string() }),
+        )
+        .await;
+
+        let made = nurture_handoff::form_requests(&app.state).await.unwrap();
+        assert_eq!(made.iter().filter(|h| h.person == person).count(), 1);
+        let crossing: Uuid = sqlx::query_scalar(
+            "SELECT crossing_event_id FROM marketing_handoff WHERE program_id = $1 AND person_id = $2",
+        )
+        .bind(program)
+        .bind(person)
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        assert_eq!(crossing, submission, "the submission is the crossing");
+        assert!(
+            nurture_handoff::form_requests(&app.state)
+                .await
+                .unwrap()
+                .iter()
+                .all(|h| h.person != person),
+            "a submission hands off once"
+        );
+    });
+}
