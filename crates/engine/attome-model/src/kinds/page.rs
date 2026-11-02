@@ -725,7 +725,7 @@ mod tests {
     const VIEW: &str = "0190a8a0-0000-7000-8000-0000000000f1";
     const FLOW: &str = "0190a8a0-0000-7000-8000-0000000000f2";
     const LOOKUP: &str = "0190a8a0-0000-7000-8000-0000000000a1";
-    const GAUGE: &str = "0190a8a0-0000-7000-8000-0000000000c1";
+    const GAUGE_COMPONENT: &str = "0190a8a0-0000-7000-8000-0000000000c1";
 
     fn page() -> Value {
         json!({
@@ -752,7 +752,7 @@ mod tests {
                     {
                         "id": "parent",
                         "type": "custom",
-                        "component": GAUGE,
+                        "component": GAUGE_COMPONENT,
                         "binding": { "record": LOOKUP }
                     }
                 ]

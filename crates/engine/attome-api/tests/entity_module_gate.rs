@@ -335,6 +335,9 @@ fn production_map() -> EntityModuleMap {
         // G4-T1 and J10-T1: queue skills and the unified router's capacity.
         "queue_item_skill",
         "agent_channel_capacity",
+        // Case links and quality reviews.
+        "service_case_link",
+        "service_quality_review",
     ] {
         map.claim(entity, owner("attome-service", MODULE_SERVICE));
     }

@@ -304,8 +304,9 @@ mod entity_module_tests {
         // lists; `entity_module_gate.rs`'s
         // `the_real_engines_declare_exactly_these_entities` is what pins
         // those against each engine's own seed. G4-T1 and J10-T1 added
-        // `queue_item_skill` and `agent_channel_capacity` to the service model.
-        assert_eq!(map.len(), 41, "unexpected claimed-entity count");
+        // `queue_item_skill` and `agent_channel_capacity` to the service model,
+        // and G1-T1/G1-T4 `service_case_link` and `service_quality_review`.
+        assert_eq!(map.len(), 43, "unexpected claimed-entity count");
     }
 
     #[test]
