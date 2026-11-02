@@ -5,6 +5,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { provideAttomeBase } from './provide';
 import { AuthService } from './auth.service';
 
+/** The SDK sends, and answers, a promise turn later (Y9-T3). */
+const tick = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
 /**
  * NGB-6.1a — the session bootstrap D-129 requires, without the first-paint
  * stall it used to cause. The initializer may only *start* the one
@@ -41,25 +44,30 @@ describe('provideAttomeBase', () => {
     return initializers;
   }
 
-  it('starts the session bootstrap from an initializer without resolving it', () => {
+  it('starts the session bootstrap from an initializer without resolving it', async () => {
     runInitializers();
 
     // In flight — and no subscriber has been handed a session yet.
+    await tick();
     const request = httpMock.expectOne(SESSION_URL);
     expect(TestBed.inject(AuthService).isLoggedIn()).toBe(false);
 
     request.flush({ user_id: 'user-1', email: 'user@example.com' });
+    await tick();
 
     expect(TestBed.inject(AuthService).isLoggedIn()).toBe(true);
   });
 
-  it('shares the one round trip with a later subscriber', () => {
+  it('shares the one round trip with a later subscriber', async () => {
     runInitializers();
+    await tick();
     httpMock.expectOne(SESSION_URL).flush({ user_id: 'user-1', email: 'user@example.com' });
+    await tick();
 
     let observed: unknown = 'not-set';
     TestBed.inject(AuthService).sessionReady().subscribe(session => { observed = session; });
 
+    await tick();
     httpMock.expectNone(SESSION_URL);
     expect(observed).not.toBe('not-set');
   });

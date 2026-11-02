@@ -8,6 +8,9 @@ import { AuthService } from './auth.service';
 import { ATTOME_CONFIG } from './config';
 import type { ApiError } from './types';
 
+/** The SDK sends, and answers, a promise turn later (Y9-T3). */
+const tick = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
 describe('AuthService', () => {
   let httpMock: HttpTestingController;
   let navigateSpy: ReturnType<typeof vi.fn>;
@@ -38,27 +41,31 @@ describe('AuthService', () => {
 
   // ── sessionReady (non-blocking bootstrap; D-129's wait moved to authGuard) ─
 
-  it('sessionReady() issues exactly one GET /auth/session across many callers', () => {
+  it('sessionReady() issues exactly one GET /auth/session across many callers', async () => {
     const auth = setUp();
     auth.sessionReady().subscribe();
     auth.sessionReady().subscribe();
     // One request only — the app initializer and every guard share it.
+    await tick();
     httpMock
       .expectOne('http://localhost:7865/api/v1/auth/session')
       .flush({ user_id: 'user-boot', email: 'boot@example.com' });
+    await tick();
 
     let late: unknown = 'not-set';
     auth.sessionReady().subscribe(res => { late = res; });
     // A caller arriving after it resolved replays, rather than re-requesting.
+    await tick();
     httpMock.expectNone('http://localhost:7865/api/v1/auth/session');
     expect(late).toEqual({ userId: 'user-boot', loggedIn: true });
   });
 
-  it('sessionReady() does not emit until the server has answered', () => {
+  it('sessionReady() does not emit until the server has answered', async () => {
     const auth = setUp();
     let emitted = false;
     auth.sessionReady().subscribe(() => { emitted = true; });
 
+    await tick();
     const req = httpMock.expectOne('http://localhost:7865/api/v1/auth/session');
     // The guard must not be able to decide "logged out" on an in-flight
     // bootstrap — that is exactly the redirect-to-login bug a non-blocking
@@ -67,11 +74,12 @@ describe('AuthService', () => {
     expect(auth.isLoggedIn()).toBe(false);
 
     req.flush({ user_id: 'user-boot', email: 'boot@example.com' });
+    await tick();
     expect(emitted).toBe(true);
     expect(auth.isLoggedIn()).toBe(true);
   });
 
-  it('sessionReady() emits (logged out) rather than erroring when the backend is unreachable', () => {
+  it('sessionReady() emits (logged out) rather than erroring when the backend is unreachable', async () => {
     const auth = setUp();
     let resolved: unknown = 'not-set';
     let errored = false;
@@ -80,6 +88,7 @@ describe('AuthService', () => {
       error: () => { errored = true; },
     });
     // status 0 — connection refused, i.e. the backend is not running at all.
+    await tick();
     httpMock
       .expectOne('http://localhost:7865/api/v1/auth/session')
       .error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
@@ -91,20 +100,22 @@ describe('AuthService', () => {
 
   // ── bootstrapSession (P-session-refresh-hardening, D-129) ──────────────────
 
-  it('bootstrapSession() sets the session from a successful GET /auth/session', () => {
+  it('bootstrapSession() sets the session from a successful GET /auth/session', async () => {
     const auth = setUp();
     let resolved: unknown;
     auth.bootstrapSession().subscribe(res => { resolved = res; });
+    await tick();
     httpMock
       .expectOne('http://localhost:7865/api/v1/auth/session')
       .flush({ user_id: 'user-boot', email: 'boot@example.com' });
+    await tick();
 
     expect(auth.isLoggedIn()).toBe(true);
     expect(auth.userId()).toBe('user-boot');
     expect(resolved).toEqual({ userId: 'user-boot', loggedIn: true });
   });
 
-  it('bootstrapSession() resolves null and stays logged out on a 401 (no live session cookie)', () => {
+  it('bootstrapSession() resolves null and stays logged out on a 401 (no live session cookie)', async () => {
     const auth = setUp();
     let resolved: unknown = 'not-set';
     let errored = false;
@@ -112,9 +123,11 @@ describe('AuthService', () => {
       next: res => { resolved = res; },
       error: () => { errored = true; },
     });
+    await tick();
     httpMock
       .expectOne('http://localhost:7865/api/v1/auth/session')
       .flush({ error: 'unauthorized', message: 'no session' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
 
     expect(errored).toBe(false);
     expect(resolved).toBeNull();
@@ -124,10 +137,12 @@ describe('AuthService', () => {
 
   // ── refreshSession (P-session-refresh-hardening, D-129) ────────────────────
 
-  it('refreshSession() sets the session on a successful POST /auth/refresh', () => {
+  it('refreshSession() sets the session on a successful POST /auth/refresh', async () => {
     const auth = setUp();
     auth.refreshSession().subscribe();
+    await tick();
     httpMock.expectOne('http://localhost:7865/api/v1/auth/refresh').flush({ user_id: 'user-refreshed' });
+    await tick();
 
     expect(auth.isLoggedIn()).toBe(true);
     expect(auth.userId()).toBe('user-refreshed');
@@ -135,63 +150,75 @@ describe('AuthService', () => {
 
   // ── Existing credential flows ───────────────────────────────────────────────
 
-  it('login() sets the session signal', () => {
+  it('login() sets the session signal', async () => {
     const auth = setUp();
     auth.login({ email: 'a@b.com', password: 'x' }).subscribe();
+    await tick();
     httpMock.expectOne('http://localhost:7865/api/v1/auth/login').flush({ user_id: 'user-789' });
+    await tick();
 
     expect(auth.isLoggedIn()).toBe(true);
     expect(auth.userId()).toBe('user-789');
   });
 
-  it('login() resolves an MFA challenge without setting a session', () => {
+  it('login() resolves an MFA challenge without setting a session', async () => {
     const auth = setUp();
     auth.login({ email: 'a@b.com', password: 'x' }).subscribe();
+    await tick();
     httpMock
       .expectOne('http://localhost:7865/api/v1/auth/login')
       .flush({ mfa: 'required', pending_token: 'tok-abc' });
+    await tick();
 
     expect(auth.isLoggedIn()).toBe(false);
   });
 
-  it('verifyMfa() sets the session on a successful TOTP check', () => {
+  it('verifyMfa() sets the session on a successful TOTP check', async () => {
     const auth = setUp();
     auth.verifyMfa({ pending_token: 'tok-abc', code: '123456' }).subscribe();
+    await tick();
     httpMock.expectOne('http://localhost:7865/api/v1/auth/mfa/verify').flush({ user_id: 'user-mfa' });
+    await tick();
 
     expect(auth.isLoggedIn()).toBe(true);
     expect(auth.userId()).toBe('user-mfa');
   });
 
-  it('confirmMfaEnrollment() sets the session and returns recovery codes', () => {
+  it('confirmMfaEnrollment() sets the session and returns recovery codes', async () => {
     const auth = setUp();
     auth.confirmMfaEnrollment({ pending_token: 'tok-abc', code: '123456' }).subscribe();
+    await tick();
     httpMock
       .expectOne('http://localhost:7865/api/v1/auth/mfa/pending-confirm')
       .flush({ user_id: 'user-new', recovery_codes: ['AAAA-BBBB'] });
+    await tick();
 
     expect(auth.isLoggedIn()).toBe(true);
     expect(auth.userId()).toBe('user-new');
   });
 
-  it('logout() clears the session and navigates to the default login route', () => {
+  it('logout() clears the session and navigates to the default login route', async () => {
     const auth = setUp();
     auth.restoreSession('user-1');
 
     auth.logout().subscribe();
+    await tick();
     httpMock.expectOne('http://localhost:7865/api/v1/auth/logout').flush(null);
+    await tick();
 
     expect(auth.isLoggedIn()).toBe(false);
     expect(auth.userId()).toBeNull();
     expect(navigateSpy).toHaveBeenCalledWith(['/login']);
   });
 
-  it('logout() navigates to a configured loginRoute', () => {
+  it('logout() navigates to a configured loginRoute', async () => {
     const auth = setUp({ loginRoute: '/signin' });
     auth.restoreSession('user-1');
 
     auth.logout().subscribe();
+    await tick();
     httpMock.expectOne('http://localhost:7865/api/v1/auth/logout').flush(null);
+    await tick();
 
     expect(navigateSpy).toHaveBeenCalledWith(['/signin']);
   });
@@ -205,9 +232,11 @@ describe('AuthService', () => {
     auth.restoreSession('user-1');
 
     const settled = firstValueFrom(auth.logout()).catch((e: ApiError) => e);
+    await tick();
     httpMock
       .expectOne('http://localhost:7865/api/v1/auth/logout')
       .flush({ error: 'internal_error', message: 'boom' }, { status: 500, statusText: 'Error' });
+    await tick();
 
     const error = await settled;
     expect(error).toMatchObject({ status: 500, kind: 'internal' });

@@ -2,7 +2,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { Router } from '@angular/router';
 import { Observable, catchError, from, map, of, shareReplay, switchMap, tap } from 'rxjs';
-import { ApiService } from './api.service';
+import { SdkService } from './sdk.service';
 import { ConditionalCache } from './conditional-cache';
 import { PASSKEY_BROWSER } from './passkey';
 import { ATTOME_CONFIG } from './config';
@@ -44,7 +44,7 @@ export interface PowChallenge {
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly api    = inject(ApiService);
+  private readonly sdk    = inject(SdkService);
   private readonly passkeys = inject(PASSKEY_BROWSER);
   private readonly conditional = inject(ConditionalCache);
   private readonly router = inject(Router);
@@ -70,7 +70,7 @@ export class AuthService {
   // ── Methods ───────────────────────────────────────────────────────────────
 
   register(req: RegisterRequest): Observable<AuthResponse> {
-    return this.api.post<AuthResponse>('/api/v1/auth/register', req).pipe(
+    return this.sdk.post<AuthResponse>('/api/v1/auth/register', { body: req }).pipe(
       tap(res => this.setSession(res.user_id)),
     );
   }
@@ -82,14 +82,14 @@ export class AuthService {
    * `verifyMfa`/`verifyMfaRecovery` or `startMfaEnrollment`/`confirmMfaEnrollment`.
    */
   login(req: LoginRequest): Observable<AuthResponse | MfaChallenge> {
-    return this.api.post<AuthResponse | MfaChallenge>('/api/v1/auth/login', req).pipe(
+    return this.sdk.post<AuthResponse | MfaChallenge>('/api/v1/auth/login', { body: req }).pipe(
       tap(res => { if (!isMfaChallenge(res)) this.setSession(res.user_id); }),
     );
   }
 
   /** Completes an `MfaChallenge` (`mfa: 'required'`) with a live TOTP code. */
   verifyMfa(req: MfaVerifyBody): Observable<AuthResponse> {
-    return this.api.post<AuthResponse>('/api/v1/auth/mfa/verify', req).pipe(
+    return this.sdk.post<AuthResponse>('/api/v1/auth/mfa/verify', { body: req }).pipe(
       tap(res => this.setSession(res.user_id)),
     );
   }
@@ -100,9 +100,9 @@ export class AuthService {
    * site; rejects when the person cancels.
    */
   signInWithPasskey(): Observable<AuthResponse> {
-    return this.api.post<{ options: unknown }>('/api/v1/auth/passkey/start', {}).pipe(
+    return this.sdk.post<{ options: unknown }>('/api/v1/auth/passkey/start', { body: {} }).pipe(
       switchMap(started => from(this.passkeys.get(started.options))),
-      switchMap(response => this.api.post<AuthResponse>('/api/v1/auth/passkey/verify', { response })),
+      switchMap(response => this.sdk.post<AuthResponse>('/api/v1/auth/passkey/verify', { body: { response } })),
       tap(res => this.setSession(res.user_id)),
     );
   }
@@ -112,78 +112,78 @@ export class AuthService {
    * person's passkeys.
    */
   verifyMfaPasskey(pendingToken: string, remember = false): Observable<AuthResponse> {
-    return this.api.post<{ options: unknown }>('/api/v1/auth/mfa/passkey/start', { pending_token: pendingToken }).pipe(
+    return this.sdk.post<{ options: unknown }>('/api/v1/auth/mfa/passkey/start', { body: { pending_token: pendingToken } }).pipe(
       switchMap(started => from(this.passkeys.get(started.options))),
-      switchMap(response => this.api.post<AuthResponse>('/api/v1/auth/mfa/passkey/verify', {
+      switchMap(response => this.sdk.post<AuthResponse>('/api/v1/auth/mfa/passkey/verify', { body: {
         pending_token: pendingToken, response, remember,
-      })),
+      } })),
       tap(res => this.setSession(res.user_id)),
     );
   }
 
   /** Same as `verifyMfa` but via a single-use recovery code. */
   verifyMfaRecovery(req: MfaVerifyBody): Observable<AuthResponse> {
-    return this.api.post<AuthResponse>('/api/v1/auth/mfa/verify-recovery', req).pipe(
+    return this.sdk.post<AuthResponse>('/api/v1/auth/mfa/verify-recovery', { body: req }).pipe(
       tap(res => this.setSession(res.user_id)),
     );
   }
 
   /** Completes an `MfaChallenge` (`mfa: 'enrollment_required'`) — forced first-time enrollment. */
   startMfaEnrollment(req: MfaPendingEnrollBody): Observable<MfaEnrollResponse> {
-    return this.api.post<MfaEnrollResponse>('/api/v1/auth/mfa/pending-enroll', req);
+    return this.sdk.post<MfaEnrollResponse>('/api/v1/auth/mfa/pending-enroll', { body: req });
   }
 
   /** Confirms forced enrollment with the first live TOTP code — issues the session. */
   confirmMfaEnrollment(req: MfaVerifyBody): Observable<MfaPendingConfirmResponse> {
-    return this.api.post<MfaPendingConfirmResponse>('/api/v1/auth/mfa/pending-confirm', req).pipe(
+    return this.sdk.post<MfaPendingConfirmResponse>('/api/v1/auth/mfa/pending-confirm', { body: req }).pipe(
       tap(res => this.setSession(res.user_id)),
     );
   }
 
   /** Self-service (session-gated): whether the current account has MFA enrolled. */
   getMfaStatus(): Observable<MfaStatus> {
-    return this.api.get<MfaStatus>('/api/v1/auth/mfa/status');
+    return this.sdk.get<MfaStatus>('/api/v1/auth/mfa/status');
   }
 
   /** Self-service: starts (or restarts) enrollment — returns the QR/secret to render. */
   enrollMfa(): Observable<MfaEnrollResponse> {
-    return this.api.post<MfaEnrollResponse>('/api/v1/auth/mfa/enroll', {});
+    return this.sdk.post<MfaEnrollResponse>('/api/v1/auth/mfa/enroll', { body: {} });
   }
 
   /** Self-service: confirms enrollment with the first live code — returns the one-time recovery-code batch. */
   confirmMfa(code: string): Observable<MfaRecoveryCodes> {
-    return this.api.post<MfaRecoveryCodes>('/api/v1/auth/mfa/confirm', { code });
+    return this.sdk.post<MfaRecoveryCodes>('/api/v1/auth/mfa/confirm', { body: { code } });
   }
 
   /** Self-service: turns MFA off — requires a live TOTP or recovery code as proof of possession. */
   disableMfa(code: string): Observable<Ack> {
-    return this.api.post<Ack>('/api/v1/auth/mfa/disable', { code });
+    return this.sdk.post<Ack>('/api/v1/auth/mfa/disable', { body: { code } });
   }
 
   /** Self-service: invalidates the whole recovery-code batch and issues a fresh one. */
   regenerateMfaRecoveryCodes(code: string): Observable<MfaRecoveryCodes> {
-    return this.api.post<MfaRecoveryCodes>('/api/v1/auth/mfa/recovery-codes/regenerate', { code });
+    return this.sdk.post<MfaRecoveryCodes>('/api/v1/auth/mfa/recovery-codes/regenerate', { body: { code } });
   }
 
   loginWithGoogle(req: GoogleAuthRequest): Observable<AuthResponse> {
-    return this.api.post<AuthResponse>('/api/v1/auth/google', req).pipe(
+    return this.sdk.post<AuthResponse>('/api/v1/auth/google', { body: req }).pipe(
       tap(res => this.setSession(res.user_id)),
     );
   }
 
   /** P-frontend-baseline step 5 — the Google Sign-In button renders only if `client_id` is non-null; no client id baked into config. */
   getGoogleConfig(): Observable<GoogleConfigInfo> {
-    return this.api.get<GoogleConfigInfo>('/api/v1/auth/google/config');
+    return this.sdk.get<GoogleConfigInfo>('/api/v1/auth/google/config');
   }
 
   /** P2.8 step 5 — provider buttons render from this list; no client id baked into config. */
   getOidcProviders(): Observable<OidcProviderInfo[]> {
-    return this.api.get<OidcProviderInfo[]>('/api/v1/auth/oidc/providers');
+    return this.sdk.get<OidcProviderInfo[]>('/api/v1/auth/oidc/providers');
   }
 
   /** Q5-T10: puts enrolling off within the grace period and signs in. */
   postponeMfa(pendingToken: string): Observable<AuthResponse> {
-    return this.api.post<AuthResponse>('/api/v1/auth/mfa/postpone', { pending_token: pendingToken }).pipe(
+    return this.sdk.post<AuthResponse>('/api/v1/auth/mfa/postpone', { body: { pending_token: pendingToken } }).pipe(
       tap(res => this.setSession(res.user_id)),
     );
   }
@@ -191,12 +191,12 @@ export class AuthService {
   /** Q1-T14: the sign-in provider a verified email domain sends this address
    *  to, or `null` to sign in with a password. */
   discoverOidc(email: string): Observable<{ provider?: string | null }> {
-    return this.api.post<{ provider?: string | null }>('/api/v1/auth/oidc/discover', { email });
+    return this.sdk.post<{ provider?: string | null }>('/api/v1/auth/oidc/discover', { body: { email } });
   }
 
   /** P-registration-gating (D-128) — the register page/login page's sign-up link consult this to decide whether to render at all. */
   getRegistrationConfig(): Observable<RegistrationConfigInfo> {
-    return this.api.get<RegistrationConfigInfo>('/api/v1/auth/register/config');
+    return this.sdk.get<RegistrationConfigInfo>('/api/v1/auth/register/config');
   }
 
   /**
@@ -205,7 +205,7 @@ export class AuthService {
    * sign-in's `captcha_token`.
    */
   getPowChallenge(): Observable<PowChallenge> {
-    return this.api.get<PowChallenge>('/api/v1/auth/challenge');
+    return this.sdk.get<PowChallenge>('/api/v1/auth/challenge');
   }
 
   /**
@@ -219,7 +219,7 @@ export class AuthService {
 
   /** P-federation-linking-policy §4.3(a) — self-service: which providers are already linked to the logged-in account. */
   getIdentityLinks(): Observable<IdentityLinkInfo[]> {
-    return this.api.get<IdentityLinkInfo[]>('/api/v1/auth/identity-links');
+    return this.sdk.get<IdentityLinkInfo[]>('/api/v1/auth/identity-links');
   }
 
   /**
@@ -244,7 +244,7 @@ export class AuthService {
    * account; the backend rejects a credential whose email doesn't match it.
    */
   linkGoogleIdentity(credential: string): Observable<void> {
-    return this.api.post<void>('/api/v1/auth/identity-link/google', { credential });
+    return this.sdk.post<void>('/api/v1/auth/identity-link/google', { body: { credential } });
   }
 
   /**
@@ -254,7 +254,7 @@ export class AuthService {
    * response's `secret` is shown once and can never be read again.
    */
   createApiKey(req: CreateApiKeyRequest): Observable<ApiKeyCreated> {
-    return this.api.post<ApiKeyCreated>('/api/v1/auth/api-keys', req);
+    return this.sdk.post<ApiKeyCreated>('/api/v1/auth/api-keys', { body: req });
   }
 
   /**
@@ -270,7 +270,7 @@ export class AuthService {
    * session too, and the provider sends it back to the app.
    */
   logout(): Observable<void> {
-    return this.api.post<{ redirect?: string | null } | null>('/api/v1/auth/logout', {}).pipe(
+    return this.sdk.post<{ redirect?: string | null } | null>('/api/v1/auth/logout', { body: {} }).pipe(
       tap(res => {
         this.clearSession();
         const redirect = res?.redirect;
@@ -311,7 +311,7 @@ export class AuthService {
    * re-read of server-side session state.
    */
   bootstrapSession(): Observable<Session | null> {
-    return this.api.get<SessionInfo>('/api/v1/auth/session').pipe(
+    return this.sdk.get<SessionInfo>('/api/v1/auth/session').pipe(
       map(res => {
         const session: Session = { userId: res.user_id, loggedIn: true };
         this._session.set(session);
@@ -331,7 +331,7 @@ export class AuthService {
    * call this directly.
    */
   refreshSession(): Observable<AuthResponse> {
-    return this.api.post<AuthResponse>('/api/v1/auth/refresh', {}).pipe(
+    return this.sdk.post<AuthResponse>('/api/v1/auth/refresh', { body: {} }).pipe(
       tap(res => this.setSession(res.user_id)),
     );
   }
@@ -352,15 +352,15 @@ export class AuthService {
    * behavior on this beyond "request sent").
    */
   requestPasswordReset(req: ResetRequestBody): Observable<Ack> {
-    return this.api.post<Ack>('/api/v1/auth/reset-request', req);
+    return this.sdk.post<Ack>('/api/v1/auth/reset-request', { body: req });
   }
 
   confirmPasswordReset(req: ResetConfirmBody): Observable<Ack> {
-    return this.api.post<Ack>('/api/v1/auth/reset-confirm', req);
+    return this.sdk.post<Ack>('/api/v1/auth/reset-confirm', { body: req });
   }
 
   confirmEmailVerification(req: VerifyEmailConfirmBody): Observable<Ack> {
-    return this.api.post<Ack>('/api/v1/auth/verify-email/confirm', req);
+    return this.sdk.post<Ack>('/api/v1/auth/verify-email/confirm', { body: req });
   }
 
   clearSession(): void {

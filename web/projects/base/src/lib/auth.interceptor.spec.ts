@@ -7,6 +7,9 @@ import { authInterceptor } from './auth.interceptor';
 import { AuthService } from './auth.service';
 import { ATTOME_CONFIG } from './config';
 
+/** The SDK sends, and answers, a promise turn later (Y9-T3). */
+const tick = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
 const BASE = 'http://localhost:7865';
 
 describe('authInterceptor (P-session-refresh-hardening, D-129)', () => {
@@ -32,57 +35,71 @@ describe('authInterceptor (P-session-refresh-hardening, D-129)', () => {
     httpMock?.verify();
   });
 
-  it('coordinates exactly one refresh for two concurrent 401s and retries both idempotent GETs', () => {
+  it('coordinates exactly one refresh for two concurrent 401s and retries both idempotent GETs', async () => {
     setUp();
     const results: unknown[] = [];
     http.get(`${BASE}/api/v1/a`).subscribe(res => results.push(res));
     http.get(`${BASE}/api/v1/b`).subscribe(res => results.push(res));
 
+    await tick();
     httpMock
       .expectOne(`${BASE}/api/v1/a`)
       .flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
     httpMock
       .expectOne(`${BASE}/api/v1/b`)
       .flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
 
     // Exactly one refresh call for both 401s — httpMock.expectOne() itself
     // asserts there is no more than one matching pending request.
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/refresh`).flush({ user_id: 'user-1' });
+    await tick();
 
     // Both original GETs are retried once the shared refresh resolves.
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/a`).flush({ ok: 'a' });
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/b`).flush({ ok: 'b' });
+    await tick();
 
     expect(results).toEqual([{ ok: 'a' }, { ok: 'b' }]);
     expect(navigateSpy).not.toHaveBeenCalled();
   });
 
-  it('leaves a portal keyword path 401 to the page: no refresh, no navigation', () => {
+  it('leaves a portal keyword path 401 to the page: no refresh, no navigation', async () => {
     setUp();
     let error: unknown;
     http.get(`${BASE}/acme/api/v1/records/forum_thread`).subscribe({ error: err => { error = err; } });
+    await tick();
     httpMock
       .expectOne(`${BASE}/acme/api/v1/records/forum_thread`)
       .flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
     httpMock.expectNone(`${BASE}/api/v1/auth/refresh`);
     expect((error as { status: number }).status).toBe(401);
     expect(navigateSpy).not.toHaveBeenCalled();
   });
 
-  it('does not auto-retry a non-idempotent POST after refresh — surfaces the original 401', () => {
+  it('does not auto-retry a non-idempotent POST after refresh — surfaces the original 401', async () => {
     setUp();
     let error: unknown;
     http.post(`${BASE}/api/v1/items`, { name: 'x' }).subscribe({
       error: err => { error = err; },
     });
 
+    await tick();
     httpMock
       .expectOne(`${BASE}/api/v1/items`)
       .flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
 
     // The refresh still runs (a later request may benefit from it) — only
     // the non-idempotent POST itself is not resubmitted automatically.
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/refresh`).flush({ user_id: 'user-1' });
+    await tick();
 
     expect(error).toBeTruthy();
     expect((error as { status: number }).status).toBe(401);
@@ -91,55 +108,64 @@ describe('authInterceptor (P-session-refresh-hardening, D-129)', () => {
   // NGB-2.5 / OD-4b — the server replays the stored response for the same
   // `x-idempotency-key`, so a keyed write is safe to repeat after a refresh;
   // an unkeyed one still is not (the test above).
-  it('retries a keyed POST once after a refresh', () => {
+  it('retries a keyed POST once after a refresh', async () => {
     setUp();
     let result: unknown;
     http.post(`${BASE}/api/v1/items`, { name: 'x' }, { headers: { 'x-idempotency-key': 'k-1' } })
       .subscribe(res => { result = res; });
 
+    await tick();
     httpMock
       .expectOne(`${BASE}/api/v1/items`)
       .flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
 
     httpMock.expectOne(`${BASE}/api/v1/auth/refresh`).flush({ user_id: 'user-1' });
+    await tick();
 
     const retried = httpMock.expectOne(`${BASE}/api/v1/items`);
     expect(retried.request.method).toBe('POST');
     expect(retried.request.headers.get('x-idempotency-key')).toBe('k-1');
     retried.flush({ ok: true });
+    await tick();
 
     expect(result).toEqual({ ok: true });
   });
 
-  it('clears the session and navigates to login when the refresh itself fails', () => {
+  it('clears the session and navigates to login when the refresh itself fails', async () => {
     setUp();
     let error: unknown;
     http.get(`${BASE}/api/v1/a`).subscribe({
       error: err => { error = err; },
     });
 
+    await tick();
     httpMock
       .expectOne(`${BASE}/api/v1/a`)
       .flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
 
     httpMock
       .expectOne(`${BASE}/api/v1/auth/refresh`)
       .flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
 
     expect(error).toBeTruthy();
     expect(navigateSpy).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: '/current' } });
   });
 
-  it('does not attempt a refresh for a 401 from a credential endpoint (login)', () => {
+  it('does not attempt a refresh for a 401 from a credential endpoint (login)', async () => {
     setUp();
     let error: unknown;
     http.post(`${BASE}/api/v1/auth/login`, {}).subscribe({
       error: err => { error = err; },
     });
 
+    await tick();
     httpMock
       .expectOne(`${BASE}/api/v1/auth/login`)
       .flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
 
     expect(error).toBeTruthy();
     // httpMock.verify() in afterEach fails the test if a /auth/refresh call
@@ -150,17 +176,21 @@ describe('authInterceptor (P-session-refresh-hardening, D-129)', () => {
   // expired access cookie because every /api/v1/auth/* URL (including
   // /auth/session itself) was excluded from refresh-and-retry, so a valid
   // refresh session was reported as logged out on reload.
-  it('refreshes and retries a 401 from /auth/session (bootstrapSession) — not a credential endpoint', () => {
+  it('refreshes and retries a 401 from /auth/session (bootstrapSession) — not a credential endpoint', async () => {
     setUp();
     let result: unknown;
     http.get(`${BASE}/api/v1/auth/session`).subscribe(res => { result = res; });
 
+    await tick();
     httpMock
       .expectOne(`${BASE}/api/v1/auth/session`)
       .flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
 
     httpMock.expectOne(`${BASE}/api/v1/auth/refresh`).flush({ user_id: 'user-1' });
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/session`).flush({ user_id: 'user-1' });
+    await tick();
 
     expect(result).toEqual({ user_id: 'user-1' });
     expect(navigateSpy).not.toHaveBeenCalled();
@@ -172,50 +202,59 @@ describe('authInterceptor (P-session-refresh-hardening, D-129)', () => {
   // (no refresh cookie either, since they were never logged in). That used to
   // unconditionally force-navigate to `loginRoute`, hijacking every anonymous
   // page load into a redirect (e.g. always bouncing /login to /xrm/login).
-  it('does not navigate when bootstrapSession\'s 401 survives a failed refresh (anonymous visitor)', () => {
+  it('does not navigate when bootstrapSession\'s 401 survives a failed refresh (anonymous visitor)', async () => {
     setUp();
     let error: unknown;
     http.get(`${BASE}/api/v1/auth/session`).subscribe({
       error: err => { error = err; },
     });
 
+    await tick();
     httpMock
       .expectOne(`${BASE}/api/v1/auth/session`)
       .flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
 
     httpMock
       .expectOne(`${BASE}/api/v1/auth/refresh`)
       .flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
 
     expect(error).toBeTruthy();
     expect(navigateSpy).not.toHaveBeenCalled();
   });
 
-  it('refreshes and retries a 401 from a session-gated MFA self-service GET (mfa/status)', () => {
+  it('refreshes and retries a 401 from a session-gated MFA self-service GET (mfa/status)', async () => {
     setUp();
     let result: unknown;
     http.get(`${BASE}/api/v1/auth/mfa/status`).subscribe(res => { result = res; });
 
+    await tick();
     httpMock
       .expectOne(`${BASE}/api/v1/auth/mfa/status`)
       .flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
 
     httpMock.expectOne(`${BASE}/api/v1/auth/refresh`).flush({ user_id: 'user-1' });
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/mfa/status`).flush({ enrolled: true });
+    await tick();
 
     expect(result).toEqual({ enrolled: true });
   });
 
-  it('still excludes /auth/mfa/verify (credential endpoint) from refresh-and-retry', () => {
+  it('still excludes /auth/mfa/verify (credential endpoint) from refresh-and-retry', async () => {
     setUp();
     let error: unknown;
     http.post(`${BASE}/api/v1/auth/mfa/verify`, {}).subscribe({
       error: err => { error = err; },
     });
 
+    await tick();
     httpMock
       .expectOne(`${BASE}/api/v1/auth/mfa/verify`)
       .flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
 
     expect(error).toBeTruthy();
     // httpMock.verify() in afterEach fails the test if a /auth/refresh call was made here.
@@ -230,7 +269,7 @@ describe('authInterceptor (P-session-refresh-hardening, D-129)', () => {
       acceptable_factors: ['password'],
     };
 
-    it.each(['POST', 'GET'])('rethrows a reauth_required 401 on %s untouched: no refresh, no retry, no sign-out', method => {
+    it.each(['POST', 'GET'])('rethrows a reauth_required 401 on %s untouched: no refresh, no retry, no sign-out', async method => {
       setUp();
       const auth = TestBed.inject(AuthService);
       auth.restoreSession('user-1');
@@ -240,7 +279,9 @@ describe('authInterceptor (P-session-refresh-hardening, D-129)', () => {
       const req$ = method === 'POST' ? http.post(url, { name: 'k' }) : http.get(url);
       req$.subscribe({ error: err => { error = err; } });
 
+      await tick();
       httpMock.expectOne(url).flush(REAUTH, { status: 401, statusText: 'Unauthorized' });
+      await tick();
 
       expect(error).toBeInstanceOf(HttpErrorResponse);
       expect((error as HttpErrorResponse).status).toBe(401);
@@ -251,30 +292,36 @@ describe('authInterceptor (P-session-refresh-hardening, D-129)', () => {
       // httpMock.verify() in afterEach fails the test on any /auth/refresh or retry.
     });
 
-    it('still refreshes a plain unauthorized 401 on the same route', () => {
+    it('still refreshes a plain unauthorized 401 on the same route', async () => {
       setUp();
       const url = `${BASE}/api/v1/auth/step-up/identity_link`;
       let result: unknown;
       http.get(url).subscribe(res => { result = res; });
 
+      await tick();
       httpMock.expectOne(url).flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+      await tick();
       httpMock.expectOne(`${BASE}/api/v1/auth/refresh`).flush({ user_id: 'user-1' });
+      await tick();
       httpMock.expectOne(url).flush({ elevated: true });
+      await tick();
 
       expect(result).toEqual({ elevated: true });
     });
   });
 
-  it('passes through a non-401 error untouched, with no refresh attempt', () => {
+  it('passes through a non-401 error untouched, with no refresh attempt', async () => {
     setUp();
     let error: unknown;
     http.get(`${BASE}/api/v1/a`).subscribe({
       error: err => { error = err; },
     });
 
+    await tick();
     httpMock
       .expectOne(`${BASE}/api/v1/a`)
       .flush({ error: 'internal_error' }, { status: 500, statusText: 'Internal Server Error' });
+    await tick();
 
     expect((error as { status: number }).status).toBe(500);
   });
@@ -287,42 +334,50 @@ describe('authInterceptor (P-session-refresh-hardening, D-129)', () => {
   // See `isAppRequest`'s comment in auth.interceptor.ts.
   const STORE = 'http://127.0.0.1:9000';
 
-  it('does not attach credentials to a presigned object-store URL', () => {
+  it('does not attach credentials to a presigned object-store URL', async () => {
     setUp();
     http.put(`${STORE}/attomebase/_quarantine/x.png?X-Amz-Signature=abc`, new Blob(['x']))
       .subscribe();
 
+    await tick();
     const req = httpMock.expectOne(r => r.url.startsWith(STORE));
     expect(req.request.withCredentials).toBe(false);
     req.flush(null);
+    await tick();
   });
 
-  it('still attaches credentials to its own API origin', () => {
+  it('still attaches credentials to its own API origin', async () => {
     setUp();
     http.get(`${BASE}/api/v1/a`).subscribe();
 
+    await tick();
     const req = httpMock.expectOne(`${BASE}/api/v1/a`);
     expect(req.request.withCredentials).toBe(true);
     req.flush({ ok: 'a' });
+    await tick();
   });
 
-  it('treats a relative URL as its own origin and credentials it', () => {
+  it('treats a relative URL as its own origin and credentials it', async () => {
     setUp();
     http.get('/api/v1/a').subscribe();
 
+    await tick();
     const req = httpMock.expectOne('/api/v1/a');
     expect(req.request.withCredentials).toBe(true);
     req.flush({ ok: 'a' });
+    await tick();
   });
 
-  it('does not refresh-and-retry a 401 from the object store', () => {
+  it('does not refresh-and-retry a 401 from the object store', async () => {
     setUp();
     let error: unknown;
     http.get(`${STORE}/attomebase/x.png`).subscribe({ error: err => { error = err; } });
 
+    await tick();
     httpMock
       .expectOne(`${STORE}/attomebase/x.png`)
       .flush({ error: 'denied' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
 
     expect((error as { status: number }).status).toBe(401);
     expect(navigateSpy).not.toHaveBeenCalled();
@@ -333,32 +388,40 @@ describe('authInterceptor (P-session-refresh-hardening, D-129)', () => {
   // `url.includes(path)`, so `/api/v1/auth/google/config` (a public config
   // GET, no credential involved) matched the `/api/v1/auth/google` login
   // endpoint and a 401 there was never refreshed.
-  it('NGB-F4 a 401 from /auth/google/config refreshes', () => {
+  it('NGB-F4 a 401 from /auth/google/config refreshes', async () => {
     setUp();
     let result: unknown;
     http.get(`${BASE}/api/v1/auth/google/config`).subscribe(res => { result = res; });
 
+    await tick();
     httpMock
       .expectOne(`${BASE}/api/v1/auth/google/config`)
       .flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
 
     httpMock.expectOne(`${BASE}/api/v1/auth/refresh`).flush({ user_id: 'user-1' });
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/google/config`).flush({ client_id: null });
+    await tick();
 
     expect(result).toEqual({ client_id: null });
   });
 
-  it('NGB-F4 a 401 from /auth/register/config refreshes too', () => {
+  it('NGB-F4 a 401 from /auth/register/config refreshes too', async () => {
     setUp();
     let result: unknown;
     http.get(`${BASE}/api/v1/auth/register/config`).subscribe(res => { result = res; });
 
+    await tick();
     httpMock
       .expectOne(`${BASE}/api/v1/auth/register/config`)
       .flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
 
     httpMock.expectOne(`${BASE}/api/v1/auth/refresh`).flush({ user_id: 'user-1' });
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/register/config`).flush({ mode: 'public' });
+    await tick();
 
     expect(result).toEqual({ mode: 'public' });
   });
@@ -366,27 +429,33 @@ describe('authInterceptor (P-session-refresh-hardening, D-129)', () => {
   // NGB-1.4 — matching the pathname, not a substring: a query string that
   // happens to contain the login path must not turn an ordinary GET into a
   // credential endpoint.
-  it('NGB-F4 ignores a query string that contains a credential path', () => {
+  it('NGB-F4 ignores a query string that contains a credential path', async () => {
     setUp();
     const url = `${BASE}/api/v1/things?next=/api/v1/auth/login`;
     let result: unknown;
     http.get(url).subscribe(res => { result = res; });
 
+    await tick();
     httpMock.expectOne(url).flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/refresh`).flush({ user_id: 'user-1' });
+    await tick();
     httpMock.expectOne(url).flush({ ok: true });
+    await tick();
 
     expect(result).toEqual({ ok: true });
   });
 
-  it('NGB-F4 still refuses to refresh the exact credential endpoint with a query string', () => {
+  it('NGB-F4 still refuses to refresh the exact credential endpoint with a query string', async () => {
     setUp();
     let error: unknown;
     http.post(`${BASE}/api/v1/auth/login?next=/x`, {}).subscribe({ error: err => { error = err; } });
 
+    await tick();
     httpMock
       .expectOne(`${BASE}/api/v1/auth/login?next=/x`)
       .flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
 
     expect((error as { status: number }).status).toBe(401);
     // httpMock.verify() in afterEach fails the test if a /auth/refresh ran here.
@@ -416,24 +485,33 @@ describe('authInterceptor (P-session-refresh-hardening, D-129)', () => {
 
     const expired = { error: 'unauthorized' }, status401 = { status: 401, statusText: 'Unauthorized' };
 
-    it('a second injector starts its own refresh instead of joining the first', () => {
+    it('a second injector starts its own refresh instead of joining the first', async () => {
       const a = configure();
       a.http.get(`${BASE}/api/v1/a`).subscribe();
+      await tick();
       a.mock.expectOne(`${BASE}/api/v1/a`).flush(expired, status401);
+      await tick();
       const aRefresh = a.mock.expectOne(`${BASE}/api/v1/auth/refresh`); // left in flight
 
       const b = configure();
       b.http.get(`${BASE}/api/v1/b`).subscribe();
+      await tick();
       b.mock.expectOne(`${BASE}/api/v1/b`).flush(expired, status401);
+      await tick();
 
       // The second injector's own refresh — a module-global would replay the
       // first injector's in-flight observable and issue no request here.
+      await tick();
       b.mock.expectOne(`${BASE}/api/v1/auth/refresh`).flush({ user_id: 'user-b' });
+      await tick();
       b.mock.expectOne(`${BASE}/api/v1/b`).flush({ ok: 'b' });
+      await tick();
       b.mock.verify();
 
       aRefresh.flush({ user_id: 'user-a' });
+      await tick();
       a.mock.expectOne(`${BASE}/api/v1/a`).flush({ ok: 'a' });
+      await tick();
       a.mock.verify();
     });
   });

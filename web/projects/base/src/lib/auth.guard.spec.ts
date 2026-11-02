@@ -8,6 +8,9 @@ import { authGuard } from './auth.guard';
 import { AuthService } from './auth.service';
 import { ATTOME_CONFIG } from './config';
 
+/** The SDK sends, and answers, a promise turn later (Y9-T3). */
+const tick = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
 /**
  * The app initializer no longer blocks the first paint on
  * `GET /auth/session`, so this guard is now the thing that guarantees D-129's
@@ -37,7 +40,7 @@ describe('authGuard', () => {
     httpMock?.verify();
   });
 
-  it('waits for the in-flight bootstrap instead of redirecting a logged-in deep link to login', () => {
+  it('waits for the in-flight bootstrap instead of redirecting a logged-in deep link to login', async () => {
     const { auth, createUrlTree } = setUp({ loginRoute: '/xrm/login' });
     let result: unknown = 'not-set';
 
@@ -47,18 +50,20 @@ describe('authGuard', () => {
     returned.subscribe(r => { result = r; });
 
     // Bootstrap has not answered yet: the guard must not have decided.
+    await tick();
     const req = httpMock.expectOne(SESSION_URL);
     expect(result).toBe('not-set');
     expect(createUrlTree).not.toHaveBeenCalled();
 
     req.flush({ user_id: 'user-boot', email: 'boot@example.com' });
+    await tick();
 
     expect(result).toBe(true);
     expect(createUrlTree).not.toHaveBeenCalled();
     expect(auth.isLoggedIn()).toBe(true);
   });
 
-  it('redirects to loginRoute with returnUrl once the server confirms no session', () => {
+  it('redirects to loginRoute with returnUrl once the server confirms no session', async () => {
     const { createUrlTree } = setUp({ loginRoute: '/xrm/login' });
     let result: unknown = 'not-set';
 
@@ -67,9 +72,11 @@ describe('authGuard', () => {
     ) as Observable<unknown>;
     returned.subscribe(r => { result = r; });
 
+    await tick();
     httpMock
       .expectOne(SESSION_URL)
       .flush({ error: 'unauthorized', message: 'no session' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
 
     expect(result).not.toBe(true);
     expect(createUrlTree).toHaveBeenCalledWith(['/xrm/login'], {
@@ -77,7 +84,7 @@ describe('authGuard', () => {
     });
   });
 
-  it('redirects rather than hanging when the backend is unreachable', () => {
+  it('redirects rather than hanging when the backend is unreachable', async () => {
     const { createUrlTree } = setUp({ loginRoute: '/xrm/login' });
     let result: unknown = 'not-set';
 
@@ -86,6 +93,7 @@ describe('authGuard', () => {
     ) as Observable<unknown>;
     returned.subscribe(r => { result = r; });
 
+    await tick();
     httpMock
       .expectOne(SESSION_URL)
       .error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
@@ -96,23 +104,27 @@ describe('authGuard', () => {
     });
   });
 
-  it('defaults to /login when the config sets no loginRoute', () => {
+  it('defaults to /login when the config sets no loginRoute', async () => {
     const { createUrlTree } = setUp();
     (TestBed.runInInjectionContext(() =>
       authGuard({} as ActivatedRouteSnapshot, { url: '/x' } as RouterStateSnapshot),
     ) as Observable<unknown>).subscribe();
 
+    await tick();
     httpMock
       .expectOne(SESSION_URL)
       .flush({ error: 'unauthorized', message: 'no session' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
 
     expect(createUrlTree).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: '/x' } });
   });
 
-  it('reuses the bootstrap already started by the app initializer', () => {
+  it('reuses the bootstrap already started by the app initializer', async () => {
     const { auth } = setUp();
     auth.sessionReady().subscribe();               // what provide.ts's initializer does
+    await tick();
     httpMock.expectOne(SESSION_URL).flush({ user_id: 'u', email: 'u@example.com' });
+    await tick();
 
     let result: unknown = 'not-set';
     (TestBed.runInInjectionContext(() =>
@@ -120,6 +132,7 @@ describe('authGuard', () => {
     ) as Observable<unknown>).subscribe(r => { result = r; });
 
     // No second round trip, and the guard resolves synchronously.
+    await tick();
     httpMock.expectNone(SESSION_URL);
     expect(result).toBe(true);
   });
