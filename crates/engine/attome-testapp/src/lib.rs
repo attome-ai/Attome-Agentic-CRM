@@ -291,19 +291,70 @@ async fn build_with(config: AppConfig) -> Option<TestApp> {
         attome_server::ServerBuilder::new(base_state.clone(), (*base_state.config).clone())
             .add_bundle(system.core_routes())
             .build(|r| attome_api::apply_s2s_layer(r, base_state.clone()));
-    // Boot seeds this entity; the packs upsert their document templates into it.
-    attome_api::changeset::boot::apply_platform_definition(&state, "attome-docgen")
-        .await
-        .expect("apply the docgen platform definition");
-    attome_api::changeset::boot::apply_platform_definition(&state, "attome-search-saved-search")
-        .await
-        .expect("apply the saved search platform definition");
+    apply_platform_definitions(&state).await;
     let admin = seed_admin(&state.base.db).await;
     Some(TestApp {
         router,
         state,
         admin,
     })
+}
+
+/// The platform definitions the tests need, applied under the platform seed
+/// lock a real boot takes (`attome::platform_seed_lock`: the same namespace
+/// and key), so test processes building an app at once against one database
+/// never claim the same changeset together.
+async fn apply_platform_definitions(state: &EngineState) {
+    /// `attome::role_seed_lock::ADVISORY_LOCK_NAMESPACE`.
+    const SEED_NAMESPACE: i32 = 10;
+    const SEED_KEY: &str = "server/boot:platform-seed";
+    let mut conn = state
+        .base
+        .db
+        .acquire()
+        .await
+        .expect("a connection for the platform seed lock");
+    loop {
+        let held: bool = sqlx::query_scalar("SELECT pg_try_advisory_lock($1, hashtext($2))")
+            .bind(SEED_NAMESPACE)
+            .bind(SEED_KEY)
+            .fetch_one(&mut *conn)
+            .await
+            .expect("try the platform seed lock");
+        if held {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+    }
+    // Docgen: boot seeds this entity; the packs upsert their document
+    // templates into it. Then the entities of engines registered above that
+    // pack and engine tests write to: saved searches, workflow definitions
+    // (the marketing pack's nurture tracks look them up), contract versions
+    // (the contract pack's views read them), call trackers and analyses (call
+    // intelligence), AI personalities (the agent definition looks them up),
+    // and the metric definitions with their governance fields (the metric
+    // tests read `dimension_attributes`).
+    for module in [
+        "attome-docgen",
+        "attome-search-saved-search",
+        "attome-workflow",
+        "attome-contract",
+        "attome-callintel",
+        "attome-ai-personality",
+        "attome-metric",
+        "attome-api-glossary",
+        "attome-metric-governance",
+    ] {
+        attome_api::changeset::boot::apply_platform_definition(state, module)
+            .await
+            .unwrap_or_else(|e| panic!("apply the {module} platform definition: {e}"));
+    }
+    let _released: Result<bool, _> =
+        sqlx::query_scalar("SELECT pg_advisory_unlock($1, hashtext($2))")
+            .bind(SEED_NAMESPACE)
+            .bind(SEED_KEY)
+            .fetch_one(&mut *conn)
+            .await;
 }
 
 impl TestApp {
