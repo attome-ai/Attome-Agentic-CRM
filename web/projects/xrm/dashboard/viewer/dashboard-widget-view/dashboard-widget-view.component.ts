@@ -19,6 +19,7 @@ import { DeclarativeWidgetRendererComponent } from '../../widget/declarative-wid
 import { WidgetExplainPanelComponent } from '../widget-explain-panel/widget-explain-panel.component';
 import { WidgetRecordsDrawerComponent } from '../widget-records-drawer/widget-records-drawer.component';
 import { DeclarativeWidgetConfig } from '../../widget/declarative-widget-renderer/declarative-widget.types';
+import { type Timeline, timelineBars } from './timeline-bars';
 
 /** A column plus its resolved click-to-navigate route template — same
  * precedence `EntityListComponent` computes from the identical wire shape
@@ -323,6 +324,10 @@ export class DashboardWidgetViewComponent implements OnChanges, OnInit, OnDestro
   });
   readonly rows = computed<Record<string, unknown>[]>(() => this.query()?.data.records ?? []);
 
+  /** P6-T1: a Gantt or timeline widget's bars, from the query rows and the
+   * widget's `label_field`, `start_field` and `end_field`. */
+  readonly timeline = computed<Timeline | null>(() => timelineBars(this.rows(), this.config()));
+
   readonly kpiMetrics = computed<KpiMetric[]>(() => this.data()?.kpi?.metrics ?? []);
 
   constructor() {
@@ -464,6 +469,11 @@ export class DashboardWidgetViewComponent implements OnChanges, OnInit, OnDestro
     if (value === null || value === undefined) return '—';
     if (typeof value === 'string') return value;
     return value.toLocaleString(this.lang.intlLocale(), { maximumFractionDigits: 2 });
+  }
+
+  /** A timeline date, in the viewer's locale. */
+  formatDate(value: Date): string {
+    return value.toLocaleDateString(this.lang.intlLocale(), { dateStyle: 'medium' });
   }
 
   kpiStatusKey(metric: KpiMetric): string | null {

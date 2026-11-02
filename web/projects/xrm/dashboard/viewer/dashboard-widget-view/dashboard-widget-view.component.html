@@ -73,6 +73,24 @@
           <div class="xdv-widget-scalar">{{ formatValue(scalar()) }}</div>
         }
       }
+      @case ('timeline') {
+        @if (timeline(); as t) {
+          <ol class="xdv-timeline" data-testid="timeline">
+            @for (b of t.bars; track $index) {
+              <li class="xdv-timeline-row">
+                <span class="xdv-timeline-label" dir="auto">{{ b.label }}</span>
+                <span class="xdv-timeline-track">
+                  <span class="xdv-timeline-bar" [style.margin-inline-start.%]="b.offset" [style.inline-size.%]="b.length"
+                        [title]="formatDate(b.start) + ' – ' + formatDate(b.end)"></span>
+                </span>
+              </li>
+            }
+          </ol>
+          <p class="xdv-widget-footnote">{{ formatDate(t.from) }} – {{ formatDate(t.to) }}</p>
+        } @else {
+          <div class="xdv-widget-status xdv-widget-empty">{{ 'dashboard.viewer.noRowsReturned' | translate }}</div>
+        }
+      }
       @case ('table') {
         @if (rows().length === 0) {
           <div class="xdv-widget-status xdv-widget-empty">{{ 'dashboard.viewer.noRowsReturned' | translate }}</div>

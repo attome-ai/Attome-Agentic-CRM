@@ -173,3 +173,10 @@ button.xdv-widget-scalar {
   font: inherit;
   cursor: pointer;
 }
+
+/* P6-T1: Gantt and timeline bars, placed with logical properties so they mirror in Arabic. */
+.xdv-timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.25rem; }
+.xdv-timeline-row { display: grid; grid-template-columns: minmax(6rem, 30%) 1fr; gap: 0.5rem; align-items: center; }
+.xdv-timeline-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.xdv-timeline-track { display: flex; block-size: 0.75rem; background: var(--color-bg-alt); border-radius: 2px; }
+.xdv-timeline-bar { display: block; block-size: 100%; background: var(--color-primary); border-radius: 2px; }
