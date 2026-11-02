@@ -17,6 +17,9 @@ import { Observable, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SecuritySettingsComponent } from './security-settings.component';
 
+/** The SDK sends, and answers, a promise turn later (Y9-T3). */
+const tick = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
 /** The passkeys card has its own spec; here it is an inert element. */
 function withoutPasskeysCard(): void {
   TestBed.overrideComponent(SecuritySettingsComponent, {
@@ -467,20 +470,26 @@ describe('SecuritySettingsComponent with the real interceptor (D-129, D-510)', (
   }
 
   /** The fail-soft directory read and the Google config, which are not what these tests are about. */
-  function flushSideRequests(): void {
+  async function flushSideRequests(): Promise<void> {
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/oidc/providers`).flush([]);
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/google/config`).flush({ client_id: null });
+    await tick();
   }
 
   /** Answers the prompt's local step-up: a fresh challenge, then a successful verify. */
-  function passStepUp(operation: string, factor: 'password' | 'totp', credential: string): void {
+  async function passStepUp(operation: string, factor: 'password' | 'totp', credential: string): Promise<void> {
     TestBed.inject(StepUpService).submit(factor, credential);
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/step-up/${operation}`)
       .flush({ challenge_id: 'c-1', operation, acceptable_factors: [factor], expires_in_secs: 300 },
         { status: 201, statusText: 'Created' });
+    await tick();
     const verifyReq = httpMock.expectOne(`${BASE}/api/v1/auth/step-up/${operation}/verify`);
     expect(verifyReq.request.body).toEqual({ challenge_id: 'c-1', factor, credential });
     verifyReq.flush({ operation, elevated_until: '2026-09-15T12:15:00Z' });
+    await tick();
   }
 
   beforeEach(() => {
@@ -491,21 +500,26 @@ describe('SecuritySettingsComponent with the real interceptor (D-129, D-510)', (
     httpMock?.verify();
   });
 
-  it('refreshes and replays the identity-links read when the access cookie expired mid-load', () => {
+  it('refreshes and replays the identity-links read when the access cookie expired mid-load', async () => {
     const fixture = mountWithRealHttp();
     const component = fixture.componentInstance;
 
-    flushSideRequests();
+    await flushSideRequests();
+    await tick();
     httpMock
       .expectOne(`${BASE}/api/v1/auth/identity-links`)
       .flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
 
     // One refresh, then the same GET again — expectOne() also asserts the
     // interceptor did not fan out a second refresh.
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/refresh`).flush({ user_id: 'user-1' });
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/identity-links`).flush([
       { provider_key: 'okta', email: 'operator@example.com', linked_at: '2026-08-01T00:00:00Z' },
     ]);
+    await tick();
 
     expect(TestBed.inject(AuthService).userId()).toBe('user-1');
     expect(component.loading()).toBe(false);
@@ -513,17 +527,20 @@ describe('SecuritySettingsComponent with the real interceptor (D-129, D-510)', (
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it('clears the session and returns to the XRM login when the refresh itself fails', () => {
+  it('clears the session and returns to the XRM login when the refresh itself fails', async () => {
     const fixture = mountWithRealHttp();
     const component = fixture.componentInstance;
 
-    flushSideRequests();
+    await flushSideRequests();
+    await tick();
     httpMock
       .expectOne(`${BASE}/api/v1/auth/identity-links`)
       .flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
     httpMock
       .expectOne(`${BASE}/api/v1/auth/refresh`)
       .flush({ error: 'unauthorized' }, { status: 401, statusText: 'Unauthorized' });
+    await tick();
 
     expect(TestBed.inject(AuthService).userId()).toBeNull();
     // `loginRoute` comes from this app's provideAttomeBase config, not the
@@ -542,12 +559,16 @@ describe('SecuritySettingsComponent with the real interceptor (D-129, D-510)', (
     const component = fixture.componentInstance;
     const auth = TestBed.inject(AuthService);
     auth.restoreSession('user-1');
-    flushSideRequests();
+    await flushSideRequests();
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/identity-links`).flush([]);
+    await tick();
 
     deliverGoogleCredential(component, 'jwt-from-gsi');
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/identity-link/google`)
       .flush(reauthBody('identity_link', ['totp', 'recovery_code']), { status: 401, statusText: 'Unauthorized' });
+    await tick();
 
     // No refresh (httpMock.verify), no sign-out, no login navigation.
     expect(auth.userId()).toBe('user-1');
@@ -556,15 +577,19 @@ describe('SecuritySettingsComponent with the real interceptor (D-129, D-510)', (
       operation: 'identity_link', localFactors: ['totp', 'recovery_code'],
     });
 
-    passStepUp('identity_link', 'totp', '123456');
+    await passStepUp('identity_link', 'totp', '123456');
     await settle();
 
+    await tick();
     const retry = httpMock.expectOne(`${BASE}/api/v1/auth/identity-link/google`);
     expect(retry.request.body).toEqual({ credential: 'jwt-from-gsi' });
     retry.flush(null);
+    await tick();
 
     httpMock.expectOne(`${BASE}/api/v1/auth/oidc/providers`).flush([]);
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/identity-links`).flush([]);
+    await tick();
 
     expect(component.banner()?.kind).toBe('success');
     expect(auth.userId()).toBe('user-1');
@@ -576,26 +601,32 @@ describe('SecuritySettingsComponent with the real interceptor (D-129, D-510)', (
     const component = fixture.componentInstance;
     const auth = TestBed.inject(AuthService);
     auth.restoreSession('user-1');
-    flushSideRequests();
+    await flushSideRequests();
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/identity-links`).flush([]);
+    await tick();
 
     component.apiKeyName.set('ci');
     component.apiKeyExpiry.set('30');
     component.createApiKey();
 
+    await tick();
     const first = httpMock.expectOne(`${BASE}/api/v1/auth/api-keys`);
     expect(first.request.body).toEqual({ name: 'ci', expires_in_days: 30 });
     first.flush(reauthBody('api_key_create', ['password']), { status: 401, statusText: 'Unauthorized' });
+    await tick();
     expect(auth.userId()).toBe('user-1');
 
-    passStepUp('api_key_create', 'password', 'correct horse');
+    await passStepUp('api_key_create', 'password', 'correct horse');
     await settle();
 
+    await tick();
     httpMock.expectOne(`${BASE}/api/v1/auth/api-keys`).flush({
       id: '0190a000-0000-7000-8000-000000000001', name: 'ci',
       public_key: 'atk_pub_ci', secret: 'atk_sec_only_once',
       created_at: '2026-09-15T12:00:00Z', expires_at: '2026-10-15T12:00:00Z',
     }, { status: 201, statusText: 'Created' });
+    await tick();
     fixture.detectChanges();
 
     const text = fixture.nativeElement.textContent as string;
