@@ -1,0 +1,29 @@
+{
+  "app": "partner",
+  "doc": {
+    "audience": "portal",
+    "page_type": "portal",
+    "root": {
+      "children": [
+        {
+          "binding": {
+            "entity": "partner_certification"
+          },
+          "id": "certifications",
+          "props": {
+            "title_ar": "شهاداتنا",
+            "title_en": "Our certifications"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "الشهادات",
+    "title_en": "Certifications"
+  },
+  "kind": "page",
+  "name": "portal-certifications",
+  "schema_version": 1
+}

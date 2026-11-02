@@ -1,0 +1,29 @@
+{
+  "app": "partner",
+  "doc": {
+    "audience": "portal",
+    "page_type": "portal",
+    "root": {
+      "children": [
+        {
+          "binding": {
+            "entity": "partner_performance_snapshot"
+          },
+          "id": "scorecard",
+          "props": {
+            "title_ar": "بطاقة أدائنا",
+            "title_en": "Our scorecard"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "بطاقة أدائنا",
+    "title_en": "Our scorecard"
+  },
+  "kind": "page",
+  "name": "portal-performance",
+  "schema_version": 1
+}

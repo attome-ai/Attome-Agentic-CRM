@@ -1,0 +1,29 @@
+{
+  "app": "partner",
+  "doc": {
+    "audience": "portal",
+    "page_type": "portal",
+    "root": {
+      "children": [
+        {
+          "binding": {
+            "entity": "lead"
+          },
+          "id": "leads",
+          "props": {
+            "title_ar": "العملاء المحتملون المعروضون علينا",
+            "title_en": "Leads offered to us"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "العملاء المحتملون المعروضون علينا",
+    "title_en": "Leads offered to us"
+  },
+  "kind": "page",
+  "name": "portal-leads",
+  "schema_version": 1
+}

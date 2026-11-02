@@ -60,10 +60,13 @@ shows depends on the portal role's grants on `service_ticket`, `case_message`,
 `knowledge_data_item` and `service_offering`. The portal also has its own sign-in, profile and
 consent pages.
 
-The partner pack ships `portal-home`, `portal-deals` (a partner registers a deal through the
-create form), `portal-deal` (its status and protection end) and `portal-resources` (published
-`partner_resource` records, pack changeset 0002), over the grants on `deal_registration` and
-`partner_resource`.
+The partner pack ships `portal-home` (leads offered, deal registrations, resources),
+`portal-deals` (a partner registers a deal through the create form), `portal-deal` (its status and
+protection end), `portal-resources` (published `partner_resource` records, pack changeset 0002),
+`portal-leads`, `portal-opportunities`, `portal-mdf` (funds, requests and claims),
+`portal-certifications` and `portal-performance` (the partner's scorecard snapshots). Each shows what
+the member's partner role reads (`attome partner portal-roles`): their own partner's records only.
+MDF requests and claims are made through the partner routes, not a create form.
 
 ### A portal on its own domain
 

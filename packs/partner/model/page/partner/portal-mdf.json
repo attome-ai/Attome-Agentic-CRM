@@ -1,0 +1,51 @@
+{
+  "app": "partner",
+  "doc": {
+    "audience": "portal",
+    "page_type": "portal",
+    "root": {
+      "children": [
+        {
+          "binding": {
+            "entity": "mdf_fund"
+          },
+          "id": "funds",
+          "props": {
+            "title_ar": "صناديقنا",
+            "title_en": "Our funds"
+          },
+          "type": "list"
+        },
+        {
+          "binding": {
+            "entity": "mdf_request"
+          },
+          "id": "requests",
+          "props": {
+            "title_ar": "طلبات التمويل",
+            "title_en": "Fund requests"
+          },
+          "type": "list"
+        },
+        {
+          "binding": {
+            "entity": "mdf_claim"
+          },
+          "id": "claims",
+          "props": {
+            "title_ar": "مطالبات التمويل",
+            "title_en": "Fund claims"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "صناديق التسويق",
+    "title_en": "Marketing funds"
+  },
+  "kind": "page",
+  "name": "portal-mdf",
+  "schema_version": 1
+}

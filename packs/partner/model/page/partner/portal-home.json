@@ -7,6 +7,17 @@
       "children": [
         {
           "binding": {
+            "entity": "lead"
+          },
+          "id": "leads",
+          "props": {
+            "title_ar": "العملاء المحتملون المعروضون علينا",
+            "title_en": "Leads offered to us"
+          },
+          "type": "list"
+        },
+        {
+          "binding": {
             "entity": "deal_registration"
           },
           "events": [

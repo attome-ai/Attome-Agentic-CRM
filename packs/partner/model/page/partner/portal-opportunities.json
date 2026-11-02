@@ -1,0 +1,29 @@
+{
+  "app": "partner",
+  "doc": {
+    "audience": "portal",
+    "page_type": "portal",
+    "root": {
+      "children": [
+        {
+          "binding": {
+            "entity": "opportunity"
+          },
+          "id": "opportunities",
+          "props": {
+            "title_ar": "صفقاتنا",
+            "title_en": "Our deals"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "صفقاتنا",
+    "title_en": "Our deals"
+  },
+  "kind": "page",
+  "name": "portal-opportunities",
+  "schema_version": 1
+}
