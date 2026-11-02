@@ -2570,6 +2570,19 @@ pub async fn create_one_as(
         },
     )
     .await?;
+    attome_core::record_hooks::enqueue_after_commit(
+        tx,
+        state,
+        attome_core::record_hooks::AfterCommitPayload {
+            entity: entity_name.to_owned(),
+            record_id,
+            is_create: true,
+            values: row.as_object().cloned().unwrap_or_default(),
+            previous: None,
+            actor,
+        },
+    )
+    .await?;
 
     // D-787 rule 7: a reference-data create inside a changeset is recorded
     // as `upsert_record` (no-op outside the generic handler's scope).
@@ -3887,6 +3900,19 @@ pub async fn update_one_as(
             is_create: false,
             values: new_row.as_object().unwrap_or(&no_fields),
             previous: old_row.as_ref().and_then(Value::as_object),
+            actor: modified_by,
+        },
+    )
+    .await?;
+    attome_core::record_hooks::enqueue_after_commit(
+        tx,
+        state,
+        attome_core::record_hooks::AfterCommitPayload {
+            entity: entity_name.to_owned(),
+            record_id,
+            is_create: false,
+            values: new_row.as_object().cloned().unwrap_or_default(),
+            previous: old_row.as_ref().and_then(Value::as_object).cloned(),
             actor: modified_by,
         },
     )

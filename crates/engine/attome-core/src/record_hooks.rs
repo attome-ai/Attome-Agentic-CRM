@@ -11,15 +11,19 @@
 //! - [`HookStage::AfterSave`]: in the transaction, after the row is written;
 //!   may reject (the whole write rolls back) but not change values.
 //!
+//! - [`HookStage::AfterCommit`]: once the write has committed, in a job
+//!   ([`AFTER_COMMIT_JOB`]) with the stored row; it cannot undo the write, so
+//!   a rejection there is only logged. This is the stage for the network.
+//!
 //! A rejection answers 422 with the hook's message. An in-transaction hook
 //! must not reach the network (the extension runtime refuses its HTTP calls
-//! there); work after the commit goes through a job (`after_commit`, not run
-//! here).
+//! there); work after the commit goes through the `after_commit` job.
 
 use std::future::Future;
 use std::pin::Pin;
 
 use attome_types::AppError;
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use uuid::Uuid;
 
@@ -31,6 +35,14 @@ pub enum HookStage {
     BeforeValidation,
     BeforeSave,
     AfterSave,
+    AfterCommit,
+}
+
+impl HookStage {
+    /// Whether a hook at this stage may change the values being written.
+    pub fn may_change(self) -> bool {
+        matches!(self, Self::BeforeValidation | Self::BeforeSave)
+    }
 }
 
 /// One write, as a hook sees it.
@@ -124,7 +136,7 @@ pub async fn run_stage(
             .await?;
         match outcome {
             HookOutcome::Continue => {}
-            HookOutcome::Change(set) if stage != HookStage::AfterSave => {
+            HookOutcome::Change(set) if stage.may_change() => {
                 let mut next = values.clone();
                 next.extend(set);
                 changed = Some(next);
@@ -133,7 +145,17 @@ pub async fn run_stage(
                 tracing::warn!(
                     hook = hook.name(),
                     entity = event.entity,
-                    "an after-save hook asked to change values; ignored"
+                    ?stage,
+                    "a hook after the save asked to change values; ignored"
+                );
+            }
+            HookOutcome::Reject(message) if stage == HookStage::AfterCommit => {
+                // The write is committed; there is nothing to refuse.
+                tracing::warn!(
+                    hook = hook.name(),
+                    entity = event.entity,
+                    %message,
+                    "an after-commit hook rejected a committed write; ignored"
                 );
             }
             HookOutcome::Reject(message) => {
@@ -148,4 +170,75 @@ pub async fn run_stage(
         }
     }
     Ok(changed)
+}
+
+/// Whether `entity` has any hook at `stage`.
+pub fn has_hooks(state: &EngineState, entity: &str, stage: HookStage) -> bool {
+    state
+        .record_hooks
+        .iter()
+        .any(|h| h.stage() == stage && h.entity() == entity)
+}
+
+/// The job that runs [`HookStage::AfterCommit`] hooks. Few attempts: a hook
+/// that keeps failing is a defect to read in the dead letters, not to retry.
+pub const AFTER_COMMIT_JOB: attome_jobs::JobType = attome_jobs::JobType {
+    max_attempts: 3,
+    ..attome_jobs::JobType::new("record_hook_after_commit", 1)
+};
+
+/// One committed write, carried to the after-commit hooks.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AfterCommitPayload {
+    pub entity: String,
+    pub record_id: Uuid,
+    pub is_create: bool,
+    /// The stored row.
+    pub values: Map<String, Value>,
+    /// The row before an update.
+    pub previous: Option<Map<String, Value>>,
+    pub actor: Option<Uuid>,
+}
+
+/// Queues the after-commit hooks of a write in its own transaction, so the
+/// job exists exactly when the write commits. Nothing is queued when the
+/// entity has no such hook.
+pub async fn enqueue_after_commit(
+    tx: &mut attome_db::Tx<'_>,
+    state: &EngineState,
+    payload: AfterCommitPayload,
+) -> Result<(), AppError> {
+    if !has_hooks(state, &payload.entity, HookStage::AfterCommit) {
+        return Ok(());
+    }
+    let job = attome_jobs::RegisteredJob {
+        name: AFTER_COMMIT_JOB.name.to_owned(),
+        version: AFTER_COMMIT_JOB.version,
+        payload: serde_json::to_value(&payload).map_err(AppError::internal)?,
+        next: None,
+    };
+    attome_jobs::enqueue_in_tx(tx, crate::jobs::EngineJob::Registered(job))
+        .await
+        .map_err(AppError::internal)
+}
+
+/// Runs the after-commit hooks of one committed write (the job's body).
+pub async fn run_after_commit(
+    state: &EngineState,
+    payload: &AfterCommitPayload,
+) -> Result<(), AppError> {
+    run_stage(
+        state,
+        HookStage::AfterCommit,
+        HookEvent {
+            entity: &payload.entity,
+            record_id: Some(payload.record_id),
+            is_create: payload.is_create,
+            values: &payload.values,
+            previous: payload.previous.as_ref(),
+            actor: payload.actor,
+        },
+    )
+    .await
+    .map(|_| ())
 }

@@ -218,3 +218,107 @@ fn recursive_hooks_stop_at_depth_eight() {
         assert_eq!(attome_core::record_hooks::current_depth(), 0);
     });
 }
+
+/// Counts after-commit runs and rejects every one (which cannot undo a
+/// committed write).
+struct AfterCommit(Arc<AtomicUsize>);
+
+impl RecordHook for AfterCommit {
+    fn name(&self) -> &str {
+        "test.after_commit"
+    }
+    fn entity(&self) -> &str {
+        "account"
+    }
+    fn stage(&self) -> HookStage {
+        HookStage::AfterCommit
+    }
+    fn run<'a>(&'a self, _state: &'a EngineState, event: HookEvent<'a>) -> HookFuture<'a> {
+        Box::pin(async move {
+            assert!(event.values.contains_key("name"), "the stored row");
+            self.0.fetch_add(1, Ordering::SeqCst);
+            Ok(HookOutcome::Reject("too late to refuse".into()))
+        })
+    }
+}
+
+// feature: Y10
+#[test]
+fn after_commit_hooks_run_as_a_job_once_the_write_commits() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let runs = Arc::new(AtomicUsize::new(0));
+        let mut state = app.state.clone();
+        state.record_hooks = Arc::new(vec![
+            Arc::new(AfterCommit(runs.clone())) as Arc<dyn RecordHook>
+        ]);
+        let ctx = state
+            .base
+            .security
+            .resolve(app.admin.id)
+            .await
+            .expect("ctx");
+        let tag = uuid::Uuid::now_v7().simple().to_string();
+        let (id, _) = attome_records::entity_crud::create_record_for(
+            &state,
+            &ctx,
+            app.admin.id,
+            "account",
+            json!({ "name": format!("Committed {tag}") }),
+        )
+        .await
+        .expect("the create commits");
+        assert_eq!(runs.load(Ordering::SeqCst), 0, "not run in the write");
+
+        let queued: Vec<Value> = sqlx::query_scalar(
+            "SELECT job FROM apalis.jobs \
+              WHERE job::text LIKE '%record_hook_after_commit%' AND job::text LIKE '%' || $1 || '%'",
+        )
+        .bind(id.to_string())
+        .fetch_all(app.db())
+        .await
+        .unwrap();
+        assert_eq!(queued.len(), 1, "one job for the committed write");
+
+        let payload = attome_core::record_hooks::AfterCommitPayload {
+            entity: "account".into(),
+            record_id: id,
+            is_create: true,
+            values: Map::from_iter([("name".to_owned(), json!(format!("Committed {tag}")))]),
+            previous: None,
+            actor: Some(app.admin.id),
+        };
+        attome_core::record_hooks::run_after_commit(&state, &payload)
+            .await
+            .expect("a rejection after the commit is only logged");
+        assert_eq!(runs.load(Ordering::SeqCst), 1);
+        let kept: i64 = sqlx::query_scalar("SELECT count(*) FROM account WHERE id = $1")
+            .bind(id)
+            .fetch_one(app.db())
+            .await
+            .unwrap();
+        assert_eq!(kept, 1, "the committed write stays");
+
+        // Without such a hook nothing is queued.
+        let (plain, _) = attome_records::entity_crud::create_record_for(
+            &app.state,
+            &ctx,
+            app.admin.id,
+            "account",
+            json!({ "name": format!("Plain {tag}") }),
+        )
+        .await
+        .expect("a create without hooks");
+        let none: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM apalis.jobs \
+              WHERE job::text LIKE '%record_hook_after_commit%' AND job::text LIKE '%' || $1 || '%'",
+        )
+        .bind(plain.to_string())
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        assert_eq!(none, 0);
+    });
+}
