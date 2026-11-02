@@ -3226,3 +3226,79 @@ async fn d780_account_routes_follow_the_trusted_login_caller_rules() {
         account_call(&fx, &key, &p, &Uuid::now_v7().to_string(), "GET", "", None).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
+
+/// G12-T2: a portal user lists and unlinks their linked identities, in their
+/// own portal only, and cannot unlink their last way to sign in.
+#[tokio::test]
+async fn linked_identities_are_listed_and_unlinked_but_never_the_last_way_in() {
+    let fx = skip_if_no_db!(fixture().await);
+    let p = portal(&fx, PortalType::Authenticated, MfaPolicy::Optional).await;
+    let (user, email) = active_user(&fx, &p).await;
+    let cookies = login(&fx, &p, &email, None).await;
+    let session = vec![format!("{}={}", names(&p).session, session_of(&cookies))];
+    let (first, second) = (Uuid::now_v7(), Uuid::now_v7());
+    for (id, provider) in [(first, "broker-a"), (second, "broker-b")] {
+        sqlx::query(
+            "INSERT INTO webportal_identity (id, webportal_id, webportal_user_id, provider_key, issuer, subject) \
+             VALUES ($1, $2, $3, $4, 'https://idp.example', $5)",
+        )
+        .bind(id)
+        .bind(p.id)
+        .bind(user)
+        .bind(provider)
+        .bind(Uuid::now_v7().to_string())
+        .execute(&fx.base.db)
+        .await
+        .unwrap();
+    }
+    let list = |fx: &Fx| {
+        let req = portal_req(
+            "GET",
+            &format!("/{}/api/v1/me/identities", p.keyword),
+            &session,
+            None,
+        );
+        let app = fx.app.clone();
+        async move {
+            let res = app.oneshot(req).await.unwrap();
+            let status = res.status();
+            let bytes = axum::body::to_bytes(res.into_body(), usize::MAX)
+                .await
+                .unwrap();
+            (
+                status,
+                serde_json::from_slice::<Value>(&bytes).unwrap_or(Value::Null),
+            )
+        }
+    };
+    let (status, body) = list(&fx).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body.as_array().map(Vec::len), Some(2));
+
+    let unlink = |id: Uuid| {
+        portal_req(
+            "DELETE",
+            &format!("/{}/api/v1/me/identities/{id}", p.keyword),
+            &session,
+            None,
+        )
+    };
+    assert_eq!(send(&fx, unlink(first)).await.0, StatusCode::NO_CONTENT);
+    assert_eq!(
+        send(&fx, unlink(first)).await.0,
+        StatusCode::NOT_FOUND,
+        "already gone"
+    );
+    assert_eq!(list(&fx).await.1.as_array().map(Vec::len), Some(1));
+
+    // Without a password the last link is the only way in: refused.
+    sqlx::query(
+        "UPDATE webportal_credential SET password_hash = NULL WHERE webportal_user_id = $1",
+    )
+    .bind(user)
+    .execute(&fx.base.db)
+    .await
+    .unwrap();
+    assert_eq!(send(&fx, unlink(second)).await.0, StatusCode::CONFLICT);
+    assert_eq!(list(&fx).await.1.as_array().map(Vec::len), Some(1));
+}
