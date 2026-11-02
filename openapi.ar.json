@@ -31285,6 +31285,91 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/extensions/{name}/jobs": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Run a job extension",
+        "description": "M17-T1: queues one run of the published extension's `on_job` export with\n`input`, as the caller: the records it answers are written as the\ncaller through the generic write path.",
+        "operationId": "queue_extension_job",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The extension",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueueExtensionJob"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Queued"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No published version of that name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "queues the run; every record it writes goes through the audited generic write path as the caller",
+          "reason": "delegated",
+          "via": "extension_kinds::run_kind -> entity_crud"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/extensions/{name}/off": {
       "post": {
         "tags": [
@@ -201563,7 +201648,9 @@
           "max",
           "median",
           "q1",
-          "q3"
+          "q3",
+          "first",
+          "last"
         ]
       },
       "Meeting": {
@@ -240178,6 +240265,17 @@
           }
         }
       },
+      "QueueExtensionJob": {
+        "type": "object",
+        "description": "A job extension's input.",
+        "properties": {
+          "input": {
+            "type": "object",
+            "description": "Given to the module's `on_job` export as `input`."
+          }
+        },
+        "additionalProperties": false
+      },
       "QueueItemEvent": {
         "type": "object",
         "description": "One entry of a queue item's history.",
@@ -243013,6 +243111,8 @@
           "chart_bubble",
           "chart_range_area",
           "chart_box_plot",
+          "chart_candlestick",
+          "timeline",
           "scalar",
           "table",
           "declarative",

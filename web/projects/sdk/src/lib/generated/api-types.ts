@@ -6168,6 +6168,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/extensions/{name}/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a job extension
+         * @description M17-T1: queues one run of the published extension's `on_job` export with
+         *     `input`, as the caller: the records it answers are written as the
+         *     caller through the generic write path.
+         */
+        post: operations["queue_extension_job"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/extensions/{name}/off": {
         parameters: {
             query?: never;
@@ -64195,6 +64217,11 @@ export interface components {
             query_id: string;
             shares: components["schemas"]["QueryShare"][];
         };
+        /** @description A job extension's input. */
+        QueueExtensionJob: {
+            /** @description Given to the module's `on_job` export as `input`. */
+            input?: Record<string, never>;
+        };
         /** @description One entry of a queue item's history. */
         QueueItemEvent: {
             /** Format: uuid */
@@ -92645,6 +92672,58 @@ export interface operations {
             };
             /** @description A bad name, a module that does not compile, or bad grants */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    queue_extension_job: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The extension */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QueueExtensionJob"];
+            };
+        };
+        responses: {
+            /** @description Queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No published version of that name */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

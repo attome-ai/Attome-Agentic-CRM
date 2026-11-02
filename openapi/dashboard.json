@@ -6774,7 +6774,9 @@
           "max",
           "median",
           "q1",
-          "q3"
+          "q3",
+          "first",
+          "last"
         ]
       },
       "MetricCertification": {
@@ -8049,6 +8051,8 @@
           "chart_bubble",
           "chart_range_area",
           "chart_box_plot",
+          "chart_candlestick",
+          "timeline",
           "scalar",
           "table",
           "declarative",
