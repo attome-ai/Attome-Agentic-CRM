@@ -236,6 +236,7 @@ fn diagnostic(d: &RulesDiagnostic) -> Json {
 }
 
 /// The schema, and the declared types the context's values are read by.
+#[derive(Debug)]
 pub struct ParsedSchema {
     pub schema: Schema,
     fields: HashMap<String, Type>,

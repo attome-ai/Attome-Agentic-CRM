@@ -233,7 +233,9 @@ fn calendar_parity() {
 
         let end = parsed(start) + chrono::Duration::days(2) + chrono::Duration::minutes(minutes);
         let end_iso = end.to_rfc3339();
-        let want = server.business_duration_between(parsed(start), end).unwrap();
+        let want = server
+            .business_duration_between(parsed(start), end)
+            .unwrap();
         let got = calendar_between_value(CALENDAR, start, &end_iso);
         assert_eq!(got["value"], json!(want.num_minutes()), "between {start}");
         compared += 1;

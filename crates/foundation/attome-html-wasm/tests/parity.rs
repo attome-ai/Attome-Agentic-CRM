@@ -13,7 +13,8 @@ use attome_rules::{Context, Schema, Type, Value};
 use chrono::{TimeZone, Utc};
 use serde_json::json;
 
-const TEMPLATE: &str = "<h1>{{ name }}</h1>{% if total > 100 %}<p>{{ total | number(2) }}</p>{% else %}small{% end %}";
+const TEMPLATE: &str =
+    "<h1>{{ name }}</h1>{% if total > 100 %}<p>{{ total | number(2) }}</p>{% else %}small{% end %}";
 
 fn server(output: Output, locale: &str) -> String {
     let schema = Schema::new()

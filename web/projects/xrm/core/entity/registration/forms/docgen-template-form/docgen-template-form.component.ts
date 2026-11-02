@@ -5,7 +5,7 @@ import {
   FieldInputComponent, XrmBaseFormComponent, EngineFormBase, XrmTabDirective, recordTabDefs,
 } from '@attome/xrm/core/entity';
 import type { XrmFormTabDef } from '@attome/xrm/core/entity';
-import { TemplatePreviewComponent } from '@attome/xrm/core/admin';
+import { TemplatePreviewComponent } from '@attome/xrm/core/admin/template-preview';
 import type { FieldSchema } from '@attome/xrm';
 
 /**

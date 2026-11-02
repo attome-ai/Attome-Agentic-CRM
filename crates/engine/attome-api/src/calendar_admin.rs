@@ -3297,7 +3297,10 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/calendars/{id}/holiday-rules/{rule_id}",
             axum::routing::delete(delete_rule),
         )
-        .route("/api/v1/admin/calendars/{id}/expanded", get(expanded_calendar))
+        .route(
+            "/api/v1/admin/calendars/{id}/expanded",
+            get(expanded_calendar),
+        )
         .route(
             // Z12-T13: static, so it wins over `{rule_id}` (a DELETE only).
             "/api/v1/admin/calendars/{id}/holiday-rules/expanded",
@@ -3600,6 +3603,28 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_expanded_calendar_keeps_only_the_window() {
+        use chrono::Weekday;
+        use std::collections::{BTreeSet, HashMap, HashSet};
+        let range = attome_calendar::TimeRange::try_new(540, 1020).unwrap();
+        let date = |y, m, d| NaiveDate::from_ymd_opt(y, m, d).unwrap();
+        let calendar = attome_calendar::BusinessCalendar::new(
+            chrono_tz::Asia::Riyadh,
+            HashSet::from([Weekday::Sun]),
+            HashMap::from([(Weekday::Sun, vec![range])]),
+            BTreeSet::from([date(2020, 1, 1), date(2026, 11, 4)]),
+            BTreeMap::from([(date(2026, 11, 9), vec![range])]),
+        )
+        .unwrap();
+        let got = expand_calendar(&calendar, &(date(2026, 1, 1)..=date(2027, 1, 1)));
+        assert_eq!(got.timezone, "Asia/Riyadh");
+        assert_eq!(got.working_days, ["sun"]);
+        assert_eq!(got.hours["sun"][0].end_minute, 1020);
+        assert_eq!(got.holidays, [date(2026, 11, 4)]);
+        assert_eq!(got.exceptions.len(), 1);
+    }
     use serde_json::json;
 
     fn body(working_days: &[&str], hours: Value) -> CalendarBody {

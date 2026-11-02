@@ -5,7 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { ApiService, LangService, TemplateRendererService, TranslatePipe } from '@attome/base';
 import type { RulesSchema } from '@attome/base';
 import type { EntitySchema } from '@attome/xrm';
-import { rulesSchemaOf } from '../expression-editor/expression-text';
+import { rulesSchemaOf } from '@attome/xrm/core/admin/expression-editor';
 
 /** How long typing has to pause before a render. */
 const DEBOUNCE_MS = 200;

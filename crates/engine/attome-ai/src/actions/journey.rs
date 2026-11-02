@@ -228,13 +228,17 @@ pub fn diff(current: &DraftGraph, next: &DraftGraph) -> GraphDiff {
     }
 }
 
+/// A module step's verdict on a handler key and its configuration: `None`
+/// when no marketing step has that key.
+pub type StepCheck<'a> = &'a dyn Fn(&str, &Value) -> Option<Result<(), String>>;
+
 /// The problems with a drafted graph; none means it may be saved as a
 /// draft (the workflow API checks it again when it is). `step` answers for
 /// a module step's handler key: `None` when no marketing step has that key,
 /// otherwise the step's verdict on its configuration. Pure.
 pub fn problems(
     graph: &DraftGraph,
-    step: &dyn Fn(&str, &Value) -> Option<Result<(), String>>,
+    step: StepCheck<'_>,
 ) -> Vec<String> {
     let mut out = Vec::new();
     if graph.nodes.is_empty() {

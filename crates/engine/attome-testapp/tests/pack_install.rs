@@ -190,6 +190,10 @@ fn the_marketing_pack_installs_once_on_the_crm_pack() {
         attome_api::changeset::boot::apply_platform_definition(&app.state, "attome-workflow")
             .await
             .expect("workflow platform definition");
+        // Social posts (changeset 0009) name the integration engine's systems.
+        attome_api::changeset::boot::apply_platform_definition(&app.state, "attome-integration")
+            .await
+            .expect("integration platform definition");
         installs_once(
             &app,
             "marketing",
