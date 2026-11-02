@@ -982,14 +982,15 @@ fn web(root: &Path) -> Result<(), String> {
     }
 }
 
-/// The web scripts the gate runs, libraries before the app that uses them.
+/// The web scripts the gate runs, libraries before the app that uses them:
+/// the SDK first, since `@attome/base` uses it (Y9-T3).
 const WEB_SCRIPTS: [&str; 13] = [
     "check:i18n",
     "check:colours",
     "check:logical-css",
+    "build:sdk",
     "build:base",
     "build:xrm",
-    "build:sdk",
     "build",
     "lint:base",
     "lint:xrm",

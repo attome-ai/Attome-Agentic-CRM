@@ -1,8 +1,8 @@
 {
   "author": "packs",
-  "checksum": "sha256:2180fcdb914115d576a901048f63b7e6b4804f6322227eeee7435718ced629e0",
+  "checksum": "sha256:b3b3557566028c14d16af4e89601eae50049d65a97a76201f7ced1557d4e08ff",
   "closed_at": "2026-11-01T00:00:00Z",
-  "description": "Starter segments (E7-T10): four stored queries over contacts (engaged in the last 90 days, new this month, unengaged for 6 months, customers with a won opportunity) and a daily segment list for each, naming its query as <entity>/<name>. A starter list refreshes once an owner is set (it runs with its owner's access).",
+  "description": "Starter segments (E7-T10): four stored queries over contacts (engaged in the last 90 days, new this month, unengaged for 6 months, customers (lifecycle stage customer: a contact-scoped segment may not read opportunities, as its record filter covers contacts only)) and a daily segment list for each, naming its query as <entity>/<name>. A starter list refreshes once an owner is set (it runs with its owner's access).",
   "format": "attome-changeset/v1",
   "id": "01a19821-32ac-7a15-8768-eee979a5388b",
   "layer": "product",
@@ -81,7 +81,7 @@
           "is_report": false,
           "name": "Customers",
           "required_privilege": "contact.read",
-          "sql": "SELECT c.id FROM \"contact\" c WHERE c.is_active = true AND EXISTS (SELECT 1 FROM \"opportunity\" o WHERE o.account_ref = c.account_ref AND o.stage = 'closed_won' AND o.is_active = true)",
+          "sql": "SELECT c.id FROM \"contact\" c WHERE c.is_active = true AND c.lifecycle_stage = 'customer'",
           "table_definition": null
         }
       },

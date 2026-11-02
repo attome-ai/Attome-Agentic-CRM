@@ -226,16 +226,19 @@ fn package_name(manifest: &str) -> Option<String> {
 }
 
 /// The web build gate rows a changed path needs (CLAUDE.md's table, with
-/// `angular/` now `web/`). Libraries build in order: base before xrm.
+/// `angular/` now `web/`). Libraries build in order: the SDK (which base
+/// uses, Y9-T3), then base, then xrm.
 pub fn web_rows(path: &str) -> Vec<Planned> {
     if path.starts_with("web/projects/base/") {
         vec![
+            Planned::npm(&["run", "build:sdk"]),
             Planned::npm(&["run", "build:base"]),
             Planned::npm(&["run", "lint:base"]),
             Planned::npm(&["run", "test:base"]),
         ]
     } else if path.starts_with("web/projects/xrm/") {
         vec![
+            Planned::npm(&["run", "build:sdk"]),
             Planned::npm(&["run", "build:base"]),
             Planned::npm(&["run", "build:xrm"]),
             Planned::npm(&["run", "lint:xrm"]),
@@ -614,6 +617,7 @@ mod tests {
         assert_eq!(
             rows,
             strings(&[
+                "run build:sdk",
                 "run build:base",
                 "run build:xrm",
                 "run lint:xrm",
