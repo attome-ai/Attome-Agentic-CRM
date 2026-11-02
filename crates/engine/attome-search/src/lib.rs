@@ -73,7 +73,7 @@ pub mod vector;
 pub use access_cache::{AccessMap, AccessMapCache, ResultsCacheKey};
 pub use aggregate::{
     AggregateScope, BucketKey, DrillTarget, MAX_GROUP_BUCKETS, RecordColumn, StructuredAggregate,
-    StructuredBucket, StructuredRecords, key_filters, run_structured_aggregate,
+    StructuredBucket, StructuredRecords, bin_label, key_filters, run_structured_aggregate,
     run_structured_records,
 };
 pub use backfill::Backfill;

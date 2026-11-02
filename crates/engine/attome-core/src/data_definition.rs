@@ -181,6 +181,11 @@ pub struct Grouping {
     /// Present only for a time bucket; the field must then be a date field.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bucket: Option<DateBucket>,
+    /// P6-T1: present only for a histogram: the width of each bin over a
+    /// number field, every bin `low ≤ x < low + width` with `low` a multiple
+    /// of the width. Not with `bucket`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bin_width: Option<f64>,
 }
 
 /// The PostgreSQL `date_trunc` unit for a bucket — a closed set, so the
@@ -385,6 +390,16 @@ impl DataDefinition {
         {
             errors.push("group.field must be a field logical name".to_string());
         }
+        if let Some(group) = &self.group
+            && let Some(width) = group.bin_width
+        {
+            if !(width.is_finite() && width > 0.0) {
+                errors.push("group.bin_width must be a number above zero".to_string());
+            }
+            if group.bucket.is_some() {
+                errors.push("group.bin_width cannot be combined with group.bucket".to_string());
+            }
+        }
         if let Some(series) = &self.series {
             if !is_safe_identifier(series) {
                 errors.push("series must be a field logical name".to_string());
@@ -448,11 +463,14 @@ impl DataDefinition {
             }
         }
         if presentation.other_bucket {
-            let plain_field_group = self.group.as_ref().is_some_and(|g| g.bucket.is_none());
+            let plain_field_group = self
+                .group
+                .as_ref()
+                .is_some_and(|g| g.bucket.is_none() && g.bin_width.is_none());
             if presentation.limit.is_none() || !plain_field_group || self.series.is_some() {
                 errors.push(
                     "presentation.other_bucket needs limit and a field group without a time \
-                     bucket or series"
+                     bucket, bins or series"
                         .to_string(),
                 );
             }
@@ -529,6 +547,9 @@ impl DataDefinition {
             }
             if group.bucket.is_some() && !field_type.is_temporal() {
                 errors.push("group.bucket needs a date field".to_string());
+            }
+            if group.bin_width.is_some() && !is_numeric(&field_type) {
+                errors.push("group.bin_width needs a number field".to_string());
             }
         }
         if let Some(series) = &self.series

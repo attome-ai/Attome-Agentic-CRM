@@ -816,6 +816,124 @@ async fn null_bucket_multiple_measures_and_series() {
     );
 }
 
+/// P6-T1: a binned number group counts each bin `low ≤ x < high` in key
+/// order, its key drills as the same range, and the quartile measures give a
+/// box plot's five values.
+#[tokio::test]
+async fn bins_count_each_range_and_quartiles_measure_it() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let (admin_id, _) = seed_user(&system, true).await;
+    let db = system.state().base.db.clone();
+    let (deals, _) = provision_deals(&system).await;
+    for amount in [1.0, 4.0, 9.9, 10.0, 25.0] {
+        insert_deal(
+            &db,
+            &deals,
+            Some("won"),
+            amount,
+            "2026-01-05T00:00:00Z",
+            None,
+            Some(true),
+        )
+        .await;
+    }
+    let ctx = admin_ctx(&system, admin_id).await;
+    let run = |raw: Value| {
+        let system = &system;
+        let ctx = ctx.clone();
+        async move {
+            attome_search::run_structured_aggregate(
+                system.state(),
+                &ctx,
+                &definition(raw),
+                &[],
+                chrono_tz::UTC,
+            )
+            .await
+        }
+    };
+
+    let bins = run(json!({
+        "source": deals,
+        "measures": [{ "aggregation": "count" }],
+        "group": { "field": "amount", "bin_width": 10.0 }
+    }))
+    .await
+    .unwrap();
+    let counted: Vec<_> = bins
+        .buckets
+        .iter()
+        .map(|b| (b.key.clone(), b.values[0]))
+        .collect();
+    assert_eq!(
+        counted,
+        vec![
+            (
+                BucketKey::Bin {
+                    low: 0.0,
+                    high: 10.0
+                },
+                Some(3.0)
+            ),
+            (
+                BucketKey::Bin {
+                    low: 10.0,
+                    high: 20.0
+                },
+                Some(1.0)
+            ),
+            (
+                BucketKey::Bin {
+                    low: 20.0,
+                    high: 30.0
+                },
+                Some(1.0)
+            ),
+        ]
+    );
+    assert_eq!(bins.buckets[0].label.as_deref(), Some("0–10"));
+    let drill = attome_search::key_filters(
+        "amount",
+        &BucketKey::Bin {
+            low: 0.0,
+            high: 10.0,
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        drill.iter().map(|f| f.op.as_str()).collect::<Vec<_>>(),
+        vec!["gte", "lt"]
+    );
+
+    // Bins need a number field.
+    assert!(
+        run(json!({
+            "source": deals,
+            "measures": [{ "aggregation": "count" }],
+            "group": { "field": "region", "bin_width": 5.0 }
+        }))
+        .await
+        .is_err()
+    );
+
+    let quartiles = run(json!({
+        "source": deals,
+        "measures": [
+            { "aggregation": "min", "field": "amount" },
+            { "aggregation": "q1", "field": "amount" },
+            { "aggregation": "median", "field": "amount" },
+            { "aggregation": "q3", "field": "amount" },
+            { "aggregation": "max", "field": "amount" }
+        ]
+    }))
+    .await
+    .unwrap();
+    assert_eq!(
+        quartiles.buckets[0].values,
+        vec![Some(1.0), Some(4.0), Some(9.9), Some(10.0), Some(25.0)]
+    );
+}
+
 /// Past the cap the response says so, and an explicit Other bucket folds the
 /// rest — including NULL rows the plain `NOT IN` form would drop — so the
 /// buckets sum to the ungrouped count.

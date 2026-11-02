@@ -37407,6 +37407,13 @@ export interface components {
             /** Format: date-time */
             start: string;
         } | {
+            /** Format: double */
+            high: number;
+            /** @enum {string} */
+            kind: "bin";
+            /** Format: double */
+            low: number;
+        } | {
             /** @enum {string} */
             kind: "other";
         };
@@ -46493,6 +46500,13 @@ export interface components {
             rate_per_minute: number;
         };
         Grouping: {
+            /**
+             * Format: double
+             * @description P6-T1: present only for a histogram: the width of each bin over a
+             *     number field, every bin `low ≤ x < low + width` with `low` a multiple
+             *     of the width. Not with `bucket`.
+             */
+            bin_width?: number | null;
             bucket?: null | components["schemas"]["DateBucket"];
             field: string;
         };

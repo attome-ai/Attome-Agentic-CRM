@@ -250,6 +250,7 @@ fn key_value(key: &BucketKey) -> Option<Value> {
     match key {
         BucketKey::Value { value } => Some(Value::String(value.clone())),
         BucketKey::Range { start, .. } => Some(Value::String(start.to_rfc3339())),
+        BucketKey::Bin { low, .. } => Some(Value::from(*low)),
         BucketKey::Null => Some(Value::Null),
         BucketKey::Total | BucketKey::Other => None,
     }
@@ -595,6 +596,7 @@ fn crumb_label(key: &BucketKey) -> Option<String> {
     match key {
         BucketKey::Value { value } => Some(value.clone()),
         BucketKey::Range { start, .. } => Some(start.to_rfc3339()),
+        BucketKey::Bin { low, high } => Some(attome_search::bin_label(*low, *high)),
         BucketKey::Null | BucketKey::Total | BucketKey::Other => None,
     }
 }
@@ -722,6 +724,7 @@ async fn widget_drill_down(
     data.group = Some(Grouping {
         field: level.attribute.clone(),
         bucket: level.grain,
+        bin_width: None,
     });
     data.series = None;
     {

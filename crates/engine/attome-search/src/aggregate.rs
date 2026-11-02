@@ -406,6 +406,8 @@ pub enum BucketKey {
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     },
+    /// P6-T1: a histogram bin: `low ≤ x < high`.
+    Bin { low: f64, high: f64 },
     /// Everything past `presentation.limit`, when `other_bucket` is set.
     Other,
 }
@@ -592,6 +594,11 @@ pub fn range_label(start: DateTime<Utc>, bucket: DateBucket, tz: chrono_tz::Tz) 
     }
 }
 
+/// A histogram bin's label, `low–high`. Pure.
+pub fn bin_label(low: f64, high: f64) -> String {
+    format!("{low}–{high}")
+}
+
 fn value_key(value: Option<String>) -> BucketKey {
     match value {
         Some(value) => BucketKey::Value { value },
@@ -628,6 +635,7 @@ pub async fn run_structured_aggregate(
     let mut key_order = String::new();
     let mut join_sql = String::new();
     let bucket = definition.group.as_ref().and_then(|g| g.bucket);
+    let bin_width = definition.group.as_ref().and_then(|g| g.bin_width);
 
     if let Some(group) = &definition.group {
         scope.require_field(&group.field, "group")?;
@@ -676,8 +684,21 @@ pub async fn run_structured_aggregate(
             None => {
                 select.push("NULL::timestamptz AS g_start".to_owned());
                 select.push("NULL::timestamptz AS g_end".to_owned());
-                select.push(format!("{column}::text AS g"));
-                select.push(format!("{column} AS g_typed"));
+                match bin_width {
+                    Some(width) => {
+                        if scope.data_type(&group.field) != Some("number") {
+                            return Err(AppError::Validation("bins need a number field".into()));
+                        }
+                        let w = scope.bind(width.to_string());
+                        let low = format!("floor({column}::float8 / ${w}::float8) * ${w}::float8");
+                        select.push(format!("({low})::text AS g"));
+                        select.push(format!("{low} AS g_typed"));
+                    }
+                    None => {
+                        select.push(format!("{column}::text AS g"));
+                        select.push(format!("{column} AS g_typed"));
+                    }
+                }
                 group_by.extend(["3".to_owned(), "4".to_owned()]);
                 key_order = "g_typed".to_owned();
             }
@@ -711,11 +732,15 @@ pub async fn run_structured_aggregate(
         } else {
             ""
         };
-        let sort = definition.presentation.sort.unwrap_or(if bucket.is_some() {
-            SortOrder::KeyAsc
-        } else {
-            SortOrder::ValueDesc
-        });
+        let sort =
+            definition
+                .presentation
+                .sort
+                .unwrap_or(if bucket.is_some() || bin_width.is_some() {
+                    SortOrder::KeyAsc
+                } else {
+                    SortOrder::ValueDesc
+                });
         let order = match sort {
             SortOrder::ValueDesc => {
                 format!("m0 DESC NULLS LAST, {key_order} ASC NULLS FIRST{series_order}")
@@ -792,16 +817,29 @@ pub async fn run_structured_aggregate(
                         _ => BucketKey::Null,
                     }
                 }
-                (Some(_), None) => value_key(
-                    row.try_get::<Option<String>, _>("g")
-                        .map_err(AppError::internal)?,
-                ),
+                (Some(_), None) => match bin_width {
+                    Some(width) => match row
+                        .try_get::<Option<f64>, _>("g_typed")
+                        .map_err(AppError::internal)?
+                    {
+                        Some(low) => BucketKey::Bin {
+                            low,
+                            high: low + width,
+                        },
+                        None => BucketKey::Null,
+                    },
+                    None => value_key(
+                        row.try_get::<Option<String>, _>("g")
+                            .map_err(AppError::internal)?,
+                    ),
+                },
             };
             let label = match (&key, bucket) {
                 (BucketKey::Value { value }, _) => Some(value.clone()),
                 (BucketKey::Range { start, .. }, Some(bucket)) => {
                     Some(range_label(*start, bucket, tz))
                 }
+                (BucketKey::Bin { low, high }, _) => Some(bin_label(*low, *high)),
                 _ => None,
             };
             let series_key = if definition.series.is_some() {
@@ -1046,6 +1084,10 @@ pub fn key_filters(field: &str, key: &BucketKey) -> Result<Vec<Filter>, AppError
             filter("gte", Some(Value::String(start.to_rfc3339()))),
             filter("lt", Some(Value::String(end.to_rfc3339()))),
         ]),
+        BucketKey::Bin { low, high } => Ok(vec![
+            filter("gte", Some(Value::from(*low))),
+            filter("lt", Some(Value::from(*high))),
+        ]),
         BucketKey::Other | BucketKey::Total => Err(AppError::Validation(
             "this key cannot be expressed as filters".into(),
         )),
@@ -1106,6 +1148,18 @@ pub async fn run_structured_records(
             (Some(group), BucketKey::Value { .. }) if group.bucket.is_some() => {
                 return Err(AppError::Validation(format!(
                     "group {} is time-bucketed; use its range key",
+                    group.field
+                )));
+            }
+            (Some(group), BucketKey::Bin { .. }) if group.bin_width.is_none() => {
+                return Err(AppError::Validation(format!(
+                    "group {} has no bins; a bin key does not apply",
+                    group.field
+                )));
+            }
+            (Some(group), BucketKey::Value { .. }) if group.bin_width.is_some() => {
+                return Err(AppError::Validation(format!(
+                    "group {} is binned; use its bin key",
                     group.field
                 )));
             }

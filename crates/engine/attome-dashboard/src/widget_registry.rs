@@ -282,6 +282,8 @@ const RENDERERS: &[(&str, RenderKind, DataContract)] = &[
         RenderKind::ChartBoxPlot,
         DataContract::Structured,
     ),
+    // P6-T1: bars over a binned number field (`group.bin_width`).
+    ("histogram", RenderKind::ChartBar, DataContract::Structured),
     ("metric", RenderKind::Scalar, DataContract::Structured),
     ("entity_data_grid", RenderKind::Table, DataContract::Query),
     ("table", RenderKind::Table, DataContract::Query),
@@ -1045,10 +1047,10 @@ mod tests {
         );
         // P6-T1: quartile measures (q1, q3) give a box plot five values.
         assert_eq!(registry().render_kind("box_plot"), RenderKind::ChartBoxPlot);
-        // No definition can produce these yet: bins, open and close values,
-        // or start and end pairs.
+        assert_eq!(registry().render_kind("histogram"), RenderKind::ChartBar);
+        // No definition can produce these yet: open and close values, or
+        // start and end pairs.
         for type_id in [
-            "histogram",
             "gantt_chart",
             "timeline",
             "candlestick_chart",
