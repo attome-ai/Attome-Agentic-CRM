@@ -25,12 +25,30 @@ the cart is read and again at checkout. Checkout:
    request (`commerce.order_approval`) regarding the order. Staff confirm the order as usual once it is
    approved.
 
+## Promotions and coupons
+
+Checkout applies the live promotions (`promotion`, sales pack changesets `0030` and `0032`) after the
+list price and before VAT, in this order: percent, amount, buy X get Y, free shipping, bundle. Each
+offer takes from what the earlier ones left, so a line never goes below zero. A promotion is live while
+it is enabled, inside its start and end dates, at or above its minimum subtotal, and while its
+eligibility rule holds for the cart (`account_ref`, `subtotal`, `line_count`, `currency`). It may name
+one product (`product_ref`), buy and free quantities (`buy_quantity`, `get_quantity`), or the SKUs of a
+bundle (`bundle_skus`, comma separated; `value` is the amount off each complete set).
+
+A promotion with coupons applies only with one of its codes: `POST …/shop/cart/checkout?coupon=CODE`.
+A code that matches no live offer is refused (422). The coupon's use is recorded with the order
+(`coupon_redemption`, and the coupon's `uses_count`) under a lock per code, so a coupon with
+`max_uses` 1 is used once however many people check out at the same moment; a coupon used up, or over
+the promotion's `max_uses_per_customer` for the buyer's contact, refuses the checkout (409) and gives
+the cart back. Each order line keeps its `discount_amount` and `promotion_ref`, so the cost of every
+offer can be reported.
+
 ## Routes
 
 - `GET /{keyword}/api/v1/shop/catalogue?search=`
 - `GET /{keyword}/api/v1/shop/cart`
 - `PUT /{keyword}/api/v1/shop/cart/lines/{product_id}` `{quantity}` (0 removes)
-- `POST /{keyword}/api/v1/shop/cart/checkout`
+- `POST /{keyword}/api/v1/shop/cart/checkout?coupon=`
 - `GET /{keyword}/api/v1/shop/orders`: the account's orders, newest first; each order's lines and
   tracking come from `GET /{keyword}/api/v1/fulfilment/orders/{order_id}` (with `fulfilment.portal` on).
 

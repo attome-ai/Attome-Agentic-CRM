@@ -37,6 +37,8 @@ pub mod orgchart;
 pub mod owner_change;
 /// D26-T2: the plays that apply to a deal.
 pub mod plays;
+/// F8-T6: promotions and coupons in the shop's pricing order.
+pub mod promotion;
 pub mod price_resolution;
 pub mod pricing;
 pub mod quote;

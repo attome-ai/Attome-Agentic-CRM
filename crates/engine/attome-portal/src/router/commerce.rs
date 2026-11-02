@@ -50,6 +50,14 @@ async fn shopper(
     Ok((portal, principal.user_id, account))
 }
 
+/// F8-T6: a coupon to apply at checkout.
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct CheckoutQuery {
+    /// A coupon code.
+    pub coupon: Option<String>,
+}
+
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct CatalogueQuery {
@@ -165,22 +173,32 @@ async fn set_line(
     path = "/{keyword}/api/v1/shop/cart/checkout",
     operation_id = "portal_shop_checkout",
     tag = "sales",
-    params(("keyword" = String, Path, description = "The portal")),
+    params(("keyword" = String, Path, description = "The portal"), CheckoutQuery),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Create)])))),
     responses(
         (status = 200, description = "The order made", body = CheckedOut),
         (status = 401, description = "Not signed in to the portal", body = ErrorResponse),
         (status = 404, description = "The shop is off, the person has no account, or the portal has no service user", body = ErrorResponse),
-        (status = 409, description = "The cart is being checked out already", body = ErrorResponse),
-        (status = 422, description = "The cart is empty, or a product is no longer on sale", body = ErrorResponse),
+        (status = 409, description = "The cart is being checked out already, or the coupon is used up or busy", body = ErrorResponse),
+        (status = 422, description = "The cart is empty, a product is no longer on sale, or the coupon does not apply", body = ErrorResponse),
     ),
 )]
 async fn checkout(
     State(state): State<EngineState>,
     Path(keyword): Path<String>,
+    Query(query): Query<CheckoutQuery>,
     headers: HeaderMap,
 ) -> Result<Json<CheckedOut>, AppError> {
     let (portal, user, account) = shopper(&state, &keyword, &headers).await?;
+    // `shopper` found the account through the person's contact, so the
+    // column is there.
+    let contact: Option<Uuid> =
+        sqlx::query_scalar("SELECT contact_ref FROM webportal_user WHERE id = $1")
+            .bind(user)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?
+            .flatten();
     let service_user = crate::provision::service_user(&state.base.db, portal.id)
         .await?
         .ok_or(AppError::NotFound)?;
@@ -192,6 +210,8 @@ async fn checkout(
             &format!("portal user {user}"),
             user,
             account,
+            contact,
+            query.coupon.as_deref(),
         )
         .await?,
     ))

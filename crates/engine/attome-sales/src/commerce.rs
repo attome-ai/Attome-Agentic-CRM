@@ -20,6 +20,11 @@
 //!   [`APPROVAL_LIMIT_SETTING`] (0, the default, means never) an approval
 //!   request (`commerce.order_approval`, regarding the order) is submitted,
 //!   and staff confirm the order once it is approved.
+//! - **Offers** (F8-T6, [`crate::promotion`]): checkout applies the live
+//!   promotions to the re-priced lines, and a coupon code when one is given
+//!   (a code that matches no live offer refuses the checkout); each line
+//!   keeps its discount and promotion, and the coupon's use is recorded
+//!   with the order under the coupon's lock.
 
 use std::str::FromStr;
 
@@ -29,7 +34,7 @@ use attome_types::AppError;
 use chrono::Utc;
 use rust_decimal::Decimal;
 use serde::Serialize;
-use serde_json::json;
+use serde_json::{Value, json};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -127,7 +132,10 @@ pub struct ShopOrder {
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct CheckedOut {
     pub order_id: Uuid,
+    /// What the order comes to after offers.
     pub total: String,
+    /// What the offers took off (F8-T6).
+    pub discount_total: String,
     /// An approval request was submitted for the order.
     pub needs_approval: bool,
     pub approval_id: Option<Uuid>,
@@ -359,14 +367,19 @@ pub async fn orders(state: &EngineState, account: Uuid) -> Result<Vec<ShopOrder>
 }
 
 /// Turns the portal user's open cart into a draft order for `account`, as
-/// the portal's service user `ctx` for `behalf`.
+/// the portal's service user `ctx` for `behalf`, with the live offers and
+/// `coupon` (for `contact`'s per-customer limit) applied.
+#[allow(clippy::too_many_arguments)]
 pub async fn checkout(
     state: &EngineState,
     ctx: &SecurityContext,
     behalf: &str,
     portal_user: Uuid,
     account: Uuid,
+    contact: Option<Uuid>,
+    coupon: Option<&str>,
 ) -> Result<CheckedOut, AppError> {
+    let coupon = coupon.map(str::trim).filter(|c| !c.is_empty());
     let priced = cart(state, portal_user, account).await?;
     let Some(cart_id) = priced.cart_id else {
         return Err(AppError::Validation("the cart is empty".into()));
@@ -376,7 +389,33 @@ pub async fn checkout(
             "a product in the cart is no longer on sale; remove it first".into(),
         ));
     }
-    let total = Decimal::from_str(&priced.total).unwrap_or(Decimal::ZERO);
+    let subtotal = Decimal::from_str(&priced.total).unwrap_or(Decimal::ZERO);
+    let dec = |s: Option<&str>| s.and_then(|s| Decimal::from_str(s).ok());
+    let priced_lines: Vec<crate::promotion::PricedLine> = priced
+        .lines
+        .iter()
+        .map(|line| crate::promotion::PricedLine {
+            product: line.product_id,
+            quantity: dec(Some(line.quantity.as_str())).unwrap_or(Decimal::ZERO),
+            unit_price: dec(line.unit_price.as_deref()).unwrap_or(Decimal::ZERO),
+        })
+        .collect();
+    let now = Utc::now();
+    let rule_view = json!({
+        "account_ref": account,
+        "subtotal": subtotal.to_string().parse::<f64>().unwrap_or(0.0),
+        "line_count": priced.lines.len(),
+        "currency": priced.currency,
+    });
+    let offers = crate::promotion::applicable_promotions(state, &rule_view, now, coupon).await?;
+    if coupon.is_some() && !offers.iter().any(|o| o.coupon) {
+        return Err(AppError::Validation(
+            "the coupon does not apply to this cart".into(),
+        ));
+    }
+    let discounts = crate::promotion::price_offers(&offers, &priced_lines, Decimal::ZERO, now);
+    let discount_total: Decimal = discounts.iter().map(|d| d.amount).sum();
+    let total = (subtotal - discount_total).max(Decimal::ZERO);
     // Claim the cart first, so two checkouts cannot both order it.
     let claimed = sqlx::query(
         "UPDATE commerce_cart SET status = 'ordered', updated_at = now() \
@@ -397,27 +436,39 @@ pub async fn checkout(
         "currency": priced.currency,
     });
     let mut head = head;
-    if let Some(total) = crate::order::number(&priced.total) {
-        head["subtotal"] = total.clone();
-        head["grand_total"] = total;
-    }
+    head["subtotal"] = crate::order::number(&priced.total).unwrap_or(Value::Null);
+    head["discount_total"] =
+        crate::order::number(&discount_total.to_string()).unwrap_or(Value::Null);
+    head["grand_total"] = crate::order::number(&total.to_string()).unwrap_or(Value::Null);
     let written = async {
         let (order, _) =
             attome_records::entity_crud::create_record_for(state, ctx, ctx.user_id, "order", head)
                 .await?;
         for line in &priced.lines {
+            let mine: Vec<&crate::promotion::Discount> = discounts
+                .iter()
+                .filter(|d| d.product == Some(line.product_id))
+                .collect();
+            let off: Decimal = mine.iter().map(|d| d.amount).sum();
+            let gross = dec(line.line_total.as_deref()).unwrap_or(Decimal::ZERO);
+            let mut body = json!({
+                "order_ref": order,
+                "product_ref": line.product_id,
+                "quantity": crate::order::number(&line.quantity),
+                "unit_price": line.unit_price.as_deref().and_then(crate::order::number),
+                "line_total": crate::order::number(&(gross - off).max(Decimal::ZERO).to_string()),
+            });
+            if !off.is_zero() {
+                body["discount_amount"] =
+                    crate::order::number(&off.to_string()).unwrap_or(Value::Null);
+                body["promotion_ref"] = json!(mine[0].promotion);
+            }
             attome_records::entity_crud::create_record_for(
                 state,
                 ctx,
                 ctx.user_id,
                 "order_line",
-                json!({
-                    "order_ref": order,
-                    "product_ref": line.product_id,
-                    "quantity": crate::order::number(&line.quantity),
-                    "unit_price": line.unit_price.as_deref().and_then(crate::order::number),
-                    "line_total": line.line_total.as_deref().and_then(crate::order::number),
-                }),
+                body,
             )
             .await?;
         }
@@ -437,6 +488,34 @@ pub async fn checkout(
         }
     };
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    if let Some(code) = coupon {
+        if let Err(error) = crate::promotion::redeem_coupon(&mut tx, code, order, contact).await {
+            drop(tx);
+            // The coupon is used up or busy: take the order back and give
+            // the cart back.
+            if let Err(undo) = attome_records::entity_crud::delete_record_for(
+                state,
+                ctx,
+                ctx.user_id,
+                "order",
+                order,
+                None,
+                &attome_records::entity_mutation::DeleteOrigin::new(
+                    attome_records::entity_mutation::DeleteKind::Portal,
+                ),
+            )
+            .await
+            {
+                tracing::error!(%order, error = %undo, "checkout: an order was not taken back");
+            }
+            sqlx::query("UPDATE commerce_cart SET status = 'open' WHERE id = $1")
+                .bind(cart_id)
+                .execute(&state.base.db)
+                .await
+                .map_err(AppError::internal)?;
+            return Err(error);
+        }
+    }
     sqlx::query("UPDATE commerce_cart SET order_id = $2 WHERE id = $1")
         .bind(cart_id)
         .bind(order)
@@ -466,7 +545,7 @@ pub async fn checkout(
         let request = attome_approval::submit_regarding_with(
             &state.base.db,
             "commerce.order_approval",
-            json!({ "order_id": order, "total": priced.total, "limit": limit.to_string(),
+            json!({ "order_id": order, "total": total.to_string(), "limit": limit.to_string(),
                     "requested_for": behalf }),
             ctx.user_id,
             1,
@@ -481,7 +560,8 @@ pub async fn checkout(
     };
     Ok(CheckedOut {
         order_id: order,
-        total: priced.total,
+        total: total.to_string(),
+        discount_total: discount_total.to_string(),
         needs_approval: approval_id.is_some(),
         approval_id,
     })

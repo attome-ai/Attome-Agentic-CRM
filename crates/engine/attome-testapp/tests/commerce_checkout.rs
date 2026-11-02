@@ -158,9 +158,17 @@ fn checkout_makes_a_draft_order_and_asks_approval_above_the_limit() {
             .await
             .unwrap();
 
-        let done = checkout(&app.state, &service, "portal user p6", portal_user, account)
-            .await
-            .unwrap();
+        let done = checkout(
+            &app.state,
+            &service,
+            "portal user p6",
+            portal_user,
+            account,
+            None,
+            None,
+        )
+        .await
+        .unwrap();
         assert!(done.needs_approval, "300 is above the 250 limit");
         let (status, owner): (Option<String>, Option<Uuid>) =
             sqlx::query_as("SELECT status::text, account_ref FROM \"order\" WHERE id = $1")
@@ -178,7 +186,16 @@ fn checkout_makes_a_draft_order_and_asks_approval_above_the_limit() {
         assert_eq!(lines, 1);
 
         // The cart is closed: checking out again finds nothing to order.
-        let again = checkout(&app.state, &service, "portal user p6", portal_user, account).await;
+        let again = checkout(
+            &app.state,
+            &service,
+            "portal user p6",
+            portal_user,
+            account,
+            None,
+            None,
+        )
+        .await;
         assert!(matches!(again, Err(AppError::Validation(_))), "{again:?}");
         assert!(
             cart(&app.state, portal_user, account)

@@ -14,6 +14,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Promotions and coupons at checkout (F8-T6, sales pack changeset `0032`): percent, amount, buy X
+  get Y, free shipping and bundle offers applied after the list price and before VAT, eligibility by a
+  rule, `?coupon=` on `POST /{keyword}/api/v1/shop/cart/checkout`, coupon limits enforced under a lock
+  per code, and the discount and promotion kept on each order line. `CheckedOut` gains `discount_total`
+  and its `total` is after offers. See `docs/portal-shop.md`.
 - Shop sync (F8-T2, sales pack changeset `0031`): a `commerce` connector kind and the platform-neutral
   shop order, customer and product with the `ShopPlatform` trait (attome-integration), and
   `attome_sales::shop_sync::upsert_from_source`, which writes them through the record engine once per source
