@@ -244,6 +244,7 @@ pub struct HandoffQuery {
     pub status: Option<String>,
     /// One-based.
     pub page: Option<i64>,
+    /// Hand-offs per page.
     pub page_size: Option<i64>,
 }
 

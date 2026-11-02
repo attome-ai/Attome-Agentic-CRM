@@ -25,6 +25,7 @@
 use std::time::Duration;
 
 use attome_cache::Store;
+use attome_outbound::http::{Outbound, Purpose};
 use attome_types::AppError;
 use jsonwebtoken::{Algorithm, DecodingKey, Validation};
 use serde::Deserialize;
@@ -124,7 +125,7 @@ pub fn verify_with(
     Ok(())
 }
 
-async fn fetch_keys(http: &reqwest::Client, url: &str) -> Result<Value, AppError> {
+async fn fetch_keys(http: &Outbound, url: &str) -> Result<Value, AppError> {
     let unavailable = || AppError::CapabilityUnavailable("botframework_keys");
     let response = tokio::time::timeout(FETCH_TIMEOUT, http.get(url).send())
         .await
@@ -148,7 +149,7 @@ async fn fetch_keys(http: &reqwest::Client, url: &str) -> Result<Value, AppError
 }
 
 /// The key set, from Redis or fetched; `fresh` forces a fetch.
-async fn keys(redis: &Store, http: &reqwest::Client, fresh: bool) -> Result<Value, AppError> {
+async fn keys(redis: &Store, http: &Outbound, fresh: bool) -> Result<Value, AppError> {
     if !fresh
         && let Some(cached) = redis.get(KEYS_CACHE).await?
         && let Ok(keys) = serde_json::from_str::<Value>(&cached)
@@ -170,7 +171,7 @@ async fn keys(redis: &Store, http: &reqwest::Client, fresh: bool) -> Result<Valu
 /// for a key id the cached set lacks.
 pub async fn verify(
     redis: &Store,
-    http: &reqwest::Client,
+    http: &Outbound,
     authorization: Option<&str>,
     activity: &Value,
     app_id: &str,
@@ -197,16 +198,22 @@ pub async fn verify(
     }
 }
 
-/// The client the key set is fetched with: https only, no redirects, a
-/// connect and request time limit.
-pub fn http_client() -> reqwest::Client {
-    reqwest::Client::builder()
-        .https_only(true)
-        .redirect(reqwest::redirect::Policy::none())
-        .connect_timeout(FETCH_TIMEOUT)
-        .timeout(FETCH_TIMEOUT)
-        .build()
-        .unwrap_or_default()
+/// The client the key set is fetched with, through the outbound guard
+/// (Q21-T1): public addresses only, https only, no redirects, a connect and
+/// request time limit. Built once for the process.
+pub fn http_client() -> &'static Outbound {
+    static CLIENT: std::sync::OnceLock<Outbound> = std::sync::OnceLock::new();
+    CLIENT.get_or_init(|| {
+        attome_outbound::http::shared(
+            Purpose::public("botframework_keys").no_redirects(),
+            |builder| {
+                builder
+                    .https_only(true)
+                    .connect_timeout(FETCH_TIMEOUT)
+                    .timeout(FETCH_TIMEOUT)
+            },
+        )
+    })
 }
 
 /// The Redis key that marks activity `id` of `system` accepted.

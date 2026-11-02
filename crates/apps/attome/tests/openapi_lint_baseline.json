@@ -20,6 +20,8 @@
   "error-shape POST /api/v1/auth/api-keys",
   "error-shape POST /api/v1/auth/identity-link/google",
   "error-shape POST /api/v1/mcp",
+  "error-shape POST /api/v1/oauth/device/token",
+  "error-shape POST /api/v1/oauth/device_authorization",
   "error-shape POST /api/v1/oauth/token",
   "error-shape POST /api/v1/query/execute",
   "error-shape POST /api/v1/sales/opportunities/{id}/sync",

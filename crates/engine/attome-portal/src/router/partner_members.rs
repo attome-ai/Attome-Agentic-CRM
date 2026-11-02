@@ -34,7 +34,10 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use super::{authenticate, portal_for};
+use super::{authenticate, portal_for, whole_list};
+
+/// The most members one list answers.
+const MAX_MEMBERS: i64 = 500;
 use crate::auth::PortalPrincipal;
 use crate::partner_roles::{PARTNER_ADMIN, PARTNER_SALES, PARTNER_SERVICE};
 use crate::provision::{NewPortalUser, PortalDetail};
@@ -117,7 +120,7 @@ const MEMBER_SELECT: &str = "SELECT u.id, u.name, u.email, r.name AS role, u.sta
     tag = "partner",
     params(("keyword" = String, Path, description = "The portal")),
     responses(
-        (status = 200, description = "The members", body = Vec<PartnerMember>),
+        (status = 200, description = "The members, at most 500", body = attome_types::PaginatedResponse<PartnerMember>),
         (status = 401, description = "Not signed in to the portal", body = ErrorResponse),
         (status = 403, description = "Not the administrator of a partner", body = ErrorResponse),
         (status = 404, description = "No such portal", body = ErrorResponse),
@@ -127,16 +130,17 @@ async fn list_members(
     State(state): State<EngineState>,
     Path(keyword): Path<String>,
     headers: HeaderMap,
-) -> Result<Json<Vec<PartnerMember>>, AppError> {
+) -> Result<Json<attome_types::PaginatedResponse<PartnerMember>>, AppError> {
     let (portal, _, partner) = signed_in_admin(&state, &keyword, &headers).await?;
-    let members: Vec<PartnerMember> =
-        sqlx::query_as(&format!("{MEMBER_SELECT} ORDER BY u.name, u.id LIMIT 500"))
-            .bind(portal.id)
-            .bind(partner)
-            .fetch_all(&state.base.db)
-            .await
-            .map_err(AppError::internal)?;
-    Ok(Json(members))
+    let members: Vec<PartnerMember> = sqlx::query_as(&format!(
+        "{MEMBER_SELECT} ORDER BY u.name, u.id LIMIT {MAX_MEMBERS}"
+    ))
+    .bind(portal.id)
+    .bind(partner)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(Json(whole_list(members, Some(MAX_MEMBERS))))
 }
 
 /// Invite a partner member

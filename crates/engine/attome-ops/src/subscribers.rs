@@ -90,6 +90,7 @@ pub struct SubscribeBody {
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct TokenQuery {
+    /// The token from the email.
     pub token: String,
 }
 

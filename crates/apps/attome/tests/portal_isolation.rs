@@ -4418,7 +4418,7 @@ async fn partner_admin_manages_only_its_own_members() {
 
     let (status, list) = as_user(&w, &admin_a, "GET", &members, None, None).await;
     assert_eq!(status, StatusCode::OK, "{list}");
-    let ids: Vec<&str> = list
+    let ids: Vec<&str> = list["items"]
         .as_array()
         .unwrap()
         .iter()

@@ -373,7 +373,7 @@ async fn teams_activity(
         .and_then(|v| v.to_str().ok());
     if let Err(error) = crate::botframework::verify(
         &state.base.redis_coordination,
-        &crate::botframework::http_client(),
+        crate::botframework::http_client(),
         authorization,
         &activity,
         &app_id,

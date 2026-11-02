@@ -120,6 +120,14 @@ async fn portal_for(state: &EngineState, keyword: &str) -> Result<PortalDetail, 
     Ok(portal_entry_for(state, keyword).await?.detail.clone())
 }
 
+/// A whole bounded list as page one of the standard envelope (guidelines
+/// §12): `page_size` is the list's ceiling, or its length when it has none.
+fn whole_list<T>(items: Vec<T>, ceiling: Option<i64>) -> attome_types::PaginatedResponse<T> {
+    let total = i64::try_from(items.len()).unwrap_or(i64::MAX);
+    let page_size = ceiling.unwrap_or(total).max(1);
+    attome_types::PaginatedResponse::new(items, total, 1, page_size)
+}
+
 fn secure_cookies(state: &EngineState) -> bool {
     state.base.config.auth.secure_cookies
 }

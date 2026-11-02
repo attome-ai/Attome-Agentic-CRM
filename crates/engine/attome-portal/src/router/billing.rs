@@ -42,7 +42,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use super::fulfilment::account_of;
-use super::{authenticate, portal_for};
+use super::{authenticate, portal_for, whole_list};
 
 /// My subscriptions
 ///
@@ -55,7 +55,7 @@ use super::{authenticate, portal_for};
     tag = "billing",
     params(("keyword" = String, Path, description = "The portal")),
     responses(
-        (status = 200, description = "The account's subscriptions", body = Vec<PortalSubscription>),
+        (status = 200, description = "The account's subscriptions", body = attome_types::PaginatedResponse<PortalSubscription>),
         (status = 401, description = "Not signed in to the portal", body = ErrorResponse),
         (status = 404, description = "The route is off, or the person has no account", body = ErrorResponse),
     ),
@@ -64,7 +64,7 @@ async fn my_subscriptions(
     State(state): State<EngineState>,
     Path(keyword): Path<String>,
     headers: HeaderMap,
-) -> Result<Json<Vec<PortalSubscription>>, AppError> {
+) -> Result<Json<attome_types::PaginatedResponse<PortalSubscription>>, AppError> {
     if !state.modules.load().has(attome_modules::MODULE_BILLING)
         || !attome_billing::subscription::portal::portal_on(&state)
     {
@@ -75,9 +75,10 @@ async fn my_subscriptions(
     let account = account_of(&state, principal.user_id)
         .await?
         .ok_or(AppError::NotFound)?;
-    Ok(Json(
+    Ok(Json(whole_list(
         attome_billing::subscription::portal::for_account(&state, account).await?,
-    ))
+        None,
+    )))
 }
 
 /// The signed-in person's account, while the payments routes are open.
@@ -109,7 +110,7 @@ async fn payments_account(
     tag = "billing",
     params(("keyword" = String, Path, description = "The portal")),
     responses(
-        (status = 200, description = "The account's open invoices", body = Vec<PortalInvoice>),
+        (status = 200, description = "The account's open invoices", body = attome_types::PaginatedResponse<PortalInvoice>),
         (status = 401, description = "Not signed in to the portal", body = ErrorResponse),
         (status = 404, description = "The route is off, or the person has no account", body = ErrorResponse),
     ),
@@ -118,11 +119,12 @@ async fn my_open_invoices(
     State(state): State<EngineState>,
     Path(keyword): Path<String>,
     headers: HeaderMap,
-) -> Result<Json<Vec<PortalInvoice>>, AppError> {
+) -> Result<Json<attome_types::PaginatedResponse<PortalInvoice>>, AppError> {
     let account = payments_account(&state, &keyword, &headers).await?;
-    Ok(Json(
+    Ok(Json(whole_list(
         attome_billing::payment::portal::open_invoices(&state, account).await?,
-    ))
+        None,
+    )))
 }
 
 /// My payment methods
@@ -136,7 +138,7 @@ async fn my_open_invoices(
     tag = "billing",
     params(("keyword" = String, Path, description = "The portal")),
     responses(
-        (status = 200, description = "The account's saved payment methods", body = Vec<PortalPaymentMethod>),
+        (status = 200, description = "The account's saved payment methods", body = attome_types::PaginatedResponse<PortalPaymentMethod>),
         (status = 401, description = "Not signed in to the portal", body = ErrorResponse),
         (status = 404, description = "The route is off, or the person has no account", body = ErrorResponse),
     ),
@@ -145,11 +147,12 @@ async fn my_payment_methods(
     State(state): State<EngineState>,
     Path(keyword): Path<String>,
     headers: HeaderMap,
-) -> Result<Json<Vec<PortalPaymentMethod>>, AppError> {
+) -> Result<Json<attome_types::PaginatedResponse<PortalPaymentMethod>>, AppError> {
     let account = payments_account(&state, &keyword, &headers).await?;
-    Ok(Json(
+    Ok(Json(whole_list(
         attome_billing::payment::portal::payment_methods(&state, account).await?,
-    ))
+        None,
+    )))
 }
 
 /// A quantity change.

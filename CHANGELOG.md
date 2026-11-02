@@ -8,6 +8,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Breaking
+- Four portal lists answer the standard `PaginatedResponse` envelope (`items`, `total`, `page`,
+  `page_size`) instead of a bare array (Z14-T7): `GET /{keyword}/api/v1/billing/subscriptions`,
+  `.../billing/invoices/open`, `.../billing/payment-methods` and `.../partner/members` (at most 500).
+- A rejected hook answer may carry a message key (`{"reject": {"key", "args"}}`); a caller sending
+  `Accept-Language: ar` reads the extension's Arabic text in `message` and `detail` (Y10-T2).
 - `dashboard_metric_definition.certified` and `certified_at` can no longer be set through the record
   API (P9-T11): a create may only send `certified: false`, an update naming either is a 422, and a
   new metric starts uncertified. Certify with `POST /api/v1/metrics/{id}/certify`, which needs

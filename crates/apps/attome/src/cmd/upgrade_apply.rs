@@ -134,7 +134,7 @@ fn read_key(path: &str) -> Result<String, String> {
 
 /// What verification reads the running service with.
 struct Probe {
-    client: reqwest::Client,
+    client: attome_outbound::http::Outbound,
     base: String,
     admin: String,
     no_role: String,
@@ -274,10 +274,13 @@ fn signing_key(settings: &attome_config::AppConfig) -> Result<evidence::SigningK
 }
 
 async fn wait_ready(url: &str) -> Result<(), String> {
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(5))
-        .build()
-        .map_err(|error| error.to_string())?;
+    // The server this machine just started: the operator names its URL, so
+    // its host is listed private for this purpose (Q21-T1).
+    let client = attome_outbound::http::client(
+        attome_outbound::http::Purpose::public("upgrade_ready").with_private_urls([url]),
+        |builder| builder.timeout(Duration::from_secs(5)),
+    )
+    .map_err(|error| error.to_string())?;
     let deadline = tokio::time::Instant::now() + READY_WAIT;
     loop {
         if let Ok(response) = client.get(url).send().await
@@ -389,10 +392,12 @@ fn apply(args: &[String]) -> Result<ExitCode, String> {
     let outcome = steps.and_then(|()| {
         runtime.block_on(async {
             let probe = Probe {
-                client: reqwest::Client::builder()
-                    .timeout(Duration::from_secs(30))
-                    .build()
-                    .map_err(|error| error.to_string())?,
+                client: attome_outbound::http::client(
+                    attome_outbound::http::Purpose::public("upgrade_probe")
+                        .with_private_urls([base_url.as_str()]),
+                    |builder| builder.timeout(Duration::from_secs(30)),
+                )
+                .map_err(|error| error.to_string())?,
                 base: base_url.trim_end_matches('/').to_owned(),
                 admin: admin_key,
                 no_role: no_role_key,

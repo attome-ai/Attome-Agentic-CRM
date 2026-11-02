@@ -226,10 +226,14 @@ pub struct BaseRecordsQuery {
     /// `me`, or a user id.
     #[serde(default)]
     pub owner: Option<String>,
+    /// Only records in this status.
     #[serde(default)]
     pub status: Option<String>,
+    /// One-based: page 1 is the first page.
     #[serde(default)]
+    #[param(minimum = 1)]
     pub page: Option<i64>,
+    /// Records per page.
     #[serde(default)]
     pub page_size: Option<i64>,
 }
