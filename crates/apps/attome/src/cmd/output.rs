@@ -119,6 +119,7 @@ const COMMANDS: &[(&str, &[&str])] = &[
             "--json",
         ],
     ),
+    ("dev", &["--name", "--once", "--target", "--url"]),
     (
         "package",
         &[

@@ -65,6 +65,10 @@ Custom code runs as WebAssembly on Wasmtime inside the server (Y10, V2-D125), in
   user). It answers `"continue"` or `{"records": [{"entity", "id"?, "values"}]}`; each write must be
   granted and is made through the ordinary write path, at most 100 per run. A failed run is not
   retried, because writes made before the failure stay.
+- **Developing.** `attome dev <folder>` watches a Rust extension crate (with its `manifest.json`),
+  builds it for `wasm32-unknown-unknown` on every change, prints cargo's errors with their source
+  lines, and uploads each good build as a new draft version (`--once` builds one time; `--target`
+  or `--url` names the deployment). JavaScript extensions are not supported yet.
 - **Record and replay.** `attome_extension::Recorder` wraps a host and keeps every host call of a
   run with its result, every secret value masked; `Replayer` answers the same calls from that
   recording, reaching no record, secret or network, and lists where a changed extension's run

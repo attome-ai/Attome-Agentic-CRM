@@ -25,6 +25,9 @@ Usage:
                                 Forget a target's session; list the targets
   attome flags list|get <name>|set <name> on|off|off-now <name>
                                 Customer flags (admin.deployment; changes need --yes)
+  attome dev <folder> [--name <name>] [--once]
+                                Rebuild an extension on every change and upload
+                                each good build as a draft version
   attome package keygen|build|publish|install
                                 Signed packages: build from a folder, publish to a
                                 catalogue folder, install to a target (--yes)
@@ -189,6 +192,10 @@ fn main() -> ExitCode {
                 ExitCode::from(2)
             }
         },
+        ["dev", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            outcome(attome::cmd::dev::run(&rest).map_err(Into::into))
+        }
         ["package", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             outcome(attome::cmd::package::run(&rest).map_err(Into::into))

@@ -434,7 +434,9 @@ fn client(url: &str) -> Result<attome_outbound::http::Outbound, String> {
         .map_err(|error| format!("build the HTTP client: {error}"))
 }
 
-async fn send(
+/// One authenticated call to the server; its JSON answer. Shared with
+/// `attome dev`.
+pub(crate) async fn send(
     url: &str,
     auth: &Auth,
     method: reqwest::Method,

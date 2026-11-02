@@ -18,6 +18,8 @@ pub mod cluster_ssh;
 pub mod config_cmd;
 /// T4-T4: `attome data query|export|import`.
 pub mod data;
+/// AE2-T2: `attome dev`, rebuilding and uploading an extension as it changes.
+pub mod dev;
 /// AB4-T3: drill keys, evidence verification and readiness.
 pub mod drill;
 pub mod flags;
