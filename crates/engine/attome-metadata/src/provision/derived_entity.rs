@@ -872,6 +872,34 @@ pub async fn trend(
     Ok(week_series(current, &all))
 }
 
+/// A26-T5: the ids of `def`'s current members, live anchor rows, in id
+/// order, at most `limit + 1` (so a caller can tell there were more).
+pub async fn member_ids(
+    db: &DbPool,
+    def: &DerivedEntity,
+    anchor: &EntityMeta,
+    limit: i64,
+) -> Result<Vec<Uuid>, AppError> {
+    let members = members_predicate(def, anchor, "a")?;
+    let live = live_row_predicate("a", anchor.is_append_only).unwrap_or_else(|| "TRUE".into());
+    let mut tx = attome_db::tx::begin(db).await?;
+    sqlx::query(READ_TIMEOUT)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    let ids = sqlx::query_scalar(&format!(
+        "SELECT a.\"id\" FROM {} a WHERE {live} AND COALESCE(({members}), false) \
+          ORDER BY a.\"id\" LIMIT $1",
+        quote_ident(&anchor.logicalname)
+    ))
+    .bind(limit + 1)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    attome_db::tx::commit(tx).await?;
+    Ok(ids)
+}
+
 /// The names of the paused definitions.
 pub async fn paused(db: &DbPool) -> Result<std::collections::HashSet<String>, AppError> {
     Ok(

@@ -410,6 +410,100 @@ async fn trend(
     Ok(Json(PaginatedResponse::new(items, total, 1, total.max(1))))
 }
 
+/// The most members one mass action covers.
+pub const MAX_MASS_MEMBERS: i64 = 100_000;
+
+/// A mass action on a derived entity's current members: the anchor's mass
+/// operation body (`kind`: `update`, `delete`, `reassign`; `payload`),
+/// without a filter.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DerivedMassBody {
+    pub kind: String,
+    #[serde(default)]
+    #[schema(value_type = Object)]
+    pub payload: serde_json::Value,
+    #[serde(default)]
+    pub reason: Option<String>,
+    #[serde(default)]
+    pub confirm_estimate_rows: Option<i64>,
+}
+
+/// Act on a derived entity's members
+///
+/// A26-T5: one change over every current member, as the anchor's mass
+/// operation (`/api/v1/{entity}/mass`) over the members taken at the
+/// start: each record through its normal single-record path (record
+/// access, validation, rules, audit), in the background past the inline
+/// threshold, with progress, pause, cancel and undo at
+/// `/api/v1/mass/{id}`. Needs bulk on the derived entity and the anchor.
+#[utoipa::path(
+    post,
+    path = "/api/v1/derived-entities/{entity}/mass",
+    operation_id = "derived_entity_mass",
+    tag = "records",
+    params(("entity" = String, Path, description = "The derived entity")),
+    request_body = DerivedMassBody,
+    responses(
+        (status = 200, description = "Ran in the request", body = attome_records::mass::MassRun),
+        (status = 202, description = "Queued for the background", body = attome_records::mass::MassRun),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller may not make this change in bulk", body = ErrorResponse),
+        (status = 404, description = "No such derived entity", body = ErrorResponse),
+        (status = 422, description = "No members, too many, or an invalid kind or payload", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[
+        (attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::BulkAccepted),
+        (attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::BulkCompleted),
+    ])))),
+)]
+async fn mass(
+    State(state): State<EngineState>,
+    ctx: Authorized<attome_server::authz::RecordScoped<attome_security::record_action::Bulk>>,
+    Path(entity): Path<String>,
+    Json(body): Json<DerivedMassBody>,
+) -> Result<(StatusCode, Json<attome_records::mass::MassRun>), AppError> {
+    use attome_security::SecurityContextExt;
+    let read = attome_records::derived_entity::for_read(&state, &entity)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    ctx.require(&read.anchor, "bulk")?;
+    let anchor = state
+        .entities
+        .load()
+        .get(&read.anchor)
+        .cloned()
+        .ok_or(AppError::NotFound)?;
+    let ids =
+        derived_entity::member_ids(&state.base.db, &read.definition, &anchor, MAX_MASS_MEMBERS)
+            .await?;
+    if ids.is_empty() {
+        return Err(AppError::Validation(format!("{entity} has no members now")));
+    }
+    if ids.len() as i64 > MAX_MASS_MEMBERS {
+        return Err(AppError::Validation(format!(
+            "{entity} has more than {MAX_MASS_MEMBERS} members; act on the anchor with a filter"
+        )));
+    }
+    let start: attome_records::mass::MassStartBody = serde_json::from_value(json!({
+        "filter": { "kind": "compare", "field": "id", "op": "in", "value": ids },
+        "kind": body.kind,
+        "payload": body.payload,
+        "reason": body.reason,
+        "confirm_estimate_rows": body.confirm_estimate_rows,
+    }))
+    .map_err(|e| AppError::Validation(format!("invalid mass action: {e}")))?;
+    let (run, inline) =
+        attome_records::mass::start(&state, &ctx, &read.anchor, start, None).await?;
+    let status = if inline {
+        StatusCode::OK
+    } else {
+        StatusCode::ACCEPTED
+    };
+    Ok((status, Json(run)))
+}
+
 /// What resuming a paused derived entity moved.
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct DerivedResumed {
@@ -513,10 +607,14 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/derived-entities/{entity}/explain/{record_id}",
             get(explain),
         )
+        .route(
+            "/api/v1/derived-entities/{entity}/mass",
+            axum::routing::post(mass),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list, put, delete, resume, preview, explain, trend))]
+#[openapi(paths(list, put, delete, resume, preview, explain, trend, mass))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
