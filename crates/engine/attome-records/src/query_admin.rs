@@ -1312,22 +1312,76 @@ async fn describe_query(
     // exist" back.
     let pool = state.base.readonly_query_pool(ctx.user_id).await;
     lint_and_plan(pool, sql_query).await?;
+    Ok(Json(describe_columns(pool, sql_query).await?))
+}
+
+/// The output columns of an unsaved SELECT, described without fetching a
+/// row. The caller has passed it through [`lint_and_plan`].
+async fn describe_columns(
+    pool: &DbPool,
+    sql_query: &str,
+) -> Result<Vec<DescribedColumn>, AppError> {
     let discovery_sql = format!("SELECT * FROM ({sql_query}) AS query_output LIMIT 0");
     let description = pool
         .describe(&discovery_sql)
         .await
         .map_err(|e| AppError::Validation(format!("cannot describe query output: {e}")))?;
+    Ok(description
+        .columns()
+        .iter()
+        .map(|column| DescribedColumn {
+            name: column.name().to_owned(),
+            data_type: editor_data_type(column.type_info().name()),
+        })
+        .collect())
+}
 
-    Ok(Json(
-        description
-            .columns()
-            .iter()
-            .map(|column| DescribedColumn {
-                name: column.name().to_owned(),
-                data_type: editor_data_type(column.type_info().name()),
-            })
-            .collect(),
-    ))
+/// What an unsaved draft query is, once it has passed the checks a publish
+/// runs.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct DraftQueryCheck {
+    /// The entity tables it reads, sorted.
+    pub relations: Vec<String>,
+    /// Its output column names, in order.
+    pub columns: Vec<String>,
+    /// The planner's estimate of its rows (table statistics, no record
+    /// access applied).
+    pub estimated_rows: i64,
+}
+
+/// E7-T11: runs an unsaved query through the publish-time lint
+/// ([`lint_and_plan`]: plans, no function scans, only registered entity
+/// tables) and the describe step, on `pool` (the caller's read-only query
+/// pool), and estimates its rows. Saves nothing; a failure is the
+/// `Validation` error a publish would give.
+pub async fn check_draft_query(
+    pool: &DbPool,
+    sql_query: &str,
+) -> Result<DraftQueryCheck, AppError> {
+    let sql_query = sql_query.trim().trim_end_matches(';').trim();
+    if sql_query.is_empty() {
+        return Err(AppError::Validation("sql_query is empty".into()));
+    }
+    let (_, relations) = lint_and_plan(pool, sql_query).await?;
+    let columns = describe_columns(pool, sql_query)
+        .await?
+        .into_iter()
+        .map(|c| c.name)
+        .collect();
+    let explain_sql = format!("EXPLAIN (FORMAT JSON) SELECT * FROM ({sql_query}) AS t");
+    let plan: Value = sqlx::query_scalar(&explain_sql)
+        .fetch_one(pool)
+        .await
+        .map_err(|e| AppError::Validation(format!("sql_query failed to plan: {e}")))?;
+    let estimated_rows = plan
+        .pointer("/0/Plan/Plan Rows")
+        .and_then(Value::as_f64)
+        .map_or(0, |rows| rows.round().max(0.0) as i64);
+    Ok(DraftQueryCheck {
+        relations,
+        columns,
+        estimated_rows,
+    })
 }
 
 /// C-25: `query_exec::build_columns` reads a column definition under either

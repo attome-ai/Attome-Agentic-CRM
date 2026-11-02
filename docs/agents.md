@@ -215,6 +215,9 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   manual change, an import, a form or a flow); counts only, for a list the caller may read.
   `segment.lookalike` suggests conditions for a look-alike segment: choice values clearly more common
   among the list's members (those the caller may read) than among all records, saving nothing.
+  `segment.draft` (administrators) drafts a segment's query over contacts, leads or accounts from a
+  description, checks it as a stored-query publish would (one table, returning ids), and returns it
+  with the planner's estimate and the two calls that save it; nothing is saved.
 - Journeys (marketing): `journey.draft` drafts a journey's steps from a description and returns the
   graph, a diff against the current draft, any problems (one trigger, known steps, only waits,
   branches and registered marketing steps, never a record write or an outside call) and the

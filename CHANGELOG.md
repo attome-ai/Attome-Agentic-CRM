@@ -19,6 +19,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `marketing_nurture_tick`) sends each person the next email of their track they have neither seen
   nor been sent, through the journey rules, one per the programme's `cadence_days`. Opening or
   clicking an email from a saved design marks it seen. Migration 0367.
+- Agent tool `segment.draft` (E7-T11, administrators): a marketing segment's query drafted from a
+  description, checked by the stored-query publish checks, with its estimated size and the calls that
+  save it; nothing is saved.
 - Agent tools `journey.draft`, `journey.explain_person` and `journey.suggest` (E8-T12): a drafted
   journey graph with its diff and the call that saves it as a draft (nothing saved or published), a
   person's path explained, and where a journey loses people or gets blocked.
