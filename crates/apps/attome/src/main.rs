@@ -25,6 +25,9 @@ Usage:
                                 Forget a target's session; list the targets
   attome flags list|get <name>|set <name> on|off|off-now <name>
                                 Customer flags (admin.deployment; changes need --yes)
+  attome new component <tag> [--dir <folder>] [--package <name>]
+                                A custom web component project (TypeScript, the
+                                component SDK, its manifest and a test)
   attome dev <folder> [--name <name>] [--once]
                                 Rebuild an extension on every change and upload
                                 each good build as a draft version
@@ -192,6 +195,10 @@ fn main() -> ExitCode {
                 ExitCode::from(2)
             }
         },
+        ["new", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            outcome(attome::cmd::new_component::run(&rest).map_err(Into::into))
+        }
         ["dev", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             outcome(attome::cmd::dev::run(&rest).map_err(Into::into))
