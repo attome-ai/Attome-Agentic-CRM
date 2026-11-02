@@ -175,7 +175,7 @@ async fn put(
     operation_id = "delete_derived_entity",
     tag = "admin",
     params(("name" = String, Path, description = "The derived entity's name")),
-    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Delete)])))),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::HardDelete)])))),
     responses(
         (status = 204, description = "Deleted"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -192,7 +192,7 @@ async fn delete(
     if !derived_entity::remove(&state.base.db_migrator, &state.base.db, &name).await? {
         return Err(AppError::NotFound);
     }
-    audit(&state, ctx.user_id, AuditOperation::Delete, &name).await?;
+    audit(&state, ctx.user_id, AuditOperation::HardDelete, &name).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

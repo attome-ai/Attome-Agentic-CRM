@@ -370,6 +370,25 @@ const ODATA_OPS: [&str; 10] = [
     "starts_with",
 ];
 
+impl std::fmt::Debug for PostgresSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PostgresSource")
+            .field("table", &self.table)
+            .field("key", &self.key)
+            .finish_non_exhaustive()
+    }
+}
+
+impl std::fmt::Debug for ODataSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // The headers may carry credentials; they are never shown.
+        f.debug_struct("ODataSource")
+            .field("base_url", &self.base_url)
+            .field("entity_set", &self.entity_set)
+            .finish_non_exhaustive()
+    }
+}
+
 /// One OData entity set.
 pub struct ODataSource {
     base_url: String,
