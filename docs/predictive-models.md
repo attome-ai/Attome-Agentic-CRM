@@ -47,5 +47,14 @@ enough history).
 per model version, read through `GET /api/v1/predictions?regarding=...`, with
 `explanation.top_factors`: the three inputs that moved the score most.
 
-Not built yet: scoring on each change, and recording outcomes (O11) for
-definition models.
+**On change.** Every five minutes the job `predict_definition_rescore` reads
+the record changes since its last run (the change feed) and rescores the
+changed records of each active model on that entity; a record changed many
+times in those minutes is scored once, and gets a new prediction only when
+its score moved.
+
+**Outcomes.** The outcome-fill sweep records each prediction's outcome in
+`outcome` (kind `prediction`, effectiveness 1 when the prediction was right,
+0 when wrong): for a choice target with yes and no values once the record
+closes either way, for a yes/no target once the prediction's 30-day horizon
+has passed.

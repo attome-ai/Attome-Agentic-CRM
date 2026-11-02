@@ -235,5 +235,59 @@ fn lead_conversion_waits_for_history() {
                 .starts_with("authority="),
             "{explanation}"
         );
+
+        // A changed lead is rescored when its score moved, and only then.
+        let lead = |name: &'static str| {
+            let db = app.db().clone();
+            async move {
+                sqlx::query_scalar::<_, uuid::Uuid>("SELECT id FROM lead WHERE name = $1")
+                    .bind(name)
+                    .fetch_one(&db)
+                    .await
+                    .unwrap()
+            }
+        };
+        let changed = lead("Lead 521").await;
+        sqlx::query("UPDATE lead SET authority = 'decision_maker' WHERE id = $1")
+            .bind(changed)
+            .execute(app.db())
+            .await
+            .unwrap();
+        let rescore = |app: &TestApp| {
+            let state = app.state.clone();
+            async move {
+                attome_predict::generic::rescore(&state, model, &[changed])
+                    .await
+                    .unwrap()
+            }
+        };
+        assert_eq!(rescore(&app).await, 1, "the score moved");
+        assert_eq!(rescore(&app).await, 0, "nothing changed since");
+
+        // A lead that converts records the prediction's outcome (O11).
+        let converted = lead("Lead 520").await;
+        sqlx::query("UPDATE lead SET lead_status = 'converted' WHERE id = $1")
+            .bind(converted)
+            .execute(app.db())
+            .await
+            .unwrap();
+        let filled = attome_predict::generic::fill_outcomes(&app.state)
+            .await
+            .unwrap();
+        assert_eq!(filled, 1, "only the closed lead has an outcome");
+        let effectiveness: Option<f64> = sqlx::query_scalar(
+            "SELECT o.effectiveness FROM outcome o JOIN prediction p ON p.outcome_ref = o.id \
+              WHERE p.model_ref = $1 AND p.regarding_id = $2",
+        )
+        .bind(model)
+        .bind(converted)
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        assert_eq!(
+            effectiveness,
+            Some(1.0),
+            "a likely conversion that converted"
+        );
     });
 }

@@ -25,8 +25,12 @@
 //! score most, coefficient times the standardized value) once per model
 //! version, and, when the definition names a `score_attribute`, the score
 //! from 0 to 100 on the record itself. The nightly scoring sweep runs it
-//! ([`score_all`]). Scoring on each change and the outcome record (O11) are
-//! not built yet.
+//! ([`score_all`]). On each change ([`drain_changes`], the change-feed
+//! consumer [`CONSUMER`] drained by the job [`RESCORE_JOB`] every few
+//! minutes, which is the debounce) a changed record gets a new prediction
+//! when its score moved. Once the outcome is known ([`fill_outcomes`], in the
+//! outcome-fill sweep) each prediction gets its O11 `outcome` row: right (1)
+//! or wrong (0).
 
 use std::collections::{BTreeMap, HashMap};
 use std::str::FromStr;
@@ -254,16 +258,24 @@ pub fn standardize(x: &[f64], means: &[f64], scales: &[f64]) -> Vec<f64> {
         .collect()
 }
 
-/// Reads up to [`MAX_ROWS`] rows of `def` as `ctx`, labelled or not.
+/// Reads up to [`MAX_ROWS`] rows of `def` as `ctx`: the labelled ones, or
+/// every row, or the rows `ids`.
 async fn read_rows(
     state: &EngineState,
     ctx: &attome_server::security::SecurityContext,
     def: &ModelDef,
     labelled_only: bool,
+    ids: Option<&[Uuid]>,
 ) -> Result<Vec<Map<String, Value>>, AppError> {
     let mut spec = crate::model_def::training_spec(def);
     if !labelled_only {
-        spec.r#where = None;
+        spec.r#where = ids.map(|ids| attome_records::query_spec::Condition::Compare {
+            field: "id".to_owned(),
+            op: "in".to_owned(),
+            value: Some(Value::Array(
+                ids.iter().map(|id| Value::String(id.to_string())).collect(),
+            )),
+        });
     }
     let mut rows = Vec::new();
     loop {
@@ -373,7 +385,7 @@ pub async fn train(state: &EngineState, model: Uuid) -> Result<(), AppError> {
         .await;
     }
     let ctx = attome_security::resolve_uncached(&state.base.db, creator).await?;
-    let rows = read_rows(state, &ctx, &def, true).await?;
+    let rows = read_rows(state, &ctx, &def, true, None).await?;
     let labelled: Vec<(&Map<String, Value>, i32)> = rows
         .iter()
         .filter_map(|r| {
@@ -495,6 +507,23 @@ pub fn check(state: &EngineState, def: &ModelDef) -> Result<(), AppError> {
 /// Scores the rows of definition model `model` that its current version has
 /// not scored; how many were scored (O1-T3).
 pub async fn score(state: &EngineState, model: Uuid) -> Result<usize, AppError> {
+    score_rows(state, model, None).await
+}
+
+/// Rescores records `ids` of definition model `model` after they changed: a
+/// new prediction for each whose score moved; how many were written.
+pub async fn rescore(state: &EngineState, model: Uuid, ids: &[Uuid]) -> Result<usize, AppError> {
+    if ids.is_empty() {
+        return Ok(0);
+    }
+    score_rows(state, model, Some(ids)).await
+}
+
+async fn score_rows(
+    state: &EngineState,
+    model: Uuid,
+    ids: Option<&[Uuid]>,
+) -> Result<usize, AppError> {
     let (def, creator, version) = load(state, model).await?;
     let artifact: Option<Value> = sqlx::query_scalar(
         "SELECT model_artifact FROM prediction_model WHERE id = $1 AND status = 'active'",
@@ -508,7 +537,8 @@ pub async fn score(state: &EngineState, model: Uuid) -> Result<usize, AppError> 
         return Ok(0);
     };
     let ctx = attome_security::resolve_uncached(&state.base.db, creator).await?;
-    let rows = read_rows(state, &ctx, &def, false).await?;
+    let rows = read_rows(state, &ctx, &def, false, ids).await?;
+    let on_change = ids.is_some();
     let mut scored = 0;
     for row in &rows {
         let Some(id) = row
@@ -537,9 +567,12 @@ pub async fn score(state: &EngineState, model: Uuid) -> Result<usize, AppError> 
             "INSERT INTO prediction (model_ref, regarding_entity, regarding_id, score, label, \
                  explanation, horizon_at) \
              SELECT $1, $2, $3, $4, $5, $6, now() + interval '30 days' \
-              WHERE NOT EXISTS (SELECT 1 FROM prediction \
-                                 WHERE model_ref = $1 AND regarding_id = $3 \
-                                   AND explanation ->> 'version' = $7 AND is_deleted = false)",
+              WHERE NOT EXISTS (SELECT 1 FROM (SELECT score, explanation FROM prediction \
+                                  WHERE model_ref = $1 AND regarding_id = $3 \
+                                    AND is_deleted = false \
+                                  ORDER BY predicted_at DESC LIMIT 1) latest \
+                                 WHERE latest.explanation ->> 'version' = $7 \
+                                   AND (NOT $8 OR abs(latest.score - $4) < 0.000001))",
         )
         .bind(model)
         .bind(&def.entity)
@@ -548,6 +581,7 @@ pub async fn score(state: &EngineState, model: Uuid) -> Result<usize, AppError> 
         .bind(if p > 0.5 { "likely" } else { "unlikely" })
         .bind(json!({ "top_factors": factors, "version": version.to_string() }))
         .bind(version.to_string())
+        .bind(on_change)
         .execute(&state.base.db)
         .await
         .map_err(AppError::internal)?;
@@ -590,6 +624,152 @@ pub async fn score_all(state: &EngineState) -> Result<usize, AppError> {
         }
     }
     Ok(total)
+}
+
+/// The change-feed consumer that rescores changed records.
+pub const CONSUMER: &str = "attome-predict/definitions";
+/// The registered job that drains it every few minutes; the interval is the
+/// debounce, and a record changed several times in it is scored once.
+pub const RESCORE_JOB: &str = "predict_definition_rescore";
+const FEED_BATCH: i64 = 500;
+const FEED_MAX_BATCHES: usize = 20;
+
+/// Reads the new record changes and rescores the records of every active
+/// definition model on their entity; how many predictions were written.
+pub async fn drain_changes(state: &EngineState) -> Result<usize, AppError> {
+    let db = &state.base.db;
+    let models: Vec<(Uuid, String)> = sqlx::query_as(
+        "SELECT id, entity FROM prediction_model WHERE status = 'active' \
+           AND definition IS NOT NULL AND is_deleted = false",
+    )
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut written = 0;
+    for _ in 0..FEED_MAX_BATCHES {
+        let mut conn = db.acquire().await.map_err(AppError::internal)?;
+        let events = attome_core::change_feed::read_batch(&mut conn, CONSUMER, FEED_BATCH).await?;
+        drop(conn);
+        let Some(last) = events.last().cloned() else {
+            break;
+        };
+        let mut changed: BTreeMap<&str, Vec<Uuid>> = BTreeMap::new();
+        for event in &events {
+            if event.event_name.is_none() {
+                let ids = changed
+                    .entry(event.entity_logicalname.as_str())
+                    .or_default();
+                if !ids.contains(&event.record_id) {
+                    ids.push(event.record_id);
+                }
+            }
+        }
+        for (model, entity) in &models {
+            let Some(ids) = changed.get(entity.as_str()) else {
+                continue;
+            };
+            match rescore(state, *model, ids).await {
+                Ok(n) => written += n,
+                Err(error) => tracing::warn!(%model, %error, "definition model not rescored"),
+            }
+        }
+        let mut conn = db.acquire().await.map_err(AppError::internal)?;
+        attome_core::change_feed::advance(&mut conn, CONSUMER, &last).await?;
+        if events.len() < usize::try_from(FEED_BATCH).unwrap_or(usize::MAX) {
+            break;
+        }
+    }
+    Ok(written)
+}
+
+type PendingRow = (Uuid, Uuid, f64, String, chrono::DateTime<chrono::Utc>, bool);
+
+/// Records the outcome (O11's `outcome`) of each prediction of a definition
+/// model once it is known: a choice target with yes and no values when the
+/// record closes either way, any other target when the prediction's horizon
+/// passes. How many outcomes were written.
+pub async fn fill_outcomes(state: &EngineState) -> Result<usize, AppError> {
+    let db = &state.base.db;
+    let models: Vec<(Uuid, Value)> = sqlx::query_as(
+        "SELECT id, definition FROM prediction_model \
+          WHERE definition IS NOT NULL AND is_deleted = false",
+    )
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut filled = 0;
+    for (model, definition) in models {
+        let Ok(def) = serde_json::from_value::<ModelDef>(definition) else {
+            continue;
+        };
+        let pending: Vec<PendingRow> = sqlx::query_as(
+            "SELECT id, regarding_id, score, label, predicted_at, horizon_at < now() \
+               FROM prediction WHERE model_ref = $1 AND outcome_ref IS NULL \
+                AND is_deleted = false ORDER BY predicted_at LIMIT $2",
+        )
+        .bind(model)
+        .bind(FEED_BATCH)
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?;
+        if pending.is_empty() {
+            continue;
+        }
+        let ids: Vec<Uuid> = pending.iter().map(|p| p.1).collect();
+        // The entity and target were checked against the metadata when the
+        // model was created; both are quoted identifiers.
+        let actual: HashMap<Uuid, Value> = sqlx::query_as::<_, (Uuid, Option<Value>)>(&format!(
+            "SELECT id, to_jsonb({}) FROM {} WHERE id = ANY($1)",
+            attome_db::ident::quote_ident(&def.target),
+            attome_db::ident::quote_ident(&def.entity),
+        ))
+        .bind(&ids)
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?
+        .into_iter()
+        .map(|(id, value)| (id, value.unwrap_or(Value::Null)))
+        .collect();
+        for (prediction, record, score, predicted_label, predicted_at, horizon_passed) in pending {
+            let value = actual.get(&record).cloned().unwrap_or(Value::Null);
+            let Some(outcome) = label(&def, &value) else {
+                continue;
+            };
+            if def.positive.is_empty() && !horizon_passed {
+                continue;
+            }
+            let hit = i32::from(score > 0.5) == outcome;
+            let mut tx = attome_db::tx::begin(db).await?;
+            let inserted = sqlx::query(
+                "INSERT INTO outcome (id, kind, source_module, entity_logicalname, \
+                     regarding_entity, regarding_id, model_id, proposed_at, expected_value, \
+                     actual_value, measured_at, effectiveness) \
+                 VALUES ($1, 'prediction', 'attome-predict', $2, 'prediction', $1, $3, $4, \
+                         $5, $6, now(), $7) \
+                 ON CONFLICT (id) DO NOTHING",
+            )
+            .bind(prediction)
+            .bind(&def.entity)
+            .bind(model.to_string())
+            .bind(predicted_at)
+            .bind(json!({ "score": score, "label": predicted_label }))
+            .bind(json!({ "target": def.target, "value": value, "outcome": outcome }))
+            .bind(if hit { 1.0_f64 } else { 0.0 })
+            .execute(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+            sqlx::query(
+                "UPDATE prediction SET outcome_ref = $1 WHERE id = $1 AND outcome_ref IS NULL",
+            )
+            .bind(prediction)
+            .execute(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+            attome_db::tx::commit(tx).await?;
+            filled += usize::from(inserted.rows_affected() > 0);
+        }
+    }
+    Ok(filled)
 }
 
 #[cfg(test)]

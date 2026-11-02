@@ -2085,6 +2085,14 @@ async fn dispatch_platform_job(
         // same `prediction` rows), not a separate `outcome_fill` module.
         EngineJob::PredictOutcomeFillSweep => {
             let stats = attome_predict::score::fill_outcomes(&db).await?;
+            // O1-T3: the outcomes of definition models' predictions.
+            let defined = attome_predict::generic::fill_outcomes(&attome_state).await?;
+            if defined > 0 {
+                tracing::info!(
+                    filled = defined,
+                    "predict: definition model outcomes recorded"
+                );
+            }
             if stats.filled > 0 {
                 tracing::info!(
                     filled = stats.filled,
@@ -3372,6 +3380,8 @@ const DEDUP_KEY_FULFILMENT_CUSTOMER_UPDATES: &str = "fulfilment-customer-updates
 const DEDUP_KEY_CALLINTEL_AGGREGATE: &str = "callintel-aggregate";
 /// D22-T11: competitors followed as call trackers (a registered job type).
 const DEDUP_KEY_CALLINTEL_COMPETITORS: &str = "callintel-competitors";
+/// O1-T3: changed records rescored by definition models (a registered job type).
+const DEDUP_KEY_PREDICT_DEFINITION_RESCORE: &str = "predict-definition-rescore";
 /// G1-T4: the weekly quality review sample (a registered job type).
 const DEDUP_KEY_SERVICE_QUALITY_SAMPLE: &str = "service-quality-sample";
 /// F8-T9: the abandoned cart sweep (a registered job type).
@@ -3861,6 +3871,10 @@ pub const SERVICE_QUALITY_SAMPLE: attome_jobs::JobType =
 /// D22-T11: competitors followed as call trackers.
 pub const CALLINTEL_COMPETITORS: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_callintel::analysis::signals::JOB, 1);
+
+/// O1-T3: changed records rescored by definition models.
+pub const PREDICT_DEFINITION_RESCORE: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_predict::generic::RESCORE_JOB, 1);
 
 /// D22-T9: yesterday's call trend aggregates.
 pub const CALLINTEL_AGGREGATE: attome_jobs::JobType =
@@ -5350,6 +5364,23 @@ pub fn register_job_types() {
                     .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 if opened > 0 {
                     tracing::info!(opened, "quality reviews opened");
+                }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            PREDICT_DEFINITION_RESCORE,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_PREDICT) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let written = attome_predict::generic::drain_changes(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if written > 0 {
+                    tracing::info!(written, "changed records rescored");
                 }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
@@ -6857,6 +6888,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == CALLINTEL_COMPETITORS.name => {
             DEDUP_KEY_CALLINTEL_COMPETITORS
         }
+        EngineJob::Registered(job) if job.name == PREDICT_DEFINITION_RESCORE.name => {
+            DEDUP_KEY_PREDICT_DEFINITION_RESCORE
+        }
         EngineJob::Registered(job) if job.name == SERVICE_QUALITY_SAMPLE.name => {
             DEDUP_KEY_SERVICE_QUALITY_SAMPLE
         }
@@ -7154,6 +7188,7 @@ pub const SCHEDULE_MODULES: &[(&str, &str)] = &[
     ("predict-scoring-sweep", "predict"),
     ("predict-outcome-fill-sweep", "predict"),
     ("predict-drift", "predict"),
+    ("predict-definition-rescore", "predict"),
     ("fulfilment-split", "fulfilment"),
     ("fulfilment-exceptions", "fulfilment"),
     ("fulfilment-tracking", "fulfilment"),
@@ -8592,6 +8627,21 @@ pub fn spawn_service_quality_sample_scheduler(db: DbPool, interval: std::time::D
             "quality review sample",
         ),
         Err(error) => tracing::error!(%error, "quality review sample: not scheduled"),
+    }
+}
+
+/// O1-T3: every five minutes, changed records rescored by definition models.
+pub fn spawn_predict_definition_rescore_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(PREDICT_DEFINITION_RESCORE.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_PREDICT_DEFINITION_RESCORE,
+            "definition model rescoring",
+        ),
+        Err(error) => tracing::error!(%error, "definition model rescoring: not scheduled"),
     }
 }
 
