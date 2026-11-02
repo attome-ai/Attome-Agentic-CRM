@@ -37,6 +37,8 @@ pub mod landing;
 pub mod list_routes;
 pub mod loyalty;
 pub mod model;
+/// E9-T3: the nurture step and the drip that sends each track on its cadence.
+pub mod nurture_run;
 pub mod nurture_tracks;
 pub mod precheck;
 /// E23-T2: profile events in batches, and a contact's traits rolled up from them.

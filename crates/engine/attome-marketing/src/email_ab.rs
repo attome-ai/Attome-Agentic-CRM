@@ -406,6 +406,11 @@ async fn engaged(state: &EngineState, token: &str) {
     {
         tracing::warn!(%error, "email campaign: engagement not recorded");
     }
+    // E9-T3: an email from a saved design counts as seen, so a nurture
+    // track does not send it again.
+    if let Err(error) = crate::nurture_run::seen_from_token(&state.base.db, token).await {
+        tracing::warn!(%error, "email campaign: content seen not recorded");
+    }
 }
 
 #[utoipa::path(

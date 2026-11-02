@@ -3265,6 +3265,8 @@ const DEDUP_KEY_MARKETING_ATTRIBUTION: &str = "marketing-attribution";
 /// E7-T6: the live segment tick (a registered job type).
 const DEDUP_KEY_SEGMENT_LIVE: &str = "marketing-segment-live";
 const DEDUP_KEY_JOURNEY_COUNTS: &str = "marketing-journey-counts";
+/// E9-T3: the nurture drip tick (a registered job type).
+const DEDUP_KEY_NURTURE_TICK: &str = "marketing-nurture-tick";
 const DEDUP_KEY_LIST_PAUSE: &str = "marketing-list-pause-unused";
 /// E8-T5: the journey entry tick and the date entry (registered job types).
 const DEDUP_KEY_JOURNEY_ENTRY: &str = "marketing-journey-entry";
@@ -3548,6 +3550,11 @@ pub const LIST_PAUSE_UNUSED: attome_jobs::JobType =
 /// E8-T9: journey node counts recomputed for versions with recent runs.
 pub const JOURNEY_COUNTS: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_marketing::journey::insight::COUNTS_JOB, 1);
+
+/// E9-T3: nurture states that are due get their next email; finished
+/// states release the journey runs that wait for them.
+pub const NURTURE_TICK: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_marketing::nurture_run::TICK_JOB, 1);
 
 /// E23-T1: drops profile event months past retention.
 pub const PROFILE_EVENT_RETENTION: attome_jobs::JobType =
@@ -6058,6 +6065,20 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            NURTURE_TICK,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_MARKETING) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                nurture_tick(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             SEGMENT_LIVE,
             |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
                 if !state.modules.load().has(attome_modules::MODULE_MARKETING) {
@@ -6503,6 +6524,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         }
         EngineJob::Registered(job) if job.name == SEGMENT_LIVE.name => DEDUP_KEY_SEGMENT_LIVE,
         EngineJob::Registered(job) if job.name == JOURNEY_COUNTS.name => DEDUP_KEY_JOURNEY_COUNTS,
+        EngineJob::Registered(job) if job.name == NURTURE_TICK.name => DEDUP_KEY_NURTURE_TICK,
         EngineJob::Registered(job) if job.name == LIST_PAUSE_UNUSED.name => DEDUP_KEY_LIST_PAUSE,
         EngineJob::Registered(job) if job.name == STOCK_LEDGER.name => DEDUP_KEY_STOCK_LEDGER,
         EngineJob::Registered(job) if job.name == WORK_ORDER_INVOICING.name => {
@@ -6776,6 +6798,7 @@ pub const SCHEDULE_MODULES: &[(&str, &str)] = &[
     ("marketing-segment-live", "marketing"),
     ("marketing-journey-entry", "marketing"),
     ("marketing-journey-date-entry", "marketing"),
+    ("marketing-nurture-tick", "marketing"),
     ("social-publish", "marketing"),
     ("social-mentions-sync", "marketing"),
     ("social-reviews-sync", "omnichannel"),
@@ -7537,6 +7560,50 @@ pub fn spawn_journey_counts_scheduler(db: DbPool, interval: std::time::Duration)
         DEDUP_KEY_JOURNEY_COUNTS,
         "journey counts",
     );
+}
+
+/// E9-T3: one nurture pass. Due states get their next email, then the
+/// runs whose state finished are told (`nurture.done:<run>`); a run not yet
+/// waiting is told on a later pass.
+async fn nurture_tick(state: &EngineState) -> Result<(), attome_types::AppError> {
+    let sent = attome_marketing::nurture_run::tick(state).await?;
+    if sent > 0 {
+        tracing::info!(sent, "nurture: emails queued");
+    }
+    for (program, person, instance, status) in
+        attome_marketing::nurture_run::finished(&state.base.db, 500).await?
+    {
+        let settled = attome_workflow::scheduler::signal_event(
+            state,
+            instance,
+            &attome_marketing::nurture_run::done_event(instance),
+            serde_json::json!({ "nurture": status }),
+        )
+        .await?;
+        if settled {
+            attome_marketing::nurture_run::mark_signalled(
+                &state.base.db,
+                program,
+                person,
+                instance,
+            )
+            .await?;
+        }
+    }
+    Ok(())
+}
+
+/// E9-T3: every minute, the nurture drip (one pending at most).
+pub fn spawn_nurture_tick_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(NURTURE_TICK.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "nurture tick: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(db, interval, job, DEDUP_KEY_NURTURE_TICK, "nurture tick");
 }
 
 /// I6-T2: every minute, one tick of work order stock.

@@ -4198,6 +4198,33 @@ async fn an_attribute_filtered_update_trigger_starts_only_on_those_attributes() 
 // ---------------------------------------------------------------------------
 
 /// Echoes its configuration; refuses a configuration without `"ok": true`.
+/// E9-T3: a step that waits for its run's own named event.
+struct WaitEventStep;
+
+impl attome_core::workflow_step::WorkflowStepHandler for WaitEventStep {
+    fn key(&self) -> &'static str {
+        "test.wait_event"
+    }
+    fn module_id(&self) -> attome_modules::ModuleId {
+        attome_modules::MODULE_WORKFLOW
+    }
+    fn validate_config(&self, _config: &serde_json::Value) -> Result<(), String> {
+        Ok(())
+    }
+    fn run<'a>(
+        &'a self,
+        _state: &'a EngineState,
+        inv: attome_core::workflow_step::StepInvocation,
+    ) -> attome_core::workflow_step::StepFuture<'a> {
+        Box::pin(async move {
+            Ok(attome_core::workflow_step::StepOutcome::Waiting {
+                resume_at: None,
+                wait_event: Some(format!("test.done:{}", inv.instance_id)),
+            })
+        })
+    }
+}
+
 struct EchoStep;
 
 impl attome_core::workflow_step::WorkflowStepHandler for EchoStep {
@@ -4298,9 +4325,12 @@ fn with_module_steps(mut state: EngineState) -> EngineState {
         std::sync::Arc::new(EchoStep);
     let counting: std::sync::Arc<dyn attome_core::workflow_step::WorkflowStepHandler> =
         std::sync::Arc::new(CountStep);
+    let waiting: std::sync::Arc<dyn attome_core::workflow_step::WorkflowStepHandler> =
+        std::sync::Arc::new(WaitEventStep);
     state.workflow_step_handlers = std::sync::Arc::new(std::collections::HashMap::from([
         ("test.echo", handler),
         ("test.count", counting),
+        ("test.wait_event", waiting),
     ]));
     let guard: std::sync::Arc<dyn attome_core::workflow_step::WorkflowKindGuard> =
         std::sync::Arc::new(GoalGuard);
@@ -4489,4 +4519,69 @@ async fn kind_guard_exit_cancels_instance() {
     .await
     .expect("count module step runs");
     assert_eq!(ran, 0, "the guard ends the instance before the step runs");
+}
+
+/// E9-T3: a module step's named-event wait ends when the event is
+/// signalled to its run, and a signal for another event, or before the run
+/// waits, does not end it.
+#[tokio::test]
+async fn module_step_named_event_resumes_the_run() {
+    let state = with_module_steps(skip_if_no_db!(test_state().await));
+    let user_id = seed_user(&state.base.db).await;
+    let graph = module_step_graph("test.wait_event", json!({}));
+    let version_id = publish_workflow(&state.base.db, "named-event-test", graph).await;
+    let instance_id = attome_workflow::instance_admin::start_instance_internal(
+        &state,
+        version_id,
+        None,
+        Some(user_id),
+        None,
+        json!({}),
+    )
+    .await
+    .expect("start instance");
+
+    let early = attome_workflow::scheduler::signal_event(
+        &state,
+        instance_id,
+        &format!("test.done:{instance_id}"),
+        json!({}),
+    )
+    .await
+    .expect("signal before the wait");
+    assert!(!early, "a live run that is not waiting yet is not settled");
+
+    assert_eq!(run_to_checkpoint(&state, instance_id).await, "waiting");
+    let other = attome_workflow::scheduler::signal_event(
+        &state,
+        instance_id,
+        "test.done:someone-else",
+        json!({}),
+    )
+    .await
+    .expect("signal another event");
+    assert!(!other);
+    assert_eq!(wait_row_count(&state, instance_id).await, 1);
+
+    let settled = attome_workflow::scheduler::signal_event(
+        &state,
+        instance_id,
+        &format!("test.done:{instance_id}"),
+        json!({ "nurture": "handed_off" }),
+    )
+    .await
+    .expect("signal the event");
+    assert!(settled);
+    assert_eq!(wait_row_count(&state, instance_id).await, 0);
+    assert_eq!(run_to_checkpoint(&state, instance_id).await, "completed");
+
+    let again = attome_workflow::scheduler::signal_event(
+        &state,
+        instance_id,
+        &format!("test.done:{instance_id}"),
+        json!({}),
+    )
+    .await
+    .expect("signal a finished run");
+    assert!(again, "a finished run is settled");
 }

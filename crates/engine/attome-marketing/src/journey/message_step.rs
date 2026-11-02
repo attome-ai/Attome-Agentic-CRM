@@ -97,10 +97,10 @@ impl WorkflowStepHandler for ChannelUnavailable {
 type DesignRow = (Option<String>, Option<String>, Option<String>);
 
 /// A rendered email: subject, locale, HTML, text.
-type Rendered = (String, String, String, String);
+pub(crate) type Rendered = (String, String, String, String);
 
 /// The design, rendered: subject, locale, HTML, text.
-async fn rendered(state: &EngineState, design_id: Uuid) -> Result<Rendered, AppError> {
+pub(crate) async fn rendered(state: &EngineState, design_id: Uuid) -> Result<Rendered, AppError> {
     let row: Option<DesignRow> = sqlx::query_as(
         "SELECT subject, locale, design FROM marketing_email_design \
           WHERE id = $1 AND is_active IS NOT FALSE",
@@ -337,8 +337,8 @@ impl WorkflowStepHandler for SendEmail {
             }
             let send_id: Uuid = sqlx::query_scalar(
                 "INSERT INTO email_campaign_send \
-                   (list_id, subject, html_body, text_body, purpose_key, locale) \
-                 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+                   (list_id, subject, html_body, text_body, purpose_key, locale, design_id) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
             )
             .bind(journey.unwrap_or(inv.instance_id))
             .bind(&subject)
@@ -346,6 +346,7 @@ impl WorkflowStepHandler for SendEmail {
             .bind(&text)
             .bind(purpose)
             .bind(&locale)
+            .bind(design_id)
             .fetch_one(&mut *tx)
             .await
             .map_err(AppError::internal)?;

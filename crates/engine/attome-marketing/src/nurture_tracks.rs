@@ -121,6 +121,59 @@ type TrackRow = (
 
 type StateRow = (Uuid, Option<Uuid>, bool);
 
+/// The person's stage, interest and language, read from their record
+/// (`lead` has no language). `None` when the record is gone.
+pub(crate) async fn person_facts(
+    db: &attome_db::DbPool,
+    entity: &str,
+    person: Uuid,
+) -> Result<Option<Person>, AppError> {
+    let language = if entity == "contact" {
+        "preferred_language"
+    } else {
+        "NULL::text"
+    };
+    let row: Option<(Option<String>, Option<String>, Option<String>)> = sqlx::query_as(&format!(
+        "SELECT lifecycle_stage, nurture_interest, {language} FROM {} WHERE id = $1",
+        attome_core::quote_ident(entity)
+    ))
+    .bind(person)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(row.map(|(stage, interest, language)| Person {
+        stage,
+        interest,
+        language,
+    }))
+}
+
+/// The programme's live tracks.
+pub(crate) async fn tracks_of(
+    db: &attome_db::DbPool,
+    program: Uuid,
+) -> Result<Vec<Track>, AppError> {
+    let tracks: Vec<TrackRow> = sqlx::query_as(
+        "SELECT id, lifecycle_stage, interest, language, position::float8 \
+             FROM marketing_nurture_track \
+             WHERE program_ref = $1 AND (is_active IS NULL OR is_active = true)",
+    )
+    .bind(program)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(tracks
+        .into_iter()
+        .map(|(id, stage, interest, language, position)| Track {
+            id,
+            stage: stage.unwrap_or_else(|| "any".to_owned()),
+            interest,
+            language: language.unwrap_or_else(|| "any".to_owned()),
+            position: position.map_or(0, |p| p as i64),
+        })
+        .collect())
+}
+
 async fn move_person(db: &attome_db::DbPool, entity: &str, person: Uuid) -> Result<u64, AppError> {
     let states: Vec<StateRow> = sqlx::query_as(
         "SELECT s.program_id, s.track_id, COALESCE(p.acquisition_only, false) \
@@ -136,26 +189,8 @@ async fn move_person(db: &attome_db::DbPool, entity: &str, person: Uuid) -> Resu
     if states.is_empty() {
         return Ok(0);
     }
-    let language = if entity == "contact" {
-        "preferred_language"
-    } else {
-        "NULL::text"
-    };
-    let row: Option<(Option<String>, Option<String>, Option<String>)> = sqlx::query_as(&format!(
-        "SELECT lifecycle_stage, nurture_interest, {language} FROM {} WHERE id = $1",
-        attome_core::quote_ident(entity)
-    ))
-    .bind(person)
-    .fetch_optional(db)
-    .await
-    .map_err(AppError::internal)?;
-    let Some((stage, interest, language)) = row else {
+    let Some(facts) = person_facts(db, entity, person).await? else {
         return Ok(0);
-    };
-    let facts = Person {
-        stage,
-        interest,
-        language,
     };
     let mut changed = 0;
     for (program, current, acquisition_only) in states {
@@ -172,25 +207,7 @@ async fn move_person(db: &attome_db::DbPool, entity: &str, person: Uuid) -> Resu
             .rows_affected();
             continue;
         }
-        let tracks: Vec<TrackRow> = sqlx::query_as(
-            "SELECT id, lifecycle_stage, interest, language, position::float8 \
-                 FROM marketing_nurture_track \
-                 WHERE program_ref = $1 AND (is_active IS NULL OR is_active = true)",
-        )
-        .bind(program)
-        .fetch_all(db)
-        .await
-        .map_err(AppError::internal)?;
-        let tracks: Vec<Track> = tracks
-            .into_iter()
-            .map(|(id, stage, interest, language, position)| Track {
-                id,
-                stage: stage.unwrap_or_else(|| "any".to_owned()),
-                interest,
-                language: language.unwrap_or_else(|| "any".to_owned()),
-                position: position.map_or(0, |p| p as i64),
-            })
-            .collect();
+        let tracks = tracks_of(db, program).await?;
         let best = best_track(&tracks, &facts);
         if best.is_some() && best != current {
             // Content seen is kept per person, not per track, so a move

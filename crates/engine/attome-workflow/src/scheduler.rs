@@ -3613,6 +3613,48 @@ pub async fn resume_node(
     Ok(())
 }
 
+/// E9-T3: delivers the named event `event` to one run: every module step
+/// of `instance_id` waiting for it (`StepOutcome::Waiting { wait_event }`)
+/// completes with `output`, as a `wait_for_event` node does when its
+/// entity event arrives. Whether the event is settled: delivered, or the
+/// run is gone or finished so nothing will ever wait for it. `false` means
+/// the run is live but not waiting yet (its step has not checkpointed);
+/// the caller tries again later.
+pub async fn signal_event(
+    state: &EngineState,
+    instance_id: Uuid,
+    event: &str,
+    output: Value,
+) -> Result<bool, AppError> {
+    let waits: Vec<(String, Uuid)> = sqlx::query_as(
+        "SELECT node_id, node_run_id FROM workflow_trigger_index \
+          WHERE role = 'wait' AND match_type = 'entity_event' AND instance_id = $1 \
+            AND entity_logicalname IS NULL AND node_run_id IS NOT NULL \
+            AND condition ->> 'event' = $2",
+    )
+    .bind(instance_id)
+    .bind(event)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if !waits.is_empty() {
+        for (node_id, node_run_id) in waits {
+            resume_node(state, instance_id, &node_id, node_run_id, output.clone()).await?;
+        }
+        return Ok(true);
+    }
+    let status: Option<String> =
+        sqlx::query_scalar("SELECT status FROM workflow_instance WHERE id = $1")
+            .bind(instance_id)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    Ok(!matches!(
+        status.as_deref(),
+        Some("queued" | "running" | "waiting" | "paused")
+    ))
+}
+
 /// F095 backoff resume: flips a `waiting`, `kind: "retry"` `node_run` back
 /// to `pending` (not `succeeded` — this is not a cached replay, the node
 /// re-executes for real on the next pass) so `ready_nodes` picks it up
