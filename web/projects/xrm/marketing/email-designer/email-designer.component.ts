@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked, viewChild } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Router, RouterLink } from '@angular/router';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, LangService, SdkService, TranslatePipe } from '@attome/base';
 import { CanvasComponent, EditCommand, valueAt } from '@attome/xrm/canvas';
 import {
   DesignDoc, DesignNode, Direction, EmailDesign, PALETTE, PaletteType, fromCanvas, newNode, problems, toCanvas,
@@ -60,7 +60,7 @@ function textOf(v: unknown): string {
   styleUrl: './email-designer.component.css',
 })
 export class EmailDesignerComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
   private readonly sanitizer = inject(DomSanitizer);
   private readonly router = inject(Router);
@@ -151,8 +151,8 @@ export class EmailDesignerComponent {
     };
     const id = this.id();
     const request = id && id !== 'new' && this.rowVersion() !== null
-      ? this.api.patch<DesignRecord>(`/api/v1/${DESIGN_ENTITY}/${encodeURIComponent(id)}`, body, this.rowVersion() ?? undefined)
-      : this.api.post<DesignRecord>(`/api/v1/${DESIGN_ENTITY}`, body);
+      ? this.sdk.patch<DesignRecord>(`/api/v1/${DESIGN_ENTITY}/${encodeURIComponent(id)}`, { body, ifMatch: this.rowVersion() ?? undefined })
+      : this.sdk.post<DesignRecord>(`/api/v1/${DESIGN_ENTITY}`, { body });
     request.subscribe({
       next: record => {
         this.busy.set(false);
@@ -174,9 +174,9 @@ export class EmailDesignerComponent {
     if (!design || !person) return;
     this.busy.set(true);
     this.error.set(null);
-    this.api.post<{ html: string }>('/api/v1/marketing/emails/preview', {
+    this.sdk.post<{ html: string }>('/api/v1/marketing/emails/preview', { body: {
       design, entity: this.previewEntity().trim() || 'contact', person_id: person,
-    }).subscribe({
+    } }).subscribe({
       next: r => {
         this.busy.set(false);
         // Shown in a frame with an empty sandbox: no script, form or same-origin access.
@@ -194,7 +194,7 @@ export class EmailDesignerComponent {
     this.initial.set(fresh ? toCanvas({ blocks: [] }) : null);
     this.current.set(this.initial());
     if (!fresh) {
-      this.api.get<{ items: Record<string, unknown>[] }>(`/api/v1/${DESIGN_ENTITY}`, { page_size: '100', sort: 'name' })
+      this.sdk.get<{ items: Record<string, unknown>[] }>(`/api/v1/${DESIGN_ENTITY}`, { query: { page_size: '100', sort: 'name' } })
         .subscribe({
           next: page => this.saved.set((page.items ?? []).map(r => {
             const data = (r['data'] ?? r) as Record<string, unknown>;
@@ -207,7 +207,7 @@ export class EmailDesignerComponent {
 
   private load(id: string): void {
     this.error.set(null);
-    this.api.get<DesignRecord>(`/api/v1/${DESIGN_ENTITY}/${encodeURIComponent(id)}`).subscribe({
+    this.sdk.get<DesignRecord>(`/api/v1/${DESIGN_ENTITY}/${encodeURIComponent(id)}`).subscribe({
       next: record => {
         const data = record.data ?? {};
         let design: EmailDesign = { blocks: [] };

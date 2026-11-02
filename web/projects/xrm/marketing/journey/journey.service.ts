@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiComponents, ApiService } from '@attome/base';
+import { ApiComponents, SdkService } from '@attome/base';
 import { Observable, map } from 'rxjs';
 
 export type JourneyCounts = ApiComponents['schemas']['JourneyCounts'];
@@ -22,7 +22,7 @@ export interface NodeWaiting {
 /** The journey routes the workflow editor reads for a journey (E8-T13). */
 @Injectable({ providedIn: 'root' })
 export class JourneyService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   private base(journey: string): string {
     return `/api/v1/marketing/journeys/${encodeURIComponent(journey)}`;
@@ -30,39 +30,39 @@ export class JourneyService {
 
   /** The marketing journey record whose workflow is `logicalname`, if any. */
   forDefinition(logicalname: string): Observable<string | null> {
-    return this.api
-      .get<{ items: { id: string }[] }>('/api/v1/marketing_journey', {
+    return this.sdk
+      .get<{ items: { id: string }[] }>('/api/v1/marketing_journey', { query: {
         'filter[workflow_definition_logicalname][eq]': logicalname,
         page_size: '1',
         select: 'id',
-      })
+      } })
       .pipe(map(page => page.items?.[0]?.id ?? null));
   }
 
   /** Each node's counts, per version, with the goal conversion. */
   counts(journey: string): Observable<JourneyCounts> {
-    return this.api.get<JourneyCounts>(`${this.base(journey)}/counts`);
+    return this.sdk.get<JourneyCounts>(`${this.base(journey)}/counts`);
   }
 
   /** One person's runs, oldest first. */
   path(journey: string, person: string): Observable<PersonRun[]> {
-    return this.api
+    return this.sdk
       .get<{ items: PersonRun[] }>(`${this.base(journey)}/people/${encodeURIComponent(person)}/path`)
       .pipe(map(page => page.items ?? []));
   }
 
   /** Who waits where, and who a move would move, before publishing `version`. */
   preview(journey: string, version: string): Observable<NodeWaiting[]> {
-    return this.api
+    return this.sdk
       .get<{ items: NodeWaiting[] }>(`${this.base(journey)}/versions/${encodeURIComponent(version)}/preview`)
       .pipe(map(page => page.items ?? []));
   }
 
   /** Publishes `version`, placing the people already in the journey as `mode` says. */
   publish(journey: string, version: string, mode: VersionMode): Observable<JourneyPublishResult> {
-    return this.api.post<JourneyPublishResult>(`${this.base(journey)}/publish`, {
+    return this.sdk.post<JourneyPublishResult>(`${this.base(journey)}/publish`, { body: {
       version_id: version,
       version_mode: mode,
-    });
+    } });
   }
 }

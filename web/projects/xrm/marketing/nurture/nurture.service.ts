@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import { Observable } from 'rxjs';
 
 /** A hand-off to sales (E9-T5). */
@@ -44,21 +44,21 @@ export interface NurtureHistory {
 /** The hand-off and nurture routes (E9-T8). */
 @Injectable({ providedIn: 'root' })
 export class NurtureService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   history(person: string, entity: string): Observable<NurtureHistory> {
-    return this.api.get<NurtureHistory>(
-      `/api/v1/marketing/people/${encodeURIComponent(person)}/nurture-history`, { entity });
+    return this.sdk.get<NurtureHistory>(
+      `/api/v1/marketing/people/${encodeURIComponent(person)}/nurture-history`, { query: { entity } });
   }
 
   accept(handoff: string): Observable<Handoff> {
-    return this.api.post<Handoff>(`/api/v1/marketing/handoffs/${encodeURIComponent(handoff)}/accept`, {});
+    return this.sdk.post<Handoff>(`/api/v1/marketing/handoffs/${encodeURIComponent(handoff)}/accept`, { body: {} });
   }
 
   /** Gives the person back; `wakeUpOn` (an ISO date-time) is when nurture starts again. */
   returnHandoff(handoff: string, reason: string, wakeUpOn: string | null): Observable<{ handoff_id: string; recycled: boolean }> {
-    return this.api.post<{ handoff_id: string; recycled: boolean }>(
+    return this.sdk.post<{ handoff_id: string; recycled: boolean }>(
       `/api/v1/marketing/handoffs/${encodeURIComponent(handoff)}/return`,
-      { reason, wake_up_on: wakeUpOn });
+      { body: { reason, wake_up_on: wakeUpOn } });
   }
 }

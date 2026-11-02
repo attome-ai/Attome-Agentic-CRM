@@ -1,12 +1,13 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, LangService, SdkService } from '@attome/base';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { EmailDesignerComponent } from './email-designer.component';
 import { EmailDesign, fromCanvas, linkOk, problems, toCanvas } from './email-design.model';
+import { sdkFromApi } from '../../testing/sdk-from-api';
 
 describe('EmailDesignerComponent (E2-T1)', () => {
   const stored: EmailDesign = {
@@ -34,6 +35,7 @@ describe('EmailDesignerComponent (E2-T1)', () => {
       providers: [
         provideRouter([]),
         { provide: ApiService, useValue: api },
+        { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi },
         {
           provide: LangService,
           useValue: {

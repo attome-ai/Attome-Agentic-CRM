@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import { Observable } from 'rxjs';
 
 /** A finding of the pre-send check (`crate::precheck::Finding`). */
@@ -84,15 +84,15 @@ export interface DeliverabilityOverview {
 /** E6's deliverability routes. */
 @Injectable({ providedIn: 'root' })
 export class DeliverabilityService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** The dashboard's figures over the last `days` days (1-90). */
   overview(days: number): Observable<DeliverabilityOverview> {
-    return this.api.get<DeliverabilityOverview>('/api/v1/marketing/deliverability/overview', { days: String(days) });
+    return this.sdk.get<DeliverabilityOverview>('/api/v1/marketing/deliverability/overview', { query: { days: String(days) } });
   }
 
   /** Scores a message before it is sent; nothing is sent or stored. */
   precheck(body: PrecheckBody): Observable<PrecheckReport> {
-    return this.api.post<PrecheckReport>('/api/v1/marketing/precheck', body);
+    return this.sdk.post<PrecheckReport>('/api/v1/marketing/precheck', { body });
   }
 }
