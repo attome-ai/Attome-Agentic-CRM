@@ -156,3 +156,65 @@ fn hooks_change_reject_and_follow_the_save() {
         assert_eq!(stored, format!("Plain {tag}"));
     });
 }
+
+/// A hook whose own work runs the same stage again, as a hook writing the
+/// record it watches would.
+struct Recursive(Arc<AtomicUsize>);
+
+impl RecordHook for Recursive {
+    fn name(&self) -> &str {
+        "test.recursive"
+    }
+    fn entity(&self) -> &str {
+        "loop_entity"
+    }
+    fn stage(&self) -> HookStage {
+        HookStage::BeforeSave
+    }
+    fn run<'a>(&'a self, state: &'a EngineState, event: HookEvent<'a>) -> HookFuture<'a> {
+        Box::pin(async move {
+            self.0.fetch_add(1, Ordering::SeqCst);
+            attome_core::record_hooks::run_stage(state, HookStage::BeforeSave, event).await?;
+            Ok(HookOutcome::Continue)
+        })
+    }
+}
+
+// feature: Y10
+#[test]
+fn recursive_hooks_stop_at_depth_eight() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let calls = Arc::new(AtomicUsize::new(0));
+        let mut state = app.state.clone();
+        state.record_hooks = Arc::new(vec![
+            Arc::new(Recursive(calls.clone())) as Arc<dyn RecordHook>
+        ]);
+        let values = Map::new();
+        let refused = attome_core::record_hooks::run_stage(
+            &state,
+            HookStage::BeforeSave,
+            HookEvent {
+                entity: "loop_entity",
+                record_id: None,
+                is_create: true,
+                values: &values,
+                previous: None,
+                actor: None,
+            },
+        )
+        .await;
+        assert!(
+            matches!(refused, Err(AppError::Validation(_))),
+            "{refused:?}"
+        );
+        assert_eq!(
+            calls.load(Ordering::SeqCst),
+            attome_core::record_hooks::MAX_HOOK_DEPTH as usize,
+            "the hook ran at depths 1 to 8, then the ninth level was refused"
+        );
+        assert_eq!(attome_core::record_hooks::current_depth(), 0);
+    });
+}

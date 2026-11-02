@@ -58,6 +58,20 @@ pub enum HookOutcome {
     Reject(String),
 }
 
+/// Y10-T4: a write made by a hook may run hooks of its own; past this
+/// depth the write is refused, so two hooks cannot call each other forever.
+pub const MAX_HOOK_DEPTH: u32 = 8;
+
+tokio::task_local! {
+    /// How many hook calls enclose the current write on this task.
+    static HOOK_DEPTH: u32;
+}
+
+/// The hook depth of the current task (0 outside any hook).
+pub fn current_depth() -> u32 {
+    HOOK_DEPTH.try_with(|d| *d).unwrap_or(0)
+}
+
 pub type HookFuture<'a> = Pin<Box<dyn Future<Output = Result<HookOutcome, AppError>> + Send + 'a>>;
 
 /// One hook on one entity's writes.
@@ -91,10 +105,23 @@ pub async fn run_stage(
         return Ok(None);
     }
     hooks.sort_by_key(|h| h.order());
+    let depth = current_depth();
+    if depth >= MAX_HOOK_DEPTH {
+        tracing::warn!(
+            entity = event.entity,
+            depth,
+            "hook-triggered writes nested too deep"
+        );
+        return Err(AppError::Validation(format!(
+            "hooks triggered writes {MAX_HOOK_DEPTH} levels deep; stopped to prevent a loop"
+        )));
+    }
     let mut changed: Option<Map<String, Value>> = None;
     for hook in hooks {
         let values = changed.as_ref().unwrap_or(event.values);
-        let outcome = hook.run(state, HookEvent { values, ..event }).await?;
+        let outcome = HOOK_DEPTH
+            .scope(depth + 1, hook.run(state, HookEvent { values, ..event }))
+            .await?;
         match outcome {
             HookOutcome::Continue => {}
             HookOutcome::Change(set) if stage != HookStage::AfterSave => {
