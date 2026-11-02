@@ -14,7 +14,7 @@ pub use model::CallintelModel;
 pub const ADVISORY_LOCK_NAMESPACE: i32 = 33;
 
 /// This crate's slice of the workspace OpenAPI document, merged in by
-/// `attome::openapi::document()`. Empty until the first route lands.
+/// `attome::openapi::document()`: the D22-T8 call page and coaching routes.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    utoipa::openapi::OpenApiBuilder::new().build()
+    analysis::routes::openapi_fragment()
 }

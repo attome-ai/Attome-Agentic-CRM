@@ -65,3 +65,15 @@ conversation signals read; the event carries no transcript text.
 - **Comments.** The owner, their managers and peers holding `call_comment.create` comment at a moment of the
   call; the owner is notified of others' comments. The owner and their managers read all comments; anyone
   else reads only their own.
+
+## Routes
+
+- `GET /api/v1/callintel/calls/{activity_id}`: the call's latest analysis, findings and scorecard answers;
+  the talk patterns only for the call's owner and their managers. You must be able to read the call.
+- `GET /api/v1/callintel/calls/{activity_id}/recording`: a short-lived link to the recording. Every
+  playback is written to the audit log.
+- `POST /api/v1/callintel/findings/{id}/task`, `POST /api/v1/callintel/scorecard-answers/{id}/confirm`
+  (`{value, row_version}`) and `POST /api/v1/callintel/calls/{activity_id}/comments`
+  (`{at_ms, body, parent_id}`): the coaching steps above.
+
+All need `call_analysis.read` and are hidden while the call analysis module is off.

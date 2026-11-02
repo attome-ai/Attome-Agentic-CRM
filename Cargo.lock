@@ -958,8 +958,10 @@ name = "attome-callintel"
 version = "0.1.0"
 dependencies = [
  "attome-ai",
+ "attome-audit",
  "attome-core",
  "attome-db",
+ "attome-document",
  "attome-inference",
  "attome-jobs",
  "attome-modules",

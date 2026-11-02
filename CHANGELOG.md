@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Call page routes (D22-T8): `GET /api/v1/callintel/calls/{activity_id}` and `/recording` (every playback
+  audited), `POST /api/v1/callintel/findings/{id}/task`, `/scorecard-answers/{id}/confirm` and
+  `/calls/{activity_id}/comments`.
 - Revenue agent actions (F11-T12): `revrec.explain_period`, `revrec.propose_revenue_rule` and
   `revrec.draft_disclosure`, read-only, on the default agent.
 - Partners (F9): `/api/v1/partner/*` (application decisions and agreements, registration decisions and

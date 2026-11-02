@@ -6,6 +6,8 @@ pub mod coach;
 pub mod extract;
 /// D22-T5: one analysis per finished transcript, over its redacted copy.
 pub mod job;
+/// D22-T8: the call page and coaching routes.
+pub mod routes;
 /// D22-T11: the analysis-done event and competitors as trackers.
 pub mod signals;
 pub mod talk;

@@ -44,6 +44,6 @@ impl EngineModel for CallintelModel {
     }
 
     fn routes(&self) -> Router<EngineState> {
-        Router::new()
+        crate::analysis::routes::routes()
     }
 }
