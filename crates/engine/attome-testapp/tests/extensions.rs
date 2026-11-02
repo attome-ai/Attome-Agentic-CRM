@@ -150,3 +150,141 @@ fn extensions_version_publish_roll_back_and_switch_off() {
         assert_eq!(run["logs"][0]["message"], "called ERP with key ***");
     });
 }
+
+/// Answers `{"change":{"name":"Set by wasm"}}` (33 bytes at 0).
+const CHANGES_NAME: &str = r#"(module
+    (memory (export "memory") 1)
+    (data (i32.const 0) "{\"change\":{\"name\":\"Set by wasm\"}}")
+    (func (export "alloc") (param i32) (result i32) (i32.const 1024))
+    (func (export "on_record") (param i32 i32) (result i64) (i64.const 33)))"#;
+
+/// Answers `{"reject":"wasm says no"}` (25 bytes at 0).
+const REJECTS: &str = r#"(module
+    (memory (export "memory") 1)
+    (data (i32.const 0) "{\"reject\":\"wasm says no\"}")
+    (func (export "alloc") (param i32) (result i32) (i32.const 1024))
+    (func (export "on_record") (param i32 i32) (result i64) (i64.const 25)))"#;
+
+async fn create_account(
+    state: &attome_core::EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    admin: Uuid,
+    label: String,
+) -> Result<Uuid, attome_types::AppError> {
+    attome_records::entity_crud::create_record_for(
+        state,
+        ctx,
+        admin,
+        "account",
+        json!({ "name": label }),
+    )
+    .await
+    .map(|(id, _)| id)
+}
+
+async fn account_name(db: &attome_db::DbPool, id: Uuid) -> String {
+    sqlx::query_scalar("SELECT name FROM account WHERE id = $1")
+        .bind(id)
+        .fetch_one(db)
+        .await
+        .unwrap()
+}
+
+// feature: Y10
+#[test]
+fn published_extensions_run_at_their_hook_stage() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let name = format!("hook_{}", &Uuid::now_v7().simple().to_string()[24..]);
+        let manifest = json!({
+            "entities": { "account": { "read": true, "write": true, "attributes": ["name"] } },
+            "hooks": [{ "entity": "account", "stage": "before_save" }]
+        });
+        let upload_and_publish = |module: &'static str, version: i32| {
+            let app = &app;
+            let name = name.clone();
+            let manifest = manifest.clone();
+            async move {
+                let (status, body) = app
+                    .request(
+                        Method::POST,
+                        "/api/v1/admin/extensions",
+                        Some(json!({ "name": name, "module_base64": b64(module), "manifest": manifest })),
+                    )
+                    .await;
+                assert_eq!(status, StatusCode::CREATED, "{body}");
+                let (status, body) = app
+                    .request(
+                        Method::POST,
+                        &format!("/api/v1/admin/extensions/{name}/versions/{version}/publish"),
+                        None,
+                    )
+                    .await;
+                assert_eq!(status, StatusCode::OK, "{body}");
+                assert!(
+                    attome_api::extension_hooks::refresh(&app.state)
+                        .await
+                        .unwrap()
+                        >= 1
+                );
+            }
+        };
+
+        let mut state = app.state.clone();
+        state.record_hooks = std::sync::Arc::new(
+            attome_api::extension_hooks::ExtensionHooks::all()
+                .into_iter()
+                .map(|h| {
+                    std::sync::Arc::new(h)
+                        as std::sync::Arc<dyn attome_core::record_hooks::RecordHook>
+                })
+                .collect(),
+        );
+        let ctx = state
+            .base
+            .security
+            .resolve(app.admin.id)
+            .await
+            .expect("ctx");
+
+        // Version 1 changes the name before the save.
+        upload_and_publish(CHANGES_NAME, 1).await;
+        let id = create_account(&state, &ctx, app.admin.id, format!("Typed {name}"))
+            .await
+            .expect("a changed create");
+        assert_eq!(account_name(app.db(), id).await, "Set by wasm");
+        let (status, body) = app
+            .request(
+                Method::GET,
+                &format!("/api/v1/admin/extensions/{name}/runs"),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["items"][0]["ok"], true, "the run is logged");
+
+        // Version 2 refuses the save with its message.
+        upload_and_publish(REJECTS, 2).await;
+        let refused = create_account(&state, &ctx, app.admin.id, format!("Refused {name}")).await;
+        assert!(
+            matches!(&refused, Err(attome_types::AppError::Validation(m)) if m == "wasm says no"),
+            "{refused:?}"
+        );
+
+        // Off is immediate, before any refresh.
+        let (status, _) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/admin/extensions/{name}/off"),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::NO_CONTENT);
+        let id = create_account(&state, &ctx, app.admin.id, format!("Free {name}"))
+            .await
+            .expect("no extension runs");
+        assert_eq!(account_name(app.db(), id).await, format!("Free {name}"));
+    });
+}

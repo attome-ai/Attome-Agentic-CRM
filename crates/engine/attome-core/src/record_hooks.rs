@@ -92,6 +92,12 @@ pub trait RecordHook: Send + Sync + 'static {
     fn name(&self) -> &str;
     /// The entity it watches.
     fn entity(&self) -> &str;
+    /// Whether it runs on `entity`'s writes; by default, its
+    /// [`Self::entity`]. A hook serving several entities (the published
+    /// extensions) answers from its own list.
+    fn watches(&self, entity: &str) -> bool {
+        self.entity() == entity
+    }
     fn stage(&self) -> HookStage;
     /// Lower runs first; hooks of the same order run in registration order.
     fn order(&self) -> i32 {
@@ -111,7 +117,7 @@ pub async fn run_stage(
     let mut hooks: Vec<_> = state
         .record_hooks
         .iter()
-        .filter(|h| h.stage() == stage && h.entity() == event.entity)
+        .filter(|h| h.stage() == stage && h.watches(event.entity))
         .collect();
     if hooks.is_empty() {
         return Ok(None);
@@ -177,7 +183,7 @@ pub fn has_hooks(state: &EngineState, entity: &str, stage: HookStage) -> bool {
     state
         .record_hooks
         .iter()
-        .any(|h| h.stage() == stage && h.entity() == entity)
+        .any(|h| h.stage() == stage && h.watches(entity))
 }
 
 /// The job that runs [`HookStage::AfterCommit`] hooks. Few attempts: a hook

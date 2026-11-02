@@ -1370,6 +1370,9 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
     platform_seed_lock.release().await;
     replay_erasures(system.state(), config).await?;
     enqueue_lookup_index_backfill(system.state()).await;
+    // Y10-T2: the published extensions' hooks, loaded before anything
+    // serves and kept fresh.
+    attome_api::extension_hooks::start(system.state().clone()).await;
     attome_profiler::record("boot.post_build", t_post_build.elapsed());
 
     Ok(Boot {
@@ -1760,7 +1763,7 @@ fn warn_if_knowledge_article_entity_diverges(config: &AppConfig) {
 pub fn register_engines(
     builder: attome_api::EngineSystemBuilder,
 ) -> attome_api::EngineSystemBuilder {
-    builder
+    let builder = builder
         .register(attome_security::model::SecurityModel)
         .register(attome_notification::NotificationModel)
         .register(attome_workflow::WorkflowModel)
@@ -1959,7 +1962,11 @@ pub fn register_engines(
         })
         .register_workflow_step_handler(attome_marketing::journey::action_step::Unavailable {
             key: attome_marketing::journey::action_step::UNAVAILABLE[1],
-        })
+        });
+    // Y10-T2: published extensions, at each record write hook stage.
+    attome_api::extension_hooks::ExtensionHooks::all()
+        .into_iter()
+        .fold(builder, |builder, hook| builder.register_record_hook(hook))
 }
 
 #[cfg(test)]

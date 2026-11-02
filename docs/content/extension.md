@@ -60,15 +60,26 @@ Custom code runs as WebAssembly on Wasmtime inside the server (Y10, V2-D125), in
 - **Testing.** `attome_extension::FakeHost` runs the host API in memory (records, logs, secrets,
   stubbed HTTP), held to the same grants, for an extension's unit tests.
 
-- **Record hooks.** The record write path calls registered hooks at three stages: before
-  validation, before save (a hook may change the values or reject the write) and after save. A hook
-  that writes records runs hooks again, at most eight levels deep.
+- **Record hooks.** The record write path calls registered hooks at four stages: before
+  validation, before save (a hook may change the values or reject the write), after save (in the
+  transaction) and after commit (in a job, with the stored row). A hook that writes records runs
+  hooks again, at most eight levels deep.
+- **Extensions as hooks.** A manifest lists the writes an extension runs on, for example
+  `"hooks": [{"entity": "account", "stage": "before_save", "order": 0}]`; each hook needs a read
+  grant on its entity. The module exports `memory`, `alloc(len) -> ptr` and
+  `on_record(ptr, len) -> i64`: the server writes the write as JSON (`stage`, `entity`,
+  `record_id`, `is_create`, `values`, `previous`, `actor`; only the attributes the extension may
+  read) at the pointer `alloc` answers, and `on_record` answers its output's pointer in the high 32
+  bits and its length in the low 32. The output is `"continue"`, `{"change": {...}}` (before
+  stages only; every attribute must be granted for writing) or `{"reject": "message"}`. An
+  extension that fails refuses the write. A newly published version runs within five seconds;
+  switching one off takes effect at once.
 - **Versions.** `POST /api/v1/admin/extensions` uploads a module and its manifest as the next
   version; `.../{name}/versions/{v}/publish` makes one version live (publishing an older one rolls
   back) and `.../{name}/off` stops every version.
 - **Run logs.** Each run is kept with its version, time, fuel used, result and log lines, every
   granted secret masked: `GET /api/v1/admin/extensions/{name}/runs`.
 
-Not yet: wiring published extensions into the hook stages, and approving grants at publish. Until
-then, extend behaviour through rules, flows and packs.
+Not yet: the host API calls from inside a hook (reading other records, secrets, HTTP after the
+commit), JavaScript extensions, and approving grants at publish by a second person.
 

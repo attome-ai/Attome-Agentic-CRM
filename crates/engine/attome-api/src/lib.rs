@@ -151,6 +151,8 @@ mod email_webhooks;
 pub mod expression_admin;
 /// Y10-T5: publishing, versioning and switching off extensions.
 pub mod extension_admin;
+/// Y10-T2: published extensions run at the record write hook stages.
+pub mod extension_hooks;
 /// `pub` only for the two re-exports below (`read_record`,
 /// `resolve_entity_public`), which `attome-ai` calls so a read action reuses
 /// this crate's own authorization path instead of growing a second one. Every

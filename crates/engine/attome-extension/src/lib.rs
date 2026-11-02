@@ -13,6 +13,8 @@ pub mod host;
 /// Y10-T1: the engine, the limits and running one export.
 pub mod runtime;
 
-pub use grants::{Denied, EntityGrant, Grants};
+pub use grants::{Denied, EntityGrant, Grants, HookDecl, HookPoint};
 pub use host::{FakeHost, HostApi, Level, Response};
-pub use runtime::{CallCost, ExtensionError, Limits, Runtime, mask_secrets};
+pub use wasmtime::Module;
+
+pub use runtime::{CallCost, ExtensionError, Limits, MAX_OUTPUT_BYTES, Runtime, mask_secrets};

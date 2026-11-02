@@ -20,6 +20,9 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use wasmtime::{Config, Engine, Instance, Module, ResourceLimiter, Store, Trap};
 
+/// The largest answer a JSON call may return, in bytes.
+pub const MAX_OUTPUT_BYTES: usize = 1024 * 1024;
+
 /// How often the epoch advances.
 pub const TICK: Duration = Duration::from_millis(10);
 
@@ -74,7 +77,7 @@ mod millis {
 }
 
 /// Y10-T6: what one call cost.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct CallCost {
     pub fuel_used: u64,
     pub elapsed: Duration,
@@ -212,6 +215,75 @@ impl Runtime {
         arg: i32,
         limits: &Limits,
     ) -> (Result<i32, ExtensionError>, CallCost) {
+        self.in_store(module, limits, |store, instance| {
+            let run = instance
+                .get_typed_func::<i32, i32>(&mut *store, name)
+                .map_err(|_| ExtensionError::MissingExport(name.to_owned()))?;
+            run.call(&mut *store, arg)
+                .map_err(|e| classify(e, store.data(), limits))
+        })
+    }
+
+    /// Y10-T2: calls the module's export `name` with `input` (JSON bytes)
+    /// and answers its output bytes, with the call's cost. The calling
+    /// convention, for modules without the component model: the module
+    /// exports `memory`, `alloc(len: i32) -> i32` (where the host writes the
+    /// input) and `name(ptr: i32, len: i32) -> i64`, whose answer is the
+    /// output's pointer in the high 32 bits and its length in the low 32.
+    pub fn call_json_measured(
+        &self,
+        module: &Module,
+        name: &str,
+        input: &[u8],
+        limits: &Limits,
+    ) -> (Result<Vec<u8>, ExtensionError>, CallCost) {
+        self.in_store(module, limits, |store, instance| {
+            let memory = instance
+                .get_memory(&mut *store, "memory")
+                .ok_or_else(|| ExtensionError::MissingExport("memory".into()))?;
+            let alloc = instance
+                .get_typed_func::<i32, i32>(&mut *store, "alloc")
+                .map_err(|_| ExtensionError::MissingExport("alloc".into()))?;
+            let run = instance
+                .get_typed_func::<(i32, i32), i64>(&mut *store, name)
+                .map_err(|_| ExtensionError::MissingExport(name.to_owned()))?;
+            let len = i32::try_from(input.len())
+                .map_err(|_| ExtensionError::Trap("the input is too large".into()))?;
+            let ptr = alloc
+                .call(&mut *store, len)
+                .map_err(|e| classify(e, store.data(), limits))?;
+            memory
+                .write(
+                    &mut *store,
+                    usize::try_from(ptr).unwrap_or(usize::MAX),
+                    input,
+                )
+                .map_err(|_| ExtensionError::Trap("alloc answered memory out of bounds".into()))?;
+            let packed = run
+                .call(&mut *store, (ptr, len))
+                .map_err(|e| classify(e, store.data(), limits))?;
+            let (out_ptr, out_len) = unpack(packed);
+            if out_len > MAX_OUTPUT_BYTES {
+                return Err(ExtensionError::Trap(format!(
+                    "the answer is larger than {MAX_OUTPUT_BYTES} bytes"
+                )));
+            }
+            let mut out = vec![0; out_len];
+            memory
+                .read(&*store, out_ptr, &mut out)
+                .map_err(|_| ExtensionError::Trap("the answer is out of bounds".into()))?;
+            Ok(out)
+        })
+    }
+
+    /// Runs `body` against a fresh instance of `module` in a fresh store
+    /// held to `limits`, and measures it.
+    fn in_store<T>(
+        &self,
+        module: &Module,
+        limits: &Limits,
+        body: impl FnOnce(&mut Store<Guard>, Instance) -> Result<T, ExtensionError>,
+    ) -> (Result<T, ExtensionError>, CallCost) {
         let started = std::time::Instant::now();
         let mut store = Store::new(
             &self.engine,
@@ -233,11 +305,7 @@ impl Runtime {
                 Ok(instance) => instance,
                 Err(e) => return Err(classify(e, store.data(), limits)),
             };
-            let run = instance
-                .get_typed_func::<i32, i32>(&mut store, name)
-                .map_err(|_| ExtensionError::MissingExport(name.to_owned()))?;
-            run.call(&mut store, arg)
-                .map_err(|e| classify(e, store.data(), limits))
+            body(&mut store, instance)
         })();
         let left = store.get_fuel().unwrap_or(0);
         let cost = CallCost {
@@ -246,6 +314,15 @@ impl Runtime {
         };
         (result, cost)
     }
+}
+
+/// A JSON call's answer: pointer in the high 32 bits, length in the low.
+/// Pure.
+fn unpack(packed: i64) -> (usize, usize) {
+    let bits = packed.cast_unsigned();
+    let ptr = usize::try_from(bits >> 32).unwrap_or(usize::MAX);
+    let len = usize::try_from(bits & 0xffff_ffff).unwrap_or(usize::MAX);
+    (ptr, len)
 }
 
 /// The typed reason a call failed. Pure.
@@ -343,6 +420,34 @@ mod tests {
             ),
             "token=*** user=svc pass=***"
         );
+    }
+
+    /// Echoes its input: `alloc` places it at 1024 and `on_record` answers
+    /// the same bytes.
+    const ECHO: &str = r#"(module
+        (memory (export "memory") 1)
+        (func (export "alloc") (param i32) (result i32) (i32.const 1024))
+        (func (export "on_record") (param i32 i32) (result i64)
+            (i64.or
+                (i64.shl (i64.extend_i32_u (local.get 0)) (i64.const 32))
+                (i64.extend_i32_u (local.get 1)))))"#;
+
+    #[test]
+    fn a_json_call_passes_bytes_in_and_out() {
+        let rt = Runtime::shared().unwrap();
+        let module = rt.compile(ECHO).unwrap();
+        let input = br#"{"stage":"before_save","values":{"name":"x"}}"#;
+        let (out, cost) = rt.call_json_measured(&module, "on_record", input, &Limits::default());
+        assert_eq!(out.unwrap(), input.to_vec());
+        assert!(cost.fuel_used > 0);
+        let (missing, _) = rt.call_json_measured(
+            &rt.compile(SPIN).unwrap(),
+            "on_record",
+            input,
+            &Limits::default(),
+        );
+        assert_eq!(missing, Err(ExtensionError::MissingExport("memory".into())));
+        assert_eq!(unpack((7_i64 << 32) | 9), (7, 9));
     }
 
     #[test]

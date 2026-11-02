@@ -20,7 +20,28 @@ pub struct EntityGrant {
     pub attributes: BTreeSet<String>,
 }
 
-/// An extension's declared grants.
+/// Y10-T2: a stage of the record write pipeline an extension is called at.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HookPoint {
+    BeforeValidation,
+    BeforeSave,
+    AfterSave,
+    AfterCommit,
+}
+
+/// Y10-T2: one write an extension is called on.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HookDecl {
+    pub entity: String,
+    pub stage: HookPoint,
+    /// Lower runs first.
+    #[serde(default)]
+    pub order: i32,
+}
+
+/// An extension's declared grants, and the writes it is called on.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Grants {
@@ -29,6 +50,8 @@ pub struct Grants {
     /// Hosts for HTTP, exact or `.`-prefixed for a domain and its
     /// subdomains.
     pub hosts: BTreeSet<String>,
+    /// The hook stages it runs at; each needs a read grant on its entity.
+    pub hooks: Vec<HookDecl>,
 }
 
 /// Why a host call was refused.
@@ -66,6 +89,14 @@ pub fn check(grants: &Grants) -> Vec<String> {
             if !ident(attribute) {
                 problems.push(format!("{entity}.{attribute} is not an attribute name"));
             }
+        }
+    }
+    for hook in &grants.hooks {
+        if grants.may_read(&hook.entity, &[]).is_err() {
+            problems.push(format!(
+                "a hook on {} needs a read grant on it",
+                hook.entity
+            ));
         }
     }
     for secret in &grants.secrets {
@@ -217,5 +248,20 @@ mod tests {
         .unwrap();
         let problems = check(&bad);
         assert_eq!(problems.len(), 4, "{problems:?}");
+
+        // A hook needs a read grant on its entity.
+        let hooked: Grants = serde_json::from_value(serde_json::json!({
+            "entities": { "account": { "read": true } },
+            "hooks": [
+                { "entity": "account", "stage": "before_save" },
+                { "entity": "deal", "stage": "after_commit", "order": 2 }
+            ]
+        }))
+        .unwrap();
+        assert_eq!(hooked.hooks[1].stage, HookPoint::AfterCommit);
+        assert_eq!(
+            check(&hooked),
+            vec!["a hook on deal needs a read grant on it".to_owned()]
+        );
     }
 }
