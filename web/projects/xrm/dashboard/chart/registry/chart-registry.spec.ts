@@ -55,7 +55,7 @@ function seriesOf(option: ChartOption): Record<string, unknown>[] {
 
 describe('the chart registry', () => {
   it('registers an adapter per kind and nothing else', () => {
-    expect(KINDS).toHaveLength(16);
+    expect(KINDS).toHaveLength(17);
     expect(isEChartKind('sankey')).toBe(true);
     expect(isEChartKind('bar')).toBe(false);
   });
@@ -164,6 +164,18 @@ describe('what an adapter computes', () => {
     expect(data[2]).toEqual(['-', '-', '-', '-', '-']);
     expect(draw(CHART_REGISTRY.box_plot.option(input({ series: five })))).toMatch(/<path\b/);
     expect(boxRows(input())).toEqual([]);
+  });
+
+  it('draws a candle per category from open, close, low and high', () => {
+    const four = [
+      series('Open', [10, 12, 9]), series('Close', [12, 9, null]), series('Low', [9, 8, 8]), series('High', [13, 12, 10]),
+    ];
+    const [candles] = seriesOf(CHART_REGISTRY.candlestick.option(input({ series: four })));
+    const data = candles['data'] as (ChartOption | string[])[];
+    expect((data[0] as ChartOption)['value']).toEqual([10, 12, 9, 13]);
+    expect(((data[0] as ChartOption)['bucket'] as ChartBucket).trackKey).toBe('a|Close');
+    expect(data[2]).toEqual(['-', '-', '-', '-']);
+    expect(draw(CHART_REGISTRY.candlestick.option(input({ series: four })))).toMatch(/<path\b/);
   });
 
   it('skips a category missing either edge of a band', () => {

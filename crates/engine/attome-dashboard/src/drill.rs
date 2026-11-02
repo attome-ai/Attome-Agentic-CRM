@@ -1541,6 +1541,14 @@ pub fn plain_definition(
             format!("Upper quartile of {field} of {entity}"),
             format!("الربيع الأعلى لـ {field} في {entity}"),
         ),
+        Some(MeasureFn::First) => (
+            format!("First {field} of {entity} in each period"),
+            format!("أول {field} في {entity} في كل فترة"),
+        ),
+        Some(MeasureFn::Last) => (
+            format!("Last {field} of {entity} in each period"),
+            format!("آخر {field} في {entity} في كل فترة"),
+        ),
     };
     if !filters.is_empty() {
         let conditions: Vec<(String, String)> = filters

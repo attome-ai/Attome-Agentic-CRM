@@ -16,7 +16,7 @@ import { ChartBucket, ChartCategory, ChartSeries, SLICE_COLORS } from '../dashbo
  */
 export type EChartKind =
   | 'stacked_bar' | 'combo' | 'waterfall' | 'treemap' | 'sunburst' | 'sankey' | 'radar' | 'polar'
-  | 'heatmap' | 'calendar_heatmap' | 'pareto' | 'control' | 'scatter' | 'bubble' | 'range_area' | 'box_plot';
+  | 'heatmap' | 'calendar_heatmap' | 'pareto' | 'control' | 'scatter' | 'bubble' | 'range_area' | 'box_plot' | 'candlestick';
 
 export type ChartOption = Record<string, unknown>;
 
@@ -592,6 +592,30 @@ function boxPlot(input: ChartInput): ChartOption {
   }]);
 }
 
+/**
+ * P6-T1: a candle per category from the first four series in order: open
+ * (the `first` measure), close (`last`), low (`min`) and high (`max`). Up
+ * candles take the positive colour, down ones the negative. A category
+ * missing any of the four has no candle.
+ */
+function candlestick(input: ChartInput): ChartOption {
+  const four = input.series.slice(0, 4);
+  return cartesian(input, [{
+    type: 'candlestick',
+    itemStyle: { color: POSITIVE, color0: NEGATIVE, borderColor: POSITIVE, borderColor0: NEGATIVE },
+    data: input.categories.map((category, index) => {
+      const points = four.map(s => s.points[index]);
+      if (four.length < 4 || points.some(p => !p)) return ['-', '-', '-', '-'];
+      const [open, close, low, high] = points as ChartBucket[];
+      return {
+        value: [open.value, close.value, low.value, high.value],
+        bucket: close,
+        tip: tip(category.label, ...four.map((s, k) => `${s.name}: ${input.format(points[k]!.value)}`)),
+      };
+    }),
+  }]);
+}
+
 export const CHART_REGISTRY: Record<EChartKind, ChartAdapter> = {
   stacked_bar:      { minSeries: 1, legend: true,  option: stackedBar },
   combo:            { minSeries: 1, legend: true,  option: combo },
@@ -609,6 +633,7 @@ export const CHART_REGISTRY: Record<EChartKind, ChartAdapter> = {
   bubble:           { minSeries: 3, legend: false, option: bubble },
   range_area:       { minSeries: 2, legend: true,  option: rangeArea },
   box_plot:         { minSeries: 5, legend: false, option: boxPlot },
+  candlestick:      { minSeries: 4, legend: false, option: candlestick },
 };
 
 export function isEChartKind(kind: string): kind is EChartKind {
@@ -616,4 +641,4 @@ export function isEChartKind(kind: string): kind is EChartKind {
 }
 
 /** Kinds whose series are measures side by side, not one measure split by a field. */
-export const MEASURE_KINDS: ReadonlySet<string> = new Set(['combo', 'scatter', 'bubble', 'range_area', 'box_plot']);
+export const MEASURE_KINDS: ReadonlySet<string> = new Set(['combo', 'scatter', 'bubble', 'range_area', 'box_plot', 'candlestick']);

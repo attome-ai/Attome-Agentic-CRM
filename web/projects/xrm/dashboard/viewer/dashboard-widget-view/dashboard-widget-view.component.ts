@@ -289,7 +289,8 @@ export class DashboardWidgetViewComponent implements OnChanges, OnInit, OnDestro
       case 'chart_scatter':
       case 'chart_bubble':
       case 'chart_range_area':
-      case 'chart_box_plot':       return kind.slice('chart_'.length) as ChartKind;
+      case 'chart_box_plot':
+      case 'chart_candlestick':    return kind.slice('chart_'.length) as ChartKind;
       default:                     return null;
     }
   });

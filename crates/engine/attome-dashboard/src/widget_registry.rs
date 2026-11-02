@@ -141,6 +141,9 @@ pub enum RenderKind {
     /// P6-T1: a box per category from five measures side by side: lowest,
     /// lower quartile, median, upper quartile, highest.
     ChartBoxPlot,
+    /// P6-T1: a candle per time bucket from four measures side by side:
+    /// first (open), last (close), min (low) and max (high).
+    ChartCandlestick,
     /// P6-T1: one bar per row of a stored query, from the widget's
     /// `label_field`, `start_field` and `end_field` (Gantt and timeline).
     Timeline,
@@ -283,6 +286,11 @@ const RENDERERS: &[(&str, RenderKind, DataContract)] = &[
     (
         "box_plot",
         RenderKind::ChartBoxPlot,
+        DataContract::Structured,
+    ),
+    (
+        "candlestick_chart",
+        RenderKind::ChartCandlestick,
         DataContract::Structured,
     ),
     // P6-T1: rows of a stored query as bars between two dates.
@@ -1066,9 +1074,13 @@ mod tests {
         );
         assert_eq!(registry().render_kind("gantt_chart"), RenderKind::Timeline);
         assert_eq!(registry().render_kind("timeline"), RenderKind::Timeline);
-        // No definition can produce these yet: open and close values, a
-        // measure over two fields, or cohorts.
-        for type_id in ["candlestick_chart", "correlation_matrix", "cohort_chart"] {
+        assert_eq!(
+            registry().render_kind("candlestick_chart"),
+            RenderKind::ChartCandlestick
+        );
+        // No definition can produce these yet: a measure over two fields, or
+        // cohorts.
+        for type_id in ["correlation_matrix", "cohort_chart"] {
             assert_eq!(registry().render_kind(type_id), RenderKind::Unsupported);
         }
         assert_eq!(

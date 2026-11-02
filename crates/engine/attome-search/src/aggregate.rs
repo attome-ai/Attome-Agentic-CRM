@@ -517,6 +517,24 @@ fn measure_sql(scope: &AggregateScope, definition: &DataDefinition) -> Result<St
                     MeasureFn::Q3 => {
                         format!("percentile_cont(0.75) WITHIN GROUP (ORDER BY {column})")
                     }
+                    MeasureFn::First | MeasureFn::Last => {
+                        let Some(group) = definition.group.as_ref().filter(|g| g.bucket.is_some())
+                        else {
+                            return Err(AppError::Validation(
+                                "measures first and last need a time-bucketed group".into(),
+                            ));
+                        };
+                        let direction = if aggregation == MeasureFn::First {
+                            "ASC"
+                        } else {
+                            "DESC"
+                        };
+                        let at = format!("t.{}", quote_ident(&group.field));
+                        format!(
+                            "(array_agg({column} ORDER BY {at} {direction}, t.id {direction}) \
+                             FILTER (WHERE {column} IS NOT NULL AND {at} IS NOT NULL))[1]"
+                        )
+                    }
                     MeasureFn::Count => unreachable!("matched above"),
                 }
             }

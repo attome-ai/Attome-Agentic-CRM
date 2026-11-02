@@ -934,6 +934,74 @@ async fn bins_count_each_range_and_quartiles_measure_it() {
     );
 }
 
+/// P6-T1: `first` and `last` take the value at the earliest and latest time
+/// in each time bucket, a candlestick's open and close; without a time
+/// bucket they are refused.
+#[tokio::test]
+async fn first_and_last_follow_time_within_each_bucket() {
+    let system = skip_if_no_db!(test_system(&[]).await);
+    let (admin_id, _) = seed_user(&system, true).await;
+    let db = system.state().base.db.clone();
+    let (deals, _) = provision_deals(&system).await;
+    for (amount, closed_on) in [
+        (7.0, "2026-01-20T00:00:00Z"),
+        (5.0, "2026-01-05T00:00:00Z"),
+        (6.0, "2026-01-12T00:00:00Z"),
+        (9.0, "2026-02-05T00:00:00Z"),
+    ] {
+        insert_deal(
+            &db,
+            &deals,
+            Some("won"),
+            amount,
+            closed_on,
+            None,
+            Some(true),
+        )
+        .await;
+    }
+    let ctx = admin_ctx(&system, admin_id).await;
+    let candles = attome_search::run_structured_aggregate(
+        system.state(),
+        &ctx,
+        &definition(json!({
+            "source": deals,
+            "measures": [
+                { "aggregation": "first", "field": "amount" },
+                { "aggregation": "last", "field": "amount" },
+                { "aggregation": "min", "field": "amount" },
+                { "aggregation": "max", "field": "amount" }
+            ],
+            "group": { "field": "closed_on", "bucket": "month" }
+        })),
+        &[],
+        chrono_tz::UTC,
+    )
+    .await
+    .unwrap();
+    let values: Vec<_> = candles.buckets.iter().map(|b| b.values.clone()).collect();
+    assert_eq!(
+        values,
+        vec![
+            vec![Some(5.0), Some(7.0), Some(5.0), Some(7.0)],
+            vec![Some(9.0), Some(9.0), Some(9.0), Some(9.0)],
+        ]
+    );
+
+    let ungrouped = attome_search::run_structured_aggregate(
+        system.state(),
+        &ctx,
+        &definition(json!({
+            "source": deals,
+            "measures": [{ "aggregation": "first", "field": "amount" }]
+        })),
+        &[],
+        chrono_tz::UTC,
+    )
+    .await;
+    assert!(ungrouped.is_err());
+}
+
 /// Past the cap the response says so, and an explicit Other bucket folds the
 /// rest — including NULL rows the plain `NOT IN` form would drop — so the
 /// buckets sum to the ungrouped count.

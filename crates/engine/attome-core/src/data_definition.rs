@@ -126,6 +126,12 @@ pub enum MeasureFn {
     Q1,
     /// P6-T1: the upper quartile (75th percentile), for a box plot.
     Q3,
+    /// P6-T1: the value at the earliest time in a time bucket (a
+    /// candlestick's open). Needs a time-bucketed group.
+    First,
+    /// P6-T1: the value at the latest time in a time bucket (a candlestick's
+    /// close). Needs a time-bucketed group.
+    Last,
 }
 
 impl MeasureFn {
@@ -138,7 +144,15 @@ impl MeasureFn {
     pub fn needs_numeric_field(self) -> bool {
         matches!(
             self,
-            Self::Sum | Self::Avg | Self::Min | Self::Max | Self::Median | Self::Q1 | Self::Q3
+            Self::Sum
+                | Self::Avg
+                | Self::Min
+                | Self::Max
+                | Self::Median
+                | Self::Q1
+                | Self::Q3
+                | Self::First
+                | Self::Last
         )
     }
 
@@ -159,6 +173,8 @@ impl MeasureFn {
             Self::Median => "median",
             Self::Q1 => "q1",
             Self::Q3 => "q3",
+            Self::First => "first",
+            Self::Last => "last",
         }
     }
 }
@@ -389,6 +405,15 @@ impl DataDefinition {
             && !is_safe_identifier(&group.field)
         {
             errors.push("group.field must be a field logical name".to_string());
+        }
+        let time_bucketed = self.group.as_ref().is_some_and(|g| g.bucket.is_some());
+        if !time_bucketed
+            && self
+                .measures
+                .iter()
+                .any(|m| matches!(m.aggregation, MeasureFn::First | MeasureFn::Last))
+        {
+            errors.push("measures first and last need a time-bucketed group".to_string());
         }
         if let Some(group) = &self.group
             && let Some(width) = group.bin_width
