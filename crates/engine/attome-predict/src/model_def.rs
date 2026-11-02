@@ -100,6 +100,13 @@ pub struct ModelDef {
     /// to (0 to 100), for views, rules and forms.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub score_attribute: Option<String>,
+    /// D18-T2: for a choice target, the values that count as yes
+    /// (`converted`) and as no (`disqualified`); a row with any other value
+    /// is still open, is not trained on, and is the row that gets scored.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub positive: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub negative: Vec<String>,
 }
 
 impl ModelDef {
@@ -138,7 +145,12 @@ pub fn validate(
             let categorical = matches!(t, FieldType::Bool | FieldType::Choice);
             let fits = match def.algorithm {
                 Algorithm::LinearRegression => numeric,
-                Algorithm::LogisticRegression => matches!(t, FieldType::Bool),
+                Algorithm::LogisticRegression => {
+                    matches!(t, FieldType::Bool)
+                        || (t == FieldType::Choice
+                            && !def.positive.is_empty()
+                            && !def.negative.is_empty())
+                }
                 Algorithm::RandomForest => categorical,
             };
             if !fits {
@@ -150,6 +162,9 @@ pub fn validate(
                 ));
             }
         }
+    }
+    if def.positive.iter().any(|p| def.negative.contains(p)) {
+        problems.push("a value cannot be both positive and negative".to_owned());
     }
     if let Some(attribute) = &def.score_attribute
         && !matches!(

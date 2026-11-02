@@ -12,7 +12,8 @@
 //! booleans as themselves, a time feature through
 //! [`crate::model_def::time_feature`], text and choices one-hot over the
 //! [`MAX_CATEGORIES`] most common values seen in training. The label is the
-//! target read as yes or no ([`label_of`]). A fifth of the rows is held out;
+//! target read as yes or no ([`label`]: the definition's `positive` and
+//! `negative` values for a choice, else [`label_of`]). A fifth of the rows is held out;
 //! the inputs are standardized by the training rows' means and spreads, and
 //! the model is kept only when it beats the majority class there, as the
 //! ticket model is. Only `logistic_regression` trains here; rollup features
@@ -59,6 +60,51 @@ pub fn label_of(value: &Value) -> Option<i32> {
             _ => Some(1),
         },
         _ => None,
+    }
+}
+
+/// The target of a row under `def`: with `positive`/`negative` values, 1, 0
+/// or open (`None`); otherwise [`label_of`]. Pure.
+pub fn label(def: &ModelDef, value: &Value) -> Option<i32> {
+    if def.positive.is_empty() {
+        return label_of(value);
+    }
+    let value = value.as_str()?;
+    if def.positive.iter().any(|p| p == value) {
+        Some(1)
+    } else if def.negative.iter().any(|n| n == value) {
+        Some(0)
+    } else {
+        None
+    }
+}
+
+/// D18-T2: lead conversion, from the leads converted or disqualified
+/// before. Trains only once 500 leads have closed either way; the open
+/// leads are scored, each with its top factors.
+pub fn lead_conversion() -> ModelDef {
+    let attribute = |a: &str| Feature::Attribute {
+        attribute: a.to_owned(),
+    };
+    ModelDef {
+        entity: "lead".to_owned(),
+        target: "lead_status".to_owned(),
+        features: [
+            "source",
+            "seniority",
+            "authority",
+            "timeline",
+            "budget",
+            "country_code",
+        ]
+        .into_iter()
+        .map(attribute)
+        .collect(),
+        algorithm: crate::model_def::Algorithm::LogisticRegression,
+        min_rows: Some(500),
+        score_attribute: None,
+        positive: vec!["converted".to_owned()],
+        negative: vec!["disqualified".to_owned()],
     }
 }
 
@@ -330,7 +376,11 @@ pub async fn train(state: &EngineState, model: Uuid) -> Result<(), AppError> {
     let rows = read_rows(state, &ctx, &def, true).await?;
     let labelled: Vec<(&Map<String, Value>, i32)> = rows
         .iter()
-        .filter_map(|r| r.get(&def.target).and_then(label_of).map(|l| (r, l)))
+        .filter_map(|r| {
+            r.get(&def.target)
+                .and_then(|v| label(&def, v))
+                .map(|l| (r, l))
+        })
         .collect();
     let positives = labelled.iter().filter(|(_, l)| *l == 1).count();
     let min_rows = def.min_rows() as usize;
@@ -468,6 +518,11 @@ pub async fn score(state: &EngineState, model: Uuid) -> Result<usize, AppError> 
         else {
             continue;
         };
+        // With yes and no values, a row that has closed is history, not a
+        // row to predict.
+        if !def.positive.is_empty() && row.get(&def.target).and_then(|v| label(&def, v)).is_some() {
+            continue;
+        }
         let inputs = standardize(
             &trained.encoder.encode(&def, row),
             &trained.means,
@@ -563,6 +618,10 @@ mod tests {
         assert_eq!(label_of(&json!("lost")), Some(0));
         assert_eq!(label_of(&json!("won")), Some(1));
         assert_eq!(label_of(&json!(null)), None);
+        let leads = lead_conversion();
+        assert_eq!(label(&leads, &json!("converted")), Some(1));
+        assert_eq!(label(&leads, &json!("disqualified")), Some(0));
+        assert_eq!(label(&leads, &json!("qualified")), None, "still open");
     }
 
     #[test]

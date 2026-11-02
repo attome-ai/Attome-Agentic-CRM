@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Predictive models from a definition (O1-T3, D18-T2): any entity's yes/no or choice attribute,
+  trained through the secured query compiler and scored nightly with the top three factors;
+  lead conversion once 500 leads have closed. `docs/predictive-models.md`; migration 0378.
 - Revenue schedules for contracts from orders and subscriptions (F11-T14): point-in-time obligations
   in the month of delivery, ratable ones over their dates, written by the close and the nightly roll-forward;
   an order-to-posted-close test.
