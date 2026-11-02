@@ -538,3 +538,82 @@ fn derived_explain_preview_and_trend() {
         assert_eq!(body["items"][0]["members"], 2);
     });
 }
+
+// feature: A26
+// op: derived_entity_mass
+#[test]
+fn derived_mass_changes_only_the_members() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let dir =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../packs/crm/changesets");
+        let mut files: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.path())
+            .collect();
+        files.sort();
+        for file in &files {
+            let value: Value =
+                serde_json::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
+            attome_api::changeset::boot::apply_pack_document(&app.state, &value)
+                .await
+                .unwrap_or_else(|e| panic!("{}: {e}", file.display()));
+        }
+        let prefix = format!("Mass {}", Uuid::now_v7().simple());
+        let mut ids = Vec::new();
+        for label in [
+            format!("{prefix} A"),
+            format!("{prefix} B"),
+            format!("Outside {prefix}"),
+        ] {
+            let id: Uuid = sqlx::query_scalar(
+                "INSERT INTO account (name, owner_ref, owner_type) VALUES ($1, $2, 0) RETURNING id",
+            )
+            .bind(&label)
+            .bind(app.admin.id)
+            .fetch_one(app.db())
+            .await
+            .unwrap();
+            ids.push(id);
+        }
+        let name = format!("dv_ms_{}", &Uuid::now_v7().simple().to_string()[24..]);
+        let (status, body) = app
+            .request(
+                Method::PUT,
+                &format!("/api/v1/admin/derived-entities/{name}"),
+                Some(json!({
+                    "anchor": "account",
+                    "condition": format!("startswith(name, \"{prefix}\")"),
+                })),
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let renamed = format!("{prefix} renamed");
+        let (status, body) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/derived-entities/{name}/mass"),
+                Some(json!({ "kind": "update", "payload": { "name": renamed }, "reason": "test" })),
+            )
+            .await;
+        assert!(status.is_success(), "{status}: {body}");
+        let names: Vec<String> =
+            sqlx::query_scalar("SELECT name FROM account WHERE id = ANY($1) ORDER BY id")
+                .bind(&ids)
+                .fetch_all(app.db())
+                .await
+                .unwrap();
+        assert_eq!(
+            names.iter().filter(|n| **n == renamed).count(),
+            2,
+            "{names:?}"
+        );
+        assert!(
+            names.contains(&format!("Outside {prefix}")),
+            "a non-member is untouched"
+        );
+    });
+}
