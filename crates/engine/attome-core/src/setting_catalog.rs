@@ -758,6 +758,17 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(false),
         ),
+        // F5-T14: payments on the portal.
+        SettingDescriptor::new(
+            "billing.portal.payments",
+            "Whether portal users see their own account's open invoices and saved payment methods \
+         (never a token) at /{keyword}/api/v1/billing/invoices/open and \
+         /{keyword}/api/v1/billing/payment-methods (F5-T14). Off by default: the routes answer 404.",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
         // F11-T9: loyalty points as a material right.
         SettingDescriptor::new(
             "revrec.loyalty_point_value",

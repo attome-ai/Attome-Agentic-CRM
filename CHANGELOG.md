@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Payments on the portal (F5-T14, read part): with `billing.portal.payments` on, a portal user sees their
+  account's open invoices (`GET /{keyword}/api/v1/billing/invoices/open`) and saved payment methods without
+  their tokens (`GET /{keyword}/api/v1/billing/payment-methods`). See `docs/billing-portal.md`.
 - Subscriptions on the portal (F3-T13, read part): with `billing.portal.subscriptions` on,
   `GET /{keyword}/api/v1/billing/subscriptions` shows a portal user their own account's subscriptions with
   the lines in force and the charges to come. See `docs/billing-portal.md`.

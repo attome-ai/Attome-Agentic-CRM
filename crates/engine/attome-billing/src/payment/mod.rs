@@ -6,6 +6,8 @@ pub mod allocate;
 pub mod credit;
 pub mod dispute;
 pub mod link;
+/// F5-T14: what a portal user sees of their payments.
+pub mod portal;
 pub mod reconcile;
 pub mod recurring;
 pub mod refund;

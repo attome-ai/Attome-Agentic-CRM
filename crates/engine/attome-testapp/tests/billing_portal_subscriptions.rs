@@ -118,3 +118,73 @@ fn portal_lists_only_own_account() {
         assert!(for_account(&app.state, other).await.unwrap().is_empty());
     });
 }
+
+// feature: F5
+#[test]
+fn payment_token_never_returned() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        install(&app).await;
+        let mine = account(&app, "Card holder").await;
+        sqlx::query(
+            "INSERT INTO saved_payment_method (id, account_ref, gateway_system_ref, token, brand, \
+                 last4, expiry_month, expiry_year, is_default, is_active, row_version) \
+             VALUES ($1, $2, 'gw', 'tok_secret_value', 'visa', '4242', 12, 2030, true, true, 0)",
+        )
+        .bind(Uuid::now_v7())
+        .bind(mine)
+        .execute(app.db())
+        .await
+        .unwrap();
+
+        let methods = attome_billing::payment::portal::payment_methods(&app.state, mine)
+            .await
+            .unwrap();
+        assert_eq!(methods.len(), 1);
+        let json = serde_json::to_string(&methods).unwrap();
+        assert!(!json.contains("tok_secret_value"), "{json}");
+        assert!(!json.contains("token"), "{json}");
+        assert!(json.contains("4242"));
+    });
+}
+
+// feature: F5
+// negative: GET /{keyword}/api/v1/billing/invoices/open
+#[test]
+fn payment_portal_other_account_404() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        install(&app).await;
+        let mine = account(&app, "Invoiced").await;
+        let other = account(&app, "Someone else").await;
+        for (status, open) in [("issued", "100"), ("draft", "50"), ("issued", "0")] {
+            sqlx::query(
+                "INSERT INTO invoice (id, account_ref, currency, status, payment_status, \
+                     invoice_number, grand_total, open_total, is_active, row_version) \
+                 VALUES ($1, $2, 'SAR', $3, 'open', 'INV-1', 100, $4::numeric, true, 0)",
+            )
+            .bind(Uuid::now_v7())
+            .bind(mine)
+            .bind(status)
+            .bind(open)
+            .execute(app.db())
+            .await
+            .unwrap();
+        }
+
+        let open = attome_billing::payment::portal::open_invoices(&app.state, mine)
+            .await
+            .unwrap();
+        assert_eq!(open.len(), 1, "only the issued invoice with an amount open");
+        assert!(
+            attome_billing::payment::portal::open_invoices(&app.state, other)
+                .await
+                .unwrap()
+                .is_empty()
+        );
+    });
+}
