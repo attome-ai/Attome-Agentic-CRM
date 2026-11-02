@@ -85,7 +85,13 @@ fn kpis_under_300ms_at_100k() {
         let reports = reports();
         assert!(reports.len() >= 5, "the pack's five reports: {reports:?}");
 
-        // A spread of states, dates and deviations, as a deployment has.
+        // A spread of states, dates and deviations, as a deployment has, seeded
+        // on one connection without the pool's statement timeout.
+        let mut seed = app.db().acquire().await.unwrap();
+        sqlx::query("SET statement_timeout = 0")
+            .execute(&mut *seed)
+            .await
+            .unwrap();
         sqlx::query(
             "INSERT INTO contract (id, title, counterparty, status, contract_value, end_date, \
                  playbook_deviations, is_active, row_version, created_at) \
@@ -98,7 +104,7 @@ fn kpis_under_300ms_at_100k() {
                FROM generate_series(1, $1) AS g",
         )
         .bind(CONTRACTS)
-        .execute(app.db())
+        .execute(&mut *seed)
         .await
         .unwrap();
         sqlx::query(
@@ -110,7 +116,7 @@ fn kpis_under_300ms_at_100k() {
               WHERE s.no < 3 OR c.status = 'active'",
         )
         .bind(app.admin.id)
-        .execute(app.db())
+        .execute(&mut *seed)
         .await
         .unwrap();
         sqlx::query(
@@ -122,13 +128,14 @@ fn kpis_under_300ms_at_100k() {
                     true, 0 \
                FROM contract c",
         )
-        .execute(app.db())
+        .execute(&mut *seed)
         .await
         .unwrap();
         sqlx::query("ANALYZE contract, contract_version, obligation")
-            .execute(app.db())
+            .execute(&mut *seed)
             .await
             .unwrap();
+        drop(seed);
 
         let mut slow = Vec::new();
         for (name, sql) in &reports {
