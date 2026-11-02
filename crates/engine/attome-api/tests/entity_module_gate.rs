@@ -115,6 +115,10 @@ const UNGATED_BY_DESIGN: &[(&str, &str)] = &[
         "core platform (platform-bundles/attome-scan.json, B16-T7)",
     ),
     (
+        "work_item",
+        "core platform: the Work item base other entities extend (platform-bundles/attome-work-item.json, V2-D1588)",
+    ),
+    (
         "task_checklist_item",
         "core platform: checklists of core activity tasks (platform-bundles/attome-task-checklist.json, V2-T2)",
     ),

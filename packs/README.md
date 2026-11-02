@@ -31,7 +31,8 @@ The MENA base library other packs and agents build on (A1-T12): `party` (a perso
 organisation), `person` (the four-part Arabic name, first, father, grandfather and family, plus the
 English names; `national_id`, `iqama_number` and `emirates_id` are sensitive personal data),
 `organisation` (commercial registration, VAT number, parent), `address` (the Saudi national address:
-short address, building number, street, district, city, postal code, additional number), `work_item`
+short address, building number, street, district, city, postal code, additional number), the party link
+on `work_item` (the Work item base itself is a platform entity, V2-D1588, so the service ticket extends it)
 and `agreement` (with a Hijri start date). Activity, product and payment come with the crm, sales and
 finance packs. Install it with `--packs crm,library-core`.
 

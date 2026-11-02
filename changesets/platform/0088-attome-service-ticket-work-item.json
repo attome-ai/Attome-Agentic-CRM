@@ -1,0 +1,57 @@
+{
+  "author": "attome-service (G1-T1, V2-D1588)",
+  "checksum": "sha256:59543fc737efe13bbacbe3d43782343210ef69e4edf2219de787decb52874927",
+  "closed_at": "2026-11-02T00:00:00Z",
+  "description": "V2-D1588 (2): the ticket extends the Work item base; its description becomes rich text, the base's type, first.",
+  "format": "attome-changeset/v1",
+  "id": "01a19c40-0000-7001-8000-000000000088",
+  "layer": "platform",
+  "name": "attome-service-ticket-work-item",
+  "opened_at": "2026-11-02T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "conversion": {
+          "from_type": "text"
+        },
+        "field_type": "rich_text"
+      },
+      "op": "change_field_type",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "service_ticket",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "changed": [
+          "extends"
+        ],
+        "definition": {
+          "display_name": "Ticket",
+          "extends": "work_item",
+          "is_append_only": false,
+          "logicalname": "service_ticket",
+          "primary_name_attribute": "title"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "service_ticket"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "platform",
+  "seq": 88,
+  "title": "Platform definitions: attome-service-ticket-work-item"
+}

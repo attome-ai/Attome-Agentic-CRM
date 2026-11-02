@@ -1279,6 +1279,10 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-service-case-links",
         // V2-D1588 (1): the portal's service user for its self-service changes.
         "attome-portal-service-user",
+        // V2-D1588 (2): the Work item base in the platform, and the ticket
+        // extending it.
+        "attome-work-item",
+        "attome-service-ticket-work-item",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

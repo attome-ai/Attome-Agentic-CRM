@@ -512,6 +512,18 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
             "../../../../../changesets/platform/0086-attome-portal-service-user.json"
         ),
     },
+    PlatformChangeset {
+        file: "0087-attome-work-item.json",
+        name: "attome-work-item",
+        json: include_str!("../../../../../changesets/platform/0087-attome-work-item.json"),
+    },
+    PlatformChangeset {
+        file: "0088-attome-service-ticket-work-item.json",
+        name: "attome-service-ticket-work-item",
+        json: include_str!(
+            "../../../../../changesets/platform/0088-attome-service-ticket-work-item.json"
+        ),
+    },
 ];
 
 #[cfg(test)]
