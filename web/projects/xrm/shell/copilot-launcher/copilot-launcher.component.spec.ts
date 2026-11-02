@@ -29,7 +29,7 @@ describe('CopilotLauncherComponent (B17-T10)', () => {
   it('transcript sent as chat turn', async () => {
     const fixture = await render(true, 'سجل مكالمة مع الفيصل');
     const component = fixture.componentInstance;
-    const ask = vi.spyOn(component, 'ask').mockResolvedValue();
+    const ask = vi.spyOn(component, 'ask').mockResolvedValue(undefined);
     const speech = TestBed.inject(SpeechService) as unknown as { listen: ReturnType<typeof vi.fn> };
 
     (fixture.nativeElement.querySelector('[data-testid="copilot-speak"]') as HTMLButtonElement).click();
