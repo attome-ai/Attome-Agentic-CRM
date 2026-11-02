@@ -338,7 +338,8 @@ pub struct RunGroup {
     pub total: f64,
 }
 
-type GroupRow = (Uuid, NaiveDate, String, i64, f64);
+/// Account, period end, earliest start, currency, charges, total.
+type GroupRow = (Uuid, NaiveDate, NaiveDate, String, i64, f64);
 
 async fn groups(
     db: &attome_db::DbPool,
@@ -346,12 +347,16 @@ async fn groups(
     limit: i64,
 ) -> Result<Vec<GroupRow>, AppError> {
     sqlx::query_as(
-        "SELECT s.account_ref, c.period_start, c.currency, count(*), SUM(c.amount)::float8 \
+        // F3-T15: by the period a charge ends with, so a mid-period
+        // proration (which ends with its period) joins that period's
+        // invoice rather than making one of its own.
+        "SELECT s.account_ref, c.period_end, MIN(c.period_start), c.currency, count(*), \
+                SUM(c.amount)::float8 \
            FROM subscription_charge c JOIN subscription s ON s.id = c.subscription_ref \
           WHERE c.status = 'planned' AND c.period_start <= $1 \
             AND (c.is_active IS NULL OR c.is_active = true) \
-          GROUP BY s.account_ref, c.period_start, c.currency \
-          ORDER BY s.account_ref, c.period_start, c.currency LIMIT $2",
+          GROUP BY s.account_ref, c.period_end, c.currency \
+          ORDER BY s.account_ref, c.period_end, c.currency LIMIT $2",
     )
     .bind(as_of)
     .bind(limit)
@@ -369,7 +374,7 @@ pub async fn preview_run(
         .await?
         .into_iter()
         .map(
-            |(account_ref, period_start, currency, charges, total)| RunGroup {
+            |(account_ref, _, period_start, currency, charges, total)| RunGroup {
                 account_ref,
                 period_start,
                 currency,
@@ -448,20 +453,22 @@ pub async fn execute_run(state: &EngineState, run: Uuid) -> Result<(), AppError>
         if batch.is_empty() {
             break;
         }
-        for (account, period, currency, _, _) in batch {
+        for (account, period_end, period, currency, _, _) in batch {
             let charges: Vec<ChargeRow> = sqlx::query_as(
                 "SELECT c.id, c.kind, c.amount::float8, c.period_start, c.period_end, \
                         l.product_ref, c.subscription_ref \
                    FROM subscription_charge c \
                    JOIN subscription s ON s.id = c.subscription_ref \
                    LEFT JOIN subscription_line l ON l.id = c.line_ref \
-                  WHERE c.status = 'planned' AND s.account_ref = $1 AND c.period_start = $2 \
+                  WHERE c.status = 'planned' AND s.account_ref = $1 AND c.period_end = $2 \
+                    AND c.period_start <= $4 \
                     AND c.currency = $3 AND (c.is_active IS NULL OR c.is_active = true) \
                   ORDER BY c.id",
             )
             .bind(account)
-            .bind(period)
+            .bind(period_end)
             .bind(&currency)
+            .bind(as_of)
             .fetch_all(db)
             .await
             .map_err(AppError::internal)?;
