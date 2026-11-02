@@ -169,6 +169,8 @@ describe('SdkService, as ApiService behaved (Y9-T3)', () => {
 
     it('fails before the second request when the reported total exceeds the ceiling', async () => {
       const promise = firstValueFrom(service.getAllPages<string>('/api/v1/things', {}, 200, 300));
+      // The SDK rejects a turn later, while the test still ticks: mark it handled now.
+      promise.catch(() => undefined);
 
       await tick();
       expectPage(1).flush(page(['a'], 1, 301));
@@ -328,6 +330,8 @@ describe('SdkService, as ApiService behaved (Y9-T3)', () => {
     for (const [status, code, kind] of cases) {
       it(`maps HTTP ${status} + code "${code}" to kind "${kind}"`, async () => {
         const promise = firstValueFrom(service.get('/api/v1/foo'));
+        // The SDK rejects a turn later, while the test still ticks: mark it handled now.
+        promise.catch(() => undefined);
         await tick();
         const req = httpMock.expectOne('http://localhost:7865/api/v1/foo');
         req.flush({ error: code, message: 'boom' }, { status, statusText: 'Error' });
@@ -350,6 +354,8 @@ describe('SdkService, as ApiService behaved (Y9-T3)', () => {
     for (const [status, kind] of statusCases) {
       it(`falls back to kind "${kind}" for HTTP ${status} with no body code`, async () => {
         const promise = firstValueFrom(service.get('/api/v1/foo'));
+        // The SDK rejects a turn later, while the test still ticks: mark it handled now.
+        promise.catch(() => undefined);
         await tick();
         const req = httpMock.expectOne('http://localhost:7865/api/v1/foo');
         req.flush({ message: 'boom' }, { status, statusText: 'Error' });
@@ -363,6 +369,8 @@ describe('SdkService, as ApiService behaved (Y9-T3)', () => {
     // NGB-2.1 — support correlates a UI error with the server's logs.
     it('keeps request_id from the body', async () => {
       const promise = firstValueFrom(service.get('/api/v1/foo'));
+      // The SDK rejects a turn later, while the test still ticks: mark it handled now.
+      promise.catch(() => undefined);
       await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/foo');
       req.flush({ error: 'internal_error', message: 'x', request_id: 'req-body' }, { status: 500, statusText: 'Error' });
@@ -374,6 +382,8 @@ describe('SdkService, as ApiService behaved (Y9-T3)', () => {
 
     it('falls back to the x-request-id response header when the body carries none', async () => {
       const promise = firstValueFrom(service.get('/api/v1/foo'));
+      // The SDK rejects a turn later, while the test still ticks: mark it handled now.
+      promise.catch(() => undefined);
       await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/foo');
       req.flush(
@@ -388,6 +398,8 @@ describe('SdkService, as ApiService behaved (Y9-T3)', () => {
 
     it('keeps the matches and hidden count of a duplicate_detected refusal (A15-T4)', async () => {
       const refused = firstValueFrom(service.post('/api/v1/contact', { body: { phone: '1' } }));
+      // The SDK rejects a turn later, while the test still ticks: mark it handled now.
+      refused.catch(() => undefined);
       const match = { record_id: 'r1', rule_id: 'm1', rule_name: 'Phone', score: 0.9 };
       await tick();
       httpMock.expectOne('http://localhost:7865/api/v1/contact').flush(
@@ -403,6 +415,8 @@ describe('SdkService, as ApiService behaved (Y9-T3)', () => {
 
     it('keeps rule_id on a rule_violation only', async () => {
       const violation = firstValueFrom(service.get('/api/v1/foo'));
+      // The SDK rejects a turn later, while the test still ticks: mark it handled now.
+      violation.catch(() => undefined);
       await tick();
       httpMock.expectOne('http://localhost:7865/api/v1/foo')
         .flush(
@@ -413,6 +427,8 @@ describe('SdkService, as ApiService behaved (Y9-T3)', () => {
       expect(((await violation.catch((e: ApiError) => e)) as ApiError).ruleId).toBe('rule-7');
 
       const other = firstValueFrom(service.get('/api/v1/foo'));
+      // The SDK rejects a turn later, while the test still ticks: mark it handled now.
+      other.catch(() => undefined);
       await tick();
       httpMock.expectOne('http://localhost:7865/api/v1/foo')
         .flush({ error: 'conflict', message: 'x', rule_id: 'rule-7' }, { status: 409, statusText: 'Error' });
@@ -424,6 +440,8 @@ describe('SdkService, as ApiService behaved (Y9-T3)', () => {
 
     it('keeps field, rule_name, effect and details of a field_locked refusal (D-789)', async () => {
       const promise = firstValueFrom(service.patch('/api/v1/deal/1', { body: { amount: 5 }, ifMatch: 3 }));
+      // The SDK rejects a turn later, while the test still ticks: mark it handled now.
+      promise.catch(() => undefined);
       await tick();
       httpMock.expectOne('http://localhost:7865/api/v1/deal/1').flush(
         {
@@ -448,6 +466,8 @@ describe('SdkService, as ApiService behaved (Y9-T3)', () => {
 
     it('keeps the details of a rule_violation and leaves the new members unset when absent', async () => {
       const violation = firstValueFrom(service.get('/api/v1/foo'));
+      // The SDK rejects a turn later, while the test still ticks: mark it handled now.
+      violation.catch(() => undefined);
       await tick();
       httpMock.expectOne('http://localhost:7865/api/v1/foo').flush(
         { error: 'rule_violation', message: 'nope', rule_id: 'r', details: { field: 'amount', rules: [] } },
@@ -459,6 +479,8 @@ describe('SdkService, as ApiService behaved (Y9-T3)', () => {
       expect(err.field).toBeUndefined();
 
       const plain = firstValueFrom(service.get('/api/v1/foo'));
+      // The SDK rejects a turn later, while the test still ticks: mark it handled now.
+      plain.catch(() => undefined);
       await tick();
       httpMock.expectOne('http://localhost:7865/api/v1/foo')
         .flush({ error: 'not_found', message: 'x' }, { status: 404, statusText: 'Error' });
@@ -472,6 +494,8 @@ describe('SdkService, as ApiService behaved (Y9-T3)', () => {
 
     it('maps reauth_required with its code, operation and acceptable factors (D-510)', async () => {
       const promise = firstValueFrom(service.post('/api/v1/auth/api-keys', { body: { name: 'k' } }));
+      // The SDK rejects a turn later, while the test still ticks: mark it handled now.
+      promise.catch(() => undefined);
       await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/auth/api-keys');
       req.flush(
@@ -501,6 +525,8 @@ describe('SdkService, as ApiService behaved (Y9-T3)', () => {
 
     it('keeps no step-up fields on any other error', async () => {
       const promise = firstValueFrom(service.get('/api/v1/foo'));
+      // The SDK rejects a turn later, while the test still ticks: mark it handled now.
+      promise.catch(() => undefined);
       await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/foo');
       req.flush(
@@ -515,6 +541,8 @@ describe('SdkService, as ApiService behaved (Y9-T3)', () => {
 
     it('falls back to status-based classification when the body has no recognized error code', async () => {
       const promise = firstValueFrom(service.get('/api/v1/foo'));
+      // The SDK rejects a turn later, while the test still ticks: mark it handled now.
+      promise.catch(() => undefined);
       await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/foo');
       req.flush({ message: 'boom' }, { status: 404, statusText: 'Error' });
@@ -526,6 +554,8 @@ describe('SdkService, as ApiService behaved (Y9-T3)', () => {
 
     it('falls back to "unknown" for an unrecognized status with no body code', async () => {
       const promise = firstValueFrom(service.get('/api/v1/foo'));
+      // The SDK rejects a turn later, while the test still ticks: mark it handled now.
+      promise.catch(() => undefined);
       await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/foo');
       req.flush(null, { status: 418, statusText: 'Error' });
@@ -541,6 +571,8 @@ describe('SdkService, as ApiService behaved (Y9-T3)', () => {
     // for every kind. (The old default was 'An unexpected error occurred'.)
     it('leaves the message empty when the server sends none', async () => {
       const promise = firstValueFrom(service.get('/api/v1/foo'));
+      // The SDK rejects a turn later, while the test still ticks: mark it handled now.
+      promise.catch(() => undefined);
       await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/foo');
       req.flush(null, { status: 500, statusText: 'Error' });
@@ -553,6 +585,8 @@ describe('SdkService, as ApiService behaved (Y9-T3)', () => {
 
     it('never surfaces HttpErrorResponse.message, which embeds the request URL', async () => {
       const promise = firstValueFrom(service.get('/api/v1/foo'));
+      // The SDK rejects a turn later, while the test still ticks: mark it handled now.
+      promise.catch(() => undefined);
       await tick();
       const req = httpMock.expectOne('http://localhost:7865/api/v1/foo');
       // status 0 — connection refused, no JSON body at all.
@@ -626,6 +660,8 @@ describe('SdkService, as ApiService behaved (Y9-T3)', () => {
     for (const [code, message] of cases) {
       it(`lifts "${code}" out of a 409 conflict message, keeping kind conflict`, async () => {
         const promise = firstValueFrom(service.patch('/api/v1/admin/entities/1', { body: {}, ifMatch: 1 }));
+        // The SDK rejects a turn later, while the test still ticks: mark it handled now.
+        promise.catch(() => undefined);
         await tick();
         httpMock.expectOne('http://localhost:7865/api/v1/admin/entities/1')
           .flush({ error: 'conflict', message }, { status: 409, statusText: 'Conflict' });
@@ -642,6 +678,8 @@ describe('SdkService, as ApiService behaved (Y9-T3)', () => {
 
     it('leaves an ordinary conflict alone', async () => {
       const promise = firstValueFrom(service.post('/api/v1/foo', { body: {} }));
+      // The SDK rejects a turn later, while the test still ticks: mark it handled now.
+      promise.catch(() => undefined);
       await tick();
       httpMock.expectOne('http://localhost:7865/api/v1/foo')
         .flush({ error: 'conflict', message: 'conflict: name already taken' }, { status: 409, statusText: 'Conflict' });
