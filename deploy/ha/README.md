@@ -60,6 +60,17 @@ and p95 before, during and after; during the fault it stops itself after three 1
 key with a different body is refused. With `--database-url` it verifies the audit chain afterwards. Any
 of these failing makes the run fail.
 
+### Production game days
+
+A production deployment refuses chaos runs. To run one on purpose, turn on
+`ops.chaos.production_game_days` (off by default) and ask for the run:
+`POST /api/v1/ops/chaos/requests` with `{"fault", "duration_secs", "reason"}` (`ops.chaos.run`;
+at most `ops.chaos.max_duration_secs`, 300 by default). A second member of the Operations role
+approves it in the approvals inbox; the requester never can. Then, on the server:
+`attome drill chaos run --fault <name> --duration <s> --production --approval-id <id>`. The command
+checks the approval is for that fault and within the approved duration, and claims it, so one
+approval allows one run.
+
 ## Standby region
 
 `patroni-standby.yml.example` and [README-standby.md](README-standby.md): a second cluster in

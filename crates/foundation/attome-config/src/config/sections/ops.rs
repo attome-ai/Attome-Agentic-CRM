@@ -21,6 +21,31 @@ pub struct OpsSection {
     pub dr_contacts: Vec<DrContact>,
     /// AB2-T9: this deployment's standby cluster in another region, promoted by `attome drill standby-promote`. Its region must be listed in `residency.allowed_regions`.
     pub standby_region: Option<StandbyRegion>,
+    // AB9-T7: production game days (see `ChaosSettings`).
+    pub chaos: ChaosSettings,
+}
+
+/// AB9-T7: production game days. Chaos runs against a production deployment
+/// are refused unless this is on, and then only with a second person's
+/// approval and within the time limit.
+#[derive(Clone, Debug, Deserialize, schemars::JsonSchema)]
+#[serde(default)]
+pub struct ChaosSettings {
+    /// Whether a chaos run may target this production deployment at all
+    /// (`attome drill chaos run --production --approval-id <id>`). Off by
+    /// default.
+    pub production_game_days: bool,
+    /// The longest a production chaos run may last, in seconds (1 to 3600).
+    pub max_duration_secs: u32,
+}
+
+impl Default for ChaosSettings {
+    fn default() -> Self {
+        Self {
+            production_game_days: false,
+            max_duration_secs: 300,
+        }
+    }
 }
 
 /// AB2-T9: a standby cluster in another region, replicating the main one through Patroni's `standby_cluster`.
@@ -56,6 +81,7 @@ impl Default for OpsSection {
             profile: "solo".to_owned(),
             dr_contacts: Vec::new(),
             standby_region: None,
+            chaos: ChaosSettings::default(),
         }
     }
 }
@@ -105,6 +131,12 @@ impl OpsSection {
             return Err((
                 "ops.drill_signing_key_path".into(),
                 "a file path, or leave it out".into(),
+            ));
+        }
+        if !(1..=3600).contains(&self.chaos.max_duration_secs) {
+            return Err((
+                "ops.chaos.max_duration_secs".into(),
+                "1 to 3600 seconds".into(),
             ));
         }
         if !["solo", "team", "ha", "scale"].contains(&self.profile.as_str()) {

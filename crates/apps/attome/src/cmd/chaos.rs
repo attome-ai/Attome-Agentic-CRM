@@ -22,6 +22,12 @@
 //! Ctrl+C, and from a drop guard if anything returns early ([`UndoGuard`]).
 //! A deployment whose `app.deployment_profile` is `production` is refused,
 //! and so is a `--database-url` naming the deployment's own database.
+//!
+//! **Production game days** (AB9-T7). `--production --approval-id <id>` runs
+//! against a production deployment only when `ops.chaos.production_game_days`
+//! is on and `<id>` is an approved `POST /api/v1/ops/chaos/requests` for
+//! this fault, at most its approved duration and `ops.chaos.max_duration_secs`;
+//! the approval's execution is claimed first, so it allows one run.
 
 #![allow(
     clippy::print_stdout,
@@ -101,6 +107,9 @@ pub struct ChaosArgs {
     pub database_url: Option<String>,
     pub port: u16,
     pub fake_endpoints: bool,
+    /// AB9-T7: the run targets a production deployment on an approval.
+    pub production: bool,
+    pub approval_id: Option<uuid::Uuid>,
 }
 
 /// Parses the arguments after `chaos run`. Pure.
@@ -122,6 +131,8 @@ pub fn parse_args(args: &[String]) -> Result<ChaosArgs, String> {
         database_url: None,
         port: DEFAULT_FAKE_PORT,
         fake_endpoints: false,
+        production: false,
+        approval_id: None,
     };
     let mut duration = None;
     let mut problems = Vec::new();
@@ -134,6 +145,10 @@ pub fn parse_args(args: &[String]) -> Result<ChaosArgs, String> {
             }
             "--fake-endpoints" => {
                 parsed.fake_endpoints = true;
+                continue;
+            }
+            "--production" => {
+                parsed.production = true;
                 continue;
             }
             _ => {}
@@ -172,6 +187,10 @@ pub fn parse_args(args: &[String]) -> Result<ChaosArgs, String> {
             "--iface" if name_ok(value) => parsed.iface = value.clone(),
             "--iface" => problems.push("--iface is an interface name".into()),
             "--database-url" => parsed.database_url = Some(value.clone()),
+            "--approval-id" => match uuid::Uuid::parse_str(value) {
+                Ok(id) => parsed.approval_id = Some(id),
+                Err(_) => problems.push("--approval-id is the chaos request's id".into()),
+            },
             "--port" => match value.parse::<u16>() {
                 Ok(port) if port >= 1024 => parsed.port = port,
                 _ => problems.push("--port is 1024 to 65535".into()),
@@ -182,6 +201,9 @@ pub fn parse_args(args: &[String]) -> Result<ChaosArgs, String> {
     match fault {
         Some(spec) => parsed.fault = spec,
         None => problems.push("--fault names a catalogue fault".into()),
+    }
+    if parsed.production != parsed.approval_id.is_some() {
+        problems.push("--production and --approval-id go together".into());
     }
     parsed.duration = Duration::from_secs(
         duration.unwrap_or_else(|| u64::from(parsed.fault.default_duration_secs)),
@@ -444,8 +466,18 @@ pub fn inject<'a, E: Exec>(
 /// deployment, or a queue flood aimed at the deployment's own database.
 /// Pure.
 pub fn refusal(args: &ChaosArgs, profile: &str, own_database: Option<&str>) -> Option<String> {
-    if profile == "production" {
-        return Some("this deployment's profile is production; chaos runs on a test rig".into());
+    match (profile == "production", args.production) {
+        (true, false) => {
+            return Some(
+                "this deployment's profile is production; chaos runs on a test rig, or on an \
+                 approved game day with --production --approval-id"
+                    .into(),
+            );
+        }
+        (false, true) => {
+            return Some("--production is only for a production deployment".into());
+        }
+        _ => {}
     }
     match (args.database_url.as_deref(), own_database) {
         (Some(url), Some(own)) if url.contains(own) => Some(format!(
@@ -577,6 +609,29 @@ pub async fn run_cli(args: &[String]) -> u8 {
             if let Some(reason) = refusal(&args, &config.app.deployment_profile, Some(&own)) {
                 eprintln!("attome drill chaos: {reason}");
                 return EXIT_USAGE;
+            }
+            // AB9-T7: a production run claims its approved request first.
+            if let (true, Some(approval)) = (args.production, args.approval_id) {
+                let db = match attome_db::create_pool(&config).await {
+                    Ok(db) => db,
+                    Err(e) => {
+                        eprintln!("attome drill chaos: the database could not be reached: {e}");
+                        return EXIT_FAILED;
+                    }
+                };
+                if let Err(reason) = attome_ops::chaos_requests::claim_for_run(
+                    &db,
+                    &config.ops.chaos,
+                    approval,
+                    args.fault.name,
+                    args.duration.as_secs(),
+                )
+                .await
+                {
+                    eprintln!("attome drill chaos: {reason}");
+                    return EXIT_USAGE;
+                }
+                println!("production game day: chaos request {approval} approved and claimed");
             }
         }
         Err(_) => {
@@ -808,6 +863,29 @@ mod tests {
         assert!(refusal(&flood, "production", None).is_some());
         assert!(refusal(&flood, "team", Some("db:5432/attome")).is_some());
         assert!(refusal(&flood, "team", Some("db:5432/other")).is_none());
+    }
+
+    #[test]
+    fn production_needs_an_approval_id() {
+        let id = "0190a8b4-0000-7000-8000-000000000001";
+        let game_day = args(&["--fault", "redis-down", "--production", "--approval-id", id]);
+        // Past the profile check; the approval itself is checked and
+        // claimed against the database (`claim_for_run`).
+        assert!(refusal(&game_day, "production", None).is_none());
+        assert!(refusal(&game_day, "team", None).is_some());
+        let to_strings = |l: &[&str]| l.iter().map(|s| (*s).to_owned()).collect::<Vec<_>>();
+        assert!(parse_args(&to_strings(&["--fault", "redis-down", "--production"])).is_err());
+        assert!(parse_args(&to_strings(&["--fault", "redis-down", "--approval-id", id])).is_err());
+        assert!(
+            parse_args(&to_strings(&[
+                "--fault",
+                "redis-down",
+                "--production",
+                "--approval-id",
+                "x"
+            ]))
+            .is_err()
+        );
     }
 
     #[test]

@@ -56,7 +56,7 @@ pub use sections::observability::{
     EmailStreamRates, GoogleAiSection, ObservabilitySection, SendGridSettings, SendingDomain,
     SesSettings,
 };
-pub use sections::ops::OpsSection;
+pub use sections::ops::{ChaosSettings, OpsSection};
 pub use sections::portal::{CaptchaConfig, CaptchaProvider, PortalSection};
 pub use sections::shed::{ShedPermits, ShedSection};
 pub use sections::storage::{

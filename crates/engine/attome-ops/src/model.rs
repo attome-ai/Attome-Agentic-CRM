@@ -36,6 +36,7 @@ impl EngineModel for OpsModel {
         Router::new()
             .merge(crate::upgrades::routes())
             .merge(crate::disasters::routes())
+            .merge(crate::chaos_requests::routes())
             .merge(crate::status::routes())
             .merge(crate::public_status::routes())
             .merge(crate::subscribers::routes())

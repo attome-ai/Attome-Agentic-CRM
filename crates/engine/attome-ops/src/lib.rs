@@ -11,6 +11,8 @@
 /// AB3-T7: declared disasters under two-person control.
 /// AB4-T10: the auditor pack of signed drill evidence.
 pub mod auditor_pack;
+/// AB9-T7: production chaos runs under two-person control.
+pub mod chaos_requests;
 /// AB2-T6: failovers and switchovers recorded from Patroni.
 pub mod cluster;
 pub mod disasters;
@@ -71,6 +73,7 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 46;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = upgrades::openapi_fragment();
     doc.merge(disasters::openapi_fragment());
+    doc.merge(chaos_requests::openapi_fragment());
     doc.merge(status::openapi_fragment());
     doc.merge(public_status::openapi_fragment());
     doc.merge(subscribers::openapi_fragment());

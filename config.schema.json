@@ -1135,6 +1135,24 @@
       },
       "type": "object"
     },
+    "ChaosSettings": {
+      "description": "AB9-T7: production game days. Chaos runs against a production deployment\nare refused unless this is on, and then only with a second person's\napproval and within the time limit.",
+      "properties": {
+        "max_duration_secs": {
+          "default": 300,
+          "description": "The longest a production chaos run may last, in seconds (1 to 3600).",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "production_game_days": {
+          "default": false,
+          "description": "Whether a chaos run may target this production deployment at all\n(`attome drill chaos run --production --approval-id <id>`). Off by\ndefault.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
     "CorsSection": {
       "properties": {
         "allowed_origins": {
@@ -2660,6 +2678,9 @@
     },
     "OpsSection": {
       "properties": {
+        "chaos": {
+          "$ref": "#/$defs/ChaosSettings"
+        },
         "dr_contacts": {
           "description": "AB3-T8: the people the disaster runbook says to call.",
           "items": {

@@ -30,6 +30,8 @@ async fn app() -> Option<TestApp> {
             // AB2-T8: a Patroni node is named (nothing listens there; no
             // test here lets a switchover run).
             config.ops.patroni_api_urls = vec!["http://127.0.0.1:9".into()];
+            // AB9-T7: production game days on, so a chaos run can be asked.
+            config.ops.chaos.production_game_days = true;
         })
         .await
     })
@@ -704,5 +706,78 @@ fn the_live_rpo_names_three_sources_with_their_targets() {
                 "the solo profile's target: {s}"
             );
         }
+    });
+}
+
+// feature: AB9
+// op: request_ops_chaos_run
+// op: get_ops_chaos_request
+#[test]
+fn needs_second_person() {
+    attome_testkit::run_shared(async {
+        let Some(app) = app().await else {
+            return;
+        };
+        operations_role(&app).await;
+        // Past the time limit: refused.
+        let (status, _) = app
+            .request(
+                Method::POST,
+                "/api/v1/ops/chaos/requests",
+                Some(json!({"fault": "redis-down", "duration_secs": 301, "reason": "game day"})),
+            )
+            .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+        let (status, body) = app
+            .request(
+                Method::POST,
+                "/api/v1/ops/chaos/requests",
+                Some(json!({"fault": "redis-down", "duration_secs": 120, "reason": "quarterly game day"})),
+            )
+            .await;
+        assert_eq!(status, StatusCode::ACCEPTED, "{body}");
+        assert_eq!(body["status"], "pending");
+        let approval = Uuid::parse_str(body["approval_id"].as_str().unwrap()).unwrap();
+
+        // The requester cannot approve their own run.
+        let version: i64 =
+            sqlx::query_scalar("SELECT row_version FROM approval_request WHERE id = $1")
+                .bind(approval)
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        let (status, _) = app
+            .request(
+                Method::POST,
+                &format!("/api/v1/approvals/{approval}/decide"),
+                Some(json!({"decision": "approve", "row_version": version})),
+            )
+            .await;
+        assert!(
+            !status.is_success(),
+            "the requester approved their own chaos run: {status}"
+        );
+
+        // The CLI's check: still pending, so nothing may run.
+        let (status, body) = app
+            .request(
+                Method::GET,
+                &format!("/api/v1/ops/chaos/requests/{approval}"),
+                None,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert_eq!(body["status"], "pending");
+        assert_eq!(body["fault"], "redis-down");
+        let refused = attome_ops::chaos_requests::claim_for_run(
+            app.db(),
+            &app.state.base.config.ops.chaos,
+            approval,
+            "redis-down",
+            60,
+        )
+        .await
+        .unwrap_err();
+        assert!(refused.contains("not approved"), "{refused}");
     });
 }
