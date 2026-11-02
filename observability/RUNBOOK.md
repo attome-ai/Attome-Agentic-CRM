@@ -85,6 +85,29 @@ and the fast-burn notification are described in `docs/slo.md`.
 - [ReplicaLagHigh](runbooks/ReplicaLagHigh.md)
 - [ReplicaLagCritical](runbooks/ReplicaLagCritical.md)
 
+### High availability (optional, V2-D100)
+
+One database server is the normal case; this applies to a Patroni cluster (`deploy/ha/README.md`).
+
+- **Synchronous by default.** The example Patroni configuration sets `synchronous_mode: true` with one
+  synchronous replica: a commit returns once a replica has it, so a failover loses nothing acknowledged
+  (RPO 0). Turning it off (asynchronous replication) trades that for lower write latency: a failover can
+  then lose what the old leader committed and had not yet shipped, up to the replica lag
+  (`ReplicaLagHigh` shows it). `synchronous_mode_strict: false` keeps writes going when the only replica
+  is down; a failover in that window can lose those writes.
+- **Planned switchover.** `POST /api/v1/ops/cluster/switchover` (`ops.cluster.switchover`, with an
+  optional candidate and a reason) asks; a second person in the Operations role approves; the
+  15-second cluster poll then asks Patroni to switch, once. The result is an `ops_failover_event` row
+  and `ops.switchover_completed` or `ops.switchover_failed` in the audit log.
+- **A former leader rejoins** by `pg_rewind` (`use_pg_rewind: true`); a failed rewind keeps its data
+  directory for you to inspect.
+- **Standby region.** `attome drill standby-promote --cluster <scope> --confirm <scope>` promotes the
+  standby cluster when the main region is lost (`deploy/ha/README-standby.md`).
+- **Proving it.** `attome drill failover --scenario leader|router|redis --confirm <scenario> ...` breaks
+  one part under a write loop and writes signed evidence (recovery time, writes lost, split brain);
+  `attome drill chaos run --fault <name>` injects one catalogue fault and undoes it
+  (`deploy/ha/README.md`).
+
 ## Jobs
 
 - [ApalisBacklogGrowing](runbooks/ApalisBacklogGrowing.md)
