@@ -8,8 +8,11 @@
 
 /// Y10-T3: what an extension may touch, checked before every host call.
 pub mod grants;
+/// The host API as a Rust trait, and AE2-T1's in-memory fake host.
+pub mod host;
 /// Y10-T1: the engine, the limits and running one export.
 pub mod runtime;
 
 pub use grants::{Denied, EntityGrant, Grants};
+pub use host::{FakeHost, HostApi, Level, Response};
 pub use runtime::{ExtensionError, Limits, Runtime};

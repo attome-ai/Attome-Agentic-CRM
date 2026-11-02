@@ -142,6 +142,10 @@ impl Runtime {
             .name("attome-extension-epoch".into())
             .spawn(move || {
                 loop {
+                    #[expect(
+                        clippy::disallowed_methods,
+                        reason = "the epoch ticker is its own OS thread, not an async worker"
+                    )]
                     std::thread::sleep(TICK);
                     ticker.increment_epoch();
                 }
