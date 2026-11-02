@@ -56,3 +56,12 @@ icons and splash in every Android size (through `@capacitor/assets`) and the Ara
 as above from that folder. Publishing under the customer's own Google or Apple developer account is a
 business step agreed with the customer, outside this script.
 
+## Managed devices
+
+On a phone managed by Intune or another MDM, the app reads its managed configuration (Android
+restrictions, iOS `com.apple.configuration.managed`) through a managed-configuration plugin registered as
+`ManagedConfigurations` in the shell: `deployment_url` (an `https://` address; the app opens it and skips
+the connect page), `block_copy` (`true` turns off copying sensitive fields) and `lock_timeout_minutes`.
+The web app reads them through `ManagedConfigService` in `@attome/base/native`. Wrapping with Microsoft's
+Intune App SDK (app protection without enrolment) is a separate build, not part of this shell.
+

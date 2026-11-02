@@ -159,6 +159,18 @@
   });
   document.getElementById('scan').addEventListener('click', scan);
 
+  // B17-T9: an MDM's managed deployment_url skips this page too.
+  async function managedAddress() {
+    const managed = cap && cap.Plugins && cap.Plugins.ManagedConfigurations;
+    if (!managed) return null;
+    try {
+      const { value } = await managed.getString({ key: 'deployment_url' });
+      return value ? origin(value) : null;
+    } catch {
+      return null;
+    }
+  }
+
   // B17-T11: a branded build locked to one deployment skips this page.
   async function brandAddress() {
     try {
@@ -172,7 +184,8 @@
   }
 
   const change = new URLSearchParams(window.location.search).has('change');
-  brandAddress().then(locked => {
+  Promise.all([managedAddress(), brandAddress()]).then(([managed, branded]) => {
+    const locked = managed || branded;
     if (locked) {
       window.location.href = locked;
       return;
