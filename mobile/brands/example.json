@@ -1,0 +1,10 @@
+{
+  "appId": "io.attome.example",
+  "appName": "Example CRM",
+  "appNameAr": "مثال لإدارة العملاء",
+  "iconPng": "example/icon.png",
+  "splashPng": "example/splash.png",
+  "primaryColor": "#0b57d0",
+  "deploymentUrl": "https://crm.example.com",
+  "pushMode": "relay"
+}

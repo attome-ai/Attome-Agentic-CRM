@@ -159,12 +159,30 @@
   });
   document.getElementById('scan').addEventListener('click', scan);
 
+  // B17-T11: a branded build locked to one deployment skips this page.
+  async function brandAddress() {
+    try {
+      const response = await fetch('brand.json');
+      if (!response.ok) return null;
+      const brand = await response.json();
+      return brand && typeof brand.deploymentUrl === 'string' ? origin(brand.deploymentUrl) : null;
+    } catch {
+      return null;
+    }
+  }
+
   const change = new URLSearchParams(window.location.search).has('change');
-  load().then(saved => {
+  brandAddress().then(locked => {
+    if (locked) {
+      window.location.href = locked;
+      return;
+    }
+    return load().then(saved => {
     if (saved && !change && origin(saved)) {
       window.location.href = saved;
     } else if (saved) {
       input.value = saved;
     }
+    });
   });
 })();

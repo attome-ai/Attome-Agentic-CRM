@@ -6,7 +6,8 @@
   "scripts": {
     "sync": "cap sync",
     "android": "cap open android",
-    "ios": "cap open ios"
+    "ios": "cap open ios",
+    "brand": "node scripts/brand.mjs"
   },
   "dependencies": {
     "@capacitor/android": "7.0.1",
@@ -15,6 +16,7 @@
     "@capacitor/preferences": "7.0.0"
   },
   "devDependencies": {
+    "@capacitor/assets": "3.0.5",
     "@capacitor/cli": "7.0.1",
     "typescript": "5.7.3"
   }

@@ -36,3 +36,23 @@ then `npx cap sync android` and `npx cap open android`, or from `mobile/android`
 and sign in Xcode.
 
 Capacitor and its plugins are pinned to exact versions in `package.json`; upgrade them together.
+
+## Branded builds
+
+A customer can have its own app: its id, name, icon and colour, and optionally locked to its own
+deployment. Describe the brand in `brands/<brand>.json` (see `brands/example.json`):
+
+| Field | Meaning |
+|---|---|
+| `appId` | The store id, such as `io.attome.acme`. |
+| `appName`, `appNameAr` | The app's name in English and Arabic. |
+| `iconPng`, `splashPng` | Square PNGs (1024 px icon, 2732 px splash), relative to the brand file. |
+| `primaryColor` | `#rrggbb`, behind the icon and the splash. |
+| `deploymentUrl` | Optional `https://` address: the app opens it directly and never shows the connect page. |
+| `pushMode` | `relay` (Attome's push relay) or `own_keys` (the customer's own Firebase and APNs keys). |
+
+Then `npm run brand -- <brand>` writes `build/<brand>/`: the shell with the brand's id and name, the
+icons and splash in every Android size (through `@capacitor/assets`) and the Arabic app name. Build it
+as above from that folder. Publishing under the customer's own Google or Apple developer account is a
+business step agreed with the customer, outside this script.
+
