@@ -1,6 +1,6 @@
 {
   "author": "attome-callintel (D22-T9)",
-  "checksum": "sha256:4bc9e52ac82bef0be094836a6929e9b09682536233958f2dabf456e997d135aa",
+  "checksum": "sha256:a772365996a9950e62b0717acc8c81297ce1bf73b6baa0b8edeb4e83517e901c",
   "closed_at": "2026-11-02T00:00:00Z",
   "description": "D22-T9: stored queries over the nightly call trend aggregates: tracker hits by week, staff talk share and scorecard results by team.",
   "format": "attome-changeset/v1",
@@ -18,7 +18,7 @@
           "is_report": true,
           "name": "Call trackers by week",
           "required_privilege": "call_daily_aggregate.read",
-          "sql": "SELECT date_trunc('week', t.day) AS week, t.tracker_ref, SUM(t.value) AS hits FROM call_daily_aggregate t WHERE t.metric = 'tracker_hits' AND t.is_active IS NOT FALSE GROUP BY 1, 2 ORDER BY 1, 2",
+          "sql": "SELECT date_trunc('week', t.day) AS week, t.tracker_ref, SUM(t.value) AS hits FROM call_daily_aggregate t WHERE t.metric = 'tracker_hits' AND t.is_active IS NOT FALSE GROUP BY 1, 2",
           "table_definition": null
         }
       },
@@ -39,7 +39,7 @@
           "is_report": true,
           "name": "Call talk share by team",
           "required_privilege": "call_daily_aggregate.read",
-          "sql": "SELECT t.team_ref, date_trunc('week', t.day) AS week, AVG(t.value) AS staff_talk_share FROM call_daily_aggregate t WHERE t.metric = 'staff_talk_share' AND t.is_active IS NOT FALSE GROUP BY 1, 2 ORDER BY 2, 1",
+          "sql": "SELECT t.team_ref, date_trunc('week', t.day) AS week, AVG(t.value) AS staff_talk_share FROM call_daily_aggregate t WHERE t.metric = 'staff_talk_share' AND t.is_active IS NOT FALSE GROUP BY 1, 2",
           "table_definition": null
         }
       },
@@ -60,7 +60,7 @@
           "is_report": true,
           "name": "Call scorecard results by team",
           "required_privilege": "call_daily_aggregate.read",
-          "sql": "SELECT t.team_ref, date_trunc('week', t.day) AS week, AVG(t.value) AS yes_rate FROM call_daily_aggregate t WHERE t.metric = 'scorecard_yes_rate' AND t.is_active IS NOT FALSE GROUP BY 1, 2 ORDER BY 2, 1",
+          "sql": "SELECT t.team_ref, date_trunc('week', t.day) AS week, AVG(t.value) AS yes_rate FROM call_daily_aggregate t WHERE t.metric = 'scorecard_yes_rate' AND t.is_active IS NOT FALSE GROUP BY 1, 2",
           "table_definition": null
         }
       },
