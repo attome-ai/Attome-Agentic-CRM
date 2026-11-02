@@ -1,4 +1,4 @@
-import { EMPTY, Observable, defer, expand, map, of, reduce } from 'rxjs';
+import { EMPTY, Observable, defer, expand, reduce } from 'rxjs';
 import { ApiError, VersionConflictState } from './types';
 
 /** AA7-T11: the reads remembered in `ConditionalCache` and revalidated. */
