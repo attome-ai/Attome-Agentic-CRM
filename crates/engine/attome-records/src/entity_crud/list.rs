@@ -34,7 +34,7 @@ use utoipa::IntoParams;
 use attome_security::field_gate::{self, Surface};
 
 use crate::query_exec::ExecuteQueryRequest;
-use crate::query_spec::routes::{RunResponse, execute_spec_on};
+use crate::query_spec::routes::{RunResponse, execute_spec_restricted};
 use crate::query_spec::{Condition, QuerySpec, SortKey};
 
 /// The operators a list filter may name.
@@ -185,6 +185,20 @@ pub(super) async fn list_records(
         let items = page.items.into_iter().map(Value::Object).collect();
         return Ok(Json(CursorPage::new(items, page.next_cursor)).into_response());
     }
+    // A26-T1: a derived entity lists its anchor's rows that are members,
+    // through the anchor's own query, so its record-level security applies.
+    let derived = crate::derived_entity::for_read(&state, &entity_input).await?;
+    let (entity_input, restrict) = match derived {
+        Some(read) => {
+            if params.delta_token.is_some() {
+                return Err(AppError::Validation(
+                    "a derived entity has no change feed, so no delta token".into(),
+                ));
+            }
+            (read.anchor, Some(read.restrict))
+        }
+        None => (entity_input, None),
+    };
     if let Some(token) = params.delta_token.as_deref() {
         let request = ExecuteQueryRequest::for_entity_list(
             entity_input,
@@ -235,7 +249,14 @@ pub(super) async fn list_records(
         params: Default::default(),
         totals: None,
     };
-    let RunResponse::Rows(page) = execute_spec_on(&state, &ctx, spec, Surface::Interactive).await?
+    let RunResponse::Rows(page) = execute_spec_restricted(
+        &state,
+        &ctx,
+        spec,
+        Surface::Interactive,
+        restrict.as_deref(),
+    )
+    .await?
     else {
         return Err(AppError::internal("a record list compiled to aggregates"));
     };
@@ -245,6 +266,49 @@ pub(super) async fn list_records(
         .map(|row| Value::Object(row.0))
         .collect();
     Ok(Json(CursorPage::new(items, page.next_cursor)).into_response())
+}
+
+/// A26-T1: one member of a derived entity, read as its list reads (the
+/// anchor's query on the interactive surface, with the members predicate),
+/// so a record the caller may not read, or that is not a member, is a 404.
+pub(super) async fn read_member(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    read: &crate::derived_entity::DerivedRead,
+    record_id: uuid::Uuid,
+) -> Result<Value, AppError> {
+    let spec = QuerySpec {
+        entity: read.anchor.clone(),
+        select: default_select(state, ctx, &read.anchor)?,
+        r#where: Some(Condition::Compare {
+            field: "id".into(),
+            op: "eq".into(),
+            value: Some(Value::String(record_id.to_string())),
+        }),
+        sort: Vec::new(),
+        page_size: Some(1),
+        cursor: None,
+        group_by: Vec::new(),
+        aggregates: Vec::new(),
+        having: None,
+        explain: false,
+        as_of: None,
+        params: Default::default(),
+        totals: None,
+    };
+    let RunResponse::Rows(page) =
+        execute_spec_restricted(state, ctx, spec, Surface::Interactive, Some(&read.restrict))
+            .await?
+    else {
+        return Err(AppError::internal(
+            "a derived member read compiled to aggregates",
+        ));
+    };
+    page.items
+        .into_iter()
+        .next()
+        .map(|row| Value::Object(row.0))
+        .ok_or(AppError::NotFound)
 }
 
 /// S4-T12: the columns a list with no `select` returns, as before: the

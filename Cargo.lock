@@ -1773,6 +1773,7 @@ dependencies = [
  "attome-db",
  "attome-jobs",
  "attome-model",
+ "attome-rules",
  "attome-testkit",
  "attome-types",
  "chrono",

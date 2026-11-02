@@ -17,6 +17,7 @@ attome-core.workspace   = true
 attome-db.workspace     = true
 attome-jobs.workspace   = true
 attome-model.workspace  = true
+attome-rules.workspace  = true
 attome-types.workspace  = true
 chrono.workspace        = true
 fred.workspace          = true

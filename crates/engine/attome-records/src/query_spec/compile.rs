@@ -112,6 +112,11 @@ pub struct Env<'a> {
     /// S4-T12: the surface fields are gated on (D-589): `Bulk` for a query,
     /// `Interactive` for the record list, whose masked fields read masked.
     pub surface: Surface,
+    /// A26-T1: a predicate on the root row (aliased `t`) every row must also
+    /// match, with no placeholders: a derived entity's condition, written by
+    /// `attome_core::rules_sql::to_sql_inline` from its definition, never
+    /// from request data. `None` for every other query.
+    pub restrict: Option<&'a str>,
 }
 
 impl std::fmt::Debug for Env<'_> {
@@ -913,6 +918,9 @@ pub fn compile(spec: &QuerySpec, env: &Env<'_>) -> Result<Compiled, AppError> {
     }
 
     let mut conds: Vec<String> = Vec::new();
+    if let Some(restrict) = env.restrict {
+        conds.push(format!("({restrict})"));
+    }
     if let Some(condition) = &spec.r#where {
         conds.push(b.condition(&scope, condition, spec)?);
     }
@@ -998,6 +1006,9 @@ pub fn compile_scope_rows(
     let b = Builder::new(env);
     let scope = Scope::root(root);
     let mut conds: Vec<String> = Vec::new();
+    if let Some(restrict) = env.restrict {
+        conds.push(format!("({restrict})"));
+    }
     if let Some(condition) = &spec.r#where {
         conds.push(b.condition(&scope, condition, spec)?);
     }
@@ -1235,6 +1246,7 @@ pub(super) mod fixtures {
             access,
             clock: clock(),
             surface: attome_security::field_gate::Surface::Bulk,
+            restrict: None,
         };
         let spec: QuerySpec = serde_json::from_value(doc).expect("spec");
         compile(&spec, &env)
@@ -1304,6 +1316,7 @@ mod tests {
             access: &access,
             clock: clock(),
             surface: attome_security::field_gate::Surface::Bulk,
+            restrict: None,
         };
         let spec: QuerySpec = serde_json::from_value(doc).expect("spec");
         compile(&spec, &env)

@@ -34,6 +34,8 @@ pub mod changeset;
 pub mod contract;
 mod ddl;
 mod default_query;
+/// A26-T1: derived entities, read-only views over an anchor entity.
+pub mod derived_entity;
 /// Solution 7 Phase 2 (D-788) — rename in place, real delete with the
 /// recovery archive, in-place type conversion, choice values, run ledger.
 pub mod field_change;

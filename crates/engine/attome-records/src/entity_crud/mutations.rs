@@ -231,6 +231,12 @@ pub(super) async fn get_record(
         let row = provider.get(record_id).await?.ok_or(AppError::NotFound)?;
         return Ok(Json(Value::Object(row)).into_response());
     }
+    // A26-T1: a derived entity's member, read through its anchor's query.
+    if let Some(read) = crate::derived_entity::for_read(&state, &entity_input).await? {
+        use axum::response::IntoResponse;
+        let row = super::list::read_member(&state, &ctx, &read, record_id).await?;
+        return Ok(Json(row).into_response());
+    }
     let select =
         super::response::resolve_select(&state, &ctx, &entity_input, select.select.as_deref())
             .await?;
@@ -625,6 +631,8 @@ pub(super) async fn create_record(
         let row = crate::virtual_entity::create(&entity_input, provider.as_ref(), &body).await?;
         return Ok((StatusCode::CREATED, Json(Value::Object(row))).into_response());
     }
+    // A26-T1: nothing writes to a derived entity.
+    crate::derived_entity::refuse_write(&state, &entity_input).await?;
     // Y12-T8: an old attribute name still in its alias period.
     let (body, renamed) = super::aliases::apply(&state, &entity_input, body);
     // S1-T3: a bad `select` refuses the request before anything is written.
@@ -1545,6 +1553,8 @@ pub(super) async fn update_record(
             .await?;
         return Ok(Json(Value::Object(row)).into_response());
     }
+    // A26-T1: nothing writes to a derived entity.
+    crate::derived_entity::refuse_write(&state, &entity_input).await?;
     // Y12-T8: an old attribute name still in its alias period.
     let (body, renamed) = super::aliases::apply(&state, &entity_input, body);
     // S1-T3: a bad `select` refuses the request before anything is written.
@@ -1838,6 +1848,8 @@ pub(super) async fn delete_record(
     if crate::virtual_entity::provider_for(&entity_input).is_some() {
         return Err(AppError::MethodNotAllowed);
     }
+    // A26-T1: nothing writes to a derived entity.
+    crate::derived_entity::refuse_write(&state, &entity_input).await?;
     // C5: the whole sequence lives in `delete_record_for`; header parsing is
     // the one thing it cannot do for itself — same split `update_record`
     // makes with `update_record_for`.
@@ -1896,6 +1908,8 @@ pub(super) async fn hard_delete_record(
     headers: axum::http::HeaderMap,
 ) -> Result<axum::response::Response, AppError> {
     use axum::response::IntoResponse;
+    // A26-T1: nothing writes to a derived entity.
+    crate::derived_entity::refuse_write(&state, &entity_input).await?;
     let expected_version = optional_expected_row_version(&headers)?;
     let (_, entity_name, _, _) = resolve_entity(&state, &entity_input).await?;
     let needs_approval: bool = sqlx::query_scalar(attome_db::tagged_sql!(
@@ -2303,6 +2317,8 @@ pub(super) async fn restore_record(
     Path((entity_input, record_id)): Path<(String, Uuid)>,
     headers: axum::http::HeaderMap,
 ) -> Result<Json<EntityRecordResponse>, AppError> {
+    // A26-T1: nothing writes to a derived entity.
+    crate::derived_entity::refuse_write(&state, &entity_input).await?;
     // C5: the whole sequence lives in `restore_record_for`; header parsing is
     // the one thing it cannot do for itself.
     let response = restore_record_for(

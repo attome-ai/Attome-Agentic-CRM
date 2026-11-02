@@ -128,6 +128,8 @@ pub mod data_profile_admin;
 pub mod dead_letter_inbox;
 /// Y9-T2: the OpenAPI document of this deployment's own entities.
 pub mod deployment_openapi;
+/// A26-T1: defining derived entities.
+pub mod derived_admin;
 /// D-432 / M13 (Master Data Management, scoped to dedup + survivorship
 /// only) — `/api/v1/admin/data/match-rules`, `/survivorship-rules`,
 /// `/duplicates*`. `pub` only for `ACTION_MDM_AUTO_MERGE`, which

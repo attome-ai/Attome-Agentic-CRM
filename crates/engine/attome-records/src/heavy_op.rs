@@ -314,6 +314,7 @@ async fn scope_sql(
             fiscal_start_month: 1,
         },
         surface: attome_security::field_gate::Surface::Bulk,
+        restrict: None,
     };
     compile_scope_rows(&spec, &env, rows == Rows::Deleted)
 }

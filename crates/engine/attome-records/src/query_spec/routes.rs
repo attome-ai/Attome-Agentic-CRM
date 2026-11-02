@@ -356,6 +356,19 @@ pub async fn execute_spec_on(
     spec: QuerySpec,
     surface: attome_security::field_gate::Surface,
 ) -> Result<RunResponse, AppError> {
+    execute_spec_restricted(state, ctx, spec, surface, None).await
+}
+
+/// A26-T1: [`execute_spec_on`] with every row also matching `restrict`, a
+/// predicate on the root row aliased `t` with no placeholders (a derived
+/// entity's condition from its definition; see `Env::restrict`).
+pub async fn execute_spec_restricted(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    spec: QuerySpec,
+    surface: attome_security::field_gate::Surface,
+    restrict: Option<&str>,
+) -> Result<RunResponse, AppError> {
     let levels: HashMap<Uuid, AccessLevel> = if ctx.is_admin {
         HashMap::new()
     } else {
@@ -391,6 +404,7 @@ pub async fn execute_spec_on(
                 fiscal_start_month: 1,
             },
             surface,
+            restrict,
         };
         if spec.aggregates.is_empty() && spec.group_by.is_empty() && spec.having.is_none() {
             Plan::Rows(compile::compile(&spec, &env)?)

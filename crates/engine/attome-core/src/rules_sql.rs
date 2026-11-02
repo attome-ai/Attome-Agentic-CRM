@@ -83,6 +83,10 @@ struct Translator<'a> {
     /// Z11-T16: every placeholder carries its own `::type` cast, for a
     /// caller that binds every parameter as text.
     cast_binds: bool,
+    /// A26-T1: every value is written into the SQL as a quoted, cast
+    /// literal instead of a placeholder, for a view definition (which
+    /// cannot take parameters).
+    inline: bool,
 }
 
 /// `expr` as a predicate (or value) with its parameters, numbered from
@@ -98,6 +102,7 @@ pub fn to_sql(
         first: first_param.max(1),
         alias: "",
         cast_binds: false,
+        inline: false,
     };
     let part = t.part(expr)?;
     Ok((part.sql, t.params))
@@ -120,9 +125,50 @@ pub fn to_sql_text_binds(
         first: first_param.max(1),
         alias,
         cast_binds: true,
+        inline: false,
     };
     let part = t.part(expr)?;
     Ok((part.sql, t.params))
+}
+
+/// A26-T1: [`to_sql_text_binds`] with every value written into the SQL as a
+/// quoted literal carrying its cast (`'100'::numeric`, `'open'::text`), for
+/// a view definition, which cannot take parameters. A text value is quoted
+/// by doubling its quotes; one holding a NUL is refused.
+pub fn to_sql_inline(
+    expr: &Expr,
+    attrs: &HashMap<String, AttrInfo>,
+    alias: &str,
+) -> Result<String, NotTranslatable> {
+    let mut t = Translator {
+        attrs,
+        params: Vec::new(),
+        first: 1,
+        alias,
+        cast_binds: true,
+        inline: true,
+    };
+    let part = t.part(expr)?;
+    if t.params
+        .iter()
+        .any(|p| matches!(p, SqlParam::Text(text) if text.contains('\0')))
+    {
+        return refuse("a text value holding a NUL character");
+    }
+    Ok(part.sql)
+}
+
+/// `value` as a SQL literal for [`to_sql_inline`], without its cast. Pure.
+fn inline_literal(value: &SqlParam) -> String {
+    let quote = |text: &str| format!("'{}'", text.replace('\'', "''"));
+    match value {
+        SqlParam::Number(n) => quote(&n.to_string()),
+        SqlParam::Text(text) => quote(text),
+        SqlParam::Bool(b) => quote(&b.to_string()),
+        SqlParam::Date(d) => quote(&d.to_rfc3339()),
+        SqlParam::Uuid(u) => quote(&u.to_string()),
+        SqlParam::Null => "NULL".to_owned(),
+    }
 }
 
 /// Whether `expr` translates against `attrs`, for the editor to tell a
@@ -141,6 +187,11 @@ impl Translator<'_> {
             (SqlParam::Date(_), true) => "::timestamptz",
             (SqlParam::Text(_) | SqlParam::Null, true) => "::text",
         };
+        if self.inline {
+            let literal = inline_literal(&value);
+            self.params.push(value);
+            return format!("{literal}{cast}");
+        }
         self.params.push(value);
         format!("${}{cast}", self.first + self.params.len() - 1)
     }
@@ -506,6 +557,21 @@ mod tests {
         assert!(matches!(params[0], SqlParam::Uuid(_)));
         let (text, _) = sql("if(amount > 1, name, \"x\") == lower(name)").unwrap();
         assert!(text.starts_with("((CASE WHEN"), "{text}");
+    }
+
+    #[test]
+    fn inline_writes_quoted_literals() {
+        let expr = attome_rules::parse("amount > 100 and name == \"O'Brien\"").unwrap();
+        let text = to_sql_inline(&expr, &attrs(), "a").unwrap();
+        assert!(!text.contains('$'), "{text}");
+        assert!(text.contains("a.\"amount\""), "{text}");
+        assert!(text.contains("'100'::numeric"), "{text}");
+        assert!(text.contains("'O''Brien'::text"), "{text}");
+        let nul = attome_rules::parse("name == \"a\\u0000b\"");
+        if let Ok(expr) = nul {
+            let refused = to_sql_inline(&expr, &attrs(), "");
+            assert!(refused.is_err() || !refused.unwrap().contains('\0'));
+        }
     }
 
     #[test]

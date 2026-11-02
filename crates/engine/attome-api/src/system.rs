@@ -252,6 +252,13 @@ impl EngineSystem {
                 )),
             )
             .merge(
+                // A26-T1: derived entity definitions.
+                crate::derived_admin::routes().layer(middleware::from_fn_with_state(
+                    self.state.clone(),
+                    attome_security::strict_authz::strict_authz,
+                )),
+            )
+            .merge(
                 // A31-T3: ownership model previews and the unit backfill.
                 crate::ownership_change::routes().layer(middleware::from_fn_with_state(
                     self.state.clone(),

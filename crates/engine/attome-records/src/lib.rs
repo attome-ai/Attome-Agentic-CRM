@@ -51,6 +51,9 @@ pub mod changes;
 pub mod composite;
 pub mod customer_tests;
 pub mod data_mapping;
+/// A26-T1: the record routes over a derived entity: read through the anchor,
+/// writes refused.
+pub mod derived_entity;
 pub mod duplicate_check;
 pub mod entity_crud;
 pub mod entity_mutation;
