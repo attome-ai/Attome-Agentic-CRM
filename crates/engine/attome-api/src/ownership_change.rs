@@ -30,7 +30,6 @@ use axum::{
     routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use utoipa::{IntoParams, ToSchema};
 
 /// The registered job that fills missing record units.

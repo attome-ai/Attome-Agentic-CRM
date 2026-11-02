@@ -907,7 +907,10 @@ fn web_vitals(root: &Path) -> Result<(), String> {
     if !e2e.join("node_modules").is_dir() {
         return Err("e2e/node_modules is missing: run `npm ci` and `npx playwright install chromium` in e2e/ first".to_owned());
     }
-    if !root.join("web/dist/attome-website/browser/index.html").is_file() {
+    if !root
+        .join("web/dist/attome-website/browser/index.html")
+        .is_file()
+    {
         return Err("no production build to measure: run `npm run build` in web/ first".to_owned());
     }
     let mut command = Command::new(npm_program("npx"));

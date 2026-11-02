@@ -243,7 +243,14 @@ smartcore     = { version = "0.6", default-features = false }
 sqlx          = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono", "migrate", "tls-rustls", "json"] }
 thiserror     = "2"
 # Y10-T1 (V2-D125): the extension runtime, WebAssembly components on Wasmtime.
-wasmtime      = "33"
+# The 36 LTS line at 36.0.20 or later carries every published fix (sandbox
+# escapes and miscompilations in 33). Default features without `profiling`,
+# whose fxprof-processed-profile pulls in the unmaintained fxhash.
+wasmtime      = { version = "36.0.20", default-features = false, features = [
+    "async", "cache", "gc", "gc-drc", "gc-null", "wat", "parallel-compilation", "cranelift",
+    "pooling-allocator", "demangle", "addr2line", "coredump", "debug-builtins", "runtime",
+    "component-model", "threads", "stack-switching", "std",
+] }
 zeroize       = "1"
 tokio         = { version = "1", features = ["full"] }
 totp-rs       = { version = "6", default-features = false, features = ["gen_secret", "otpauth", "std"] }

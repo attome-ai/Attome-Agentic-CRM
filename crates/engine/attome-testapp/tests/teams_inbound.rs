@@ -44,7 +44,13 @@ async fn bot(app: &TestApp) -> Uuid {
     .execute(app.db())
     .await
     .unwrap();
-    let ring = app.state.base.secrets.load().integration_credential_key.clone();
+    let ring = app
+        .state
+        .base
+        .secrets
+        .load()
+        .integration_credential_key
+        .clone();
     let mut tx = attome_db::tx::begin(app.db()).await.unwrap();
     let credential =
         attome_integration::credential::store(&mut tx, &ring, system, &format!("{APP}:s3cret"))
@@ -95,7 +101,12 @@ fn activity() -> Value {
     })
 }
 
-async fn post(app: &TestApp, system: Uuid, auth: Option<String>, body: &Value) -> (StatusCode, Value) {
+async fn post(
+    app: &TestApp,
+    system: Uuid,
+    auth: Option<String>,
+    body: &Value,
+) -> (StatusCode, Value) {
     let path = format!("/api/v1/integrations/{system}/webhook");
     let header = auth.map(|t| format!("Bearer {t}"));
     let mut headers = vec![("content-type", "application/json")];
@@ -126,13 +137,12 @@ fn a_signed_activity_lands_once() {
         let (status, body) = post(&app, system, Some(token(APP)), &activity).await;
         assert_eq!(status, StatusCode::ACCEPTED, "{body}");
         assert_eq!(body["accepted"], 1);
-        let event_type: String = sqlx::query_scalar(
-            "SELECT event_type FROM integration_event WHERE system_ref = $1",
-        )
-        .bind(system)
-        .fetch_one(app.db())
-        .await
-        .unwrap();
+        let event_type: String =
+            sqlx::query_scalar("SELECT event_type FROM integration_event WHERE system_ref = $1")
+                .bind(system)
+                .fetch_one(app.db())
+                .await
+                .unwrap();
         assert_eq!(event_type, "teams.message");
         // Teams retries with the same activity id.
         let (status, body) = post(&app, system, Some(token(APP)), &activity).await;

@@ -131,13 +131,12 @@ pub fn check_config(config: &Value) -> Result<(), String> {
     }) {
         return Err("allowed_hosts names at least one host".into());
     }
-    if let Some(t) = config.get("timeout_ms") {
-        if !t
+    if let Some(t) = config.get("timeout_ms")
+        && !t
             .as_u64()
             .is_some_and(|t| (1_000..=MAX_RUN_MS).contains(&t))
-        {
-            return Err(format!("timeout_ms is 1000 to {MAX_RUN_MS}"));
-        }
+    {
+        return Err(format!("timeout_ms is 1000 to {MAX_RUN_MS}"));
     }
     let steps = config
         .get("steps")

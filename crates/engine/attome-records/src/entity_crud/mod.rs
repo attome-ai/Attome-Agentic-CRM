@@ -98,6 +98,8 @@ pub use access::{
 // (`invalidate_privilege_grant_user`) directly — see
 // `GrantInvalidation::ByUser`'s doc comment for why that one case can't go
 // through `invalidate_privilege_grant_target`.
+/// A26-T4: a record read's access check, for the derived entity explanation.
+pub(crate) use access::require_record_read;
 pub(crate) use access::{
     invalidate_audit_user_if_systemuser, invalidate_privilege_grant_target,
     invalidate_privilege_grant_user,
@@ -105,8 +107,6 @@ pub(crate) use access::{
 /// U1 (basic-units plan B-R1): the parent-record gate for polymorphic child
 /// entities, shared by this directory's single-record CRUD and `bulk.rs`.
 pub(crate) use access::{require_child_parent_access, require_child_parent_access_for_write};
-/// A26-T4: a record read's access check, for the derived entity explanation.
-pub(crate) use access::require_record_read;
 /// M01-core C-05 — `pub`, not `pub(crate)`: `query_exec.rs` (this crate, a
 /// sibling module of this directory) and `attome-server`'s `documents_tree.rs`
 /// (an external crate, D-477) both batch a lookup/polymorphic-reference
