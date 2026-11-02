@@ -7,7 +7,7 @@ import { Observable, catchError, forkJoin, map, of } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
-  ApiError, ApiService, AuthService, MentionCandidate, MentionPickerComponent, MentionSearch, TranslatePipe,
+  ApiError, AuthService, SdkService, MentionCandidate, MentionPickerComponent, MentionSearch, TranslatePipe,
 } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { NativeService } from '@attome/base/native';
@@ -164,11 +164,11 @@ export class NotesPanelComponent implements OnInit {
         }))),
         catchError(() => none),
       );
-    const api = this.api;
-    const records: Observable<MentionCandidate[]> = term.length < 2 || !api
+    const sdk = this.sdk;
+    const records: Observable<MentionCandidate[]> = term.length < 2 || !sdk
       ? none
-      : api.get<{ items: { entity_logicalname: string; record_id: string; title?: string | null }[] }>(
-          '/api/v1/search', { q: term, page_size: '5' },
+      : sdk.get<{ items: { entity_logicalname: string; record_id: string; title?: string | null }[] }>(
+          '/api/v1/search', { query: { q: term, page_size: '5' } },
         ).pipe(
           map(res => res.items.map(h => ({
             kind: 'record' as const,
@@ -183,8 +183,8 @@ export class NotesPanelComponent implements OnInit {
   };
 
   /** Resolved on first use, so a host without an HTTP client still renders. */
-  private get api(): ApiService | null {
-    return this.injector.get(ApiService, null);
+  private get sdk(): SdkService | null {
+    return this.injector.get(SdkService, null);
   }
 
   /**
@@ -195,7 +195,7 @@ export class NotesPanelComponent implements OnInit {
   private notifyMentions(text: string): void {
     if (!text.includes('@[')) return;
     const path = `/api/v1/${encodeURIComponent(this.entityName())}/${encodeURIComponent(this.recordId())}/mentions`;
-    this.api?.post(path, { text }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.sdk?.post(path, { body: { text } }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       error: () => undefined,
     });
   }

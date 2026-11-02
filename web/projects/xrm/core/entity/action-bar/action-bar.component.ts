@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, Injector, computed, inject, input, output, signal } from '@angular/core';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 
 /** One action as `GET /api/v1/actions` lists it for the caller. */
 export interface CatalogAction {
@@ -70,8 +70,8 @@ export class ActionBarComponent {
   // Resolved when first used, so a host that never opens the menu needs no
   // HTTP client (the form and list specs render this component).
   private readonly injector = inject(Injector);
-  private get api(): ApiService {
-    return this.injector.get(ApiService);
+  private get sdk(): SdkService {
+    return this.injector.get(SdkService);
   }
 
   /** Logical name of the records' entity. */
@@ -102,7 +102,7 @@ export class ActionBarComponent {
     }
     this.open.set(true);
     if (this.catalog() !== null) return;
-    this.api.get<{ items: CatalogAction[] }>('/api/v1/actions').subscribe({
+    this.sdk.get<{ items: CatalogAction[] }>('/api/v1/actions').subscribe({
       next: r => this.catalog.set(r.items ?? []),
       error: () => this.catalog.set([]),
     });
@@ -117,14 +117,14 @@ export class ActionBarComponent {
     this.busy.set(true);
     this.notice.set(null);
     const call = record
-      ? this.api.post<ActionAnswer>(
+      ? this.sdk.post<ActionAnswer>(
           `/api/v1/${encodeURIComponent(entity)}/${encodeURIComponent(record)}/actions/${encodeURIComponent(action.id)}`,
-          { args: {}, confirm },
+          { body: { args: {}, confirm } },
         )
-      : this.api.post<ActionAnswer>(`/api/v1/actions/${encodeURIComponent(action.id)}/invoke`, {
+      : this.sdk.post<ActionAnswer>(`/api/v1/actions/${encodeURIComponent(action.id)}/invoke`, { body: {
           args: { entity, record_ids: [...records] },
           confirm,
-        });
+        } });
     call.subscribe({
       next: answer => {
         this.busy.set(false);

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, Injector, effect, inject, input, signal } from '@angular/core';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, LangService, SdkService, TranslatePipe } from '@attome/base';
 import { Subject, debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
@@ -59,9 +59,9 @@ export class RecordTagsComponent {
    * so a host without an HTTP client (a preview, a form test) renders none
    * instead of failing the form.
    */
-  private get api(): ApiService | null {
+  private get sdk(): SdkService | null {
     try {
-      return this.injector.get(ApiService);
+      return this.injector.get(SdkService);
     } catch {
       return null;
     }
@@ -71,7 +71,7 @@ export class RecordTagsComponent {
     effect(() => {
       const entity = this.entity();
       const id = this.recordId();
-      this.api?.get<Page<RecordTag>>(this.path(entity, id)).subscribe({
+      this.sdk?.get<Page<RecordTag>>(this.path(entity, id)).subscribe({
         next: page => this.tags.set(page.items),
         error: () => this.tags.set([]),
       });
@@ -80,9 +80,9 @@ export class RecordTagsComponent {
       debounceTime(200),
       distinctUntilChanged(),
       switchMap(q => {
-        const api = this.api;
-        return q.trim() && api
-          ? api.get<Page<TagSuggestionItem>>('/api/v1/tags/suggest', { q: q.trim() })
+        const sdk = this.sdk;
+        return q.trim() && sdk
+          ? sdk.get<Page<TagSuggestionItem>>('/api/v1/tags/suggest', { query: { q: q.trim() } })
           : of({ items: [] as TagSuggestionItem[] });
       }),
       takeUntilDestroyed(),
@@ -116,11 +116,11 @@ export class RecordTagsComponent {
     const body = suggestion
       ? { tag_id: suggestion.id }
       : { name, personal: this.personal() };
-    const api = this.api;
-    if (!api) return;
+    const sdk = this.sdk;
+    if (!sdk) return;
     this.busy.set(true);
     this.error.set(null);
-    api.post<Page<RecordTag>>(this.path(this.entity(), this.recordId()), body).subscribe({
+    sdk.post<Page<RecordTag>>(this.path(this.entity(), this.recordId()), { body }).subscribe({
       next: page => {
         this.tags.set(page.items);
         this.typed.set('');
@@ -135,11 +135,11 @@ export class RecordTagsComponent {
   }
 
   remove(tag: RecordTag): void {
-    const api = this.api;
-    if (this.busy() || !api) return;
+    const sdk = this.sdk;
+    if (this.busy() || !sdk) return;
     this.busy.set(true);
     this.error.set(null);
-    api.delete(`${this.path(this.entity(), this.recordId())}/${encodeURIComponent(tag.id)}`).subscribe({
+    sdk.delete(`${this.path(this.entity(), this.recordId())}/${encodeURIComponent(tag.id)}`).subscribe({
       next: () => {
         this.tags.update(all => all.filter(t => t.id !== tag.id));
         this.busy.set(false);
