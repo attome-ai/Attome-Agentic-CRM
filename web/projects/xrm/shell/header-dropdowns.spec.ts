@@ -1,11 +1,12 @@
 import { Component, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, AuthService, LangService, ThemeService } from '@attome/base';
+import { ApiService, AuthService, LangService, ThemeService, SdkService } from '@attome/base';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotificationBellComponent } from './notification-bell/notification-bell.component';
 import { ProfileMenuComponent } from './profile-menu/profile-menu.component';
+import { sdkFromApi } from '../testing/sdk-from-api';
 
 /**
  * D-315 removed the shell's combined outside-click handler and the mutual
@@ -146,3 +147,5 @@ describe('profile menu', () => {
     expect(profile.isOpen()).toBe(false);
   });
 });
+,
+      { provide: SdkService, deps: [ApiService], useFactory: sdkFromApi }

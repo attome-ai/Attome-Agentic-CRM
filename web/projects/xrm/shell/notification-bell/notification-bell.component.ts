@@ -4,7 +4,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { ApiService, TranslatePipe, LiveChannel } from '@attome/base';
+import { LiveChannel, SdkService, TranslatePipe } from '@attome/base';
 import { WebPushService } from '../services/web-push.service';
 import {
   EMPTY, Observable, catchError, distinctUntilChanged, fromEvent, map, of, repeat, startWith, switchMap, tap, timer,
@@ -116,7 +116,7 @@ export function pageVisible$(doc: Document): Observable<boolean> {
   templateUrl: './notification-bell.component.html',
 })
 export class NotificationBellComponent implements OnInit {
-  private readonly api        = inject(ApiService);
+  private readonly sdk        = inject(SdkService);
   private readonly router     = inject(Router);
   private readonly host       = inject(ElementRef<HTMLElement>);
   private readonly document   = inject(DOCUMENT);
@@ -184,8 +184,8 @@ export class NotificationBellComponent implements OnInit {
 
   /** One poll that always completes, recording success or failure for the backoff. */
   private pollOnce(): Observable<void> {
-    return this.api.post<{ notifications: XrmNotif[]; unread_count: number }>(
-      '/api/v1/notification/poll', {}, { background: true },
+    return this.sdk.post<{ notifications: XrmNotif[]; unread_count: number }>(
+      '/api/v1/notification/poll', { body: {} }, { background: true },
     ).pipe(
       tap(res => {
         this.notifications.set(res.notifications ?? []);
@@ -215,7 +215,7 @@ export class NotificationBellComponent implements OnInit {
     if (!n.isRead) {
       this.notifications.update(list => list.map(x => x.id === n.id ? { ...x, isRead: true } : x));
       this.unreadCount.update(c => Math.max(0, c - 1));
-      this.api.post('/api/v1/notification/read', { id: n.id }).subscribe();
+      this.sdk.post('/api/v1/notification/read', { body: { id: n.id } }).subscribe();
     }
     if (n.route) { this.router.navigateByUrl(n.route); this.isOpen.set(false); }
   }
@@ -249,20 +249,20 @@ export class NotificationBellComponent implements OnInit {
     const ids = new Set(unread);
     this.notifications.update(list => list.map(n => ids.has(n.id) ? { ...n, isRead: true } : n));
     this.unreadCount.update(c => Math.max(0, c - unread.length));
-    for (const id of unread) this.api.post('/api/v1/notification/read', { id }).subscribe();
+    for (const id of unread) this.sdk.post('/api/v1/notification/read', { body: { id } }).subscribe();
   }
 
   markRead(id: string, event: Event): void {
     event.stopPropagation();
     this.notifications.update(list => list.map(n => n.id === id ? { ...n, isRead: true } : n));
     this.unreadCount.update(c => Math.max(0, c - 1));
-    this.api.post('/api/v1/notification/read', { id }).subscribe();
+    this.sdk.post('/api/v1/notification/read', { body: { id } }).subscribe();
   }
 
   clearAll(): void {
     this.notifications.update(list => list.map(n => ({ ...n, isRead: true })));
     this.unreadCount.set(0);
-    this.api.post('/api/v1/notification/clear', {}).subscribe();
+    this.sdk.post('/api/v1/notification/clear', { body: {} }).subscribe();
   }
 
   notifIcon(type: number): string {

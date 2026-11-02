@@ -1,7 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { SwPush } from '@angular/service-worker';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import { firstValueFrom } from 'rxjs';
 
 /** Where this browser keeps the id of its push address, to remove it later. */
@@ -31,7 +31,7 @@ interface BadgeNavigator {
  */
 @Injectable({ providedIn: 'root' })
 export class WebPushService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly router = inject(Router);
   private readonly sw = inject(SwPush, { optional: true });
 
@@ -46,15 +46,15 @@ export class WebPushService {
   /** Asks for permission and registers this browser; false when refused or unsupported. */
   async enable(): Promise<boolean> {
     if (!this.supported || !this.sw) return false;
-    const key = await firstValueFrom(this.api.get<VapidKey>('/api/v1/push/vapid-public-key'));
+    const key = await firstValueFrom(this.sdk.get<VapidKey>('/api/v1/push/vapid-public-key'));
     const subscription = await this.sw.requestSubscription({ serverPublicKey: key.public_key });
     const json = subscription.toJSON();
-    const address = await firstValueFrom(this.api.post<{ id: string }>('/api/v1/push/subscriptions', {
+    const address = await firstValueFrom(this.sdk.post<{ id: string }>('/api/v1/push/subscriptions', { body: {
       platform: 'web',
       endpoint: json.endpoint,
       p256dh: json.keys?.['p256dh'],
       auth: json.keys?.['auth'],
-    }));
+    } }));
     try { localStorage.setItem(ADDRESS_KEY, address.id); } catch { /* private mode: nothing to remember */ }
     this.enabled.set(true);
     return true;
@@ -64,7 +64,7 @@ export class WebPushService {
   async disable(): Promise<void> {
     const id = this.storedAddress();
     if (id) {
-      await firstValueFrom(this.api.delete(`/api/v1/push/subscriptions/${encodeURIComponent(id)}`)).catch(() => undefined);
+      await firstValueFrom(this.sdk.delete(`/api/v1/push/subscriptions/${encodeURIComponent(id)}`)).catch(() => undefined);
     }
     try { localStorage.removeItem(ADDRESS_KEY); } catch { /* nothing stored */ }
     await this.sw?.unsubscribe().catch(() => undefined);

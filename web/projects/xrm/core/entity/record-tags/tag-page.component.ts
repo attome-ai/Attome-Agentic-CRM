@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 
 import { entityFormRoute, entityListRoute } from '../services/entity-url.utils';
 
@@ -54,7 +54,7 @@ export interface TaggedRecord {
   `],
 })
 export class TagPageComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** From the route, `/xrm/tags/:tagId`. */
   readonly tagId = input.required<string>();
@@ -69,7 +69,7 @@ export class TagPageComponent {
   constructor() {
     effect(() => {
       const id = this.tagId();
-      this.api.get<{ items: TaggedRecord[] }>(`/api/v1/tags/${encodeURIComponent(id)}/records`).subscribe({
+      this.sdk.get<{ items: TaggedRecord[] }>(`/api/v1/tags/${encodeURIComponent(id)}/records`).subscribe({
         next: page => { this.error.set(null); this.records.set(page.items); },
         error: (e: ApiError) => this.error.set(e.message),
       });

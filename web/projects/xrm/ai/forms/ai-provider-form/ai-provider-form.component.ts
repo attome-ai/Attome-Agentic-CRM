@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signa
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule } from '@angular/forms';
 import { catchError, from, map, mergeMap, of, toArray } from 'rxjs';
-import { ApiService, LangService, TranslatePipe } from '@attome/base';
+import { LangService, SdkService, TranslatePipe } from '@attome/base';
 import type { ApiError } from '@attome/base';
 import {
   FieldInputComponent, XrmBaseFormComponent, EngineFormBase, XrmTabDirective, recordTabDefs,
@@ -67,7 +67,7 @@ interface SetCredentialResponse {
   templateUrl: './ai-provider-form.component.html',
 })
 export class AiProviderFormComponent extends EngineFormBase {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
   /** Not `destroyRef`: the base class already owns a private member of that name. */
   private readonly lifetime = inject(DestroyRef);
@@ -145,7 +145,7 @@ export class AiProviderFormComponent extends EngineFormBase {
 
     this.savingKey.set(true);
     this.keyError.set(null);
-    this.api.post<SetCredentialResponse>(`/api/v1/admin/ai/providers/${id}/credential`, { api_key: key })
+    this.sdk.post<SetCredentialResponse>(`/api/v1/admin/ai/providers/${id}/credential`, { body: { api_key: key } })
       .subscribe({
         next: result => {
           this.keySavedAt.set(result.is_set ? result.updated_at : null);
@@ -178,7 +178,7 @@ export class AiProviderFormComponent extends EngineFormBase {
 
     this.fetchingModels.set(true);
     this.modelsError.set(null);
-    this.api.post<FetchModelsResponse>(`/api/v1/admin/ai/providers/${id}/models/fetch`, {})
+    this.sdk.post<FetchModelsResponse>(`/api/v1/admin/ai/providers/${id}/models/fetch`, { body: {} })
       .subscribe({
         next: result => {
           this.models.set(result.models);

@@ -1,7 +1,7 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import { Observable, filter } from 'rxjs';
 
 /** One kept item: a record, a view or a page (B9-T2). */
@@ -82,7 +82,7 @@ export function moved<T>(items: readonly T[], from: number, to: number): T[] {
  */
 @Injectable({ providedIn: 'root' })
 export class FavouritesService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -113,7 +113,7 @@ export class FavouritesService {
   }
 
   reload(): void {
-    this.api.get<Page<FavouriteList>>('/api/v1/me/favourites').subscribe({
+    this.sdk.get<Page<FavouriteList>>('/api/v1/me/favourites').subscribe({
       next: page => this.lists.set(page.items),
       error: () => this.lists.set([]),
     });
@@ -121,7 +121,7 @@ export class FavouritesService {
   }
 
   private loadRecent(): void {
-    this.api.get<Page<RecentItem>>('/api/v1/me/recent', { limit: '20' }).subscribe({
+    this.sdk.get<Page<RecentItem>>('/api/v1/me/recent', { query: { limit: '20' } }).subscribe({
       next: page => this.recent.set(page.items),
       error: () => this.recent.set([]),
     });
@@ -147,7 +147,7 @@ export class FavouritesService {
     const items = this.pending.slice(-RECENT_BATCH);
     this.pending = [];
     if (!items.length) return;
-    this.api.post<void>('/api/v1/me/recent', { items }).subscribe({
+    this.sdk.post<void>('/api/v1/me/recent', { body: { items } }).subscribe({
       next: () => this.loadRecent(),
       error: () => undefined,
     });
@@ -155,7 +155,7 @@ export class FavouritesService {
 
   clearRecent(): void {
     this.pending = [];
-    this.api.delete('/api/v1/me/recent').subscribe({ next: () => this.recent.set([]), error: () => undefined });
+    this.sdk.delete('/api/v1/me/recent').subscribe({ next: () => this.recent.set([]), error: () => undefined });
   }
 
   /** The first own list holding this record, if any. */
@@ -180,7 +180,7 @@ export class FavouritesService {
   add(item: FavouriteItemInput): void {
     const own = this.lists().find(l => !l.team_id);
     if (!own) {
-      this.api.post<FavouriteList>('/api/v1/me/favourites/lists', { name: DEFAULT_LIST_NAME, items: [item] })
+      this.sdk.post<FavouriteList>('/api/v1/me/favourites/lists', { body: { name: DEFAULT_LIST_NAME, items: [item] } })
         .subscribe({ next: () => this.reload(), error: () => undefined });
       return;
     }
@@ -204,7 +204,7 @@ export class FavouritesService {
     const path = list.team_id
       ? `/api/v1/teams/${list.team_id}/favourites/lists/${list.id}`
       : `/api/v1/me/favourites/lists/${list.id}`;
-    const request: Observable<FavouriteList> = this.api.put<FavouriteList>(path, { name: list.name, items });
+    const request: Observable<FavouriteList> = this.sdk.put<FavouriteList>(path, { body: { name: list.name, items } });
     request.subscribe({ next: () => this.reload(), error: () => this.reload() });
   }
 

@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { concatMap, type Observable } from 'rxjs';
-import { ApiService, AuthService } from '@attome/base';
+import { ApiService, AuthService, SdkService } from '@attome/base';
 import type { SelectionAction } from '@attome/xrm/core/entity';
 
 /**
@@ -80,10 +80,10 @@ function rowId(row: Record<string, unknown>): string | null {
  * both buttons, both disabled.
  */
 export function userAccountStateActions(): SelectionAction[] {
-  const api  = inject(ApiService);
+  const api  = inject(SdkService);
   const auth = inject(AuthService);
   const post = (id: string, verb: 'disable' | 'enable'): Observable<void> =>
-    api.post<void>(`/api/v1/admin/security/users/${id}/${verb}`, {});
+    api.post<void>(`/api/v1/admin/security/users/${id}/${verb}`, { body: {} });
 
   /**
    * True when the selection contains the signed-in admin's own account.

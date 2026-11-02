@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { ApiComponents, ApiService } from '@attome/base';
+import { ApiComponents, SdkService } from '@attome/base';
 import { map, Observable } from 'rxjs';
 
 export type LeadConvertBody = ApiComponents['schemas']['LeadConvertBody'];
@@ -46,10 +46,10 @@ function recordData(r: unknown): Record<string, unknown> {
 /** D3-T3: the lead conversion routes (D3-T2) and the lead reads around them. */
 @Injectable({ providedIn: 'root' })
 export class LeadConvertApiService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   lead(id: string): Observable<LeadHead> {
-    return this.api.get<{ id: string; row_version: number; data: unknown }>(`/api/v1/lead/${encodeURIComponent(id)}`).pipe(
+    return this.sdk.get<{ id: string; row_version: number; data: unknown }>(`/api/v1/lead/${encodeURIComponent(id)}`).pipe(
       map(r => {
         const data = recordData(r);
         return {
@@ -64,7 +64,7 @@ export class LeadConvertApiService {
 
   /** A match's display name; its id when the record has no name. */
   matchName(entity: 'account' | 'contact', id: string): Observable<string> {
-    return this.api.get<{ data: unknown }>(`/api/v1/${entity}/${encodeURIComponent(id)}`).pipe(
+    return this.sdk.get<{ data: unknown }>(`/api/v1/${entity}/${encodeURIComponent(id)}`).pipe(
       map(r => {
         const name = recordData(r)[NAME_FIELD[entity]];
         return typeof name === 'string' && name.trim() ? name : id;
@@ -73,27 +73,26 @@ export class LeadConvertApiService {
   }
 
   preview(id: string): Observable<LeadConvertPreview> {
-    return this.api.get<LeadConvertPreview>(`/api/v1/sales/leads/${encodeURIComponent(id)}/convert`);
+    return this.sdk.get<LeadConvertPreview>(`/api/v1/sales/leads/${encodeURIComponent(id)}/convert`);
   }
 
   convert(id: string, body: LeadConvertBody, rowVersion: number): Observable<LeadConverted> {
-    return this.api.post<LeadConverted>(`/api/v1/sales/leads/${encodeURIComponent(id)}/convert`, body, {
+    return this.sdk.post<LeadConverted>(`/api/v1/sales/leads/${encodeURIComponent(id)}/convert`, { body }, {
       ifMatch: rowVersion,
     });
   }
 
   undo(conversionId: string): Observable<LeadConversionUndone> {
-    return this.api.post<LeadConversionUndone>(
-      `/api/v1/sales/lead-conversions/${encodeURIComponent(conversionId)}/undo`, {},
+    return this.sdk.post<LeadConversionUndone>(
+      `/api/v1/sales/lead-conversions/${encodeURIComponent(conversionId)}/undo`, { body: {} },
     );
   }
 
   /** Moves the lead to `disqualified` with its reason, in one update (the state model checks the reason). */
   disqualify(id: string, reason: DisqualifyReason, rowVersion: number): Observable<unknown> {
-    return this.api.patch(
+    return this.sdk.patch(
       `/api/v1/lead/${encodeURIComponent(id)}`,
-      { lead_status: 'disqualified', disqualify_reason: reason },
-      rowVersion,
+      { body: { lead_status: 'disqualified', disqualify_reason: reason }, ifMatch: rowVersion },
     );
   }
 }

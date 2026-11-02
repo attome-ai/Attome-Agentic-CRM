@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule } from '@angular/forms';
-import { ApiService, LangService, TranslatePipe } from '@attome/base';
+import { LangService, SdkService, TranslatePipe } from '@attome/base';
 import { AccessService } from '@attome/xrm/core/access/data';
 import {
   FieldInputComponent, XrmBaseFormComponent, EngineFormBase, XrmTabDirective, recordTabDefs,
@@ -36,7 +36,7 @@ interface MetricCertification {
 })
 export class DashboardMetricDefinitionFormComponent extends EngineFormBase {
   private readonly lang = inject(LangService);
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly access = inject(AccessService);
   private readonly destroyed = inject(DestroyRef);
 
@@ -70,7 +70,7 @@ export class DashboardMetricDefinitionFormComponent extends EngineFormBase {
     if (!id || this.certifying()) return;
     this.certifying.set(true);
     this.certifyFailed.set(false);
-    this.api.post<MetricCertification>(`/api/v1/metrics/${encodeURIComponent(id)}/certify`, { certified: value })
+    this.sdk.post<MetricCertification>(`/api/v1/metrics/${encodeURIComponent(id)}/certify`, { body: { certified: value } })
       .pipe(takeUntilDestroyed(this.destroyed))
       .subscribe({
         next: () => {

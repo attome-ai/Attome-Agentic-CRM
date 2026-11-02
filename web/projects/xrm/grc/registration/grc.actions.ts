@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { map } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import type { SelectionAction } from '@attome/xrm/core/entity';
 
 interface AssessmentStartResponse {
@@ -27,7 +27,7 @@ interface FindingRemediateResponse {
  * already past `planned`) is reported per assessment.
  */
 export function assessmentActions(): SelectionAction[] {
-  const api = inject(ApiService);
+  const api = inject(SdkService);
 
   return [
     {
@@ -38,7 +38,7 @@ export function assessmentActions(): SelectionAction[] {
       isEnabled: rows => rows.length === 1 && rows[0]?.['status'] === 'planned',
       run: id =>
         api
-          .post<AssessmentStartResponse>(`/api/v1/grc/assessments/${id}/start`, {})
+          .post<AssessmentStartResponse>(`/api/v1/grc/assessments/${id}/start`, { body: {} })
           .pipe(map(result => result)),
     },
   ];
@@ -50,7 +50,7 @@ export function assessmentActions(): SelectionAction[] {
  * [`assessmentActions`] above.
  */
 export function findingActions(): SelectionAction[] {
-  const api = inject(ApiService);
+  const api = inject(SdkService);
 
   return [
     {
@@ -63,7 +63,7 @@ export function findingActions(): SelectionAction[] {
         ['open', 'in_progress'].includes(String(rows[0]?.['status'] ?? '')),
       run: id =>
         api
-          .post<FindingRemediateResponse>(`/api/v1/grc/findings/${id}/remediate`, {})
+          .post<FindingRemediateResponse>(`/api/v1/grc/findings/${id}/remediate`, { body: {} })
           .pipe(map(result => result)),
     },
   ];

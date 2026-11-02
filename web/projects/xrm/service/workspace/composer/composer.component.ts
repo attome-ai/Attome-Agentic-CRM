@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
-import { ApiService, LangService, TranslatePipe } from '@attome/base';
+import { LangService, SdkService, TranslatePipe } from '@attome/base';
 
 /** A reply template suggested for the record (G6-T3, `Suggestion`). */
 export interface ReplyTemplate {
@@ -100,7 +100,7 @@ export function matchTemplates(templates: ReplyTemplate[], query: string): Reply
   `],
 })
 export class ComposerComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
 
   /** The case's entity and id. */
@@ -136,9 +136,9 @@ export class ComposerComponent {
       const entity = this.entity();
       const recordId = this.recordId();
       const channel = this.channel() === 'note' ? 'portal' : 'email';
-      this.api.get<{ items: ReplyTemplate[] }>('/api/v1/model/reply-suggestions', {
+      this.sdk.get<{ items: ReplyTemplate[] }>('/api/v1/model/reply-suggestions', { query: {
         entity, record_id: recordId, channel,
-      }).subscribe({
+      } }).subscribe({
         next: page => this.templates.set(page.items),
         error: () => this.templates.set([]),
       });
@@ -178,9 +178,9 @@ export class ComposerComponent {
     const caret = q.start + t.reply.length;
     box.setSelectionRange(caret, caret);
     this.query.set(null);
-    this.api.post<void>(`/api/v1/model/reply-templates/${t.id}/used`, {
+    this.sdk.post<void>(`/api/v1/model/reply-templates/${t.id}/used`, { body: {
       entity: this.entity(), record_id: this.recordId(),
-    }).subscribe({ error: () => undefined });
+    } }).subscribe({ error: () => undefined });
   }
 
   send(event: Event): void {
@@ -190,18 +190,18 @@ export class ComposerComponent {
     this.notice.set(null);
     const channel = this.channel();
     const request = channel === 'email'
-      ? this.api.post<unknown>(`/api/v1/${this.entity()}/${this.recordId()}/communications`, {
+      ? this.sdk.post<unknown>(`/api/v1/${this.entity()}/${this.recordId()}/communications`, { body: {
           channel: 'email',
           to: [this.to().trim()],
           subject: this.subject().trim(),
           body: this.body(),
-        })
-      : this.api.post<unknown>('/api/v1/note', {
+        } })
+      : this.sdk.post<unknown>('/api/v1/note', { body: {
           entity_name: this.entity(),
           record_id: this.recordId(),
           title: this.subject().trim() || this.lang.translate('composer.noteDefaultTitle'),
           note_text: this.body(),
-        });
+        } });
     request.subscribe({
       next: () => {
         this.sending.set(false);

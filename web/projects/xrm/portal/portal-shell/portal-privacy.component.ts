@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { ApiError, ApiService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, LangService, LocalDatePipe, SdkService, TranslatePipe } from '@attome/base';
 
 import { PortalSiteService } from './portal-site.service';
 
@@ -70,7 +70,7 @@ export const PRIVACY_REQUEST_TYPES = ['access', 'portability', 'rectification', 
   `],
 })
 export class PortalPrivacyComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly site = inject(PortalSiteService);
   private readonly lang = inject(LangService);
 
@@ -94,7 +94,7 @@ export class PortalPrivacyComponent implements OnInit {
   load(): void {
     const path = this.path();
     if (!path) return;
-    this.api.get<PortalPrivacyRequest[]>(path).subscribe({
+    this.sdk.get<PortalPrivacyRequest[]>(path).subscribe({
       next: list => this.requests.set(list),
       error: (e: ApiError) => this.error.set(this.lang.errorText(e)),
     });
@@ -106,7 +106,7 @@ export class PortalPrivacyComponent implements OnInit {
     this.busy.set(true);
     this.sent.set(false);
     this.error.set(null);
-    this.api.post<PortalPrivacyRequest>(path, { request_type: this.type(), password: this.password() }).subscribe({
+    this.sdk.post<PortalPrivacyRequest>(path, { body: { request_type: this.type(), password: this.password() } }).subscribe({
       next: created => {
         this.busy.set(false);
         this.password.set('');

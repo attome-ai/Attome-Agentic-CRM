@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
-import { ApiError, ApiService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, LocalDatePipe, SdkService, TranslatePipe } from '@attome/base';
 
 /** `attome_service::oncall::pages::OnCallPage`. */
 export interface OnCallPage {
@@ -57,7 +57,7 @@ export interface OnCallPage {
   `,
 })
 export class OncallPagesComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** The page a notification opened, if any. */
   readonly focus = input<string | null>(null);
@@ -67,7 +67,7 @@ export class OncallPagesComponent implements OnInit {
   readonly error = signal<string | null>(null);
 
   ngOnInit(): void {
-    this.api.get<{ items: OnCallPage[] }>('/api/v1/service/oncall/pages', { page_size: '20' }).subscribe({
+    this.sdk.get<{ items: OnCallPage[] }>('/api/v1/service/oncall/pages', { query: { page_size: '20' } }).subscribe({
       next: r => this.pages.set(r.items ?? []),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -76,7 +76,7 @@ export class OncallPagesComponent implements OnInit {
   acknowledge(page: OnCallPage): void {
     this.busy.set(true);
     this.error.set(null);
-    this.api.post<OnCallPage>(`/api/v1/service/oncall/pages/${encodeURIComponent(page.id)}/acknowledge`, {}).subscribe({
+    this.sdk.post<OnCallPage>(`/api/v1/service/oncall/pages/${encodeURIComponent(page.id)}/acknowledge`, { body: {} }).subscribe({
       next: done => {
         this.busy.set(false);
         this.pages.update(ps => ps.map(p => (p.id === done.id ? done : p)));

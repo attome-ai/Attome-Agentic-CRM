@@ -1,6 +1,6 @@
 import { DOCUMENT } from '@angular/common';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { ApiService, LangService, ThemeMode, ThemeService, UserPreferencesService } from '@attome/base';
+import { LangService, SdkService, ThemeMode, ThemeService, UserPreferencesService } from '@attome/base';
 import { Observable, map, tap } from 'rxjs';
 
 /** One setting as `/api/v1/settings/me` returns it. */
@@ -34,7 +34,7 @@ export const SIMPLE_MODE_CLASS = 'attome-simple-mode';
  */
 @Injectable({ providedIn: 'root' })
 export class PersonalSettingsService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
   private readonly theme = inject(ThemeService);
   private readonly prefs = inject(UserPreferencesService);
@@ -44,7 +44,7 @@ export class PersonalSettingsService {
   readonly byKey = computed(() => new Map(this.settings().map(s => [s.key, s])));
 
   load(): Observable<PersonalSetting[]> {
-    return this.api.get<{ items: PersonalSetting[] }>('/api/v1/settings/me').pipe(
+    return this.sdk.get<{ items: PersonalSetting[] }>('/api/v1/settings/me').pipe(
       map(doc => doc.items),
       tap(items => {
         this.settings.set(items);
@@ -70,7 +70,7 @@ export class PersonalSettingsService {
 
   /** Saves the person's own value for `key` and applies it at once. */
   save(key: PersonalKey, value: unknown): Observable<PersonalSetting> {
-    return this.api.put<PersonalSetting>(`/api/v1/settings/me/${key}`, { value }).pipe(
+    return this.sdk.put<PersonalSetting>(`/api/v1/settings/me/${key}`, { body: { value } }).pipe(
       tap(saved => {
         this.settings.update(all => {
           const rest = all.filter(s => s.key !== key);

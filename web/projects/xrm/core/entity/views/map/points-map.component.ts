@@ -3,7 +3,7 @@ import {
   signal, untracked, viewChild,
 } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
-import { ATTOME_CONFIG, ApiService, TranslatePipe } from '@attome/base';
+import { ATTOME_CONFIG, SdkService, TranslatePipe } from '@attome/base';
 import type * as MapLibre from 'maplibre-gl';
 
 /** B15-T2: the default of the `maps.attribution` setting. */
@@ -71,7 +71,7 @@ export class PointsMapComponent {
   readonly label = input('entityViews.map.label');
   readonly pointClick = output<string>();
 
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly config = inject(ATTOME_CONFIG);
   private readonly loadLibrary = inject(MAP_LIBRARY_LOADER);
   private readonly document = inject(DOCUMENT);
@@ -102,7 +102,7 @@ export class PointsMapComponent {
     const url = `${this.config.apiUrl}/api/v1/maps/tiles/{z}/{x}/{y}`;
     try {
       const settings = await new Promise<{ items: { key: string; value: unknown }[] }>((resolve, reject) =>
-        this.api.get<{ items: { key: string; value: unknown }[] }>('/api/v1/settings/me').subscribe({ next: resolve, error: reject }));
+        this.sdk.get<{ items: { key: string; value: unknown }[] }>('/api/v1/settings/me').subscribe({ next: resolve, error: reject }));
       const attribution = settings.items.find(i => i.key === 'maps.attribution')?.value;
       return { url, attribution: typeof attribution === 'string' ? attribution : DEFAULT_ATTRIBUTION };
     } catch {

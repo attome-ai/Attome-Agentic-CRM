@@ -1,7 +1,7 @@
 import {
   ChangeDetectionStrategy, Component, ElementRef, OnInit, computed, inject, output, signal,
 } from '@angular/core';
-import { ApiService, TranslatePipe } from '@attome/base';
+import { SdkService, TranslatePipe } from '@attome/base';
 import { AppContextService, AvailableApp } from '../services/app-context.service';
 
 export type { AvailableApp };
@@ -36,7 +36,7 @@ export type { AvailableApp };
   templateUrl: './app-switcher.component.html',
 })
 export class AppSwitcherComponent implements OnInit {
-  private readonly api  = inject(ApiService);
+  private readonly sdk  = inject(SdkService);
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly appContext = inject(AppContextService);
 
@@ -56,7 +56,7 @@ export class AppSwitcherComponent implements OnInit {
   readonly selectedApp = computed(() => this.appContext.selectedApp());
 
   ngOnInit(): void {
-    this.api.get<AvailableApp[]>('/api/v1/apps').subscribe({
+    this.sdk.get<AvailableApp[]>('/api/v1/apps').subscribe({
       next: apps => {
         this.apps.set(apps);
         this.appContext.setApps(apps);

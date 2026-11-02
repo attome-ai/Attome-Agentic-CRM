@@ -5,7 +5,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
-import { ATTOME_CONFIG, ApiService, LangService } from '@attome/base';
+import { ATTOME_CONFIG, LangService, SdkService } from '@attome/base';
 import { AccessService } from '@attome/xrm/core/access/data';
 import { EntityService, RecordTabPanelsComponent, XrmBaseFormComponent } from '@attome/xrm/core/entity';
 import type { XrmFormTabDef } from '@attome/xrm/core/entity';
@@ -102,13 +102,13 @@ describe('DashboardMetricDefinitionFormComponent (P9-T14)', () => {
 
   it('offers certification to a holder of the certify privilege', () => {
     setUp(true, false);
-    const post = vi.spyOn(TestBed.inject(ApiService), 'post').mockReturnValue(
+    const post = vi.spyOn(TestBed.inject(SdkService), 'post').mockReturnValue(
       of({ metric_id: 'm1', certified: true, certified_at: '2026-10-29T00:00:00Z' }) as never,
     );
     const { el } = create();
     const button = el.querySelector<HTMLButtonElement>('[data-testid="certify-button"]');
     expect(button).not.toBeNull();
     button?.click();
-    expect(post).toHaveBeenCalledWith('/api/v1/metrics/m1/certify', { certified: true });
+    expect(post).toHaveBeenCalledWith('/api/v1/metrics/m1/certify', { body: { certified: true } });
   });
 });

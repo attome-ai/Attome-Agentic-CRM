@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
-import { ApiService, TranslatePipe } from '@attome/base';
+import { SdkService, TranslatePipe } from '@attome/base';
 
 /** A cited passage (`GET /api/v1/search/knowledge`, `KnowledgeCitation`). */
 export interface ArticleSuggestion {
@@ -74,7 +74,7 @@ export function caseQuery(title: string | null | undefined, description: string 
   `],
 })
 export class ArticleSuggestComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** The case text to suggest articles for. */
   readonly text = input<string>('');
@@ -90,7 +90,7 @@ export class ArticleSuggestComponent {
         this.suggestions.set([]);
         return;
       }
-      this.api.get<{ items: ArticleSuggestion[] }>('/api/v1/search/knowledge', { q, limit: '3' }).subscribe({
+      this.sdk.get<{ items: ArticleSuggestion[] }>('/api/v1/search/knowledge', { query: { q, limit: '3' } }).subscribe({
         next: page => this.suggestions.set(page.items),
         error: () => this.suggestions.set([]),
       });
@@ -98,7 +98,7 @@ export class ArticleSuggestComponent {
   }
 
   vote(s: ArticleSuggestion, useful: boolean): void {
-    this.api.post<unknown>('/api/v1/content/knowledge-feedback', { item_id: s.item_id, useful }).subscribe({
+    this.sdk.post<unknown>('/api/v1/content/knowledge-feedback', { body: { item_id: s.item_id, useful } }).subscribe({
       next: () => this.mark(s.item_id, useful ? 'useful' : 'not_useful'),
       // Only "not an article" is final; anything else leaves the buttons.
       error: (e: { kind?: string }) => {

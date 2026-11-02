@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
-import { ApiService, LangService, TranslatePipe } from '@attome/base';
+import { LangService, SdkService, TranslatePipe } from '@attome/base';
 import type { Page } from '@attome/base';
 
 /** M10-T4: one pending timer (`attome_core::timer::PendingTimer`). */
@@ -58,7 +58,7 @@ export interface PendingTimer {
   `,
 })
 export class PendingTimersComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
 
   /** The record's entity; with `recordId`, the record's own timers. */
@@ -74,7 +74,7 @@ export class PendingTimersComponent {
       this.timers.set([]);
       const url = entity && id ? `/api/v1/${entity}/${id}/timers` : '/api/v1/admin/timers';
       if ((entity && !id) || (!entity && id)) return;
-      const sub = this.api.get<Page<PendingTimer>>(url, entity ? undefined : { page_size: '200' }).subscribe({
+      const sub = this.sdk.get<Page<PendingTimer>>(url, { query: entity ? undefined : { page_size: '200' } }).subscribe({
         next: page => this.timers.set(page.items),
         // Nothing to show (or not allowed to see it): the form shows nothing.
         error: () => this.timers.set([]),

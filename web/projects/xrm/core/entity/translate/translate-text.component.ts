@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, LangService, SdkService, TranslatePipe } from '@attome/base';
 
 /** What `POST /api/v1/actions/text.translate/invoke` returns. */
 type TranslateOutcome =
@@ -40,7 +40,7 @@ type TranslateOutcome =
   `],
 })
 export class TranslateTextComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   protected readonly lang = inject(LangService);
 
   /** The text to translate. */
@@ -55,9 +55,9 @@ export class TranslateTextComponent {
     if (!text) return;
     this.busy.set(true);
     this.error.set(false);
-    this.api.post<TranslateOutcome>('/api/v1/actions/text.translate/invoke', {
+    this.sdk.post<TranslateOutcome>('/api/v1/actions/text.translate/invoke', { body: {
       args: { text, to: this.lang.current() },
-    }).subscribe({
+    } }).subscribe({
       next: outcome => {
         this.busy.set(false);
         const translated = outcome.status === 'completed' ? outcome.result.translation : undefined;

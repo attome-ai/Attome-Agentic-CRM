@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, signal } from '@angular/core';
-import { ApiService, LangService, TranslatePipe } from '@attome/base';
+import { LangService, SdkService, TranslatePipe } from '@attome/base';
 import { BookingPageView, ManagedBooking, groupByDay, meetingTime, ownTimeZone } from './booking';
 
 type Stage = 'loading' | 'ready' | 'busy' | 'missing' | 'failed' | 'taken';
@@ -79,7 +79,7 @@ type Stage = 'loading' | 'ready' | 'busy' | 'missing' | 'failed' | 'taken';
   `],
 })
 export class BookManageComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   protected readonly lang = inject(LangService);
 
   /** The signed manage token, from the route. */
@@ -101,7 +101,7 @@ export class BookManageComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.api.get<ManagedBooking>(this.path()).subscribe({
+    this.sdk.get<ManagedBooking>(this.path()).subscribe({
       next: b => {
         this.booking.set(b);
         this.stage.set('ready');
@@ -117,7 +117,7 @@ export class BookManageComponent implements OnInit {
   showTimes(): void {
     const slug = this.booking()?.slug;
     if (!slug) return;
-    this.api.get<BookingPageView>(`/api/v1/booking/${encodeURIComponent(slug)}`).subscribe({
+    this.sdk.get<BookingPageView>(`/api/v1/booking/${encodeURIComponent(slug)}`).subscribe({
       next: page => this.slots.set(page.slots),
       error: () => this.stage.set('failed'),
     });
@@ -133,7 +133,7 @@ export class BookManageComponent implements OnInit {
 
   private send(path: string, body: object): void {
     this.stage.set('busy');
-    this.api.post<ManagedBooking>(path, body).subscribe({
+    this.sdk.post<ManagedBooking>(path, { body }).subscribe({
       next: b => {
         this.booking.set(b);
         this.slots.set([]);

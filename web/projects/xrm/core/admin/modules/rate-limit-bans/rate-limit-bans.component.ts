@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, TranslatePipe } from '@attome/base';
 
 /** `attome_server::middleware::rate_limit::ActiveBan`. */
 export interface ActiveBan {
@@ -54,7 +54,7 @@ export function minutesLeft(ban: ActiveBan): number {
   `],
 })
 export class RateLimitBansComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly bans = signal<ActiveBan[]>([]);
   readonly error = signal<string | null>(null);
@@ -66,7 +66,7 @@ export class RateLimitBansComponent implements OnInit {
   }
 
   load(): void {
-    this.api.get<{ items: ActiveBan[] }>('/api/v1/admin/rate-limits/bans').subscribe({
+    this.sdk.get<{ items: ActiveBan[] }>('/api/v1/admin/rate-limits/bans').subscribe({
       next: body => this.bans.set(body.items),
       error: (e: ApiError) => this.error.set(e.message),
     });
@@ -74,7 +74,7 @@ export class RateLimitBansComponent implements OnInit {
 
   lift(ban: ActiveBan): void {
     this.busy.set(true);
-    this.api.delete(`/api/v1/admin/rate-limits/bans/${encodeURIComponent(ban.bucket)}`).subscribe({
+    this.sdk.delete(`/api/v1/admin/rate-limits/bans/${encodeURIComponent(ban.bucket)}`).subscribe({
       next: () => { this.busy.set(false); this.load(); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });

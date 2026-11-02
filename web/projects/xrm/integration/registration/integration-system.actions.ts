@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { map } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import type { SelectionAction } from '@attome/xrm/core/entity';
 
 interface TestConnectionResponse {
@@ -24,7 +24,7 @@ interface TestConnectionResponse {
  * different call shape.
  */
 export function integrationSystemActions(): SelectionAction[] {
-  const api = inject(ApiService);
+  const api = inject(SdkService);
 
   return [
     {
@@ -35,7 +35,7 @@ export function integrationSystemActions(): SelectionAction[] {
       isEnabled: rows => rows.length === 1,
       run: id =>
         api
-          .post<TestConnectionResponse>(`/api/v1/admin/integrations/systems/${id}/test-connection`, {})
+          .post<TestConnectionResponse>(`/api/v1/admin/integrations/systems/${id}/test-connection`, { body: {} })
           .pipe(
             map(result => {
               // The grid's action runner only cares that the observable

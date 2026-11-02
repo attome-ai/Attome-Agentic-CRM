@@ -1,7 +1,7 @@
 import {
   ChangeDetectionStrategy, Component, DestroyRef, OnInit, effect, inject, input, signal,
 } from '@angular/core';
-import { ApiService, TranslatePipe } from '@attome/base';
+import { SdkService, TranslatePipe } from '@attome/base';
 
 /** The person's presence on the service desk (`service.presence`). */
 export type Presence = 'available' | 'busy' | 'away';
@@ -80,7 +80,7 @@ export function toPresence(value: unknown): Presence {
   `],
 })
 export class PresenceComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** The record being viewed, if any. */
   readonly entity = input<string | null>(null);
@@ -110,7 +110,7 @@ export class PresenceComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.api.get<{ items: MySetting[] }>('/api/v1/settings/me').subscribe({
+    this.sdk.get<{ items: MySetting[] }>('/api/v1/settings/me').subscribe({
       next: res => {
         const mine = res.items.find(s => s.key === 'service.presence');
         this.presence.set(toPresence(mine?.value));
@@ -125,7 +125,7 @@ export class PresenceComponent implements OnInit {
     this.presence.set(next);
     this.saving.set(true);
     this.error.set(false);
-    this.api.put('/api/v1/settings/me/service.presence', { value: next }).subscribe({
+    this.sdk.put('/api/v1/settings/me/service.presence', { body: { value: next } }).subscribe({
       next: () => this.saving.set(false),
       error: () => {
         this.presence.set(before);
@@ -136,7 +136,7 @@ export class PresenceComponent implements OnInit {
   }
 
   private beat(entity: string, recordId: string): void {
-    this.api.post<ViewingResponse>('/api/v1/service/viewing', { entity, record_id: recordId }).subscribe({
+    this.sdk.post<ViewingResponse>('/api/v1/service/viewing', { body: { entity, record_id: recordId } }).subscribe({
       next: res => this.viewers.set(res.viewers ?? []),
       // Presence of others is a courtesy: on failure, show nobody.
       error: () => this.viewers.set([]),
