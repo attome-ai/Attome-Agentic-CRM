@@ -960,6 +960,7 @@ dependencies = [
  "attome-ai",
  "attome-core",
  "attome-db",
+ "attome-inference",
  "attome-jobs",
  "attome-modules",
  "attome-rules",

@@ -29,6 +29,16 @@ sides' questions and the staff's words per minute. Tracker hits are `call_findin
 Trackers match by their **exact terms** (Arabic and English, compared after normalisation). Matching by
 example phrases needs embeddings, which this analysis does not compute yet.
 
+## Questions, objections and scorecards
+
+After a call is analysed, the redacted transcript goes once to the deployment's generation model (the
+self-hosted one unless your AI provider settings say otherwise; the task is `callintel.extract`), within
+the call owner's AI budget. It answers with the questions asked, objections, next steps and price
+mentions, each tied to the moment in the call it comes from, and a proposed answer to each question of the
+latest scorecard. Anything placed at a moment the transcript does not have is dropped. Scorecard answers
+are only **proposed**: a person confirms them. Nobody's mood or tone is scored. When the budget is spent or
+no model answers, the analysis stays as it is.
+
 ## Trends
 
 Every night the analysed calls of the day before are summed up per team (the team of the call's activity

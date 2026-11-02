@@ -194,6 +194,15 @@ async fn mark(state: &EngineState, analysis: Uuid, status: &str) -> Result<(), A
 /// Runs one queued analysis; its final status (`done`, `skipped`, `failed`).
 pub async fn run(state: &EngineState, analysis: Uuid) -> Result<&'static str, AppError> {
     match analyse(state, analysis).await {
+        Ok("done") => {
+            // D22-T6: one model call over the redacted copy; a refusal or a
+            // failure there leaves the analysis done.
+            match super::extract::extract(state, analysis).await {
+                Ok(found) => tracing::debug!(%analysis, found, "call extraction"),
+                Err(error) => tracing::warn!(%analysis, %error, "call extraction not made"),
+            }
+            Ok("done")
+        }
         Ok(status) => Ok(status),
         Err(error) => {
             tracing::warn!(%analysis, %error, "call analysis failed");
