@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import type { Block } from '@attome/xrm/content/view';
 
 // `Block`/`BlockKind` are defined in `@attome/xrm/content/view` (the
@@ -140,131 +140,139 @@ export interface PublishResult {
 
 @Injectable({ providedIn: 'root' })
 export class ContentAdminService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** Children of `parentId` within `spaceId` (omit `parentId` for
    *  root-level pages). */
   listPages(spaceId: string, parentId?: string): Observable<PageSummary[]> {
     const params: Record<string, string> = { content_space_id: spaceId };
     if (parentId) params['parent_page_id'] = parentId;
-    return this.api.getAllPages<PageSummary>('/api/v1/admin/content/pages', params);
+    return this.sdk.getAllPages<PageSummary>('/api/v1/admin/content/pages', params);
   }
 
   searchPages(spaceId: string, query: string): Observable<PageSummary[]> {
-    return this.api.getAllPages<PageSummary>('/api/v1/admin/content/pages', {
+    return this.sdk.getAllPages<PageSummary>('/api/v1/admin/content/pages', {
       content_space_id: spaceId, search: query,
     });
   }
 
   getPage(id: string): Observable<PageDetail> {
-    return this.api.get<PageDetail>(`/api/v1/admin/content/pages/${id}`);
+    return this.sdk.get<PageDetail>(`/api/v1/admin/content/pages/${id}`);
   }
 
   createPage(body: CreatePageBody): Observable<PageDetail> {
-    return this.api.post<PageDetail>('/api/v1/admin/content/pages', body);
+    return this.sdk.post<PageDetail>('/api/v1/admin/content/pages', { body: body });
   }
 
   /** `rowVersion` is sent as `If-Match` (D-079's contract), not in the body. */
   updatePage(id: string, body: UpdatePageBody, rowVersion: number): Observable<PageDetail> {
-    return this.api.patch<PageDetail>(`/api/v1/admin/content/pages/${id}`, body, rowVersion);
+    return this.sdk.patch<PageDetail>(`/api/v1/admin/content/pages/${id}`, { body: body, ifMatch: rowVersion });
   }
 
   deletePage(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/content/pages/${id}`);
+    return this.sdk.delete(`/api/v1/admin/content/pages/${id}`);
   }
 
   publishPage(id: string): Observable<PublishResult> {
-    return this.api.post<PublishResult>(`/api/v1/admin/content/pages/${id}/publish`, {});
+    return this.sdk.post<PublishResult>(`/api/v1/admin/content/pages/${id}/publish`, { body: {} });
   }
 
   movePage(id: string, newParentId: string | null): Observable<PageDetail> {
-    return this.api.post<PageDetail>(`/api/v1/admin/content/pages/${id}/move`, {
+    return this.sdk.post<PageDetail>(
+      `/api/v1/admin/content/pages/${id}/move`,
+      { body: {
       parent_page_id: newParentId,
-    });
+    } },
+    );
   }
 
   ancestors(id: string): Observable<AncestorRow[]> {
-    return this.api.get<AncestorRow[]>(`/api/v1/admin/content/pages/${id}/ancestors`);
+    return this.sdk.get<AncestorRow[]>(`/api/v1/admin/content/pages/${id}/ancestors`);
   }
 
   relatedPages(id: string): Observable<PageSummary[]> {
-    return this.api.get<PageSummary[]>(`/api/v1/admin/content/pages/${id}/related`);
+    return this.sdk.get<PageSummary[]>(`/api/v1/admin/content/pages/${id}/related`);
   }
 
   /** Full-set replace, symmetric — the server writes both directions. */
   setRelatedPages(id: string, relatedPageIds: string[]): Observable<PageSummary[]> {
-    return this.api.put<PageSummary[]>(`/api/v1/admin/content/pages/${id}/related`, {
+    return this.sdk.put<PageSummary[]>(
+      `/api/v1/admin/content/pages/${id}/related`,
+      { body: {
       related_page_ids: relatedPageIds,
-    });
+    } },
+    );
   }
 
   /** M37 Phase 2 (D-452) — full replace, `null` clears. `PATCH` (not `PUT`
    *  — see the handler's doc comment for why). */
   setReviewBy(id: string, reviewBy: string | null, rowVersion: number): Observable<PageDetail> {
-    return this.api.patch<PageDetail>(
+    return this.sdk.patch<PageDetail>(
       `/api/v1/admin/content/pages/${id}/review-by`,
-      { review_by: reviewBy } as ReviewByBody,
-      rowVersion,
+      { body: { review_by: reviewBy } as ReviewByBody, ifMatch: rowVersion },
     );
   }
 
   /** M37 Phase 2 (D-452) — the page stats panel's only query. */
   pageStats(id: string): Observable<PageStats> {
-    return this.api.get<PageStats>(`/api/v1/admin/content/pages/${id}/stats`);
+    return this.sdk.get<PageStats>(`/api/v1/admin/content/pages/${id}/stats`);
   }
 
   // ── Spaces ──────────────────────────────────────────────────────────────
 
   listSpaces(): Observable<ContentSpace[]> {
-    return this.api.get<ContentSpace[]>('/api/v1/admin/content/spaces');
+    return this.sdk.get<ContentSpace[]>('/api/v1/admin/content/spaces');
   }
 
   getSpace(id: string): Observable<ContentSpace> {
-    return this.api.get<ContentSpace>(`/api/v1/admin/content/spaces/${id}`);
+    return this.sdk.get<ContentSpace>(`/api/v1/admin/content/spaces/${id}`);
   }
 
   createSpace(body: CreateSpaceBody): Observable<ContentSpace> {
-    return this.api.post<ContentSpace>('/api/v1/admin/content/spaces', body);
+    return this.sdk.post<ContentSpace>('/api/v1/admin/content/spaces', { body: body });
   }
 
   updateSpace(id: string, body: UpdateSpaceBody, rowVersion: number): Observable<ContentSpace> {
-    return this.api.patch<ContentSpace>(`/api/v1/admin/content/spaces/${id}`, body, rowVersion);
+    return this.sdk.patch<ContentSpace>(`/api/v1/admin/content/spaces/${id}`, { body: body, ifMatch: rowVersion });
   }
 
   deleteSpace(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/content/spaces/${id}`);
+    return this.sdk.delete(`/api/v1/admin/content/spaces/${id}`);
   }
 
   spaceTemplates(id: string): Observable<string[]> {
-    return this.api.get<string[]>(`/api/v1/admin/content/spaces/${id}/templates`);
+    return this.sdk.get<string[]>(`/api/v1/admin/content/spaces/${id}/templates`);
   }
 
   /** Full-set replace of which templates `id`'s editors may pick from. */
   setSpaceTemplates(id: string, templateIds: string[]): Observable<string[]> {
-    return this.api.put<string[]>(`/api/v1/admin/content/spaces/${id}/templates`, {
+    return this.sdk.put<string[]>(
+      `/api/v1/admin/content/spaces/${id}/templates`,
+      { body: {
       template_ids: templateIds,
-    });
+    } },
+    );
   }
 
   // ── Templates ───────────────────────────────────────────────────────────
 
   listTemplates(): Observable<ContentTemplate[]> {
-    return this.api.get<ContentTemplate[]>('/api/v1/admin/content/templates');
+    return this.sdk.get<ContentTemplate[]>('/api/v1/admin/content/templates');
   }
 
   getTemplate(id: string): Observable<ContentTemplate> {
-    return this.api.get<ContentTemplate>(`/api/v1/admin/content/templates/${id}`);
+    return this.sdk.get<ContentTemplate>(`/api/v1/admin/content/templates/${id}`);
   }
 
   createTemplate(body: CreateTemplateBody): Observable<ContentTemplate> {
-    return this.api.post<ContentTemplate>('/api/v1/admin/content/templates', body);
+    return this.sdk.post<ContentTemplate>('/api/v1/admin/content/templates', { body: body });
   }
 
   updateTemplate(id: string, body: UpdateTemplateBody, rowVersion: number): Observable<ContentTemplate> {
-    return this.api.patch<ContentTemplate>(`/api/v1/admin/content/templates/${id}`, body, rowVersion);
+    return this.sdk.patch<ContentTemplate>(`/api/v1/admin/content/templates/${id}`, { body: body, ifMatch: rowVersion });
   }
 
   deleteTemplate(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/content/templates/${id}`);
+    return this.sdk.delete(`/api/v1/admin/content/templates/${id}`);
   }
 }

@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import type { ApiComponents } from '@attome/base';
 
 /** One access review campaign (`GET /api/v1/admin/security/access-reviews`). */
@@ -24,14 +24,14 @@ export type AccessReviewDecision = 'keep' | 'revoke';
 /** Q11-T1 — the access review routes the review screen reads and decides through. */
 @Injectable({ providedIn: 'root' })
 export class AccessReviewsService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   listCampaigns(): Observable<AccessReviewCampaign[]> {
-    return this.api.getAllPages<AccessReviewCampaign>('/api/v1/admin/security/access-reviews');
+    return this.sdk.getAllPages<AccessReviewCampaign>('/api/v1/admin/security/access-reviews');
   }
 
   listItems(campaignId: string): Observable<AccessReviewItem[]> {
-    return this.api.getAllPages<AccessReviewItem>(
+    return this.sdk.getAllPages<AccessReviewItem>(
       `/api/v1/admin/security/access-reviews/${campaignId}/items`,
     );
   }
@@ -42,9 +42,9 @@ export class AccessReviewsService {
     decision: AccessReviewDecision,
     reason: string,
   ): Observable<AccessReviewItem> {
-    return this.api.post<AccessReviewItem>(
+    return this.sdk.post<AccessReviewItem>(
       `/api/v1/admin/security/access-reviews/${campaignId}/items/${itemId}/decide`,
-      { decision, reason: reason.trim() || null },
+      { body: { decision, reason: reason.trim() || null } },
     );
   }
 }

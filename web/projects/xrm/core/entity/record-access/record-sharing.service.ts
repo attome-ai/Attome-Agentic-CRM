@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import type { Observable } from 'rxjs';
-import { ApiComponents, ApiService } from '@attome/base';
+import { ApiComponents, SdkService } from '@attome/base';
 
 export type RecordShareItem       = ApiComponents['schemas']['RecordShareItem'];
 export type CreateRecordShareBody = ApiComponents['schemas']['CreateRecordShareBody'];
@@ -24,24 +24,24 @@ export type ShareCapability = typeof SHARE_CAPABILITIES[number];
  */
 @Injectable({ providedIn: 'root' })
 export class RecordSharingService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   listRecordShares(entity: string, recordId: string): Observable<RecordShareItem[]> {
-    return this.api.getAllPages<RecordShareItem>('/api/v1/admin/security/record-shares', {
+    return this.sdk.getAllPages<RecordShareItem>('/api/v1/admin/security/record-shares', {
       entity, record_id: recordId,
     });
   }
 
   createRecordShare(body: CreateRecordShareBody): Observable<RecordShareItem> {
-    return this.api.post<RecordShareItem>('/api/v1/admin/security/record-shares', body);
+    return this.sdk.post<RecordShareItem>('/api/v1/admin/security/record-shares', { body: body });
   }
 
   deleteRecordShare(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/security/record-shares/${id}`);
+    return this.sdk.delete(`/api/v1/admin/security/record-shares/${id}`);
   }
 
   /** PUT, per record — the route has no bulk form. */
   reassignOwner(body: ReassignOwnerBody): Observable<OwnerItem> {
-    return this.api.put<OwnerItem>('/api/v1/admin/security/record-shares/reassign-owner', body);
+    return this.sdk.put<OwnerItem>('/api/v1/admin/security/record-shares/reassign-owner', { body: body });
   }
 }

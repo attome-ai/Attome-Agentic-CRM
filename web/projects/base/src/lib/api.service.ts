@@ -314,34 +314,7 @@ export class ApiService {
   ): Observable<T[]> {
     const fetchPage = (page: number) =>
       this.get<Page<T>>(path, { ...extraParams, page: String(page), page_size: String(pageSize) });
-    // `reduce`'s seed is captured when the pipe is built, not per subscription,
-    // so the mutable accumulator has to be created inside `defer` — otherwise a
-    // second subscription (a `retry`, a component subscribing twice) would keep
-    // appending to the first one's array.
-    return defer(() => fetchPage(firstPage).pipe(
-      expand(res => {
-        if (res.total > maxItems) throw tooManyPages(res.total, maxItems);
-        // Count pages already consumed relative to the endpoint's own base, and
-        // resume from the page the server says it served (`res.page`) rather
-        // than the one we asked for — a handler that clamps an out-of-range page
-        // reports the clamped value, and following it is what keeps the walk
-        // aligned. On the default one-based walk this is
-        // `res.page * res.page_size < res.total`.
-        const consumed = res.page - firstPage + 1;
-        // A `page_size` of 0 would make the "have we reached `total`" arithmetic
-        // true forever; treat it as end-of-list instead of looping. `consumed <= 0`
-        // guards the same way against a server echoing a page below the base.
-        return res.page_size > 0 && consumed > 0 && consumed * res.page_size < res.total
-          ? fetchPage(res.page + 1)
-          : EMPTY;
-      }),
-      // `push` rather than `[...acc, ...res.items]`: the spread reallocated and
-      // recopied the whole accumulation once per page (O(n²) over the walk).
-      reduce<Page<T>, T[]>((acc, res) => {
-        for (const item of res.items) acc.push(item);
-        return acc;
-      }, []),
-    ));
+    return walkAllPages(fetchPage, maxItems, firstPage);
   }
 
   /**
@@ -551,4 +524,44 @@ export function apiErrorOf(status: number, body: any, headerId: string | null): 
       : [];
   }
   return error;
+}
+
+/**
+ * Every item of a paged list, a page at a time from `firstPage`, refusing a
+ * list over `maxItems` (`too_many_pages`). `ApiService.getAllPages` and
+ * `SdkService.getAllPages` (Y9-T3) both walk with it.
+ */
+export function walkAllPages<T>(
+  fetchPage: (page: number) => Observable<Page<T>>,
+  maxItems = MAX_ALL_PAGES_ITEMS,
+  firstPage = 1,
+): Observable<T[]> {
+  // `reduce`'s seed is captured when the pipe is built, not per subscription,
+  // so the mutable accumulator has to be created inside `defer` — otherwise a
+  // second subscription (a `retry`, a component subscribing twice) would keep
+  // appending to the first one's array.
+  return defer(() => fetchPage(firstPage).pipe(
+    expand(res => {
+      if (res.total > maxItems) throw tooManyPages(res.total, maxItems);
+      // Count pages already consumed relative to the endpoint's own base, and
+      // resume from the page the server says it served (`res.page`) rather
+      // than the one we asked for — a handler that clamps an out-of-range page
+      // reports the clamped value, and following it is what keeps the walk
+      // aligned. On the default one-based walk this is
+      // `res.page * res.page_size < res.total`.
+      const consumed = res.page - firstPage + 1;
+      // A `page_size` of 0 would make the "have we reached `total`" arithmetic
+      // true forever; treat it as end-of-list instead of looping. `consumed <= 0`
+      // guards the same way against a server echoing a page below the base.
+      return res.page_size > 0 && consumed > 0 && consumed * res.page_size < res.total
+        ? fetchPage(res.page + 1)
+        : EMPTY;
+    }),
+    // `push` rather than `[...acc, ...res.items]`: the spread reallocated and
+    // recopied the whole accumulation once per page (O(n²) over the walk).
+    reduce<Page<T>, T[]>((acc, res) => {
+      for (const item of res.items) acc.push(item);
+      return acc;
+    }, []),
+  ));
 }

@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 
 // ── Response/request types (mirror crates/engine/attome-api/src/bundle/{routes,
 //    plan,ledger}.rs exactly — M92 Phase 1 lifecycle UI). Hand-declared
@@ -90,23 +90,23 @@ export interface RollbackBody {
 
 @Injectable({ providedIn: 'root' })
 export class BundleAdminService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** Newest first. `status` narrows to one lifecycle state (e.g. `succeeded`
    * for "installed bundles", `planned`/`queued` for "pending plans"). */
   listPlans(status?: PlanStatus): Observable<PlanListItem[]> {
-    return this.api.getAllPages<PlanListItem>(
+    return this.sdk.getAllPages<PlanListItem>(
       '/api/v1/admin/metadata/plans',
       status ? { status } : {},
     );
   }
 
   getPlan(id: string): Observable<PlanDetail> {
-    return this.api.get<PlanDetail>(`/api/v1/admin/metadata/plans/${id}`);
+    return this.sdk.get<PlanDetail>(`/api/v1/admin/metadata/plans/${id}`);
   }
 
   getDrift(): Observable<DriftReport> {
-    return this.api.get<DriftReport>('/api/v1/admin/metadata/drift');
+    return this.sdk.get<DriftReport>('/api/v1/admin/metadata/drift');
   }
 
   /** `POST …/bundles/{name}/rollback` — undo = re-apply the ledger's own
@@ -116,9 +116,9 @@ export class BundleAdminService {
    * `bundle-tool`'s own `encode_segment` so an odd bundle name round-trips
    * the same way from either client. */
   rollback(name: string, body: RollbackBody): Observable<ApplyAccepted> {
-    return this.api.post<ApplyAccepted>(
+    return this.sdk.post<ApplyAccepted>(
       `/api/v1/admin/metadata/bundles/${encodeURIComponent(name)}/rollback`,
-      body,
+      { body: body },
     );
   }
 }

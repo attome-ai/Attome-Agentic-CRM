@@ -3,7 +3,8 @@ import { Injectable, inject } from '@angular/core';
 import { AttomeClient, ApiError as SdkApiError, CHANGESET_HEADER } from '@attome/sdk';
 import type { AuthProvider, AuthRequestContext, RequestOptions } from '@attome/sdk';
 import { Observable, catchError, defer, firstValueFrom, from, map, throwError } from 'rxjs';
-import { ApiService, apiErrorOf } from './api.service';
+import { ApiService, MAX_ALL_PAGES_ITEMS, apiErrorOf, walkAllPages } from './api.service';
+import type { Page } from './api.service';
 import { ATTOME_CONFIG } from './config';
 
 /** The SDK needs an origin; this one stands for "the page's own" and is cut off again. */
@@ -119,8 +120,24 @@ export class SdkService {
     return this.call(() => this.client.put<T>(path, opts));
   }
 
-  delete<T>(path: string, opts?: RequestOptions): Observable<T> {
+  delete<T = void>(path: string, opts?: RequestOptions): Observable<T> {
     return this.call(() => this.client.delete<T>(path, opts));
+  }
+
+  /**
+   * Every item of a paged list, as `ApiService.getAllPages` walks it (the same
+   * ceiling and `too_many_pages` refusal), through the SDK.
+   */
+  getAllPages<T>(
+    path: string,
+    extraParams: Record<string, string> = {},
+    pageSize = 200,
+    maxItems = MAX_ALL_PAGES_ITEMS,
+    firstPage = 1,
+  ): Observable<T[]> {
+    const fetchPage = (page: number): Observable<Page<T>> =>
+      this.get<Page<T>>(path, { query: { ...extraParams, page: String(page), page_size: String(pageSize) } });
+    return walkAllPages(fetchPage, maxItems, firstPage);
   }
 
   private call<T>(send: () => Promise<{ data: T }>): Observable<T> {

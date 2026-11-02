@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, catchError, forkJoin, map, of, switchMap, tap } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import type { ApiComponents } from '@attome/base';
 import type { ConditionTree, PolicyDef, RuleSeverity } from './business-rule.model';
 import { EntityMetadataChangeService } from './entity-metadata-change.service';
@@ -110,7 +110,7 @@ interface PortalRoleWire { id: string; name: string }
 
 @Injectable({ providedIn: 'root' })
 export class BusinessRulesService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly metadataChanged = inject(EntityMetadataChangeService);
 
   /** Every rule matching `filter` (one-based list, D-731). */
@@ -121,50 +121,50 @@ export class BusinessRulesService {
     if (filter.role_id) params['role_id'] = filter.role_id;
     if (filter.portal_role_id) params['portal_role_id'] = filter.portal_role_id;
     if (filter.is_active !== undefined) params['is_active'] = String(filter.is_active);
-    return this.api.getAllPages<BusinessRule>('/api/v1/admin/business-rules', params, 200, undefined, 1);
+    return this.sdk.getAllPages<BusinessRule>('/api/v1/admin/business-rules', params, 200, undefined, 1);
   }
 
   /** One rule with its editor warnings. */
   get(id: string): Observable<BusinessRule> {
-    return this.api.get<BusinessRule>(`/api/v1/admin/business-rules/${id}`);
+    return this.sdk.get<BusinessRule>(`/api/v1/admin/business-rules/${id}`);
   }
 
   /** 201 with warnings; a repeat of an identical create answers 200 with the existing rule. */
   create(body: BusinessRuleBody): Observable<BusinessRule> {
-    return this.api.post<BusinessRule>('/api/v1/admin/business-rules', body)
+    return this.sdk.post<BusinessRule>('/api/v1/admin/business-rules', { body: body })
       .pipe(this.notifyOnSuccess());
   }
 
   /** `rowVersion` is sent as `If-Match` (required: 422 without it, 409 `version_conflict` when stale). */
   update(id: string, patch: BusinessRulePatch, rowVersion: number): Observable<BusinessRule> {
-    return this.api.patch<BusinessRule>(`/api/v1/admin/business-rules/${id}`, patch, rowVersion)
+    return this.sdk.patch<BusinessRule>(`/api/v1/admin/business-rules/${id}`, { body: patch, ifMatch: rowVersion })
       .pipe(this.notifyOnSuccess());
   }
 
   /** Retires the rule (`is_active = false`). */
   retire(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/business-rules/${id}`).pipe(this.notifyOnSuccess());
+    return this.sdk.delete(`/api/v1/admin/business-rules/${id}`).pipe(this.notifyOnSuccess());
   }
 
   /** Validates a body against the live schema, roles and limits; writes nothing. */
   validate(body: BusinessRuleBody): Observable<RuleValidateResponse> {
-    return this.api.post<RuleValidateResponse>('/api/v1/admin/business-rules/validate', body);
+    return this.sdk.post<RuleValidateResponse>('/api/v1/admin/business-rules/validate', { body: body });
   }
 
   /** Evaluates the SAVED rule against a sample record for an audience; writes nothing. */
   test(id: string, request: RuleTestRequest): Observable<RuleTestResponse> {
-    return this.api.post<RuleTestResponse>(`/api/v1/admin/business-rules/${id}/test`, request);
+    return this.sdk.post<RuleTestResponse>(`/api/v1/admin/business-rules/${id}/test`, { body: request });
   }
 
   /** Snapshots the rule into its version history and bumps `version`. */
   publish(id: string): Observable<BusinessRule> {
-    return this.api.post<BusinessRule>(`/api/v1/admin/business-rules/${id}/publish`, {})
+    return this.sdk.post<BusinessRule>(`/api/v1/admin/business-rules/${id}/publish`, { body: {} })
       .pipe(this.notifyOnSuccess());
   }
 
   /** Staff roles (`/api/v1/admin/security/roles`). */
   staffRoles(): Observable<AudienceRoleOption[]> {
-    return this.api.getAllPages<StaffRoleWire>('/api/v1/admin/security/roles').pipe(
+    return this.sdk.getAllPages<StaffRoleWire>('/api/v1/admin/security/roles').pipe(
       map(items => items.map(r => ({ id: r.id, name: r.name, portal: null }))),
     );
   }
@@ -175,11 +175,11 @@ export class BusinessRulesService {
    * no portal roles rather than failing the editor.
    */
   portalRoles(): Observable<AudienceRoleOption[]> {
-    return this.api.get<PageOf<PortalWire>>('/api/v1/admin/webportals', { page: '1', page_size: '200' }).pipe(
+    return this.sdk.get<PageOf<PortalWire>>('/api/v1/admin/webportals', { query: { page: '1', page_size: '200' } }).pipe(
       switchMap(page => page.items.length === 0
         ? of([] as AudienceRoleOption[][])
         : forkJoin(page.items.map(portal =>
-          this.api.get<PageOf<PortalRoleWire>>(`/api/v1/admin/webportals/${portal.id}/roles`).pipe(
+          this.sdk.get<PageOf<PortalRoleWire>>(`/api/v1/admin/webportals/${portal.id}/roles`).pipe(
             map(roles => roles.items.map(r => ({ id: r.id, name: r.name, portal: portal.name }))),
             catchError(() => of([] as AudienceRoleOption[])),
           )))),

@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiService, LangService, TemplateRendererService } from '@attome/base';
 import { TemplatePreviewComponent } from './template-preview.component';
 
@@ -14,6 +14,8 @@ describe('TemplatePreviewComponent', () => {
   let fixture: ComponentFixture<TemplatePreviewComponent>;
   const render = vi.fn();
   const post = vi.fn();
+
+  afterEach(() => vi.useRealTimers());
 
   beforeEach(() => {
     vi.useFakeTimers();

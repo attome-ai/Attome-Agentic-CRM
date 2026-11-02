@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { ApiComponents, ApiService } from '@attome/base';
+import { ApiComponents, SdkService } from '@attome/base';
 
 export type RecordShare = ApiComponents['schemas']['RecordShare'];
 export type AccessExplanation = ApiComponents['schemas']['AccessExplanation'];
@@ -35,37 +35,42 @@ interface QueryRows {
  */
 @Injectable({ providedIn: 'root' })
 export class SharingPanelService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   record(entity: string, id: string): Observable<EntityRecordResponse> {
-    return this.api.get<EntityRecordResponse>(`/api/v1/${entity}/${id}`);
+    return this.sdk.get<EntityRecordResponse>(`/api/v1/${entity}/${id}`);
   }
 
   shares(entity: string, id: string): Observable<RecordShare[]> {
-    return this.api.getAllPages<RecordShare>(`/api/v1/${entity}/${id}/shares`);
+    return this.sdk.getAllPages<RecordShare>(`/api/v1/${entity}/${id}/shares`);
   }
 
   share(entity: string, id: string, who: PrincipalOption, capability: 'view' | 'action'): Observable<RecordShare> {
-    return this.api.post<RecordShare>(`/api/v1/${entity}/${id}/shares`, {
+    return this.sdk.post<RecordShare>(
+      `/api/v1/${entity}/${id}/shares`,
+      { body: {
       capability,
       user_id: who.kind === 'user' ? who.id : null,
       team_id: who.kind === 'team' ? who.id : null,
-    });
+    } },
+    );
   }
 
   unshare(entity: string, id: string, shareId: string): Observable<void> {
-    return this.api.delete(`/api/v1/${entity}/${id}/shares/${shareId}`);
+    return this.sdk.delete(`/api/v1/${entity}/${id}/shares/${shareId}`);
   }
 
   explain(entity: string, id: string, userId: string, action: ExplainAction): Observable<AccessExplanation> {
-    return this.api.get<AccessExplanation>(`/api/v1/${entity}/${id}/access/explain`, { user: userId, action });
+    return this.sdk.get<AccessExplanation>(`/api/v1/${entity}/${id}/access/explain`, { query: { user: userId, action } });
   }
 
   /** Users (by email) or teams (by name) whose name contains `term`, the first 20. */
   search(kind: PrincipalKind, term: string): Observable<PrincipalOption[]> {
     const { entity, field } = PRINCIPALS[kind];
     const text = term.trim();
-    return this.api.post<QueryRows>('/api/v1/query/execute', {
+    return this.sdk.post<QueryRows>(
+      '/api/v1/query/execute',
+      { body: {
       entity,
       page: 1,
       page_size: 20,
@@ -73,7 +78,8 @@ export class SharingPanelService {
       order_dir: 'asc',
       filters: text ? [{ field, op: 'contains', value: text }] : [],
       include_total: false,
-    }).pipe(
+    } },
+    ).pipe(
       map(res => res.data.records.map(r => ({
         kind,
         id: String(r['id'] ?? ''),
