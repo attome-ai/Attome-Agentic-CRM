@@ -1,7 +1,7 @@
 import { JsonPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ATTOME_CONFIG, ApiService, TranslatePipe } from '@attome/base';
+import { ATTOME_CONFIG, SdkService, TranslatePipe } from '@attome/base';
 import { CsvImportComponent } from '../csv-import/csv-import.component';
 
 interface MigrationProject {
@@ -287,7 +287,7 @@ interface MigrationRunDetail {
   `,
 })
 export class MigrationWizardComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly config = inject(ATTOME_CONFIG);
 
   /** CSV file (U11) or pasted JSON records. */
@@ -325,10 +325,12 @@ export class MigrationWizardComponent {
       this.mappings.set([]);
       return;
     }
-    this.api
-      .get<{ items: DataMappingListItem[] }>('/api/v1/admin/data/mappings', {
+    this.sdk.get<{ items: DataMappingListItem[] }>(
+      '/api/v1/admin/data/mappings',
+      { query: {
         target_entity: target,
-      })
+      } },
+    )
       .subscribe({
         next: page => this.mappings.set(page.items),
         error: () => this.mappings.set([]),
@@ -339,14 +341,16 @@ export class MigrationWizardComponent {
     const target = this.targetEntity.trim();
     if (!target) return;
     this.busy.set(true);
-    this.api
-      .post<MigrationProject>('/api/v1/admin/migration-projects', {
+    this.sdk.post<MigrationProject>(
+      '/api/v1/admin/migration-projects',
+      { body: {
         name: this.projectName.trim() || `migration-${Date.now()}`,
         source_kind: this.sourceKind,
         source_ref: this.sourceRef.trim() || null,
         target_entity: target,
         mapping_ref: this.mappingRef,
-      })
+      } },
+    )
       .subscribe({
         next: p => {
           this.project.set(p);
@@ -378,8 +382,7 @@ export class MigrationWizardComponent {
     this.busy.set(true);
     const body: Record<string, unknown> = { operation: this.operation, records, mode };
     if (project.mapping_ref) body['mapping_ref'] = project.mapping_ref;
-    this.api
-      .post<StagedImportResponse>(`/api/v1/${project.target_entity}/staged-import`, body)
+    this.sdk.post<StagedImportResponse>(`/api/v1/${project.target_entity}/staged-import`, { body: body })
       .subscribe({
         next: staged => {
           this.stagedImport.set(staged);
@@ -402,14 +405,15 @@ export class MigrationWizardComponent {
     const staged = this.stagedImport();
     if (!project || !staged) return;
     this.busy.set(true);
-    this.api
-      .post<{ id: string }>(`/api/v1/admin/migration-projects/${project.id}/runs`, {
+    this.sdk.post<{ id: string }>(
+      `/api/v1/admin/migration-projects/${project.id}/runs`,
+      { body: {
         staged_import_id: staged.id,
-      })
+      } },
+    )
       .subscribe({
         next: created => {
-          this.api
-            .post(`/api/v1/${project.target_entity}/staged-import/${staged.id}/approve`, {})
+          this.sdk.post(`/api/v1/${project.target_entity}/staged-import/${staged.id}/approve`, { body: {} })
             .subscribe({
               next: () => this.refreshRun(project.id, created.id),
               error: () => this.busy.set(false),
@@ -420,8 +424,7 @@ export class MigrationWizardComponent {
   }
 
   private refreshRun(projectId: string, runId: string): void {
-    this.api
-      .get<MigrationRunDetail>(`/api/v1/admin/migration-projects/${projectId}/runs/${runId}`)
+    this.sdk.get<MigrationRunDetail>(`/api/v1/admin/migration-projects/${projectId}/runs/${runId}`)
       .subscribe({
         next: r => {
           this.run.set(r);
@@ -444,8 +447,7 @@ export class MigrationWizardComponent {
     const r = this.run();
     if (!project || !r) return;
     this.busy.set(true);
-    this.api
-      .post(`/api/v1/admin/migration-projects/${project.id}/runs/${r.id}/rollback`, {})
+    this.sdk.post(`/api/v1/admin/migration-projects/${project.id}/runs/${r.id}/rollback`, { body: {} })
       .subscribe({
         next: () => this.refreshRun(project.id, r.id),
         error: () => this.busy.set(false),

@@ -3,7 +3,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import type { Observable } from 'rxjs';
-import { ApiService, LangService, LocalDatePipe, LocalNumberPipe, TranslatePipe } from '@attome/base';
+import { SdkService, LangService, LocalDatePipe, LocalNumberPipe, TranslatePipe } from '@attome/base';
 import type { ApiError, Page } from '@attome/base';
 import { ConfirmService } from '@attome/base/dialog';
 
@@ -47,30 +47,36 @@ const BASE = '/api/v1/admin/metadata';
  */
 @Injectable({ providedIn: 'root' })
 export class MetadataVersionsService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   list(page = 1, pageSize = 20): Observable<Page<MetadataVersion>> {
-    return this.api.get<Page<MetadataVersion>>(`${BASE}/versions`, {
+    return this.sdk.get<Page<MetadataVersion>>(
+      `${BASE}/versions`,
+      { query: {
       page: String(page), page_size: String(pageSize),
-    });
+    } },
+    );
   }
 
   nodes(version: number): Observable<Page<NodeSwitch>> {
-    return this.api.get<Page<NodeSwitch>>(`${BASE}/versions/${version}/nodes`, {
+    return this.sdk.get<Page<NodeSwitch>>(
+      `${BASE}/versions/${version}/nodes`,
+      { query: {
       page: '1', page_size: '100',
-    });
+    } },
+    );
   }
 
   preview(version: number): Observable<VersionPreview> {
-    return this.api.get<VersionPreview>(`${BASE}/versions/${version}/preview`);
+    return this.sdk.get<VersionPreview>(`${BASE}/versions/${version}/preview`);
   }
 
   switchTo(version: number): Observable<VersionSwitch> {
-    return this.api.post<VersionSwitch>(`${BASE}/versions/${version}/switch`, {});
+    return this.sdk.post<VersionSwitch>(`${BASE}/versions/${version}/switch`, { body: {} });
   }
 
   rollback(): Observable<VersionSwitch> {
-    return this.api.post<VersionSwitch>(`${BASE}/rollback`, {});
+    return this.sdk.post<VersionSwitch>(`${BASE}/rollback`, { body: {} });
   }
 }
 

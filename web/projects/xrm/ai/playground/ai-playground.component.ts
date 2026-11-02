@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import { AiActionsService } from '../services/ai-actions.service';
 
 interface AgentOption {
@@ -46,7 +46,7 @@ interface Turn {
   templateUrl: './ai-playground.component.html',
 })
 export class AiPlaygroundComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly actions = inject(AiActionsService);
 
   readonly agents = signal<AgentOption[]>([]);
@@ -72,11 +72,13 @@ export class AiPlaygroundComponent implements OnInit {
     // entity API (only POST create/upsert and /{id} — see
     // `attome_records::entity_crud`), so listing goes through the same
     // `query/execute` ad-hoc mode every lookup search uses.
-    this.api
-      .post<{ data: { records: Record<string, unknown>[] } }>('/api/v1/query/execute', {
+    this.sdk.post<{ data: { records: Record<string, unknown>[] } }>(
+      '/api/v1/query/execute',
+      { body: {
         entity: 'ai_agent',
         page_size: 100,
-      })
+      } },
+    )
       .subscribe({
         next: (resp) => {
           this.agents.set(

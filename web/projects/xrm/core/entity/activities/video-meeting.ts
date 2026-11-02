@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 
 /** J7-T1's providers, as `POST /api/v1/me/meetings` names them. */
 export const MEETING_PROVIDERS = ['teams', 'meet', 'zoom', 'jitsi'] as const;
@@ -86,9 +86,9 @@ export function canJoin(
 /** J7-T2: creates the online meeting behind a "video meeting" activity. */
 @Injectable({ providedIn: 'root' })
 export class VideoMeetingService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   create(request: MeetingRequest): Observable<CreatedMeeting> {
-    return this.api.post<CreatedMeeting>('/api/v1/me/meetings', request);
+    return this.sdk.post<CreatedMeeting>('/api/v1/me/meetings', { body: request });
   }
 }

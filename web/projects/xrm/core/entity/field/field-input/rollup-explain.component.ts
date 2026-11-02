@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 
 import { entityFormRoute } from '../../services/entity-url.utils';
 
@@ -66,7 +66,7 @@ export interface RollupExplanation {
   `],
 })
 export class RollupExplainComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
 
   readonly entity = input.required<string>();
@@ -82,7 +82,7 @@ export class RollupExplainComponent {
         + `/rollups/${encodeURIComponent(this.attribute())}/explain`;
       untracked(() => {
         this.error.set(null);
-        this.api.get<RollupExplanation>(path).subscribe({
+        this.sdk.get<RollupExplanation>(path).subscribe({
           next: x => this.explanation.set(x),
           error: (e: ApiError) => this.error.set(this.lang.errorText(e)),
         });

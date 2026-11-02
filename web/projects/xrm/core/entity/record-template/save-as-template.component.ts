@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 import { AccessService } from '@attome/xrm/core/access/data';
 
 /** A template name: not blank, at most 100 characters. */
@@ -56,7 +56,7 @@ export function templateNameOk(name: string): boolean {
   `],
 })
 export class SaveAsTemplateComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly access = inject(AccessService);
   private readonly lang = inject(LangService);
 
@@ -96,7 +96,7 @@ export class SaveAsTemplateComponent implements OnInit {
       label_en: this.labelEn.trim(),
       ...(this.labelAr.trim() ? { label_ar: this.labelAr.trim() } : {}),
     };
-    this.api.post<{ id: string; name: string; values: number }>('/api/v1/record-templates/from-record', body).subscribe({
+    this.sdk.post<{ id: string; name: string; values: number }>('/api/v1/record-templates/from-record', { body: body }).subscribe({
       next: saved => {
         this.busy.set(false);
         this.message.set(this.lang.translate('recordTemplates.saved', { name: saved.name, values: saved.values }));

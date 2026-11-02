@@ -1,7 +1,7 @@
 import {
   ChangeDetectionStrategy, Component, ComponentRef, DestroyRef, OnInit, ViewContainerRef, inject,
 } from '@angular/core';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import type { SoftphoneComponent, SoftphoneConfig } from '@attome/xrm/service/softphone';
 
 /**
@@ -18,13 +18,13 @@ import type { SoftphoneComponent, SoftphoneConfig } from '@attome/xrm/service/so
   template: '',
 })
 export class SoftphoneLauncherComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly host = inject(ViewContainerRef);
   private readonly destroyRef = inject(DestroyRef);
   private ref: ComponentRef<SoftphoneComponent> | null = null;
 
   ngOnInit(): void {
-    const sub = this.api.get<SoftphoneConfig>('/api/v1/voice/softphone').subscribe({
+    const sub = this.sdk.get<SoftphoneConfig>('/api/v1/voice/softphone').subscribe({
       next: config => {
         if (config.available) void this.mount(config);
       },

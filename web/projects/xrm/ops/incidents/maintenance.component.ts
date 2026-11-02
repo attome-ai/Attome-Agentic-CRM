@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 /** `attome_ops::maintenance::Maintenance`. */
 export interface MaintenanceWindow {
@@ -90,7 +90,7 @@ export function windowProblem(titleEn: string, titleAr: string, starts: string |
   `],
 })
 export class MaintenanceComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   readonly lang = inject(LangService);
 
   readonly windows = signal<MaintenanceWindow[]>([]);
@@ -108,7 +108,7 @@ export class MaintenanceComponent implements OnInit {
   }
 
   load(): void {
-    this.api.get<{ items: MaintenanceWindow[] }>('/api/v1/ops/maintenance').subscribe({
+    this.sdk.get<{ items: MaintenanceWindow[] }>('/api/v1/ops/maintenance').subscribe({
       next: page => this.windows.set(page.items),
       error: (e: ApiError) => this.error.set(this.lang.errorText(e)),
     });
@@ -121,13 +121,16 @@ export class MaintenanceComponent implements OnInit {
     this.problem.set(problem);
     if (problem) return;
     this.busy.set(true);
-    this.api.post<MaintenanceWindow>('/api/v1/ops/maintenance', {
+    this.sdk.post<MaintenanceWindow>(
+      '/api/v1/ops/maintenance',
+      { body: {
       title_en: this.titleEn.trim(),
       title_ar: this.titleAr.trim(),
       starts_at: startsAt,
       ends_at: endsAt,
       audience: this.audience,
-    }).subscribe({
+    } },
+    ).subscribe({
       next: () => {
         this.busy.set(false);
         this.titleEn = '';
@@ -145,7 +148,7 @@ export class MaintenanceComponent implements OnInit {
 
   cancel(window: MaintenanceWindow): void {
     this.busy.set(true);
-    this.api.post<MaintenanceWindow>(`/api/v1/ops/maintenance/${encodeURIComponent(window.id)}/cancel`, {}, { ifMatch: window.row_version }).subscribe({
+    this.sdk.post<MaintenanceWindow>(`/api/v1/ops/maintenance/${encodeURIComponent(window.id)}/cancel`, { body: {} }, { ifMatch: window.row_version }).subscribe({
       next: () => {
         this.busy.set(false);
         this.load();

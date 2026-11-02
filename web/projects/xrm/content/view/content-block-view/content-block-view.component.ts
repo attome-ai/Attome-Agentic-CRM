@@ -2,7 +2,7 @@ import {
   ChangeDetectionStrategy, Component, computed, effect, inject, input, signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiError, ApiService, AuthService } from '@attome/base';
+import { ApiError, SdkService, AuthService } from '@attome/base';
 import { QueryService } from '@attome/xrm/core/query/data';
 import { QueryColumnDef } from '@attome/xrm/core/query/data';
 import { Block } from '../services/content-public.service';
@@ -53,7 +53,7 @@ export class ContentBlockViewComponent {
 
   private readonly auth = inject(AuthService);
   private readonly querySvc = inject(QueryService);
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly authed = computed(() => this.auth.isLoggedIn());
   readonly requiresAuth = computed(() => true);
@@ -182,7 +182,7 @@ export class ContentBlockViewComponent {
     // Reuses the generic entity CRUD create path directly (`POST
     // /api/v1/{entity}`) — no bespoke write endpoint for this block, same
     // path every other engine uses for record writes.
-    this.api.post(`/api/v1/${entity}`, this.formValues).subscribe({
+    this.sdk.post(`/api/v1/${entity}`, { body: this.formValues }).subscribe({
       next: () => {
         this.formSubmitting.set(false);
         this.formMessage.set('Submitted.');

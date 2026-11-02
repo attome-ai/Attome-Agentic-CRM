@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
-import { ApiService, LocalNumberPipe, TranslatePipe } from '@attome/base';
+import { SdkService, LocalNumberPipe, TranslatePipe } from '@attome/base';
 
 /** `attome_commission::statement::CommissionEstimate`. */
 export interface CommissionEstimate {
@@ -45,7 +45,7 @@ export interface CommissionEstimate {
   `],
 })
 export class CommissionEstimatePanelComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly opportunityId = input<string | null>(null);
 
@@ -64,7 +64,7 @@ export class CommissionEstimatePanelComponent {
     const id = this.opportunityId();
     if (!id) return;
     this.busy.set(true);
-    this.api.post<CommissionEstimate>('/api/v1/commission/estimate', { opportunity_id: id }).subscribe({
+    this.sdk.post<CommissionEstimate>('/api/v1/commission/estimate', { body: { opportunity_id: id } }).subscribe({
       next: e => { this.busy.set(false); this.estimate.set(e); },
       // On no plan, or not the reader's deal: nothing to estimate.
       error: () => { this.busy.set(false); this.available.set(false); },

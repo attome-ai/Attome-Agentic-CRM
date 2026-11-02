@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ApiError, ApiService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 /** `attome_api::approval_process::ApprovalHistoryItem`. */
 export interface ApprovalHistoryItem {
@@ -63,7 +63,7 @@ export const APPROVAL_HISTORY_PAGE_SIZE = 20;
   `],
 })
 export class ApprovalHistoryPanelComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly entityName = input.required<string>();
   readonly recordId = input<string | null>(null);
@@ -82,9 +82,9 @@ export class ApprovalHistoryPanelComponent {
 
   private load(entity: string, id: string): void {
     this.error.set(null);
-    this.api.get<Page<ApprovalHistoryItem>>(
+    this.sdk.get<Page<ApprovalHistoryItem>>(
       `/api/v1/approvals/regarding/${encodeURIComponent(entity)}/${encodeURIComponent(id)}`,
-      { page_size: String(APPROVAL_HISTORY_PAGE_SIZE) },
+      { query: { page_size: String(APPROVAL_HISTORY_PAGE_SIZE) } },
     ).subscribe({
       next: page => { this.items.set(page.items); this.total.set(page.total); },
       error: (e: ApiError) => this.error.set(e.message),

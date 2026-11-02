@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import type { Observable } from 'rxjs';
 
 /**
@@ -113,39 +113,44 @@ export function counts(mapping: ModelMapping): Record<MapAction, number> {
 
 @Injectable({ providedIn: 'root' })
 export class ModelMappingService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   private path(projectId: string): string {
     return `/api/v1/admin/migration-projects/${encodeURIComponent(projectId)}/model-mapping`;
   }
 
   get(projectId: string): Observable<MappingDoc> {
-    return this.api.get<MappingDoc>(this.path(projectId));
+    return this.sdk.get<MappingDoc>(this.path(projectId));
   }
 
   draft(projectId: string, sourceModel: unknown): Observable<MappingDoc> {
-    return this.api.post<MappingDoc>(`${this.path(projectId)}/draft`, { source_model: sourceModel });
+    return this.sdk.post<MappingDoc>(`${this.path(projectId)}/draft`, { body: { source_model: sourceModel } });
   }
 
   /** The model of the integration system `system` (a migration source). */
   describe(projectId: string, system: string): Observable<{ kind: string; source_model: unknown }> {
-    return this.api.post<{ kind: string; source_model: unknown }>(
-      `/api/v1/admin/migration-projects/${encodeURIComponent(projectId)}/source-model`, { system });
+    return this.sdk.post<{ kind: string; source_model: unknown }>(
+      `/api/v1/admin/migration-projects/${encodeURIComponent(projectId)}/source-model`,
+      { body: { system } },
+    );
   }
 
   /** A24-T4: the project's waves, newest first. */
   waves(projectId: string): Observable<{ items: MigrationWave[] }> {
-    return this.api.get<{ items: MigrationWave[] }>(
-      `/api/v1/admin/migration-projects/${encodeURIComponent(projectId)}/waves`);
+    return this.sdk.get<{ items: MigrationWave[] }>(
+      `/api/v1/admin/migration-projects/${encodeURIComponent(projectId)}/waves`,
+    );
   }
 
   /** A24-T4: queues the next wave (the cut-over when `cutOver`). */
   startWave(projectId: string, system: string, cutOver: boolean): Observable<MigrationWave> {
-    return this.api.post<MigrationWave>(
-      `/api/v1/admin/migration-projects/${encodeURIComponent(projectId)}/waves`, { system, cut_over: cutOver });
+    return this.sdk.post<MigrationWave>(
+      `/api/v1/admin/migration-projects/${encodeURIComponent(projectId)}/waves`,
+      { body: { system, cut_over: cutOver } },
+    );
   }
 
   save(projectId: string, mapping: ModelMapping, rowVersion: number): Observable<MappingDoc> {
-    return this.api.put<MappingDoc>(this.path(projectId), { mapping, row_version: rowVersion });
+    return this.sdk.put<MappingDoc>(this.path(projectId), { body: { mapping, row_version: rowVersion } });
   }
 }

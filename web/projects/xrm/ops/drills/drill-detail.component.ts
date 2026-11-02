@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ApiError, ApiService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
 /** One check of `attome_ops::evidence::Evidence`. */
 export interface DrillCheck {
@@ -83,7 +83,7 @@ export interface SignedDrillEvidence {
   `],
 })
 export class DrillDetailComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
 
   readonly id = input.required<string>();
@@ -91,7 +91,7 @@ export class DrillDetailComponent implements OnInit {
   readonly error = signal<string | null>(null);
 
   ngOnInit(): void {
-    this.api.get<SignedDrillEvidence>(`/api/v1/ops/drills/${encodeURIComponent(this.id())}`).subscribe({
+    this.sdk.get<SignedDrillEvidence>(`/api/v1/ops/drills/${encodeURIComponent(this.id())}`).subscribe({
       next: s => this.signed.set(s),
       error: (e: ApiError) => this.error.set(this.lang.errorText(e)),
     });

@@ -4,7 +4,7 @@ import {
 import { FormControl, FormRecord, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, SdkService, LangService, TranslatePipe } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { ChoiceOptions, FieldSchema } from '@attome/xrm';
 import { EntityService } from '../services/entity.service';
@@ -218,7 +218,7 @@ export class BulkEditDialogComponent {
   readonly applied = output<void>();
 
   private readonly entitySvc = inject(EntityService);
-  private readonly api       = inject(ApiService);
+  private readonly sdk       = inject(SdkService);
   private readonly lang      = inject(LangService);
   private readonly dialogSvc = inject(DialogService);
   private readonly bulkJobs  = inject(BulkJobRunner);
@@ -394,7 +394,7 @@ export class BulkEditDialogComponent {
     if (!name || !body) return;
     const value = withSavedAction(this.savedValue, this.entityName(), { name, operations: body.operations });
     try {
-      await firstValueFrom(this.api.put(`/api/v1/settings/me/${BULK_ACTIONS_SETTING}`, { value }));
+      await firstValueFrom(this.sdk.put(`/api/v1/settings/me/${BULK_ACTIONS_SETTING}`, { body: { value } }));
       this.savedValue = value;
       this.saved.set(value[this.entityName()] ?? []);
       this.saveName.set('');
@@ -472,7 +472,7 @@ export class BulkEditDialogComponent {
 
   private loadSaved(): void {
     this.saved.set([]);
-    this.api.get<{ items?: { key: string; value: unknown }[] }>('/api/v1/settings/me').subscribe({
+    this.sdk.get<{ items?: { key: string; value: unknown }[] }>('/api/v1/settings/me').subscribe({
       next: settings => {
         this.savedValue = settings.items?.find(s => s.key === BULK_ACTIONS_SETTING)?.value ?? {};
         this.saved.set(savedActionsFor(this.savedValue, this.entityName()));
