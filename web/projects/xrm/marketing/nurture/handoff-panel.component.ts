@@ -44,8 +44,8 @@ export function hijriDate(date: string, locale: string): string | null {
       @if (handoff().due_at) {
         <p>{{ 'nurturePanel.due' | translate }} <span dir="ltr">{{ handoff().due_at }}</span></p>
       }
-      @if (decided()) {
-        <p data-testid="hp-done">{{ decided() | translate }}</p>
+      @if (decided(); as done) {
+        <p data-testid="hp-done">{{ done | translate }}</p>
       } @else {
         <div class="hp-actions">
           <button type="button" class="btn btn-primary" (click)="accept()" [disabled]="busy()"
