@@ -1,5 +1,5 @@
 import { firstValueFrom } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import { solvePow } from '@attome/base/pow';
 
 /** `GET /api/v1/booking/{slug}`. */
@@ -88,10 +88,10 @@ export function meetingTime(start: string, end: string, locale: string, timeZone
  * The challenge answer when the deployment asks for proof-of-work, else
  * none: no challenge in force answers 404 and the booking goes without.
  */
-export async function challengeToken(api: ApiService): Promise<string | undefined> {
+export async function challengeToken(sdk: SdkService): Promise<string | undefined> {
   let challenge: { challenge: string; nonce: string; difficulty: number };
   try {
-    challenge = await firstValueFrom(api.get<{ challenge: string; nonce: string; difficulty: number }>(
+    challenge = await firstValueFrom(sdk.get<{ challenge: string; nonce: string; difficulty: number }>(
       '/api/v1/auth/challenge',
     ));
   } catch {

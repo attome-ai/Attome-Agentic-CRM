@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ApiService, LangService, TranslatePipe } from '@attome/base';
+import { LangService, SdkService, TranslatePipe } from '@attome/base';
 import { BookingPageView, challengeToken, groupByDay, meetingTime, ownTimeZone, timeZones } from './booking';
 
 type Stage = 'loading' | 'ready' | 'booking' | 'booked' | 'missing' | 'taken' | 'failed';
@@ -138,7 +138,7 @@ type Stage = 'loading' | 'ready' | 'booking' | 'booked' | 'missing' | 'taken' | 
   `],
 })
 export class BookPageComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   protected readonly lang = inject(LangService);
 
   /** The page's link name, from the route. */
@@ -168,7 +168,7 @@ export class BookPageComponent implements OnInit {
   }
 
   private load(): void {
-    this.api.get<BookingPageView>(`/api/v1/booking/${encodeURIComponent(this.slug())}`).subscribe({
+    this.sdk.get<BookingPageView>(`/api/v1/booking/${encodeURIComponent(this.slug())}`).subscribe({
       next: page => {
         this.page.set(page);
         if (this.stage() === 'loading') this.stage.set('ready');
@@ -190,11 +190,11 @@ export class BookPageComponent implements OnInit {
     const start = this.chosen();
     if (!start || this.stage() === 'booking') return;
     this.stage.set('booking');
-    const captcha_token = await challengeToken(this.api);
-    this.api.post(`/api/v1/booking/${encodeURIComponent(this.slug())}`, {
+    const captcha_token = await challengeToken(this.sdk);
+    this.sdk.post(`/api/v1/booking/${encodeURIComponent(this.slug())}`, { body: {
       start, name: this.name.trim(), email: this.email.trim(),
       phone: this.phone.trim() || null, notes: this.notes.trim() || null, captcha_token,
-    }).subscribe({
+    } }).subscribe({
       next: () => this.stage.set('booked'),
       error: (err: { status?: number }) => {
         if (err?.status === 409) {
