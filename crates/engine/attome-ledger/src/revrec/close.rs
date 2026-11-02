@@ -52,6 +52,8 @@ use super::contract::BASIC_FLAG;
 
 /// The job's name.
 pub const JOB: &str = "revrec_close";
+/// F11-T10: the nightly balance roll-forward job.
+pub const ROLLFORWARD_JOB: &str = "revrec_rollforward_snapshot";
 /// The approval a close waits for.
 pub const APPROVAL: &str = "ledger.revrec_close";
 /// The posting rule's source kind.
@@ -304,6 +306,20 @@ async fn close_contract(
     .execute(&mut **tx)
     .await
     .map_err(AppError::internal)?;
+    snapshot_contract(tx, contract, kind, source, period, last, actor).await
+}
+
+/// Writes `contract`'s balance snapshot for `period` (ending `last`) from its
+/// schedule lines and invoices as they stand.
+async fn snapshot_contract(
+    tx: &mut attome_db::Tx<'_>,
+    contract: Uuid,
+    kind: &str,
+    source: &str,
+    period: &str,
+    last: NaiveDate,
+    actor: Uuid,
+) -> Result<(), AppError> {
     let recognised: Option<String> = sqlx::query_scalar(
         "SELECT COALESCE(sum(s.amount_contract_ccy), 0)::text \
            FROM revenue_schedule_line s JOIN performance_obligation o ON o.id = s.obligation_ref \
@@ -373,6 +389,39 @@ async fn close_contract(
         .map_err(AppError::internal)?;
     }
     Ok(())
+}
+
+/// F11-T10: the nightly roll-forward: every contract's balance snapshot for
+/// the month holding `today`, written as it stands (no line changes status),
+/// in batches of [`BATCH`]; how many contracts were written.
+pub async fn refresh_snapshots(state: &EngineState, today: NaiveDate) -> Result<usize, AppError> {
+    let period = format!("{:04}-{:02}", today.year(), today.month());
+    let (_, last) = month_bounds(&period).ok_or_else(|| AppError::internal("bad period"))?;
+    let db = &state.base.db;
+    let mut after = Uuid::nil();
+    let mut written = 0;
+    loop {
+        let contracts: Vec<ContractRow> = sqlx::query_as(
+            "SELECT id, source_kind::text, source_id FROM revenue_contract \
+              WHERE id > $1 AND (is_active IS NULL OR is_active = true) ORDER BY id LIMIT $2",
+        )
+        .bind(after)
+        .bind(BATCH)
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?;
+        let Some(last_id) = contracts.last().map(|c| c.0) else {
+            break;
+        };
+        let mut tx = attome_db::tx::begin(db).await?;
+        for (contract, kind, source) in &contracts {
+            snapshot_contract(&mut tx, *contract, kind, source, &period, last, Uuid::nil()).await?;
+        }
+        attome_db::tx::commit(tx).await?;
+        written += contracts.len();
+        after = last_id;
+    }
+    Ok(written)
 }
 
 /// What posting did.

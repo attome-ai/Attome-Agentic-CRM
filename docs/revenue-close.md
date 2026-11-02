@@ -34,3 +34,12 @@ revenue is posted to the ledger and the lines locked.
    audit event; start the month again.
 
 Starting and posting a month hold a lock per month, so two people cannot close the same month at once.
+
+## Balances between closes and the reports
+
+Every night the roll-forward rewrites each contract's balance snapshot for the current month as it stands
+(no line changes status), so the reports below are current between closes. The ledger pack's changeset
+`0007` ships them as reports: **Revenue: Waterfall** (planned revenue by future period), **Deferred
+Roll-forward** (billed, recognised and deferred by period), **Unbilled Balance** (each contract's latest),
+**Remaining Performance Obligations** (planned revenue per contract) and **Recognised vs Billed by
+Customer**.

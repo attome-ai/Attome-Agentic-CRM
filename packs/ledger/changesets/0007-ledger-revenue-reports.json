@@ -1,0 +1,128 @@
+{
+  "author": "packs",
+  "checksum": "sha256:b054eec5aaf887f2e839066ff9466324b3ccdfaff15df93fe0b8503807e8f735",
+  "closed_at": "2026-11-02T00:00:00Z",
+  "description": "F11-T10: the revenue reports as stored queries over the schedule lines and balance snapshots: the waterfall of planned revenue by period, the deferred roll-forward, unbilled balances, remaining performance obligations per contract, and recognised against billed per customer.",
+  "format": "attome-changeset/v1",
+  "id": "01a19c40-0000-7f0b-8000-000000000007",
+  "layer": "product",
+  "name": "ledger-revenue-reports",
+  "opened_at": "2026-11-02T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Revenue: Waterfall",
+          "required_privilege": "revenue_schedule_line.read",
+          "sql": "SELECT s.fiscal_period, SUM(s.amount_contract_ccy) AS planned, COUNT(*) AS lines FROM revenue_schedule_line s WHERE s.status = 'planned' AND (s.is_active IS NULL OR s.is_active = true) GROUP BY s.fiscal_period ORDER BY s.fiscal_period",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "revenue_schedule_line",
+        "query": "Revenue: Waterfall"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Revenue: Deferred Roll-forward",
+          "required_privilege": "revenue_balance_snapshot.read",
+          "sql": "SELECT b.fiscal_period, SUM(b.billed_to_date) AS billed_to_date, SUM(b.recognised_to_date) AS recognised_to_date, SUM(b.deferred) AS deferred FROM revenue_balance_snapshot b WHERE (b.is_active IS NULL OR b.is_active = true) GROUP BY b.fiscal_period ORDER BY b.fiscal_period",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "revenue_balance_snapshot",
+        "query": "Revenue: Deferred Roll-forward"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Revenue: Unbilled Balance",
+          "required_privilege": "revenue_balance_snapshot.read",
+          "sql": "SELECT c.customer_account_ref, b.revenue_contract_ref, b.fiscal_period, b.unbilled FROM revenue_balance_snapshot b JOIN revenue_contract c ON c.id = b.revenue_contract_ref WHERE b.unbilled > 0 AND (b.is_active IS NULL OR b.is_active = true) AND b.fiscal_period = (SELECT MAX(x.fiscal_period) FROM revenue_balance_snapshot x WHERE x.revenue_contract_ref = b.revenue_contract_ref AND (x.is_active IS NULL OR x.is_active = true)) ORDER BY b.unbilled DESC",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "revenue_balance_snapshot",
+        "query": "Revenue: Unbilled Balance"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Revenue: Remaining Performance Obligations",
+          "required_privilege": "revenue_contract.read",
+          "sql": "SELECT c.id AS revenue_contract_ref, c.customer_account_ref, c.currency, SUM(s.amount_contract_ccy) AS remaining, MIN(s.fiscal_period) AS from_period, MAX(s.fiscal_period) AS to_period FROM revenue_contract c JOIN performance_obligation o ON o.revenue_contract_ref = c.id JOIN revenue_schedule_line s ON s.obligation_ref = o.id WHERE s.status = 'planned' AND (c.is_active IS NULL OR c.is_active = true) AND (o.is_active IS NULL OR o.is_active = true) AND (s.is_active IS NULL OR s.is_active = true) GROUP BY c.id, c.customer_account_ref, c.currency ORDER BY remaining DESC",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "revenue_contract",
+        "query": "Revenue: Remaining Performance Obligations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Revenue: Recognised vs Billed by Customer",
+          "required_privilege": "revenue_balance_snapshot.read",
+          "sql": "SELECT c.customer_account_ref, SUM(b.recognised_to_date) AS recognised_to_date, SUM(b.billed_to_date) AS billed_to_date, SUM(b.deferred) AS deferred, SUM(b.unbilled) AS unbilled FROM revenue_balance_snapshot b JOIN revenue_contract c ON c.id = b.revenue_contract_ref WHERE (b.is_active IS NULL OR b.is_active = true) AND b.fiscal_period = (SELECT MAX(x.fiscal_period) FROM revenue_balance_snapshot x WHERE x.revenue_contract_ref = b.revenue_contract_ref AND (x.is_active IS NULL OR x.is_active = true)) GROUP BY c.customer_account_ref ORDER BY recognised_to_date DESC",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "revenue_balance_snapshot",
+        "query": "Revenue: Recognised vs Billed by Customer"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "ledger",
+  "seq": 7,
+  "title": "Pack: revenue reports"
+}

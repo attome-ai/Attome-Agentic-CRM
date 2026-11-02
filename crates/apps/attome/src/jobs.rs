@@ -3368,6 +3368,8 @@ const DEDUP_KEY_CALLINTEL_AGGREGATE: &str = "callintel-aggregate";
 const DEDUP_KEY_SERVICE_QUALITY_SAMPLE: &str = "service-quality-sample";
 /// F8-T9: the abandoned cart sweep (a registered job type).
 const DEDUP_KEY_COMMERCE_ABANDONED_CART: &str = "commerce-abandoned-cart";
+/// F11-T10: the nightly revenue roll-forward (a registered job type).
+const DEDUP_KEY_REVREC_ROLLFORWARD: &str = "revrec-rollforward";
 /// O1-T2: the weekly drift check of active prediction models.
 const DEDUP_KEY_PREDICT_DRIFT: &str = "predict-drift";
 const DEDUP_KEY_CONTENT_SEO_AUDIT: &str = "content-seo-audit";
@@ -3851,6 +3853,10 @@ pub const SERVICE_QUALITY_SAMPLE: attome_jobs::JobType =
 /// D22-T9: yesterday's call trend aggregates.
 pub const CALLINTEL_AGGREGATE: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_callintel::analysis::trends::JOB, 1);
+
+/// F11-T10: the nightly revenue balance roll-forward.
+pub const REVREC_ROLLFORWARD: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_ledger::revrec::close::ROLLFORWARD_JOB, 1);
 
 /// F11-T7: one month's revenue close.
 pub const REVREC_CLOSE: attome_jobs::JobType =
@@ -5355,6 +5361,24 @@ pub fn register_job_types() {
             tracing::error!(%error, "job type registration failed");
         }
         if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            REVREC_ROLLFORWARD,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                if !state.modules.load().has(attome_modules::MODULE_LEDGER) {
+                    return Ok::<(), attome_jobs::registry::BoxError>(());
+                }
+                let written = attome_ledger::revrec::close::refresh_snapshots(
+                    &state,
+                    chrono::Utc::now().date_naive(),
+                )
+                .await
+                .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                tracing::info!(written, "revenue balances rolled forward");
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
             REVREC_CLOSE,
             |state: EngineState, job: attome_jobs::RegisteredJob| async move {
                 if !state.modules.load().has(attome_modules::MODULE_LEDGER) {
@@ -6783,6 +6807,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == COMMERCE_ABANDONED_CART.name => {
             DEDUP_KEY_COMMERCE_ABANDONED_CART
         }
+        EngineJob::Registered(job) if job.name == REVREC_ROLLFORWARD.name => {
+            DEDUP_KEY_REVREC_ROLLFORWARD
+        }
         EngineJob::Registered(job) if job.name == PREDICT_DRIFT.name => DEDUP_KEY_PREDICT_DRIFT,
         EngineJob::Registered(job) if job.name == CONTENT_SEO_AUDIT.name => {
             DEDUP_KEY_CONTENT_SEO_AUDIT
@@ -7078,6 +7105,7 @@ pub const SCHEDULE_MODULES: &[(&str, &str)] = &[
     ("callintel-aggregate", "callintel"),
     ("service-quality-sample", "service"),
     ("commerce-abandoned-cart", "sales"),
+    ("revrec-rollforward", "ledger"),
     ("workforce-intraday", "workforce"),
     ("rfq-open", "procurement"),
     ("grc-policy-sweep", "grc"),
@@ -8461,6 +8489,21 @@ pub fn spawn_fulfilment_tracking_scheduler(db: DbPool, interval: std::time::Dura
             "fulfilment tracking",
         ),
         Err(error) => tracing::error!(%error, "fulfilment tracking: not scheduled"),
+    }
+}
+
+/// F11-T10: nightly, the revenue balance roll-forward.
+pub fn spawn_revrec_rollforward_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    match attome_core::jobs::JOB_TYPES.job(REVREC_ROLLFORWARD.name, &()) {
+        Ok(job) => spawn_dedup_scheduler(
+            db,
+            interval,
+            EngineJob::Registered(job),
+            DEDUP_KEY_REVREC_ROLLFORWARD,
+            "revenue roll-forward",
+        ),
+        Err(error) => tracing::error!(%error, "revenue roll-forward: not scheduled"),
     }
 }
 

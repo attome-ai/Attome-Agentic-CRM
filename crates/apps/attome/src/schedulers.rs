@@ -282,6 +282,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(30 * 60),
     );
+    // F11-T10: the revenue balance roll-forward, nightly.
+    crate::jobs::spawn_revrec_rollforward_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
     // F8-T9: the abandoned cart sweep, every 15 minutes.
     crate::jobs::spawn_commerce_abandoned_cart_scheduler(
         db.clone(),
