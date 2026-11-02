@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { map, Observable, of, switchMap } from 'rxjs';
-import { ApiComponents, ApiService } from '@attome/base';
+import { ApiComponents, SdkService } from '@attome/base';
 import { EntityRecord } from '@attome/xrm';
 import { EntityRecordResponse, EntityService } from '@attome/xrm/core/entity';
 
@@ -230,7 +230,7 @@ export function snapshotParameters(snapshot: unknown): DashboardParameter[] {
 
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
-  private readonly api      = inject(ApiService);
+  private readonly sdk      = inject(SdkService);
   private readonly entities = inject(EntityService);
 
   /** The dashboard's whole draft tree in one call (`GET .../tree`, D-520):
@@ -238,14 +238,14 @@ export class DashboardService {
    * section and widget under them, each with its `row_version`. Editor-only —
    * the route answers 404 to a caller without record Update. Never writes. */
   loadTree(dashboardId: string): Observable<DashboardTree> {
-    return this.api.get<DraftTreeResponse>(`/api/v1/attome-dashboard/${dashboardId}/tree`).pipe(
+    return this.sdk.get<DraftTreeResponse>(`/api/v1/attome-dashboard/${dashboardId}/tree`).pipe(
       map(draftTreeToDashboardTree),
     );
   }
 
   /** What viewers see (`GET .../published`, D-521) — record Read only. */
   loadPublished(dashboardId: string): Observable<PublishedView> {
-    return this.api.get<PublishedDashboard>(`/api/v1/attome-dashboard/${dashboardId}/published`).pipe(
+    return this.sdk.get<PublishedDashboard>(`/api/v1/attome-dashboard/${dashboardId}/published`).pipe(
       map((res): PublishedView => {
         const state = res.state as PublishedState;
         const hasSnapshot = state !== 'none' && res.snapshot != null;
@@ -287,13 +287,13 @@ export class DashboardService {
   /** `POST .../pages` — the page and its root grid section in one
    * transaction, owned by `dashboardId` (D-520/D-527). */
   createPage(dashboardId: string, body: NewPageBody): Observable<CreatedPage> {
-    return this.api.post<CreatedPage>(`/api/v1/attome-dashboard/${dashboardId}/pages`, body);
+    return this.sdk.post<CreatedPage>(`/api/v1/attome-dashboard/${dashboardId}/pages`, { body });
   }
 
   /** `POST .../pages/{pageId}/root-section` — the explicit repair for a page
    * with no section; 409 when it already has one. */
   repairRootSection(dashboardId: string, pageId: string): Observable<RepairedRootSection> {
-    return this.api.post<RepairedRootSection>(`/api/v1/attome-dashboard/${dashboardId}/pages/${pageId}/root-section`, {});
+    return this.sdk.post<RepairedRootSection>(`/api/v1/attome-dashboard/${dashboardId}/pages/${pageId}/root-section`, { body: {} });
   }
 
   /**
@@ -314,37 +314,37 @@ export class DashboardService {
     rowVersion: number,
     body: Record<string, unknown> = {},
   ): Observable<TransitionResponse> {
-    return this.api.post<TransitionResponse>(
+    return this.sdk.post<TransitionResponse>(
       `/api/v1/attome-dashboard/${id}/${action}`,
-      { row_version: rowVersion, ...body },
+      { body: { row_version: rowVersion, ...body } },
     );
   }
 
   /** `POST /api/v1/attome-dashboard/{id}/clone` — no request body; the clone is
    * owned by the caller once created (R-04). */
   clone(id: string): Observable<CloneResponse> {
-    return this.api.post<CloneResponse>(`/api/v1/attome-dashboard/${id}/clone`, {});
+    return this.sdk.post<CloneResponse>(`/api/v1/attome-dashboard/${id}/clone`, { body: {} });
   }
 
   /** `POST /api/v1/attome-dashboard/{id}/versions/{versionId}/restore` — writes
    * the version into the draft only (D-521); what viewers see is unchanged. */
   restoreVersion(id: string, versionId: string): Observable<RestoreResponse> {
-    return this.api.post<RestoreResponse>(`/api/v1/attome-dashboard/${id}/versions/${versionId}/restore`, {});
+    return this.sdk.post<RestoreResponse>(`/api/v1/attome-dashboard/${id}/versions/${versionId}/restore`, { body: {} });
   }
 
   /** `POST .../versions/{versionId}/activate` — makes a stored version live
    * (rollback). 202 with `approval_pending` when four-eyes gated. */
   activateVersion(id: string, versionId: string, rowVersion: number): Observable<ActivateResponse> {
-    return this.api.post<ActivateResponse>(
+    return this.sdk.post<ActivateResponse>(
       `/api/v1/attome-dashboard/${id}/versions/${versionId}/activate`,
-      { row_version: rowVersion },
+      { body: { row_version: rowVersion } },
     );
   }
 
   /** `GET /api/v1/attome-dashboard/{id}/health-check` — read-only diagnostic
    * over the dashboard's widgets' `query_id` refs (`health.rs`). */
   healthCheck(id: string): Observable<HealthCheckResponse> {
-    return this.api.get<HealthCheckResponse>(`/api/v1/attome-dashboard/${id}/health-check`);
+    return this.sdk.get<HealthCheckResponse>(`/api/v1/attome-dashboard/${id}/health-check`);
   }
 
   /** `POST .../widgets/{widgetId}/data` (D-522, D-543) — one widget's data,
@@ -353,9 +353,9 @@ export class DashboardService {
    * values only — parameter values, cross-filter values — never a query, a
    * view, a filter or an aggregation, so no number is ever computed here. */
   widgetData(dashboardId: string, widgetId: string, inputs: WidgetInputs = {}): Observable<WidgetDataResponse> {
-    return this.api.post<WidgetDataResponse>(
+    return this.sdk.post<WidgetDataResponse>(
       `/api/v1/attome-dashboard/${dashboardId}/widgets/${widgetId}/data`,
-      inputs,
+      { body: inputs },
     );
   }
 
@@ -364,55 +364,55 @@ export class DashboardService {
    * with an exact total and a keyset cursor. 422 for a widget that is not
    * exactly drillable. */
   widgetRecords(dashboardId: string, widgetId: string, inputs: WidgetRecordsInputs): Observable<WidgetRecordsResponse> {
-    return this.api.post<WidgetRecordsResponse>(
+    return this.sdk.post<WidgetRecordsResponse>(
       `/api/v1/attome-dashboard/${dashboardId}/widgets/${widgetId}/records`,
-      inputs,
+      { body: inputs },
     );
   }
 
   /** P7-T5: `POST .../widgets/{widgetId}/drill-down` — the next level of
    * buckets under the ones clicked (`path`), with a breadcrumb. */
   drillDown(dashboardId: string, widgetId: string, body: WidgetDrillDownInputs): Observable<WidgetDrillDownResponse> {
-    return this.api.post<WidgetDrillDownResponse>(
+    return this.sdk.post<WidgetDrillDownResponse>(
       `/api/v1/attome-dashboard/${dashboardId}/widgets/${widgetId}/drill-down`,
-      body,
+      { body },
     );
   }
 
   /** P7-T8: `POST .../widgets/{widgetId}/compare` — the records that entered,
    * left or changed between two periods. */
   compare(dashboardId: string, widgetId: string, body: WidgetCompareInputs): Observable<WidgetCompareResponse> {
-    return this.api.post<WidgetCompareResponse>(
+    return this.sdk.post<WidgetCompareResponse>(
       `/api/v1/attome-dashboard/${dashboardId}/widgets/${widgetId}/compare`,
-      body,
+      { body },
     );
   }
 
   /** P9-T15: `GET /api/v1/metrics/scorecards/{id}` — a scorecard's metrics
    * with their newest stored values, targets and freshness. */
   getScorecard(id: string): Observable<ScorecardRead> {
-    return this.api.get<ScorecardRead>(`/api/v1/metrics/scorecards/${encodeURIComponent(id)}`);
+    return this.sdk.get<ScorecardRead>(`/api/v1/metrics/scorecards/${encodeURIComponent(id)}`);
   }
 
   /** P9-T15: `GET /api/v1/metrics` — the metric catalogue, one page. */
   listMetrics(page = 1, pageSize = 200): Observable<MetricCataloguePage> {
-    return this.api.get<MetricCataloguePage>(`/api/v1/metrics?page=${page}&page_size=${pageSize}`);
+    return this.sdk.get<MetricCataloguePage>(`/api/v1/metrics?page=${page}&page_size=${pageSize}`);
   }
 
   /** P9-T15: `POST /api/v1/metrics/{id}/targets/spread`. */
   spreadTarget(id: string, body: SpreadTargetBody): Observable<SpreadTargetResult> {
-    return this.api.post<SpreadTargetResult>(`/api/v1/metrics/${encodeURIComponent(id)}/targets/spread`, body);
+    return this.sdk.post<SpreadTargetResult>(`/api/v1/metrics/${encodeURIComponent(id)}/targets/spread`, { body });
   }
 
   /** P9-T15: `POST /api/v1/metrics/{id}/backfill`. */
   backfillMetric(id: string, body: { from: string; to: string }): Observable<unknown> {
-    return this.api.post<unknown>(`/api/v1/metrics/${encodeURIComponent(id)}/backfill`, body);
+    return this.sdk.post<unknown>(`/api/v1/metrics/${encodeURIComponent(id)}/backfill`, { body });
   }
 
   /** P9-T15: `GET /api/v1/metrics/{id}/comments` — one period's when given. */
   listComments(id: string, periodStart?: string | null): Observable<MetricCommentPage> {
     const period = periodStart ? `&period_start=${encodeURIComponent(periodStart)}` : '';
-    return this.api.get<MetricCommentPage>(
+    return this.sdk.get<MetricCommentPage>(
       `/api/v1/metrics/${encodeURIComponent(id)}/comments?page=1&page_size=5${period}`);
   }
 
@@ -420,9 +420,9 @@ export class DashboardService {
    * calculated: measures, filters with their origins, timezone, scope,
    * freshness; for a governed KPI its metric, target and lineage. */
   widgetExplain(dashboardId: string, widgetId: string, inputs: WidgetInputs = {}): Observable<WidgetExplanation> {
-    return this.api.post<WidgetExplanation>(
+    return this.sdk.post<WidgetExplanation>(
       `/api/v1/attome-dashboard/${dashboardId}/widgets/${widgetId}/explain`,
-      inputs,
+      { body: inputs },
     );
   }
 
@@ -430,19 +430,19 @@ export class DashboardService {
    * request (at most four execute at once on the server); a widget that fails
    * carries its own `error` instead of failing the page. */
   pageData(dashboardId: string, pageId: string, inputs: WidgetInputs = {}): Observable<PageDataResponse> {
-    return this.api.post<PageDataResponse>(
+    return this.sdk.post<PageDataResponse>(
       `/api/v1/attome-dashboard/${dashboardId}/pages/${pageId}/data`,
-      inputs,
+      { body: inputs },
     );
   }
 
   /** `POST /api/v1/attome-dashboard/widget/duplicate` — defaults to duplicating
    * in place (same section) when `targetSectionId` is omitted. */
   duplicateWidget(widgetId: string, targetSectionId?: string): Observable<DuplicateResponse> {
-    return this.api.post<DuplicateResponse>('/api/v1/attome-dashboard/widget/duplicate', {
+    return this.sdk.post<DuplicateResponse>('/api/v1/attome-dashboard/widget/duplicate', { body: {
       widget_id: widgetId,
       target_section_id: targetSectionId,
-    });
+    } });
   }
 
   /** `GET /api/v1/attome-dashboard/widget-types` — the widget descriptors for a
@@ -450,7 +450,7 @@ export class DashboardService {
    * `includeUnsupported` (D-525). */
   widgetTypes(includeUnsupported = false): Observable<WidgetDescriptor[]> {
     const query = includeUnsupported ? '?include_unsupported=true' : '';
-    return this.api.get<WidgetDescriptor[]>(`/api/v1/attome-dashboard/widget-types${query}`);
+    return this.sdk.get<WidgetDescriptor[]>(`/api/v1/attome-dashboard/widget-types${query}`);
   }
 
   /** `POST /api/v1/attome-dashboard/{id}/resolve-variables` — resolves
@@ -464,10 +464,10 @@ export class DashboardService {
     pageId?: string,
     urlOverrides: Record<string, string> = {},
   ): Observable<ResolveVariablesResponse> {
-    return this.api.post<ResolveVariablesResponse>(`/api/v1/attome-dashboard/${id}/resolve-variables`, {
+    return this.sdk.post<ResolveVariablesResponse>(`/api/v1/attome-dashboard/${id}/resolve-variables`, { body: {
       page_id: pageId,
       url_overrides: urlOverrides,
-    });
+    } });
   }
 
   /** `POST /api/v1/attome-dashboard/widget/validate-config` — the sanctioned
@@ -477,9 +477,9 @@ export class DashboardService {
    * structurally invalid config — `valid: false` plus `errors` is the normal
    * response shape; only auth/transport failures throw. */
   validateWidgetConfig(config: unknown, widgetType?: string): Observable<ValidateConfigResponse> {
-    return this.api.post<ValidateConfigResponse>(
+    return this.sdk.post<ValidateConfigResponse>(
       '/api/v1/attome-dashboard/widget/validate-config',
-      widgetType ? { config, widget_type: widgetType } : { config },
+      { body: widgetType ? { config, widget_type: widgetType } : { config } },
     );
   }
 }
