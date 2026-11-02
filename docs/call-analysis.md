@@ -106,10 +106,12 @@ are confirmed only by managers, and no staff sentiment is ever scored.
 
 ## Agent tools
 
-Three read-only tools, each needing the call analysis module's read privilege: `callintel.search_calls`
-(calls by tracker, finding kind or text), `callintel.deal_highlights` (a deal's call moments, each with a
-link to its second in the call) and `callintel.coaching_brief` (a person's recent calls, for themselves or
-a manager above them; anyone else gets not found).
+Three read-only tools, all as the caller (`call_analysis.read`, and read access to each call):
+`callintel.search_calls` (`tracker`, optional `from` and `to`: the calls that hit a tracker, with their
+moments), `callintel.deal_highlights` (`opportunity_id`: a deal's calls and their findings, each linked to
+its second in the call) and `callintel.coaching_brief` (`user_id`, optional `from` and `to`: one person's
+calls with talk patterns and scorecard answers, for that person or a manager above them; anyone else gets
+not found).
 
 ## Open points
 
