@@ -1,0 +1,122 @@
+<div class="page-header">
+  <div>
+    <h2>{{ 'environments.title' | translate }}</h2>
+    <p class="subtitle">{{ 'environments.subtitle' | translate }}</p>
+  </div>
+</div>
+
+<div class="env-tabs" role="tablist">
+  <button type="button" role="tab" [attr.aria-selected]="tab() === 'history'" (click)="show('history')" data-testid="tab-history">
+    {{ 'environments.history' | translate }}
+  </button>
+  <button type="button" role="tab" [attr.aria-selected]="tab() === 'waiting'" (click)="show('waiting')" data-testid="tab-waiting">
+    {{ 'environments.waiting' | translate }}
+  </button>
+  <button type="button" role="tab" [attr.aria-selected]="tab() === 'compare'" (click)="show('compare')" data-testid="tab-compare">
+    {{ 'environments.compare' | translate }}
+  </button>
+</div>
+
+@if (error(); as message) {
+  <p class="error-msg" role="alert">{{ message }}</p>
+}
+
+@if (tab() === 'compare') {
+  <p class="env-muted">{{ 'environments.compareHint' | translate }}</p>
+  <label class="env-upload">
+    <i class="las la-upload" aria-hidden="true"></i> {{ 'environments.chooseFiles' | translate }}
+    <input type="file" accept=".json,application/json" multiple (change)="compare($event)" data-testid="files" />
+  </label>
+  @if (planning()) {
+    <p class="env-muted">{{ 'environments.planning' | translate }}</p>
+  }
+  @if (plan(); as p) {
+    <p class="env-summary" data-testid="plan-summary">
+      @if (p.applicable) {
+        {{ 'environments.applicable' | translate }}
+      } @else {
+        {{ 'environments.blocked' | translate }}
+      }
+      {{ 'environments.counts' | translate: {
+        create: counts()['create'] ?? 0, update: counts()['update'] ?? 0,
+        retire: counts()['retire'] ?? 0, noop: counts()['noop'] ?? 0
+      } }}
+    </p>
+    <table class="env-table">
+      <caption class="env-visually-hidden">{{ 'environments.compare' | translate }}</caption>
+      <thead>
+        <tr>
+          <th scope="col">{{ 'environments.changeset' | translate }}</th>
+          <th scope="col">{{ 'environments.layer' | translate }}</th>
+          <th scope="col">{{ 'environments.status' | translate }}</th>
+          <th scope="col">{{ 'environments.operations' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (cs of p.changesets; track cs.changeset_id) {
+          <tr [class.env-blocked]="cs.blocked.length > 0">
+            <td>{{ cs.ref }}</td>
+            <td>{{ cs.layer }} · {{ cs.scope }}</td>
+            <td>
+              {{ cs.status }}
+              @for (b of cs.blocked; track b) {
+                <span class="env-badge">{{ b }}</span>
+              }
+            </td>
+            <td>
+              <ul class="env-ops">
+                @for (phase of cs.phases; track phase.phase) {
+                  @for (op of phase.operations; track op.seq) {
+                    @if (op.action !== 'noop') {
+                      <li [class.env-risky]="op.risky">{{ op.action }} · {{ op.op }}@if (op.reason) { — {{ op.reason }}}</li>
+                    }
+                  }
+                }
+              </ul>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+} @else if (loading()) {
+  <p class="env-muted">{{ 'environments.loading' | translate }}</p>
+} @else if (rows().length === 0) {
+  <p class="env-muted" data-testid="empty">
+    {{ (tab() === 'waiting' ? 'environments.noneWaiting' : 'environments.none') | translate }}
+  </p>
+} @else {
+  <table class="env-table">
+    <caption class="env-visually-hidden">{{ 'environments.history' | translate }}</caption>
+    <thead>
+      <tr>
+        <th scope="col">{{ 'environments.changeset' | translate }}</th>
+        <th scope="col">{{ 'environments.layer' | translate }}</th>
+        <th scope="col">{{ 'environments.status' | translate }}</th>
+        <th scope="col">{{ 'environments.source' | translate }}</th>
+        <th scope="col">{{ 'environments.when' | translate }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (r of rows(); track r.id) {
+        <tr data-testid="ledger-row">
+          <td>{{ r.ref }} <span class="env-muted">#{{ r.seq }} · {{ r.phase }}</span></td>
+          <td>{{ r.layer }} · {{ r.scope }}</td>
+          <td>
+            {{ r.status }}
+            @if (r.error_message) {
+              <span class="env-error">{{ r.error_message }}</span>
+            }
+          </td>
+          <td>{{ r.source }}</td>
+          <td>{{ (r.finished_at ?? r.created_at) | localDate: dateFmt }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+  <div class="env-pager">
+    <button type="button" class="btn-text" (click)="previous()" [disabled]="page() <= 1">{{ 'environments.previous' | translate }}</button>
+    <span>{{ 'environments.page' | translate: { page: page(), pages: pages() } }}</span>
+    <button type="button" class="btn-text" (click)="next()" [disabled]="page() >= pages()">{{ 'environments.next' | translate }}</button>
+  </div>
+}

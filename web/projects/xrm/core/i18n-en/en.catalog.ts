@@ -4356,6 +4356,20 @@ export const xrmEn = {
   },
   // Solution 7 Phase 2 (design §10) — the release report pages
   // (`@attome/xrm/core/admin/release-reports`).
+  // A22-T5 — the environments page (`@attome/xrm/core/admin/environments`).
+  environments: {
+    title: 'Environments',
+    subtitle: 'What was promoted into this deployment, what waits for a second administrator, and what a set of changesets would change here. Promote with attome promote.',
+    history: 'History', waiting: 'Waiting for approval', compare: 'Compare',
+    changeset: 'Changeset', layer: 'Layer', status: 'Status', source: 'Source', when: 'When',
+    operations: 'What changes',
+    loading: 'Loading…', none: 'Nothing has been applied here yet.', noneWaiting: 'Nothing waits for approval.',
+    compareHint: 'Choose the changeset files of the configuration you mean to promote. They are planned against this deployment and nothing is applied.',
+    chooseFiles: 'Choose changeset files', planning: 'Planning…', notJson: 'A chosen file is not JSON.',
+    applicable: 'Everything can be applied.', blocked: 'Something is blocked.',
+    counts: '{create} to create, {update} to change, {retire} to retire, {noop} unchanged.',
+    previous: 'Previous', next: 'Next', page: 'Page {page} of {pages}',
+  },
   // Y8-T12 — published metadata versions and rollback.
   metadataVersions: {
     title: 'Metadata versions',

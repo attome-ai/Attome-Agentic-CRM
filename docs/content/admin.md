@@ -73,6 +73,9 @@ every key.
   which on production waits for a second administrator. `--at <time>` holds the apply until then.
   `--only <entity,...>` promotes those entities with their fields, the entities their lookups need,
   and their queries, views and relationships, and leaves everything else on the target alone.
+  On the target, **Admin → Environments** (`/xrm/admin/environments`) shows what was promoted in (the
+  changeset ledger), what waits for the second administrator, and, from changeset files you choose, what
+  they would create, change, retire or be blocked by there, without applying anything.
 - **Applying an upgrade**: from the installed binary, `attome upgrade apply --manifest <file>
   --new-binary <path> --restart <command> --ready-url <url> --base-url <url> --admin-key-file
   <path> --no-role-key-file <path> --yes`. The restart command receives the binary to start in

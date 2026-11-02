@@ -314,6 +314,13 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/metadata-versions').then(m => m.MetadataVersionsComponent),
           },
           {
+            // A22-T5 — promotion history, approvals waiting, and a plan of
+            // uploaded changesets against this deployment.
+            path: 'environments',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/environments').then(m => m.EnvironmentsComponent),
+          },
+          {
             // S10-T1 — API usage per key and route, and per-key quotas.
             path: 'api-usage',
             canActivate: [authGuard],

@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Environments page (A22-T5, V2-D1595): `/xrm/admin/environments` shows the changeset ledger, the applies
+  waiting for approval, and a plan of uploaded changeset files against this deployment; promotion stays in
+  `attome promote`.
 - Commerce agent actions (F8-T11, V2-D1595): `commerce.product_answer`, `commerce.order_track`
   (shopper-verified by phone or email) and `commerce.draft_product_description` (Arabic and English, nothing
   saved), all read-only, on the default agent.
