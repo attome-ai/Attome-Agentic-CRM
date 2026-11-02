@@ -125,6 +125,12 @@ Ownership applies to an entity with its own access, not one controlled by its pa
 effect when the metadata version is published; a person's access resolved before an entity became
 `unit` reaches none of its records at User/Team level until it is resolved again.
 
+Before switching an entity, `GET /api/v1/admin/security/ownership/{entity}/preview?target=unit` (or
+`organisation`) counts its records and owners and, for `unit`, the records with no unit, how many their
+owner's home unit can fill and the records whose unit is not their owner's. `POST
+.../ownership/{entity}/prepare` fills those units in the background, 1,000 records at a time. The model
+itself changes when the entity settings are published, all at once; until then the old one applies.
+
 ## When someone leaves
 
 An entity's settings can name where a disabled person's records go:

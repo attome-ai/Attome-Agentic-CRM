@@ -3874,6 +3874,10 @@ pub const SERVICE_QUALITY_SAMPLE: attome_jobs::JobType =
 pub const CALLINTEL_COMPETITORS: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_callintel::analysis::signals::JOB, 1);
 
+/// A31-T3: record units filled before an entity switches to unit ownership.
+pub const OWNERSHIP_PREPARE: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_api::ownership_change::PREPARE_JOB, 3);
+
 /// A31-T4: a disabled person's records moved per entity rule.
 pub const LEAVER_REASSIGN: attome_jobs::JobType =
     attome_jobs::JobType::new(attome_security::ownership::LEAVER_JOB, 3);
@@ -5379,6 +5383,18 @@ pub fn register_job_types() {
                 if opened > 0 {
                     tracing::info!(opened, "quality reviews opened");
                 }
+                Ok::<(), attome_jobs::registry::BoxError>(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            OWNERSHIP_PREPARE,
+            |state: EngineState, job: attome_jobs::RegisteredJob| async move {
+                let payload: attome_api::ownership_change::PreparePayload = job.payload()?;
+                attome_api::ownership_change::run_prepare(&state, &payload.entity)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },
         ) {

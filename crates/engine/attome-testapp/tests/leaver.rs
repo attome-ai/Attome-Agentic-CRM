@@ -113,3 +113,85 @@ fn leaver_records_move_to_their_manager() {
         );
     });
 }
+
+// feature: A31
+#[test]
+fn unit_switch_preview_and_backfill() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let dir =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../packs/crm/changesets");
+        let mut files: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .map(|e| e.path())
+            .collect();
+        files.sort();
+        for file in &files {
+            let value: Value =
+                serde_json::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
+            attome_api::changeset::boot::apply_pack_document(&app.state, &value)
+                .await
+                .unwrap_or_else(|e| panic!("{}: {e}", file.display()));
+        }
+        let unit: Uuid =
+            sqlx::query_scalar("INSERT INTO organization (id, name) VALUES ($1, $2) RETURNING id")
+                .bind(Uuid::now_v7())
+                .bind(format!("Unit {}", Uuid::now_v7().simple()))
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        let owner = seed_user(app.db(), "unit-owner").await.id;
+        sqlx::query("UPDATE user_account SET organization_ref = $2 WHERE id = $1")
+            .bind(owner)
+            .bind(unit)
+            .execute(app.db())
+            .await
+            .unwrap();
+        let mut accounts = Vec::new();
+        for _ in 0..3 {
+            let id: Uuid = sqlx::query_scalar(
+                "INSERT INTO account (name, owner_ref, owner_type, organization_ref)                  VALUES ($1, $2, 0, NULL) RETURNING id",
+            )
+            .bind(format!("Unitless {}", Uuid::now_v7().simple()))
+            .bind(owner)
+            .fetch_one(app.db())
+            .await
+            .unwrap();
+            accounts.push(id);
+        }
+
+        let (status, preview) = app
+            .request(
+                axum::http::Method::GET,
+                "/api/v1/admin/security/ownership/account/preview?target=unit",
+                None,
+            )
+            .await;
+        assert_eq!(status, axum::http::StatusCode::OK, "{preview}");
+        assert!(preview["fillable"].as_i64().unwrap() >= 3, "{preview}");
+
+        let filled = attome_api::ownership_change::run_prepare(&app.state, "account")
+            .await
+            .unwrap();
+        assert!(filled >= 3);
+        for id in accounts {
+            let got: Option<Uuid> =
+                sqlx::query_scalar("SELECT organization_ref FROM account WHERE id = $1")
+                    .bind(id)
+                    .fetch_one(app.db())
+                    .await
+                    .unwrap();
+            assert_eq!(got, Some(unit), "the owner's home unit");
+        }
+        assert_eq!(
+            attome_api::ownership_change::run_prepare(&app.state, "account")
+                .await
+                .unwrap(),
+            0,
+            "nothing left to fill"
+        );
+    });
+}

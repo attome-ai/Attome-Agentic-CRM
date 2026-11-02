@@ -220,6 +220,8 @@ pub mod my_work_workflow;
 /// reasoning this route does not share.
 pub mod omnichannel_metrics;
 mod openapi;
+/// A31-T3: previewing and preparing an ownership model change.
+pub mod ownership_change;
 mod profiler_admin;
 /// L2-T2: the data-quality dimensions.
 pub mod quality;

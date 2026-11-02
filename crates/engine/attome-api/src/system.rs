@@ -252,6 +252,13 @@ impl EngineSystem {
                 )),
             )
             .merge(
+                // A31-T3: ownership model previews and the unit backfill.
+                crate::ownership_change::routes().layer(middleware::from_fn_with_state(
+                    self.state.clone(),
+                    attome_security::strict_authz::strict_authz,
+                )),
+            )
+            .merge(
                 // M02/D-412 — `/api/v1/admin/settings` (Admin) +
                 // `/api/v1/settings/me` (SelfService) share one bundle/layer,
                 // same shape `crate::sidebar::routes()` uses for its mix of
