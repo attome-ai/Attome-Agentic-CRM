@@ -112,6 +112,19 @@ pub struct ModelDef {
     /// else every row.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub score: Vec<String>,
+    /// O2-T1: the rows whose outcome is known: `attribute` is one of
+    /// `values` (a ticket that is resolved or closed). Only they are trained
+    /// on, and only the others are scored, for a target that is set before
+    /// it is final (a yes/no that starts as no).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub closed_when: Option<ClosedWhen>,
+}
+
+/// O2-T1: which rows have a known outcome.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ClosedWhen {
+    pub attribute: String,
+    pub values: Vec<String>,
 }
 
 impl ModelDef {
@@ -170,6 +183,14 @@ pub fn validate(
     }
     if def.positive.iter().any(|p| def.negative.contains(p)) {
         problems.push("a value cannot be both positive and negative".to_owned());
+    }
+    if let Some(closed) = &def.closed_when
+        && (attr_type(&def.entity, &closed.attribute).is_none() || closed.values.is_empty())
+    {
+        problems.push(format!(
+            "closed_when names {}.{}, which must exist, and at least one value",
+            def.entity, closed.attribute
+        ));
     }
     if let Some(attribute) = &def.score_attribute
         && !matches!(
@@ -264,11 +285,46 @@ fn time_part_name(part: TimePart) -> &'static str {
     }
 }
 
+/// The rows a model trains on: the target is set and, with
+/// [`ModelDef::closed_when`], the outcome is known. Pure.
+pub fn training_condition(def: &ModelDef) -> attome_records::query_spec::Condition {
+    use attome_records::query_spec::Condition;
+    let set = Condition::Compare {
+        field: def.target.clone(),
+        op: "is_not_null".into(),
+        value: None,
+    };
+    match &def.closed_when {
+        Some(closed) => Condition::And {
+            all: vec![
+                set,
+                Condition::Compare {
+                    field: closed.attribute.clone(),
+                    op: "in".into(),
+                    value: Some(serde_json::Value::Array(
+                        closed
+                            .values
+                            .iter()
+                            .map(|v| serde_json::Value::String(v.clone()))
+                            .collect(),
+                    )),
+                },
+            ],
+        },
+        None => set,
+    }
+}
+
 /// The QuerySpec of a model's rows: the id, the target and every
 /// attribute, path and time-feature source, for rows whose target is set.
 /// Paging (`cursor`, `page_size`) is the caller's.
 pub fn training_spec(def: &ModelDef) -> attome_records::query_spec::QuerySpec {
     let mut select: Vec<String> = vec!["id".to_owned(), def.target.clone()];
+    if let Some(closed) = &def.closed_when
+        && !select.contains(&closed.attribute)
+    {
+        select.push(closed.attribute.clone());
+    }
     for feature in &def.features {
         let column = match feature {
             Feature::Attribute { attribute } => Some(attribute.clone()),
@@ -285,11 +341,7 @@ pub fn training_spec(def: &ModelDef) -> attome_records::query_spec::QuerySpec {
     attome_records::query_spec::QuerySpec {
         entity: def.entity.clone(),
         select,
-        r#where: Some(attome_records::query_spec::Condition::Compare {
-            field: def.target.clone(),
-            op: "is_not_null".into(),
-            value: None,
-        }),
+        r#where: Some(training_condition(def)),
         sort: vec![attome_records::query_spec::SortKey {
             field: "id".into(),
             desc: false,

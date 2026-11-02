@@ -32,6 +32,7 @@ target reads `def:<target>`.
 |---|---|
 | `target` | A yes/no attribute, or a choice with `positive` and `negative` values. With values, a row with any other value is open: it is not trained on and it is the row that is scored. |
 | `features` | `{ "attribute" }`, `{ "path": "account.industry" }`, `{ "time", "part" }` (`day_of_week`, `month`, `hour`, `age_days`) or `{ "rollup": "<child entity>", "via": "<its lookup>", "func": "count|sum|avg|min|max", "field", "alias" }` (the children of each row, counted or summed, read as the model's creator). |
+| `closed_when` | Optional `{ "attribute", "values" }`: the rows whose outcome is known (a ticket that is resolved or closed). Only they are trained on and only the others are scored, for a yes/no target that starts as no. |
 | `score` | Optional: the target values whose rows are scored. Without it, the open rows (neither positive nor negative) are scored when there are yes and no values, else every row. |
 | `min_rows` | Labelled rows needed before a model trains (default 200, never below 50). |
 | `score_attribute` | Optional number attribute of the entity that receives the score from 0 to 100. |
@@ -70,4 +71,9 @@ has passed.
   **Renewal risk** view lists the scored subscriptions, highest risk first. Case volume, satisfaction,
   usage and engagement join as features once those records link to the subscription or the account
   through a lookup a rollup can follow.
+- **SLA breach** (`attome_predict::generic::sla_breach`, O2-T1): on `service_ticket`, trained on resolved
+  and closed tickets (`sla_breached` is final then) and scored on open ones, from priority, severity,
+  urgency, impact, type, category, channel, escalation level and whether it is a major incident. Its
+  metrics carry the fixed-feature ticket model's as `metrics.baseline`, to compare. A ticket scored at 0.7
+  or above has its waiting queue items moved up one priority, so the router offers it sooner.
 

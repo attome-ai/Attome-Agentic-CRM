@@ -84,10 +84,16 @@ pub fn label(def: &ModelDef, value: &Value) -> Option<i32> {
     }
 }
 
-/// Whether a row whose target is `value` is scored: one of `def.score`
-/// when it names values; else, with yes and no values, an open row (a
-/// closed one is history, not a row to predict); else every row. Pure.
-pub fn scored_row(def: &ModelDef, value: &Value) -> bool {
+/// Whether `row` is scored: with `closed_when`, a row whose outcome is not
+/// known yet; else one whose target is one of `def.score` when it names
+/// values; else, with yes and no values, an open row (a closed one is
+/// history, not a row to predict); else every row. Pure.
+pub fn scored_row(def: &ModelDef, row: &Map<String, Value>) -> bool {
+    if let Some(closed) = &def.closed_when {
+        let value = row.get(&closed.attribute).and_then(Value::as_str);
+        return !value.is_some_and(|v| closed.values.iter().any(|c| c == v));
+    }
+    let value = row.get(&def.target).unwrap_or(&Value::Null);
     if !def.score.is_empty() {
         return value
             .as_str()
@@ -144,6 +150,7 @@ pub fn subscription_churn() -> ModelDef {
         positive: vec!["cancelled".to_owned()],
         negative: vec!["active".to_owned(), "paused".to_owned()],
         score: vec!["active".to_owned(), "trial".to_owned(), "paused".to_owned()],
+        closed_when: None,
     }
 }
 
@@ -174,7 +181,96 @@ pub fn lead_conversion() -> ModelDef {
         positive: vec!["converted".to_owned()],
         negative: vec!["disqualified".to_owned()],
         score: Vec::new(),
+        closed_when: None,
     }
+}
+
+/// O2-T1: SLA breach as a definition model, beside the fixed-feature ticket
+/// model (the baseline, `crate::train`). Trained on resolved and closed
+/// tickets, whose `sla_breached` is final; scored on the open ones. Beyond
+/// the baseline's priority, severity and type it reads urgency, impact,
+/// category, channel, escalation level and whether it is a major incident.
+/// Its metrics carry the baseline's (`metrics.baseline`), and a waiting
+/// queue item of a ticket it scores at [`BREACH_PRIORITY_AT`] or above moves
+/// up one priority, so the router (J10) offers it sooner.
+pub fn sla_breach() -> ModelDef {
+    let attribute = |a: &str| Feature::Attribute {
+        attribute: a.to_owned(),
+    };
+    ModelDef {
+        entity: crate::ENTITY_TICKET.to_owned(),
+        target: SLA_TARGET.to_owned(),
+        features: [
+            "priority",
+            "severity",
+            "urgency",
+            "impact",
+            "ticket_type",
+            "category",
+            "channel",
+            "escalation_level",
+            "major",
+        ]
+        .into_iter()
+        .map(attribute)
+        .collect(),
+        algorithm: crate::model_def::Algorithm::LogisticRegression,
+        min_rows: Some(200),
+        score_attribute: None,
+        positive: Vec::new(),
+        negative: Vec::new(),
+        score: Vec::new(),
+        closed_when: Some(crate::model_def::ClosedWhen {
+            attribute: "status".to_owned(),
+            values: vec!["resolved".to_owned(), "closed".to_owned()],
+        }),
+    }
+}
+
+/// The ticket attribute the SLA template predicts.
+pub const SLA_TARGET: &str = "sla_breached";
+/// The score at which a ticket's waiting queue item moves up a priority.
+pub const BREACH_PRIORITY_AT: f64 = 0.7;
+
+/// The priority one step up; `critical` stays. Pure.
+pub fn raised_priority(priority: &str) -> &'static str {
+    match priority {
+        "low" => "medium",
+        "medium" => "high",
+        _ => "critical",
+    }
+}
+
+/// Moves the waiting queue items of `ticket` up one priority (O2-T1, J10).
+async fn raise_queue_priority(state: &EngineState, ticket: Uuid) -> Result<(), AppError> {
+    let items: Vec<(Uuid, Option<String>)> = sqlx::query_as(
+        "SELECT id, priority::text FROM queue_item \
+          WHERE record_entity = $1 AND record_id = $2 AND status::text = 'waiting' \
+            AND (is_active IS NULL OR is_active = true)",
+    )
+    .bind(crate::ENTITY_TICKET)
+    .bind(ticket.to_string())
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    for (item, priority) in items {
+        let current = priority.unwrap_or_else(|| "medium".to_owned());
+        let raised = raised_priority(&current);
+        if raised == current {
+            continue;
+        }
+        sqlx::query(
+            "UPDATE queue_item SET priority = $2, row_version = row_version + 1 \
+              WHERE id = $1 AND priority::text = $3",
+        )
+        .bind(item)
+        .bind(raised)
+        .bind(&current)
+        .execute(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+    }
+    Ok(())
 }
 
 /// The column a feature reads (`None` for a rollup). Pure.
@@ -586,11 +682,25 @@ pub async fn train(state: &EngineState, model: Uuid) -> Result<(), AppError> {
         / scored.len().max(1) as f64;
     let baseline =
         hold.iter().filter(|(_, l)| *l == majority).count() as f64 / hold.len().max(1) as f64;
-    let metrics = json!({
+    let mut metrics = json!({
         "rows": labelled.len(), "holdout": hold.len(), "accuracy": accuracy,
         "baseline_accuracy": baseline, "auc": crate::train::auc(&scored),
         "features": encoder.names.len(),
     });
+    if def.entity == crate::ENTITY_TICKET && def.target == SLA_TARGET {
+        let ticket_model: Option<Value> = sqlx::query_scalar(
+            "SELECT metrics FROM prediction_model WHERE target = $1 AND entity = $2 \
+                AND status = 'active' AND definition IS NULL AND is_deleted = false \
+              ORDER BY updated_at DESC LIMIT 1",
+        )
+        .bind(crate::TARGET_SLA_BREACH)
+        .bind(crate::ENTITY_TICKET)
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(AppError::internal)?
+        .flatten();
+        metrics["baseline"] = ticket_model.unwrap_or(Value::Null);
+    }
     if accuracy <= baseline {
         return finish(state, model, "failed_holdout", metrics, None).await;
     }
@@ -661,7 +771,7 @@ async fn score_rows(
         else {
             continue;
         };
-        if !scored_row(&def, row.get(&def.target).unwrap_or(&Value::Null)) {
+        if !scored_row(&def, row) {
             continue;
         }
         let inputs = standardize(
@@ -700,6 +810,10 @@ async fn score_rows(
             continue;
         }
         scored += 1;
+        if def.entity == crate::ENTITY_TICKET && def.target == SLA_TARGET && p >= BREACH_PRIORITY_AT
+        {
+            raise_queue_priority(state, id).await?;
+        }
         // The attribute was checked to be a number of this entity when the
         // model was created; both names are quoted identifiers.
         if let Some(attribute) = &def.score_attribute {
@@ -913,16 +1027,48 @@ mod tests {
         assert_eq!(label(&leads, &json!("converted")), Some(1));
         assert_eq!(label(&leads, &json!("disqualified")), Some(0));
         assert_eq!(label(&leads, &json!("qualified")), None, "still open");
-        assert!(scored_row(&leads, &json!("qualified")));
-        assert!(!scored_row(&leads, &json!("converted")));
+        let lead = |status: &str| {
+            json!({ "lead_status": status })
+                .as_object()
+                .unwrap()
+                .clone()
+        };
+        assert!(scored_row(&leads, &lead("qualified")));
+        assert!(!scored_row(&leads, &lead("converted")));
         let churn = subscription_churn();
         assert_eq!(
             label(&churn, &json!("active")),
             Some(0),
             "trained as not churned"
         );
-        assert!(scored_row(&churn, &json!("active")), "and scored");
-        assert!(!scored_row(&churn, &json!("cancelled")));
+        let sub = |status: &str| json!({ "status": status }).as_object().unwrap().clone();
+        assert!(scored_row(&churn, &sub("active")), "and scored");
+        assert!(!scored_row(&churn, &sub("cancelled")));
+        let sla = sla_breach();
+        let ticket = |status: &str| {
+            json!({ "status": status, "sla_breached": false })
+                .as_object()
+                .unwrap()
+                .clone()
+        };
+        assert!(
+            scored_row(&sla, &ticket("open")),
+            "an open ticket is scored"
+        );
+        assert!(
+            !scored_row(&sla, &ticket("closed")),
+            "a closed one is history"
+        );
+        assert_eq!(raised_priority("medium"), "high");
+        assert_eq!(raised_priority("critical"), "critical");
+        let spec = crate::model_def::training_spec(&sla);
+        assert!(spec.select.iter().any(|c| c == "status"));
+        assert!(
+            serde_json::to_string(&spec.r#where)
+                .unwrap()
+                .contains("resolved"),
+            "trained on known outcomes only"
+        );
     }
 
     #[test]
