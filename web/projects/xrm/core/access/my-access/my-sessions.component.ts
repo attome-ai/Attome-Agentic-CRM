@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { ApiError, ApiService, LocalDatePipe, SdkService, TranslatePipe } from '@attome/base';
+import { ApiError, LocalDatePipe, SdkService, TranslatePipe } from '@attome/base';
+import type { Observable } from 'rxjs';
 
 /** One of the caller's own sessions (`GET /api/v1/auth/sessions`, Q8-T4). */
 export interface MySession {
@@ -72,7 +73,7 @@ export class MySessionsComponent implements OnInit {
     this.run(this.sdk.post<void>('/api/v1/auth/sessions/end-others', { body: {} }));
   }
 
-  private run(call: ReturnType<ApiService['delete']>): void {
+  private run(call: Observable<void>): void {
     this.busy.set(true);
     call.subscribe({
       next: () => {
