@@ -608,8 +608,8 @@ fn open_sequence_pauses_sends() {
         let _serial = SERIAL.lock().await;
         install(&app).await;
         let first = design(&app, "First").await;
-        let definition = definition(&app).await;
-        let (program, _) = programme(&app, definition, &[first]).await;
+        let journey = definition(&app).await;
+        let (program, _) = programme(&app, journey, &[first]).await;
         sqlx::query("UPDATE marketing_nurture_program SET pause_enabled = true WHERE id = $1")
             .bind(program)
             .execute(app.db())

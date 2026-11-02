@@ -91,10 +91,10 @@ fn kpis_under_300ms_at_100k() {
                  playbook_deviations, is_active, row_version, created_at) \
              SELECT uuidv7(), 'Contract ' || g, 'Counterparty ' || (g % 500), \
                     (ARRAY['draft', 'review', 'approved', 'active', 'terminated'])[1 + g % 5], \
-                    (g % 1000) * 100, now()::date + (g % 720 - 120), \
+                    (g % 1000) * 100, now()::date + (g % 720 - 120)::int, \
                     CASE WHEN g % 7 = 0 THEN '[{\"severity\":\"needs_legal\"}]' \
                          WHEN g % 11 = 0 THEN '[]' END, \
-                    true, 0, now() - make_interval(days => g % 400) \
+                    true, 0, now() - make_interval(days => (g % 400)::int) \
                FROM generate_series(1, $1) AS g",
         )
         .bind(CONTRACTS)
