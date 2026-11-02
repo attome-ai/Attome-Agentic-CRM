@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import { Observable } from 'rxjs';
 
 import type { ActionOutcome } from '../services/ai-actions.service';
@@ -116,28 +116,31 @@ export function checkedIndexes(checks: readonly boolean[]): number[] {
  */
 @Injectable({ providedIn: 'root' })
 export class AiMeetingService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   private base(meetingId: string): string {
     return `/api/v1/ai/meetings/${encodeURIComponent(meetingId)}`;
   }
 
   brief(meetingId: string): Observable<MeetingBrief> {
-    return this.api.get<MeetingBrief>(`${this.base(meetingId)}/brief`);
+    return this.sdk.get<MeetingBrief>(`${this.base(meetingId)}/brief`);
   }
 
   regenerateBrief(meetingId: string): Observable<ActionOutcome> {
-    return this.api.post<ActionOutcome>(`${this.base(meetingId)}/brief/regenerate`, {});
+    return this.sdk.post<ActionOutcome>(`${this.base(meetingId)}/brief/regenerate`, { body: {} });
   }
 
   requestNotes(meetingId: string, transcriptRef: string): Observable<MeetingNotesQueued> {
-    return this.api.post<MeetingNotesQueued>(`${this.base(meetingId)}/notes`, {
+    return this.sdk.post<MeetingNotesQueued>(
+      `${this.base(meetingId)}/notes`,
+      { body: {
       transcript_ref: transcriptRef,
-    });
+    } },
+    );
   }
 
   notes(notesId: string): Observable<NotesRecord> {
-    return this.api.get<NotesRecord>(`/api/v1/ai_meeting_notes/${encodeURIComponent(notesId)}`);
+    return this.sdk.get<NotesRecord>(`/api/v1/ai_meeting_notes/${encodeURIComponent(notesId)}`);
   }
 
   confirmNotes(
@@ -146,13 +149,13 @@ export class AiMeetingService {
     actionItemIndexes: number[],
     recordUpdateIndexes: number[],
   ): Observable<ActionOutcome> {
-    return this.api.post<ActionOutcome>(
+    return this.sdk.post<ActionOutcome>(
       `${this.base(meetingId)}/notes/confirm`,
-      {
+      { body: {
         notes_id: notes.id,
         action_item_indexes: actionItemIndexes,
         record_update_indexes: recordUpdateIndexes,
-      },
+      } },
       { ifMatch: notes.row_version },
     );
   }

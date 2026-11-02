@@ -1,5 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { ApiService, Page } from '@attome/base';
+import { SdkService, Page } from '@attome/base';
 import type { PageBinding, PageDoc, PageRows } from '@attome/xrm/core/page-runtime';
 import { Observable, map, of, throwError } from 'rxjs';
 
@@ -73,7 +73,7 @@ export function portalFilters(binding: PageBinding, recordId: string | null): Re
  */
 @Injectable({ providedIn: 'root' })
 export class PortalSiteService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** The portal the app shows, set by the shell from the route. */
   readonly keyword = signal<string | null>(null);
@@ -85,38 +85,41 @@ export class PortalSiteService {
   }
 
   login(keyword: string, login: string, password: string, code?: string): Observable<unknown> {
-    return this.api.post(`${this.base(keyword)}/auth/login`, { login, password, code: code || undefined });
+    return this.sdk.post(`${this.base(keyword)}/auth/login`, { body: { login, password, code: code || undefined } });
   }
 
   logout(keyword: string): Observable<unknown> {
-    return this.api.post(`${this.base(keyword)}/auth/logout`, {});
+    return this.sdk.post(`${this.base(keyword)}/auth/logout`, { body: {} });
   }
 
   me(keyword: string): Observable<PortalMe> {
-    return this.api.get<PortalMe>(`${this.base(keyword)}/me`);
+    return this.sdk.get<PortalMe>(`${this.base(keyword)}/me`);
   }
 
   updateProfile(keyword: string, changes: Record<string, unknown>, rowVersion: number): Observable<PortalMe> {
-    return this.api.patch<PortalMe>(`${this.base(keyword)}/me`, changes, rowVersion);
+    return this.sdk.patch<PortalMe>(`${this.base(keyword)}/me`, { body: changes, ifMatch: rowVersion });
   }
 
   consent(keyword: string): Observable<PortalConsent> {
-    return this.api.get<PortalConsent>(`${this.base(keyword)}/me/consent`);
+    return this.sdk.get<PortalConsent>(`${this.base(keyword)}/me/consent`);
   }
 
   acceptConsent(keyword: string, consent: PortalConsent): Observable<unknown> {
-    return this.api.post(`${this.base(keyword)}/me/consent`, {
+    return this.sdk.post(
+      `${this.base(keyword)}/me/consent`,
+      { body: {
       terms_version: consent.terms_version,
       privacy_version: consent.privacy_version,
-    });
+    } },
+    );
   }
 
   pages(keyword: string): Observable<PortalPageSummary[]> {
-    return this.api.get<Page<PortalPageSummary>>(`${this.base(keyword)}/pages`).pipe(map(p => p.items));
+    return this.sdk.get<Page<PortalPageSummary>>(`${this.base(keyword)}/pages`).pipe(map(p => p.items));
   }
 
   page(keyword: string, name: string): Observable<PortalPage> {
-    return this.api.get<PortalPage>(`${this.base(keyword)}/pages/${encodeURIComponent(name)}`);
+    return this.sdk.get<PortalPage>(`${this.base(keyword)}/pages/${encodeURIComponent(name)}`);
   }
 
   /** A page component's rows: an entity binding through the portal's record API. */
@@ -124,23 +127,24 @@ export class PortalSiteService {
     if (!binding.entity) return of({ records: [], total: 0 });
     const filters = portalFilters(binding, recordId);
     if (!filters) return of({ records: [], total: 0 });
-    return this.api
-      .get<Page<PortalRecord>>(`${this.base(keyword)}/records/${encodeURIComponent(binding.entity)}`, {
+    return this.sdk.get<Page<PortalRecord>>(
+      `${this.base(keyword)}/records/${encodeURIComponent(binding.entity)}`,
+      { query: {
         page: '1',
         page_size: String(PORTAL_ROWS),
         ...filters,
-      })
+      } },
+    )
       .pipe(map(page => ({ records: page.items.map(r => ({ id: r.id, ...r.data })), total: page.total })));
   }
 
   record(keyword: string, entity: string, id: string): Observable<Record<string, unknown>> {
-    return this.api
-      .get<PortalRecord>(`${this.base(keyword)}/records/${encodeURIComponent(entity)}/${encodeURIComponent(id)}`)
+    return this.sdk.get<PortalRecord>(`${this.base(keyword)}/records/${encodeURIComponent(entity)}/${encodeURIComponent(id)}`)
       .pipe(map(r => r.data));
   }
 
   create(keyword: string, entity: string, data: Record<string, unknown>): Observable<unknown> {
-    return this.api.post(`${this.base(keyword)}/records/${encodeURIComponent(entity)}`, data);
+    return this.sdk.post(`${this.base(keyword)}/records/${encodeURIComponent(entity)}`, { body: data });
   }
 }
 

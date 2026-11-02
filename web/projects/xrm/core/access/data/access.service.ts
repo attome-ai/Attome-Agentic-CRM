@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { ApiService, AuthService } from '@attome/base';
+import { SdkService, AuthService } from '@attome/base';
 import { Observable, catchError, map, of, shareReplay } from 'rxjs';
 
 /**
@@ -29,7 +29,7 @@ interface AccessState {
  */
 @Injectable({ providedIn: 'root' })
 export class AccessService {
-  private readonly api  = inject(ApiService);
+  private readonly sdk  = inject(SdkService);
   private readonly auth = inject(AuthService);
 
   private readonly state = signal<AccessState | null>(null);
@@ -46,7 +46,7 @@ export class AccessService {
     if (this.inFlight?.userId !== userId) {
       this.inFlight = {
         userId,
-        request: this.api.get<WhoAmI>('/api/v1/admin/security/whoami').pipe(
+        request: this.sdk.get<WhoAmI>('/api/v1/admin/security/whoami').pipe(
           map((res): AccessState => ({
             userId,
             isAdmin: res.is_admin === true,

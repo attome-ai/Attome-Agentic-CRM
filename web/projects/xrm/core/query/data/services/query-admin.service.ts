@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiComponents, ApiService } from '@attome/base';
+import { ApiComponents, SdkService } from '@attome/base';
 
 export interface QueryMeta {
   id:                  string;
@@ -52,31 +52,34 @@ export interface DescribedQueryColumn {
 
 @Injectable({ providedIn: 'root' })
 export class QueryAdminService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   listQueries(): Observable<QueryMeta[]> {
-    return this.api.getAllPages<QueryMeta>('/api/v1/admin/queries');
+    return this.sdk.getAllPages<QueryMeta>('/api/v1/admin/queries');
   }
 
   getQuery(id: string): Observable<QueryDetail> {
-    return this.api.get<QueryDetail>(`/api/v1/admin/queries/${id}`);
+    return this.sdk.get<QueryDetail>(`/api/v1/admin/queries/${id}`);
   }
 
   describeQuery(sqlQuery: string): Observable<DescribedQueryColumn[]> {
-    return this.api.post<DescribedQueryColumn[]>('/api/v1/admin/queries/describe', {
+    return this.sdk.post<DescribedQueryColumn[]>(
+      '/api/v1/admin/queries/describe',
+      { body: {
       sql_query: sqlQuery,
-    });
+    } },
+    );
   }
 
   createQuery(body: CreateQueryBody): Observable<QueryDetail> {
-    return this.api.post<QueryDetail>('/api/v1/admin/queries', body);
+    return this.sdk.post<QueryDetail>('/api/v1/admin/queries', { body: body });
   }
 
   updateQuery(id: string, body: UpdateQueryBody): Observable<QueryDetail> {
-    return this.api.patch<QueryDetail>(`/api/v1/admin/queries/${id}`, body);
+    return this.sdk.patch<QueryDetail>(`/api/v1/admin/queries/${id}`, { body: body });
   }
 
   deleteQuery(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/queries/${id}`);
+    return this.sdk.delete(`/api/v1/admin/queries/${id}`);
   }
 }

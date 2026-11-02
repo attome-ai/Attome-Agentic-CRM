@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService, Page } from '@attome/base';
+import { SdkService, Page } from '@attome/base';
 
 // Wire types of the web portal admin API (`crates/engine/attome-portal/src/admin.rs`,
 // `roles.rs`, `provision.rs`). Every route is `system.admin` only.
@@ -177,20 +177,22 @@ export const USERS_PAGE_SIZE = 200;
 
 @Injectable({ providedIn: 'root' })
 export class PortalAdminService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   listPortals(): Observable<Page<PortalDetail>> {
-    return this.api.get<Page<PortalDetail>>(BASE, { page: '1', page_size: '200' });
+    return this.sdk.get<Page<PortalDetail>>(BASE, { query: { page: '1', page_size: '200' } });
   }
 
   createPortal(body: NewPortal): Observable<PortalDetail> {
-    return this.api.post<PortalDetail>(BASE, body);
+    return this.sdk.post<PortalDetail>(BASE, { body: body });
   }
 
   /** One-based page of a portal's users. */
   listUsers(portalId: string, page = 1): Observable<Page<PortalUserDetail>> {
-    return this.api.get<Page<PortalUserDetail>>(
-      `${BASE}/${portalId}/users`, { page: String(page), page_size: String(USERS_PAGE_SIZE) });
+    return this.sdk.get<Page<PortalUserDetail>>(
+      `${BASE}/${portalId}/users`,
+      { query: { page: String(page), page_size: String(USERS_PAGE_SIZE) } },
+    );
   }
 
   /**
@@ -200,7 +202,7 @@ export class PortalAdminService {
    * point must not import (D-314).
    */
   listTeams(): Observable<TeamOption[]> {
-    return this.api.getAllPages<TeamOption>('/api/v1/admin/security/teams');
+    return this.sdk.getAllPages<TeamOption>('/api/v1/admin/security/teams');
   }
 
   /** D-777: at least one of `email` and `username`. */
@@ -208,91 +210,97 @@ export class PortalAdminService {
     portalId: string,
     body: { name: string; email?: string; username?: string },
   ): Observable<PortalUserDetail> {
-    return this.api.post<PortalUserDetail>(`${BASE}/${portalId}/users`, body);
+    return this.sdk.post<PortalUserDetail>(`${BASE}/${portalId}/users`, { body: body });
   }
 
   inviteUser(portalId: string, userId: string): Observable<InvitationSent> {
-    return this.api.post<InvitationSent>(`${BASE}/${portalId}/users/${userId}/invite`, {});
+    return this.sdk.post<InvitationSent>(`${BASE}/${portalId}/users/${userId}/invite`, { body: {} });
   }
 
   setUserEnabled(portalId: string, userId: string, enabled: boolean): Observable<PortalUserDetail> {
-    return this.api.post<PortalUserDetail>(
-      `${BASE}/${portalId}/users/${userId}/${enabled ? 'enable' : 'disable'}`, {});
+    return this.sdk.post<PortalUserDetail>(
+      `${BASE}/${portalId}/users/${userId}/${enabled ? 'enable' : 'disable'}`,
+      { body: {} },
+    );
   }
 
   assignRole(portalId: string, userId: string, roleId: string): Observable<void> {
-    return this.api.put<void>(`${BASE}/${portalId}/users/${userId}/role`, { role_id: roleId });
+    return this.sdk.put<void>(`${BASE}/${portalId}/users/${userId}/role`, { body: { role_id: roleId } });
   }
 
   exportUser(portalId: string, userId: string): Observable<ExportResult> {
-    return this.api.post<ExportResult>(`${BASE}/${portalId}/users/${userId}/export`, {});
+    return this.sdk.post<ExportResult>(`${BASE}/${portalId}/users/${userId}/export`, { body: {} });
   }
 
   eraseUser(portalId: string, userId: string): Observable<{ erasure_request_id: string }> {
-    return this.api.post<{ erasure_request_id: string }>(`${BASE}/${portalId}/users/${userId}/erase`, {});
+    return this.sdk.post<{ erasure_request_id: string }>(`${BASE}/${portalId}/users/${userId}/erase`, { body: {} });
   }
 
   listRoles(portalId: string): Observable<Page<RoleSummary>> {
-    return this.api.get<Page<RoleSummary>>(`${BASE}/${portalId}/roles`);
+    return this.sdk.get<Page<RoleSummary>>(`${BASE}/${portalId}/roles`);
   }
 
   getRole(portalId: string, roleId: string): Observable<RoleView> {
-    return this.api.get<RoleView>(`${BASE}/${portalId}/roles/${roleId}`);
+    return this.sdk.get<RoleView>(`${BASE}/${portalId}/roles/${roleId}`);
   }
 
   createRole(portalId: string, name: string): Observable<RoleSummary> {
-    return this.api.post<RoleSummary>(`${BASE}/${portalId}/roles`, { name });
+    return this.sdk.post<RoleSummary>(`${BASE}/${portalId}/roles`, { body: { name } });
   }
 
   putGrant(portalId: string, roleId: string, entity: string, grant: GrantSpec): Observable<void> {
-    return this.api.put<void>(
-      `${BASE}/${portalId}/roles/${roleId}/grants/${encodeURIComponent(entity)}`, grant);
+    return this.sdk.put<void>(
+      `${BASE}/${portalId}/roles/${roleId}/grants/${encodeURIComponent(entity)}`,
+      { body: grant },
+    );
   }
 
   deleteGrant(portalId: string, roleId: string, entity: string): Observable<void> {
-    return this.api.delete(`${BASE}/${portalId}/roles/${roleId}/grants/${encodeURIComponent(entity)}`);
+    return this.sdk.delete(`${BASE}/${portalId}/roles/${roleId}/grants/${encodeURIComponent(entity)}`);
   }
 
   listEntityConfigs(portalId: string): Observable<Page<EntityConfigView>> {
-    return this.api.get<Page<EntityConfigView>>(`${BASE}/${portalId}/entities`);
+    return this.sdk.get<Page<EntityConfigView>>(`${BASE}/${portalId}/entities`);
   }
 
   putEntityConfig(portalId: string, entity: string, portalUserField: string | null): Observable<void> {
-    return this.api.put<void>(
-      `${BASE}/${portalId}/entities/${encodeURIComponent(entity)}`, { portal_user_field: portalUserField });
+    return this.sdk.put<void>(
+      `${BASE}/${portalId}/entities/${encodeURIComponent(entity)}`,
+      { body: { portal_user_field: portalUserField } },
+    );
   }
 
   listErasureRequests(portalId: string): Observable<Page<ErasureRequest>> {
-    return this.api.get<Page<ErasureRequest>>(`${BASE}/${portalId}/erasure-requests`, { page: '1', page_size: '200' });
+    return this.sdk.get<Page<ErasureRequest>>(`${BASE}/${portalId}/erasure-requests`, { query: { page: '1', page_size: '200' } });
   }
 
   rejectErasureRequest(portalId: string, requestId: string): Observable<void> {
-    return this.api.post<void>(`${BASE}/${portalId}/erasure-requests/${requestId}/reject`, {});
+    return this.sdk.post<void>(`${BASE}/${portalId}/erasure-requests/${requestId}/reject`, { body: {} });
   }
 
   updateSettings(portalId: string, patch: PortalSettingsPatch): Observable<PortalDetail> {
-    return this.api.patch<PortalDetail>(`${BASE}/${portalId}/settings`, patch);
+    return this.sdk.patch<PortalDetail>(`${BASE}/${portalId}/settings`, { body: patch });
   }
 
   getAuthPolicy(portalId: string): Observable<AuthPolicy> {
-    return this.api.get<AuthPolicy>(`${BASE}/${portalId}/auth-policy`);
+    return this.sdk.get<AuthPolicy>(`${BASE}/${portalId}/auth-policy`);
   }
 
   putAuthPolicy(portalId: string, policy: AuthPolicy): Observable<AuthPolicy> {
-    return this.api.put<AuthPolicy>(`${BASE}/${portalId}/auth-policy`, policy);
+    return this.sdk.put<AuthPolicy>(`${BASE}/${portalId}/auth-policy`, { body: policy });
   }
 
   renameRole(portalId: string, roleId: string, name: string): Observable<void> {
-    return this.api.patch<void>(`${BASE}/${portalId}/roles/${roleId}`, { name });
+    return this.sdk.patch<void>(`${BASE}/${portalId}/roles/${roleId}`, { body: { name } });
   }
 
   /** Refused (409) while any user holds the role or the signup policy hands it out. */
   deleteRole(portalId: string, roleId: string): Observable<void> {
-    return this.api.delete(`${BASE}/${portalId}/roles/${roleId}`);
+    return this.sdk.delete(`${BASE}/${portalId}/roles/${roleId}`);
   }
 
   /** 404 when the user holds no role in this portal. */
   unassignRole(portalId: string, userId: string): Observable<void> {
-    return this.api.delete(`${BASE}/${portalId}/users/${userId}/role`);
+    return this.sdk.delete(`${BASE}/${portalId}/users/${userId}/role`);
   }
 }

@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiComponents, ApiService, Page } from '@attome/base';
+import { ApiComponents, SdkService, Page } from '@attome/base';
 
 /**
  * M14 / L2 (Data Quality) — `/api/v1/admin/data/quality*`
@@ -54,20 +54,23 @@ export interface QualityIssueFilter {
 
 @Injectable({ providedIn: 'root' })
 export class DataQualityService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** The latest score per (entity, dimension), every page walked. */
   listScores(entity?: string): Observable<QualityScore[]> {
-    return this.api.getAllPages<QualityScore>(
+    return this.sdk.getAllPages<QualityScore>(
       '/api/v1/admin/data/quality/scores', entity ? { entity } : {},
     );
   }
 
   /** One entity+dimension's period series, newest first — the trend. */
   scoreHistory(entity: string, dimension: QualityDimension, pageSize = 30): Observable<Page<QualityScore>> {
-    return this.api.get<Page<QualityScore>>('/api/v1/admin/data/quality/scores/history', {
+    return this.sdk.get<Page<QualityScore>>(
+      '/api/v1/admin/data/quality/scores/history',
+      { query: {
       entity, dimension, page: '1', page_size: String(pageSize),
-    });
+    } },
+    );
   }
 
   listIssues(filter: QualityIssueFilter, page = 1, pageSize = 50): Observable<Page<QualityIssue>> {
@@ -75,66 +78,70 @@ export class DataQualityService {
     if (filter.entity)    params['entity'] = filter.entity;
     if (filter.dimension) params['dimension'] = filter.dimension;
     if (filter.status)    params['status'] = filter.status;
-    return this.api.get<Page<QualityIssue>>('/api/v1/admin/data/quality/issues', params);
+    return this.sdk.get<Page<QualityIssue>>('/api/v1/admin/data/quality/issues', { query: params });
   }
 
   /** 204 on success; 409 when the issue is already resolved. */
   resolveIssue(id: string): Observable<void> {
-    return this.api.post<void>(`/api/v1/admin/data/quality/issues/${id}/resolve`, {});
+    return this.sdk.post<void>(`/api/v1/admin/data/quality/issues/${id}/resolve`, { body: {} });
   }
 
   /** L2-T4: moves an issue to `status`; `accepted` needs a reason. */
   setIssueStatus(id: string, status: QualityIssueStatus, acceptedReason?: string): Observable<void> {
-    return this.api.patch<void>(`/api/v1/admin/data/quality/issues/${id}`, {
+    return this.sdk.patch<void>(
+      `/api/v1/admin/data/quality/issues/${id}`,
+      { body: {
       status,
       accepted_reason: acceptedReason ?? null,
-    });
+    } },
+    );
   }
 
   /** The rules of one entity, or of every entity. */
   listRules(entity?: string): Observable<QualityRule[]> {
-    return this.api.getAllPages<QualityRule>(
+    return this.sdk.getAllPages<QualityRule>(
       '/api/v1/admin/data/quality/rules', entity ? { entity } : {},
     );
   }
 
   createRule(body: CreateQualityRule): Observable<QualityRule> {
-    return this.api.post<QualityRule>('/api/v1/admin/data/quality/rules', body);
+    return this.sdk.post<QualityRule>('/api/v1/admin/data/quality/rules', { body: body });
   }
 
   /** `body.row_version` is the version the edit was made against. */
   updateRule(id: string, body: UpdateQualityRule): Observable<QualityRule> {
-    return this.api.patch<QualityRule>(`/api/v1/admin/data/quality/rules/${id}`, body);
+    return this.sdk.patch<QualityRule>(`/api/v1/admin/data/quality/rules/${id}`, { body: body });
   }
 
   deleteRule(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/data/quality/rules/${id}`);
+    return this.sdk.delete(`/api/v1/admin/data/quality/rules/${id}`);
   }
 
   listTargets(entity?: string): Observable<QualityTarget[]> {
-    return this.api.getAllPages<QualityTarget>(
+    return this.sdk.getAllPages<QualityTarget>(
       '/api/v1/admin/data/quality/targets', entity ? { entity } : {},
     );
   }
 
   putTarget(entity: string, body: PutQualityTarget): Observable<QualityTarget> {
-    return this.api.put<QualityTarget>(
-      `/api/v1/admin/data/quality/targets/${encodeURIComponent(entity)}`, body,
+    return this.sdk.put<QualityTarget>(
+      `/api/v1/admin/data/quality/targets/${encodeURIComponent(entity)}`,
+      { body: body },
     );
   }
 
   /** L2-T5: what a fix would change, without changing it. */
   previewFix(body: QualityFixBody): Observable<QualityFixPreview> {
-    return this.api.post<QualityFixPreview>('/api/v1/admin/data/quality/fixes/preview', body);
+    return this.sdk.post<QualityFixPreview>('/api/v1/admin/data/quality/fixes/preview', { body: body });
   }
 
   /** L2-T5: applies the fix as one bulk edit; its `undo` puts it back. */
   applyFix(body: QualityFixBody): Observable<QualityFixSubmitted> {
-    return this.api.post<QualityFixSubmitted>('/api/v1/admin/data/quality/fixes/apply', body);
+    return this.sdk.post<QualityFixSubmitted>('/api/v1/admin/data/quality/fixes/apply', { body: body });
   }
 
   /** B5-T3: undoes an applied fix with the list its answer carried. */
   undoFix(entity: string, undo: QualityFixSubmitted['undo']): Observable<unknown> {
-    return this.api.post<unknown>(`/api/v1/${encodeURIComponent(entity)}/bulk-edit/undo`, { undo });
+    return this.sdk.post<unknown>(`/api/v1/${encodeURIComponent(entity)}/bulk-edit/undo`, { body: { undo } });
   }
 }

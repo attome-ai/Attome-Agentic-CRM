@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, map, switchMap } from 'rxjs';
-import { ATTOME_CONFIG, ApiService } from '@attome/base';
+import { ATTOME_CONFIG, SdkService } from '@attome/base';
 import type { ApiComponents } from '@attome/base';
 import { flowDraft } from '../copilot-panel/copilot-components';
 
@@ -52,7 +52,7 @@ const PAGE_SIZE = 100;
  */
 @Injectable({ providedIn: 'root' })
 export class ChatService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly config = inject(ATTOME_CONFIG);
 
   /**
@@ -61,11 +61,13 @@ export class ChatService {
    * the playground's route to the same picklist.
    */
   listAgents(): Observable<AgentOption[]> {
-    return this.api
-      .post<{ data: { records: Record<string, unknown>[] } }>('/api/v1/query/execute', {
+    return this.sdk.post<{ data: { records: Record<string, unknown>[] } }>(
+      '/api/v1/query/execute',
+      { body: {
         entity: 'ai_agent',
         page_size: 100,
-      })
+      } },
+    )
       .pipe(
         map((resp) =>
           (resp.data?.records ?? []).map((r) => ({
@@ -82,7 +84,7 @@ export class ChatService {
       risk_ceiling: riskCeiling,
       ...(mode ? { mode } : {}),
     };
-    return this.api.post<ConversationDetail>(BASE, body);
+    return this.sdk.post<ConversationDetail>(BASE, { body: body });
   }
 
   /**
@@ -92,7 +94,7 @@ export class ChatService {
    */
   send(conversationId: string, text: string, context: RecordContext | null): Observable<TurnResponse> {
     const body: Schemas['SendChatMessageRequest'] = context ? { text, context } : { text };
-    return this.api.post<TurnResponse>(`${BASE}/${conversationId}/messages`, body);
+    return this.sdk.post<TurnResponse>(`${BASE}/${conversationId}/messages`, { body: body });
   }
 
   /**
@@ -102,22 +104,28 @@ export class ChatService {
    */
   startRun(conversationId: string, task: string, maxSteps?: number): Observable<{ conversation_id: string; status: string }> {
     const body: { task: string; max_steps?: number } = maxSteps === undefined ? { task } : { task, max_steps: maxSteps };
-    return this.api.post<{ conversation_id: string; status: string }>(`${BASE}/${conversationId}/runs`, body);
+    return this.sdk.post<{ conversation_id: string; status: string }>(`${BASE}/${conversationId}/runs`, { body: body });
   }
 
   /** The newest page of the transcript, oldest first within it. */
   messages(conversationId: string, page = 1): Observable<MessagePage> {
-    return this.api.get<MessagePage>(`${BASE}/${conversationId}/messages`, {
+    return this.sdk.get<MessagePage>(
+      `${BASE}/${conversationId}/messages`,
+      { query: {
       page: String(page),
       page_size: String(PAGE_SIZE),
-    });
+    } },
+    );
   }
 
   toolCalls(conversationId: string, page = 1): Observable<ToolCallPage> {
-    return this.api.get<ToolCallPage>(`${BASE}/${conversationId}/tool-calls`, {
+    return this.sdk.get<ToolCallPage>(
+      `${BASE}/${conversationId}/tool-calls`,
+      { query: {
       page: String(page),
       page_size: String(PAGE_SIZE),
-    });
+    } },
+    );
   }
 
   /**
@@ -127,14 +135,14 @@ export class ChatService {
    */
   confirm(conversationId: string, toolCallId: string, argumentsHash: string): Observable<ConfirmResult> {
     const body: Schemas['ConfirmToolCallRequest'] = { arguments_hash: argumentsHash };
-    return this.api.post<ConfirmResult>(
+    return this.sdk.post<ConfirmResult>(
       `${BASE}/${conversationId}/tool-calls/${encodeURIComponent(toolCallId)}/confirm`,
-      body,
+      { body: body },
     );
   }
 
   reject(conversationId: string, toolCallId: string): Observable<void> {
-    return this.api.delete(`${BASE}/${conversationId}/tool-calls/${encodeURIComponent(toolCallId)}`);
+    return this.sdk.delete(`${BASE}/${conversationId}/tool-calls/${encodeURIComponent(toolCallId)}`);
   }
 
   /**
@@ -156,17 +164,17 @@ export class ChatService {
    * running completes; a proposal waiting for confirmation is untouched.
    */
   cancel(conversationId: string, turnId: string): Observable<CancelTurnView> {
-    return this.api.post<CancelTurnView>(`${BASE}/${conversationId}/turns/${turnId}/cancel`, {});
+    return this.sdk.post<CancelTurnView>(`${BASE}/${conversationId}/turns/${turnId}/cancel`, { body: {} });
   }
 
   /** The caller's thumbs vote on a turn's answer; a new vote replaces the old. */
   feedback(conversationId: string, messageId: string, vote: Vote): Observable<FeedbackView> {
     const body: Schemas['FeedbackRequest'] = { vote };
-    return this.api.put<FeedbackView>(`${BASE}/${conversationId}/messages/${messageId}/feedback`, body);
+    return this.sdk.put<FeedbackView>(`${BASE}/${conversationId}/messages/${messageId}/feedback`, { body: body });
   }
 
   end(conversationId: string): Observable<void> {
-    return this.api.delete(`${BASE}/${conversationId}`);
+    return this.sdk.delete(`${BASE}/${conversationId}`);
   }
 
   /**
@@ -175,8 +183,7 @@ export class ChatService {
    * when the user may not read the record. Display only; never sent back.
    */
   currentRecord(entity: string, recordId: string): Observable<Record<string, unknown>> {
-    return this.api
-      .get<{ data: Record<string, unknown> }>(`/api/v1/${entity}/${recordId}`)
+    return this.sdk.get<{ data: Record<string, unknown> }>(`/api/v1/${entity}/${recordId}`)
       .pipe(map((r) => r.data ?? {}));
   }
 
@@ -187,17 +194,21 @@ export class ChatService {
    */
   createFlowDraft(agentDefinitionId: string, task: string): Observable<string> {
     const draft = flowDraft(agentDefinitionId, task, new Date());
-    return this.api
-      .post<Schemas['DefinitionDetail']>('/api/v1/workflow/definitions', {
+    return this.sdk.post<Schemas['DefinitionDetail']>(
+      '/api/v1/workflow/definitions',
+      { body: {
         logicalname: draft.logicalname,
         name: draft.name,
-      })
+      } },
+    )
       .pipe(
         switchMap((definition) =>
-          this.api
-            .post<unknown>(`/api/v1/workflow/definitions/${encodeURIComponent(definition.id)}/versions`, {
+          this.sdk.post<unknown>(
+            `/api/v1/workflow/definitions/${encodeURIComponent(definition.id)}/versions`,
+            { body: {
               graph: draft.graph,
-            })
+            } },
+          )
             .pipe(map(() => definition.id)),
         ),
       );

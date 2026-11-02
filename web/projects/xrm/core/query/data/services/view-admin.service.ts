@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import { QueryColumnDef } from './types';
 
 /** D-429 (+ chart, migration 0447) — how a view renders. Kind-specific
@@ -154,38 +154,38 @@ export interface UpdatePersonalViewBody {
 
 @Injectable({ providedIn: 'root' })
 export class ViewAdminService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   // ── Admin (system-scope) CRUD ───────────────────────────────────────────
-  list(): Observable<ViewDetail[]> { return this.api.getAllPages<ViewDetail>('/api/v1/admin/views'); }
-  get(id: string): Observable<ViewDetail> { return this.api.get<ViewDetail>(`/api/v1/admin/views/${id}`); }
-  create(body: ViewBody): Observable<ViewDetail> { return this.api.post<ViewDetail>('/api/v1/admin/views', body); }
+  list(): Observable<ViewDetail[]> { return this.sdk.getAllPages<ViewDetail>('/api/v1/admin/views'); }
+  get(id: string): Observable<ViewDetail> { return this.sdk.get<ViewDetail>(`/api/v1/admin/views/${id}`); }
+  create(body: ViewBody): Observable<ViewDetail> { return this.sdk.post<ViewDetail>('/api/v1/admin/views', { body: body }); }
   update(id: string, body: ViewBody): Observable<ViewDetail> {
-    return this.api.patch<ViewDetail>(`/api/v1/admin/views/${id}`, body);
+    return this.sdk.patch<ViewDetail>(`/api/v1/admin/views/${id}`, { body: body });
   }
-  delete(id: string): Observable<void> { return this.api.delete(`/api/v1/admin/views/${id}`); }
+  delete(id: string): Observable<void> { return this.sdk.delete(`/api/v1/admin/views/${id}`); }
 
   // ── Self-service ─────────────────────────────────────────────────────────
   listAvailable(entity: string): Observable<AvailableView[]> {
-    return this.api.get<AvailableView[]>(`/api/v1/views?entity=${encodeURIComponent(entity)}`);
+    return this.sdk.get<AvailableView[]>(`/api/v1/views?entity=${encodeURIComponent(entity)}`);
   }
 
   /** "Save as my view" — creates a personal (owner-only) view. */
   createMine(body: CreatePersonalViewBody): Observable<ViewDetail> {
-    return this.api.post<ViewDetail>('/api/v1/views', body);
+    return this.sdk.post<ViewDetail>('/api/v1/views', { body: body });
   }
 
   updateMine(id: string, body: UpdatePersonalViewBody): Observable<ViewDetail> {
-    return this.api.patch<ViewDetail>(`/api/v1/views/${id}`, body);
+    return this.sdk.patch<ViewDetail>(`/api/v1/views/${id}`, { body: body });
   }
 
-  deleteMine(id: string): Observable<void> { return this.api.delete(`/api/v1/views/${id}`); }
+  deleteMine(id: string): Observable<void> { return this.sdk.delete(`/api/v1/views/${id}`); }
 
   /** Promotes a personal view to `shared` — visible to any caller who holds
    * the underlying query's privilege, same gate a system view uses. Audited
    * server-side (`AuditOperation::PermissionChange`, `event_name:
    * 'view_shared'`). Owner-only; a non-owner gets a 404 (D-429). */
   share(id: string): Observable<ViewDetail> {
-    return this.api.post<ViewDetail>(`/api/v1/views/${id}/share`, {});
+    return this.sdk.post<ViewDetail>(`/api/v1/views/${id}/share`, { body: {} });
   }
 }

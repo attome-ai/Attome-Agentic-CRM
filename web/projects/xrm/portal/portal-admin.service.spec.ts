@@ -5,6 +5,9 @@ import { ATTOME_CONFIG } from '@attome/base';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { PortalAdminService } from './portal-admin.service';
 
+/** The SDK sends after a promise turn (Y9-T3). */
+const tick = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
 /** Pins the URL, method and body each call sends to the portal admin API. */
 describe('PortalAdminService', () => {
   let service: PortalAdminService;
@@ -26,84 +29,110 @@ describe('PortalAdminService', () => {
 
   afterEach(() => http.verify());
 
-  it('lists portals on the one-based admin page', () => {
+  it('lists portals on the one-based admin page', async () => {
     service.listPortals().subscribe();
+    await tick();
     const req = http.expectOne(r => r.url === BASE);
     expect(req.request.method).toBe('GET');
     expect(req.request.params.get('page')).toBe('1');
     expect(req.request.params.get('page_size')).toBe('200');
     expect(req.request.withCredentials).toBe(true);
     req.flush({ items: [], total: 0, page: 1, page_size: 200 });
+    await tick();
   });
 
-  it('puts a grant under the role and entity', () => {
+  it('puts a grant under the role and entity', async () => {
     const grant = {
       can_read: true, can_create: true, can_update: false, can_delete: false,
       conditions: [{ field: 'portal_user_ref', operator: 'eq' as const, value_ref: '@portal_user.id' }],
       fields: [{ field: 'title', can_read: true, can_write: true, can_filter: false }],
     };
     service.putGrant('p1', 'r1', 'case', grant).subscribe();
+    await tick();
     const req = http.expectOne(`${BASE}/p1/roles/r1/grants/case`);
     expect(req.request.method).toBe('PUT');
     expect(req.request.body).toEqual(grant);
     req.flush(null, { status: 204, statusText: 'No Content' });
+    await tick();
   });
 
-  it('assigns a role with a role_id body', () => {
+  it('assigns a role with a role_id body', async () => {
     service.assignRole('p1', 'u1', 'r1').subscribe();
+    await tick();
     const req = http.expectOne(`${BASE}/p1/users/u1/role`);
     expect(req.request.method).toBe('PUT');
     expect(req.request.body).toEqual({ role_id: 'r1' });
     req.flush(null, { status: 204, statusText: 'No Content' });
+    await tick();
   });
 
-  it('exports a user through the export route (G-14)', () => {
+  it('exports a user through the export route (G-14)', async () => {
     let id: string | undefined;
     service.exportUser('p1', 'u1').subscribe(r => (id = r.id));
+    await tick();
     const req = http.expectOne(`${BASE}/p1/users/u1/export`);
     expect(req.request.method).toBe('POST');
     req.flush({ id: 'dsr-1', status: 'fulfilled', scopes: [] });
+    await tick();
     expect(id).toBe('dsr-1');
   });
 
-  it('invites, enables and disables on their own routes', () => {
+  it('invites, enables and disables on their own routes', async () => {
     service.inviteUser('p1', 'u1').subscribe();
+    await tick();
     http.expectOne(r => r.method === 'POST' && r.url === `${BASE}/p1/users/u1/invite`).flush({ expires_at: '2026-10-01T00:00:00Z' });
+    await tick();
     service.setUserEnabled('p1', 'u1', false).subscribe();
+    await tick();
     http.expectOne(r => r.method === 'POST' && r.url === `${BASE}/p1/users/u1/disable`).flush({});
+    await tick();
     service.setUserEnabled('p1', 'u1', true).subscribe();
+    await tick();
     http.expectOne(r => r.method === 'POST' && r.url === `${BASE}/p1/users/u1/enable`).flush({});
+    await tick();
   });
 
-  it('patches settings and reads and puts the auth policy', () => {
+  it('patches settings and reads and puts the auth policy', async () => {
     service.updateSettings('p1', { row_version: 3, mfa_policy: 'required', owning_team_ref: null }).subscribe();
+    await tick();
     const patch = http.expectOne(r => r.method === 'PATCH' && r.url === `${BASE}/p1/settings`);
     expect(patch.request.body).toEqual({ row_version: 3, mfa_policy: 'required', owning_team_ref: null });
     patch.flush({});
+    await tick();
 
     service.getAuthPolicy('p1').subscribe();
+    await tick();
     http.expectOne(r => r.method === 'GET' && r.url === `${BASE}/p1/auth-policy`).flush({});
+    await tick();
     const body = {
       signup_mode: 'invite_only' as const, signup_domains: [], signup_role_ref: null, oidc_providers: [],
       terms_version: null, privacy_version: null, editable_profile_fields: ['phone'],
       page_size_cap: 100, allowed_cidrs: [], records_rpm: 600, username_min_len: 3, username_max_len: 12, username_blocked_words: [], username_reserved: [], trusted_server_login: false, row_version: 1,
     };
     service.putAuthPolicy('p1', body).subscribe();
+    await tick();
     const put = http.expectOne(r => r.method === 'PUT' && r.url === `${BASE}/p1/auth-policy`);
     expect(put.request.body).toEqual(body);
     put.flush(body);
+    await tick();
   });
 
-  it('renames and deletes a role and unassigns a user role', () => {
+  it('renames and deletes a role and unassigns a user role', async () => {
     service.renameRole('p1', 'r1', 'agents').subscribe();
+    await tick();
     const rename = http.expectOne(r => r.method === 'PATCH' && r.url === `${BASE}/p1/roles/r1`);
     expect(rename.request.body).toEqual({ name: 'agents' });
     rename.flush(null, { status: 204, statusText: 'No Content' });
+    await tick();
     service.deleteRole('p1', 'r1').subscribe();
+    await tick();
     http.expectOne(r => r.method === 'DELETE' && r.url === `${BASE}/p1/roles/r1`)
       .flush(null, { status: 204, statusText: 'No Content' });
+      await tick();
     service.unassignRole('p1', 'u1').subscribe();
+    await tick();
     http.expectOne(r => r.method === 'DELETE' && r.url === `${BASE}/p1/users/u1/role`)
       .flush(null, { status: 204, statusText: 'No Content' });
+      await tick();
   });
 });

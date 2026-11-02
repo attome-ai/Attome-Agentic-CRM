@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import type { ApiComponents, Page } from '@attome/base';
 import { AdminHttp } from './admin-http';
 
@@ -99,7 +99,7 @@ function pageParams(page: number, pageSize: number): Record<string, string> {
 
 @Injectable({ providedIn: 'root' })
 export class ReleaseReportService {
-  private readonly api  = inject(ApiService);
+  private readonly sdk  = inject(SdkService);
   private readonly http = inject(AdminHttp);
 
   /** Reports, newest first. One-based paging (D-731). */
@@ -107,16 +107,16 @@ export class ReleaseReportService {
     const params = pageParams(page, pageSize);
     if (filter.status) params['status'] = filter.status;
     if (filter.source) params['source'] = filter.source;
-    return this.api.get<Page<ReleaseReport>>(`${BASE}/release-reports`, params);
+    return this.sdk.get<Page<ReleaseReport>>(`${BASE}/release-reports`, { query: params });
   }
 
   /** Open items by kind, the last release and reports still building. */
   summary(): Observable<ReleaseReportSummary> {
-    return this.api.get<ReleaseReportSummary>(`${BASE}/release-reports/summary`);
+    return this.sdk.get<ReleaseReportSummary>(`${BASE}/release-reports/summary`);
   }
 
   getReport(reportId: string): Observable<ReleaseReport> {
-    return this.api.get<ReleaseReport>(`${BASE}/release-reports/${encodeURIComponent(reportId)}`);
+    return this.sdk.get<ReleaseReport>(`${BASE}/release-reports/${encodeURIComponent(reportId)}`);
   }
 
   /** A report's items, oldest first. One-based paging. */
@@ -125,8 +125,9 @@ export class ReleaseReportService {
     if (filter.kind)   params['kind'] = filter.kind;
     if (filter.status) params['status'] = filter.status;
     if (filter.entity) params['entity'] = filter.entity;
-    return this.api.get<Page<ReportItemView>>(
-      `${BASE}/release-reports/${encodeURIComponent(reportId)}/items`, params,
+    return this.sdk.get<Page<ReportItemView>>(
+      `${BASE}/release-reports/${encodeURIComponent(reportId)}/items`,
+      { query: params },
     );
   }
 
@@ -157,14 +158,15 @@ export class ReleaseReportService {
    * `remaining > 0`.
    */
   restore(itemId: string): Observable<ItemRestoreResult> {
-    return this.api.post<ItemRestoreResult>(
-      `${BASE}/release-report-items/${encodeURIComponent(itemId)}/restore`, {},
+    return this.sdk.post<ItemRestoreResult>(
+      `${BASE}/release-report-items/${encodeURIComponent(itemId)}/restore`,
+      { body: {} },
     );
   }
 
   /** The record's current `row_version` (Use mine on a record conflict). */
   recordRowVersion(entity: string, recordId: string): Observable<number> {
-    return this.api.get<EntityRecordResponse>(
+    return this.sdk.get<EntityRecordResponse>(
       `/api/v1/${encodeURIComponent(entity)}/${encodeURIComponent(recordId)}`,
     ).pipe(map(r => r.row_version));
   }

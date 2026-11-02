@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiService, type Page } from '@attome/base';
+import { SdkService, type Page } from '@attome/base';
 import { Observable, map, of, shareReplay, catchError } from 'rxjs';
 
 /** `attome_service::handoff::Handoff`. */
@@ -37,31 +37,31 @@ export function canHandBack(handoff: ServiceHandoff): boolean {
 /** AI7-T6: the hand-off routes (AI7-T5). */
 @Injectable({ providedIn: 'root' })
 export class ServiceHandoffService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly names = new Map<string, Observable<string>>();
 
   pending(): Observable<Page<ServiceHandoff>> {
-    return this.api.get<Page<ServiceHandoff>>('/api/v1/service/handoffs?page=1&page_size=100');
+    return this.sdk.get<Page<ServiceHandoff>>('/api/v1/service/handoffs?page=1&page_size=100');
   }
 
   forTicket(ticketId: string): Observable<Page<ServiceHandoff>> {
-    return this.api.get<Page<ServiceHandoff>>(
+    return this.sdk.get<Page<ServiceHandoff>>(
       `/api/v1/service/tickets/${encodeURIComponent(ticketId)}/handoffs?page=1&page_size=20`,
     );
   }
 
   accept(handoff: ServiceHandoff): Observable<ServiceHandoff> {
-    return this.api.post<ServiceHandoff>(
+    return this.sdk.post<ServiceHandoff>(
       `/api/v1/service/handoffs/${encodeURIComponent(handoff.id)}/accept`,
-      {},
+      { body: {} },
       { ifMatch: handoff.row_version },
     );
   }
 
   handBack(handoff: ServiceHandoff, note: string): Observable<ServiceHandoff> {
-    return this.api.post<ServiceHandoff>(
+    return this.sdk.post<ServiceHandoff>(
       `/api/v1/service/handoffs/${encodeURIComponent(handoff.id)}/return`,
-      { note },
+      { body: { note } },
       { ifMatch: handoff.row_version },
     );
   }
@@ -70,7 +70,7 @@ export class ServiceHandoffService {
   personName(userId: string): Observable<string> {
     let name = this.names.get(userId);
     if (!name) {
-      name = this.api.get<{ data: Record<string, unknown> }>(`/api/v1/user_account/${encodeURIComponent(userId)}`).pipe(
+      name = this.sdk.get<{ data: Record<string, unknown> }>(`/api/v1/user_account/${encodeURIComponent(userId)}`).pipe(
         map(r => {
           const d = r?.data ?? {};
           const text = (k: string) => (typeof d[k] === 'string' && (d[k] as string).trim() ? (d[k] as string) : null);
