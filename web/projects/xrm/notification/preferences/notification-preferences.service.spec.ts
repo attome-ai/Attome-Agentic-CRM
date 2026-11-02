@@ -21,9 +21,8 @@ describe('NotificationPreferencesService', () => {
 
   afterEach(() => http.verify());
 
-  /** The SDK sends after a promise turn; JSON answers go back as text. */
+  /** The SDK sends after a promise turn. */
   const tick = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
-  const json = (body: unknown): string => JSON.stringify(body);
 
   it('reads the caller\'s own preferences, naming no user', async () => {
     service.load().subscribe();
@@ -31,7 +30,7 @@ describe('NotificationPreferencesService', () => {
     const req = http.expectOne(URL);
     expect(req.request.method).toBe('GET');
     expect(req.request.params.keys()).toEqual([]);
-    req.flush(json({ categories: [], channels: [], items: [] }));
+    req.flush({ categories: [], channels: [], items: [] });
   });
 
   it('writes the items as the PUT body', async () => {
@@ -40,7 +39,7 @@ describe('NotificationPreferencesService', () => {
     await tick();
     const req = http.expectOne(URL);
     expect(req.request.method).toBe('PUT');
-    expect(JSON.parse(req.request.body as string)).toEqual({ items });
-    req.flush(json({ categories: ['reminder'], channels: ['email'], items: [] }));
+    expect(req.request.body).toEqual({ items });
+    req.flush({ categories: ['reminder'], channels: ['email'], items: [] });
   });
 });

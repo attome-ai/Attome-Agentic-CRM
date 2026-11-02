@@ -6,7 +6,6 @@ import { firstValueFrom } from 'rxjs';
 import { describe, expect, it } from 'vitest';
 import { WorkforceApiService } from './workforce-api.service';
 
-const JSON_HEADERS = { headers: { 'content-type': 'application/json' } };
 const tick = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
 
 function setup(): { service: WorkforceApiService; http: HttpTestingController } {
@@ -25,8 +24,10 @@ describe('WorkforceApiService (Y9-T3, through the SDK)', () => {
     const { service, http } = setup();
     const shifts = firstValueFrom(service.mySchedule('2026-11-01', '2026-11-14'));
     await tick();
-    http.expectOne('/api/v1/workforce/me/schedule?from=2026-11-01&to=2026-11-14')
-      .flush(JSON.stringify([{ id: 'a1' }]), JSON_HEADERS);
+    const req = http.expectOne(r => r.url === '/api/v1/workforce/me/schedule');
+    expect(req.request.params.get('from')).toBe('2026-11-01');
+    expect(req.request.params.get('to')).toBe('2026-11-14');
+    req.flush([{ id: 'a1' }]);
     expect(await shifts).toEqual([{ id: 'a1' }]);
   });
 
@@ -37,7 +38,7 @@ describe('WorkforceApiService (Y9-T3, through the SDK)', () => {
     const req = http.expectOne('/api/v1/workforce/schedules/s1/publish');
     expect(req.request.method).toBe('POST');
     expect(req.request.headers.get('If-Match')).toBe('"3"');
-    req.flush(JSON.stringify({ id: 's1' }), JSON_HEADERS);
+    req.flush({ id: 's1' });
     expect(await published).toEqual({ id: 's1' });
   });
 
@@ -45,8 +46,8 @@ describe('WorkforceApiService (Y9-T3, through the SDK)', () => {
     const { service, http } = setup();
     const groups = firstValueFrom(service.groups());
     await tick();
-    http.expectOne(r => r.url.startsWith('/api/v1/wfm_planning_group?'))
-      .flush(JSON.stringify({ items: [{ id: 'g1', name: 'Riyadh desk' }] }), JSON_HEADERS);
+    http.expectOne(r => r.url === '/api/v1/wfm_planning_group')
+      .flush({ items: [{ id: 'g1', name: 'Riyadh desk' }] });
     expect(await groups).toEqual([{ id: 'g1', label: 'Riyadh desk' }]);
   });
 });

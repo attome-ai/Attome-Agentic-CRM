@@ -6,6 +6,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { AdminApiError } from './admin-http';
 import { FieldChangeService, conversionTargets, type FieldChangeOutcome } from './field-change.service';
 
+/** The SDK sends after a promise turn (Y9-T3). */
+const tick = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
 function asResult(o: FieldChangeOutcome | null): Extract<FieldChangeOutcome, { kind: 'result' }> {
   if (!o || o.kind !== 'result') throw new Error('expected a result outcome');
   return o;
@@ -38,9 +41,10 @@ describe('FieldChangeService', () => {
 
   afterEach(() => http.verify());
 
-  it('sends a dry-run delete as ?dry_run=true and returns the result', () => {
+  it('sends a dry-run delete as ?dry_run=true and returns the result', async () => {
     let out = null as FieldChangeOutcome | null;
     service.delete('e1', 'f1', true).subscribe(o => (out = o));
+    await tick();
     const req = http.expectOne(r => r.url === FIELD);
     expect(req.request.method).toBe('DELETE');
     expect(req.request.params.get('dry_run')).toBe('true');
@@ -48,9 +52,10 @@ describe('FieldChangeService', () => {
     expect(asResult(out).result.values_to_archive).toBe(3);
   });
 
-  it('treats a 409 that carries the result as a blocked change, not an error', () => {
+  it('treats a 409 that carries the result as a blocked change, not an error', async () => {
     let out = null as FieldChangeOutcome | null;
     service.delete('e1', 'f1', true).subscribe(o => (out = o));
+    await tick();
     http.expectOne(r => r.url === FIELD).flush(
       result({ error: 'field_referenced', blockers: [{ hook: 'views', object_kind: 'view', object_ref: null, name: 'All', reason: 'r' }] }),
       { status: 409, statusText: 'Conflict' },
@@ -61,9 +66,10 @@ describe('FieldChangeService', () => {
     expect(blocked.result.blockers.length).toBe(1);
   });
 
-  it('keeps a plain 409 an error', () => {
+  it('keeps a plain 409 an error', async () => {
     let error = null as AdminApiError | null;
     service.rename('e1', 'f1', 'new_name', false).subscribe({ error: e => (error = e) });
+    await tick();
     http.expectOne(`${FIELD}/rename`).flush(
       { error: 'conflict', message: 'conflict: field_busy: still running' },
       { status: 409, statusText: 'Conflict' },
@@ -71,18 +77,20 @@ describe('FieldChangeService', () => {
     expect(error!.message).toContain('field_busy');
   });
 
-  it('maps a 202 approval answer', () => {
+  it('maps a 202 approval answer', async () => {
     let out = null as FieldChangeOutcome | null;
     service.changeType('e1', 'f1', 'number', { from_type: 'text' }, false).subscribe(o => (out = o));
+    await tick();
     const req = http.expectOne(`${FIELD}/change-type`);
     expect(req.request.body).toEqual({ field_type: 'number', conversion: { from_type: 'text' }, dry_run: false });
     req.flush({ approval_pending: true, approval_request_id: 'a1' }, { status: 202, statusText: 'Accepted' });
     expect(out).toEqual({ kind: 'approval', approvalRequestId: 'a1' });
   });
 
-  it('keeps the 202 status of a large-table run', () => {
+  it('keeps the 202 status of a large-table run', async () => {
     let out = null as FieldChangeOutcome | null;
     service.delete('e1', 'f1', false).subscribe(o => (out = o));
+    await tick();
     const req = http.expectOne(r => r.url === FIELD);
     expect(req.request.params.has('dry_run')).toBe(false);
     req.flush(result({ dry_run: false, applied: true, run_id: 'run1' }), { status: 202, statusText: 'Accepted' });
@@ -91,28 +99,32 @@ describe('FieldChangeService', () => {
     expect(queued.result.run_id).toBe('run1');
   });
 
-  it('adds and removes choices on the choices routes', () => {
+  it('adds and removes choices on the choices routes', async () => {
     service.addChoice('e1', 'f1', { value: 'on_hold', label: 'On hold', after: 'active' }).subscribe();
+    await tick();
     const add = http.expectOne(`${FIELD}/choices`);
     expect(add.request.body).toEqual({ value: 'on_hold', label: 'On hold', after: 'active' });
     add.flush(result({ op: 'add_choice_value', dry_run: false, applied: true }));
 
     service.removeChoice('e1', 'f1', 'a b', true).subscribe();
+    await tick();
     const remove = http.expectOne(r => r.url === `${FIELD}/choices/a%20b`);
     expect(remove.request.method).toBe('DELETE');
     expect(remove.request.params.get('dry_run')).toBe('true');
     remove.flush(result({ op: 'remove_choice_value', records_with_value: 4 }));
   });
 
-  it('abandons a run', () => {
+  it('abandons a run', async () => {
     service.abandonRun('e1', 'f1', 'run1').subscribe();
+    await tick();
     const req = http.expectOne(`${FIELD}/runs/run1/abandon`);
     expect(req.request.method).toBe('POST');
     req.flush({ run_id: 'run1', kind: 'retype', status: 'abandoned', shadow_dropped: true, archive_rows_removed: 2, conversion_completed: false, labels: [] });
   });
 
-  it('lists and restores the recovery archive', () => {
+  it('lists and restores the recovery archive', async () => {
     service.listArchive({ entity: 'contact', field: 'rating', include_restored: true }, 1, 25).subscribe();
+    await tick();
     const list = http.expectOne(r => r.url === `${API}/api/v1/admin/metadata/recovery-archive`);
     expect(list.request.params.get('entity')).toBe('contact');
     expect(list.request.params.get('field')).toBe('rating');
@@ -121,11 +133,13 @@ describe('FieldChangeService', () => {
     list.flush({ items: [], total: 0, page: 1, page_size: 25 });
 
     service.restoreField('contact', 'rating').subscribe();
+    await tick();
     const all = http.expectOne(`${API}/api/v1/admin/metadata/recovery-archive/restore`);
     expect(all.request.body).toEqual({ entity: 'contact', field: 'rating' });
     all.flush({ restored: 0, skipped_filled: 0, skipped_not_convertible: 0, missing_records: 0, remaining: 0 });
 
     service.restoreArchived('a1').subscribe();
+    await tick();
     http.expectOne(`${API}/api/v1/admin/metadata/recovery-archive/a1/restore`)
       .flush({ restored: 1, skipped_filled: 0, skipped_not_convertible: 0, missing_records: 0, remaining: 0 });
   });

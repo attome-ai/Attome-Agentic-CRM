@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpResponse } from '@angular/common/http';
 import { Observable, catchError, map, of, throwError } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import type { ApiComponents, Page } from '@attome/base';
 import { AdminHttp, type AdminApiError } from './admin-http';
 import type { RestoreCounts } from './release-report.service';
@@ -178,7 +178,7 @@ const ARCHIVE = '/api/v1/admin/metadata/recovery-archive';
 
 @Injectable({ providedIn: 'root' })
 export class FieldChangeService {
-  private readonly api  = inject(ApiService);
+  private readonly sdk  = inject(SdkService);
   private readonly http = inject(AdminHttp);
 
   private fieldPath(entityId: string, fieldId: string): string {
@@ -229,19 +229,21 @@ export class FieldChangeService {
   /** Abandons a FAILED batched run (`run_not_failed` otherwise). */
   /** Y12-T5: a run's status, counts and ETA. */
   runStatus(runId: string): Observable<DataStepRunStatus> {
-    return this.api.get<DataStepRunStatus>(`/api/v1/admin/data-step-runs/${encodeURIComponent(runId)}`);
+    return this.sdk.get<DataStepRunStatus>(`/api/v1/admin/data-step-runs/${encodeURIComponent(runId)}`);
   }
 
   /** Y12-T5: pause, resume or cancel a run; answers its new status. */
   controlRun(runId: string, action: 'pause' | 'resume' | 'cancel'): Observable<DataStepRunStatus> {
-    return this.api.post<DataStepRunStatus>(
-      `/api/v1/admin/data-step-runs/${encodeURIComponent(runId)}/${action}`, {},
+    return this.sdk.post<DataStepRunStatus>(
+      `/api/v1/admin/data-step-runs/${encodeURIComponent(runId)}/${action}`,
+      { body: {} },
     );
   }
 
   abandonRun(entityId: string, fieldId: string, runId: string): Observable<AbandonedFieldRun> {
-    return this.api.post<AbandonedFieldRun>(
-      `${this.fieldPath(entityId, fieldId)}/runs/${encodeURIComponent(runId)}/abandon`, {},
+    return this.sdk.post<AbandonedFieldRun>(
+      `${this.fieldPath(entityId, fieldId)}/runs/${encodeURIComponent(runId)}/abandon`,
+      { body: {} },
     );
   }
 
@@ -254,16 +256,16 @@ export class FieldChangeService {
     if (filter.field) params['field'] = filter.field;
     if (filter.reason) params['reason'] = filter.reason;
     if (filter.include_restored) params['include_restored'] = 'true';
-    return this.api.get<Page<ArchiveRow>>(ARCHIVE, params);
+    return this.sdk.get<Page<ArchiveRow>>(ARCHIVE, { query: params });
   }
 
   /** Restores one value (fills an empty field only). */
   restoreArchived(archiveId: string): Observable<RestoreCounts> {
-    return this.api.post<RestoreCounts>(`${ARCHIVE}/${encodeURIComponent(archiveId)}/restore`, {});
+    return this.sdk.post<RestoreCounts>(`${ARCHIVE}/${encodeURIComponent(archiveId)}/restore`, { body: {} });
   }
 
   /** Restores every unexpired value of a field; repeat while `remaining > 0`. */
   restoreField(entity: string, field: string): Observable<RestoreCounts> {
-    return this.api.post<RestoreCounts>(`${ARCHIVE}/restore`, { entity, field });
+    return this.sdk.post<RestoreCounts>(`${ARCHIVE}/restore`, { body: { entity, field } });
   }
 }

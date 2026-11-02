@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 
 export interface RuntimeModule {
   name: string;
@@ -45,13 +45,13 @@ export interface ModuleConfiguration {
  */
 @Injectable({ providedIn: 'root' })
 export class ModuleAdminService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   getModuleConfiguration(): Observable<ModuleConfiguration> {
-    return this.api.get<ModuleConfiguration>('/api/v1/admin/license/modules');
+    return this.sdk.get<ModuleConfiguration>('/api/v1/admin/license/modules');
   }
 
   updateModuleConfiguration(enabled: boolean, modules: string[]): Observable<ModuleConfiguration> {
-    return this.api.put<ModuleConfiguration>('/api/v1/admin/license/modules', { enabled, modules });
+    return this.sdk.put<ModuleConfiguration>('/api/v1/admin/license/modules', { body: { enabled, modules } });
   }
 }

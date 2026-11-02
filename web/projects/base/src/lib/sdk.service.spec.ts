@@ -33,12 +33,13 @@ describe('SdkService', () => {
       sdk.patch<{ ok: boolean }>('/api/v1/thing/1', { body: { a: 1 }, ifMatch: 7, query: { x: 'y' } }),
     );
     await tick();
-    const req = http.expectOne('http://api.test/api/v1/thing/1?x=y');
+    const req = http.expectOne(r => r.url === 'http://api.test/api/v1/thing/1');
+    expect(req.request.params.get('x')).toBe('y');
     expect(req.request.method).toBe('PATCH');
     expect(req.request.headers.get('If-Match')).toBe('"7"');
-    expect(JSON.parse(req.request.body as string)).toEqual({ a: 1 });
+    expect(req.request.body).toEqual({ a: 1 });
     expect(req.request.withCredentials).toBe(true);
-    req.flush(JSON.stringify({ ok: true }), { headers: { 'content-type': 'application/json' } });
+    req.flush({ ok: true });
     expect(await answer).toEqual({ ok: true });
     http.verify();
   });
@@ -48,8 +49,8 @@ describe('SdkService', () => {
     const answer = firstValueFrom(sdk.get('/api/v1/thing/2')).catch((e: ApiError) => e);
     await tick();
     http.expectOne('http://api.test/api/v1/thing/2').flush(
-      JSON.stringify({ error: 'not_found', message: 'gone', request_id: 'r-1' }),
-      { status: 404, statusText: 'Not Found', headers: { 'content-type': 'application/json' } },
+      { error: 'not_found', message: 'gone', request_id: 'r-1' },
+      { status: 404, statusText: 'Not Found' },
     );
     const err = (await answer) as ApiError;
     expect(err.status).toBe(404);
@@ -64,13 +65,13 @@ describe('SdkService', () => {
     await tick();
     const post = http.expectOne('http://api.test/api/v1/thing');
     expect(post.request.headers.get('X-Attome-Changeset')).toBe('cs-1');
-    post.flush('{}', { headers: { 'content-type': 'application/json' } });
+    post.flush({});
     await write;
     const read = firstValueFrom(sdk.get('/api/v1/thing'));
     await tick();
     const get = http.expectOne('http://api.test/api/v1/thing');
     expect(get.request.headers.has('X-Attome-Changeset')).toBe(false);
-    get.flush('{}', { headers: { 'content-type': 'application/json' } });
+    get.flush({});
     await read;
   });
 });

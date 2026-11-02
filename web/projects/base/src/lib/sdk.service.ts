@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { AttomeClient, ApiError as SdkApiError, CHANGESET_HEADER } from '@attome/sdk';
 import type { AuthProvider, AuthRequestContext, RequestOptions } from '@attome/sdk';
@@ -20,34 +20,52 @@ export function httpClientFetch(http: HttpClient): typeof fetch {
   return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const raw = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     // A same-origin deployment (`apiUrl: ''`) sends relative paths, as ApiService does.
-    const url = raw.startsWith(SAME_ORIGIN) ? raw.slice(SAME_ORIGIN.length) : raw;
+    const full = raw.startsWith(SAME_ORIGIN) ? raw.slice(SAME_ORIGIN.length) : raw;
+    // The query goes as HttpParams and a JSON body as an object, the shapes
+    // ApiService sends, so interceptors and specs read them the same way.
+    const at = full.indexOf('?');
+    const url = at < 0 ? full : full.slice(0, at);
+    const params = new HttpParams({ fromString: at < 0 ? '' : full.slice(at + 1) });
     const method = (init?.method ?? 'GET').toUpperCase();
     let headers = new HttpHeaders();
     new Headers(init?.headers).forEach((value, name) => {
       headers = headers.set(name, value);
     });
-    const body = typeof init?.body === 'string' ? init.body : init?.body ?? null;
+    let body: unknown = init?.body ?? null;
+    if (typeof body === 'string' && (headers.get('content-type') ?? '').includes('application/json')) {
+      body = JSON.parse(body) as unknown;
+    }
     const answer = await firstValueFrom(
       http.request(method, url, {
         body,
         headers,
+        params,
         observe: 'response',
-        responseType: 'text',
+        responseType: 'json',
         withCredentials: true,
       }),
     ).catch((err: unknown) => {
       if (err instanceof HttpErrorResponse) return err;
       throw err;
     });
-    const text = answer instanceof HttpErrorResponse
-      ? (typeof answer.error === 'string' ? answer.error : JSON.stringify(answer.error ?? null))
-      : (answer.body ?? '');
+    let text: string | null;
+    if (answer instanceof HttpErrorResponse) {
+      // A 2xx whose body is not JSON arrives as a parse failure carrying the text.
+      const failed = answer.error as { text?: unknown } | string | null;
+      text = typeof failed === 'string' ? failed
+        : failed && typeof failed.text === 'string' && answer.status >= 200 && answer.status < 300 ? failed.text
+          : JSON.stringify(failed ?? null);
+    } else {
+      text = answer.body === null ? null : JSON.stringify(answer.body);
+    }
+    const status = answer.status === 0 ? 599 : answer.status;
     const out = new Headers();
     for (const name of answer.headers.keys()) {
       const value = answer.headers.get(name);
       if (value !== null) out.set(name, value);
     }
-    const status = answer.status === 0 ? 599 : answer.status;
+    // HttpClient parsed the answer as JSON; say so, for the SDK reads by content type.
+    if (text !== null && !out.has('content-type')) out.set('content-type', 'application/json');
     // A 204 or 304 answer has no body.
     return new Response(status === 204 || status === 304 ? null : text, { status, headers: out });
   };

@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiComponents, ApiService } from '@attome/base';
+import { ApiComponents, SdkService } from '@attome/base';
 
 /**
  * M89 Change Intelligence item 1 — `GET /api/v1/admin/changes`
@@ -50,7 +50,7 @@ export interface ChangeFeedFilter {
 
 @Injectable({ providedIn: 'root' })
 export class ChangeFeedService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** `cursor` is a previous page's `next_cursor`, verbatim; omit it for the first page. */
   listChanges(filter: ChangeFeedFilter, cursor?: string, pageSize = 50): Observable<ChangeFeedPage> {
@@ -59,11 +59,11 @@ export class ChangeFeedService {
     if (filter.kind) params['kind'] = filter.kind;
     if (filter.from) params['from'] = filter.from;
     if (filter.to)   params['to'] = filter.to;
-    return this.api.get<ChangeFeedPage>('/api/v1/admin/changes', params);
+    return this.sdk.get<ChangeFeedPage>('/api/v1/admin/changes', { query: params });
   }
 
   /** L7-T7: every consumer of the change feed with its lag. */
   listConsumers(): Observable<{ items: ChangeConsumer[] }> {
-    return this.api.get<{ items: ChangeConsumer[] }>('/api/v1/admin/change-feed/consumers');
+    return this.sdk.get<{ items: ChangeConsumer[] }>('/api/v1/admin/change-feed/consumers');
   }
 }
