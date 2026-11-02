@@ -191271,6 +191271,13 @@
               "string",
               "null"
             ]
+          },
+          "paired_field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "P6-T1: a `corr` measure's second field, by its display name when it\nhas one."
           }
         }
       },
@@ -201617,6 +201624,13 @@
               "string",
               "null"
             ]
+          },
+          "paired_field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "P6-T1: the second number field of a `corr` measure, the one `field`\nis correlated with. Required for `corr`, refused for any other."
           }
         },
         "additionalProperties": false
@@ -201650,7 +201664,8 @@
           "q1",
           "q3",
           "first",
-          "last"
+          "last",
+          "corr"
         ]
       },
       "Meeting": {
@@ -243113,6 +243128,8 @@
           "chart_box_plot",
           "chart_candlestick",
           "timeline",
+          "chart_correlation",
+          "cohort_grid",
           "scalar",
           "table",
           "declarative",
