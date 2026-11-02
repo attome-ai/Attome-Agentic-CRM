@@ -1,0 +1,8 @@
+{
+  "name": "attome-rpa-browser",
+  "private": true,
+  "type": "module",
+  "description": "M16-T1: the isolated headless browser service for scripted steps.",
+  "scripts": { "start": "node server.mjs", "test": "node --test steps.test.mjs" },
+  "dependencies": { "playwright": "1.49.0" }
+}

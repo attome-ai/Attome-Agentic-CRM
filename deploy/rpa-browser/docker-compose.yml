@@ -1,0 +1,27 @@
+# Optional isolated browser for scripted steps (roadmap M16-T1). Nothing in
+# Attome needs it to run. Start it, then give the Attome server its address
+# and token:
+#
+#   RPA_TOKEN=<at least 16 random characters> docker compose -f deploy/rpa-browser/docker-compose.yml up -d --build
+#
+# It listens on 127.0.0.1 only, keeps no browser profile between runs, and
+# lets a run reach only the hosts the run names.
+
+name: attome-rpa-browser
+
+services:
+  rpa-browser:
+    build: .
+    environment:
+      RPA_TOKEN: ${RPA_TOKEN:?set RPA_TOKEN}
+    ports: ["127.0.0.1:8099:8099"]
+    read_only: true
+    tmpfs: ["/tmp"]
+    shm_size: 1gb
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8099/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
