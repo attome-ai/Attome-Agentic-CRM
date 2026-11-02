@@ -223,6 +223,25 @@ pub async fn preview(
     Ok((from, changes(&live, &target)))
 }
 
+/// U7-T1: what changed from the recorded version `from` to the recorded
+/// version `to`, by artefact key, either way round. Changes nothing. Not
+/// found when either was never recorded.
+pub async fn diff(pool: &DbPool, from: i64, to: i64) -> Result<VersionChanges, AppError> {
+    let manifest = |version: i64| async move {
+        let hash: Option<String> = sqlx::query_scalar(
+            "SELECT manifest_hash FROM metadata_published_version WHERE version = $1",
+        )
+        .bind(version)
+        .fetch_optional(pool)
+        .await
+        .map_err(AppError::internal)?;
+        load_manifest(pool, &hash.ok_or(AppError::NotFound)?).await
+    };
+    let older = manifest(from).await?;
+    let newer = manifest(to).await?;
+    Ok(changes(&older, &newer))
+}
+
 /// Makes the recorded `version` current. Not found when it was never
 /// recorded; a conflict while another switch holds the pointer.
 pub async fn set_current(tx: &mut Tx<'_>, version: i64) -> Result<Switched, AppError> {

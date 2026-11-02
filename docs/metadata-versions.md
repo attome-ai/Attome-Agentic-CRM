@@ -61,6 +61,14 @@ then fix and publish.
   version before the current one).
 - `POST /api/v1/admin/metadata/versions/{version}/switch` makes any recorded version current.
 - `GET /api/v1/admin/metadata/versions/{version}/nodes` shows which nodes have switched.
+- `GET /api/v1/admin/metadata/versions/{version}/preview` shows what a switch would add, remove and
+  change against the current version; `GET /api/v1/admin/metadata/versions/{version}/diff?against={other}`
+  compares any two recorded versions the same way.
+
+A column a field deletion or a large retype leaves behind is not dropped at once: it is retired under a
+`__retired_` name with its values and dropped after `records.contract_period_hours` (168, seven days, by
+default) once every node runs a later version ([schema changes](schema-changes.md)). Rolling back within
+that week finds the values still in the table.
 
 Every node follows the moved pointer through the same doorbell and poll as a publish.
 

@@ -2977,6 +2977,48 @@ async fn version_preview(
     }))
 }
 
+/// The version a version diff compares against (U7-T1).
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub(crate) struct VersionDiffQuery {
+    /// The version to compare from (older or newer).
+    against: i64,
+}
+
+/// Compares two recorded metadata versions (U7-T1): what the path's version
+/// has that `against` lacks (`added`), lacks (`removed`) and has cooked
+/// differently (`changed`). Changes nothing.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/metadata/versions/{version}/diff",
+    description = "Compares two recorded metadata versions by artefact: added, removed and changed going from `against` to the path's version (U7-T1). Changes nothing.",
+    operation_id = "diff_metadata_versions",
+    tag = "admin",
+    params(("version" = i64, Path, description = "A published metadata version"), VersionDiffQuery),
+    responses(
+        (status = 200, description = "What differs", body = VersionPreview),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "Either version was never published", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn version_diff(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
+    Path(version): Path<i64>,
+    Query(query): Query<VersionDiffQuery>,
+) -> Result<Json<VersionPreview>, AppError> {
+    let changes = attome_model::switch::diff(&state.base.db, query.against, version).await?;
+    Ok(Json(VersionPreview {
+        from: Some(query.against),
+        to: version,
+        added: changes.added,
+        removed: changes.removed,
+        changed: changes.changed,
+    }))
+}
+
 /// Lists the nodes serving a metadata version, earliest switch first
 /// (Y8-T10). A node missing from the list has not loaded the version yet.
 #[utoipa::path(
@@ -3027,6 +3069,10 @@ pub fn routes() -> Router<EngineState> {
         .route(
             "/api/v1/admin/metadata/versions/{version}/preview",
             get(version_preview),
+        )
+        .route(
+            "/api/v1/admin/metadata/versions/{version}/diff",
+            get(version_diff),
         )
         .route(
             "/api/v1/admin/metadata/versions/{version}/nodes",
@@ -3155,6 +3201,7 @@ pub fn routes() -> Router<EngineState> {
         retire_app,
         switch_version,
         version_preview,
+        version_diff,
         list_versions,
         version_nodes,
         version_docs,

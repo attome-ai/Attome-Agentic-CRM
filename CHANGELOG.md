@@ -14,6 +14,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- `GET /api/v1/admin/metadata/versions/{version}/diff?against=` compares two recorded metadata versions (U7-T1).
+- Per-entity ownership models `user_or_team`, `organisation` and `unit` in entity settings (A31-T1).
 - Revenue recognition routes under `/api/v1/ledger/revrec` (F11): `ssp`, `contracts/combine`, `changes`,
   `changes/{id}/apply`, `changes/{id}/discard`, `close` and `close/{id}/post`; the policy guide
   `docs/revenue-recognition.md` for finance and auditors (F11-T15).
