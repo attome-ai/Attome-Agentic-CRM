@@ -14,6 +14,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Agent tools `nurture.suggest_content`, `nurture.draft_summary` and `nurture.find_stalls` (E9-T10), for
+  programmes with `agent_suggestions_enabled`; read-only.
 - A lead's and a contact's form have a Nurture tab (E9-T11): a pending hand-off to accept or return
   (with a reason and a wake-up date, its Hijri date shown), the person's nurture programmes, the content
   they have seen and their hand-offs, in English and Arabic.

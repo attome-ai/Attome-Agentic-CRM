@@ -226,6 +226,11 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   each run ended (a person the caller may not read is not found); `journey.suggest` names the step
   most people leave at and the most common block reasons. There is no agent action to publish a
   journey or enrol anyone.
+- Nurture (marketing, only where a programme has `agent_suggestions_enabled`): `nurture.suggest_content`
+  names up to three pieces of content people with the same interest most often saw before a hand-off,
+  `nurture.draft_summary` writes a hand-off's summary in the person's language (saving nothing), and
+  `nurture.find_stalls` names tracks waiting more than twice the programme's median. No tool creates,
+  accepts or returns a hand-off.
 - Org charts (sales; no manager is set): `sales.orgchart.read` reads an account's chart,
   `sales.committee.read` a deal's buying committee (influence and attitude only through the Deal
   Attitude profile) and `sales.coverage.gaps` just its gaps; `sales.orgchart.propose` queues

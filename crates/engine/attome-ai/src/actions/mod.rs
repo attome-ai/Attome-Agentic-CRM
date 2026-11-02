@@ -87,6 +87,8 @@ pub mod model_edit;
 pub mod nl_query;
 /// A13-T5: a view from plain language.
 pub mod nl_view;
+/// E9-T10: nurture content suggestions, hand-off summaries and stalled tracks.
+pub mod nurture;
 pub mod oidc_assist;
 /// AB2-T12: the cluster's status and a switchover proposal.
 pub mod ops_cluster;
@@ -245,6 +247,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(deliverability::descriptors());
     all.extend(segment::descriptors());
     all.extend(journey::descriptors());
+    all.extend(nurture::descriptors());
     all.extend(sales_dialer::descriptors());
     all.extend(sales_orgchart::descriptors());
     all.extend(sales_team::descriptors());
@@ -359,6 +362,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(deliverability::executors());
     all.extend(segment::executors());
     all.extend(journey::executors());
+    all.extend(nurture::executors());
     all.extend(sales_dialer::executors());
     all.extend(sales_orgchart::executors());
     all.extend(sales_team::executors());

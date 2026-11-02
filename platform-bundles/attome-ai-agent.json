@@ -70,6 +70,7 @@
               "model.stage_process.describe", "model.stage_process.edit", "model.stage_process.list",
               "model.state_model.describe", "model.survey.describe", "model.survey.edit", "model.survey.list",
               "model.tour.describe", "model.tour.edit", "model.tour.list", "ops.cluster_status",
+              "nurture.draft_summary", "nurture.find_stalls", "nurture.suggest_content",
               "ops.draft_incident_update", "ops.drill_evidence", "ops.drill_freshness", "ops.live_rpo", "ops.propose_switchover",
               "ops.recovery_readiness", "ops.report", "ops.slo_health", "ops.status", "ops.upgrade_status", "page.draft",
               "profile.explain", "profile.summary", "quality.explain_drop", "quality.propose_rules",

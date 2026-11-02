@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:da7b93021dba4f76f1df94441b891156a1893e1c7747a33f2c77f1d276b2ac28",
+  "checksum": "sha256:4149e44eb77580190ee6b67619ef92240c2ad1587216cb837b072881eceedb56",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-agent.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -469,6 +469,9 @@
               "model.tour.describe",
               "model.tour.edit",
               "model.tour.list",
+              "nurture.draft_summary",
+              "nurture.find_stalls",
+              "nurture.suggest_content",
               "ops.cluster_status",
               "ops.draft_incident_update",
               "ops.drill_evidence",
