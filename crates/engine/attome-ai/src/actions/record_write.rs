@@ -285,7 +285,38 @@ impl Action for RecordCreate {
                 Value::Object(args.values),
             )
             .await?;
+            // A31-T4: an entity may send what an agent creates to a team's
+            // queue; the reassignment is the audited owner change, as the
+            // person the agent acts for. The record exists by now, so a
+            // failed move (no such team) keeps it with the person and is
+            // logged, rather than failing the action into a retried create.
+            let entity_id = state.entities.load().get(&args.entity).map(|m| m.entity_id);
+            let mut queued_to = None;
+            if let Some(attome_security::ownership::AgentOwner::Queue(team)) =
+                entity_id.map(attome_security::ownership::agent_owner_for)
+            {
+                match attome_security::admin::reassign_owner_for(
+                    state,
+                    ctx.security.user_id,
+                    &args.entity,
+                    record_id,
+                    None,
+                    Some(&team),
+                )
+                .await
+                {
+                    Ok(moved) => queued_to = Some(moved.owner_id),
+                    Err(e) => tracing::warn!(
+                        entity = %args.entity,
+                        %record_id,
+                        team = %team,
+                        error = %e,
+                        "an agent-created record stays with its creator: the queue team could not take it"
+                    ),
+                }
+            }
             Ok(ActionResult::plain(json!({
+                "queued_to": queued_to,
                 "entity": args.entity,
                 "record_id": record_id,
                 "record": redacted(state, ctx, record)?,

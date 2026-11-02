@@ -116,6 +116,51 @@ async fn a_user_create_executes_normally() {
     assert_eq!(f.row_count().await, 1);
 }
 
+/// A31-T4: an entity whose agent-owner rule is a queue hands what is
+/// created there to that team, through the audited owner change; without
+/// the rule the creator keeps it.
+#[tokio::test]
+async fn a_create_on_a_queued_entity_goes_to_the_team() {
+    let f = skip_if_no_db!(fixture().await);
+    let team = Uuid::now_v7();
+    let team_name = format!("Agent queue {}", team.simple());
+    sqlx::query("INSERT INTO team (id, name) VALUES ($1, $2)")
+        .bind(team)
+        .bind(&team_name)
+        .execute(f.db())
+        .await
+        .unwrap();
+    let entity_id = f.state.entities.load().get(&f.entity).unwrap().entity_id;
+    attome_security::ownership::install_agent_owners([(
+        entity_id,
+        attome_security::ownership::AgentOwner::Queue(team_name),
+    )]);
+    let ctx = f.user_ctx(f.owner).await;
+    let outcome = f
+        .dispatch(
+            &ctx,
+            "record.create",
+            json!({"entity": f.entity, "values": {"status": "queued"}}),
+        )
+        .await
+        .expect("dispatch");
+    attome_security::ownership::install_agent_owners([]);
+    let ActionOutcome::Completed { result, .. } = outcome else {
+        panic!("{outcome:?}");
+    };
+    assert_eq!(result["queued_to"], json!(team));
+    let record_id: Uuid = serde_json::from_value(result["record_id"].clone()).unwrap();
+    let table = attome_core::quote_ident(&f.entity);
+    let (owner, owner_type): (Uuid, i32) = sqlx::query_as(&format!(
+        "SELECT owner_ref, owner_type::int FROM {table} WHERE id = $1"
+    ))
+    .bind(record_id)
+    .fetch_one(f.db())
+    .await
+    .unwrap();
+    assert_eq!((owner, owner_type), (team, 1));
+}
+
 #[tokio::test]
 async fn a_caller_without_the_create_privilege_is_refused() {
     let f = skip_if_no_db!(fixture().await);

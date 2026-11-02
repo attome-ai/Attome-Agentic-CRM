@@ -281,6 +281,21 @@ pub(crate) async fn load_parent_access(db: &attome_db::DbPool) {
         })
         .collect();
     attome_security::ownership::install_leavers(leavers);
+    // A31-T4: who owns what an agent creates, per entity.
+    let agent_owners: Vec<(uuid::Uuid, attome_security::ownership::AgentOwner)> = snapshot
+        .manifest
+        .artefacts
+        .keys()
+        .filter(|key| key.starts_with(&prefix))
+        .filter_map(|key| {
+            cooked.get::<serde_json::Value>(attome_model::kinds::ENTITY_SETTINGS.0, key)
+        })
+        .filter_map(|doc| attome_model::kinds::entity_settings::agent_owner(&doc))
+        .filter_map(|(entity, rule)| {
+            attome_security::ownership::AgentOwner::parse(&rule).map(|r| (entity, r))
+        })
+        .collect();
+    attome_security::ownership::install_agent_owners(agent_owners);
     tracing::info!(owned, "entity ownership models loaded");
     match attome_security::parent_access::resolve(db, &pairs).await {
         Ok(links) => {

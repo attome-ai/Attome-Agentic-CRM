@@ -83,6 +83,25 @@ pub fn leaver(cooked: &Value) -> Option<(Uuid, String)> {
         .flatten()
 }
 
+/// A31-T4: whether `rule` says who owns the records an agent creates:
+/// `owner` (the person the agent acts for, the default) or `queue:<team
+/// name>`. Pure.
+pub fn agent_owner_ok(rule: &str) -> bool {
+    rule == "owner"
+        || rule
+            .strip_prefix("queue:")
+            .is_some_and(|team| !team.trim().is_empty())
+}
+
+/// A31-T4: the entity and its agent-owner rule, from cooked entity settings
+/// whose rule is not the default `owner`.
+pub fn agent_owner(cooked: &Value) -> Option<(Uuid, String)> {
+    let rule = cooked["access"]["agent_owner"].as_str()?;
+    (rule != "owner" && agent_owner_ok(rule))
+        .then(|| Some((uuid_at(&cooked["entity"])?, rule.to_owned())))
+        .flatten()
+}
+
 /// A31-T1: the entity and its ownership model, from cooked entity settings
 /// whose model is not the default `user_or_team`.
 pub fn ownership(cooked: &Value) -> Option<(Uuid, String)> {
@@ -166,7 +185,10 @@ fn check_access(access: &Value, issues: &mut Vec<Issue>) {
         return;
     };
     for key in object.keys() {
-        if !matches!(key.as_str(), "mode" | "lookup" | "ownership" | "leaver") {
+        if !matches!(
+            key.as_str(),
+            "mode" | "lookup" | "ownership" | "leaver" | "agent_owner"
+        ) {
             issues.push(Issue::new(
                 format!("/access/{key}"),
                 "unknown_property",
@@ -200,6 +222,14 @@ fn check_access(access: &Value, issues: &mut Vec<Issue>) {
             "/access/leaver",
             "unknown_value",
             "leaver is manager, team or user:<email>",
+        ));
+    }
+    let agent_owner = &access["agent_owner"];
+    if !agent_owner.is_null() && !agent_owner.as_str().is_some_and(agent_owner_ok) {
+        issues.push(Issue::new(
+            "/access/agent_owner",
+            "unknown_value",
+            "agent_owner is owner or queue:<team name>",
         ));
     }
     let lookup = &access["lookup"];
@@ -414,6 +444,17 @@ impl Kind for EntitySettingsKind {
                     }
                     plan["access"]["leaver"] = json!(rule);
                 }
+                // A31-T4: who owns what an agent creates, when not the
+                // default.
+                if let Some(rule) = input.doc["access"]["agent_owner"]
+                    .as_str()
+                    .filter(|r| *r != "owner")
+                {
+                    if plan.get("access").is_none() {
+                        plan["access"] = json!({ "mode": "own" });
+                    }
+                    plan["access"]["agent_owner"] = json!(rule);
+                }
                 let text = crate::canonical::canonicalize(&plan).map_err(AppError::Validation)?;
                 Ok(Artefact {
                     kind: ENTITY_SETTINGS,
@@ -585,6 +626,49 @@ mod tests {
             .unwrap();
         let plan: Value = serde_json::from_slice(&out[0].payload).unwrap();
         assert_eq!(leaver(&plan), Some((entity, "manager".to_owned())));
+    }
+
+    #[test]
+    fn agent_owner_rule_is_checked_and_cooked() {
+        let entity = Uuid::now_v7();
+        for (rule, ok) in [
+            ("owner", true),
+            ("queue:Inside sales", true),
+            ("queue: ", false),
+            ("agent", false),
+        ] {
+            let doc = json!({
+                "entity": entity.to_string(),
+                "access": { "mode": "own", "agent_owner": rule }
+            });
+            assert_eq!(
+                EntitySettingsKind.validate_shape(&doc).is_ok(),
+                ok,
+                "{rule}"
+            );
+        }
+        let doc = json!({
+            "entity": entity.to_string(),
+            "access": { "mode": "own", "agent_owner": "queue:Inside sales" }
+        });
+        let out = EntitySettingsKind
+            .cook(&[CookInput {
+                id: ObjectId(Uuid::now_v7()),
+                name: "lead".into(),
+                doc,
+            }])
+            .unwrap();
+        let plan: Value = serde_json::from_slice(&out[0].payload).unwrap();
+        assert_eq!(
+            agent_owner(&plan),
+            Some((entity, "queue:Inside sales".to_owned()))
+        );
+        assert_eq!(
+            agent_owner(
+                &json!({ "entity": entity.to_string(), "access": { "agent_owner": "owner" } })
+            ),
+            None
+        );
     }
 
     #[test]

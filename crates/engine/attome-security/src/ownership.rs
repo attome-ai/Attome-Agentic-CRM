@@ -119,6 +119,61 @@ pub fn leaver_rules() -> Leavers {
         .clone()
 }
 
+/// A31-T4: who owns a record an agent creates, per entity. An agent acts
+/// for a person (its session's owner), so by default that person owns what
+/// it creates; an entity may send those records to a team's queue instead.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AgentOwner {
+    /// The person the agent acts for.
+    Owner,
+    /// The team of this name.
+    Queue(String),
+}
+
+impl AgentOwner {
+    /// The rule a settings value names; `None` for an unknown one.
+    pub fn parse(rule: &str) -> Option<AgentOwner> {
+        match rule {
+            "owner" => Some(AgentOwner::Owner),
+            other => other
+                .strip_prefix("queue:")
+                .map(str::trim)
+                .filter(|team| !team.is_empty())
+                .map(|team| AgentOwner::Queue(team.to_owned())),
+        }
+    }
+}
+
+type AgentOwners = Arc<HashMap<Uuid, AgentOwner>>;
+
+fn agent_owner_slot() -> &'static RwLock<AgentOwners> {
+    static SLOT: OnceLock<RwLock<AgentOwners>> = OnceLock::new();
+    SLOT.get_or_init(|| RwLock::new(Arc::new(HashMap::new())))
+}
+
+/// Replaces every entity's agent-owner rule (the metadata runtime, with the
+/// ownership models); an entity not named keeps the default.
+pub fn install_agent_owners(rules: impl IntoIterator<Item = (Uuid, AgentOwner)>) {
+    *agent_owner_slot()
+        .write()
+        .unwrap_or_else(|e| e.into_inner()) = Arc::new(
+        rules
+            .into_iter()
+            .filter(|(_, rule)| *rule != AgentOwner::Owner)
+            .collect(),
+    );
+}
+
+/// Who owns what an agent creates on `entity`.
+pub fn agent_owner_for(entity: Uuid) -> AgentOwner {
+    agent_owner_slot()
+        .read()
+        .unwrap_or_else(|e| e.into_inner())
+        .get(&entity)
+        .cloned()
+        .unwrap_or(AgentOwner::Owner)
+}
+
 /// The registered job that moves a disabled person's records.
 pub const LEAVER_JOB: &str = "security_leaver_reassign";
 
@@ -181,6 +236,28 @@ pub fn model_for(entity: Uuid) -> Ownership {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn agent_owner_rules_parse_and_install() {
+        assert_eq!(AgentOwner::parse("owner"), Some(AgentOwner::Owner));
+        assert_eq!(
+            AgentOwner::parse("queue: Inside sales"),
+            Some(AgentOwner::Queue("Inside sales".into()))
+        );
+        assert_eq!(AgentOwner::parse("queue:"), None);
+        assert_eq!(AgentOwner::parse("agent"), None);
+        let (queued, plain) = (Uuid::now_v7(), Uuid::now_v7());
+        install_agent_owners([
+            (queued, AgentOwner::Queue("Inside sales".into())),
+            (plain, AgentOwner::Owner),
+        ]);
+        assert_eq!(
+            agent_owner_for(queued),
+            AgentOwner::Queue("Inside sales".into())
+        );
+        assert_eq!(agent_owner_for(plain), AgentOwner::Owner);
+        assert_eq!(agent_owner_for(Uuid::now_v7()), AgentOwner::Owner);
+    }
 
     #[test]
     fn leaver_rules_parse() {
