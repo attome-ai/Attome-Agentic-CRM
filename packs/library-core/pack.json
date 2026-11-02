@@ -1,0 +1,11 @@
+{
+  "format": "attome-pack/v1",
+  "name": "library-core",
+  "title": "Library core",
+  "version": "1.2.0",
+  "level": "starter",
+  "depends": [],
+  "contents": [
+    "changesets"
+  ]
+}

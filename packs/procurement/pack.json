@@ -1,0 +1,14 @@
+{
+  "format": "attome-pack/v1",
+  "name": "procurement",
+  "title": "Procurement",
+  "version": "1.3.0",
+  "level": "standard",
+  "depends": [
+    "finance",
+    "vendor-supplier"
+  ],
+  "contents": [
+    "changesets"
+  ]
+}

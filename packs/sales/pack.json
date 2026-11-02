@@ -1,0 +1,13 @@
+{
+  "format": "attome-pack/v1",
+  "name": "sales",
+  "title": "Sales",
+  "version": "1.33.0",
+  "level": "standard",
+  "depends": [
+    "crm"
+  ],
+  "contents": [
+    "changesets"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "format": "attome-pack/v1",
+  "name": "workforce",
+  "title": "Workforce",
+  "version": "1.6.0",
+  "level": "starter",
+  "depends": [],
+  "contents": [
+    "changesets"
+  ]
+}

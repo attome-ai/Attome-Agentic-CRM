@@ -1,0 +1,13 @@
+{
+  "format": "attome-pack/v1",
+  "name": "vendor-supplier",
+  "title": "Vendor supplier",
+  "version": "1.4.0",
+  "level": "starter",
+  "depends": [
+    "crm"
+  ],
+  "contents": [
+    "changesets"
+  ]
+}

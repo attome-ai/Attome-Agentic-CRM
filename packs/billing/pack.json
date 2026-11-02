@@ -1,0 +1,16 @@
+{
+  "format": "attome-pack/v1",
+  "name": "billing",
+  "title": "Billing",
+  "version": "1.25.0",
+  "level": "standard",
+  "depends": [
+    "contract-management",
+    "crm",
+    "finance",
+    "sales"
+  ],
+  "contents": [
+    "changesets"
+  ]
+}

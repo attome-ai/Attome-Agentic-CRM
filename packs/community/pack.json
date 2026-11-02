@@ -1,0 +1,11 @@
+{
+  "format": "attome-pack/v1",
+  "name": "community",
+  "title": "Community",
+  "version": "1.1.0",
+  "level": "standard",
+  "depends": [],
+  "contents": [
+    "changesets"
+  ]
+}

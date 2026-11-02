@@ -1,0 +1,13 @@
+{
+  "format": "attome-pack/v1",
+  "name": "commission",
+  "title": "Commission",
+  "version": "1.6.0",
+  "level": "standard",
+  "depends": [
+    "crm"
+  ],
+  "contents": [
+    "changesets"
+  ]
+}

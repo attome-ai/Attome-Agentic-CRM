@@ -57,3 +57,94 @@ fn every_pack_changeset_is_a_valid_product_changeset() {
         "expected the nine packs, found {checked} changesets"
     );
 }
+
+/// X2-T1: every pack carries a `pack.json` manifest: its own name, a level,
+/// a version whose minor part is its changeset count (adding a changeset
+/// bumps it), dependencies that are packs and form no cycle, and contents
+/// that exist; a `complete` pack ships golden workflows and model objects.
+#[test]
+fn every_pack_has_a_manifest() {
+    let mut manifests = std::collections::BTreeMap::new();
+    for pack in std::fs::read_dir(packs_dir()).expect("packs/").flatten() {
+        let dir = pack.path();
+        if !dir.join("changesets").is_dir() {
+            continue;
+        }
+        let name = pack.file_name().to_string_lossy().into_owned();
+        let text = std::fs::read_to_string(dir.join("pack.json"))
+            .unwrap_or_else(|e| panic!("{name}: no pack.json: {e}"));
+        let manifest: serde_json::Value =
+            serde_json::from_str(&text).unwrap_or_else(|e| panic!("{name}: pack.json: {e}"));
+        assert_eq!(manifest["format"], "attome-pack/v1", "{name}");
+        assert_eq!(manifest["name"], name.as_str(), "{name}");
+        assert!(
+            manifest["title"].as_str().is_some_and(|t| !t.is_empty()),
+            "{name}: a title"
+        );
+        let changesets = std::fs::read_dir(dir.join("changesets"))
+            .expect("read changesets")
+            .flatten()
+            .filter(|e| e.path().extension().is_some_and(|x| x == "json"))
+            .count();
+        assert_eq!(
+            manifest["version"],
+            format!("1.{changesets}.0").as_str(),
+            "{name}: the minor version is the changeset count"
+        );
+        let level = manifest["level"].as_str().unwrap_or_default();
+        assert!(
+            ["starter", "standard", "complete"].contains(&level),
+            "{name}: level {level:?}"
+        );
+        let contents: Vec<&str> = manifest["contents"]
+            .as_array()
+            .map(|c| c.iter().filter_map(|v| v.as_str()).collect())
+            .unwrap_or_default();
+        for item in &contents {
+            let path = match *item {
+                "golden" => dir.join("golden").join("golden.json"),
+                other => dir.join(other),
+            };
+            assert!(
+                path.exists(),
+                "{name}: contents names {item}, which is missing"
+            );
+        }
+        if level == "complete" {
+            assert!(
+                contents.contains(&"golden") && contents.contains(&"model"),
+                "{name}: a complete pack ships golden workflows and model objects"
+            );
+        }
+        let depends: Vec<String> = manifest["depends"]
+            .as_array()
+            .expect("depends is a list")
+            .iter()
+            .map(|d| d.as_str().expect("a pack name").to_owned())
+            .collect();
+        manifests.insert(name, depends);
+    }
+    assert!(manifests.len() >= 30, "found {} packs", manifests.len());
+    for (name, depends) in &manifests {
+        for dep in depends {
+            assert!(
+                manifests.contains_key(dep),
+                "{name} depends on unknown pack {dep}"
+            );
+            assert_ne!(dep, name, "{name} depends on itself");
+        }
+    }
+    // No cycle: repeatedly take the packs whose dependencies are all taken.
+    let mut done = std::collections::BTreeSet::new();
+    while done.len() < manifests.len() {
+        let ready: Vec<&String> = manifests
+            .iter()
+            .filter(|(name, deps)| !done.contains(*name) && deps.iter().all(|d| done.contains(d)))
+            .map(|(name, _)| name)
+            .collect();
+        assert!(!ready.is_empty(), "pack dependencies form a cycle");
+        for name in ready {
+            done.insert(name.clone());
+        }
+    }
+}

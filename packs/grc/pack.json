@@ -1,0 +1,11 @@
+{
+  "format": "attome-pack/v1",
+  "name": "grc",
+  "title": "Governance, risk and compliance",
+  "version": "1.1.0",
+  "level": "starter",
+  "depends": [],
+  "contents": [
+    "changesets"
+  ]
+}

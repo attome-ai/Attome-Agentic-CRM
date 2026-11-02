@@ -1,0 +1,13 @@
+{
+  "format": "attome-pack/v1",
+  "name": "finance",
+  "title": "Finance",
+  "version": "1.3.0",
+  "level": "standard",
+  "depends": [
+    "crm"
+  ],
+  "contents": [
+    "changesets"
+  ]
+}

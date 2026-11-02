@@ -1,0 +1,11 @@
+{
+  "format": "attome-pack/v1",
+  "name": "privacy",
+  "title": "Privacy",
+  "version": "1.1.0",
+  "level": "starter",
+  "depends": [],
+  "contents": [
+    "changesets"
+  ]
+}

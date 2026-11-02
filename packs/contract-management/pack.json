@@ -1,0 +1,14 @@
+{
+  "format": "attome-pack/v1",
+  "name": "contract-management",
+  "title": "Contract management",
+  "version": "1.8.0",
+  "level": "standard",
+  "depends": [
+    "crm",
+    "vendor-supplier"
+  ],
+  "contents": [
+    "changesets"
+  ]
+}

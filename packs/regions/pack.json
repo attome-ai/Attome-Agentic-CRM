@@ -1,0 +1,11 @@
+{
+  "format": "attome-pack/v1",
+  "name": "regions",
+  "title": "Regions",
+  "version": "1.2.0",
+  "level": "starter",
+  "depends": [],
+  "contents": [
+    "changesets"
+  ]
+}

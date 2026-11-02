@@ -1,0 +1,18 @@
+{
+  "format": "attome-pack/v1",
+  "name": "field-service",
+  "title": "Field service",
+  "version": "1.11.0",
+  "level": "starter",
+  "depends": [
+    "asset-management",
+    "billing",
+    "crm",
+    "customer-service",
+    "sales"
+  ],
+  "contents": [
+    "changesets",
+    "model"
+  ]
+}

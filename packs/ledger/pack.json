@@ -1,0 +1,14 @@
+{
+  "format": "attome-pack/v1",
+  "name": "ledger",
+  "title": "Ledger",
+  "version": "1.7.0",
+  "level": "standard",
+  "depends": [
+    "crm",
+    "sales"
+  ],
+  "contents": [
+    "changesets"
+  ]
+}

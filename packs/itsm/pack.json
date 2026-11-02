@@ -1,0 +1,11 @@
+{
+  "format": "attome-pack/v1",
+  "name": "itsm",
+  "title": "IT service management",
+  "version": "1.3.0",
+  "level": "starter",
+  "depends": [],
+  "contents": [
+    "changesets"
+  ]
+}

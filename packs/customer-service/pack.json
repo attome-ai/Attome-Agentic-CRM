@@ -1,0 +1,17 @@
+{
+  "format": "attome-pack/v1",
+  "name": "customer-service",
+  "title": "Customer service",
+  "version": "1.4.0",
+  "level": "starter",
+  "depends": [
+    "asset-management",
+    "contract-management",
+    "crm",
+    "sales"
+  ],
+  "contents": [
+    "changesets",
+    "model"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "format": "attome-pack/v1",
+  "name": "partner",
+  "title": "Partner",
+  "version": "1.9.0",
+  "level": "standard",
+  "depends": [
+    "contract-management",
+    "crm",
+    "sales"
+  ],
+  "contents": [
+    "changesets",
+    "model"
+  ]
+}

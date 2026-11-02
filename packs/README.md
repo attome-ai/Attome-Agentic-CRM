@@ -25,6 +25,10 @@ attome-testapp test `pack_golden_workflows_pass` installs each pack's list and r
 run in the release gate's `tests` step on every release; nothing a test does is kept. Boot never reads
 `golden/`.
 
+Each pack also carries `pack.json`: its version (the minor part counts its changesets), its level
+(`starter`, `standard` or `complete`) and the packs it depends on. `docs/pack-quality-bar.md` says what
+each level needs.
+
 ## library-core
 
 The MENA base library other packs and agents build on (A1-T12): `party` (a person or an

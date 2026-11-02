@@ -1,0 +1,15 @@
+{
+  "format": "attome-pack/v1",
+  "name": "enterprise-architecture",
+  "title": "Enterprise architecture",
+  "version": "1.2.0",
+  "level": "standard",
+  "depends": [
+    "crm",
+    "itsm"
+  ],
+  "contents": [
+    "changesets",
+    "golden"
+  ]
+}

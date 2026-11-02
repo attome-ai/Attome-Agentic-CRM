@@ -1,0 +1,14 @@
+{
+  "format": "attome-pack/v1",
+  "name": "fulfilment",
+  "title": "Fulfilment",
+  "version": "1.9.0",
+  "level": "starter",
+  "depends": [
+    "crm",
+    "sales"
+  ],
+  "contents": [
+    "changesets"
+  ]
+}
