@@ -98686,6 +98686,288 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/ledger/revrec/changes": {
+      "post": {
+        "tags": [
+          "ledger"
+        ],
+        "summary": "Preview a contract change",
+        "description": "Computes how a contract change moves the planned schedule lines of the obligations named, by the\nIFRS 15 treatment (or the one named), and stores it as a preview. Nothing else changes.",
+        "operationId": "revrec_change_preview",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The stored preview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangePreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks revenue_contract.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such contract, or revenue recognition is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a change kind, a bad amount, or an obligation with no planned line",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ledger",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/ledger/revrec/changes/{id}/apply": {
+      "post": {
+        "tags": [
+          "ledger"
+        ],
+        "summary": "Apply a previewed contract change",
+        "description": "Writes a previewed change to the planned schedule lines it named, only while each is still\nplanned at the previewed amount; recognised and locked lines are never changed.",
+        "operationId": "revrec_change_apply",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The change",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Applied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeApplied"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks revenue_contract.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such change, or revenue recognition is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Applied or discarded already, or a line changed since the preview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ledger",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/ledger/revrec/changes/{id}/discard": {
+      "post": {
+        "tags": [
+          "ledger"
+        ],
+        "summary": "Discard a previewed contract change",
+        "description": "Marks a previewed change discarded; no schedule line changes.",
+        "operationId": "revrec_change_discard",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The change",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Discarded"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks revenue_contract.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such change, or revenue recognition is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Applied or discarded already",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ledger",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/ledger/revrec/contracts/combine": {
       "post": {
         "tags": [
@@ -155320,6 +155602,89 @@
         "x-risk": "low"
       }
     },
+    "/{keyword}/api/v1/billing/invoices/{id}/pay": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Pay an open invoice",
+        "description": "F5-T14: a payment link for one of the signed-in person's own account's open invoices; the\ncustomer pays on the hosted payment page it opens.",
+        "operationId": "portal_billing_pay_invoice",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The invoice",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The payment link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkCreated"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such open invoice of the person's account, or the route is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/{keyword}/api/v1/billing/payment-methods": {
       "get": {
         "tags": [
@@ -155387,6 +155752,82 @@
         "x-risk": "low"
       }
     },
+    "/{keyword}/api/v1/billing/payment-methods/{id}": {
+      "delete": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Remove a saved payment method",
+        "description": "F5-T14: deletes one of the signed-in person's own account's saved payment methods.",
+        "operationId": "portal_billing_remove_payment_method",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The saved payment method",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such method of the person's account, or the route is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "soft_delete"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "high"
+      }
+    },
     "/{keyword}/api/v1/billing/subscriptions": {
       "get": {
         "tags": [
@@ -155452,6 +155893,232 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/{keyword}/api/v1/billing/subscriptions/{id}/cancel": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Cancel a subscription at the end of its term",
+        "description": "F3-T13: cancels one of the signed-in person's own account's subscriptions at the end of its term;\nnever at once.",
+        "operationId": "portal_billing_subscription_cancel",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The subscription",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalCancel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Cancelled from the end of the term",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalCancelled"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such subscription of the person's account, or the route is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another change to the subscription is in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a reason, already cancelled, or a subscription with no term end",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/{keyword}/api/v1/billing/subscriptions/{id}/quantity": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "summary": "Change a subscription line's quantity",
+        "description": "F3-T13: sets one line of the signed-in person's own account's subscription to a quantity within\nthe line's portal bounds, from today, prorated, at the price in force.",
+        "operationId": "portal_billing_subscription_quantity",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The subscription",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuantityChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuantityChanged"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such subscription of the person's account, or the route is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another change to the subscription is in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The line cannot be changed on the portal, or the quantity is outside its bounds",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/{keyword}/api/v1/fulfilment/orders/{order_id}": {
@@ -158409,6 +159076,405 @@
         "x-privilege": "authenticated",
         "x-rate-class": "api",
         "x-risk": "medium"
+      }
+    },
+    "/{keyword}/api/v1/shop/cart": {
+      "get": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "My cart",
+        "description": "F7-T1: the signed-in person's open cart, priced now.",
+        "operationId": "portal_shop_cart",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The cart",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cart"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The shop is off, or the person has no account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/{keyword}/api/v1/shop/cart/checkout": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "Check out",
+        "description": "F7-T1: turns the signed-in person's cart into a draft order for their account, re-priced now,\nwith an approval request above the shop's limit.",
+        "operationId": "portal_shop_checkout",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The order made",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckedOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The shop is off, the person has no account, or the portal has no service user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The cart is being checked out already",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The cart is empty, or a product is no longer on sale",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/{keyword}/api/v1/shop/cart/lines/{product_id}": {
+      "put": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "Set a cart line",
+        "description": "F7-T1: puts a product on sale into the signed-in person's cart at a quantity, or removes it.",
+        "operationId": "portal_shop_cart_line",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "product_id",
+            "in": "path",
+            "description": "The product",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CartQuantity"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The cart",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Cart"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The shop is off, or the product is not on sale to the account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a quantity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "a portal user's own cart: a product and a quantity, no price and no business effect until checkout, which writes the order and its audited event",
+          "reason": "user_preference",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/{keyword}/api/v1/shop/catalogue": {
+      "get": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "The shop's catalogue",
+        "description": "F7-T1: the products on sale to the signed-in person's account, priced for it.",
+        "operationId": "portal_shop_catalogue",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Part of a product's name or SKU.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The products on sale",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogueItem"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The shop is off, or the person has no account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/{keyword}/api/v1/shop/orders": {
+      "get": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "My account's orders",
+        "description": "F7-T2: the signed-in person's account's orders, newest first.",
+        "operationId": "portal_shop_orders",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The account's orders",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ShopOrder"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in to the portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The shop is off, or the person has no account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
       }
     }
   },
@@ -168063,6 +169129,90 @@
           "not_recorded"
         ]
       },
+      "Cart": {
+        "type": "object",
+        "description": "The portal user's open cart.",
+        "required": [
+          "currency",
+          "lines",
+          "total",
+          "can_check_out"
+        ],
+        "properties": {
+          "can_check_out": {
+            "type": "boolean",
+            "description": "False while a line is no longer on sale."
+          },
+          "cart_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CartLine"
+            }
+          },
+          "total": {
+            "type": "string"
+          }
+        }
+      },
+      "CartLine": {
+        "type": "object",
+        "description": "A cart line, priced now.",
+        "required": [
+          "product_id",
+          "quantity"
+        ],
+        "properties": {
+          "line_total": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "string"
+          },
+          "unit_price": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`None` when the product is no longer on sale."
+          }
+        }
+      },
+      "CartQuantity": {
+        "type": "object",
+        "description": "A cart line's quantity.",
+        "required": [
+          "quantity"
+        ],
+        "properties": {
+          "quantity": {
+            "type": "string",
+            "description": "A decimal in text; 0 removes the line."
+          }
+        }
+      },
       "CaseAdded": {
         "type": "object",
         "required": [
@@ -168968,6 +170118,46 @@
           }
         }
       },
+      "CatalogueItem": {
+        "type": "object",
+        "description": "A product on sale, priced for the account.",
+        "required": [
+          "product_id",
+          "price",
+          "currency"
+        ],
+        "properties": {
+          "currency": {
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "price": {
+            "type": "string",
+            "description": "The unit price for one, a decimal in text."
+          },
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "Certification": {
         "type": "object",
         "required": [
@@ -169033,6 +170223,26 @@
           }
         },
         "additionalProperties": false
+      },
+      "ChangeApplied": {
+        "type": "object",
+        "description": "What applying did.",
+        "required": [
+          "change_id",
+          "lines"
+        ],
+        "properties": {
+          "change_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lines": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Planned lines changed.",
+            "minimum": 0
+          }
+        }
       },
       "ChangeBody": {
         "type": "object",
@@ -169193,6 +170403,99 @@
               "type": "object"
             },
             "description": "Each `{ \"kind\": ..., \"field\": ... }`: `add_field`, `add_choice_value`,\n`rename_field` (with `to`), `set_required`, `add_index`,\n`set_max_length` (with `max_length`), `change_type` (with `to`),\n`backfill`, `delete_field`."
+          }
+        }
+      },
+      "ChangePreview": {
+        "type": "object",
+        "description": "A stored preview.",
+        "required": [
+          "change_id",
+          "contract_id",
+          "change_kind",
+          "treatment",
+          "overridden",
+          "status",
+          "obligations"
+        ],
+        "properties": {
+          "change_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "change_kind": {
+            "type": "string"
+          },
+          "contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "obligations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ObligationPreview"
+            }
+          },
+          "overridden": {
+            "type": "boolean",
+            "description": "The treatment was named by the caller rather than the rule."
+          },
+          "status": {
+            "type": "string",
+            "description": "`previewed`, `applied` or `discarded`."
+          },
+          "treatment": {
+            "$ref": "#/components/schemas/Treatment"
+          }
+        }
+      },
+      "ChangeRequest": {
+        "type": "object",
+        "description": "A change to preview.",
+        "required": [
+          "contract_id",
+          "change_kind"
+        ],
+        "properties": {
+          "adds_distinct_at_standalone_price": {
+            "type": "boolean",
+            "description": "Goods added that are distinct and priced at their standalone price."
+          },
+          "change_kind": {
+            "type": "string",
+            "description": "`amendment` (F3), `change_order` (D10) or `credit_note` (F4)."
+          },
+          "contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "obligations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ObligationChange"
+            }
+          },
+          "remaining_distinct": {
+            "type": "boolean",
+            "description": "The goods still to deliver are distinct from those delivered."
+          },
+          "source_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The record the change came from, if any."
+          },
+          "treatment": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Treatment",
+                "description": "A revenue accountant's own choice, replacing the rule's."
+              }
+            ]
           }
         }
       },
@@ -169900,6 +171203,35 @@
           "fail",
           "skipped"
         ]
+      },
+      "CheckedOut": {
+        "type": "object",
+        "description": "What checkout made.",
+        "required": [
+          "order_id",
+          "total",
+          "needs_approval"
+        ],
+        "properties": {
+          "approval_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "needs_approval": {
+            "type": "boolean",
+            "description": "An approval request was submitted for the order."
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "total": {
+            "type": "string"
+          }
+        }
       },
       "ChecklistRunBody": {
         "type": "object",
@@ -192378,6 +193710,32 @@
           }
         }
       },
+      "LineChange": {
+        "type": "object",
+        "description": "A planned line's change.",
+        "required": [
+          "line_id",
+          "fiscal_period",
+          "from",
+          "to"
+        ],
+        "properties": {
+          "fiscal_period": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string",
+            "description": "Decimals in text."
+          },
+          "line_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "to": {
+            "type": "string"
+          }
+        }
+      },
       "LineRollup": {
         "type": "object",
         "description": "One line's fulfilment.",
@@ -198830,6 +200188,57 @@
           "version_no": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "ObligationChange": {
+        "type": "object",
+        "description": "One obligation's new total.",
+        "required": [
+          "obligation_id",
+          "new_total"
+        ],
+        "properties": {
+          "new_total": {
+            "type": "number",
+            "format": "double",
+            "description": "The obligation's whole allocated amount after the change, a decimal."
+          },
+          "obligation_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ObligationPreview": {
+        "type": "object",
+        "description": "An obligation's change.",
+        "required": [
+          "obligation_id",
+          "recognised",
+          "old_total",
+          "new_total",
+          "lines"
+        ],
+        "properties": {
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineChange"
+            }
+          },
+          "new_total": {
+            "type": "string"
+          },
+          "obligation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "old_total": {
+            "type": "string"
+          },
+          "recognised": {
+            "type": "string"
           }
         }
       },
@@ -228511,6 +229920,32 @@
           }
         }
       },
+      "PortalCancel": {
+        "type": "object",
+        "description": "A cancellation.",
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "`price`, `product_fit`, `budget`, `switched_vendor` or `other`."
+          }
+        }
+      },
+      "PortalCancelled": {
+        "type": "object",
+        "description": "When a cancelled subscription ends.",
+        "required": [
+          "ends_on"
+        ],
+        "properties": {
+          "ends_on": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
       "PortalCharge": {
         "type": "object",
         "description": "A charge still to come.",
@@ -229197,6 +230632,14 @@
           "row_version": {
             "type": "integer",
             "format": "int64"
+          },
+          "service_user_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "V2-D1588 (1): the staff user the portal's self-service changes run\nas; absent unchanged, `null` cleared. It needs an active account and\nonly the privileges the self-service routes use."
           }
         }
       },
@@ -232102,6 +233545,44 @@
               "null"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "QuantityChange": {
+        "type": "object",
+        "description": "A quantity change.",
+        "required": [
+          "line_id",
+          "quantity"
+        ],
+        "properties": {
+          "line_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The subscription line."
+          },
+          "quantity": {
+            "type": "string",
+            "description": "The new quantity, a decimal in text, within the line's portal bounds."
+          }
+        }
+      },
+      "QuantityChanged": {
+        "type": "object",
+        "description": "What a quantity change did.",
+        "required": [
+          "amendment_id",
+          "charges"
+        ],
+        "properties": {
+          "amendment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "charges": {
+            "type": "integer",
+            "description": "Prorations or credits planned for the rest of the period.",
+            "minimum": 0
           }
         }
       },
@@ -243826,6 +245307,56 @@
           }
         }
       },
+      "ShopOrder": {
+        "type": "object",
+        "description": "One of the account's orders, as the shop lists it.",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "grand_total": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A decimal in text."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "order_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ordered_on": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "SidebarAdminItem": {
         "type": "object",
         "required": [
@@ -251247,6 +252778,15 @@
           }
         }
       },
+      "Treatment": {
+        "type": "string",
+        "description": "How a change is accounted for.",
+        "enum": [
+          "separate_contract",
+          "prospective",
+          "cumulative_catch_up"
+        ]
+      },
       "TreeComputed": {
         "type": "object",
         "description": "One metric of a tree computation.",
@@ -256680,6 +258220,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-version-adapters": [],
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -256732,6 +258273,5 @@
       }
     }
   },
-  "x-api-version": "2026-10",
-  "x-version-adapters": []
+  "x-api-version": "2026-10"
 }

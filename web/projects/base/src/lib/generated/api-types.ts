@@ -20555,6 +20555,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ledger/revrec/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview a contract change
+         * @description Computes how a contract change moves the planned schedule lines of the obligations named, by the
+         *     IFRS 15 treatment (or the one named), and stores it as a preview. Nothing else changes.
+         */
+        post: operations["revrec_change_preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ledger/revrec/changes/{id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply a previewed contract change
+         * @description Writes a previewed change to the planned schedule lines it named, only while each is still
+         *     planned at the previewed amount; recognised and locked lines are never changed.
+         */
+        post: operations["revrec_change_apply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ledger/revrec/changes/{id}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Discard a previewed contract change
+         * @description Marks a previewed change discarded; no schedule line changes.
+         */
+        post: operations["revrec_change_discard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ledger/revrec/contracts/combine": {
         parameters: {
             query?: never;
@@ -32912,6 +32974,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/{keyword}/api/v1/billing/invoices/{id}/pay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pay an open invoice
+         * @description F5-T14: a payment link for one of the signed-in person's own account's open invoices; the
+         *     customer pays on the hosted payment page it opens.
+         */
+        post: operations["portal_billing_pay_invoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/{keyword}/api/v1/billing/payment-methods": {
         parameters: {
             query?: never;
@@ -32933,6 +33016,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/{keyword}/api/v1/billing/payment-methods/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a saved payment method
+         * @description F5-T14: deletes one of the signed-in person's own account's saved payment methods.
+         */
+        delete: operations["portal_billing_remove_payment_method"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/{keyword}/api/v1/billing/subscriptions": {
         parameters: {
             query?: never;
@@ -32948,6 +33051,48 @@ export interface paths {
         get: operations["portal_billing_subscriptions"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/billing/subscriptions/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a subscription at the end of its term
+         * @description F3-T13: cancels one of the signed-in person's own account's subscriptions at the end of its term;
+         *     never at once.
+         */
+        post: operations["portal_billing_subscription_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/billing/subscriptions/{id}/quantity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change a subscription line's quantity
+         * @description F3-T13: sets one line of the signed-in person's own account's subscription to a quantity within
+         *     the line's portal bounds, from today, prorated, at the price in force.
+         */
+        post: operations["portal_billing_subscription_quantity"];
         delete?: never;
         options?: never;
         head?: never;
@@ -33501,6 +33646,107 @@ export interface paths {
          * @description Marks the upload `uploaded` and queues its scan, or `rejected`; a finalised session is 409.
          */
         post: operations["portal_finalize_upload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/shop/cart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My cart
+         * @description F7-T1: the signed-in person's open cart, priced now.
+         */
+        get: operations["portal_shop_cart"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/shop/cart/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check out
+         * @description F7-T1: turns the signed-in person's cart into a draft order for their account, re-priced now,
+         *     with an approval request above the shop's limit.
+         */
+        post: operations["portal_shop_checkout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/shop/cart/lines/{product_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set a cart line
+         * @description F7-T1: puts a product on sale into the signed-in person's cart at a quantity, or removes it.
+         */
+        put: operations["portal_shop_cart_line"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/shop/catalogue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The shop's catalogue
+         * @description F7-T1: the products on sale to the signed-in person's account, priced for it.
+         */
+        get: operations["portal_shop_catalogue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{keyword}/api/v1/shop/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My account's orders
+         * @description F7-T2: the signed-in person's account's orders, newest first.
+         */
+        get: operations["portal_shop_orders"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -37299,6 +37545,31 @@ export interface components {
          * @enum {string}
          */
         CaptureOutcome: "recorded" | "awaiting_confirmation" | "not_recorded";
+        /** @description The portal user's open cart. */
+        Cart: {
+            /** @description False while a line is no longer on sale. */
+            can_check_out: boolean;
+            /** Format: uuid */
+            cart_id?: string | null;
+            currency: string;
+            lines: components["schemas"]["CartLine"][];
+            total: string;
+        };
+        /** @description A cart line, priced now. */
+        CartLine: {
+            line_total?: string | null;
+            name?: string | null;
+            /** Format: uuid */
+            product_id: string;
+            quantity: string;
+            /** @description `None` when the product is no longer on sale. */
+            unit_price?: string | null;
+        };
+        /** @description A cart line's quantity. */
+        CartQuantity: {
+            /** @description A decimal in text; 0 removes the line. */
+            quantity: string;
+        };
         CaseAdded: {
             case: unknown;
             content_hash: string;
@@ -37605,6 +37876,17 @@ export interface components {
             /** @description L4-T5: no write in 90 days, no search in 30 and no reader. */
             unused: boolean;
         };
+        /** @description A product on sale, priced for the account. */
+        CatalogueItem: {
+            currency: string;
+            name?: string | null;
+            name_ar?: string | null;
+            /** @description The unit price for one, a decimal in text. */
+            price: string;
+            /** Format: uuid */
+            product_id: string;
+            sku?: string | null;
+        };
         Certification: {
             asset_kind: string;
             asset_ref: string;
@@ -37625,6 +37907,16 @@ export interface components {
         /** @description Whether the metric is certified. */
         CertifyMetricBody: {
             certified: boolean;
+        };
+        /** @description What applying did. */
+        ChangeApplied: {
+            /** Format: uuid */
+            change_id: string;
+            /**
+             * Format: int64
+             * @description Planned lines changed.
+             */
+            lines: number;
         };
         /** @description A change order. */
         ChangeBody: {
@@ -37693,6 +37985,35 @@ export interface components {
              *     `backfill`, `delete_field`.
              */
             changes: Record<string, never>[];
+        };
+        /** @description A stored preview. */
+        ChangePreview: {
+            /** Format: uuid */
+            change_id: string;
+            change_kind: string;
+            /** Format: uuid */
+            contract_id: string;
+            obligations: components["schemas"]["ObligationPreview"][];
+            /** @description The treatment was named by the caller rather than the rule. */
+            overridden: boolean;
+            /** @description `previewed`, `applied` or `discarded`. */
+            status: string;
+            treatment: components["schemas"]["Treatment"];
+        };
+        /** @description A change to preview. */
+        ChangeRequest: {
+            /** @description Goods added that are distinct and priced at their standalone price. */
+            adds_distinct_at_standalone_price?: boolean;
+            /** @description `amendment` (F3), `change_order` (D10) or `credit_note` (F4). */
+            change_kind: string;
+            /** Format: uuid */
+            contract_id: string;
+            obligations?: components["schemas"]["ObligationChange"][];
+            /** @description The goods still to deliver are distinct from those delivered. */
+            remaining_distinct?: boolean;
+            /** @description The record the change came from, if any. */
+            source_ref?: string | null;
+            treatment?: null | components["schemas"]["Treatment"];
         };
         ChangeRequestDecisionResponse: {
             /**
@@ -37943,6 +38264,16 @@ export interface components {
         };
         /** @enum {string} */
         CheckResult: "pass" | "fail" | "skipped";
+        /** @description What checkout made. */
+        CheckedOut: {
+            /** Format: uuid */
+            approval_id?: string | null;
+            /** @description An approval request was submitted for the order. */
+            needs_approval: boolean;
+            /** Format: uuid */
+            order_id: string;
+            total: string;
+        };
         /** @description A person's marks for one run. */
         ChecklistRunBody: {
             /** @description One mark per step, in order. */
@@ -46940,6 +47271,15 @@ export interface components {
             /** Format: double */
             unit_price?: number | null;
         };
+        /** @description A planned line's change. */
+        LineChange: {
+            fiscal_period: string;
+            /** @description Decimals in text. */
+            from: string;
+            /** Format: uuid */
+            line_id: string;
+            to: string;
+        };
         /** @description One line's fulfilment. */
         LineRollup: {
             /** Format: double */
@@ -49362,6 +49702,25 @@ export interface components {
             state: string;
             /** Format: int64 */
             version_no: number;
+        };
+        /** @description One obligation's new total. */
+        ObligationChange: {
+            /**
+             * Format: double
+             * @description The obligation's whole allocated amount after the change, a decimal.
+             */
+            new_total: number;
+            /** Format: uuid */
+            obligation_id: string;
+        };
+        /** @description An obligation's change. */
+        ObligationPreview: {
+            lines: components["schemas"]["LineChange"][];
+            new_total: string;
+            /** Format: uuid */
+            obligation_id: string;
+            old_total: string;
+            recognised: string;
         };
         /** @description `POST /api/v1/partner/leads/{id}/offer`. */
         OfferBody: {
@@ -60601,6 +60960,16 @@ export interface components {
         PortalAck: {
             ok: boolean;
         };
+        /** @description A cancellation. */
+        PortalCancel: {
+            /** @description `price`, `product_fit`, `budget`, `switched_vendor` or `other`. */
+            reason: string;
+        };
+        /** @description When a cancelled subscription ends. */
+        PortalCancelled: {
+            /** Format: date */
+            ends_on: string;
+        };
         /** @description A charge still to come. */
         PortalCharge: {
             /** @description As stored, a decimal in text. */
@@ -60840,6 +61209,13 @@ export interface components {
             portal_type?: null | components["schemas"]["PortalType"];
             /** Format: int64 */
             row_version: number;
+            /**
+             * Format: uuid
+             * @description V2-D1588 (1): the staff user the portal's self-service changes run
+             *     as; absent unchanged, `null` cleared. It needs an active account and
+             *     only the privileges the self-service routes use.
+             */
+            service_user_ref?: string | null;
         };
         PortalStatus: {
             /**
@@ -62036,6 +62412,23 @@ export interface components {
             threshold: number;
             /** Format: int32 */
             timeliness_days?: number | null;
+        };
+        /** @description A quantity change. */
+        QuantityChange: {
+            /**
+             * Format: uuid
+             * @description The subscription line.
+             */
+            line_id: string;
+            /** @description The new quantity, a decimal in text, within the line's portal bounds. */
+            quantity: string;
+        };
+        /** @description What a quantity change did. */
+        QuantityChanged: {
+            /** Format: uuid */
+            amendment_id: string;
+            /** @description Prorations or credits planned for the rest of the period. */
+            charges: number;
         };
         /**
          * @description `sql_query` — one stored query. The key is `(entity, name)`;
@@ -66598,6 +66991,18 @@ export interface components {
             shipment_id: string;
             tracking_number: string;
         };
+        /** @description One of the account's orders, as the shop lists it. */
+        ShopOrder: {
+            currency?: string | null;
+            /** @description A decimal in text. */
+            grand_total?: string | null;
+            /** Format: uuid */
+            id: string;
+            name?: string | null;
+            order_number?: string | null;
+            ordered_on?: string | null;
+            status?: string | null;
+        };
         SidebarAdminItem: {
             color?: string | null;
             /** Format: int32 */
@@ -69403,6 +69808,11 @@ export interface components {
              */
             truncated: boolean;
         };
+        /**
+         * @description How a change is accounted for.
+         * @enum {string}
+         */
+        Treatment: "separate_contract" | "prospective" | "cumulative_catch_up";
         /** @description One metric of a tree computation. */
         TreeComputed: {
             error?: string | null;
@@ -131695,6 +132105,182 @@ export interface operations {
             };
         };
     };
+    revrec_change_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description The stored preview */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangePreview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks revenue_contract.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such contract, or revenue recognition is off */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a change kind, a bad amount, or an obligation with no planned line */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    revrec_change_apply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The change */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Applied */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangeApplied"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks revenue_contract.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such change, or revenue recognition is off */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Applied or discarded already, or a line changed since the preview */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    revrec_change_discard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The change */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Discarded */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks revenue_contract.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such change, or revenue recognition is off */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Applied or discarded already */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     revrec_contracts_combine: {
         parameters: {
             query?: never;
@@ -165680,6 +166266,49 @@ export interface operations {
             };
         };
     };
+    portal_billing_pay_invoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+                /** @description The invoice */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The payment link */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkCreated"];
+                };
+            };
+            /** @description Not signed in to the portal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such open invoice of the person's account, or the route is off */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     portal_billing_payment_methods: {
         parameters: {
             query?: never;
@@ -165711,6 +166340,47 @@ export interface operations {
                 };
             };
             /** @description The route is off, or the person has no account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_billing_remove_payment_method: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+                /** @description The saved payment method */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not signed in to the portal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such method of the person's account, or the route is off */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -165753,6 +166423,136 @@ export interface operations {
             };
             /** @description The route is off, or the person has no account */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_billing_subscription_cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+                /** @description The subscription */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalCancel"];
+            };
+        };
+        responses: {
+            /** @description Cancelled from the end of the term */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalCancelled"];
+                };
+            };
+            /** @description Not signed in to the portal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such subscription of the person's account, or the route is off */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another change to the subscription is in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a reason, already cancelled, or a subscription with no term end */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_billing_subscription_quantity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+                /** @description The subscription */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuantityChange"];
+            };
+        };
+        responses: {
+            /** @description Changed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuantityChanged"];
+                };
+            };
+            /** @description Not signed in to the portal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such subscription of the person's account, or the route is off */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another change to the subscription is in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The line cannot be changed on the portal, or the quantity is outside its bounds */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -167465,6 +168265,247 @@ export interface operations {
             };
             /** @description The session was already finalized */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_shop_cart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The cart */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Cart"];
+                };
+            };
+            /** @description Not signed in to the portal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The shop is off, or the person has no account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_shop_checkout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The order made */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckedOut"];
+                };
+            };
+            /** @description Not signed in to the portal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The shop is off, the person has no account, or the portal has no service user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The cart is being checked out already */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The cart is empty, or a product is no longer on sale */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_shop_cart_line: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+                /** @description The product */
+                product_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CartQuantity"];
+            };
+        };
+        responses: {
+            /** @description The cart */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Cart"];
+                };
+            };
+            /** @description Not signed in to the portal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The shop is off, or the product is not on sale to the account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a quantity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_shop_catalogue: {
+        parameters: {
+            query?: {
+                /** @description Part of a product's name or SKU. */
+                search?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The products on sale */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueItem"][];
+                };
+            };
+            /** @description Not signed in to the portal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The shop is off, or the person has no account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_shop_orders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The account's orders */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShopOrder"][];
+                };
+            };
+            /** @description Not signed in to the portal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The shop is off, or the person has no account */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

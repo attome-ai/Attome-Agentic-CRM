@@ -499,6 +499,288 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/ledger/revrec/changes": {
+      "post": {
+        "tags": [
+          "ledger"
+        ],
+        "summary": "Preview a contract change",
+        "description": "Computes how a contract change moves the planned schedule lines of the obligations named, by the\nIFRS 15 treatment (or the one named), and stores it as a preview. Nothing else changes.",
+        "operationId": "revrec_change_preview",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The stored preview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangePreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks revenue_contract.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such contract, or revenue recognition is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a change kind, a bad amount, or an obligation with no planned line",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ledger",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/ledger/revrec/changes/{id}/apply": {
+      "post": {
+        "tags": [
+          "ledger"
+        ],
+        "summary": "Apply a previewed contract change",
+        "description": "Writes a previewed change to the planned schedule lines it named, only while each is still\nplanned at the previewed amount; recognised and locked lines are never changed.",
+        "operationId": "revrec_change_apply",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The change",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Applied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeApplied"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks revenue_contract.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such change, or revenue recognition is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Applied or discarded already, or a line changed since the preview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ledger",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/ledger/revrec/changes/{id}/discard": {
+      "post": {
+        "tags": [
+          "ledger"
+        ],
+        "summary": "Discard a previewed contract change",
+        "description": "Marks a previewed change discarded; no schedule line changes.",
+        "operationId": "revrec_change_discard",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The change",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Discarded"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks revenue_contract.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such change, or revenue recognition is off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Applied or discarded already",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ledger",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/ledger/revrec/contracts/combine": {
       "post": {
         "tags": [
@@ -1102,6 +1384,119 @@
           }
         }
       },
+      "ChangeApplied": {
+        "type": "object",
+        "description": "What applying did.",
+        "required": [
+          "change_id",
+          "lines"
+        ],
+        "properties": {
+          "change_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lines": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Planned lines changed.",
+            "minimum": 0
+          }
+        }
+      },
+      "ChangePreview": {
+        "type": "object",
+        "description": "A stored preview.",
+        "required": [
+          "change_id",
+          "contract_id",
+          "change_kind",
+          "treatment",
+          "overridden",
+          "status",
+          "obligations"
+        ],
+        "properties": {
+          "change_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "change_kind": {
+            "type": "string"
+          },
+          "contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "obligations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ObligationPreview"
+            }
+          },
+          "overridden": {
+            "type": "boolean",
+            "description": "The treatment was named by the caller rather than the rule."
+          },
+          "status": {
+            "type": "string",
+            "description": "`previewed`, `applied` or `discarded`."
+          },
+          "treatment": {
+            "$ref": "#/components/schemas/Treatment"
+          }
+        }
+      },
+      "ChangeRequest": {
+        "type": "object",
+        "description": "A change to preview.",
+        "required": [
+          "contract_id",
+          "change_kind"
+        ],
+        "properties": {
+          "adds_distinct_at_standalone_price": {
+            "type": "boolean",
+            "description": "Goods added that are distinct and priced at their standalone price."
+          },
+          "change_kind": {
+            "type": "string",
+            "description": "`amendment` (F3), `change_order` (D10) or `credit_note` (F4)."
+          },
+          "contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "obligations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ObligationChange"
+            }
+          },
+          "remaining_distinct": {
+            "type": "boolean",
+            "description": "The goods still to deliver are distinct from those delivered."
+          },
+          "source_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The record the change came from, if any."
+          },
+          "treatment": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Treatment",
+                "description": "A revenue accountant's own choice, replacing the rule's."
+              }
+            ]
+          }
+        }
+      },
       "CombineContractsBody": {
         "type": "object",
         "description": "Contracts to merge.",
@@ -1429,6 +1824,32 @@
           }
         }
       },
+      "LineChange": {
+        "type": "object",
+        "description": "A planned line's change.",
+        "required": [
+          "line_id",
+          "fiscal_period",
+          "from",
+          "to"
+        ],
+        "properties": {
+          "fiscal_period": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string",
+            "description": "Decimals in text."
+          },
+          "line_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "to": {
+            "type": "string"
+          }
+        }
+      },
       "LockedField": {
         "type": "object",
         "description": "One field a business rule locks for the writer (D-789 §3.5): `effect` is\n`hidden` or `disabled`. No value is ever echoed.",
@@ -1623,6 +2044,57 @@
         },
         "additionalProperties": false
       },
+      "ObligationChange": {
+        "type": "object",
+        "description": "One obligation's new total.",
+        "required": [
+          "obligation_id",
+          "new_total"
+        ],
+        "properties": {
+          "new_total": {
+            "type": "number",
+            "format": "double",
+            "description": "The obligation's whole allocated amount after the change, a decimal."
+          },
+          "obligation_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ObligationPreview": {
+        "type": "object",
+        "description": "An obligation's change.",
+        "required": [
+          "obligation_id",
+          "recognised",
+          "old_total",
+          "new_total",
+          "lines"
+        ],
+        "properties": {
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineChange"
+            }
+          },
+          "new_total": {
+            "type": "string"
+          },
+          "obligation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "old_total": {
+            "type": "string"
+          },
+          "recognised": {
+            "type": "string"
+          }
+        }
+      },
       "PeriodStatus": {
         "type": "object",
         "description": "A period's new status.",
@@ -1805,6 +2277,15 @@
             "format": "int64"
           }
         }
+      },
+      "Treatment": {
+        "type": "string",
+        "description": "How a change is accounted for.",
+        "enum": [
+          "separate_contract",
+          "prospective",
+          "cumulative_catch_up"
+        ]
       },
       "TrialBalance": {
         "type": "object",
