@@ -145,6 +145,19 @@ async fn put(
         ctx.user_id,
     )
     .await?;
+    // Roles are granted `<name>.read` (and `.bulk` for member actions) like
+    // any entity's privileges; writes have none, since nothing writes here.
+    for (action, what) in [("read", "read"), ("bulk", "act in bulk on the members of")] {
+        let key = format!("{}.{action}", def.name);
+        attome_security::db::ensure_privilege(
+            &state.base.db_migrator,
+            &key,
+            &key,
+            &format!("Derived entity privilege: {what} {}", def.name),
+            attome_core::changeset::Layer::Project,
+        )
+        .await?;
+    }
     audit(&state, ctx.user_id, AuditOperation::Update, &def.name).await?;
     // A26-T3: a stored one is filled from the records it already has.
     if def.mode == DerivedMode::Stored {
