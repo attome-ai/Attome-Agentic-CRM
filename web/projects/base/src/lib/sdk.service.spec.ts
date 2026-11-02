@@ -100,4 +100,22 @@ describe('SdkService', () => {
     expect(await same).toEqual({ body: null, etag: 'W/"1"' });
     http.verify();
   });
+
+  it('revalidates a schema read and answers a 304 from the remembered body', async () => {
+    const { sdk, http } = setup();
+    const first = firstValueFrom(sdk.get<{ fields: string[] }>('/api/v1/schema/deal'));
+    await tick();
+    const a = http.expectOne('http://api.test/api/v1/schema/deal');
+    expect(a.request.headers.has('If-None-Match')).toBe(false);
+    a.flush({ fields: ['name'] }, { headers: { ETag: '"s1"' } });
+    expect(await first).toEqual({ fields: ['name'] });
+
+    const second = firstValueFrom(sdk.get<{ fields: string[] }>('/api/v1/schema/deal'));
+    await tick();
+    const b = http.expectOne('http://api.test/api/v1/schema/deal');
+    expect(b.request.headers.get('If-None-Match')).toBe('"s1"');
+    b.flush(null, { status: 304, statusText: 'Not Modified' });
+    expect(await second).toEqual({ fields: ['name'] });
+    http.verify();
+  });
 });

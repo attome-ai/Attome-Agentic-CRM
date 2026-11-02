@@ -6,6 +6,9 @@ import { firstValueFrom } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CsvImportService } from './csv-import.service';
 
+/** The SDK sends after a promise turn (Y9-T3). */
+const tick = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
 const API = 'http://api';
 
 describe('CsvImportService', () => {
@@ -33,6 +36,7 @@ describe('CsvImportService', () => {
     expect(req.request.method).toBe('POST');
     expect(req.request.headers.get('x-idempotency-key')).toBe('csv-stage:p:0:a');
     req.flush({ id: 'si', status: 'pending_review', total: 0, passed: 0, failed: 0, rejected: 0 });
+    await tick();
     expect((await done).id).toBe('si');
   });
 
@@ -42,12 +46,14 @@ describe('CsvImportService', () => {
     expect(lr.request.body).toEqual({ staged_import_id: 'si' });
     expect(lr.request.headers.get('x-idempotency-key')).toBe('csv-link:p:si');
     lr.flush({ validation_report: [] });
+    await tick();
     await link;
 
     const approve = svc.approve('contact', 'si', 'csv-approve:si');
     const ar = http.expectOne(`${API}/api/v1/contact/staged-import/si/approve`);
     expect(ar.request.headers.get('x-idempotency-key')).toBe('csv-approve:si');
     ar.flush({});
+    await tick();
     await approve;
   });
 
@@ -56,12 +62,14 @@ describe('CsvImportService', () => {
     const mr = http.expectOne(`${API}/api/v1/admin/data/mappings`);
     expect(mr.request.body).toEqual({ name: 'n', target_entity: 'contact', fields: [], source_kind: 'csv' });
     mr.flush({ id: 'm' });
+    await tick();
     await m;
 
     const p = firstValueFrom(svc.createProject({ name: 'p', target_entity: 'contact', mapping_ref: 'm', source_ref: 'r' }));
     const pr = http.expectOne(`${API}/api/v1/admin/migration-projects`);
     expect(pr.request.body.source_kind).toBe('csv');
     pr.flush({ id: 'p' });
+    await tick();
     await p;
   });
 
@@ -77,10 +85,12 @@ describe('CsvImportService', () => {
         ],
         total: 3, page: 1, page_size: 200,
       });
+      await tick();
     expect((await list).map(p => p.id)).toEqual(['a']);
 
     const schema = firstValueFrom(svc.schema('contact'));
     http.expectOne(r => r.url === `${API}/api/v1/schema/contact` && r.params.get('locale') === 'ar-SA').flush({ fields: [] });
+    await tick();
     await schema;
   });
 });

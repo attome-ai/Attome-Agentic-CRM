@@ -2,7 +2,7 @@ import {
   ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, model, signal,
 } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { ApiService, LangService, RulesEvaluatorService, TranslatePipe } from '@attome/base';
+import { LangService, RulesEvaluatorService, SdkService, TranslatePipe } from '@attome/base';
 import type { RulesAnswer, RulesDiagnostic, RulesSchema } from '@attome/base';
 import type { EntitySchema } from '@attome/xrm';
 import {
@@ -60,7 +60,7 @@ interface Suggestion {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ExpressionEditorComponent {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly rules = inject(RulesEvaluatorService);
   private readonly lang = inject(LangService);
 
@@ -132,7 +132,7 @@ export class ExpressionEditorComponent {
       });
     });
     effect(() => {
-      this.api.get<{ functions: FunctionSpec[] }>('/api/v1/admin/expressions/spec', { version: this.version() })
+      this.sdk.get<{ functions: FunctionSpec[] }>('/api/v1/admin/expressions/spec', { query: { version: this.version() } })
         .subscribe({ next: spec => this.functions.set(spec.functions), error: () => this.functions.set([]) });
     });
   }
@@ -178,7 +178,7 @@ export class ExpressionEditorComponent {
   private schemaOf(entity: string): Promise<EntitySchema | null> {
     let cached = this.schemas.get(entity);
     if (!cached) {
-      cached = firstValueFrom(this.api.get<EntitySchema>(`/api/v1/schema/${encodeURIComponent(entity)}`))
+      cached = firstValueFrom(this.sdk.get<EntitySchema>(`/api/v1/schema/${encodeURIComponent(entity)}`))
         .catch(() => null);
       this.schemas.set(entity, cached);
     }
@@ -274,12 +274,12 @@ export class ExpressionEditorComponent {
     this.previewError.set(false);
     try {
       const sample = this.sampleId().trim();
-      this.check.set(await firstValueFrom(this.api.post<ExpressionCheck>('/api/v1/admin/expressions/validate', {
+      this.check.set(await firstValueFrom(this.sdk.post<ExpressionCheck>('/api/v1/admin/expressions/validate', { body: {
         expression: this.value(),
         entity: this.entity(),
         language_version: this.version(),
         ...(sample ? { sample_record_id: sample } : {}),
-      })));
+      } })));
     } catch {
       this.previewError.set(true);
     } finally {

@@ -2,10 +2,13 @@ import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams, HttpResponse } 
 import { Injectable, inject } from '@angular/core';
 import { AttomeClient, ApiError as SdkApiError, CHANGESET_HEADER } from '@attome/sdk';
 import type { AuthProvider, AuthRequestContext, RequestOptions } from '@attome/sdk';
-import { Observable } from 'rxjs';
-import { ApiService, BACKGROUND_HEADER, MAX_ALL_PAGES_ITEMS, apiErrorOf, walkAllPages, writeHeaders } from './api.service';
+import { Observable, defer } from 'rxjs';
+import {
+  ApiService, BACKGROUND_HEADER, MAX_ALL_PAGES_ITEMS, QUERY_EXECUTE_PATH, SCHEMA_PATH, apiErrorOf, walkAllPages, writeHeaders,
+} from './api.service';
 import type { Page, WriteOptions } from './api.service';
 import { ATTOME_CONFIG } from './config';
+import { ConditionalCache } from './conditional-cache';
 
 /** The SDK needs an origin; this one stands for "the page's own" and is cut off again. */
 const SAME_ORIGIN = 'https://same-origin.attome.invalid';
@@ -111,6 +114,15 @@ class AppSessionAuth implements AuthProvider {
   }
 }
 
+/** A request's query as `HttpParams` take it, unset values left out. */
+function queryObject(query: RequestOptions['query']): Record<string, string | number | boolean> {
+  const out: Record<string, string | number | boolean> = {};
+  for (const [key, value] of Object.entries(query ?? {})) {
+    if (value !== undefined && value !== null) out[key] = value;
+  }
+  return out;
+}
+
 /** `opts` with ApiService's write options as their headers. */
 function withWrite(opts: RequestOptions | undefined, write: WriteOptions | undefined): RequestOptions | undefined {
   if (!write) return opts;
@@ -131,6 +143,7 @@ function withWrite(opts: RequestOptions | undefined, write: WriteOptions | undef
 @Injectable({ providedIn: 'root' })
 export class SdkService {
   private readonly api = inject(ApiService);
+  private readonly conditional = inject(ConditionalCache);
   readonly client = new AttomeClient({
     baseUrl: inject(ATTOME_CONFIG).apiUrl || SAME_ORIGIN,
     // A test's stand-in ApiService may have no changeset to name.
@@ -140,6 +153,7 @@ export class SdkService {
   });
 
   get<T>(path: string, opts?: RequestOptions): Observable<T> {
+    if (path.startsWith(SCHEMA_PATH)) return this.revalidated<T>('GET', path, opts);
     return this.call(signal => this.client.get<T>(path, { ...opts, signal }));
   }
 
@@ -159,17 +173,62 @@ export class SdkService {
    * (or `null` when it sent none). The tag is sent as given, never re-quoted.
    */
   getIfChanged<T>(path: string, etag: string | null): Observable<{ body: T | null; etag: string | null }> {
-    return new Observable<{ body: T | null; etag: string | null }>(subscriber => {
+    return this.respond<T, { body: T | null; etag: string | null }>(
+      signal => this.client.get<T>(path, { headers: etag ? { 'If-None-Match': etag } : undefined, signal }),
+      (data, headers) => ({ body: data ?? null, etag: headers.get('ETag') }),
+      () => ({ body: null, etag }),
+    );
+  }
+
+  /**
+   * AA7-T11 through the SDK, as `ApiService` revalidates: a schema read or a
+   * stored-query run whose last answer is remembered in `ConditionalCache`
+   * (shared with `ApiService`, so its `clearConditionalCache` clears both)
+   * sends that answer's ETag as `If-None-Match`, and a `304` returns the
+   * remembered body. A `200` with an ETag replaces the entry; one without
+   * drops it. A `304` with nothing remembered is the error it is.
+   */
+  private revalidated<T>(method: 'GET' | 'POST', path: string, opts: RequestOptions | undefined): Observable<T> {
+    const query = new HttpParams({ fromObject: queryObject(opts?.query) }).toString();
+    const key = `${method} ${path}?${query}#${opts?.body === undefined ? '' : JSON.stringify(opts.body)}`;
+    return defer(() => {
+      const cached = this.conditional.get(key);
+      const headers = cached ? { ...opts?.headers, 'If-None-Match': cached.etag } : opts?.headers;
+      return this.respond<T, T>(
+        signal => method === 'GET'
+          ? this.client.get<T>(path, { ...opts, headers, signal })
+          : this.client.post<T>(path, { ...opts, headers, signal }),
+        (data, answer) => {
+          const etag = answer.get('ETag');
+          if (etag) this.conditional.set(key, etag, data);
+          else this.conditional.delete(key);
+          return (data === undefined ? null : data) as T;
+        },
+        cached ? () => cached.body as T : undefined,
+      );
+    });
+  }
+
+  /**
+   * One SDK call as an Observable of `ok(data, headers)`; a `304` answers
+   * `notModified()` when given. Unsubscribing aborts the request.
+   */
+  private respond<T, R>(
+    send: (signal: AbortSignal) => Promise<{ data: T; headers: Headers }>,
+    ok: (data: T, headers: Headers) => R,
+    notModified?: () => R,
+  ): Observable<R> {
+    return new Observable<R>(subscriber => {
       const controller = new AbortController();
-      this.client.get<T>(path, { headers: etag ? { 'If-None-Match': etag } : undefined, signal: controller.signal }).then(
+      send(controller.signal).then(
         response => {
-          subscriber.next({ body: response.data ?? null, etag: response.headers.get('ETag') });
+          subscriber.next(ok(response.data, response.headers));
           subscriber.complete();
         },
         (err: unknown) => {
           if (controller.signal.aborted) return;
-          if (err instanceof SdkApiError && err.status === 304) {
-            subscriber.next({ body: null, etag });
+          if (notModified && err instanceof SdkApiError && err.status === 304) {
+            subscriber.next(notModified());
             subscriber.complete();
             return;
           }
@@ -191,6 +250,7 @@ export class SdkService {
    * duplicate reason, merge, background, `ifMatch`), sent as the same headers.
    */
   post<T>(path: string, opts?: RequestOptions, write?: WriteOptions): Observable<T> {
+    if (path === QUERY_EXECUTE_PATH) return this.revalidated<T>('POST', path, withWrite(opts, write));
     return this.call(signal => this.client.post<T>(path, { ...withWrite(opts, write), signal }));
   }
 

@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { ApiComponents, ApiService, LangService } from '@attome/base';
+import { ApiComponents, LangService, SdkService } from '@attome/base';
 import type { EntitySchema } from '@attome/xrm';
 import { firstValueFrom, map, Observable } from 'rxjs';
 import type { DataMappingField } from './csv-mapping';
@@ -36,32 +36,32 @@ export interface DataMapping {
  */
 @Injectable({ providedIn: 'root' })
 export class CsvImportService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
 
   schema(entity: string): Observable<EntitySchema> {
-    return this.api.get<EntitySchema>(`/api/v1/schema/${encodeURIComponent(entity)}`, {
+    return this.sdk.get<EntitySchema>(`/api/v1/schema/${encodeURIComponent(entity)}`, { query: {
       locale: this.lang.intlLocale(),
-    });
+    } });
   }
 
   listMappings(entity: string): Observable<DataMapping[]> {
-    return this.api
-      .get<{ items: DataMapping[] }>('/api/v1/admin/data/mappings', { target_entity: entity, page_size: '200' })
+    return this.sdk
+      .get<{ items: DataMapping[] }>('/api/v1/admin/data/mappings', { query: { target_entity: entity, page_size: '200' } })
       .pipe(map(page => page.items));
   }
 
   createMapping(body: { name: string; target_entity: string; fields: DataMappingField[] }): Observable<DataMapping> {
-    return this.api.post<DataMapping>('/api/v1/admin/data/mappings', { ...body, source_kind: 'csv' });
+    return this.sdk.post<DataMapping>('/api/v1/admin/data/mappings', { body: { ...body, source_kind: 'csv' } });
   }
 
   /** CSV projects for `entity`, newest first — the ones an import can resume. */
   listProjects(entity: string): Observable<MigrationProject[]> {
-    return this.api
-      .get<{ items: MigrationProject[] }>('/api/v1/admin/migration-projects', {
+    return this.sdk
+      .get<{ items: MigrationProject[] }>('/api/v1/admin/migration-projects', { query: {
         target_entity: entity,
         page_size: '200',
-      })
+      } })
       .pipe(map(page => page.items.filter(p => p.source_kind === 'csv' && p.status !== 'archived')));
   }
 
@@ -71,24 +71,24 @@ export class CsvImportService {
     mapping_ref: string;
     source_ref: string;
   }): Observable<MigrationProject> {
-    return this.api.post<MigrationProject>('/api/v1/admin/migration-projects', { ...body, source_kind: 'csv' });
+    return this.sdk.post<MigrationProject>('/api/v1/admin/migration-projects', { body: { ...body, source_kind: 'csv' } });
   }
 
   completeProject(projectId: string): Observable<MigrationProject> {
-    return this.api.put<MigrationProject>(`/api/v1/admin/migration-projects/${projectId}`, { status: 'completed' });
+    return this.sdk.put<MigrationProject>(`/api/v1/admin/migration-projects/${projectId}`, { body: { status: 'completed' } });
   }
 
   stage(entity: string, body: object, idempotencyKey?: string): Promise<StagedImportResponse> {
     return firstValueFrom(
-      this.api.post<StagedImportResponse>(`/api/v1/${encodeURIComponent(entity)}/staged-import`, body, { idempotencyKey }),
+      this.sdk.post<StagedImportResponse>(`/api/v1/${encodeURIComponent(entity)}/staged-import`, { body }, { idempotencyKey }),
     );
   }
 
   linkRun(projectId: string, stagedImportId: string, idempotencyKey: string): Promise<MigrationRunDetail> {
     return firstValueFrom(
-      this.api.post<MigrationRunDetail>(
+      this.sdk.post<MigrationRunDetail>(
         `/api/v1/admin/migration-projects/${projectId}/runs`,
-        { staged_import_id: stagedImportId },
+        { body: { staged_import_id: stagedImportId } },
         { idempotencyKey },
       ),
     );
@@ -96,15 +96,15 @@ export class CsvImportService {
 
   listRuns(projectId: string): Promise<MigrationRunListItem[]> {
     return firstValueFrom(
-      this.api.getAllPages<MigrationRunListItem>(`/api/v1/admin/migration-projects/${projectId}/runs`),
+      this.sdk.getAllPages<MigrationRunListItem>(`/api/v1/admin/migration-projects/${projectId}/runs`),
     );
   }
 
   approve(entity: string, stagedImportId: string, idempotencyKey: string): Promise<StagedImportResponse> {
     return firstValueFrom(
-      this.api.post<StagedImportResponse>(
+      this.sdk.post<StagedImportResponse>(
         `/api/v1/${encodeURIComponent(entity)}/staged-import/${stagedImportId}/approve`,
-        {},
+        { body: {} },
         { idempotencyKey },
       ),
     );

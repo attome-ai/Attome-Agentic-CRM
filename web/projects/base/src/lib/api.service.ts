@@ -6,8 +6,9 @@ import { ConditionalCache } from './conditional-cache';
 import { ApiError, VersionConflictState } from './types';
 
 /** AA7-T11: the requests `ApiService` revalidates with `If-None-Match`. */
-const SCHEMA_PATH = '/api/v1/schema/';
-const QUERY_EXECUTE_PATH = '/api/v1/query/execute';
+/** AA7-T11: the reads remembered in `ConditionalCache` and revalidated. */
+export const SCHEMA_PATH = '/api/v1/schema/';
+export const QUERY_EXECUTE_PATH = '/api/v1/query/execute';
 
 /**
  * The `{items, total, page, page_size}` envelope every paginated admin-catalog

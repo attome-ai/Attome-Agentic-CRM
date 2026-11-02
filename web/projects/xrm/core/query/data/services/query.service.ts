@@ -1,14 +1,14 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import { QueryExecParams, QueryExecResponse } from './types';
 
 @Injectable({ providedIn: 'root' })
 export class QueryService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   execute(params: QueryExecParams): Observable<QueryExecResponse> {
-    return this.api.post<QueryExecResponse>('/api/v1/query/execute', {
+    return this.sdk.post<QueryExecResponse>('/api/v1/query/execute', { body: {
       entity:    params.entity,
       entity_logical_name: params.entity_logical_name,
       query_id:  params.query_id,
@@ -22,6 +22,6 @@ export class QueryService {
       include_total: params.include_total ?? false,
       after_id: params.after_id,
       query_version_id: params.query_version_id,
-    });
+    } });
   }
 }
