@@ -19,6 +19,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `marketing_nurture_tick`) sends each person the next email of their track they have neither seen
   nor been sent, through the journey rules, one per the programme's `cadence_days`. Opening or
   clicking an email from a saved design marks it seen. Migration 0367.
+- A journey in the workflow editor (E8-T13, part two): live counts on each step (read every ten
+  seconds), a person's path replayed step by step on the graph, and on publish the version-move
+  choice with who waits where (`GET /api/v1/marketing/journeys/{id}/versions/{version_id}/preview`)
+  before `POST .../publish`; new entry point `@attome/xrm/marketing/journey`. In Arabic the canvas
+  runs right to left, node types are named in the user's language, and a wait shows its Hijri date.
 - The workflow editor offers the steps modules contribute (E8-T13, part one): `GET
   /api/v1/workflow/step-handlers` lists each registered step with its module, whether this deployment
   may run it and the JSON Schema of its settings; the node picker has a "Steps from modules" section

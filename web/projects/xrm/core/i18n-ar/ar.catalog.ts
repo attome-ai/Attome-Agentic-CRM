@@ -1953,6 +1953,28 @@ export const xrmAr = {
     editGraph: 'تعديل المخطط', viewGraph: 'عرض المخطط', publishing: 'جاري النشر…', publish: 'نشر',
     notes: 'الملاحظات', notesDesc: 'الملاحظات والمرفقات على هذا السجل.',
   },
+  journeyEditor: {
+    entered: 'دخلوا', waiting: 'ينتظرون', blocked: 'محظورون', left: 'غادروا هنا',
+    countsFailed: 'تعذّر تحميل الأعداد الحية.',
+    personId: 'معرّف الشخص لإعادة مساره', replay: 'إعادة المسار', replayTitle: 'مسار شخص',
+    pathFailed: 'تعذّر تحميل مسار هذا الشخص.', blockedBecause: 'محظور:',
+    previous: 'الخطوة السابقة', next: 'الخطوة التالية', endedWith: 'غادر الرحلة:',
+    noRuns: 'لم يدخل هذا الشخص الرحلة.',
+    moveTitle: 'نشر هذا الإصدار', node: 'الخطوة', inNewVersion: 'في الإصدار الجديد', wouldMove: 'سينتقلون',
+    yes: 'نعم', no: 'لا', nobodyWaiting: 'لا أحد ينتظر في الرحلة الآن.',
+    peopleInJourney: 'الأشخاص الموجودون في الرحلة',
+    finishOnOld: 'يكملون على الإصدار الذي بدؤوا به',
+    moveMatching: 'نقل المنتظرين عند خطوة يحتفظ بها الإصدار الجديد',
+    publishFailed: 'لم يُنشر الإصدار:', publish: 'نشر', cancel: 'إلغاء',
+  },
+  workflowNodeType: {
+    trigger: 'المشغّل', condition: 'شرط', create_record: 'إنشاء سجل', update_record: 'تحديث سجل',
+    send_notification: 'إرسال إشعار', approval: 'موافقة', wait: 'انتظار / تأخير',
+    wait_for_event: 'انتظار حدث', sub_workflow: 'سير عمل فرعي', webhook: 'استدعاء ويب / HTTP',
+    split: 'تفرّع (متوازٍ)', join: 'دمج', restore_record: 'استعادة سجل',
+    duplicate_check: 'إن وُجد سجل مكرر', assign: 'تعيين المالك', module_step: 'خطوة وحدة',
+    for_each: 'لكل عنصر', connector: 'استدعاء موصل', map: 'ربط الحقول', custom_action: 'إجراء مخصص',
+  },
   workflowStep: {
     marketing: {
       send_email: 'إرسال بريد', nurture_run: 'برنامج رعاية', wait_calendar: 'انتظار وقت العمل',
@@ -1977,6 +1999,7 @@ export const xrmAr = {
   },
   workflowGraph: {
     moduleSteps: 'خطوات من الوحدات', stepSettings: 'إعدادات الخطوة', required: 'مطلوب',
+    hijri: 'بالهجري:',
     connectTo: 'الاتصال بـ…', addNode: 'إضافة عقدة…', filterNodeTypes: 'تصفية أنواع العقد',
     noTypeForOutput: 'لا يوجد نوع عقدة يقبل هذا المخرج.', noMatchingType: 'لا يوجد نوع عقدة مطابق.',
     canvasEmpty: 'انقر نقراً مزدوجاً في أي مكان لإضافة عقدة.',

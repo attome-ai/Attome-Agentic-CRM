@@ -33,6 +33,7 @@ use uuid::Uuid;
 
 use super::enrol::{EnrolOutcome, PersonRef};
 use super::insight::{JourneyCounts, PersonRun};
+use super::versions::NodeWaiting;
 
 /// Most people one manual enrolment takes.
 pub const MAX_MANUAL: usize = 1_000;
@@ -94,6 +95,38 @@ async fn get_counts(
     super::insight::counts(&state, &ctx, definition)
         .await
         .map(Json)
+}
+
+/// Preview a journey version's move
+///
+/// For publishing `version_id`: the people waiting at each node of the journey's live runs, whether
+/// the new version keeps that node, and how many `move_matching` would move there. Changes nothing.
+#[utoipa::path(
+    get,
+    path = "/api/v1/marketing/journeys/{id}/versions/{version_id}/preview",
+    operation_id = "preview_marketing_journey_version",
+    tag = "marketing",
+    params(
+        ("id" = Uuid, Path, description = "The journey"),
+        ("version_id" = Uuid, Path, description = "The draft version to publish"),
+    ),
+    responses(
+        (status = 200, description = "People waiting per node, sorted by node (one page)", body = PaginatedResponse<NodeWaiting>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks marketing_journey.read", body = ErrorResponse),
+        (status = 404, description = "No such journey, or a version that is not one of its", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn get_version_preview(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<JourneyRead>>,
+    Path((journey, version)): Path<(Uuid, Uuid)>,
+) -> Result<Json<PaginatedResponse<NodeWaiting>>, AppError> {
+    let definition = definition_of(&state, journey).await?;
+    let nodes = super::versions::preview(&state, definition, version).await?;
+    let total = nodes.len() as i64;
+    Ok(Json(PaginatedResponse::new(nodes, total, 1, total.max(1))))
 }
 
 /// Read a person's path through a journey
@@ -432,6 +465,10 @@ pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/marketing/journeys/{id}/counts", get(get_counts))
         .route(
+            "/api/v1/marketing/journeys/{id}/versions/{version_id}/preview",
+            get(get_version_preview),
+        )
+        .route(
             "/api/v1/marketing/journeys/{id}/people/{person_id}/path",
             get(get_person_path),
         )
@@ -449,6 +486,7 @@ pub fn routes() -> Router<EngineState> {
 #[openapi(
     paths(
         get_counts,
+        get_version_preview,
         get_person_path,
         post_enrolments,
         get_enrolments,
@@ -464,7 +502,8 @@ pub fn routes() -> Router<EngineState> {
         EnrolOutcome,
         super::insight::NodeCount,
         super::insight::PathStep,
-        super::insight::PathBlock
+        super::insight::PathBlock,
+        NodeWaiting
     ))
 )]
 pub(crate) struct ApiDocFragment;

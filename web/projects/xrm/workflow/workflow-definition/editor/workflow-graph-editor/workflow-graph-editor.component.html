@@ -34,8 +34,25 @@
       <button class="btn-ghost" data-testid="wf-coverage" (click)="loadCoverage()" [disabled]="coverageBusy() || dirty()">
         {{ 'workflowCoverage.run' | translate }}
       </button>
+      @if (journey()) {
+        <form class="replay-form" (ngSubmit)="replay()">
+          <input type="text" name="replay" dir="ltr" [(ngModel)]="replayInput"
+                 [placeholder]="'journeyEditor.personId' | translate"
+                 [attr.aria-label]="'journeyEditor.personId' | translate" data-testid="wf-replay-person" />
+          <button type="submit" class="btn-ghost" data-testid="wf-replay">{{ 'journeyEditor.replay' | translate }}</button>
+        </form>
+      }
     </div>
   </div>
+
+  @if (journey(); as j) {
+    @if (replayPerson()) {
+      <ng-container *ngComponentOutlet="j.module.PersonPathComponent; inputs: pathInputs()" />
+    }
+    @if (moving()) {
+      <ng-container *ngComponentOutlet="j.module.VersionMoveDialogComponent; inputs: moveInputs()" />
+    }
+  }
 
   @if (saveError()) { <div class="validation-errors">{{ saveError() }}</div> }
   @if (simulateError()) { <div class="validation-errors">{{ simulateError() }}</div> }
@@ -84,7 +101,7 @@
           @for (t of result.trace; track t.node_id) {
             <tr [class.trace-failed]="t.status === 'failed'">
               <td>{{ t.node_id }}</td>
-              <td>{{ specOf(t.node_type)?.label ?? t.node_type }}</td>
+              <td>{{ typeLabel(t.node_type) }}</td>
               <td>{{ t.status }}</td>
               <td>{{ t.taken_port ?? '—' }}</td>
               <td>{{ t.would_have ?? '—' }}</td>
@@ -99,8 +116,8 @@
   <div class="editor-shell">
     <div class="canvas-wrap" #canvasWrap (wheel)="onCanvasWheel($event)">
       <div class="canvas" #canvas [class.wiring]="pendingEdge() !== null"
-           [class.panning]="panning()"
-           [style.transform]="'translate(' + panX() + 'px, ' + panY() + 'px)'"
+           [class.panning]="panning()" [class.mirrored]="mirrored()"
+           [style.transform]="'translate(' + panX() + 'px, ' + panY() + 'px)' + (mirrored() ? ' scaleX(-1)' : '')"
            (dblclick)="openCanvasMenu($event)" (mousedown)="onCanvasMouseDown($event)">
         <svg class="edge-layer">
           @for (e of graph().edges; track edgeKey(e); let i = $index) {
@@ -121,7 +138,7 @@
                role="button" tabindex="0" (keydown.enter)="select(n.id)" (keydown.space)="$event.preventDefault(); select(n.id)">
             <span class="node-number">#{{ i + 1 }}</span>
             <div class="node-header">
-              <span class="node-title">{{ specOf(n.type)?.label ?? n.type }}</span>
+              <span class="node-title">{{ nodeTitle(n) }}</span>
               <span class="node-type-tag">{{ n.type }}</span>
             </div>
             <div class="port-row">
@@ -136,14 +153,14 @@
                           (mouseup)="onPortMouseUp($event, n.id, p.name, true)"
                           role="button" tabindex="0" [attr.aria-label]="'input port ' + p.name"
                           (keydown.enter)="onPortActivate(n.id, p.name, true)" (keydown.space)="$event.preventDefault(); onPortActivate(n.id, p.name, true)"></span>
-                    {{ p.name }}
+                    <span class="port-name">{{ p.name }}</span>
                   </div>
                 }
               </div>
               <div class="port-col">
                 @for (p of specOf(n.type)?.outputs ?? []; track p.name) {
                   <div class="port output">
-                    {{ p.name }}
+                    <span class="port-name">{{ p.name }}</span>
                     <span class="port-dot"
                           [class.wired]="isWired(n.id, p.name, false)"
                           [class.drop-target]="isDropTarget(n.id, p.name, false)"
@@ -175,7 +192,7 @@
                    [ngModel]="menuFilter()" [ngModelOptions]="{ standalone: true }"
                    (ngModelChange)="menuFilter.set($event)" />
             @for (t of menuOptions(); track t.type) {
-              <button type="button" class="type-menu-item" (click)="chooseType(t.type)">{{ t.label }}</button>
+              <button type="button" class="type-menu-item" (click)="chooseType(t.type)">{{ typeLabel(t.type) }}</button>
             }
             @if (menuSteps().length > 0) {
               <p class="type-menu-section">{{ 'workflowGraph.moduleSteps' | translate }}</p>
@@ -192,6 +209,10 @@
           </div>
         }
 
+        @if (journey(); as j) {
+          <ng-container *ngComponentOutlet="j.module.JourneyCountsOverlayComponent; inputs: overlayInputs()" />
+        }
+
         @if (graph().nodes.length === 0 && !readonly()) {
           <p class="canvas-empty">{{ 'workflowGraph.canvasEmpty' | translate }}</p>
         }
@@ -200,7 +221,7 @@
 
     <div class="inspector">
       @if (selectedNode(); as n) {
-        <h4><span class="node-number inline">#{{ nodeNumber(n.id) }}</span> {{ specOf(n.type)?.label ?? n.type }}</h4>
+        <h4><span class="node-number inline">#{{ nodeNumber(n.id) }}</span> {{ nodeTitle(n) }}</h4>
         <!-- The id is off the node itself now, but publish errors name it,
              so the inspector keeps it where it can be read and copied. -->
         <p class="hint node-ref">{{ n.id }}</p>
@@ -257,6 +278,9 @@
             }
 
             @if (f.hint) { <p class="cfg-hint">{{ f.hint }}</p> }
+            @if (hijriOf(f); as hijri) {
+              <p class="cfg-hint" data-testid="cfg-hijri">{{ 'workflowGraph.hijri' | translate }} <bdi>{{ hijri }}</bdi></p>
+            }
             @if (isMissingRequired(f)) {
               <p class="error-msg">Required — the node fails at run time without it.</p>
             }

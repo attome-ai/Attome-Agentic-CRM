@@ -1,7 +1,8 @@
 import {
-  ChangeDetectionStrategy, Component, ElementRef, HostListener, OnInit,
-  computed, effect, inject, input, signal, viewChild,
+  ChangeDetectionStrategy, Component, ElementRef, HostListener, Injector, OnInit,
+  afterNextRender, computed, effect, inject, input, signal, viewChild,
 } from '@angular/core';
+import { NgComponentOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiError, LangService, TranslatePipe } from '@attome/base';
@@ -12,6 +13,8 @@ import {
   FlowCoverage, Graph, GraphEdge, GraphNode, NODE_TYPES, NodeConfigField, NodeTypeSpec, SimulateResponse,
   StepHandlerInfo, VersionDetail, WorkflowAdminService, nodeConfigFields, nodeTypeSpec, schemaFields,
 } from '../../../services/workflow-admin.service';
+
+type JourneyModule = typeof import('@attome/xrm/marketing/journey');
 
 /* ── Node-card geometry ─────────────────────────────────────────────────────
  * The edge layer has no access to laid-out DOM — it draws each wire straight
@@ -97,7 +100,7 @@ interface TypeMenu { x: number; y: number; source?: { nodeId: string; port: stri
   selector:   'attome-workflow-graph-editor',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports:    [FormsModule, RouterLink, TranslatePipe],
+  imports:    [FormsModule, NgComponentOutlet, RouterLink, TranslatePipe],
   host: {
     '(window:mousemove)': 'onWindowMouseMove($event)',
     '(window:mouseup)':   'onWindowMouseUp()',
@@ -109,6 +112,7 @@ export class WorkflowGraphEditorComponent implements OnInit {
   private readonly svc   = inject(WorkflowAdminService);
   private readonly admin = inject(AdminService);
   private readonly lang  = inject(LangService);
+  private readonly injector = inject(Injector);
 
   readonly definitionId = input.required<string>();
   readonly versionId    = input.required<string>();
@@ -167,6 +171,33 @@ export class WorkflowGraphEditorComponent implements OnInit {
    *  Module Step node is still configurable by its handler key. */
   readonly stepHandlers = signal<StepHandlerInfo[]>([]);
 
+  /** E8-T13: for a journey, the marketing journey entry point and the
+   *  journey record, once both are known; nothing loads for another kind. */
+  readonly journey = signal<{ module: JourneyModule; id: string } | null>(null);
+  /** The person whose path is replayed, and the node of the step shown. */
+  readonly replayPerson = signal<string | null>(null);
+  readonly replayNode = signal<string | null>(null);
+  protected replayInput = '';
+  /** The version-move dialog, open while a journey version is published. */
+  readonly moving = signal(false);
+
+  readonly overlayInputs = computed(() => ({
+    journeyId: this.journey()?.id ?? '',
+    versionId: this.versionId(),
+    nodes: this.graph().nodes,
+    highlight: this.replayNode(),
+  }));
+  readonly pathInputs = computed(() => ({
+    journeyId: this.journey()?.id ?? '',
+    personId: this.replayPerson() ?? '',
+    stepChanged: (node: string | null) => this.replayNode.set(node),
+  }));
+  readonly moveInputs = computed(() => ({
+    journeyId: this.journey()?.id ?? '',
+    versionId: this.versionId(),
+    done: (result: unknown) => this.moved(result !== null),
+  }));
+
   /** Canvas offset. The work surface is bigger than its frame and is moved by
    *  dragging its background instead of by scrollbars. Everything else keeps
    *  working in canvas space: `canvasOffset()` reads the transformed rect, so
@@ -188,6 +219,13 @@ export class WorkflowGraphEditorComponent implements OnInit {
   private wireHandled = false;
 
   readonly readonly = computed(() => this.version()?.status !== 'draft');
+
+  /** E8-T13: in a right-to-left language the canvas is drawn mirrored, so a
+   *  flow runs right to left. The graph keeps its left-to-right coordinates
+   *  (nothing stored changes); the surface is flipped as a whole, its text
+   *  flipped back, and a pointer's position is read from the right edge
+   *  ([`pointerX`]). */
+  readonly mirrored = computed(() => (this.lang as Partial<LangService>).isRtl?.() === true);
   readonly selectedNode = computed(() =>
     this.graph().nodes.find(n => n.id === this.selectedNodeId()) ?? null,
   );
@@ -204,7 +242,8 @@ export class WorkflowGraphEditorComponent implements OnInit {
     const q = this.menuFilter().trim().toLowerCase();
     return NODE_TYPES.filter(t => {
       if (menu.source && !t.inputs.some(p => this.portTypesCompatible(sourceType, p.portType))) return false;
-      return q === '' || t.label.toLowerCase().includes(q) || t.type.includes(q);
+      return q === '' || t.label.toLowerCase().includes(q) || t.type.includes(q)
+        || this.typeLabel(t.type).toLowerCase().includes(q);
     });
   });
 
@@ -235,12 +274,18 @@ export class WorkflowGraphEditorComponent implements OnInit {
       next: handlers => this.stepHandlers.set(handlers),
       error: () => this.stepHandlers.set([]),
     });
+    this.svc.getDefinition(this.definitionId()).subscribe({
+      next: definition => { if (definition.kind === 'journey') this.loadJourney(definition.logicalname); },
+      error: () => undefined,
+    });
     this.svc.getVersion(this.definitionId(), this.versionId()).subscribe({
       next: v => {
         this.version.set(v);
         const g: Graph = v.graph && v.graph.nodes ? v.graph : { nodes: [], edges: [] };
         for (const n of g.nodes) { n.ports ??= { x: 40, y: 40 }; }
         this.graph.set(g);
+        // Mirrored, the flow starts at the surface's right edge: show it.
+        afterNextRender(() => { if (this.mirrored()) this.setPan(-Infinity, this.panY()); }, { injector: this.injector });
         this.savedGraphJson = JSON.stringify(g);
         this.loading.set(false);
       },
@@ -311,7 +356,7 @@ export class WorkflowGraphEditorComponent implements OnInit {
     if (evt.target !== this.canvasRef()?.nativeElement) return;
     const canvasRect = this.canvasOffset();
     this.menuFilter.set('');
-    this.typeMenu.set({ x: evt.pageX - canvasRect.left, y: evt.pageY - canvasRect.top });
+    this.typeMenu.set({ x: this.pointerX(evt.pageX, canvasRect), y: evt.pageY - canvasRect.top });
   }
 
   /** The `+` beside an output port of the selected node. */
@@ -343,6 +388,22 @@ export class WorkflowGraphEditorComponent implements OnInit {
     if (added && added.id !== before && added.type === 'module_step') {
       this.setConfig('handler', key);
     }
+  }
+
+  /** E8-T13: a node type's name in the user's language
+   *  (`workflowNodeType.<type>`), else its English label. */
+  typeLabel(type: string): string {
+    const k = `workflowNodeType.${type}`;
+    const label = this.lang.translate(k);
+    return label === k ? (nodeTypeSpec(type)?.label ?? type) : label;
+  }
+
+  /** A node's title: a Module Step by the step it runs, else its type. */
+  nodeTitle(node: GraphNode): string {
+    const handler = node.config?.['handler'];
+    return node.type === 'module_step' && typeof handler === 'string' && handler !== ''
+      ? this.stepLabel(handler)
+      : this.typeLabel(node.type);
   }
 
   /** A registered step's name in the user's language, else its key. */
@@ -469,6 +530,22 @@ export class WorkflowGraphEditorComponent implements OnInit {
     if (f.kind === 'entity')   return 'wf-entity-names';
     if (f.kind === 'workflow') return 'wf-workflow-names';
     return null;
+  }
+
+  /** E8-T13: a wait's `resume_at` as an Umm al-Qura (Hijri) date, in the
+   *  user's language; null when it is not a date. */
+  hijriOf(f: NodeConfigField): string | null {
+    if (this.selectedNode()?.type !== 'wait' || f.key !== 'resume_at') return null;
+    const at = new Date(this.stringValue(f));
+    if (this.stringValue(f) === '' || Number.isNaN(at.getTime())) return null;
+    const locale = (this.lang as Partial<LangService>).intlLocale?.() ?? 'en';
+    try {
+      return new Intl.DateTimeFormat(`${locale}-u-ca-islamic-umalqura`, {
+        dateStyle: 'long', timeStyle: 'short', timeZone: 'UTC',
+      }).format(at);
+    } catch {
+      return null;
+    }
   }
 
   isMissingRequired(f: NodeConfigField): boolean {
@@ -628,7 +705,7 @@ export class WorkflowGraphEditorComponent implements OnInit {
     const canvasRect = this.canvasOffset();
     this.dragState = {
       nodeId:  node.id,
-      offsetX: evt.pageX - canvasRect.left - node.ports.x,
+      offsetX: this.pointerX(evt.pageX, canvasRect) - node.ports.x,
       offsetY: evt.pageY - canvasRect.top - node.ports.y,
     };
   }
@@ -678,7 +755,7 @@ export class WorkflowGraphEditorComponent implements OnInit {
     if (this.dragState) {
       const { nodeId } = this.dragState;
       const canvasRect = this.canvasOffset();
-      const x = evt.pageX - canvasRect.left - this.dragState.offsetX;
+      const x = this.pointerX(evt.pageX, canvasRect) - this.dragState.offsetX;
       const y = evt.pageY - canvasRect.top - this.dragState.offsetY;
       this.graph.update(g => ({
         ...g,
@@ -689,7 +766,7 @@ export class WorkflowGraphEditorComponent implements OnInit {
     const p = this.pendingEdge();
     if (p) {
       const canvasRect = this.canvasOffset();
-      this.pendingEdge.set({ ...p, x: evt.pageX - canvasRect.left, y: evt.pageY - canvasRect.top });
+      this.pendingEdge.set({ ...p, x: this.pointerX(evt.pageX, canvasRect), y: evt.pageY - canvasRect.top });
     }
   }
 
@@ -705,9 +782,19 @@ export class WorkflowGraphEditorComponent implements OnInit {
     this.cancelWire(false);
   }
 
-  private canvasOffset(): { left: number; top: number } {
+  private canvasOffset(): { left: number; right: number; top: number } {
     const rect = this.canvasRef()?.nativeElement.getBoundingClientRect();
-    return { left: (rect?.left ?? 0) + window.scrollX, top: (rect?.top ?? 0) + window.scrollY };
+    return {
+      left: (rect?.left ?? 0) + window.scrollX,
+      right: (rect?.right ?? 0) + window.scrollX,
+      top: (rect?.top ?? 0) + window.scrollY,
+    };
+  }
+
+  /** A pointer's canvas-space x: from the surface's left edge, or, mirrored,
+   *  from its right edge (the flip maps x to width − x). */
+  private pointerX(pageX: number, canvas: { left: number; right: number }): number {
+    return this.mirrored() ? canvas.right - pageX : pageX - canvas.left;
   }
 
   // ── Wiring ────────────────────────────────────────────────────────────────
@@ -926,9 +1013,40 @@ export class WorkflowGraphEditorComponent implements OnInit {
       });
   }
 
+  /** E8-T13: loads the journey entry point and finds the journey record. */
+  private loadJourney(logicalname: string): void {
+    import('@attome/xrm/marketing/journey').then(
+      module => this.injector.get(module.JourneyService).forDefinition(logicalname).subscribe({
+        next: id => { if (id) this.journey.set({ module, id }); },
+        error: () => undefined,
+      }),
+      () => undefined,
+    );
+  }
+
+  /** E8-T13: replays the person typed in, or stops a replay. */
+  replay(): void {
+    const person = this.replayInput.trim();
+    this.replayNode.set(null);
+    this.replayPerson.set(person === '' ? null : person);
+  }
+
+  /** E8-T13: the version-move dialog closed; a publish reloads the version. */
+  private moved(published: boolean): void {
+    this.moving.set(false);
+    if (!published) return;
+    this.svc.getVersion(this.definitionId(), this.versionId()).subscribe({
+      next: v => this.version.set(v),
+      error: (e: ApiError) => this.saveError.set(e.message),
+    });
+  }
+
   publish(): void {
     const v = this.version();
     if (!v) return;
+    // A journey publishes through its own route, which places the people
+    // already in it as the dialog's choice says.
+    if (this.journey()) { this.moving.set(true); return; }
     this.publishing.set(true);
     this.saveError.set(null);
     this.svc.publishVersion(this.definitionId(), v.id).subscribe({

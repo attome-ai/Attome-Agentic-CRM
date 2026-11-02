@@ -48,6 +48,7 @@ function editor(graph: Graph, status = 'draft') {
           getVersion:      vi.fn(() => of(version(graph, status))),
           listDefinitions: vi.fn(() => of([{ logicalname: 'onboarding' }])),
           stepHandlers:    vi.fn(() => of(STEPS)),
+          getDefinition:   vi.fn(() => of({ id: 'd1', logicalname: 'onboarding', kind: 'flow' })),
           versionCoverage: vi.fn(() => of({
             tests: [{ id: 't1', name: 'Welcome reaches send', blocking: false, passed: true, failures: [] }],
             covered: ['t', 'send'],
@@ -235,6 +236,7 @@ describe('WorkflowGraphEditorComponent config form', () => {
             getVersion:      vi.fn(() => of(version({ nodes: [node('r1', 'create_record')], edges: [] }))),
             listDefinitions: vi.fn(() => EMPTY),
             stepHandlers:    vi.fn(() => EMPTY),
+            getDefinition:   vi.fn(() => EMPTY),
           },
         },
         { provide: AdminService, useValue: { listEntities: vi.fn(() => EMPTY) } },
@@ -625,6 +627,8 @@ describe('WorkflowGraphEditorComponent module steps (E8-T13)', () => {
   it("edits the step's own settings from its schema, not the raw config box", () => {
     const c = editor({ nodes: [node('m1', 'module_step', { handler: 'marketing.send_email' })], edges: [] });
     c.select('m1');
+    expect(c.nodeTitle(c.graph().nodes[0])).toBe('marketing.send_email');
+    expect(c.typeLabel('wait')).toBe('Wait / Delay');
     expect(c.stepFields().map(f => [f.key, f.kind])).toEqual([
       ['design_id', 'text'], ['on_blocked', 'select'], ['variants', 'json'],
     ]);
@@ -646,5 +650,42 @@ describe('WorkflowGraphEditorComponent module steps (E8-T13)', () => {
     c.select('m1');
     expect(c.stepFields()).toEqual([]);
     expect(c.visibleConfigFields().map(f => f.key)).toContain('config');
+  });
+
+  it('draws the canvas mirrored, flowing right to left, in Arabic', () => {
+    TestBed.configureTestingModule({
+      imports: [WorkflowGraphEditorComponent],
+      providers: [
+        provideRouter([]),
+        {
+          provide: WorkflowAdminService,
+          useValue: {
+            getVersion:      vi.fn(() => of(version({ nodes: [node('t1', 'trigger')], edges: [] }))),
+            listDefinitions: vi.fn(() => EMPTY),
+            stepHandlers:    vi.fn(() => EMPTY),
+            getDefinition:   vi.fn(() => EMPTY),
+          },
+        },
+        { provide: AdminService, useValue: { listEntities: vi.fn(() => EMPTY) } },
+        { provide: LangService, useValue: { translate: (key: string) => key, isRtl: () => true } },
+      ],
+    });
+    const fixture = TestBed.createComponent(WorkflowGraphEditorComponent);
+    fixture.componentRef.setInput('definitionId', 'd1');
+    fixture.componentRef.setInput('versionId', 'v1');
+    fixture.detectChanges();
+    expect(fixture.componentInstance.mirrored()).toBe(true);
+    const canvas = (fixture.nativeElement as HTMLElement).querySelector('.canvas') as HTMLElement;
+    expect(canvas.classList.contains('mirrored')).toBe(true);
+    expect(canvas.style.transform).toContain('scaleX(-1)');
+  });
+
+  it("shows a wait's resume time as a Hijri date", () => {
+    const c = editor({ nodes: [node('w1', 'wait', { resume_at: '2026-03-01T12:00:00Z' })], edges: [] });
+    c.select('w1');
+    const field = c.visibleConfigFields().find(f => f.key === 'resume_at') ?? { key: 'resume_at', label: '', kind: 'text' as const };
+    expect(c.hijriOf(field)).toMatch(/1447/);
+    c.setConfig('resume_at', 'not a date');
+    expect(c.hijriOf(field)).toBeNull();
   });
 });

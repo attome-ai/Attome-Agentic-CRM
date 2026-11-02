@@ -255,3 +255,11 @@
 .simulate-trace td { padding: 5px 8px; border-bottom: 1px solid var(--color-border); vertical-align: top; }
 .simulate-trace tr:last-child td { border-bottom: none; }
 .simulate-trace tr.trace-failed td { color: #f87171; }
+.replay-form { display: inline-flex; gap: 4px; align-items: center; }
+/* E8-T13: a mirrored (right-to-left) canvas flips its text back so it reads. */
+.canvas.mirrored .node-header,
+.canvas.mirrored .node-number,
+.canvas.mirrored .port-name,
+.canvas.mirrored .type-menu,
+.canvas.mirrored .canvas-empty { transform: scaleX(-1); }
+.port-name { display: inline-block; }

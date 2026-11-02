@@ -1995,6 +1995,28 @@ export const xrmEn = {
     editGraph: 'Edit Graph', viewGraph: 'View Graph', publishing: 'Publishing…', publish: 'Publish',
     notes: 'Notes', notesDesc: 'Notes and attachments on this record.',
   },
+  journeyEditor: {
+    entered: 'Entered', waiting: 'Waiting', blocked: 'Blocked', left: 'Left here',
+    countsFailed: 'Live counts could not be loaded.',
+    personId: 'Person id to replay', replay: 'Replay path', replayTitle: "A person's path",
+    pathFailed: "This person's path could not be loaded.", blockedBecause: 'Blocked:',
+    previous: 'Previous step', next: 'Next step', endedWith: 'Left the journey:',
+    noRuns: 'This person has not been in the journey.',
+    moveTitle: 'Publish this version', node: 'Step', inNewVersion: 'In the new version', wouldMove: 'Would move',
+    yes: 'Yes', no: 'No', nobodyWaiting: 'Nobody is waiting in the journey now.',
+    peopleInJourney: 'People already in the journey',
+    finishOnOld: 'Finish on the version they started',
+    moveMatching: 'Move those waiting at a step the new version keeps',
+    publishFailed: 'The version was not published:', publish: 'Publish', cancel: 'Cancel',
+  },
+  workflowNodeType: {
+    trigger: 'Trigger', condition: 'Condition', create_record: 'Create Record', update_record: 'Update Record',
+    send_notification: 'Send Notification', approval: 'Approval', wait: 'Wait / Delay',
+    wait_for_event: 'Wait for Event', sub_workflow: 'Sub-Workflow', webhook: 'Webhook / HTTP Call',
+    split: 'Split (parallel)', join: 'Join', restore_record: 'Restore Record',
+    duplicate_check: 'If a Duplicate Exists', assign: 'Assign Owner', module_step: 'Module Step',
+    for_each: 'For Each', connector: 'Connector Call', map: 'Map Fields', custom_action: 'Custom Action',
+  },
   workflowStep: {
     marketing: {
       send_email: 'Send email', nurture_run: 'Nurture programme', wait_calendar: 'Wait for working time',
@@ -2019,6 +2041,7 @@ export const xrmEn = {
   },
   workflowGraph: {
     moduleSteps: 'Steps from modules', stepSettings: 'Step settings', required: 'required',
+    hijri: 'Hijri:',
     connectTo: 'Connect to…', addNode: 'Add node…', filterNodeTypes: 'Filter node types',
     noTypeForOutput: 'No node type accepts this output.', noMatchingType: 'No matching node type.',
     canvasEmpty: 'Double-click anywhere to add a node.',

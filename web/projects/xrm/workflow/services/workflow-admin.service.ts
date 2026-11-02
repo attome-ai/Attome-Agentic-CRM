@@ -34,6 +34,8 @@ export interface DefinitionDetail {
   versions:    VersionSummary[];
   /** Solution 7 (D-785): the owning layer, typed from the generated `DefinitionDetail`. */
   owner_layer?: ApiComponents['schemas']['DefinitionDetail']['owner_layer'];
+  /** D17-T1/E8: `flow`, `journey`, `nurture` or `sequence`. */
+  kind?: string;
 }
 
 export interface VersionDetail {
