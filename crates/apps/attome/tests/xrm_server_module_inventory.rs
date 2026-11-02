@@ -90,6 +90,9 @@ use std::path::{Path, PathBuf};
 /// Keep sorted; the assertion below is set-based, but a sorted list makes the
 /// diff of a re-baseline reviewable.
 const BASELINE: &[&str] = &[
+    // T7-T4: acceptance scripts are customer tests run by people, beside
+    // customer_test_admin's routes over the same rows.
+    "acceptance_scripts",
     "admin",
     "admin_hooks",
     "api_usage_admin",
@@ -111,6 +114,9 @@ const BASELINE: &[&str] = &[
     // A4-T5: the gap report reads the autonumber sequence tables directly;
     // attome-metadata has no route or admin-guard dependency to host it.
     "autonumber_admin",
+    // A1-T5: a base's records across every entity extending it, read and
+    // reindexed over the entity registry, beside the entity admin routes.
+    "base_index_routes",
     "bootstrap_admin",
     "bulk_transform",
     "bundle",

@@ -280,6 +280,11 @@ const RECORDED: &[(&str, &[&str])] = &[
         "POST /api/v1/workflow/definitions/{id}/versions/{version_id}/publish",
         &["publish_workflow"],
     ),
+    // E8: publishing a marketing journey publishes its workflow draft.
+    (
+        "POST /api/v1/marketing/journeys/{id}/publish",
+        &["publish_workflow"],
+    ),
     ("POST /api/v1/process/case-defs", &["upsert_case_def"]),
     ("PATCH /api/v1/process/case-defs/{id}", &["upsert_case_def"]),
     (

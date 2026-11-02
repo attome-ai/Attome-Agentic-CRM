@@ -257,8 +257,14 @@ fn plan(state: &EngineState, entity_id: Uuid, body: &SplitBody) -> Result<Plan, 
                 meta.logicalname
             )));
         }
-        let compiled = attome_rules::compile(target.expression.trim(), &schema)
-            .map_err(|e| AppError::Validation(format!("{field}: {e}")))?;
+        // The latest language: `word` and `word_count` are V2 functions.
+        let compiled = attome_rules::compile_versioned(
+            target.expression.trim(),
+            &schema,
+            attome_rules::LanguageVersion::LATEST,
+            attome_rules::Budgets::default(),
+        )
+        .map_err(|e| AppError::Validation(format!("{field}: {e}")))?;
         targets.push((field.to_owned(), compiled));
     }
     Ok(Plan {
@@ -714,7 +720,16 @@ mod tests {
         exprs
             .iter()
             .enumerate()
-            .map(|(i, e)| (format!("t{i}"), attome_rules::compile(e, &schema).unwrap()))
+            .map(|(i, e)| {
+                let compiled = attome_rules::compile_versioned(
+                    e,
+                    &schema,
+                    attome_rules::LanguageVersion::LATEST,
+                    attome_rules::Budgets::default(),
+                )
+                .unwrap();
+                (format!("t{i}"), compiled)
+            })
             .collect()
     }
 

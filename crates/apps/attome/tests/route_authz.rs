@@ -508,6 +508,71 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
         "/api/v1/auth/step-up-callback/oidc/{provider}",
         "IdP redirect back for federated step-up (D-510 rule 5). A SameSite=Strict session cookie never survives the cross-site hop, so the user, family and operation come only from the single-use server-side state, bound to the browser that started it.",
     ),
+    (
+        "GET",
+        "/api/v1/portal-host",
+        "G12-T3: answers only which enabled portal's keyword the request's Host serves, so the web app opens it at `/` before anyone signs in; it reads no record and changes nothing, and an unknown host is a 404.",
+    ),
+    (
+        "POST",
+        "/api/v1/oauth/device_authorization",
+        "C7-T1 (RFC 8628 §3.1): a device asks for a grant; it carries no credential by design and the grant does nothing until a signed-in person approves it in a browser session; grants live ten minutes, are used once and are stored only as hashes.",
+    ),
+    (
+        "POST",
+        "/{keyword}/api/v1/partner/leads/{id}/accept",
+        "F9-T4: a portal route: `authenticate` resolves the signed-in portal user from the portal's own session cookie (same-origin checked, epoch and MFA enrolment enforced), not a staff context `Authorized<P>` could carry; only a lead offered to that user's own partner, before its limit, is accepted; any other is a 404.",
+    ),
+    (
+        "POST",
+        "/{keyword}/api/v1/partner/leads/{id}/reject",
+        "F9-T4: a portal route: `authenticate` resolves the signed-in portal user from the portal's own session cookie (same-origin checked, epoch and MFA enrolment enforced), not a staff context `Authorized<P>` could carry; only a lead offered to that user's own partner, before its limit, is rejected; any other is a 404.",
+    ),
+    (
+        "GET",
+        "/{keyword}/api/v1/shop/cart",
+        "F6: a portal route: `authenticate` resolves the signed-in portal user from the portal's own session cookie (same-origin checked, epoch and MFA enrolment enforced), not a staff context `Authorized<P>` could carry; the cart is the signed-in shopper's own account's.",
+    ),
+    (
+        "POST",
+        "/{keyword}/api/v1/shop/cart/checkout",
+        "F6: a portal route: `authenticate` resolves the signed-in portal user from the portal's own session cookie (same-origin checked, epoch and MFA enrolment enforced), not a staff context `Authorized<P>` could carry; checks out only the signed-in shopper's own cart, writing through the portal's record scope.",
+    ),
+    (
+        "GET",
+        "/{keyword}/api/v1/shop/orders",
+        "F6: a portal route: `authenticate` resolves the signed-in portal user from the portal's own session cookie (same-origin checked, epoch and MFA enrolment enforced), not a staff context `Authorized<P>` could carry; lists only the orders of the signed-in shopper's own account.",
+    ),
+    (
+        "GET",
+        "/{keyword}/api/v1/partner/members",
+        "F9: a portal route: `authenticate` resolves the signed-in portal user from the portal's own session cookie (same-origin checked, epoch and MFA enrolment enforced), not a staff context `Authorized<P>` could carry; only an administrator of a partner sees that partner's own members.",
+    ),
+    (
+        "POST",
+        "/{keyword}/api/v1/partner/members",
+        "F9: a portal route: `authenticate` resolves the signed-in portal user from the portal's own session cookie (same-origin checked, epoch and MFA enrolment enforced), not a staff context `Authorized<P>` could carry; only an administrator of a partner invites, into that partner only, within its seats.",
+    ),
+    (
+        "POST",
+        "/{keyword}/api/v1/partner/members/{id}/deactivate",
+        "F9: a portal route: `authenticate` resolves the signed-in portal user from the portal's own session cookie (same-origin checked, epoch and MFA enrolment enforced), not a staff context `Authorized<P>` could carry; only an administrator of a partner deactivates one of that partner's members, never themselves.",
+    ),
+    (
+        "GET",
+        "/{keyword}/api/v1/billing/invoices/open",
+        "O1: a portal route: `authenticate` resolves the signed-in portal user from the portal's own session cookie (same-origin checked, epoch and MFA enrolment enforced), not a staff context `Authorized<P>` could carry; lists only the open invoices of the signed-in user's own account.",
+    ),
+    (
+        "GET",
+        "/{keyword}/api/v1/billing/payment-methods",
+        "O1: a portal route: `authenticate` resolves the signed-in portal user from the portal's own session cookie (same-origin checked, epoch and MFA enrolment enforced), not a staff context `Authorized<P>` could carry; lists only the saved payment methods of the signed-in user's own account.",
+    ),
+    (
+        "POST",
+        "/{keyword}/api/v1/billing/invoices/{id}/pay",
+        "O1: a portal route: `authenticate` resolves the signed-in portal user from the portal's own session cookie (same-origin checked, epoch and MFA enrolment enforced), not a staff context `Authorized<P>` could carry; pays only an invoice of the signed-in user's own account; any other is a 404.",
+    ),
 ];
 
 /// `/api/v1/admin/…` routes allowed to be gated by something other than an
