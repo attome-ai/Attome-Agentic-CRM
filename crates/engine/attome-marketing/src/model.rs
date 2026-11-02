@@ -59,7 +59,10 @@ impl EngineModel for MarketingModel {
 
     /// E8-T9: a person's journey rows go with them when they are erased.
     fn erasure_hooks(&self) -> Vec<std::sync::Arc<dyn attome_core::erasure_hook::ErasureHook>> {
-        vec![std::sync::Arc::new(crate::journey::insight::JourneyErasure)]
+        vec![
+            std::sync::Arc::new(crate::journey::insight::JourneyErasure),
+            std::sync::Arc::new(crate::tracking::retention::TrackingErasure),
+        ]
     }
 
     /// E7-T6: a segment saved as live needs a query that may run live.

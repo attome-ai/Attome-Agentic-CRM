@@ -14,6 +14,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Tracking retention and erasure (E14-T11, migration `0370`): a nightly job rolls each site's page views
+  older than its `retention_days` (395 by default) into `marketing_web_daily`, drops whole months of
+  `marketing_web_event` once past the longest retention of any site, and deletes sessions past their
+  site's retention. Erasing a contact or lead removes their web sessions, every session of the same
+  visitor, those sessions' events and their visit summaries. While `marketing.tracking` is on and the
+  privacy pack is installed, a draft `processing_activity` named "Website tracking" is created once.
 - Likely company of a website visit (E14-T10, migration `0369`): with `marketing.tracking_company` on,
   a site's `company_recognition` on and an integration connection named `ip_company` configured, a
   session's truncated IP is sent to that provider (`GET {base_url}/{ip}`, `company.name` and

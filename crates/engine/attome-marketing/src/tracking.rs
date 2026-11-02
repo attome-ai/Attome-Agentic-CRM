@@ -10,6 +10,8 @@ pub mod collect;
 pub mod company;
 /// E14-T7: a visitor identified as a lead or contact.
 pub mod identify;
+/// E14-T11: retention, erasure and the records-of-processing entry.
+pub mod retention;
 /// E14-T8: one visit summary per closed, identified session.
 pub mod summary;
 pub mod writer;

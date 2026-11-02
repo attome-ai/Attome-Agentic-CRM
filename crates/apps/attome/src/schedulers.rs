@@ -371,6 +371,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
         db.clone(),
         std::time::Duration::from_secs(86_400),
     );
+    // E14-T11: web tracking retention, nightly.
+    crate::jobs::spawn_web_tracking_retention_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(86_400),
+    );
     // E6-T4: the deliverability rollup for today and yesterday, hourly.
     crate::jobs::spawn_deliverability_rollup_scheduler(
         db.clone(),
