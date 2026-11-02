@@ -4518,6 +4518,25 @@ pub fn register_job_types() {
                     if alerted > 0 {
                         tracing::info!(site = %batch.site_key, alerted, "watched pages viewed");
                     }
+                    // E14-T10: the likely company, after the batch committed.
+                    // A provider failure leaves the session as it is and
+                    // never fails the batch.
+                    match attome_marketing::tracking::company::after_batch(
+                        &state,
+                        batch.site_key.trim(),
+                        session,
+                        &batch.ip_prefix,
+                    )
+                    .await
+                    {
+                        Ok(true) => tracing::debug!(site = %batch.site_key, "likely company stored"),
+                        Ok(false) => {}
+                        Err(error) => tracing::warn!(
+                            site = %batch.site_key,
+                            %error,
+                            "company recognition failed"
+                        ),
+                    }
                 }
                 Ok::<(), attome_jobs::registry::BoxError>(())
             },

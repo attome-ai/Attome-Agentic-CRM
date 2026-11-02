@@ -106,6 +106,15 @@ const DECLARED_CACHES: &[Declared] = &[
         "empty",
     ),
     (
+        "crates/engine/attome-marketing/src/tracking/company.rs",
+        "marketing:company:{ip_prefix}",
+        "the customer's IP-to-company provider (attome_integration::ip_company)",
+        "24 h",
+        "none; a provider's change shows after the TTL",
+        "a Redis error asks the provider uncached; a failed or slow call is not cached",
+        "empty",
+    ),
+    (
         "crates/engine/attome-marketing/src/tracking/collect.rs",
         "tracked sites by site key",
         "PostgreSQL marketing_tracked_site",

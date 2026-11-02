@@ -14,6 +14,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Likely company of a website visit (E14-T10, migration `0369`): with `marketing.tracking_company` on,
+  a site's `company_recognition` on and an integration connection named `ip_company` configured, a
+  session's truncated IP is sent to that provider (`GET {base_url}/{ip}`, `company.name` and
+  `company.domain` or top-level `name` and `domain`, two seconds, answers cached 24 hours) and the
+  company is stored on the session as `likely_company`, with `likely_account_ref` when exactly one
+  live account has that `email_domain`. Never on a person; without the connection nothing is sent.
 - A marketing form can ask for sales (`intent` = `contact_sales`, marketing pack 0018): submitting it hands a
   nurtured person to sales at once (E9-T5).
 - Marketing nurture is documented in `docs/marketing-nurture.md` (E9-T13).

@@ -6,6 +6,8 @@
 pub mod alerts;
 pub mod bots;
 pub mod collect;
+/// E14-T10: the likely company of a session, from its truncated IP.
+pub mod company;
 /// E14-T7: a visitor identified as a lead or contact.
 pub mod identify;
 /// E14-T8: one visit summary per closed, identified session.

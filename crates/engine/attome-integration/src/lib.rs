@@ -32,6 +32,8 @@ pub mod inbound;
 pub mod inbound_handlers;
 /// J2-T2: routing rules for shared mailboxes.
 pub mod inbound_mail;
+/// E14-T10: the company behind a truncated IP, from a configured provider.
+pub mod ip_company;
 /// D15-T2: which personal emails are captured, onto which addresses.
 pub mod mail_capture;
 pub mod model;
