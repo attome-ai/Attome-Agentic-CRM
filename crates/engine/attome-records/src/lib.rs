@@ -102,6 +102,8 @@ pub mod rollup_heal;
 pub mod rule_engine;
 pub mod rw_pin;
 pub mod stage_move;
+/// L8-T1: virtual entities served by a provider.
+pub mod virtual_entity;
 
 /// Advisory-lock namespace for the `"xrm-files/…"` prefix — `entity_
 /// mutation`'s file-version lock and `attome-server`'s `files.rs`'s per-

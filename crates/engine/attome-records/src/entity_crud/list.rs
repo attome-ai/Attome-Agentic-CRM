@@ -165,6 +165,26 @@ pub(super) async fn list_records(
             .collect::<Vec<_>>()
     });
     let page_size = params.page_size.unwrap_or(50).clamp(1, 200);
+    // L8-T1: a virtual entity lists through its provider; the extractor
+    // already checked the entity-level read privilege, the only access a
+    // virtual entity has (V2-D1628 (2)).
+    if let Some(provider) = crate::virtual_entity::provider_for(&entity_input) {
+        if params.delta_token.is_some() {
+            return Err(AppError::Validation(
+                "a virtual entity has no change feed, so no delta token".into(),
+            ));
+        }
+        let query = crate::virtual_entity::VirtualQuery {
+            filters,
+            sort: (!order_by.is_empty()).then(|| (order_by, order_dir == "desc")),
+            page_size,
+            cursor: params.cursor,
+            select,
+        };
+        let page = crate::virtual_entity::list(&entity_input, provider.as_ref(), &query).await?;
+        let items = page.items.into_iter().map(Value::Object).collect();
+        return Ok(Json(CursorPage::new(items, page.next_cursor)).into_response());
+    }
     if let Some(token) = params.delta_token.as_deref() {
         let request = ExecuteQueryRequest::for_entity_list(
             entity_input,

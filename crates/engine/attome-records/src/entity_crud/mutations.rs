@@ -225,6 +225,12 @@ pub(super) async fn get_record(
     axum::extract::Query(as_of): axum::extract::Query<super::time_travel::AsOfParam>,
     headers: axum::http::HeaderMap,
 ) -> Result<axum::response::Response, AppError> {
+    // L8-T1: a virtual entity's record comes from its provider.
+    if let Some(provider) = crate::virtual_entity::provider_for(&entity_input) {
+        use axum::response::IntoResponse;
+        let row = provider.get(record_id).await?.ok_or(AppError::NotFound)?;
+        return Ok(Json(Value::Object(row)).into_response());
+    }
     let select =
         super::response::resolve_select(&state, &ctx, &entity_input, select.select.as_deref())
             .await?;
@@ -613,6 +619,12 @@ pub(super) async fn create_record(
     headers: axum::http::HeaderMap,
     Json(body): Json<Value>,
 ) -> Result<axum::response::Response, AppError> {
+    // L8-T1: a virtual entity writes through its provider, or not at all.
+    if let Some(provider) = crate::virtual_entity::provider_for(&entity_input) {
+        use axum::response::IntoResponse;
+        let row = crate::virtual_entity::create(&entity_input, provider.as_ref(), &body).await?;
+        return Ok((StatusCode::CREATED, Json(Value::Object(row))).into_response());
+    }
     // Y12-T8: an old attribute name still in its alias period.
     let (body, renamed) = super::aliases::apply(&state, &entity_input, body);
     // S1-T3: a bad `select` refuses the request before anything is written.
@@ -1526,6 +1538,13 @@ pub(super) async fn update_record(
     headers: axum::http::HeaderMap,
     Json(body): Json<Value>,
 ) -> Result<axum::response::Response, AppError> {
+    // L8-T1: a virtual entity writes through its provider, or not at all.
+    if let Some(provider) = crate::virtual_entity::provider_for(&entity_input) {
+        use axum::response::IntoResponse;
+        let row = crate::virtual_entity::update(&entity_input, provider.as_ref(), record_id, &body)
+            .await?;
+        return Ok(Json(Value::Object(row)).into_response());
+    }
     // Y12-T8: an old attribute name still in its alias period.
     let (body, renamed) = super::aliases::apply(&state, &entity_input, body);
     // S1-T3: a bad `select` refuses the request before anything is written.
@@ -1815,6 +1834,10 @@ pub(super) async fn delete_record(
     headers: axum::http::HeaderMap,
     axum::extract::Query(query): axum::extract::Query<DeleteQuery>,
 ) -> Result<StatusCode, AppError> {
+    // L8-T1: nothing deletes a virtual entity's rows from here.
+    if crate::virtual_entity::provider_for(&entity_input).is_some() {
+        return Err(AppError::MethodNotAllowed);
+    }
     // C5: the whole sequence lives in `delete_record_for`; header parsing is
     // the one thing it cannot do for itself — same split `update_record`
     // makes with `update_record_for`.
