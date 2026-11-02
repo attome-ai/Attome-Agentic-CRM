@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 import type { Page } from '@attome/base';
 import { StepUpService } from '@attome/base/step-up';
 import type {
@@ -43,7 +43,7 @@ function pageParams(page: number, pageSize: number): Record<string, string> {
  */
 @Injectable({ providedIn: 'root' })
 export class FleetService {
-  private readonly api    = inject(ApiService);
+  private readonly sdk    = inject(SdkService);
   private readonly stepUp = inject(StepUpService);
 
   private guarded<T>(request: () => Observable<T>): Observable<T> {
@@ -53,15 +53,18 @@ export class FleetService {
   // ── Deployments ─────────────────────────────────────────────────────────
 
   listDeployments(includeInactive: boolean, page: number, pageSize: number): Observable<Page<DeploymentView>> {
-    return this.api.get<Page<DeploymentView>>(`${FLEET_API}/deployments`, {
+    return this.sdk.get<Page<DeploymentView>>(
+      `${FLEET_API}/deployments`,
+      { query: {
       ...pageParams(page, pageSize),
       include_inactive: String(includeInactive),
-    });
+    } },
+    );
   }
 
   /** Every deployment (for pickers), walked page by page. */
   allDeployments(includeInactive: boolean): Observable<DeploymentView[]> {
-    return this.api.getAllPages<DeploymentView>(
+    return this.sdk.getAllPages<DeploymentView>(
       `${FLEET_API}/deployments`,
       { include_inactive: String(includeInactive) },
       FLEET_MAX_PAGE_SIZE,
@@ -71,44 +74,46 @@ export class FleetService {
   }
 
   getDeployment(id: string): Observable<DeploymentView> {
-    return this.api.get<DeploymentView>(`${FLEET_API}/deployments/${encodeURIComponent(id)}`);
+    return this.sdk.get<DeploymentView>(`${FLEET_API}/deployments/${encodeURIComponent(id)}`);
   }
 
   /** Step-up only when a credential is included; `run` prompts only if the server asks. */
   registerDeployment(body: RegisterDeploymentBody): Observable<DeploymentView> {
-    return this.guarded(() => this.api.post<DeploymentView>(`${FLEET_API}/deployments`, body));
+    return this.guarded(() => this.sdk.post<DeploymentView>(`${FLEET_API}/deployments`, { body: body }));
   }
 
   /** Moving a deployment that holds a credential (a new `base_url`) needs a step-up. */
   updateDeployment(id: string, body: UpdateDeploymentBody): Observable<DeploymentView> {
     return this.guarded(() =>
-      this.api.patch<DeploymentView>(`${FLEET_API}/deployments/${encodeURIComponent(id)}`, body));
+      this.sdk.patch<DeploymentView>(`${FLEET_API}/deployments/${encodeURIComponent(id)}`, { body: body }));
   }
 
   setCredential(id: string, rowVersion: number, credential: CredentialBody, verify: boolean): Observable<DeploymentView> {
     const body: SetCredentialBody = { row_version: rowVersion, ...credential, verify };
     return this.guarded(() =>
-      this.api.put<DeploymentView>(`${FLEET_API}/deployments/${encodeURIComponent(id)}/credential`, body));
+      this.sdk.put<DeploymentView>(`${FLEET_API}/deployments/${encodeURIComponent(id)}/credential`, { body: body }));
   }
 
   syncDeployment(id: string): Observable<DeploymentView> {
-    return this.api.post<DeploymentView>(`${FLEET_API}/deployments/${encodeURIComponent(id)}/sync`, {});
+    return this.sdk.post<DeploymentView>(`${FLEET_API}/deployments/${encodeURIComponent(id)}/sync`, { body: {} });
   }
 
   syncAll(): Observable<SyncQueued> {
-    return this.api.post<SyncQueued>(`${FLEET_API}/sync`, {});
+    return this.sdk.post<SyncQueued>(`${FLEET_API}/sync`, { body: {} });
   }
 
   listActions(id: string, page: number, pageSize: number): Observable<Page<ActionView>> {
-    return this.api.get<Page<ActionView>>(
-      `${FLEET_API}/deployments/${encodeURIComponent(id)}/actions`, pageParams(page, pageSize));
+    return this.sdk.get<Page<ActionView>>(
+      `${FLEET_API}/deployments/${encodeURIComponent(id)}/actions`,
+      { query: pageParams(page, pageSize) },
+    );
   }
 
   // ── Changesets ──────────────────────────────────────────────────────────
 
   /** Every closed changeset file under `fleet.changesets_dir`, platform first. */
   allChangesets(): Observable<ChangesetFile[]> {
-    return this.api.getAllPages<ChangesetFile>(`${FLEET_API}/changesets`, {}, FLEET_MAX_PAGE_SIZE, undefined, 1);
+    return this.sdk.getAllPages<ChangesetFile>(`${FLEET_API}/changesets`, {}, FLEET_MAX_PAGE_SIZE, undefined, 1);
   }
 
   // ── Release reports (read from the customer) ─────────────────────────────
@@ -116,8 +121,10 @@ export class FleetService {
   listReports(deploymentId: string, status: string | null, page: number, pageSize: number): Observable<Page<FleetReleaseReport>> {
     const params = pageParams(page, pageSize);
     if (status) params['status'] = status;
-    return this.api.get<Page<FleetReleaseReport>>(
-      `${FLEET_API}/deployments/${encodeURIComponent(deploymentId)}/release-reports`, params);
+    return this.sdk.get<Page<FleetReleaseReport>>(
+      `${FLEET_API}/deployments/${encodeURIComponent(deploymentId)}/release-reports`,
+      { query: params },
+    );
   }
 
   listItems(
@@ -126,14 +133,14 @@ export class FleetService {
     const params = pageParams(page, pageSize);
     if (filter.status) params['status'] = filter.status;
     if (filter.kind) params['kind'] = filter.kind;
-    return this.api.get<Page<FleetReportItem>>(
+    return this.sdk.get<Page<FleetReportItem>>(
       `${FLEET_API}/deployments/${encodeURIComponent(deploymentId)}/release-reports/${encodeURIComponent(reportId)}/items`,
-      params,
+      { query: params },
     );
   }
 
   openItems(page: number, pageSize: number): Observable<Page<OpenItemView>> {
-    return this.api.get<Page<OpenItemView>>(`${FLEET_API}/open-items`, pageParams(page, pageSize));
+    return this.sdk.get<Page<OpenItemView>>(`${FLEET_API}/open-items`, { query: pageParams(page, pageSize) });
   }
 
   /**
@@ -148,54 +155,62 @@ export class FleetService {
     const body = decision === 'use-mine'
       ? { row_version: rowVersion, record_row_version: recordRowVersion }
       : { row_version: rowVersion };
-    return this.api.post<FleetReportItem>(
+    return this.sdk.post<FleetReportItem>(
       `${FLEET_API}/deployments/${encodeURIComponent(deploymentId)}/release-report-items/${encodeURIComponent(itemId)}/${decision}`,
-      body,
+      { body: body },
     );
   }
 
   // ── Rollouts ────────────────────────────────────────────────────────────
 
   listRollouts(page: number, pageSize: number): Observable<Page<RolloutView>> {
-    return this.api.get<Page<RolloutView>>(`${FLEET_API}/rollouts`, pageParams(page, pageSize));
+    return this.sdk.get<Page<RolloutView>>(`${FLEET_API}/rollouts`, { query: pageParams(page, pageSize) });
   }
 
   startRollout(body: StartRolloutBody): Observable<RolloutDetail> {
-    return this.guarded(() => this.api.post<RolloutDetail>(`${FLEET_API}/rollouts`, body));
+    return this.guarded(() => this.sdk.post<RolloutDetail>(`${FLEET_API}/rollouts`, { body: body }));
   }
 
   getRollout(id: string): Observable<RolloutDetail> {
-    return this.api.get<RolloutDetail>(`${FLEET_API}/rollouts/${encodeURIComponent(id)}`);
+    return this.sdk.get<RolloutDetail>(`${FLEET_API}/rollouts/${encodeURIComponent(id)}`);
   }
 
   applyTarget(rolloutId: string, targetId: string, body: ApplyTargetBody): Observable<TargetView> {
-    return this.guarded(() => this.api.post<TargetView>(
-      `${FLEET_API}/rollouts/${encodeURIComponent(rolloutId)}/targets/${encodeURIComponent(targetId)}/apply`, body));
+    return this.guarded(() => this.sdk.post<TargetView>(
+      `${FLEET_API}/rollouts/${encodeURIComponent(rolloutId)}/targets/${encodeURIComponent(targetId)}/apply`,
+      { body: body },
+    ));
   }
 
   skipTarget(rolloutId: string, targetId: string, rowVersion: number): Observable<TargetView> {
-    return this.api.post<TargetView>(
+    return this.sdk.post<TargetView>(
       `${FLEET_API}/rollouts/${encodeURIComponent(rolloutId)}/targets/${encodeURIComponent(targetId)}/skip`,
-      { row_version: rowVersion },
+      { body: { row_version: rowVersion } },
     );
   }
 
   haltRollout(id: string, rowVersion: number): Observable<RolloutDetail> {
-    return this.api.post<RolloutDetail>(
-      `${FLEET_API}/rollouts/${encodeURIComponent(id)}/halt`, { row_version: rowVersion });
+    return this.sdk.post<RolloutDetail>(
+      `${FLEET_API}/rollouts/${encodeURIComponent(id)}/halt`,
+      { body: { row_version: rowVersion } },
+    );
   }
 
   resumeRollout(id: string, rowVersion: number): Observable<RolloutDetail> {
-    return this.guarded(() => this.api.post<RolloutDetail>(
-      `${FLEET_API}/rollouts/${encodeURIComponent(id)}/resume`, { row_version: rowVersion }));
+    return this.guarded(() => this.sdk.post<RolloutDetail>(
+      `${FLEET_API}/rollouts/${encodeURIComponent(id)}/resume`,
+      { body: { row_version: rowVersion } },
+    ));
   }
 
   cancelRollout(id: string, rowVersion: number): Observable<RolloutDetail> {
-    return this.api.post<RolloutDetail>(
-      `${FLEET_API}/rollouts/${encodeURIComponent(id)}/cancel`, { row_version: rowVersion });
+    return this.sdk.post<RolloutDetail>(
+      `${FLEET_API}/rollouts/${encodeURIComponent(id)}/cancel`,
+      { body: { row_version: rowVersion } },
+    );
   }
 
   refreshRollout(id: string): Observable<StepsQueued> {
-    return this.api.post<StepsQueued>(`${FLEET_API}/rollouts/${encodeURIComponent(id)}/refresh`, {});
+    return this.sdk.post<StepsQueued>(`${FLEET_API}/rollouts/${encodeURIComponent(id)}/refresh`, { body: {} });
   }
 }

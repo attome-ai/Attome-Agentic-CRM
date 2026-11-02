@@ -7,6 +7,9 @@ import { StepUpService } from '@attome/base/step-up';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FLEET_STEP_UP_OPERATION, FleetService } from './fleet.service';
 
+/** The SDK sends after a promise turn (Y9-T3). */
+const tick = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
 describe('FleetService', () => {
   const API = 'http://localhost:7865';
   const BASE = `${API}/api/v1/fleet`;
@@ -34,8 +37,9 @@ describe('FleetService', () => {
     expect(FLEET_STEP_UP_OPERATION).toBe('api_key_create');
   });
 
-  it('lists deployments one-based with the inactive filter', () => {
+  it('lists deployments one-based with the inactive filter', async () => {
     service.listDeployments(true, 2, 25).subscribe();
+    await tick();
     const req = http.expectOne(r => r.url === `${BASE}/deployments`);
     expect(req.request.method).toBe('GET');
     expect(req.request.params.get('page')).toBe('2');
@@ -44,26 +48,29 @@ describe('FleetService', () => {
     req.flush({ items: [], total: 0, page: 2, page_size: 25 });
   });
 
-  it('registers through the step-up wrapper', () => {
+  it('registers through the step-up wrapper', async () => {
     service.registerDeployment({ project_code: 'BMD', label: 'BMD prod', base_url: 'https://bmd.example' }).subscribe();
     expect(run).toHaveBeenCalledWith('api_key_create', expect.any(Function));
+    await tick();
     const req = http.expectOne(`${BASE}/deployments`);
     expect(req.request.method).toBe('POST');
     expect(req.request.body.project_code).toBe('BMD');
     req.flush({});
   });
 
-  it('sets a credential with PUT, the row_version and verify, through the step-up wrapper', () => {
+  it('sets a credential with PUT, the row_version and verify, through the step-up wrapper', async () => {
     service.setCredential('d1', 4, { s2s_client_id: 'c', s2s_key_id: 'k', secret: 's' }, true).subscribe();
     expect(run).toHaveBeenCalledWith('api_key_create', expect.any(Function));
+    await tick();
     const req = http.expectOne(`${BASE}/deployments/d1/credential`);
     expect(req.request.method).toBe('PUT');
     expect(req.request.body).toEqual({ row_version: 4, s2s_client_id: 'c', s2s_key_id: 'k', secret: 's', verify: true });
     req.flush({});
   });
 
-  it('edits with PATCH and the row_version in the body', () => {
+  it('edits with PATCH and the row_version in the body', async () => {
     service.updateDeployment('d1', { row_version: 2, label: 'New' }).subscribe();
+    await tick();
     const req = http.expectOne(`${BASE}/deployments/d1`);
     expect(req.request.method).toBe('PATCH');
     expect(req.request.body).toEqual({ row_version: 2, label: 'New' });
@@ -71,65 +78,79 @@ describe('FleetService', () => {
     req.flush({});
   });
 
-  it('syncs one and all', () => {
+  it('syncs one and all', async () => {
     service.syncDeployment('d1').subscribe();
+    await tick();
     http.expectOne(r => r.method === 'POST' && r.url === `${BASE}/deployments/d1/sync`).flush({});
     service.syncAll().subscribe();
+    await tick();
     http.expectOne(r => r.method === 'POST' && r.url === `${BASE}/sync`).flush({ queued: true });
   });
 
-  it('sends Use mine with the item and the record row_version', () => {
+  it('sends Use mine with the item and the record row_version', async () => {
     service.decideItem('d1', 'i1', 'use-mine', 3, 9).subscribe();
+    await tick();
     const req = http.expectOne(`${BASE}/deployments/d1/release-report-items/i1/use-mine`);
     expect(req.request.body).toEqual({ row_version: 3, record_row_version: 9 });
     req.flush({});
   });
 
-  it('sends Accept and Dismiss with the item row_version only', () => {
+  it('sends Accept and Dismiss with the item row_version only', async () => {
     service.decideItem('d1', 'i1', 'accept', 3).subscribe();
+    await tick();
     const accept = http.expectOne(`${BASE}/deployments/d1/release-report-items/i1/accept`);
     expect(accept.request.body).toEqual({ row_version: 3 });
     accept.flush({});
     service.decideItem('d1', 'i2', 'dismiss', 5).subscribe();
+    await tick();
     const dismiss = http.expectOne(`${BASE}/deployments/d1/release-report-items/i2/dismiss`);
     expect(dismiss.request.body).toEqual({ row_version: 5 });
     dismiss.flush({});
   });
 
-  it('reads a report\'s items with its filters', () => {
+  it('reads a report\'s items with its filters', async () => {
     service.listItems('d1', 'r1', { status: 'open', kind: 'conflict' }, 1, 50).subscribe();
+    await tick();
     const req = http.expectOne(r => r.url === `${BASE}/deployments/d1/release-reports/r1/items`);
     expect(req.request.params.get('status')).toBe('open');
     expect(req.request.params.get('kind')).toBe('conflict');
     req.flush({ items: [], total: 0, page: 1, page_size: 50 });
   });
 
-  it('guards start, apply and resume with the step-up wrapper, but not halt, skip or cancel', () => {
+  it('guards start, apply and resume with the step-up wrapper, but not halt, skip or cancel', async () => {
     service.startRollout({ title: 't', changeset_ids: ['c1'], deployment_ids: ['d1'] }).subscribe();
+    await tick();
     http.expectOne(`${BASE}/rollouts`).flush({});
     service.applyTarget('r1', 't1', { row_version: 1, backup_ref: 'b' }).subscribe();
+    await tick();
     http.expectOne(`${BASE}/rollouts/r1/targets/t1/apply`).flush({});
     service.resumeRollout('r1', 2).subscribe();
+    await tick();
     http.expectOne(`${BASE}/rollouts/r1/resume`).flush({});
     expect(run).toHaveBeenCalledTimes(3);
 
     service.haltRollout('r1', 2).subscribe();
+    await tick();
     http.expectOne(`${BASE}/rollouts/r1/halt`).flush({});
     service.skipTarget('r1', 't1', 1).subscribe();
+    await tick();
     http.expectOne(`${BASE}/rollouts/r1/targets/t1/skip`).flush({});
     service.cancelRollout('r1', 3).subscribe();
+    await tick();
     const cancel = http.expectOne(`${BASE}/rollouts/r1/cancel`);
     expect(cancel.request.body).toEqual({ row_version: 3 });
     cancel.flush({});
     expect(run).toHaveBeenCalledTimes(3);
   });
 
-  it('walks every changeset page one-based', () => {
+  it('walks every changeset page one-based', async () => {
     let files: unknown[] = [];
     service.allChangesets().subscribe(f => { files = f; });
+    await tick();
     const first = http.expectOne(r => r.url === `${BASE}/changesets`);
     expect(first.request.params.get('page')).toBe('1');
     first.flush({ items: [{ id: 'c1' }], total: 1, page: 1, page_size: 200 });
+    await tick();
     expect(files.length).toBe(1);
   });
 });
