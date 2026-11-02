@@ -55,3 +55,13 @@ version), and deleting it or turning off `is_tracked` turns the tracker off whil
 runs every five minutes from the change feed. When an analysis is done it writes the event
 `callintel.analysis_done` on the `call_analysis` record, which deal health, competitive intelligence and
 conversation signals read; the event carries no transcript text.
+
+## Coaching
+
+- **Next steps to tasks.** A finding (a next step, most often) becomes a task on the call's deal (else on the
+  call) owned by the call's owner; the finding remembers it, so asking again gives the same task.
+- **Confirmed scores.** Only a manager of the call's owner (anyone holding a position above the owner's)
+  confirms a scorecard answer as yes, no or unclear.
+- **Comments.** The owner, their managers and peers holding `call_comment.create` comment at a moment of the
+  call; the owner is notified of others' comments. The owner and their managers read all comments; anyone
+  else reads only their own.
