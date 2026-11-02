@@ -1676,6 +1676,7 @@ export const xrmEn = {
   },
   fieldInput: {
     // B17-T7 — the call and WhatsApp buttons of a phone field.
+    checkIn: 'Use my location', checkInFailed: 'Your location could not be read.',
     phone: { call: 'Call this number', whatsapp: 'Message on WhatsApp' },
     currency: 'Currency', baseAmount: 'In the base currency: {amount}',
     scan: {

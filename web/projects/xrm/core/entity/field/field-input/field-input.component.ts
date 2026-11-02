@@ -197,6 +197,18 @@ export class FieldInputComponent implements OnInit, OnDestroy {
     this.ctrl.markAsDirty();
   }
 
+  /** B17-T7: the device's position could not be read. */
+  readonly checkInFailed = signal(false);
+
+  /** B17-T7: writes the device's position as the field's `lat,lng`. */
+  async checkIn(): Promise<void> {
+    const position = await this.native.getPosition();
+    this.checkInFailed.set(!position);
+    if (position) {
+      this.setGeo(`${position.latitude.toFixed(6)},${position.longitude.toFixed(6)}`);
+    }
+  }
+
   /** A2-T3: why the JSON text does not parse, if it does not. */
   readonly jsonError = signal(false);
 

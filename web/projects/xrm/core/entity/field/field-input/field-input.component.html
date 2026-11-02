@@ -117,9 +117,20 @@
     }
 
     @case ('geolocation') {
+      <div class="scan-row">
       <input [id]="field().name" type="text" dir="ltr" inputmode="decimal" class="xf-input"
              [placeholder]="'fieldInput.geoPlaceholder' | translate"
              [value]="geoText()" (change)="setGeo($any($event.target).value)" />
+      <!-- B17-T7: check in, the device's position into the field. -->
+      <button type="button" class="scan-btn" data-testid="geo-check-in"
+              [attr.aria-label]="'fieldInput.checkIn' | translate" [title]="'fieldInput.checkIn' | translate"
+              (click)="checkIn()">
+        <i class="las la-globe" aria-hidden="true"></i>
+      </button>
+      </div>
+      @if (checkInFailed()) {
+        <p class="field-error" role="alert">{{ 'fieldInput.checkInFailed' | translate }}</p>
+      }
     }
 
     @case ('json') {

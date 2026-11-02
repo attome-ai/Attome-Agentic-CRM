@@ -1637,6 +1637,7 @@ export const xrmAr = {
   },
   fieldInput: {
     // B17-T7 — the call and WhatsApp buttons of a phone field.
+    checkIn: 'استخدم موقعي', checkInFailed: 'تعذّرت قراءة موقعك.',
     phone: { call: 'اتصل بهذا الرقم', whatsapp: 'راسل عبر واتساب' },
     currency: 'العملة', baseAmount: 'بالعملة الأساسية: {amount}',
     scan: {
