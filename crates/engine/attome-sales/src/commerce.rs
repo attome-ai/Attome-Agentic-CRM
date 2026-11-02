@@ -110,6 +110,19 @@ pub struct Cart {
     pub can_check_out: bool,
 }
 
+/// One of the account's orders, as the shop lists it.
+#[derive(Debug, Clone, Serialize, ToSchema, sqlx::FromRow)]
+pub struct ShopOrder {
+    pub id: Uuid,
+    pub name: Option<String>,
+    pub order_number: Option<String>,
+    pub status: Option<String>,
+    pub currency: Option<String>,
+    /// A decimal in text.
+    pub grand_total: Option<String>,
+    pub ordered_on: Option<String>,
+}
+
 /// What checkout made.
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct CheckedOut {
@@ -328,6 +341,21 @@ pub async fn set_line(
     }
     attome_db::tx::commit(tx).await?;
     cart(state, portal_user, account).await
+}
+
+/// `account`'s orders, newest first (at most 50).
+pub async fn orders(state: &EngineState, account: Uuid) -> Result<Vec<ShopOrder>, AppError> {
+    sqlx::query_as(
+        "SELECT id, name, to_jsonb(o) ->> 'order_number' AS order_number, status::text AS status, \
+                currency, grand_total::text AS grand_total, ordered_on::text AS ordered_on \
+           FROM \"order\" o \
+          WHERE account_ref = $1 AND (is_active IS NULL OR is_active = true) \
+          ORDER BY created_at DESC, id DESC LIMIT 50",
+    )
+    .bind(account)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)
 }
 
 /// Turns the portal user's open cart into a draft order for `account`, as

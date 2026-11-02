@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- The portal shop pages (F7-T2, `/shop/{keyword}`, `@attome/xrm/portal/store`): products with search,
+  quick order by SKU, the cart and checkout, and My orders with tracking, in English and Arabic;
+  `GET /{keyword}/api/v1/shop/orders` lists the account's orders.
 - The portal shop (F7-T1, migration `0374`, sales pack changeset `0029`): with `commerce.enabled` on,
   portal members see the orderable products marked `portal_visible` that have a price for their account,
   keep a cart (`/{keyword}/api/v1/shop/...`) and check out into a draft order written as the portal's

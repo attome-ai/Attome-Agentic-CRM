@@ -153,6 +153,15 @@ export const routes: Routes = [
     loadComponent: () => import('@attome/xrm/portal/community').then(m => m.ForumComponent),
   },
   {
+    // F7-T2: a web portal's shop for its signed-in members. Public route;
+    // the portal's own session authorizes every call. Ahead of the Content
+    // Management catch-all below.
+    path: 'shop/:keyword',
+    providers: [provideXrmI18n()],
+    canActivate: [layerCatalogsReady],
+    loadComponent: () => import('@attome/xrm/portal/store').then(m => m.StoreComponent),
+  },
+  {
     // G12-T1: a web portal for its signed-in users, `/p/:keyword/...`.
     // Public route; the portal's own session authorizes every call. Ahead
     // of the Content Management catch-all below.

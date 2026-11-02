@@ -31,5 +31,14 @@ the cart is read and again at checkout. Checkout:
 - `GET /{keyword}/api/v1/shop/cart`
 - `PUT /{keyword}/api/v1/shop/cart/lines/{product_id}` `{quantity}` (0 removes)
 - `POST /{keyword}/api/v1/shop/cart/checkout`
+- `GET /{keyword}/api/v1/shop/orders`: the account's orders, newest first; each order's lines and
+  tracking come from `GET /{keyword}/api/v1/fulfilment/orders/{order_id}` (with `fulfilment.portal` on).
 
 All take the account from the signed-in member's contact and answer 404 while the shop is off.
+
+## The shop pages
+
+Members shop at `/shop/{keyword}` on the deployment's web app, in Arabic or English: the products on sale
+with their prices and a search, a **quick order** (one `SKU quantity` per line), the cart (change a
+quantity, remove a line, place the order; an order waiting for approval says so) and **My orders** with
+each order's shipped quantities and tracking numbers.

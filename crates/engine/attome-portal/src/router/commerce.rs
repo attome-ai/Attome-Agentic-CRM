@@ -5,6 +5,8 @@
 //! - `GET /{keyword}/api/v1/shop/cart` and
 //!   `PUT /{keyword}/api/v1/shop/cart/lines/{product_id}` `{quantity}` (0
 //!   removes): the portal user's own open cart.
+//! - `GET /{keyword}/api/v1/shop/orders`: the account's orders, newest
+//!   first (each one's lines and tracking: the F6-T15 order route).
 //! - `POST /{keyword}/api/v1/shop/cart/checkout`: a draft order for the
 //!   account, written as the portal's service user (V2-D1588 (1)), with an
 //!   approval request above the shop's limit.
@@ -14,7 +16,7 @@
 //! and, for checkout, while the portal has no service user.
 
 use attome_core::EngineState;
-use attome_sales::commerce::{Cart, CatalogueItem, CheckedOut};
+use attome_sales::commerce::{Cart, CatalogueItem, CheckedOut, ShopOrder};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -195,6 +197,30 @@ async fn checkout(
     ))
 }
 
+/// My account's orders
+///
+/// F7-T2: the signed-in person's account's orders, newest first.
+#[utoipa::path(
+    get,
+    path = "/{keyword}/api/v1/shop/orders",
+    operation_id = "portal_shop_orders",
+    tag = "sales",
+    params(("keyword" = String, Path, description = "The portal")),
+    responses(
+        (status = 200, description = "The account's orders", body = Vec<ShopOrder>),
+        (status = 401, description = "Not signed in to the portal", body = ErrorResponse),
+        (status = 404, description = "The shop is off, or the person has no account", body = ErrorResponse),
+    ),
+)]
+async fn my_orders(
+    State(state): State<EngineState>,
+    Path(keyword): Path<String>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<ShopOrder>>, AppError> {
+    let (_, _, account) = shopper(&state, &keyword, &headers).await?;
+    Ok(Json(attome_sales::commerce::orders(&state, account).await?))
+}
+
 pub(super) fn routes() -> Router<EngineState> {
     Router::new()
         .route("/{keyword}/api/v1/shop/catalogue", get(catalogue))
@@ -204,17 +230,19 @@ pub(super) fn routes() -> Router<EngineState> {
             put(set_line),
         )
         .route("/{keyword}/api/v1/shop/cart/checkout", post(checkout))
+        .route("/{keyword}/api/v1/shop/orders", get(my_orders))
 }
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(catalogue, my_cart, set_line, checkout),
+    paths(catalogue, my_cart, set_line, checkout, my_orders),
     components(schemas(
         CatalogueItem,
         Cart,
         attome_sales::commerce::CartLine,
         CartQuantity,
-        CheckedOut
+        CheckedOut,
+        ShopOrder
     ))
 )]
 pub(super) struct CommerceApiDoc;
