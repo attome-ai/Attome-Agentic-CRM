@@ -1,7 +1,7 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { Observable, Subject } from 'rxjs';
-import { ApiService } from './api.service';
+import { SdkService } from './sdk.service';
 import type { SessionInfo } from './types';
 
 /** How long before the idle sign-out the warning shows. */
@@ -21,7 +21,7 @@ export const ACTIVITY_THROTTLE_MS = 30_000;
  */
 @Injectable({ providedIn: 'root' })
 export class IdleSessionService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly document = inject(DOCUMENT);
 
   private readonly idleSecs = signal<number | null>(null);
@@ -79,7 +79,7 @@ export class IdleSessionService {
    * and starts watching; a failed read watches nothing.
    */
   startFromSession(onExpired: () => void, destroyRef?: DestroyRef): void {
-    this.api.get<SessionInfo>('/api/v1/auth/session').subscribe({
+    this.sdk.get<SessionInfo>('/api/v1/auth/session').subscribe({
       next: info => this.start(info.idle_secs ?? null, onExpired, destroyRef),
       error: () => undefined,
     });
@@ -109,7 +109,7 @@ export class IdleSessionService {
     this.now.set(at);
     if (force || at - this.lastServerTouch >= ACTIVITY_THROTTLE_MS) {
       this.lastServerTouch = at;
-      this.api.get('/api/v1/auth/session').subscribe({ error: () => undefined });
+      this.sdk.get('/api/v1/auth/session').subscribe({ error: () => undefined });
     }
   }
 }

@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-import { ApiService } from '../api.service';
+import { SdkService } from '../sdk.service';
 import { TOURS_SEEN_SETTING, Tour, autoTour, tourFor } from './tour';
 
 /** The running tour and the step on show. */
@@ -19,7 +19,7 @@ export interface ActiveTour {
  */
 @Injectable({ providedIn: 'root' })
 export class TourService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly tours = signal<Tour[]>([]);
   readonly seen = signal<string[]>([]);
@@ -34,8 +34,8 @@ export class TourService {
   /** Loads once; later calls wait for the same load. */
   load(): Promise<void> {
     this.loading ??= Promise.all([
-      firstValueFrom(this.api.get<{ items: Tour[] }>('/api/v1/model/tours')),
-      firstValueFrom(this.api.get<{ items: { key: string; value: unknown }[] }>('/api/v1/settings/me')),
+      firstValueFrom(this.sdk.get<{ items: Tour[] }>('/api/v1/model/tours')),
+      firstValueFrom(this.sdk.get<{ items: { key: string; value: unknown }[] }>('/api/v1/settings/me')),
     ]).then(
       ([tours, settings]) => {
         this.tours.set(tours.items ?? []);
@@ -96,6 +96,6 @@ export class TourService {
     if (!active || this.replaying || this.seen().includes(active.tour.id)) return;
     const seen = [...this.seen(), active.tour.id].slice(-500);
     this.seen.set(seen);
-    this.api.put(`/api/v1/settings/me/${TOURS_SEEN_SETTING}`, { value: seen }).subscribe({ error: () => undefined });
+    this.sdk.put(`/api/v1/settings/me/${TOURS_SEEN_SETTING}`, { body: { value: seen } }).subscribe({ error: () => undefined });
   }
 }

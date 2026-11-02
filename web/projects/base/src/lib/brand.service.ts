@@ -1,8 +1,8 @@
 import { DOCUMENT } from '@angular/common';
 import { Injectable, inject, signal } from '@angular/core';
 
-import { ApiService } from './api.service';
 import { ATTOME_CONFIG } from './config';
+import { SdkService } from './sdk.service';
 import { ThemeService } from './theme.service';
 
 /** `settings_admin::PublicBranding`. */
@@ -26,7 +26,7 @@ export interface Branding {
  */
 @Injectable({ providedIn: 'root' })
 export class BrandService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly theme = inject(ThemeService);
   private readonly doc = inject(DOCUMENT);
   private readonly config = inject(ATTOME_CONFIG);
@@ -39,11 +39,11 @@ export class BrandService {
 
   /** `app` is the app being shown, when it has its own theme. */
   loadMine(app?: string): void {
-    this.load(app ? `/api/v1/branding/me?app=${encodeURIComponent(app)}` : '/api/v1/branding/me');
+    this.load('/api/v1/branding/me', app ? { app } : undefined);
   }
 
-  private load(path: string): void {
-    this.api.get<Branding>(path).subscribe({
+  private load(path: string, query?: Record<string, string>): void {
+    (query ? this.sdk.get<Branding>(path, { query }) : this.sdk.get<Branding>(path)).subscribe({
       next: brand => {
         this.current.set(brand);
         this.theme.setBrand(brand.variables);

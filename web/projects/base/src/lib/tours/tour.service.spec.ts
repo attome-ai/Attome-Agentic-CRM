@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiService } from '../api.service';
+import { SdkService } from '../sdk.service';
 import { Tour, autoTour, localText, routeMatches, tourFor } from './tour';
 import { TourService } from './tour.service';
 
@@ -38,7 +38,7 @@ describe('tours (B14-T1)', () => {
     const get = vi.fn((path: string) => of(path.endsWith('/tours')
       ? { items: [tour('deals', '/xrm/entity/opportunity')] }
       : { items: [{ key: 'core.tours_seen', value: seen }] }));
-    TestBed.configureTestingModule({ providers: [{ provide: ApiService, useValue: { get, put } }] });
+    TestBed.configureTestingModule({ providers: [{ provide: SdkService, useValue: { get, put } }] });
     return { svc: TestBed.inject(TourService), put };
   }
 
@@ -54,7 +54,7 @@ describe('tours (B14-T1)', () => {
     svc.next();
     svc.next();
     expect(svc.active()).toBeNull();
-    expect(put).toHaveBeenCalledWith('/api/v1/settings/me/core.tours_seen', { value: ['deals'] });
+    expect(put).toHaveBeenCalledWith('/api/v1/settings/me/core.tours_seen', { body: { value: ['deals'] } });
   });
 
   it('does not start a seen tour, and a replay is not recorded', async () => {

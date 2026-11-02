@@ -49,7 +49,7 @@ describe('IdleWarningComponent', () => {
     expect(expired).not.toHaveBeenCalled();
   });
 
-  it('staying signed in hides the warning and tells the server', () => {
+  it('staying signed in hides the warning and tells the server', async () => {
     const idle = TestBed.inject(IdleSessionService);
     idle.start(90, vi.fn());
     const fixture = TestBed.createComponent(IdleWarningComponent);
@@ -58,7 +58,10 @@ describe('IdleWarningComponent', () => {
     expect(idle.warning()).toBe(true);
 
     ((fixture.nativeElement as HTMLElement).querySelector('[data-testid="idle-stay"]') as HTMLButtonElement).click();
+    // The SDK sends, and delivers the answer, a promise turn later (Y9-T3).
+    await vi.advanceTimersByTimeAsync(0);
     http.expectOne(`${API}/api/v1/auth/session`).flush({ user_id: 'u', email: 'e' });
+    await vi.advanceTimersByTimeAsync(0);
     fixture.detectChanges();
     expect(idle.warning()).toBe(false);
   });

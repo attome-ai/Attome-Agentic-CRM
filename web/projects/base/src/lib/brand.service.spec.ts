@@ -2,9 +2,9 @@ import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiService } from './api.service';
 import { BrandService } from './brand.service';
 import { ATTOME_CONFIG } from './config';
+import { SdkService } from './sdk.service';
 import { ThemeService } from './theme.service';
 
 describe('BrandService (B13-T8)', () => {
@@ -12,7 +12,7 @@ describe('BrandService (B13-T8)', () => {
     const setBrand = vi.fn();
     TestBed.configureTestingModule({
       providers: [
-        { provide: ApiService, useValue: { get } },
+        { provide: SdkService, useValue: { get } },
         { provide: ThemeService, useValue: { setBrand } },
         { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://api.test' } },
       ],
@@ -44,7 +44,7 @@ describe('BrandService (B13-T8)', () => {
     const get = vi.fn().mockReturnValue(throwError(() => new Error('offline')));
     const { brand, setBrand } = create(get);
     brand.loadMine('sales hub');
-    expect(get).toHaveBeenCalledWith('/api/v1/branding/me?app=sales%20hub');
+    expect(get).toHaveBeenCalledWith('/api/v1/branding/me', { query: { app: 'sales hub' } });
     expect(setBrand).not.toHaveBeenCalled();
   });
 });

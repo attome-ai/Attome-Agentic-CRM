@@ -1,7 +1,7 @@
 import { Injectable, Injector, effect, inject, untracked } from '@angular/core';
 
-import { ApiService } from './api.service';
 import { Lang, LangService } from './lang.service';
+import { SdkService } from './sdk.service';
 
 /**
  * B20-T3: a deployment's rewordings of built-in interface text
@@ -11,7 +11,7 @@ import { Lang, LangService } from './lang.service';
  */
 @Injectable({ providedIn: 'root' })
 export class UiTextOverrides {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly lang = inject(LangService);
   private readonly injector = inject(Injector);
   private started = false;
@@ -26,7 +26,7 @@ export class UiTextOverrides {
   }
 
   load(lang: Lang): void {
-    this.api.get<{ texts: Record<string, string> }>('/api/v1/i18n/overrides', { locale: lang }).subscribe({
+    this.sdk.get<{ texts: Record<string, string> }>('/api/v1/i18n/overrides', { query: { locale: lang } }).subscribe({
       next: overrides => this.lang.applyOverrides(lang, overrides.texts ?? {}),
       error: () => undefined,
     });
