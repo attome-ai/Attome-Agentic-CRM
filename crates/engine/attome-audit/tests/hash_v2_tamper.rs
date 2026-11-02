@@ -139,11 +139,27 @@ async fn chained_headers(db: &DbPool, org: Uuid, n: usize) -> Vec<Uuid> {
             .await
             .expect("audit write (chainer path)");
     }
-    chainer::run_once(db, None, 1000, None)
-        .await
-        .expect("chainer run");
+    drain(db, org).await;
     assert_clean(db, org).await;
     header_ids(db, org).await
+}
+
+/// Runs the chainer until `org` has nothing left to chain. Every chainer
+/// run drains every organization, so another test process may hold this
+/// one's chain lock mid-batch: this run then skips it, and its headers land
+/// when that batch commits.
+async fn drain(db: &DbPool, org: Uuid) {
+    for _ in 0..100 {
+        chainer::run_once(db, None, 1000, None)
+            .await
+            .expect("chainer run");
+        let (pending, _) = verify::lag(db, org).await.expect("pending ingest rows");
+        if pending == 0 {
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    panic!("the chainer never drained {org}");
 }
 
 async fn header_ids(db: &DbPool, org: Uuid) -> Vec<Uuid> {
@@ -254,9 +270,7 @@ async fn initiator_mutation_fails_verification() {
         .write_attributed(event, attribution)
         .await
         .expect("agent-attributed audit write (chainer path)");
-    chainer::run_once(&db, None, 1000, None)
-        .await
-        .expect("chainer run");
+    drain(&db, org).await;
     assert_clean(&db, org).await;
     let ids = header_ids(&db, org).await;
 
@@ -390,9 +404,7 @@ async fn erasure_keeps_verification_passing() {
         .write(event)
         .await
         .expect("encrypted audit write (chainer path)");
-    chainer::run_once(&db, None, 1000, None)
-        .await
-        .expect("chainer run");
+    drain(&db, org).await;
     assert_clean(&db, org).await;
     let ids = header_ids(&db, org).await;
 

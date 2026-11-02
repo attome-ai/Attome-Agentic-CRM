@@ -483,22 +483,32 @@ async fn records_agent_model_approval_and_initiator() {
     .expect("count execution events");
     assert_eq!(executed, 1);
 
-    // Kept on the chainer path: drain and read the header columns back.
-    attome_audit::chainer::run_once(&db, None, 10_000, None)
+    // Kept on the chainer path: drain and read the header columns back. A
+    // chainer in another test process may hold this organization's chain
+    // lock mid-batch, when this run skips it: run again until it lands.
+    let mut found: Option<HeaderAttribution> = None;
+    for _ in 0..100 {
+        attome_audit::chainer::run_once(&db, None, 10_000, None)
+            .await
+            .expect("chainer run");
+        found = sqlx::query_as(
+            "SELECT initiator, agent_session_id, agent_action_id, ai_model_id, \
+                        approval_request_ref, user_id, hash_version \
+                 FROM audit_header \
+                 WHERE category = $1 AND operation = $2 AND record_id = $3",
+        )
+        .bind(attome_audit::AuditCategory::Ai as i32)
+        .bind(attome_audit::AuditOperation::Execute as i32)
+        .bind(agent_session_id)
+        .fetch_optional(&db)
         .await
-        .expect("chainer run");
-    let header: HeaderAttribution = sqlx::query_as(
-        "SELECT initiator, agent_session_id, agent_action_id, ai_model_id, \
-                    approval_request_ref, user_id, hash_version \
-             FROM audit_header \
-             WHERE category = $1 AND operation = $2 AND record_id = $3",
-    )
-    .bind(attome_audit::AuditCategory::Ai as i32)
-    .bind(attome_audit::AuditOperation::Execute as i32)
-    .bind(agent_session_id)
-    .fetch_one(&db)
-    .await
-    .expect("the chainer wrote the Ai+Execute header");
+        .expect("read the Ai+Execute header");
+        if found.is_some() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    let header = found.expect("the chainer wrote the Ai+Execute header");
     assert_eq!(header.0, attome_audit::Initiator::Agent.as_i16());
     assert_eq!(header.1, Some(agent_session_id));
     assert_eq!(header.2.as_deref(), Some(AGENT_PAUSE));

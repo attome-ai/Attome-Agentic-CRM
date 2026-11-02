@@ -548,7 +548,7 @@ mod tests {
             render_condition(&hop_cond(ConditionOperator::Eq, json!(id)), &attrs, "t", 4).unwrap();
         assert_eq!(
             rendered.sql,
-            "t.\"partner_account_ref\" IN (SELECT h.id FROM \"partner_account\" h              WHERE h.is_active IS NOT FALSE AND h.\"partner_manager_ref\" = $4::uuid)"
+            "t.\"partner_account_ref\" IN (SELECT h.id FROM \"partner_account\" h WHERE h.is_active IS NOT FALSE AND h.\"partner_manager_ref\" = $4::uuid)"
         );
         assert_eq!(rendered.bind_text, id);
         let any = render_condition(

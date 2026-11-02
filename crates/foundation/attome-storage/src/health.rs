@@ -182,15 +182,51 @@ async fn probe(store: &dyn object_store::ObjectStore, start: Instant) -> Storage
 }
 
 /// object_store maps HTTP 401 and 403 to typed variants. Connect and timeout
-/// errors are not typed (its `RetryError` is crate-private) and are retried,
-/// so within the probe window they surface as the probe's own timeout.
-/// Everything else is `"other"`.
+/// errors are not typed (its `RetryError` is crate-private) and are retried;
+/// within the probe window they surface as the probe's own timeout, or, once
+/// the retries give up first (a refused port answers at once), as an error
+/// whose source chain is a connection failure, reported as `"timeout"` too:
+/// the endpoint did not answer. Everything else is `"other"`.
 fn storage_error_category(e: &object_store::Error) -> &'static str {
     match e {
         object_store::Error::Unauthenticated { .. } => "unauthenticated",
         object_store::Error::PermissionDenied { .. } => "forbidden",
+        _ if is_unreachable(e) => "timeout",
         _ => "other",
     }
+}
+
+/// Whether `e` comes from failing to reach the endpoint at all: an I/O error
+/// of a refused, reset, unreachable or timed-out connection somewhere in its
+/// source chain, or an error there that says it failed to connect. Only the
+/// category leaves this module; the text never reaches a client.
+fn is_unreachable(e: &object_store::Error) -> bool {
+    use std::io::ErrorKind;
+    let mut source: Option<&(dyn std::error::Error + 'static)> = std::error::Error::source(e);
+    while let Some(err) = source {
+        if let Some(io) = err.downcast_ref::<std::io::Error>()
+            && matches!(
+                io.kind(),
+                ErrorKind::ConnectionRefused
+                    | ErrorKind::ConnectionReset
+                    | ErrorKind::ConnectionAborted
+                    | ErrorKind::NotConnected
+                    | ErrorKind::AddrNotAvailable
+                    | ErrorKind::HostUnreachable
+                    | ErrorKind::NetworkUnreachable
+                    | ErrorKind::TimedOut
+            )
+        {
+            return true;
+        }
+        // hyper's connector may not expose its I/O error; its text says it.
+        let text = err.to_string().to_ascii_lowercase();
+        if text.contains("connect error") || text.contains("connection refused") {
+            return true;
+        }
+        source = err.source();
+    }
+    false
 }
 
 #[derive(Debug, Serialize)]

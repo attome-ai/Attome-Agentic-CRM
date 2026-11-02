@@ -63,9 +63,11 @@ pub fn parse_company(body: &Value) -> Option<LikelyCompany> {
     };
     let name = text("name")?.chars().take(200).collect::<String>();
     let domain = text("domain").map(|d| {
-        d.trim_start_matches("www.")
+        let lower = d.to_ascii_lowercase();
+        lower
+            .trim_start_matches("www.")
             .trim_end_matches('.')
-            .to_ascii_lowercase()
+            .to_owned()
     });
     Some(LikelyCompany { name, domain })
 }
