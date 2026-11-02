@@ -173,11 +173,11 @@
                 </div>
                 <!-- B17-T7: a photo or a voice note from the device -->
                 <div class="xnp-capture">
-                  <button type="button" class="xnp-capture-btn" data-testid="note-take-photo" (click)="takePhoto('note')">
+                  <button type="button" class="xnp-btn-ghost" data-testid="note-take-photo" (click)="takePhoto('note')">
                     <i class="las la-camera" aria-hidden="true"></i> {{ 'notes.takePhoto' | translate }}
                   </button>
                   @if (canRecordVoice()) {
-                    <button type="button" class="xnp-capture-btn" data-testid="note-voice"
+                    <button type="button" class="xnp-btn-ghost" data-testid="note-voice"
                       [attr.aria-pressed]="recordingFor() === 'note'" (click)="toggleVoiceNote('note')">
                       <i class="las" [class.la-circle]="recordingFor() !== 'note'"
                         [class.la-stop-circle]="recordingFor() === 'note'" aria-hidden="true"></i>
