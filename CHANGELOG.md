@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Label printing (B16-T12, V2-D1610, migration `0377`): `qr_<field>` and `barcode_<field>` (Code 128) in document
+  templates, drawn as SVG on the server, and `POST /api/v1/docgen/templates/{id}/render-labels` for one PDF of up
+  to 500 records' labels. See `docs/labels.md`.
 - Call coaching (D22-T7): tasks from a call's findings (once each), scorecard answers confirmed only by
   the owner's managers, and comments on a call that notify its owner and are hidden from other reps.
 - Call analysis signals (D22-T11): a `callintel.analysis_done` change-feed event when an analysis is done,

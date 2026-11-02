@@ -147,6 +147,7 @@ fn assemble(
     data: &serde_json::Map<String, Value>,
     children: &[(ChildList, Vec<serde_json::Map<String, Value>>)],
     zatca_qr: Option<String>,
+    codes: Vec<(String, Option<String>)>,
 ) -> DocumentInput {
     let mut schema = attome_records::rule_engine::schema_for_entity(attrs);
     let mut values = attome_records::rule_engine::context_for_record(now, attrs, data);
@@ -184,6 +185,11 @@ fn assemble(
             ZATCA_QR_FIELD,
             zatca_qr.map_or(RulesValue::Null, RulesValue::Text),
         );
+    }
+    // B16-T12: `qr_<field>` and `barcode_<field>` the template names.
+    for (name, drawn) in codes {
+        schema = schema.with_field(name.clone(), Type::Text);
+        values = values.with_field(name, drawn.map_or(RulesValue::Null, RulesValue::Text));
     }
     let language = data
         .get("language")
@@ -315,7 +321,15 @@ pub async fn build_input(
     } else {
         None
     };
-    Ok(assemble(Utc::now(), &attrs, &merge.data, &children, qr))
+    let codes = crate::codes::code_values(source, &merge.data);
+    Ok(assemble(
+        Utc::now(),
+        &attrs,
+        &merge.data,
+        &children,
+        qr,
+        codes,
+    ))
 }
 
 /// Compiles and renders `source` as HTML for `locale` (`ar-SA`, `en`...).
@@ -381,7 +395,7 @@ mod tests {
             map(serde_json::json!({"description": "استشارة", "amount": 1000})),
             map(serde_json::json!({"description": "Travel <b>", "amount": 150.5})),
         ];
-        assemble(Utc::now(), &attrs, &data, &[(line, rows)], None)
+        assemble(Utc::now(), &attrs, &data, &[(line, rows)], None, Vec::new())
     }
 
     const SOURCE: &str = "<h1>{{ brand_app_name }} {{ number }}</h1>\

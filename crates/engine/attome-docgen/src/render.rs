@@ -99,6 +99,8 @@ pub(crate) struct RenderRow {
     attach_entity: Option<String>,
     attach_record_id: Option<Uuid>,
     attach_field: Option<String>,
+    /// B16-T12: the records of a label sheet, in order.
+    pub(crate) label_record_ids: Option<Vec<Uuid>>,
 }
 
 /// Creates a `pending` `docgen_render` row and enqueues its
@@ -478,6 +480,91 @@ async fn render_batch(
     ))
 }
 
+/// `POST /api/v1/docgen/templates/{id}/render-labels`.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct RenderLabelsBody {
+    /// The records to print, 1 to 500, in order; a repeated id prints once.
+    pub record_ids: Vec<Uuid>,
+}
+
+/// A queued label sheet.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct LabelsQueued {
+    /// The render; `GET /api/v1/docgen/renders/{id}` shows it and its file.
+    pub render_id: Uuid,
+    pub records: usize,
+}
+
+/// Print labels
+///
+/// B16-T12: renders the template once per record, in order, into one PDF (a label sheet), as the
+/// caller: a record the caller cannot see is left out. Codes are drawn with `qr_<field>` and
+/// `barcode_<field>` in the template.
+#[utoipa::path(
+    post,
+    path = "/api/v1/docgen/templates/{id}/render-labels",
+    tag = "docgen",
+    params(("id" = Uuid, Path, description = "The template's id")),
+    request_body = RenderLabelsBody,
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::Delegated,
+        Some("EngineJob::DocgenRender"),
+        "the route only enqueues the render; the job writes its entity and export events in its completion transaction",
+    )))),
+    responses(
+        (status = 202, description = "The label sheet is queued", body = LabelsQueued),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such template", body = ErrorResponse),
+        (status = 422, description = "No records, more than 500, or a template that cannot render", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn render_labels(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<DocgenTemplateRead>>,
+    Path(template_id): Path<Uuid>,
+    Json(body): Json<RenderLabelsBody>,
+) -> Result<(StatusCode, Json<LabelsQueued>), AppError> {
+    ctx.refuse_if_capped()?;
+    let ids = batch_ids(&body.record_ids)?;
+    let (entity, format) = render_target(&state, &ctx, template_id).await?;
+    if format != "pdf" {
+        return Err(AppError::Validation("labels print as PDF only".into()));
+    }
+    let render_id = Uuid::now_v7();
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    sqlx::query(
+        "INSERT INTO docgen_render \
+            (id, template_ref, entity_logicalname, record_id, status, format, requested_by, \
+             requested_at, label_record_ids) \
+         VALUES ($1, $2, $3, $4, 'pending', 'pdf', $5, NOW(), $6)",
+    )
+    .bind(render_id)
+    .bind(template_id)
+    .bind(&entity)
+    .bind(ids[0])
+    .bind(ctx.user_id)
+    .bind(&ids)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    attome_jobs::enqueue_in_tx(
+        &mut tx,
+        attome_core::jobs::EngineJob::DocgenRender { render_id },
+    )
+    .await
+    .map_err(AppError::internal)?;
+    attome_db::tx::commit(tx).await?;
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(LabelsQueued {
+            render_id,
+            records: ids.len(),
+        }),
+    ))
+}
+
 /// A render batch's progress (K3-T3).
 ///
 /// How many of its renders are pending, running, completed (and attached)
@@ -554,12 +641,22 @@ pub fn routes() -> Router<EngineState> {
             post(render_batch),
         )
         .route("/api/v1/docgen/batches/{batch_id}", get(batch_status))
+        .route(
+            "/api/v1/docgen/templates/{id}/render-labels",
+            post(render_labels),
+        )
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
 /// document, merged in `lib.rs::openapi()`.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(render_document, render_status, render_batch, batch_status))]
+#[openapi(paths(
+    render_document,
+    render_status,
+    render_batch,
+    batch_status,
+    render_labels
+))]
 #[derive(Debug)]
 pub struct ApiDocFragment;
 
@@ -576,7 +673,8 @@ pub(crate) async fn load_render(
     sqlx::query_as(
         "SELECT id, template_ref, entity_logicalname, record_id, status, format, \
                 object_key, error, attached, attach_error, \
-                requested_by, requested_at, attach_entity, attach_record_id, attach_field \
+                requested_by, requested_at, attach_entity, attach_record_id, attach_field, \
+                label_record_ids \
          FROM docgen_render WHERE id = $1 AND is_deleted = false",
     )
     .bind(render_id)
@@ -680,8 +778,13 @@ pub async fn process(state: &EngineState, render_id: Uuid) -> Result<(), AppErro
         .and_then(Value::as_str)
         .unwrap_or("A4");
     let margin_mm = template.get("margin_mm").and_then(Value::as_f64);
+    let labels = render
+        .label_record_ids
+        .clone()
+        .filter(|ids| !ids.is_empty());
     let attach_to_field = template
         .get("attach_to_field")
+        .filter(|_| labels.is_none())
         .and_then(Value::as_str)
         .filter(|s| !s.is_empty())
         .map(str::to_string);
@@ -695,42 +798,86 @@ pub async fn process(state: &EngineState, render_id: Uuid) -> Result<(), AppErro
     // `security` (requested_by's freshly-resolved permissions), which is what
     // makes a hidden field render empty and limits related lists to rows the
     // user may read — see crate::merge's and crate::document_render's docs.
-    let input = match crate::document_render::build_input(
-        state,
-        &security,
-        &render.entity_logicalname,
-        render.record_id,
-        body,
-    )
-    .await
-    {
-        Ok(input) => input,
-        Err(AppError::NotFound) => {
-            mark_failed(state, render_id, "source record not found or not visible").await?;
-            return Ok(());
-        }
-        Err(e) => {
-            mark_failed(
+    // B16-T12: a label sheet renders each record in turn, under the same
+    // `security`, into one document; a record the user cannot see is left
+    // out.
+    let merged_body = if let Some(ids) = labels.as_ref() {
+        let mut sheet = String::new();
+        let mut drawn = 0usize;
+        for id in ids {
+            let input = match crate::document_render::build_input(
                 state,
-                render_id,
-                &format!("failed to build merge context: {e}"),
+                &security,
+                &render.entity_logicalname,
+                *id,
+                body,
             )
-            .await?;
+            .await
+            {
+                Ok(input) => input,
+                Err(AppError::NotFound | AppError::Forbidden) => continue,
+                Err(e) => {
+                    mark_failed(state, render_id, &format!("failed to build a label: {e}")).await?;
+                    return Ok(());
+                }
+            };
+            let locale = state.deployment_locale();
+            match crate::document_render::render_document(body, input, &locale) {
+                Ok(html) => {
+                    sheet.push_str("<section class=\"label\">");
+                    sheet.push_str(&html);
+                    sheet.push_str("</section>");
+                    drawn += 1;
+                }
+                Err(e) => {
+                    mark_failed(state, render_id, &format!("template render failed: {e}")).await?;
+                    return Ok(());
+                }
+            }
+        }
+        if drawn == 0 {
+            mark_failed(state, render_id, "no label record is visible").await?;
             return Ok(());
         }
-    };
+        sheet
+    } else {
+        let input = match crate::document_render::build_input(
+            state,
+            &security,
+            &render.entity_logicalname,
+            render.record_id,
+            body,
+        )
+        .await
+        {
+            Ok(input) => input,
+            Err(AppError::NotFound) => {
+                mark_failed(state, render_id, "source record not found or not visible").await?;
+                return Ok(());
+            }
+            Err(e) => {
+                mark_failed(
+                    state,
+                    render_id,
+                    &format!("failed to build merge context: {e}"),
+                )
+                .await?;
+                return Ok(());
+            }
+        };
 
-    // K3-T1: the one template language, in the record's language when it
-    // has one, else the deployment's.
-    let locale = input
-        .language
-        .clone()
-        .unwrap_or_else(|| state.deployment_locale());
-    let merged_body = match crate::document_render::render_document(body, input, &locale) {
-        Ok(html) => html,
-        Err(e) => {
-            mark_failed(state, render_id, &format!("template render failed: {e}")).await?;
-            return Ok(());
+        // K3-T1: the one template language, in the record's language when it
+        // has one, else the deployment's.
+        let locale = input
+            .language
+            .clone()
+            .unwrap_or_else(|| state.deployment_locale());
+        match crate::document_render::render_document(body, input, &locale) {
+            Ok(html) => html,
+            Err(e) => {
+                mark_failed(state, render_id, &format!("template render failed: {e}")).await?;
+                return Ok(());
+            }
         }
     };
 

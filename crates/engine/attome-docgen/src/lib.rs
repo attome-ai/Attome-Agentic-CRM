@@ -43,6 +43,8 @@
 //! execution history, never admin-authored metadata.
 pub mod auth;
 /// K3-T1: document templates render through the one template language.
+/// B16-T12: QR and Code 128 label codes drawn on the server.
+pub mod codes;
 pub mod document_render;
 /// K3-T2: DOCX output.
 pub mod docx;
