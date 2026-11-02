@@ -107,9 +107,12 @@ pub async fn create_task_from_finding(
         _ => ("call_analysis", analysis.to_string()),
     };
     let text = text.unwrap_or_default();
-    let subject: String = text.trim().chars().take(200).collect();
+    let mut subject: String = text.trim().chars().take(200).collect();
+    if subject.is_empty() {
+        subject = "Next step from a call".to_owned();
+    }
     let mut body = json!({
-        "subject": if subject.is_empty() { "Next step from a call".to_owned() } else { subject },
+        "subject": subject,
         "activity_type": "task",
         "description": text,
         "entity_name": entity,

@@ -484,6 +484,11 @@ async fn place(
             .0
         }
     };
+    let payment_status = if req.cash_on_delivery {
+        "due_on_delivery"
+    } else {
+        "awaiting_payment"
+    };
     let mut head = json!({
         "name": format!("Guest order {}", now.format("%Y-%m-%d")),
         "status": "draft",
@@ -499,7 +504,7 @@ async fn place(
         "tax_total": number(vat),
         "grand_total": number(total),
         "source": "store:guest",
-        "payment_status": if req.cash_on_delivery { "due_on_delivery" } else { "awaiting_payment" },
+        "payment_status": payment_status,
     });
     if req.cash_on_delivery {
         head["cod_amount"] = number(total);
