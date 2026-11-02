@@ -5,6 +5,9 @@ import { ATTOME_CONFIG } from '@attome/base';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { StateModelsService } from './state-models.service';
 
+/** The SDK sends after a promise turn (Y9-T3). */
+const tick = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
 describe('StateModelsService', () => {
   const API = 'http://localhost:7865';
   const BASE = `${API}/api/v1/admin/state-models`;
@@ -25,46 +28,58 @@ describe('StateModelsService', () => {
 
   afterEach(() => http.verify());
 
-  it('unwraps the list envelope', () => {
+  it('unwraps the list envelope', async () => {
     let names: string[] = [];
     service.listModels().subscribe(items => (names = items.map(i => i.name)));
+    await tick();
     http.expectOne(BASE).flush({
       items: [{ id: 'm1', entity_logicalname: 'x', name: 'Lifecycle', state_field: 's', initial_state: 'new', is_active: true, row_version: 1 }],
       total: 1, page: 1, page_size: 1,
     });
+    await tick();
     expect(names).toEqual(['Lifecycle']);
   });
 
-  it('sends row_version in the model PATCH body', () => {
+  it('sends row_version in the model PATCH body', async () => {
     service.updateModel('m1', { name: 'n', state_field: 's', initial_state: 'a', is_active: true, row_version: 4 }).subscribe();
+    await tick();
     const req = http.expectOne(`${BASE}/m1`);
     expect(req.request.method).toBe('PATCH');
     expect(req.request.body.row_version).toBe(4);
     req.flush({});
+    await tick();
   });
 
-  it('creates, updates and deletes transitions under the model', () => {
+  it('creates, updates and deletes transitions under the model', async () => {
     service.createTransition('m1', { from_state: 'a', to_state: 'b', name: 'Go' }).subscribe();
+    await tick();
     const create = http.expectOne(`${BASE}/m1/transitions`);
     expect(create.request.method).toBe('POST');
     create.flush({});
+    await tick();
 
     service.updateTransition('m1', 't1', { name: 'Go', row_version: 2 }).subscribe();
+    await tick();
     const update = http.expectOne(`${BASE}/m1/transitions/t1`);
     expect(update.request.method).toBe('PATCH');
     expect(update.request.body.row_version).toBe(2);
     update.flush({});
+    await tick();
 
     service.deleteTransition('m1', 't1').subscribe();
+    await tick();
     const del = http.expectOne(`${BASE}/m1/transitions/t1`);
     expect(del.request.method).toBe('DELETE');
     del.flush(null, { status: 204, statusText: 'No Content' });
+    await tick();
   });
 
-  it('deletes a model', () => {
+  it('deletes a model', async () => {
     service.deleteModel('m1').subscribe();
+    await tick();
     const req = http.expectOne(`${BASE}/m1`);
     expect(req.request.method).toBe('DELETE');
     req.flush(null, { status: 204, statusText: 'No Content' });
+    await tick();
   });
 });

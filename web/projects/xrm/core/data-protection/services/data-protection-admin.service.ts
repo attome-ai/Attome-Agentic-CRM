@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiComponents, ApiService, Page } from '@attome/base';
+import { ApiComponents, Page, SdkService } from '@attome/base';
 
 // P-api-contract (C-26): codegen-derived where a generated schema exists —
 // these types now mirror `attome-compliance/src/{dsr_admin,legal_hold_admin,
@@ -93,7 +93,7 @@ export type PlaceLegalHoldBody = ApiComponents['schemas']['PlaceLegalHoldBody'];
 
 @Injectable({ providedIn: 'root' })
 export class DataProtectionAdminService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   // ── DSR requests ───────────────────────────────────────────────────────
 
@@ -102,19 +102,19 @@ export class DataProtectionAdminService {
     const params: Record<string, string> = { page: String(page), page_size: String(pageSize) };
     if (status) params['status'] = status;
     if (requestType) params['request_type'] = requestType;
-    return this.api.get<Page<DsrRequestItem>>('/api/v1/admin/dsr/requests', params);
+    return this.sdk.get<Page<DsrRequestItem>>('/api/v1/admin/dsr/requests', { query: params });
   }
 
   createDsrRequest(body: CreateDsrRequestBody): Observable<DsrRequestItem> {
-    return this.api.post<DsrRequestItem>('/api/v1/admin/dsr/requests', body);
+    return this.sdk.post<DsrRequestItem>('/api/v1/admin/dsr/requests', { body });
   }
 
   fulfillAccess(id: string, body: FulfillExportBody): Observable<FulfillExportResult> {
-    return this.api.post<FulfillExportResult>(`/api/v1/admin/dsr/requests/${id}/fulfill-access`, body);
+    return this.sdk.post<FulfillExportResult>(`/api/v1/admin/dsr/requests/${id}/fulfill-access`, { body });
   }
 
   fulfillPortability(id: string, body: FulfillExportBody): Observable<FulfillExportResult> {
-    return this.api.post<FulfillExportResult>(`/api/v1/admin/dsr/requests/${id}/fulfill-portability`, body);
+    return this.sdk.post<FulfillExportResult>(`/api/v1/admin/dsr/requests/${id}/fulfill-portability`, { body });
   }
 
   /** D-269: may resolve to a `FulfillErasureResult` (executed immediately)
@@ -122,8 +122,8 @@ export class DataProtectionAdminService {
    *  depending on whether `dsr.fulfill_erasure` is gated on this deployment —
    *  callers must check `'approval_pending' in result`. */
   fulfillErasure(id: string, body: FulfillErasureBody): Observable<FulfillErasureResult | FulfillErasurePending> {
-    return this.api.post<FulfillErasureResult | FulfillErasurePending>(
-      `/api/v1/admin/dsr/requests/${id}/fulfill-erasure`, body,
+    return this.sdk.post<FulfillErasureResult | FulfillErasurePending>(
+      `/api/v1/admin/dsr/requests/${id}/fulfill-erasure`, { body },
     );
   }
 
@@ -132,54 +132,54 @@ export class DataProtectionAdminService {
   listLegalHolds(status: 'active' | 'released' = 'active', entityLogicalname?: string, page = 1, pageSize = 50): Observable<Page<LegalHoldItem>> {
     const params: Record<string, string> = { status, page: String(page), page_size: String(pageSize) };
     if (entityLogicalname) params['entity_logicalname'] = entityLogicalname;
-    return this.api.get<Page<LegalHoldItem>>('/api/v1/admin/legal-holds', params);
+    return this.sdk.get<Page<LegalHoldItem>>('/api/v1/admin/legal-holds', { query: params });
   }
 
   placeLegalHold(body: PlaceLegalHoldBody): Observable<LegalHoldItem> {
-    return this.api.post<LegalHoldItem>('/api/v1/admin/legal-holds', body);
+    return this.sdk.post<LegalHoldItem>('/api/v1/admin/legal-holds', { body });
   }
 
   releaseLegalHold(id: string): Observable<LegalHoldItem> {
-    return this.api.post<LegalHoldItem>(`/api/v1/admin/legal-holds/${id}/release`, {});
+    return this.sdk.post<LegalHoldItem>(`/api/v1/admin/legal-holds/${id}/release`, { body: {} });
   }
 
   // ── Data domains (M15 Data Governance, D-413) ─────────────────────────────
 
   /** `page` is 1-based, like every offset list (D-793). */
   listDomains(page = 1, pageSize = 50): Observable<Page<DataDomainItem>> {
-    return this.api.get<Page<DataDomainItem>>('/api/v1/admin/governance/domains', {
+    return this.sdk.get<Page<DataDomainItem>>('/api/v1/admin/governance/domains', { query: {
       page: String(page), page_size: String(pageSize),
-    });
+    } });
   }
 
   createDomain(body: CreateDataDomainBody): Observable<DataDomainItem> {
-    return this.api.post<DataDomainItem>('/api/v1/admin/governance/domains', body);
+    return this.sdk.post<DataDomainItem>('/api/v1/admin/governance/domains', { body });
   }
 
   getDomain(id: string): Observable<DataDomainItem> {
-    return this.api.get<DataDomainItem>(`/api/v1/admin/governance/domains/${id}`);
+    return this.sdk.get<DataDomainItem>(`/api/v1/admin/governance/domains/${id}`);
   }
 
   /** `row_version` inside the body, not an `If-Match` header — matches
    *  `governance_admin.rs::update_domain`'s contract. */
   updateDomain(id: string, body: UpdateDataDomainBody): Observable<DataDomainItem> {
-    return this.api.patch<DataDomainItem>(`/api/v1/admin/governance/domains/${id}`, body);
+    return this.sdk.patch<DataDomainItem>(`/api/v1/admin/governance/domains/${id}`, { body });
   }
 
   assignEntities(id: string, entityLogicalnames: string[]): Observable<DomainEntityItem[]> {
-    return this.api.post<DomainEntityItem[]>(
+    return this.sdk.post<DomainEntityItem[]>(
       `/api/v1/admin/governance/domains/${id}/entities`,
-      { entity_logicalnames: entityLogicalnames },
+      { body: { entity_logicalnames: entityLogicalnames } },
     );
   }
 
   unassignEntity(id: string, entityLogicalname: string): Observable<void> {
-    return this.api.delete(
+    return this.sdk.delete(
       `/api/v1/admin/governance/domains/${id}/entities/${encodeURIComponent(entityLogicalname)}`,
     );
   }
 
   getDomainReport(id: string): Observable<DomainReport> {
-    return this.api.get<DomainReport>(`/api/v1/admin/governance/domains/${id}/report`);
+    return this.sdk.get<DomainReport>(`/api/v1/admin/governance/domains/${id}/report`);
   }
 }

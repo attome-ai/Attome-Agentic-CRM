@@ -5,6 +5,9 @@ import { ATTOME_CONFIG, LangService } from '@attome/base';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { MySessionsComponent, type MySession } from './my-sessions.component';
 
+/** The SDK sends after a promise turn (Y9-T3). */
+const tick = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
+
 describe('MySessionsComponent', () => {
   const API = 'http://localhost:7865';
   let fixture: ComponentFixture<MySessionsComponent>;
@@ -39,12 +42,14 @@ describe('MySessionsComponent', () => {
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(MySessionsComponent);
     fixture.detectChanges();
+    await tick();
   });
 
   afterEach(() => http.verify());
 
-  it('lists the sessions and marks this device without an end button', () => {
+  it('lists the sessions and marks this device without an end button', async () => {
     list().flush(page([session('a', true), session('b', false)]));
+    await tick();
     fixture.detectChanges();
     const rows = el().querySelectorAll('tbody tr');
     expect(rows.length).toBe(2);
@@ -53,28 +58,36 @@ describe('MySessionsComponent', () => {
     expect(rows[1].querySelector('button')?.textContent).toContain('mySessions.end');
   });
 
-  it('ends one session, then reloads the list', () => {
+  it('ends one session, then reloads the list', async () => {
     list().flush(page([session('a', true), session('b', false)]));
+    await tick();
     fixture.detectChanges();
     (el().querySelectorAll('tbody tr')[1].querySelector('button') as HTMLButtonElement).click();
+    await tick();
     const req = http.expectOne(`${API}/api/v1/auth/sessions/b`);
     expect(req.request.method).toBe('DELETE');
     req.flush(null, { status: 204, statusText: 'No Content' });
+    await tick();
     list().flush(page([session('a', true)]));
+    await tick();
     fixture.detectChanges();
     expect(el().querySelectorAll('tbody tr').length).toBe(1);
     expect(el().textContent).not.toContain('mySessions.endOthers');
   });
 
-  it('ends every other session', () => {
+  it('ends every other session', async () => {
     list().flush(page([session('a', true), session('b', false), session('c', false)]));
+    await tick();
     fixture.detectChanges();
     const buttons = Array.from(el().querySelectorAll('button'));
     const endOthers = buttons.find((b) => b.textContent?.includes('mySessions.endOthers'));
     endOthers?.click();
+    await tick();
     const req = http.expectOne(`${API}/api/v1/auth/sessions/end-others`);
     expect(req.request.method).toBe('POST');
     req.flush(null, { status: 204, statusText: 'No Content' });
+    await tick();
     list().flush(page([session('a', true)]));
+    await tick();
   });
 });

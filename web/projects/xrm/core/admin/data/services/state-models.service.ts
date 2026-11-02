@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
-import { ApiComponents, ApiService, Page } from '@attome/base';
+import { ApiComponents, Page, SdkService } from '@attome/base';
 
 /**
  * M07 / U8 — `state_model`/`state_transition` admin CRUD,
@@ -20,40 +20,40 @@ export type UpdateTransitionBody  = ApiComponents['schemas']['UpdateTransitionBo
 
 @Injectable({ providedIn: 'root' })
 export class StateModelsService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   /** The route returns every live model in one page (`page_size` = total). */
   listModels(): Observable<StateModelListItem[]> {
-    return this.api.get<Page<StateModelListItem>>('/api/v1/admin/state-models').pipe(map(p => p.items));
+    return this.sdk.get<Page<StateModelListItem>>('/api/v1/admin/state-models').pipe(map(p => p.items));
   }
 
   getModel(id: string): Observable<StateModelDetail> {
-    return this.api.get<StateModelDetail>(`/api/v1/admin/state-models/${id}`);
+    return this.sdk.get<StateModelDetail>(`/api/v1/admin/state-models/${id}`);
   }
 
   createModel(body: CreateStateModelBody): Observable<StateModelDetail> {
-    return this.api.post<StateModelDetail>('/api/v1/admin/state-models', body);
+    return this.sdk.post<StateModelDetail>('/api/v1/admin/state-models', { body });
   }
 
   updateModel(id: string, body: UpdateStateModelBody): Observable<StateModelDetail> {
-    return this.api.patch<StateModelDetail>(`/api/v1/admin/state-models/${id}`, body);
+    return this.sdk.patch<StateModelDetail>(`/api/v1/admin/state-models/${id}`, { body });
   }
 
   deleteModel(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/state-models/${id}`);
+    return this.sdk.delete(`/api/v1/admin/state-models/${id}`);
   }
 
   createTransition(modelId: string, body: CreateTransitionBody): Observable<StateTransition> {
-    return this.api.post<StateTransition>(`/api/v1/admin/state-models/${modelId}/transitions`, body);
+    return this.sdk.post<StateTransition>(`/api/v1/admin/state-models/${modelId}/transitions`, { body });
   }
 
   updateTransition(modelId: string, transitionId: string, body: UpdateTransitionBody): Observable<StateTransition> {
-    return this.api.patch<StateTransition>(
-      `/api/v1/admin/state-models/${modelId}/transitions/${transitionId}`, body,
+    return this.sdk.patch<StateTransition>(
+      `/api/v1/admin/state-models/${modelId}/transitions/${transitionId}`, { body },
     );
   }
 
   deleteTransition(modelId: string, transitionId: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/state-models/${modelId}/transitions/${transitionId}`);
+    return this.sdk.delete(`/api/v1/admin/state-models/${modelId}/transitions/${transitionId}`);
   }
 }

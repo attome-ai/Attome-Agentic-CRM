@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { ApiError, ApiService, LocalDatePipe, TranslatePipe } from '@attome/base';
+import { ApiError, ApiService, LocalDatePipe, SdkService, TranslatePipe } from '@attome/base';
 
 /** One of the caller's own sessions (`GET /api/v1/auth/sessions`, Q8-T4). */
 export interface MySession {
@@ -34,7 +34,7 @@ interface SessionPage {
   templateUrl: './my-sessions.component.html',
 })
 export class MySessionsComponent implements OnInit {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   readonly sessions = signal<MySession[]>([]);
   readonly loading = signal(true);
@@ -47,7 +47,7 @@ export class MySessionsComponent implements OnInit {
 
   load(): void {
     this.loading.set(true);
-    this.api.get<SessionPage>('/api/v1/auth/sessions', { page_size: '200' }).subscribe({
+    this.sdk.get<SessionPage>('/api/v1/auth/sessions', { query: { page_size: '200' } }).subscribe({
       next: (page) => {
         this.sessions.set(page.items);
         this.error.set(null);
@@ -65,11 +65,11 @@ export class MySessionsComponent implements OnInit {
   }
 
   end(session: MySession): void {
-    this.run(this.api.delete(`/api/v1/auth/sessions/${encodeURIComponent(session.id)}`));
+    this.run(this.sdk.delete(`/api/v1/auth/sessions/${encodeURIComponent(session.id)}`));
   }
 
   endOthers(): void {
-    this.run(this.api.post<void>('/api/v1/auth/sessions/end-others', {}));
+    this.run(this.sdk.post<void>('/api/v1/auth/sessions/end-others', { body: {} }));
   }
 
   private run(call: ReturnType<ApiService['delete']>): void {

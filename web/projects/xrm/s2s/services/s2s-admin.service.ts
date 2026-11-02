@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 
 // ── Response types (mirror s2s_admin.rs exactly) ──────────────────────────────
 
@@ -185,46 +185,46 @@ export interface SetPermissionBody {
 
 @Injectable({ providedIn: 'root' })
 export class S2sAdminService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
 
   listClients(status?: string): Observable<ClientListItem[]> {
-    return this.api.getAllPages<ClientListItem>('/api/v1/admin/s2s/clients', status ? { status } : {});
+    return this.sdk.getAllPages<ClientListItem>('/api/v1/admin/s2s/clients', status ? { status } : {});
   }
 
   createClient(body: CreateClientBody): Observable<ClientDetail> {
-    return this.api.post<ClientDetail>('/api/v1/admin/s2s/clients', body);
+    return this.sdk.post<ClientDetail>('/api/v1/admin/s2s/clients', { body });
   }
 
   getClient(id: string): Observable<ClientDetail> {
-    return this.api.get<ClientDetail>(`/api/v1/admin/s2s/clients/${id}`);
+    return this.sdk.get<ClientDetail>(`/api/v1/admin/s2s/clients/${id}`);
   }
 
   updateClient(id: string, body: UpdateClientBody): Observable<ClientDetail> {
-    return this.api.patch<ClientDetail>(`/api/v1/admin/s2s/clients/${id}`, body);
+    return this.sdk.patch<ClientDetail>(`/api/v1/admin/s2s/clients/${id}`, { body });
   }
 
   deleteClient(id: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/s2s/clients/${id}`);
+    return this.sdk.delete(`/api/v1/admin/s2s/clients/${id}`);
   }
 
   generateKey(clientId: string, body: GenerateKeyBody): Observable<KeyCreatedResponse> {
-    return this.api.post<KeyCreatedResponse>(`/api/v1/admin/s2s/clients/${clientId}/keys`, body);
+    return this.sdk.post<KeyCreatedResponse>(`/api/v1/admin/s2s/clients/${clientId}/keys`, { body });
   }
 
   revokeKey(clientId: string, slot: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/s2s/clients/${clientId}/keys/${slot}`);
+    return this.sdk.delete(`/api/v1/admin/s2s/clients/${clientId}/keys/${slot}`);
   }
 
   listPermissions(clientId: string): Observable<PermissionItem[]> {
-    return this.api.get<PermissionItem[]>(`/api/v1/admin/s2s/clients/${clientId}/permissions`);
+    return this.sdk.get<PermissionItem[]>(`/api/v1/admin/s2s/clients/${clientId}/permissions`);
   }
 
   setPermission(clientId: string, body: SetPermissionBody): Observable<PermissionItem> {
-    return this.api.post<PermissionItem>(`/api/v1/admin/s2s/clients/${clientId}/permissions`, body);
+    return this.sdk.post<PermissionItem>(`/api/v1/admin/s2s/clients/${clientId}/permissions`, { body });
   }
 
   deletePermission(clientId: string, entityName: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/s2s/clients/${clientId}/permissions/${entityName}`);
+    return this.sdk.delete(`/api/v1/admin/s2s/clients/${clientId}/permissions/${entityName}`);
   }
 
   listTrusts(clientId: string): Observable<TrustItem[]> {
@@ -234,16 +234,16 @@ export class S2sAdminService {
   }
 
   createTrust(clientId: string, body: CreateTrustBody): Observable<TrustItem> {
-    return this.api.post<TrustItem>(`/api/v1/admin/s2s/clients/${clientId}/trusts`, body);
+    return this.sdk.post<TrustItem>(`/api/v1/admin/s2s/clients/${clientId}/trusts`, { body });
   }
 
   deleteTrust(clientId: string, trustId: string): Observable<void> {
-    return this.api.delete(`/api/v1/admin/s2s/clients/${clientId}/trusts/${trustId}`);
+    return this.sdk.delete(`/api/v1/admin/s2s/clients/${clientId}/trusts/${trustId}`);
   }
 
   listLogs(clientId: string, limit = 50, offset = 0): Observable<AccessLogPage> {
-    return this.api.get<AccessLogPage>(`/api/v1/admin/s2s/clients/${clientId}/logs`, {
+    return this.sdk.get<AccessLogPage>(`/api/v1/admin/s2s/clients/${clientId}/logs`, { query: {
       limit: String(limit), offset: String(offset),
-    });
+    } });
   }
 }
