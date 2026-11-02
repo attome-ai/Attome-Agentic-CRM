@@ -271,6 +271,80 @@ pub async fn assigned(state: &EngineState, handoff: &NewHandoff) -> Result<(), A
     Ok(())
 }
 
+/// E9-T6: sales returns a hand-off: it becomes `returned` with the reason
+/// and, when the programme recycles, the person's nurture starts again on
+/// `wake_up_on` (now without one), what they have seen still counted and
+/// their score still at the threshold (a new hand-off waits for it to fall
+/// and rise again). Audited. Whether the person was recycled; `NotFound`
+/// when the hand-off is gone or already returned.
+pub async fn recycle(
+    state: &EngineState,
+    handoff: Uuid,
+    reason: &str,
+    wake_up_on: Option<chrono::DateTime<Utc>>,
+    user: Uuid,
+) -> Result<bool, AppError> {
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let returned: Option<(Uuid, Uuid)> = sqlx::query_as(
+        "UPDATE marketing_handoff \
+            SET status = 'returned', return_reason = $2, decided_at = now() \
+          WHERE id = $1 AND status IN ('pending', 'overdue', 'accepted') \
+         RETURNING program_id, person_id",
+    )
+    .bind(handoff)
+    .bind(reason)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let Some((program, person)) = returned else {
+        return Err(AppError::NotFound);
+    };
+    let recycled = sqlx::query(
+        "UPDATE marketing_nurture_state s \
+            SET status = 'active', next_due_at = COALESCE($3, now()), paused_reason = NULL, \
+                done_signalled_at = NULL \
+           FROM marketing_nurture_program p \
+          WHERE s.program_id = $1 AND s.person_id = $2 AND p.id = s.program_id \
+            AND COALESCE(p.recycling_enabled, false) AND s.status = 'handed_off'",
+    )
+    .bind(program)
+    .bind(person)
+    .bind(wake_up_on)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?
+    .rows_affected()
+        == 1;
+    let entity: Option<String> = sqlx::query_scalar(
+        "SELECT person_entity FROM marketing_nurture_state WHERE program_id = $1 AND person_id = $2",
+    )
+    .bind(program)
+    .bind(person)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?
+    .flatten();
+    attome_audit::write_business_event_in_tx(
+        &mut tx,
+        &attome_audit::audit_service(state),
+        attome_audit::BusinessEvent::new(
+            entity.as_deref().unwrap_or("contact"),
+            person,
+            attome_audit::AuditOperation::Update,
+            if recycled {
+                "marketing.nurture_recycled"
+            } else {
+                "marketing.handoff_returned"
+            },
+            user,
+        )
+        .comment(format!("hand-off {handoff} returned: {reason}")),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(recycled)
+}
+
 /// Sets the person's `lifecycle_stage` to `sales_qualified` through the
 /// record engine, as `author` (the programme's owner).
 async fn qualify(

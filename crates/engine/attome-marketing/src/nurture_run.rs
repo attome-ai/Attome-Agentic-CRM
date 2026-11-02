@@ -294,7 +294,14 @@ impl WorkflowStepHandler for NurtureRun {
 }
 
 /// A claimed state: programme, person, track, person entity, purpose.
-type Claimed = (Uuid, Uuid, Option<Uuid>, Option<String>, Option<String>);
+type Claimed = (
+    Uuid,
+    Uuid,
+    Option<Uuid>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+);
 
 /// One pass: claims the due states and sends each person's next email.
 /// The number of emails queued.
@@ -316,7 +323,8 @@ pub async fn tick(state: &EngineState) -> Result<u64, AppError> {
          UPDATE marketing_nurture_state s \
             SET next_due_at = now() + make_interval(mins => $2) \
            FROM due WHERE s.program_id = due.program_id AND s.person_id = due.person_id \
-         RETURNING s.program_id, s.person_id, s.track_id, s.person_entity, s.purpose",
+         RETURNING s.program_id, s.person_id, s.track_id, s.person_entity, s.purpose, \
+                   s.paused_reason",
     )
     .bind(BATCH)
     .bind(CLAIM_MINUTES)
@@ -382,17 +390,17 @@ async fn exit(
 /// Whether an email was queued.
 async fn drip_one(state: &EngineState, claim: Claimed) -> Result<bool, AppError> {
     let db = &state.base.db;
-    let (program, person, track, entity, purpose) = claim;
+    let (program, person, track, entity, purpose, paused_reason) = claim;
     let now = Utc::now();
-    let row: Option<(Option<String>, Option<f64>)> = sqlx::query_as(
-        "SELECT status, cadence_days::float8 FROM marketing_nurture_program \
-          WHERE id = $1 AND is_active IS NOT FALSE",
+    let row: Option<(Option<String>, Option<f64>, bool)> = sqlx::query_as(
+        "SELECT status, cadence_days::float8, COALESCE(pause_enabled, false) \
+           FROM marketing_nurture_program WHERE id = $1 AND is_active IS NOT FALSE",
     )
     .bind(program)
     .fetch_optional(db)
     .await
     .map_err(AppError::internal)?;
-    let Some((status, cadence_days)) = row else {
+    let Some((status, cadence_days, pause_enabled)) = row else {
         exit(db, program, person, "programme removed").await?;
         return Ok(false);
     };
@@ -409,6 +417,16 @@ async fn drip_one(state: &EngineState, claim: Claimed) -> Result<bool, AppError>
     }
     let every = cadence(cadence_days);
     let entity = entity.unwrap_or_else(|| "contact".to_owned());
+    // E9-T6: while sales works the person, the drip holds and tries again
+    // a day later; the pause and the resume are audited.
+    let working = pause_enabled && sales_is_working(db, person).await?;
+    if working != paused_reason.is_some() {
+        set_paused(state, program, person, &entity, working).await?;
+    }
+    if working {
+        due_at(db, program, person, now + Duration::days(1)).await?;
+        return Ok(false);
+    }
     let Some(purpose) = purpose.filter(|p| !p.trim().is_empty()) else {
         exit(db, program, person, "no consent purpose").await?;
         return Ok(false);
@@ -548,6 +566,77 @@ async fn drip_one(state: &EngineState, claim: Claimed) -> Result<bool, AppError>
     .map_err(AppError::internal)?;
     attome_db::tx::commit(tx).await?;
     Ok(claimed == 1)
+}
+
+/// E9-T6: whether sales is working the person: an active sales sequence
+/// enrolment, a meeting about them in the last 14 days, or a hand-off of
+/// theirs still pending or accepted. One indexed read each; a table this
+/// deployment lacks counts as no.
+pub async fn sales_is_working(db: &attome_db::DbPool, person: Uuid) -> Result<bool, AppError> {
+    let (busy, has_activity): (bool, bool) = sqlx::query_as(
+        "SELECT EXISTS (SELECT 1 FROM workflow_sequence_enrolment \
+                         WHERE contact_id = $1 AND status = 'active') \
+             OR EXISTS (SELECT 1 FROM marketing_handoff \
+                         WHERE person_id = $1 AND status IN ('pending', 'accepted')), \
+                to_regclass('activity') IS NOT NULL",
+    )
+    .bind(person)
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)?;
+    if busy || !has_activity {
+        return Ok(busy);
+    }
+    sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM activity a WHERE a.regarding_id = $1::text \
+                          AND a.activity_type = 'meeting' AND a.is_active IS NOT FALSE \
+                          AND a.activity_date > now() - interval '14 days')",
+    )
+    .bind(person)
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// Pauses (`true`) or resumes the person's drip, with its audit event.
+async fn set_paused(
+    state: &EngineState,
+    program: Uuid,
+    person: Uuid,
+    entity: &str,
+    paused: bool,
+) -> Result<(), AppError> {
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    sqlx::query(
+        "UPDATE marketing_nurture_state \
+            SET paused_reason = CASE WHEN $3 THEN 'sales_working' ELSE NULL END \
+          WHERE program_id = $1 AND person_id = $2",
+    )
+    .bind(program)
+    .bind(person)
+    .bind(paused)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    attome_audit::write_business_event_in_tx(
+        &mut tx,
+        &attome_audit::audit_service(state),
+        attome_audit::BusinessEvent::new(
+            entity,
+            person,
+            attome_audit::AuditOperation::Update,
+            if paused {
+                "marketing.nurture_paused"
+            } else {
+                "marketing.nurture_resumed"
+            },
+            Uuid::nil(),
+        )
+        .comment(format!("nurture programme {program}")),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(())
 }
 
 /// A state that left `active` and whose run has not been told: programme,

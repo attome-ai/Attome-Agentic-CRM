@@ -597,3 +597,112 @@ fn below_threshold_no_handoff() {
         assert_eq!(handoffs(&app, program, person).await, 0);
     });
 }
+
+// feature: E9
+#[test]
+fn open_sequence_pauses_sends() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let _serial = SERIAL.lock().await;
+        install(&app).await;
+        let first = design(&app, "First").await;
+        let definition = definition(&app).await;
+        let (program, _) = programme(&app, definition, &[first]).await;
+        sqlx::query("UPDATE marketing_nurture_program SET pause_enabled = true WHERE id = $1")
+            .bind(program)
+            .execute(app.db())
+            .await
+            .unwrap();
+        let person = person(&app).await;
+        enter(&app, person, program).await;
+        let sequence = definition(&app).await;
+        sqlx::query(
+            "INSERT INTO workflow_sequence_enrolment \
+                (definition_id, definition_version_id, contact_id, status) \
+             VALUES ($1, uuidv7(), $2, 'active')",
+        )
+        .bind(sequence)
+        .bind(person)
+        .execute(app.db())
+        .await
+        .unwrap();
+
+        nurture_run::tick(&app.state).await.unwrap();
+        assert!(sent(&app, person).await.is_empty(), "sales is working them");
+        let paused: Option<String> = sqlx::query_scalar(
+            "SELECT paused_reason FROM marketing_nurture_state WHERE person_id = $1",
+        )
+        .bind(person)
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        assert_eq!(paused.as_deref(), Some("sales_working"));
+    });
+}
+
+// feature: E9
+#[test]
+fn recycled_lead_wakes_on_date_and_handoff_is_returned() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let _serial = SERIAL.lock().await;
+        install(&app).await;
+        let model = Uuid::now_v7().to_string();
+        let program = handoff_programme(&app, &model, 50.0).await;
+        sqlx::query("UPDATE marketing_nurture_program SET recycling_enabled = true WHERE id = $1")
+            .bind(program)
+            .execute(app.db())
+            .await
+            .unwrap();
+        let person = person(&app).await;
+        enter(&app, person, program).await;
+        score(&app, &model, person, 90.0).await;
+        let handoff = nurture_handoff::detect(&app.state)
+            .await
+            .unwrap()
+            .into_iter()
+            .find(|h| h.person == person)
+            .expect("handed off");
+
+        let wake = chrono::Utc::now() + chrono::Duration::days(3);
+        let recycled = nurture_handoff::recycle(
+            &app.state,
+            handoff.id,
+            "not ready",
+            Some(wake),
+            app.admin.id,
+        )
+        .await
+        .unwrap();
+        assert!(recycled);
+        let (status, due): (String, chrono::DateTime<chrono::Utc>) = sqlx::query_as(
+            "SELECT status, next_due_at FROM marketing_nurture_state \
+              WHERE program_id = $1 AND person_id = $2",
+        )
+        .bind(program)
+        .bind(person)
+        .fetch_one(app.db())
+        .await
+        .unwrap();
+        assert_eq!(status, "active");
+        assert!((due - wake).num_seconds().abs() < 2, "{due} vs {wake}");
+        let (handoff_status, reason): (String, Option<String>) =
+            sqlx::query_as("SELECT status, return_reason FROM marketing_handoff WHERE id = $1")
+                .bind(handoff.id)
+                .fetch_one(app.db())
+                .await
+                .unwrap();
+        assert_eq!(handoff_status, "returned");
+        assert_eq!(reason.as_deref(), Some("not ready"));
+        assert!(
+            nurture_handoff::recycle(&app.state, handoff.id, "again", None, app.admin.id)
+                .await
+                .is_err(),
+            "a hand-off is returned once"
+        );
+    });
+}

@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Nurture pauses while sales works a person and recycles returned hand-offs (E9-T6): with
+  `pause_enabled`, an active sales sequence, a meeting in the last 14 days or an open hand-off holds the
+  drip a day at a time (paused and resumed are audited); a returned hand-off starts the person's
+  nurture again on its wake-up date when the programme has `recycling_enabled`.
 - Hand-off to sales (E9-T5): a nurture programme names a points model and a hand-off score
   (`handoff_score_model`, `handoff_threshold`, marketing pack 0017); when a nurtured person's score rises
   to it they are handed off once (a `marketing_handoff` with a summary), qualified, assigned (D4 for a
