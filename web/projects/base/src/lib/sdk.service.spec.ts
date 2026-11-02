@@ -74,4 +74,30 @@ describe('SdkService', () => {
     get.flush({});
     await read;
   });
+
+  it('marks a background read and answers a 304 with the caller\'s copy', async () => {
+    const { sdk, http } = setup();
+    const poll = firstValueFrom(sdk.getBackground('/api/v1/thing', { since: '1' }));
+    await tick();
+    const bg = http.expectOne(r => r.url === 'http://api.test/api/v1/thing');
+    expect(bg.request.headers.get('x-attome-background')).toBe('1');
+    expect(bg.request.params.get('since')).toBe('1');
+    bg.flush([]);
+    await poll;
+
+    const fresh = firstValueFrom(sdk.getIfChanged<{ v: number }>('/api/v1/plan', null));
+    await tick();
+    const first = http.expectOne('http://api.test/api/v1/plan');
+    expect(first.request.headers.has('If-None-Match')).toBe(false);
+    first.flush({ v: 1 }, { headers: { ETag: 'W/"1"' } });
+    expect(await fresh).toEqual({ body: { v: 1 }, etag: 'W/"1"' });
+
+    const same = firstValueFrom(sdk.getIfChanged<{ v: number }>('/api/v1/plan', 'W/"1"'));
+    await tick();
+    const second = http.expectOne('http://api.test/api/v1/plan');
+    expect(second.request.headers.get('If-None-Match')).toBe('W/"1"');
+    second.flush(null, { status: 304, statusText: 'Not Modified' });
+    expect(await same).toEqual({ body: null, etag: 'W/"1"' });
+    http.verify();
+  });
 });

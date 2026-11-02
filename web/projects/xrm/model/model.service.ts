@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, defer, from, map, of, switchMap, tap } from 'rxjs';
-import { ApiService } from '@attome/base';
+import { SdkService } from '@attome/base';
 
 import { PlanStore, StoredPlan } from './plan-store';
 
@@ -187,7 +187,7 @@ export interface QualityReport {
 /** The published metadata model, as the renderer reads it (roadmap Y14). */
 @Injectable({ providedIn: 'root' })
 export class ModelService {
-  private readonly api = inject(ApiService);
+  private readonly sdk = inject(SdkService);
   private readonly store = inject(PlanStore);
 
   /** Plans already current in this session, by form id. */
@@ -205,7 +205,7 @@ export class ModelService {
     if (current) return of(current.plan);
     const path = `/api/v1/model/forms/${encodeURIComponent(formId)}/plan`;
     return defer(() => from(this.store.read<FormPlan>(formId))).pipe(
-      switchMap(stored => this.api.getIfChanged<FormPlan>(path, stored?.etag ?? null).pipe(
+      switchMap(stored => this.sdk.getIfChanged<FormPlan>(path, stored?.etag ?? null).pipe(
         map(({ body, etag }) => {
           if (body === null && stored) return stored;
           if (body === null) throw new Error('the server answered 304 for a plan this browser does not hold');
@@ -226,61 +226,60 @@ export class ModelService {
   }
 
   record(entity: string, id: string): Observable<RecordView> {
-    return this.api.get<RecordView>(`/api/v1/${encodeURIComponent(entity)}/${encodeURIComponent(id)}`);
+    return this.sdk.get<RecordView>(`/api/v1/${encodeURIComponent(entity)}/${encodeURIComponent(id)}`);
   }
 
   /** Saves changed values; `rowVersion` guards against a lost update. */
   updateRecord(entity: string, id: string, values: Record<string, unknown>, rowVersion: number): Observable<RecordView> {
-    return this.api.patch<RecordView>(
+    return this.sdk.patch<RecordView>(
       `/api/v1/${encodeURIComponent(entity)}/${encodeURIComponent(id)}`,
-      values,
-      rowVersion,
+      { body: values, ifMatch: rowVersion },
     );
   }
 
   // ── Admin: the metadata explorer (roadmap Y1-T15) ──
 
   kinds(): Observable<Page<KindView>> {
-    return this.api.get<Page<KindView>>('/api/v1/admin/model/kinds');
+    return this.sdk.get<Page<KindView>>('/api/v1/admin/model/kinds');
   }
 
   objects(kind: string, page: number): Observable<Page<ObjectSummary>> {
-    return this.api.get<Page<ObjectSummary>>(
+    return this.sdk.get<Page<ObjectSummary>>(
       `/api/v1/admin/model/${encodeURIComponent(kind)}`,
-      { page: String(page) },
+      { query: { page: String(page) } },
     );
   }
 
   history(kind: string, id: string): Observable<Page<VersionSummary>> {
-    return this.api.get<Page<VersionSummary>>(
+    return this.sdk.get<Page<VersionSummary>>(
       `/api/v1/admin/model/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/history`,
     );
   }
 
   version(kind: string, id: string, version: number): Observable<ObjectVersion> {
-    return this.api.get<ObjectVersion>(
+    return this.sdk.get<ObjectVersion>(
       `/api/v1/admin/model/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/versions/${version}`,
     );
   }
 
   diff(kind: string, id: string, from: number, to: number): Observable<Page<PatchOp>> {
-    return this.api.get<Page<PatchOp>>(
+    return this.sdk.get<Page<PatchOp>>(
       `/api/v1/admin/model/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/diff`,
-      { from: String(from), to: String(to) },
+      { query: { from: String(from), to: String(to) } },
     );
   }
 
   object(kind: string, id: string): Observable<ObjectVersion> {
-    return this.api.get<ObjectVersion>(
+    return this.sdk.get<ObjectVersion>(
       `/api/v1/admin/model/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`,
     );
   }
 
   /** Applies edit commands to a draft; `baseHash` is `''` for a new object. */
   saveDraft(kind: string, id: string, baseHash: string, name: string | null, commands: ModelCommand[]): Observable<DraftSaved> {
-    return this.api.post<DraftSaved>(
+    return this.sdk.post<DraftSaved>(
       `/api/v1/admin/model/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/commands`,
-      { base_hash: baseHash, name, commands },
+      { body: { base_hash: baseHash, name, commands } },
     );
   }
 
@@ -290,9 +289,9 @@ export class ModelService {
    * performance findings and whether those block.
    */
   previewQuality(kind: string, id: string, doc: unknown): Observable<QualityReport> {
-    return this.api.post<Partial<QualityReport>>(
+    return this.sdk.post<Partial<QualityReport>>(
       `/api/v1/admin/model/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/validate`,
-      { doc, run_tests: true },
+      { body: { doc, run_tests: true } },
     ).pipe(map(r => ({
       tests: r.tests ?? [],
       warnings: r.warnings ?? [],
@@ -302,27 +301,27 @@ export class ModelService {
   }
 
   publish(kind: string, id: string): Observable<{ id: string; version_no: number }> {
-    return this.api.post<{ id: string; version_no: number }>(
+    return this.sdk.post<{ id: string; version_no: number }>(
       `/api/v1/admin/model/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/publish`,
-      {},
+      { body: {} },
     );
   }
 
   /** What a published agent did today against its daily limits (AH4-T4). */
   /** Starts a run of an eval suite against its agent (N23-T1). */
   startEvalRun(suite: string): Observable<{ run_id: string; cases: number; status: string }> {
-    return this.api.post<{ run_id: string; cases: number; status: string }>(
-      `/api/v1/admin/ai/eval-suites/${encodeURIComponent(suite)}/runs`, {},
+    return this.sdk.post<{ run_id: string; cases: number; status: string }>(
+      `/api/v1/admin/ai/eval-suites/${encodeURIComponent(suite)}/runs`, { body: {} },
     );
   }
 
   /** One eval run and, once finished, its graded cases. */
   evalRun(id: string): Observable<EvalRun> {
-    return this.api.get<EvalRun>(`/api/v1/admin/ai/eval-runs/${encodeURIComponent(id)}`);
+    return this.sdk.get<EvalRun>(`/api/v1/admin/ai/eval-runs/${encodeURIComponent(id)}`);
   }
 
   agentUsage(agent: string): Observable<{ items: AgentUsage[] }> {
-    return this.api.get<{ items: AgentUsage[] }>(
+    return this.sdk.get<{ items: AgentUsage[] }>(
       `/api/v1/admin/ai/agents/${encodeURIComponent(agent)}/usage`,
     );
   }
@@ -330,22 +329,22 @@ export class ModelService {
   /** A published menu as this user sees it (A21-T2). */
   /** A21-T5: counts one open of a menu item (`<group>/<item>`). */
   menuItemOpened(id: string, item: string): Observable<void> {
-    return this.api.post<void>(`/api/v1/model/navigation/${encodeURIComponent(id)}/opened`, { item });
+    return this.sdk.post<void>(`/api/v1/model/navigation/${encodeURIComponent(id)}/opened`, { body: { item } });
   }
 
   /** AK6-T2 / A21-T5: how often each item of a menu was opened in the last `days`. */
   menuUsage(id: string, days = 60): Observable<Page<MenuItemUsage>> {
-    return this.api.get<Page<MenuItemUsage>>(
-      `/api/v1/admin/model/navigation/${encodeURIComponent(id)}/usage`, { days: String(days) },
+    return this.sdk.get<Page<MenuItemUsage>>(
+      `/api/v1/admin/model/navigation/${encodeURIComponent(id)}/usage`, { query: { days: String(days) } },
     );
   }
 
   menu(id: string): Observable<MenuView> {
-    return this.api.get<MenuView>(`/api/v1/model/navigation/${encodeURIComponent(id)}`);
+    return this.sdk.get<MenuView>(`/api/v1/model/navigation/${encodeURIComponent(id)}`);
   }
 
   /** The actions the caller may invoke, which an agent may be given as tools. */
   actions(): Observable<{ items: ActionSummary[] }> {
-    return this.api.get<{ items: ActionSummary[] }>('/api/v1/actions');
+    return this.sdk.get<{ items: ActionSummary[] }>('/api/v1/actions');
   }
 }

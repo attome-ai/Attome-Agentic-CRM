@@ -153,6 +153,40 @@ export class SdkService {
   }
 
   /**
+   * Y9-T3: `ApiService.getIfChanged` through the SDK: `If-None-Match: etag`
+   * when the caller has a copy; a `304` answers `{ body: null }` with the
+   * caller's tag, otherwise the body comes back with the response's `ETag`
+   * (or `null` when it sent none). The tag is sent as given, never re-quoted.
+   */
+  getIfChanged<T>(path: string, etag: string | null): Observable<{ body: T | null; etag: string | null }> {
+    return new Observable<{ body: T | null; etag: string | null }>(subscriber => {
+      const controller = new AbortController();
+      this.client.get<T>(path, { headers: etag ? { 'If-None-Match': etag } : undefined, signal: controller.signal }).then(
+        response => {
+          subscriber.next({ body: response.data ?? null, etag: response.headers.get('ETag') });
+          subscriber.complete();
+        },
+        (err: unknown) => {
+          if (controller.signal.aborted) return;
+          if (err instanceof SdkApiError && err.status === 304) {
+            subscriber.next({ body: null, etag });
+            subscriber.complete();
+            return;
+          }
+          if (err instanceof DOMException && err.name === 'AbortError') {
+            subscriber.complete();
+            return;
+          }
+          subscriber.error(err instanceof SdkApiError
+            ? apiErrorOf(err.status, err.body, err.requestId ?? null)
+            : err);
+        },
+      );
+      return () => controller.abort();
+    });
+  }
+
+  /**
    * `write` is ApiService's option bag (idempotency key, operation id,
    * duplicate reason, merge, background, `ifMatch`), sent as the same headers.
    */
