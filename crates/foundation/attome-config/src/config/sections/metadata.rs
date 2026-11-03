@@ -55,6 +55,10 @@ pub struct MetadataSection {
     /// is copied. Unset is 1,024.
     #[serde(default)]
     pub workspace_data_max_mb: Option<i64>,
+    /// T5-T6: days a Develop workspace may go unused before it is
+    /// discarded; its owner is warned a week before. Unset is 30.
+    #[serde(default)]
+    pub workspace_idle_days: Option<i64>,
 }
 
 /// Y12-T11: the host, port and database a PostgreSQL URL names

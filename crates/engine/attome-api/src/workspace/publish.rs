@@ -549,6 +549,8 @@ pub(super) async fn publish(
     .await?;
     attome_db::tx::commit(tx).await?;
     tracing::info!(workspace = %id, changeset = %changeset, "workspace published");
+    // Nothing more runs inside a published workspace.
+    super::proxy::stop(id).await;
     Ok(Json(Published {
         workspace: published,
         plan,

@@ -24,10 +24,11 @@ PostgreSQL schema, so making one is a single call and needs no second server.
 | `DELETE /api/v1/admin/workspaces/{id}` | Discards an open workspace and drops its schema. |
 | `GET /api/v1/admin/workspaces/{id}/publish` | Previews publishing: the plan against live and any conflicts. Writes nothing. |
 | `POST /api/v1/admin/workspaces/{id}/publish` | Publishes it to live: `{}`, or `{"backup_ref": "..."}` on the production profile. |
+| `POST /api/v1/admin/workspaces/{id}/refresh` | Brings in what live changed that the workspace has not made its own. |
 
 Every call needs the data-model administration area, except publish, which needs the metadata
-rollout privilege, as any changeset apply does. Making, discarding and publishing a workspace are
-audited as configuration changes.
+rollout privilege, as any changeset apply does. Making, discarding, refreshing and publishing a
+workspace are audited as configuration changes.
 
 ## Records
 
@@ -91,4 +92,21 @@ Removals (the contract phase) are returned as `contract_apply_ids`. Apply them w
 
 Discarding a workspace also abandons its changeset if it is empty.
 
-Idle expiry and the picker in the web app follow in the next releases (roadmap T5-T6 and T5-T7).
+## Refresh and expiry
+
+A refresh brings in what live changed since the workspace was made, except what the workspace
+changed itself:
+
+- Metadata rows live added are copied in. Rows live changed are copied over, unless an operation
+  of the workspace's changeset names them (its own changes and removals stay).
+- Entity tables live added are created, empty.
+- A column live added is added to the workspace's table once the workspace's metadata has its
+  field.
+
+The workspace's process restarts on its next request, so it reads the refreshed metadata.
+
+A workspace nobody uses for `metadata.workspace_idle_days` (30 unset) is discarded by a daily job.
+Its owner is told in the app a week before, or at once when the idle time is shorter. A workspace is
+discarded only a day or more after that warning, and using it clears the warning.
+
+The picker in the web app follows in the next release (roadmap T5-T7).

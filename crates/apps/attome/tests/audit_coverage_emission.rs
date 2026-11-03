@@ -66,6 +66,13 @@ const PASSWORD: &str = "audit-emission-password-1";
 /// cannot silently outlive its route.
 const UNDRIVABLE: &[(&str, &str)] = &[
     (
+        "POST /api/v1/admin/workspaces/{id}/refresh",
+        "needs a workspace with its own schema (made by POST /api/v1/admin/workspaces, which \
+         copies every entity table); the refresh writes its Configuration event through \
+         write_security_event; attome-testapp's workspace_lifecycle.rs \
+         refresh_brings_live_changes_in drives it",
+    ),
+    (
         "POST /api/v1/admin/workspaces/{id}/publish",
         "needs a workspace whose changeset holds a change made inside the workspace's own schema \
          (a request served with that schema first); the publish writes its Configuration event \

@@ -638,6 +638,10 @@ pub enum EngineJob {
     /// AA9-T7: tells the administrators about each limit near its value,
     /// once per limit per day. Daily. Bare unit variant.
     LimitWarningCheck,
+    /// T5-T6: discards Develop workspaces unused past
+    /// `metadata.workspace_idle_days`, warning their owners first. Daily.
+    /// Bare unit variant.
+    WorkspaceExpirySweep,
     /// D25-T4: competitor mentions in new emails and notes, off the change
     /// feed. Bare unit variant.
     SalesMentionScan,
@@ -1196,6 +1200,7 @@ impl EngineJob {
             | Self::SloBurnCheck
             | Self::PerfRegressionCheck
             | Self::LimitWarningCheck
+            | Self::WorkspaceExpirySweep
             | Self::SalesMentionScan
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
@@ -1361,6 +1366,7 @@ impl EngineJob {
             EngineJob::SloBurnCheck => "SloBurnCheck",
             EngineJob::PerfRegressionCheck => "PerfRegressionCheck",
             EngineJob::LimitWarningCheck => "LimitWarningCheck",
+            EngineJob::WorkspaceExpirySweep => "WorkspaceExpirySweep",
             EngineJob::SalesMentionScan => "SalesMentionScan",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
@@ -1523,6 +1529,7 @@ impl EngineJob {
             | Self::SloBurnCheck
             | Self::PerfRegressionCheck
             | Self::LimitWarningCheck
+            | Self::WorkspaceExpirySweep
             | Self::SalesMentionScan
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
@@ -1704,6 +1711,7 @@ impl EngineJob {
             | Self::SloBurnCheck
             | Self::PerfRegressionCheck
             | Self::LimitWarningCheck
+            | Self::WorkspaceExpirySweep
             | Self::SalesMentionScan
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
@@ -2183,6 +2191,7 @@ mod tests {
         assert_round_trips(EngineJob::SloBurnCheck);
         assert_round_trips(EngineJob::PerfRegressionCheck);
         assert_round_trips(EngineJob::LimitWarningCheck);
+        assert_round_trips(EngineJob::WorkspaceExpirySweep);
         assert_round_trips(EngineJob::SalesMentionScan);
         assert_round_trips(EngineJob::SalesDefaultTeamApply {
             owner_id: Uuid::now_v7(),

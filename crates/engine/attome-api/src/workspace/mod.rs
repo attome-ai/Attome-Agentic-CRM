@@ -13,7 +13,10 @@
 //! - `DELETE /api/v1/admin/workspaces/{id}` discards one and drops its schema.
 //!
 //! - `GET`/`POST /api/v1/admin/workspaces/{id}/publish` preview and publish
-//!   it to live through the changeset engine ([`publish`], T5-T4).
+//!   it to live through the changeset engine ([`publish`], T5-T4);
+//! - `POST /api/v1/admin/workspaces/{id}/refresh` brings in live's changes
+//!   the workspace has not made its own, and a daily job discards idle
+//!   workspaces after warning their owners ([`lifecycle`], T5-T6).
 //!
 //! Requests run inside a workspace through [`proxy`] (T5-T3). Making a
 //! workspace opens the changeset its metadata writes record into. Every
@@ -22,6 +25,7 @@
 //! discarding and publishing are audited as configuration changes.
 
 pub mod data;
+pub mod lifecycle;
 pub mod proxy;
 pub mod publish;
 pub mod schema;
@@ -390,6 +394,27 @@ async fn discard(
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
     let workspace = find(&state, id).await?;
+    discard_workspace(
+        &state,
+        ctx.user_id,
+        &workspace,
+        &format!("workspace {} discarded", workspace.name),
+    )
+    .await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Discards an open workspace: marks it discarded with its
+/// `Configuration / HardDelete` event (`actor` nil for the expiry job), then
+/// drops its schema, abandons its changeset when empty and stops its
+/// process.
+pub(crate) async fn discard_workspace(
+    state: &EngineState,
+    actor: Uuid,
+    workspace: &Workspace,
+    comment: &str,
+) -> Result<(), AppError> {
+    let id = workspace.id;
     if workspace.status != "open" {
         return Err(AppError::Conflict(
             "only an open workspace can be discarded",
@@ -411,16 +436,16 @@ async fn discard(
     };
     write_security_event(
         &mut tx,
-        &audit_service(&state),
+        &audit_service(state),
         SecurityEvent::new(
             MandatoryCategory::Configuration,
             AuditOperation::HardDelete,
-            ctx.user_id,
+            actor,
             "develop_workspace",
             Some(id),
         )
         .named("workspace.discard")
-        .comment(format!("workspace {} discarded", workspace.name)),
+        .comment(comment.to_owned()),
     )
     .await?;
     attome_db::tx::commit(tx).await?;
@@ -432,12 +457,12 @@ async fn discard(
     // An empty changeset goes with it; one holding operations stays open,
     // as any changeset with recorded work does, until someone closes it.
     if let Some(changeset) = workspace.changeset_ref
-        && let Err(error) =
-            crate::changeset::close::abandon(&state, ctx.user_id, changeset, None).await
+        && let Err(error) = crate::changeset::close::abandon(state, actor, changeset, None).await
     {
         tracing::info!(workspace = %id, %changeset, error = %error, "workspace: its changeset was not abandoned");
     }
-    Ok(StatusCode::NO_CONTENT)
+    proxy::stop(id).await;
+    Ok(())
 }
 
 pub fn routes() -> Router<EngineState> {
@@ -448,10 +473,22 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/workspaces/{id}/publish",
             get(publish::preview).post(publish::publish),
         )
+        .route(
+            "/api/v1/admin/workspaces/{id}/refresh",
+            axum::routing::post(lifecycle::refresh),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(create, list, show, discard, publish::preview, publish::publish))]
+#[openapi(paths(
+    create,
+    list,
+    show,
+    discard,
+    publish::preview,
+    publish::publish,
+    lifecycle::refresh
+))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

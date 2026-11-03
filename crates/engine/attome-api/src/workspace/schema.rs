@@ -121,7 +121,7 @@ pub(crate) async fn writable_columns(
 
 /// Copies one table's structure into the workspace and, with `rows`, its
 /// rows; in its own transaction.
-async fn copy_table(
+pub(crate) async fn copy_table(
     db: &DbPool,
     live: &str,
     schema: &str,
@@ -214,7 +214,14 @@ async fn fill(db: &DbPool, live: &str, schema: &str) -> Result<CopySummary, AppE
             summary.entity_tables += 1;
         }
     }
-    // One statement a query: a prepared statement holds one command.
+    grant_runtime(db, schema).await?;
+    Ok(summary)
+}
+
+/// Lets the runtime role use the workspace schema and every table in it
+/// (again after a refresh adds tables). One statement a query: a prepared
+/// statement holds one command.
+pub(crate) async fn grant_runtime(db: &DbPool, schema: &str) -> Result<(), AppError> {
     for grant in [
         format!(
             "GRANT USAGE ON SCHEMA {} TO {}",
@@ -232,7 +239,7 @@ async fn fill(db: &DbPool, live: &str, schema: &str) -> Result<CopySummary, AppE
             .await
             .map_err(AppError::internal)?;
     }
-    Ok(summary)
+    Ok(())
 }
 
 /// Drops workspace schema `schema` with everything in it; a schema already

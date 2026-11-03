@@ -349,6 +349,24 @@ impl WorkspaceForwarder for WorkspaceHosts {
             this.proxy(workspace, request).await
         })
     }
+
+    fn stop(&self, workspace: Uuid) -> Pin<Box<dyn Future<Output = ()> + Send>> {
+        let this = HOSTS.get().cloned();
+        Box::pin(async move {
+            let Some(this) = this else {
+                return;
+            };
+            let host = this.hosts.lock().await.remove(&workspace);
+            if let Some(mut host) = host {
+                match host.child.kill().await {
+                    Ok(()) => tracing::info!(workspace = %workspace, "workspace: process stopped"),
+                    Err(error) => {
+                        tracing::warn!(workspace = %workspace, %error, "workspace: a process was not stopped");
+                    }
+                }
+            }
+        })
+    }
 }
 
 static HOSTS: std::sync::OnceLock<Arc<WorkspaceHosts>> = std::sync::OnceLock::new();

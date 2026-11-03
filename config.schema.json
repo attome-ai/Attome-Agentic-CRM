@@ -2470,6 +2470,15 @@
             "integer",
             "null"
           ]
+        },
+        "workspace_idle_days": {
+          "default": null,
+          "description": "T5-T6: days a Develop workspace may go unused before it is\ndiscarded; its owner is warned a week before. Unset is 30.",
+          "format": "int64",
+          "type": [
+            "integer",
+            "null"
+          ]
         }
       },
       "type": "object"

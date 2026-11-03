@@ -1195,6 +1195,19 @@ async fn dispatch_platform_job(
                 tracing::warn!(limits = ?notified, "limit warning: administrators told");
             }
         }
+        // T5-T6: idle Develop workspaces, warned then discarded.
+        EngineJob::WorkspaceExpirySweep => {
+            let swept =
+                attome_api::workspace::lifecycle::sweep(&attome_state, chrono::Utc::now()).await?;
+            if !swept.warned.is_empty() || !swept.discarded.is_empty() {
+                tracing::info!(
+                    warned = swept.warned.len(),
+                    discarded = swept.discarded.len(),
+                    schemas_dropped = swept.schemas_dropped,
+                    "workspace expiry sweep"
+                );
+            }
+        }
         // AA14-T8: latency regressions since the last upgrade.
         EngineJob::PerfRegressionCheck => {
             let findings = attome_server::slo::perf_regression_check(
@@ -3211,6 +3224,7 @@ const DEDUP_KEY_SLO_MONTHLY_REPORT: &str = "slo-monthly-report";
 const DEDUP_KEY_SLO_BURN_CHECK: &str = "slo-burn-check";
 const DEDUP_KEY_PERF_REGRESSION_CHECK: &str = "perf-regression-check";
 const DEDUP_KEY_LIMIT_WARNING_CHECK: &str = "limit-warning-check";
+const DEDUP_KEY_WORKSPACE_EXPIRY_SWEEP: &str = "workspace-expiry-sweep";
 const DEDUP_KEY_SALES_MENTION_SCAN: &str = "sales-mention-scan";
 const DEDUP_KEY_ACCESS_REVIEW_CAMPAIGN_SWEEP: &str = "access-review-campaign-sweep";
 const DEDUP_KEY_DATA_MATCH_SWEEP: &str = "data-match-sweep";
@@ -6922,6 +6936,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::SloBurnCheck => DEDUP_KEY_SLO_BURN_CHECK,
         EngineJob::PerfRegressionCheck => DEDUP_KEY_PERF_REGRESSION_CHECK,
         EngineJob::LimitWarningCheck => DEDUP_KEY_LIMIT_WARNING_CHECK,
+        EngineJob::WorkspaceExpirySweep => DEDUP_KEY_WORKSPACE_EXPIRY_SWEEP,
         EngineJob::SalesMentionScan => DEDUP_KEY_SALES_MENTION_SCAN,
         EngineJob::AiQualityMonitor => DEDUP_KEY_AI_QUALITY_MONITOR,
         EngineJob::PruneIdempotencyRecords => DEDUP_KEY_PRUNE_IDEMPOTENCY_RECORDS,
@@ -9674,6 +9689,17 @@ pub fn spawn_social_reviews_scheduler(db: DbPool, interval: std::time::Duration)
         job,
         DEDUP_KEY_SOCIAL_REVIEWS_SYNC,
         "social reviews sync",
+    );
+}
+
+/// T5-T6: daily, the idle Develop workspace sweep.
+pub fn spawn_workspace_expiry_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::WorkspaceExpirySweep,
+        DEDUP_KEY_WORKSPACE_EXPIRY_SWEEP,
+        "workspace expiry sweep",
     );
 }
 

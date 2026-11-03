@@ -40,6 +40,15 @@ pub trait WorkspaceForwarder: Send + Sync {
         workspace: Uuid,
         request: Request<Body>,
     ) -> Pin<Box<dyn Future<Output = Result<Response, AppError>> + Send>>;
+
+    /// Stops `workspace`'s process on this node, if it runs, so the next
+    /// request starts a fresh one (T5-T6: after a refresh, a discard or a
+    /// publish, its caches are stale). Another node's process stops when
+    /// idle.
+    fn stop(&self, workspace: Uuid) -> Pin<Box<dyn Future<Output = ()> + Send>> {
+        let _ = workspace;
+        Box::pin(async {})
+    }
 }
 
 static FORWARDER: OnceLock<Arc<dyn WorkspaceForwarder>> = OnceLock::new();
@@ -47,6 +56,13 @@ static FORWARDER: OnceLock<Arc<dyn WorkspaceForwarder>> = OnceLock::new();
 /// Installs the forwarder; once per process. `false` when one already was.
 pub fn install(forwarder: Arc<dyn WorkspaceForwarder>) -> bool {
     FORWARDER.set(forwarder).is_ok()
+}
+
+/// Stops `workspace`'s process on this node, when a forwarder is installed.
+pub async fn stop(workspace: Uuid) {
+    if let Some(forwarder) = FORWARDER.get() {
+        forwarder.stop(workspace).await;
+    }
 }
 
 /// The workspace id a header value names. Pure.
@@ -106,10 +122,14 @@ async fn route(
         return Err(AppError::Forbidden);
     }
     if let Err(error) =
-        sqlx::query("UPDATE develop_workspace SET last_used_at = now() WHERE id = $1")
-            .bind(id)
-            .execute(&state.base.db)
-            .await
+        // T5-T6: use clears an idle-expiry warning.
+        sqlx::query(
+            "UPDATE develop_workspace SET last_used_at = now(), expiry_warned_at = NULL \
+             WHERE id = $1",
+        )
+        .bind(id)
+        .execute(&state.base.db)
+        .await
     {
         tracing::warn!(workspace = %id, %error, "workspace: last use not recorded");
     }
