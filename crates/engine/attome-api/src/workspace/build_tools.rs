@@ -14,7 +14,7 @@ use std::sync::{Arc, OnceLock};
 
 use attome_ai::actions::schema_build::{self, SchemaBuilder};
 use attome_core::EngineState;
-use attome_core::changeset::{Recording, RecordingMode, RequestContext};
+use attome_core::changeset::{Recording, RequestContext};
 use attome_types::AppError;
 use serde_json::Value;
 use uuid::Uuid;

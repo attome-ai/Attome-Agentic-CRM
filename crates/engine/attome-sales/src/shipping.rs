@@ -172,7 +172,7 @@ pub async fn quote_shipping(
             ))
         })
         .collect();
-    options.sort_by(|a, b| a.0.cmp(&b.0));
+    options.sort_by_key(|a| a.0);
     Ok(options.into_iter().map(|(_, option)| option).collect())
 }
 

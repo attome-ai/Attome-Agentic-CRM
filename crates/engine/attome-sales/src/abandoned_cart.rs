@@ -103,8 +103,7 @@ pub async fn sweep(state: &EngineState) -> Result<Swept, AppError> {
             .map_err(AppError::internal)?;
             if marked.rows_affected() == 1 {
                 if consented {
-                    emit_named(&mut *tx, "contact", contact, ChangeOperation::Update, EVENT)
-                        .await?;
+                    emit_named(&mut tx, "contact", contact, ChangeOperation::Update, EVENT).await?;
                     swept.emitted += 1;
                 } else {
                     swept.no_consent += 1;

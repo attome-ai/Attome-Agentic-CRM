@@ -340,18 +340,21 @@ pub async fn confirm(
     }
 }
 
+/// An order's totals as text: subtotal, discount, shipping, tax and total.
+type TotalsRow = (
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+);
+
 async fn summary(
     state: &EngineState,
     order: Uuid,
     payment_url: Option<String>,
 ) -> Result<GuestOrder, AppError> {
-    let row: (
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-    ) = sqlx::query_as(
+    let row: TotalsRow = sqlx::query_as(
         "SELECT subtotal::text, discount_total::text, shipping_total::text, tax_total::text, \
                     grand_total::text FROM \"order\" WHERE id = $1",
     )

@@ -37,11 +37,11 @@ async fn outside_table_lists_filters_and_opens() {
     ] {
         let id = Uuid::now_v7();
         sqlx::query(&format!(
-            "INSERT INTO {table} (id, name, amount, city) VALUES ($1, $2, $3, $4)"
+            "INSERT INTO {table} (id, name, amount, city) VALUES ($1, $2, $3::numeric, $4)"
         ))
         .bind(id)
         .bind(name)
-        .bind(rust_decimal::Decimal::from(amount))
+        .bind(i64::from(amount))
         .bind(city)
         .execute(&admin)
         .await

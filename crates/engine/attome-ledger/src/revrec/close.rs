@@ -208,11 +208,14 @@ pub async fn start(state: &EngineState, actor: Uuid, period: &str) -> Result<Clo
 
 type ContractRow = (Uuid, String, String);
 
+/// A close run as `run` reads it: period, status, cursor and who started it.
+type RunRow = (String, Option<String>, Option<String>, Option<Uuid>);
+
 /// Runs the close `run_id`: recognises the month and writes the balances,
 /// then asks for approval. The run's status after.
 pub async fn run(state: &EngineState, run_id: Uuid) -> Result<String, AppError> {
     let db = &state.base.db;
-    let row: Option<(String, Option<String>, Option<String>, Option<Uuid>)> = sqlx::query_as(
+    let row: Option<RunRow> = sqlx::query_as(
         "SELECT fiscal_period, status::text, cursor, created_by FROM revrec_close_run WHERE id = $1",
     )
     .bind(run_id)

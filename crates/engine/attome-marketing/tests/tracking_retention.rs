@@ -360,7 +360,7 @@ async fn erasure_removes_visits() {
 
     let mut tx = db.begin().await.expect("begin");
     let removed = TrackingErasure
-        .erase(&mut *tx, "contact", contact)
+        .erase(&mut tx, "contact", contact)
         .await
         .expect("erase");
     tx.commit().await.expect("commit");
@@ -376,7 +376,7 @@ async fn erasure_removes_visits() {
     // Another kind of record erases nothing here.
     let mut tx = db.begin().await.expect("begin");
     let none = TrackingErasure
-        .erase(&mut *tx, "account", other_visitor)
+        .erase(&mut tx, "account", other_visitor)
         .await
         .expect("erase account");
     tx.rollback().await.expect("rollback");

@@ -370,6 +370,9 @@ pub async fn applicable_promotions(
     Ok(offers)
 }
 
+/// A coupon as redemption reads it: id, uses so far and the two limits.
+type CouponRow = (Uuid, Option<String>, Option<String>, Option<String>);
+
 /// Records `code`'s use on `order` for `contact` in `tx`; the redemption's
 /// id. Once per coupon and order: a second call for the same order answers
 /// the first redemption.
@@ -389,7 +392,7 @@ pub async fn redeem_coupon(
     if !locked {
         return Err(AppError::Conflict("the coupon is being redeemed"));
     }
-    let coupon: Option<(Uuid, Option<String>, Option<String>, Option<String>)> = sqlx::query_as(
+    let coupon: Option<CouponRow> = sqlx::query_as(
         "SELECT c.id, c.uses_count::text, p.max_uses::text, p.max_uses_per_customer::text \
            FROM coupon c JOIN promotion p ON p.id = c.promotion_ref \
           WHERE c.code = $1 AND (c.is_active IS NULL OR c.is_active = true) \
