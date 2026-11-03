@@ -97,6 +97,7 @@ pub fn intersect(
 }
 
 /// The sponsor's grants, as the agent's narrowing needs them.
+#[derive(Debug)]
 pub struct SponsorGrants {
     pub privileges: HashSet<String>,
     pub field_grants: HashSet<String>,
