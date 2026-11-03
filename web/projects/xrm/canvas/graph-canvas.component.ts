@@ -179,7 +179,7 @@ interface Pending { from: PortRef; x: number; y: number }
     .gc-wire--lit { stroke: var(--color-success, #2f855a); stroke-width: 3; }
     .gc-wire--pending { stroke-dasharray: 6 4; pointer-events: none; }
     .gc-card { position: absolute; box-sizing: border-box; border: 1px solid var(--color-border, #ccc); border-radius: 8px;
-               background: var(--color-bg, #fff); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+               background: var(--color-bg, #fff); box-shadow: 0 1px 2px color-mix(in srgb, var(--color-text-secondary, transparent) 15%, transparent); }
     .gc-card--selected { border-color: var(--color-primary, #2b6cb0); box-shadow: 0 0 0 2px var(--color-primary-bg, #dbe8f7); }
     .gc-card[data-marks~="problem"], .gc-card[data-marks~="failed"] { border-color: var(--color-danger, #c53030); border-width: 2px; }
     .gc-card[data-marks~="ran"] { border-color: var(--color-success, #2f855a); border-width: 2px; }
@@ -218,8 +218,8 @@ interface Pending { from: PortRef; x: number; y: number }
     .gc-group--selected { border-style: solid; border-color: var(--color-primary, #2b6cb0); }
     .gc-group-label { position: absolute; inset-block-start: 2px; inset-inline-start: .5rem; border: none; background: none;
                       font-size: .75rem; font-weight: 600; cursor: pointer; color: inherit; }
-    .gc-note { position: absolute; inline-size: 12rem; min-block-size: 4rem; resize: both; border: 1px solid #e3c96b;
-               background: #fff8d6; border-radius: 6px; padding: .375rem; font: inherit; font-size: .8125rem; }
+    .gc-note { position: absolute; inline-size: 12rem; min-block-size: 4rem; resize: both; border: 1px solid var(--color-warning-border, var(--color-border));
+               background: var(--color-warning-bg, var(--color-bg)); border-radius: 6px; padding: .375rem; font: inherit; font-size: .8125rem; }
     .gc-group-edit { display: flex; gap: .5rem; align-items: center; }
   `],
 })
