@@ -13,14 +13,13 @@ bounded to ten seconds:
 
 | Source | Asked by | Proposes |
 |---|---|---|
-| `registry` | the account's `cr_number`, at the Saudi commercial register (Wathq) | `legal_name_ar`, `legal_name_en`, `cr_number`, `phone`, `website`, `hq_address`, `founded_year` |
+| `registry` | the account's `cr_number`, at the Saudi commercial register (Wathq) | `legal_name_ar`, `legal_name_en`, `cr_number`, `phone`, `website`, `hq_address`, `founded_year`, and `isic_code_ref`: the first activity's ISIC Rev.4 class (the first four digits of the register's code) when the crm pack's ISIC list holds it |
 | `national_address` | the account's `hq_address` (its short address when it holds one, else the text), at SPL's National Address | `hq_address`, standardised |
 | `website` | the account's `website`: its home page only, and only when its `robots.txt` allows `/` | `logo_url` (`og:image`, else the organisation's logo), and from a schema.org organisation in JSON-LD `phone`, `hq_address` and `social_links` (`sameAs`, one per line) |
 
 The website is fetched through the crawler's SSRF-safe client, so a private or internal address
-is never read, and no AI model is called. The register's status and activities are not proposed:
-the account has no field for the status, and the ISIC list the activities would map to is not
-shipped yet.
+is never read, and no AI model is called. The register's status is not proposed: the account
+has no field for it.
 
 ## Queueing a run, budgets and agent tools
 

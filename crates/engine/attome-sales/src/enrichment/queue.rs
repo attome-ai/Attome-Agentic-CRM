@@ -269,6 +269,7 @@ pub async fn run_job(state: &EngineState, payload: &EnrichPayload) -> Result<Run
             };
             let source = RegistrySource {
                 client: WathqClient::new(&base, key, &transport),
+                db: Some(&state.base.db),
             };
             job.run(&source).await
         }

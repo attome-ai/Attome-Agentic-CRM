@@ -6,9 +6,10 @@
 //! - `registry` ([`RegistrySource`]): the Saudi commercial register (AJ4's
 //!   Wathq client) by the account's `cr_number`: legal names, the CR
 //!   number, phone, website, head-office address and founding year
-//!   (`wathq::account_patch`). The register's status and activities have no
-//!   account field to land in, and the ISIC list the activity would map to
-//!   is not shipped yet (D24-T3), so they are not proposed.
+//!   (`wathq::account_patch`), and the industry code: the first activity's
+//!   ISIC Rev.4 class (the first four digits of the register's code) as
+//!   `isic_code_ref`, when the crm pack's ISIC list (D24-T3) holds it. The
+//!   register's status has no account field to land in.
 //! - `national_address` ([`NationalAddressSource`]): SPL's National Address
 //!   (AJ5) for the account's `hq_address`, by its short address when it
 //!   holds one, else as free text; the standardised address is proposed as
@@ -70,6 +71,41 @@ async fn bounded<T>(
 /// The commercial register (AJ4) by `cr_number`.
 pub struct RegistrySource<'c> {
     pub client: WathqClient<'c>,
+    /// Where the ISIC list is read; `None` proposes no industry code.
+    pub db: Option<&'c attome_db::DbPool>,
+}
+
+/// The ISIC Rev.4 class a register activity code falls in: its first four
+/// digits (the register extends the class with two of its own). Pure.
+pub fn isic_class(code: &str) -> Option<&str> {
+    let code = code.trim();
+    (code.len() >= 4 && code.bytes().all(|b| b.is_ascii_digit())).then(|| &code[..4])
+}
+
+/// The `isic_code` record for the first activity's class, when the ISIC
+/// list is installed and holds it.
+async fn isic_ref(
+    db: &attome_db::DbPool,
+    found: &wathq::Registration,
+) -> Result<Option<uuid::Uuid>, AppError> {
+    let Some(class) = found.activities.iter().find_map(|a| isic_class(&a.code)) else {
+        return Ok(None);
+    };
+    let installed: Option<String> = sqlx::query_scalar("SELECT to_regclass('isic_code')::text")
+        .fetch_one(db)
+        .await
+        .map_err(AppError::internal)?;
+    if installed.is_none() {
+        return Ok(None);
+    }
+    sqlx::query_scalar(
+        "SELECT id FROM isic_code WHERE code = $1 AND (is_active IS NULL OR is_active = true) \
+          ORDER BY id LIMIT 1",
+    )
+    .bind(class)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)
 }
 
 impl std::fmt::Debug for RegistrySource<'_> {
@@ -97,7 +133,16 @@ impl EnrichmentSource for RegistrySource<'_> {
                 return Ok(Vec::new());
             };
             let found = bounded("the commercial register", self.client.full_info(&cr)).await?;
-            Ok(found.map(|r| registry_values(&r)).unwrap_or_default())
+            let Some(found) = found else {
+                return Ok(Vec::new());
+            };
+            let mut values = registry_values(&found);
+            if let Some(db) = self.db
+                && let Some(id) = isic_ref(db, &found).await?
+            {
+                values.push(sourced("isic_code_ref", json!(id)));
+            }
+            Ok(values)
         })
     }
 }
@@ -463,6 +508,14 @@ mod tests {
             Some("https://www.example.sa/".to_owned())
         );
         assert_eq!(site_root("ftp://example.sa"), None);
+    }
+
+    #[test]
+    fn a_register_activity_falls_in_its_isic_class() {
+        assert_eq!(isic_class("464101"), Some("4641"));
+        assert_eq!(isic_class(" 0111 "), Some("0111"));
+        assert_eq!(isic_class("46A1"), None);
+        assert_eq!(isic_class("464"), None);
     }
 
     #[test]
