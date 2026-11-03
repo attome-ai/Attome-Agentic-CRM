@@ -281,6 +281,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/app-designer').then(m => m.AppDesignerComponent),
           },
           {
+            // A12-T3 — the form designer on the shared canvas.
+            path: 'forms/:id/design',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/form-designer').then(m => m.FormDesignerComponent),
+          },
+          {
             // T2-T3 — the page designer on the shared canvas.
             path: 'pages/:id/design',
             canActivate: [authGuard],

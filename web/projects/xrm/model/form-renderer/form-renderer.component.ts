@@ -57,7 +57,12 @@ export class FormRendererComponent {
   readonly suggesting = signal<string | null>(null);
 
   /** The published form to draw. */
-  readonly formId   = input.required<string>();
+  readonly formId   = input<string>('');
+  /**
+   * A12-T3: a plan to draw instead of a published form's (a designer's
+   * unsaved draft), with no record.
+   */
+  readonly previewPlan = input<FormPlan | null>(null);
   /** The record to show and edit; without it the form is drawn empty. */
   readonly recordId = input<string | null>(null);
 
@@ -99,9 +104,13 @@ export class FormRendererComponent {
     // Y14-T3: a published change drops the cached plans.
     inject(LiveService).connect();
     effect(() => {
+      const preview = this.previewPlan();
       const formId = this.formId();
       const recordId = this.recordId();
-      untracked(() => this.load(formId, recordId));
+      untracked(() => {
+        if (preview) this.showPreview(preview);
+        else if (formId) this.load(formId, recordId);
+      });
     });
     // A11-T3: the rules' expressions, answered again on every change.
     effect(() => {
@@ -211,6 +220,24 @@ export class FormRendererComponent {
       this.changeTimer = null;
       void this.runHooks('change');
     }, CHANGE_DEBOUNCE_MS);
+  }
+
+  /** A12-T3: draws `plan` empty, with the entity's live rules. */
+  private showPreview(plan: FormPlan): void {
+    const entityChanged = this.plan()?.entity !== plan.entity;
+    this.plan.set(plan);
+    this.record.set(null);
+    this.error.set(null);
+    this.loading.set(false);
+    if (this.activeTab() >= Math.max(plan.tabs?.length ?? 0, 1)) this.activeTab.set(0);
+    if (entityChanged) {
+      this.values.set({});
+      this.schema.set(null);
+      this.model.schema(plan.entity).subscribe({
+        next: schema => this.schema.set(schema),
+        error: () => this.schema.set(null),
+      });
+    }
   }
 
   private load(formId: string, recordId: string | null): void {
