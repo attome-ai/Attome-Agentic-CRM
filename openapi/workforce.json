@@ -398,6 +398,112 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/workforce/groups/{id}/kpis": {
+      "get": {
+        "tags": [
+          "workforce"
+        ],
+        "summary": "A planning group's KPIs",
+        "description": "Forecast accuracy, service level against plan, occupancy, shrinkage, adherence, coverage and overtime over at most 31 days, each with the screen holding the records behind it. Reads only.",
+        "operationId": "workforce_group_kpis",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The planning group",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroupKpis"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks wfm_schedule.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such planning group",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The range is backwards or longer than 31 days",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "workforce",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/workforce/groups/{id}/schedules/build": {
       "post": {
         "tags": [
@@ -2038,6 +2144,35 @@
           }
         }
       },
+      "GroupKpis": {
+        "type": "object",
+        "required": [
+          "group",
+          "from",
+          "to",
+          "kpis"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "group": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kpis": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kpi"
+            }
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
       "HiringMonth": {
         "type": "object",
         "description": "One month of the hiring view.",
@@ -2091,6 +2226,39 @@
             "items": {
               "$ref": "#/components/schemas/HiringMonth"
             }
+          }
+        }
+      },
+      "Kpi": {
+        "type": "object",
+        "description": "One KPI.",
+        "required": [
+          "key",
+          "drill"
+        ],
+        "properties": {
+          "drill": {
+            "type": "string",
+            "description": "The screen with the records behind it."
+          },
+          "key": {
+            "type": "string"
+          },
+          "target": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "The plan it is held against, when there is one."
+          },
+          "value": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "A share as a percentage, or hours for `overtime`; `None` when there\nis nothing to measure it on."
           }
         }
       },

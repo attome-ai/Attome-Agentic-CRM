@@ -2546,6 +2546,192 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/admin/ai/digital-workers": {
+      "get": {
+        "tags": [
+          "ai"
+        ],
+        "summary": "List digital workers",
+        "description": "The deployment's digital workers: each agent principal working queues, the agent definition it runs, its supervisor and its hours.",
+        "operationId": "list_digital_workers",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_DigitalWorker"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "ai",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/ai/digital-workers/{id}": {
+      "put": {
+        "tags": [
+          "ai"
+        ],
+        "summary": "Make or change a digital worker",
+        "description": "Sets an agent principal's digital worker profile: the agent definition it runs on each item (which must run as this principal), the person its items escalate to, and its working days and hours. Add it to queues as a member, with per-channel capacity, as for a person. Audited.",
+        "operationId": "put_digital_worker",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The agent principal's account id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkerBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DigitalWorker"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such agent principal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The definition does not run as this agent, the supervisor is not an active person, or the hours are not valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "ai",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/ai/eval-runs/{id}": {
       "get": {
         "tags": [
@@ -10220,6 +10406,63 @@
           }
         }
       },
+      "DigitalWorker": {
+        "type": "object",
+        "description": "A digital worker's profile.",
+        "required": [
+          "user_ref",
+          "agent_definition_ref",
+          "supervisor_ref",
+          "working_days",
+          "start_minute",
+          "end_minute",
+          "time_zone",
+          "is_active",
+          "row_version"
+        ],
+        "properties": {
+          "agent_definition_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "end_minute": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "start_minute": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Minutes of the day in `time_zone`; `end_minute` 1440 is midnight."
+          },
+          "supervisor_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "time_zone": {
+            "type": "string"
+          },
+          "user_ref": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The agent principal's account id."
+          },
+          "working_days": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "description": "ISO weekdays, 1 Monday .. 7 Sunday."
+          }
+        }
+      },
       "DiscoveredModel": {
         "type": "object",
         "description": "One model as the provider reports it. Only the two fields an operator needs\nto choose from, deliberately: everything else in a provider's listing\n(pricing, ownership, capability flags) varies per protocol and is authored\non the `ai_model` catalog row by the admin, not imported.\n\nThe transport half — the request, the capped body read, the parsing and the\nmasking — lives in `attome_inference::list_models` (BIN-D3), because a\nprovider record and `config.inference.generation` describe the same kind of\ndestination and must not disagree about how it is reached. This type stays\nhere because it is the API's wire shape (`ToSchema`), which the transport\ncrate has no business knowing about.",
@@ -12321,6 +12564,97 @@
                 "status": {
                   "type": "string",
                   "description": "`staged`, `pending`, `running`, `executed`, `cancelled`,\n`invalidated`, `approval_required` or `failed`."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_DigitalWorker": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A digital worker's profile.",
+              "required": [
+                "user_ref",
+                "agent_definition_ref",
+                "supervisor_ref",
+                "working_days",
+                "start_minute",
+                "end_minute",
+                "time_zone",
+                "is_active",
+                "row_version"
+              ],
+              "properties": {
+                "agent_definition_ref": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "end_minute": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "is_active": {
+                  "type": "boolean"
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "start_minute": {
+                  "type": "integer",
+                  "format": "int32",
+                  "description": "Minutes of the day in `time_zone`; `end_minute` 1440 is midnight."
+                },
+                "supervisor_ref": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "time_zone": {
+                  "type": "string"
+                },
+                "user_ref": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "The agent principal's account id."
+                },
+                "working_days": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "format": "int32"
+                  },
+                  "description": "ISO weekdays, 1 Monday .. 7 Sunday."
                 }
               }
             }
@@ -15040,6 +15374,60 @@
             "type": "string"
           }
         }
+      },
+      "WorkerBody": {
+        "type": "object",
+        "required": [
+          "agent_definition_ref",
+          "supervisor_ref"
+        ],
+        "properties": {
+          "agent_definition_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "end_minute": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "is_active": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "start_minute": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "supervisor_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "time_zone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "working_days": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        },
+        "additionalProperties": false
       },
       "WritePolicy": {
         "type": "object",

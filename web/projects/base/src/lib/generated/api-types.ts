@@ -195,13 +195,13 @@ export interface paths {
          * List agent principals
          * @description The deployment's agent principals, newest first.
          */
-        get: operations["list_agents"];
+        get: operations["list_agent_principals"];
         put?: never;
         /**
          * Create an agent principal
          * @description Makes an agent account (kind 2, no password, no sign-in) and its principal row in one transaction. The sponsor is the caller unless named, and must be an active person. Audited.
          */
-        post: operations["create_agent"];
+        post: operations["create_agent_principal"];
         delete?: never;
         options?: never;
         head?: never;
@@ -301,7 +301,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get an agent principal */
-        get: operations["get_agent"];
+        get: operations["get_agent_principal"];
         put?: never;
         post?: never;
         delete?: never;
@@ -323,7 +323,7 @@ export interface paths {
          * Issue an API key for an agent principal
          * @description The agent's key, hashed with the versioned pepper like any user's; the secret is in this answer only. An agent that is not active gets none. Audited.
          */
-        post: operations["issue_key"];
+        post: operations["issue_agent_principal_key"];
         delete?: never;
         options?: never;
         head?: never;
@@ -344,7 +344,7 @@ export interface paths {
          * Revoke an agent principal's API key
          * @description Ends one of the agent's keys at once. Audited.
          */
-        delete: operations["revoke_key"];
+        delete: operations["revoke_agent_principal_key"];
         options?: never;
         head?: never;
         patch?: never;
@@ -364,7 +364,7 @@ export interface paths {
          *
          *     An active agent stops acting until resumed. Takes `If-Match`. Audited.
          */
-        post: operations["pause_agent"];
+        post: operations["pause_agent_principal"];
         delete?: never;
         options?: never;
         head?: never;
@@ -385,7 +385,7 @@ export interface paths {
          *
          *     A paused or suspended agent acts again; its auth epoch moves (D-116). Takes `If-Match`. Audited.
          */
-        post: operations["resume_agent"];
+        post: operations["resume_agent_principal"];
         delete?: never;
         options?: never;
         head?: never;
@@ -406,7 +406,7 @@ export interface paths {
          *
          *     Final: its keys, sessions and account end. Takes `If-Match`. Audited.
          */
-        post: operations["revoke_agent"];
+        post: operations["revoke_agent_principal"];
         delete?: never;
         options?: never;
         head?: never;
@@ -425,7 +425,7 @@ export interface paths {
          * Reassign an agent's sponsor
          * @description Names another active person as the agent's sponsor. Takes `If-Match`. Audited.
          */
-        put: operations["set_sponsor"];
+        put: operations["set_agent_principal_sponsor"];
         post?: never;
         delete?: never;
         options?: never;
@@ -447,7 +447,7 @@ export interface paths {
          *
          *     An active or paused agent is held, for review. Takes `If-Match`. Audited.
          */
-        post: operations["suspend_agent"];
+        post: operations["suspend_agent_principal"];
         delete?: never;
         options?: never;
         head?: never;
@@ -854,6 +854,46 @@ export interface paths {
          */
         get: operations["get_compliance_report"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/digital-workers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List digital workers
+         * @description The deployment's digital workers: each agent principal working queues, the agent definition it runs, its supervisor and its hours.
+         */
+        get: operations["list_digital_workers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/digital-workers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Make or change a digital worker
+         * @description Sets an agent principal's digital worker profile: the agent definition it runs on each item (which must run as this principal), the person its items escalate to, and its working days and hours. Add it to queues as a member, with per-channel capacity, as for a person. Audited.
+         */
+        put: operations["put_digital_worker"];
         post?: never;
         delete?: never;
         options?: never;
@@ -31554,6 +31594,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workforce/groups/{id}/kpis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A planning group's KPIs
+         * @description Forecast accuracy, service level against plan, occupancy, shrinkage, adherence, coverage and overtime over at most 31 days, each with the screen holding the records behind it. Reads only.
+         */
+        get: operations["workforce_group_kpis"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workforce/groups/{id}/schedules/build": {
         parameters: {
             query?: never;
@@ -41274,7 +41334,10 @@ export interface components {
             /** Format: date-time */
             due_date: string;
             name: string;
-            /** @description `"role"`, `"team"`, or `"entity_share"`. */
+            /**
+             * @description `"role"`, `"team"`, `"entity_share"`, `"s2s_client"` or `"agent"` (Q11-T2: every
+             *     S2S client, every agent principal; no other scope field).
+             */
             scope: string;
             scope_entity?: string | null;
             /** Format: uuid */
@@ -44015,6 +44078,31 @@ export interface components {
             target_entity?: string | null;
             /** Format: uuid */
             target_record_id?: string | null;
+        };
+        /** @description A digital worker's profile. */
+        DigitalWorker: {
+            /** Format: uuid */
+            agent_definition_ref: string;
+            /** Format: int32 */
+            end_minute: number;
+            is_active: boolean;
+            /** Format: int64 */
+            row_version: number;
+            /**
+             * Format: int32
+             * @description Minutes of the day in `time_zone`; `end_minute` 1440 is midnight.
+             */
+            start_minute: number;
+            /** Format: uuid */
+            supervisor_ref: string;
+            time_zone: string;
+            /**
+             * Format: uuid
+             * @description The agent principal's account id.
+             */
+            user_ref: string;
+            /** @description ISO weekdays, 1 Monday .. 7 Sunday. */
+            working_days: number[];
         };
         /** @enum {string} */
         Direction: "outbound" | "inbound" | "both";
@@ -47171,6 +47259,15 @@ export interface components {
             /** @description Each aggregate's value, by alias. */
             values: Record<string, never>;
         };
+        GroupKpis: {
+            /** Format: date */
+            from: string;
+            /** Format: uuid */
+            group: string;
+            kpis: components["schemas"]["Kpi"][];
+            /** Format: date */
+            to: string;
+        };
         GroupReplayBody: {
             /** @description The group to replay, from the groups list. */
             cause_group: string;
@@ -48693,6 +48790,23 @@ export interface components {
             item_id: string;
             /** @description Whether the article helped. */
             useful: boolean;
+        };
+        /** @description One KPI. */
+        Kpi: {
+            /** @description The screen with the records behind it. */
+            drill: string;
+            key: string;
+            /**
+             * Format: double
+             * @description The plan it is held against, when there is one.
+             */
+            target?: number | null;
+            /**
+             * Format: double
+             * @description A share as a percentage, or hours for `overtime`; `None` when there
+             *     is nothing to measure it on.
+             */
+            value?: number | null;
         };
         KpiData: {
             metrics: components["schemas"]["KpiMetric"][];
@@ -55669,6 +55783,44 @@ export interface components {
                 name: string;
                 /** @description `new`, `compliance`, `active`, `failed` or `retired`. */
                 status: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_DigitalWorker: {
+            items: {
+                /** Format: uuid */
+                agent_definition_ref: string;
+                /** Format: int32 */
+                end_minute: number;
+                is_active: boolean;
+                /** Format: int64 */
+                row_version: number;
+                /**
+                 * Format: int32
+                 * @description Minutes of the day in `time_zone`; `end_minute` 1440 is midnight.
+                 */
+                start_minute: number;
+                /** Format: uuid */
+                supervisor_ref: string;
+                time_zone: string;
+                /**
+                 * Format: uuid
+                 * @description The agent principal's account id.
+                 */
+                user_ref: string;
+                /** @description ISO weekdays, 1 Monday .. 7 Sunday. */
+                working_days: number[];
             }[];
             /** Format: int64 */
             page: number;
@@ -74449,6 +74601,19 @@ export interface components {
             status: string;
             target?: string | null;
         };
+        WorkerBody: {
+            /** Format: uuid */
+            agent_definition_ref: string;
+            /** Format: int32 */
+            end_minute?: number | null;
+            is_active?: boolean | null;
+            /** Format: int32 */
+            start_minute?: number | null;
+            /** Format: uuid */
+            supervisor_ref: string;
+            time_zone?: string | null;
+            working_days?: number[] | null;
+        };
         /** @description What moving the run would do. */
         WorkflowMovePreview: {
             /** Format: uuid */
@@ -74934,7 +75099,7 @@ export interface operations {
             };
         };
     };
-    list_agents: {
+    list_agent_principals: {
         parameters: {
             query?: {
                 /** @description Only agents in this lifecycle state. */
@@ -74977,7 +75142,7 @@ export interface operations {
             };
         };
     };
-    create_agent: {
+    create_agent_principal: {
         parameters: {
             query?: never;
             header?: never;
@@ -75235,7 +75400,7 @@ export interface operations {
             };
         };
     };
-    get_agent: {
+    get_agent_principal: {
         parameters: {
             query?: never;
             header?: never;
@@ -75285,7 +75450,7 @@ export interface operations {
             };
         };
     };
-    issue_key: {
+    issue_agent_principal_key: {
         parameters: {
             query?: never;
             header?: never;
@@ -75357,7 +75522,7 @@ export interface operations {
             };
         };
     };
-    revoke_key: {
+    revoke_agent_principal_key: {
         parameters: {
             query?: never;
             header?: never;
@@ -75407,7 +75572,7 @@ export interface operations {
             };
         };
     };
-    pause_agent: {
+    pause_agent_principal: {
         parameters: {
             query?: never;
             header?: never;
@@ -75479,7 +75644,7 @@ export interface operations {
             };
         };
     };
-    resume_agent: {
+    resume_agent_principal: {
         parameters: {
             query?: never;
             header?: never;
@@ -75551,7 +75716,7 @@ export interface operations {
             };
         };
     };
-    revoke_agent: {
+    revoke_agent_principal: {
         parameters: {
             query?: never;
             header?: never;
@@ -75623,7 +75788,7 @@ export interface operations {
             };
         };
     };
-    set_sponsor: {
+    set_agent_principal_sponsor: {
         parameters: {
             query?: never;
             header?: never;
@@ -75695,7 +75860,7 @@ export interface operations {
             };
         };
     };
-    suspend_agent: {
+    suspend_agent_principal: {
         parameters: {
             query?: never;
             header?: never;
@@ -76802,6 +76967,118 @@ export interface operations {
             };
             /** @description Caller lacks system.admin */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_digital_workers: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_DigitalWorker"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_digital_worker: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent principal's account id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkerBody"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigitalWorker"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such agent principal */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The definition does not run as this agent, the supervisor is not an active person, or the hours are not valid */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -164627,6 +164904,68 @@ export interface operations {
             };
             /** @description No such planning group */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    workforce_group_kpis: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+            };
+            header?: never;
+            path: {
+                /** @description The planning group */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroupKpis"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks wfm_schedule.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such planning group */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The range is backwards or longer than 31 days */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

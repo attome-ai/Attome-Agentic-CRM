@@ -214,7 +214,7 @@
         ],
         "summary": "List agent principals",
         "description": "The deployment's agent principals, newest first.",
-        "operationId": "list_agents",
+        "operationId": "list_agent_principals",
         "parameters": [
           {
             "name": "state",
@@ -297,7 +297,7 @@
         ],
         "summary": "Create an agent principal",
         "description": "Makes an agent account (kind 2, no password, no sign-in) and its principal row in one transaction. The sponsor is the caller unless named, and must be an active person. Audited.",
-        "operationId": "create_agent",
+        "operationId": "create_agent_principal",
         "requestBody": {
           "content": {
             "application/json": {
@@ -381,7 +381,7 @@
           "admin-security"
         ],
         "summary": "Get an agent principal",
-        "operationId": "get_agent",
+        "operationId": "get_agent_principal",
         "parameters": [
           {
             "name": "id",
@@ -459,7 +459,7 @@
         ],
         "summary": "Issue an API key for an agent principal",
         "description": "The agent's key, hashed with the versioned pepper like any user's; the secret is in this answer only. An agent that is not active gets none. Audited.",
-        "operationId": "issue_key",
+        "operationId": "issue_agent_principal_key",
         "parameters": [
           {
             "name": "id",
@@ -576,7 +576,7 @@
         ],
         "summary": "Revoke an agent principal's API key",
         "description": "Ends one of the agent's keys at once. Audited.",
-        "operationId": "revoke_key",
+        "operationId": "revoke_agent_principal_key",
         "parameters": [
           {
             "name": "id",
@@ -665,7 +665,7 @@
           "admin-security"
         ],
         "summary": "Pause an agent principal\n\nAn active agent stops acting until resumed. Takes `If-Match`. Audited.",
-        "operationId": "pause_agent",
+        "operationId": "pause_agent_principal",
         "parameters": [
           {
             "name": "id",
@@ -781,7 +781,7 @@
           "admin-security"
         ],
         "summary": "Resume an agent principal\n\nA paused or suspended agent acts again; its auth epoch moves (D-116). Takes `If-Match`. Audited.",
-        "operationId": "resume_agent",
+        "operationId": "resume_agent_principal",
         "parameters": [
           {
             "name": "id",
@@ -897,7 +897,7 @@
           "admin-security"
         ],
         "summary": "Revoke an agent principal\n\nFinal: its keys, sessions and account end. Takes `If-Match`. Audited.",
-        "operationId": "revoke_agent",
+        "operationId": "revoke_agent_principal",
         "parameters": [
           {
             "name": "id",
@@ -1014,7 +1014,7 @@
         ],
         "summary": "Reassign an agent's sponsor",
         "description": "Names another active person as the agent's sponsor. Takes `If-Match`. Audited.",
-        "operationId": "set_sponsor",
+        "operationId": "set_agent_principal_sponsor",
         "parameters": [
           {
             "name": "id",
@@ -1130,7 +1130,7 @@
           "admin-security"
         ],
         "summary": "Suspend an agent principal\n\nAn active or paused agent is held, for review. Takes `If-Match`. Audited.",
-        "operationId": "suspend_agent",
+        "operationId": "suspend_agent_principal",
         "parameters": [
           {
             "name": "id",
@@ -97958,7 +97958,7 @@
           },
           "scope": {
             "type": "string",
-            "description": "`\"role\"`, `\"team\"`, or `\"entity_share\"`."
+            "description": "`\"role\"`, `\"team\"`, `\"entity_share\"`, `\"s2s_client\"` or `\"agent\"` (Q11-T2: every\nS2S client, every agent principal; no other scope field)."
           },
           "scope_entity": {
             "type": [
