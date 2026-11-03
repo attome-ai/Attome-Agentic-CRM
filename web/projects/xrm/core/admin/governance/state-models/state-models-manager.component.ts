@@ -14,6 +14,7 @@ import {
 } from '@attome/xrm/core/admin/data';
 import { GovernanceNavComponent } from '../nav/governance-nav.component';
 import { StateDiagramComponent } from '../state-diagram/state-diagram.component';
+import { StateModelCanvasComponent } from './state-model-canvas.component';
 import { OwnerLayerBadgeComponent } from '@attome/xrm/core/generic/components';
 
 /** The editable part of a transition row, edge included. Actions are
@@ -94,7 +95,7 @@ function choicesOf(attr: AttributeMeta | undefined): string[] {
   selector: 'attome-state-models-manager',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [OwnerLayerBadgeComponent, FormsModule, TranslatePipe, GovernanceNavComponent, StateDiagramComponent, ExpressionEditorComponent],
+  imports: [OwnerLayerBadgeComponent, FormsModule, TranslatePipe, GovernanceNavComponent, StateDiagramComponent, StateModelCanvasComponent, ExpressionEditorComponent],
   styleUrls: ['../../../../styles/admin-page.css', '../governance.css', './state-models-manager.component.css'],
   templateUrl: './state-models-manager.component.html',
 })
@@ -369,9 +370,10 @@ export class StateModelsManagerComponent implements OnInit {
     });
   }
 
-  async deleteTransition(t: StateTransition): Promise<void> {
+  /** Answers whether the delete was asked of the server. */
+  async deleteTransition(t: StateTransition): Promise<boolean> {
     const current = this.detail();
-    if (!current) return;
+    if (!current) return false;
     const ok = await this.confirmSvc.confirm({
       title: this.lang.translate('governance.stateModels.deleteTransitionTitle'),
       message: this.lang.translate('governance.stateModels.deleteTransitionMessage', {
@@ -381,7 +383,7 @@ export class StateModelsManagerComponent implements OnInit {
       cancelText: this.lang.translate('governance.common.cancel'),
       variant: 'danger',
     });
-    if (!ok) return;
+    if (!ok) return false;
     this.begin();
     this.svc.deleteTransition(current.id, t.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
@@ -389,8 +391,50 @@ export class StateModelsManagerComponent implements OnInit {
         this.notice.set('governance.stateModels.transitionDeleted');
         this.replaceTransitions(this.currentTransitions().filter(x => x.id !== t.id));
       },
-      error: (e: ApiError) => this.fail(e),
+      error: (e: ApiError) => {
+        this.fail(e);
+        this.redrawCanvas();
+      },
     });
+    return true;
+  }
+
+  /** M8-T4: a connection drawn on the canvas, named after its two states until renamed in the table. */
+  addFromCanvas(link: { from: string; to: string }): void {
+    const current = this.detail();
+    if (!current) return;
+    this.begin();
+    this.svc.createTransition(current.id, {
+      from_state: link.from,
+      to_state: link.to,
+      name: this.lang.translate('governance.stateModels.canvas.defaultName', link),
+      required_privilege: null,
+      guard_expression: null,
+      entry_actions: [],
+      exit_actions: [],
+      display_order: this.currentTransitions().length,
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: created => {
+        this.busy.set(false);
+        this.notice.set('governance.stateModels.transitionAdded');
+        this.replaceTransitions([...this.currentTransitions(), created]);
+      },
+      error: (e: ApiError) => {
+        this.fail(e);
+        this.redrawCanvas();
+      },
+    });
+  }
+
+  /** M8-T4: a wire deleted on the canvas; cancelled, it is drawn again (refused, `deleteTransition` does). */
+  async removeFromCanvas(t: StateTransition): Promise<void> {
+    if (!(await this.deleteTransition(t))) this.redrawCanvas();
+  }
+
+  /** The canvas draws what is saved: a new list puts back what the server did not take. */
+  private redrawCanvas(): void {
+    const current = this.detail();
+    if (current) this.detail.set({ ...current, transitions: [...current.transitions] });
   }
 
   /** Dirty, named, a real edge (both ends set and different), not busy. */

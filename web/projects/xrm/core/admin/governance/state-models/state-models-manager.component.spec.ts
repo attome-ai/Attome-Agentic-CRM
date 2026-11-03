@@ -250,6 +250,47 @@ describe('StateModelsManagerComponent', () => {
     expect(c.detail()).toBeNull();
   });
 
+  // M8-T4: what the canvas asks goes through the same service calls and confirmation.
+  it('adds a transition drawn on the canvas, named after its states', async () => {
+    await render();
+    const c = fixture.componentInstance;
+    c.open('m1');
+    c.addFromCanvas({ from: 'open', to: 'closed' });
+    expect(svc['createTransition']).toHaveBeenCalledWith('m1', expect.objectContaining({
+      from_state: 'open', to_state: 'closed', name: 'governance.stateModels.canvas.defaultName',
+      required_privilege: null, entry_actions: [],
+    }));
+    expect(c.detail()?.transitions.map(t => t.id)).toEqual(['t1', 't2']);
+  });
+
+  it('redraws the canvas when the server refuses a drawn transition', async () => {
+    svc['createTransition'].mockReturnValue(throwError(() => ({ kind: 'conflict', message: 'already there' })));
+    await render();
+    const c = fixture.componentInstance;
+    c.open('m1');
+    const before = c.detail()?.transitions;
+    c.addFromCanvas({ from: 'open', to: 'closed' });
+    expect(c.actionError()).toBe('already there');
+    expect(c.detail()?.transitions).not.toBe(before);
+    expect(c.detail()?.transitions.map(t => t.id)).toEqual(['t1']);
+  });
+
+  it('removes a deleted wire\'s transition once confirmed; cancelled, it is drawn again', async () => {
+    await render();
+    const c = fixture.componentInstance;
+    c.open('m1');
+    const t = c.detail()?.transitions[0] as StateTransition;
+    confirm.confirm.mockResolvedValueOnce(false);
+    const before = c.detail()?.transitions;
+    await c.removeFromCanvas(t);
+    expect(svc['deleteTransition']).not.toHaveBeenCalled();
+    expect(c.detail()?.transitions).not.toBe(before);
+    expect(c.detail()?.transitions.length).toBe(1);
+    await c.removeFromCanvas(t);
+    expect(svc['deleteTransition']).toHaveBeenCalledWith('m1', 't1');
+    expect(c.detail()?.transitions).toEqual([]);
+  });
+
   it('splits comma-separated actions', () => {
     expect(splitActions(' a, b ,,c ')).toEqual(['a', 'b', 'c']);
     expect(splitActions('')).toEqual([]);

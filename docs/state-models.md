@@ -1,5 +1,14 @@
 # State models: locks, reasons, actions and automatic transitions
 
+To draw a model, open it under Governance: each state (an option of the model's
+Choice field) is a step on the canvas. Connect one state's output to another's
+input to allow that change, or select a connection and press Delete to remove
+it; each goes to the server at once, and a refused one comes back off the
+canvas. Loops are allowed, as a record may go back to a state. The arrangement
+you make is kept in your browser. Below it, enter a record's id to see each stay
+in a state and the total time in each, from the record's history of the state
+field (the latest 200 changes, under your access to that field).
+
 A state model governs one choice field of an entity (its state field): the states a record moves
 through and the transitions allowed between them. Models and transitions are administered at
 `/api/v1/admin/state-models` and travel in bundles and changesets. A record moves with

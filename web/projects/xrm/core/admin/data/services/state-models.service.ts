@@ -17,6 +17,11 @@ export type CreateStateModelBody  = ApiComponents['schemas']['CreateStateModelBo
 export type UpdateStateModelBody  = ApiComponents['schemas']['UpdateStateModelBody'];
 export type CreateTransitionBody  = ApiComponents['schemas']['CreateTransitionBody'];
 export type UpdateTransitionBody  = ApiComponents['schemas']['UpdateTransitionBody'];
+export type StateHistoryChange    = ApiComponents['schemas']['RecordHistoryChange'];
+export type StateHistoryPage      = ApiComponents['schemas']['CursorPage_RecordHistoryChange'];
+
+/** The most changes of a record's state the time-in-state view reads at once. */
+const STATE_HISTORY_PAGE = 200;
 
 @Injectable({ providedIn: 'root' })
 export class StateModelsService {
@@ -25,6 +30,14 @@ export class StateModelsService {
   /** The route returns every live model in one page (`page_size` = total). */
   listModels(): Observable<StateModelListItem[]> {
     return this.sdk.get<Page<StateModelListItem>>('/api/v1/admin/state-models').pipe(map(p => p.items));
+  }
+
+  /** M8-T4: a record's changes to its state field, newest first, by the caller's access. */
+  stateHistory(entity: string, recordId: string, field: string): Observable<StateHistoryPage> {
+    return this.sdk.get<StateHistoryPage>(
+      `/api/v1/${encodeURIComponent(entity)}/${encodeURIComponent(recordId)}/history`,
+      { query: { field, page_size: String(STATE_HISTORY_PAGE) } },
+    );
   }
 
   getModel(id: string): Observable<StateModelDetail> {

@@ -208,6 +208,11 @@
         </figure>
       </div>
 
+      <attome-state-model-canvas [modelId]="d.id" [entity]="d.entity_logicalname" [field]="d.state_field"
+                                 [states]="stateOptions()" [transitions]="d.transitions" [initial]="d.initial_state"
+                                 [readonly]="busy()" (addTransition)="addFromCanvas($event)"
+                                 (removeTransition)="removeFromCanvas($event)" />
+
       <h4>
         {{ 'governance.stateModels.transitions' | translate }}
         <span class="count">{{ d.transitions.length }}</span>

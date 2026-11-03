@@ -138,7 +138,7 @@ export type { ChangeConsumer } from './services/change-feed.service';
 export type { ChangeFeedEntry, ChangeFeedPage, ChangeKind, ChangeFeedFilter } from './services/change-feed.service';
 export { StateModelsService } from './services/state-models.service';
 export type {
-  StateModelListItem, StateModelDetail, StateTransition,
+  StateModelListItem, StateModelDetail, StateTransition, StateHistoryChange, StateHistoryPage,
   CreateStateModelBody, UpdateStateModelBody, CreateTransitionBody, UpdateTransitionBody,
 } from './services/state-models.service';
 // Solution 7 (D-785) — the open changeset the designer records into, and the
