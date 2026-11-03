@@ -177,6 +177,8 @@ impl EngineModel for ActionModel {
             .merge(crate::a2a::routes())
             // N30-T5 — per-write approval policies, admin-only.
             .merge(crate::write_policy::routes())
+            // O13-T1 — digital worker profiles, admin-only.
+            .merge(crate::digital_worker::routes())
             // AH8 — autonomy levels (admin-only) and the undo window.
             .merge(crate::autonomy::routes())
             .merge(crate::deferred::routes())

@@ -3461,6 +3461,7 @@ const DEDUP_KEY_SOCIAL_PUBLISH: &str = "social-publish";
 /// AA10-T5: mass-operation undo values past retention (a registered job type).
 const DEDUP_KEY_HEAVY_OP_UNDO_RETENTION: &str = "heavy-op-undo-retention";
 const DEDUP_KEY_AGENT_SPONSOR_RECONCILE: &str = "agent-sponsor-reconcile";
+const DEDUP_KEY_DIGITAL_WORKER_TICK: &str = "digital-worker-tick";
 const DEDUP_KEY_TIME_FORMULA_RECOMPUTE: &str = "time-formula-recompute";
 
 /// Z1-T8: reminds administrators of secrets older than
@@ -4102,6 +4103,10 @@ pub const TIME_FORMULA_RECOMPUTE: attome_jobs::JobType = attome_jobs::JobType {
     ..attome_jobs::JobType::new("time_formula_recompute", 1)
 };
 
+/// O13-T1: every minute, digital workers accept and work their offers.
+pub const DIGITAL_WORKER_TICK: attome_jobs::JobType =
+    attome_jobs::JobType::new(attome_ai::digital_worker::TICK_JOB, 1);
+
 /// AH3-T7: daily, agent principals whose sponsor is no longer an active
 /// person are paused (the backstop behind the in-transaction pause).
 pub const AGENT_SPONSOR_RECONCILE: attome_jobs::JobType =
@@ -4278,6 +4283,24 @@ pub fn register_job_types() {
                 .await
                 .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 tracing::info!(role_id = %payload.role_id, ended, "role sessions ended");
+                Ok(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            DIGITAL_WORKER_TICK,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                let stats = attome_ai::digital_worker::tick(&state)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
+                if stats.accepted > 0 {
+                    tracing::info!(
+                        accepted = stats.accepted,
+                        escalated = stats.escalated,
+                        "digital workers"
+                    );
+                }
                 Ok(())
             },
         ) {
@@ -7000,6 +7023,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == AGENT_SPONSOR_RECONCILE.name => {
             DEDUP_KEY_AGENT_SPONSOR_RECONCILE
         }
+        EngineJob::Registered(job) if job.name == DIGITAL_WORKER_TICK.name => {
+            DEDUP_KEY_DIGITAL_WORKER_TICK
+        }
         EngineJob::Registered(job) if job.name == TIME_FORMULA_RECOMPUTE.name => {
             DEDUP_KEY_TIME_FORMULA_RECOMPUTE
         }
@@ -7806,6 +7832,25 @@ pub fn spawn_heavy_op_undo_retention_scheduler(db: DbPool, interval: std::time::
         job,
         DEDUP_KEY_HEAVY_OP_UNDO_RETENTION,
         "mass undo retention",
+    );
+}
+
+/// O13-T1: every minute, the digital workers' tick.
+pub fn spawn_digital_worker_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(DIGITAL_WORKER_TICK.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "digital workers: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_DIGITAL_WORKER_TICK,
+        "digital worker tick",
     );
 }
 

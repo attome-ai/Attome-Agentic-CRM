@@ -50,6 +50,19 @@ closes.
 An agent account never signs in interactively (no password, federated, refresh, reset or MFA
 step accepts it) and is never granted `system.admin`, directly or through a role.
 
+## Digital workers
+
+A digital worker is an agent principal that works service queues. Give it a profile with
+`PUT /api/v1/admin/ai/digital-workers/{agent_id}` (`agent_definition_ref`: an agent definition
+whose `principal_ref` is this agent; `supervisor_ref`: the person its items escalate to;
+optional `working_days` (ISO weekdays), `start_minute`, `end_minute` and `time_zone`), then add
+its account to queues as a member with per-channel capacity, as for a person
+(`GET /api/v1/admin/ai/digital-workers` lists them). The queue router offers it items while it is
+on duty, instead of by presence. Every minute it accepts its offers (at most five a run) and runs
+one turn of its definition on each item's record, as itself within its sponsor's grants. An item
+it does not finish is assigned to its supervisor, recorded on the item, and the supervisor is
+told in the app.
+
 ## What an agent may do
 
 Effective authority is a conjunction, and nothing in a definition widens it: the person's own

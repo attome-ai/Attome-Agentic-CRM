@@ -66,6 +66,12 @@ const PASSWORD: &str = "audit-emission-password-1";
 /// cannot silently outlive its route.
 const UNDRIVABLE: &[(&str, &str)] = &[
     (
+        "PUT /api/v1/admin/ai/digital-workers/{id}",
+        "needs an agent principal and an ai_agent definition whose principal_ref names it \
+         (a definition needs a live model record); writes its Configuration event through \
+         write_security_event in the profile's own transaction",
+    ),
+    (
         "POST /api/v1/admin/entities/{entity_id}/scaffold",
         "needs a live entity with its fields (made through the entity and field routes first); \
          its form draft writes the Configuration event through write_security_event in the \

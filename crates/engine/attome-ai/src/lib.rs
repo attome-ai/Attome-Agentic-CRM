@@ -108,6 +108,8 @@ pub mod deferred;
 /// pub/sub, never persisted, never replayed, never on the public widget.
 pub mod delta_stream;
 pub mod descriptor;
+/// O13-T1: digital workers, agent principals working service queues.
+pub mod digital_worker;
 /// AH4-T1: the money rule, an agent's cap on the discount its steps give.
 pub mod discount_rule;
 pub mod engine;
@@ -260,6 +262,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(ai_status::openapi_fragment());
     doc.merge(a2a::openapi_fragment());
     doc.merge(write_policy::openapi_fragment());
+    doc.merge(digital_worker::openapi_fragment());
     doc.merge(autonomy::openapi_fragment());
     doc.merge(deferred::openapi_fragment());
     doc.merge(trial::openapi_fragment());

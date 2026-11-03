@@ -17,6 +17,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Digital workers (O13-T1): an agent principal with a profile (`PUT
+  /api/v1/admin/ai/digital-workers/{id}`: its agent definition, supervisor and working hours;
+  migration 0392) works service queues: the router offers it items while on duty and under
+  capacity, it accepts and works each with one turn of its definition, and escalates what it does
+  not finish to its supervisor.
 - Access reviews of machine identities (Q11-T2): a campaign's `scope` may be `s2s_client` (every
   active or suspended S2S client, reviewed under its service user) or `agent` (every agent
   principal not yet revoked); revoking an item revokes the client and its keys, or the agent

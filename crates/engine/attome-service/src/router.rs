@@ -27,6 +27,11 @@
 //! assignee); `/decline` refuses it and the next agent is offered it.
 //!
 //! Intake routing of work requests to a queue stays `crate::routing`.
+//!
+//! O13-T1: a member that is a digital worker (`digital_worker`, an agent
+//! principal) has no presence; it is available while it is on duty
+//! ([`worker_on_duty`]: its working days and hours in its time zone) and its
+//! principal is active. Capacity, skills and load apply to it as to anyone.
 
 use std::collections::{HashMap, HashSet};
 
@@ -46,6 +51,32 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::schedule_candidates::{NeededSkill, skills_cover};
+
+/// O13-T1: whether a digital worker is on duty at `now`: an ISO weekday in
+/// `days` (1 Monday .. 7 Sunday) and a minute of the day in
+/// `start..end` in its time zone (`end` 1440 is midnight; a `start` after
+/// `end` spans midnight). An unknown time zone is read as UTC. Pure.
+pub fn worker_on_duty(
+    now: DateTime<Utc>,
+    days: &[i16],
+    start_minute: i32,
+    end_minute: i32,
+    time_zone: &str,
+) -> bool {
+    use chrono::{Datelike, Timelike};
+    let tz: chrono_tz::Tz = time_zone.parse().unwrap_or(chrono_tz::UTC);
+    let local = now.with_timezone(&tz);
+    let weekday = i16::try_from(local.weekday().number_from_monday()).unwrap_or(0);
+    if !days.contains(&weekday) {
+        return false;
+    }
+    let minute = i32::try_from(local.hour() * 60 + local.minute()).unwrap_or(0);
+    if start_minute <= end_minute {
+        (start_minute..end_minute).contains(&minute)
+    } else {
+        minute >= start_minute || minute < end_minute
+    }
+}
 
 /// The registered job that runs [`tick`].
 pub const TICK_JOB: &str = "service_router_tick";
@@ -372,6 +403,29 @@ async fn agents_for(
             }
         }
     }
+    // O13-T1: digital workers among the members, and whether each is on duty.
+    let workers: Vec<(Uuid, Vec<i16>, i32, i32, String)> = sqlx::query_as(
+        "SELECT w.user_ref, w.working_days, w.start_minute, w.end_minute, w.time_zone \
+           FROM digital_worker w JOIN agent_principal a ON a.user_ref = w.user_ref \
+          WHERE w.user_ref = ANY($1) AND w.is_active AND a.lifecycle_state = 'active'",
+    )
+    .bind(&members)
+    .fetch_all(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    let now = Utc::now();
+    let on_duty: HashMap<Uuid, bool> = workers
+        .into_iter()
+        .map(|(user, days, start, end, tz)| (user, worker_on_duty(now, &days, start, end, &tz)))
+        .collect();
+    let digital: HashSet<Uuid> =
+        sqlx::query_scalar("SELECT user_ref FROM digital_worker WHERE user_ref = ANY($1)")
+            .bind(&members)
+            .fetch_all(&mut **tx)
+            .await
+            .map_err(AppError::internal)?
+            .into_iter()
+            .collect();
     let none = HashMap::new();
     Ok(members
         .into_iter()
@@ -385,7 +439,13 @@ async fn agents_for(
                     .get(&user)
                     .copied()
                     .unwrap_or_else(|| default_capacity(channel)),
-                available: crate::presence::is_available(state, user),
+                // A digital worker (even a paused or inactive one) has no
+                // presence: only its duty hours make it available.
+                available: if digital.contains(&user) {
+                    on_duty.get(&user).copied().unwrap_or(false)
+                } else {
+                    crate::presence::is_available(state, user)
+                },
                 has_skills: skills_cover(skills.get(&user).unwrap_or(&none), &need),
                 tried: tried.contains(&user),
             }
@@ -645,6 +705,39 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn digital_worker_duty_hours() {
+        use chrono::TimeZone;
+        // Monday 2026-11-02 06:00 UTC is 09:00 in Riyadh.
+        let monday = Utc.with_ymd_and_hms(2026, 11, 2, 6, 0, 0).unwrap();
+        let weekdays = [1, 2, 3, 4, 5];
+        assert!(worker_on_duty(
+            monday,
+            &weekdays,
+            8 * 60,
+            17 * 60,
+            "Asia/Riyadh"
+        ));
+        assert!(
+            !worker_on_duty(monday, &weekdays, 8 * 60, 17 * 60, "UTC"),
+            "06:00 UTC"
+        );
+        assert!(
+            !worker_on_duty(monday, &[6, 7], 0, 1440, "Asia/Riyadh"),
+            "not a working day"
+        );
+        // A night shift spanning midnight.
+        assert!(worker_on_duty(monday, &weekdays, 22 * 60, 7 * 60, "UTC"));
+        assert!(worker_on_duty(
+            monday,
+            &weekdays,
+            0,
+            1440,
+            "Nowhere/Unknown"
+        ));
+    }
+
     use super::*;
 
     fn agent(id: u128, channel_load: i64, total_load: i64) -> AgentView {
