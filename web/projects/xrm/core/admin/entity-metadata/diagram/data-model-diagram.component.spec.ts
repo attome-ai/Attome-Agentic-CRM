@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { LangService } from '@attome/base';
+import { LangService, SdkService } from '@attome/base';
 import { AdminService, LineageService } from '@attome/xrm/core/admin/data';
 import type { EntityDetail, EntityMeta, ImpactReport, RelationshipDef } from '@attome/xrm/core/admin/data';
 import { of } from 'rxjs';
@@ -50,6 +50,8 @@ function setup(rtl = false) {
     providers: [
       { provide: AdminService, useValue: admin },
       { provide: LineageService, useValue: lineage },
+      // AD1-T2: the draft review the page embeds; not exercised here.
+      { provide: SdkService, useValue: { post: vi.fn() } },
       { provide: LangService, useValue: { translate: (key: string) => key, isRtl: signal(rtl), intlLocale: () => 'en-US' } },
     ],
   });

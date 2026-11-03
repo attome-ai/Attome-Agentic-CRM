@@ -17,6 +17,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- The data model page reviews a building agent's draft (AD1-T2): the proposed entities on a diagram beside
+  what they extend or reuse, accepted or rejected per entity and field, then the accepted changes made.
 - `model.draft` plans each drafted entity against the library (AD1-T1): reuse, extend a base, ask
   about a near-duplicate name (English or Arabic), or create.
 - `POST /api/v1/admin/entities/{entity_id}/scaffold` (A1-T7): an entity's starting set, a draft main

@@ -47,3 +47,6 @@ export { duplicatesManagerAr, duplicatesManagerEn } from './duplicates-manager.i
 export { DataModelDiagramComponent, layoutDiagram } from './entity-metadata/diagram/data-model-diagram.component';
 export type { Diagram, DiagramEdge, DiagramNode, DiagramRole } from './entity-metadata/diagram/data-model-diagram.component';
 export { dataModelAr, dataModelEn } from './entity-metadata/diagram/data-model.i18n';
+// AD1-T2: a building agent's draft, accepted or rejected per item.
+export { DraftReviewComponent, acceptedCalls, layoutDraft } from './entity-metadata/diagram/draft-review.component';
+export type { DraftCall, DraftResult, DraftStep } from './entity-metadata/diagram/draft-review.component';

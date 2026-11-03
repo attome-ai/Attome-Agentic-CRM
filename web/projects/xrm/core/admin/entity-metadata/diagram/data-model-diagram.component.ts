@@ -5,6 +5,7 @@ import {
   AdminService, AttributeMeta, EntityDetail, EntityMeta, ImpactChange, ImpactReport, LineageService,
   RelationshipDef,
 } from '@attome/xrm/core/admin/data';
+import { DraftReviewComponent } from './draft-review.component';
 
 /** Where a node sits relative to the entity in the middle. */
 export type DiagramRole = 'center' | 'lookup' | 'base' | 'derived' | 'related';
@@ -138,7 +139,7 @@ const CHANGE_KEYS: Record<Exclude<ImpactChange, 'other'>, string> = {
   selector: 'xrm-data-model-diagram',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, TranslatePipe],
+  imports: [FormsModule, TranslatePipe, DraftReviewComponent],
   styleUrls: ['../../../../styles/admin-page.css'],
   styles: [`
     .dm { display: grid; grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr); gap: 1rem; }
@@ -250,6 +251,8 @@ const CHANGE_KEYS: Record<Exclude<ImpactChange, 'other'>, string> = {
           }
         </aside>
       </div>
+      <!-- AD1-T2: a building agent's draft, reviewed before anything is made. -->
+      <xrm-draft-review />
     </section>
   `,
 })
