@@ -143,7 +143,6 @@ pub fn key_column(headers: &[String], rows: &[Vec<String>]) -> Option<usize> {
 }
 
 struct Parsed {
-    entity: String,
     headers: Vec<String>,
     rows: Vec<Vec<String>>,
     key: Option<usize>,
@@ -169,12 +168,7 @@ pub fn from_files(sheets: &[Sheet]) -> FilesDraft {
         let (headers, rows) = parse_csv(&sheet.csv);
         let rows: Vec<Vec<String>> = rows.into_iter().take(MAX_INFER_ROWS).collect();
         let key = key_column(&headers, &rows);
-        parsed.push(Parsed {
-            entity: table.name.clone(),
-            headers,
-            rows,
-            key,
-        });
+        parsed.push(Parsed { headers, rows, key });
         tables.push(table);
     }
 
