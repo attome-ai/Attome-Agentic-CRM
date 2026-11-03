@@ -339,6 +339,11 @@ export class EntityService {
     return this.sdk.post(`/api/v1/${entityName}/${id}/related/${relationship}`, { body: { id: otherId } });
   }
 
+  /** A2-T4: makes `id`'s links on `relationship` exactly `ids`, in one transaction. */
+  replaceRelated(entityName: string, id: string, relationship: string, ids: readonly string[]): Observable<void> {
+    return this.sdk.put<void>(`/api/v1/${entityName}/${id}/related/${relationship}`, { body: { ids } });
+  }
+
   /** `?id=`, not a request body — `DELETE` conventionally carries none, and
    * `SdkService.delete` has no body-sending variant (see the Rust handler's
    * own doc comment for why this endpoint took the query-param route

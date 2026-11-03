@@ -75,6 +75,10 @@ export const xrmEn = {
     pathsTruncated: 'The search hit a bound; a longer connection may exist.',
   },
   // A8-T5: the polymorphic lookup picker.
+  multiLookup: {
+    linked: 'Linked records', none: 'None linked yet.', search: 'Search to add',
+    results: 'Matching records', remove: 'Remove {name}', save: 'Save links', saving: 'Saving…',
+  },
   polymorphicLookup: {
     search: 'Search records',
     placeholder: 'Search {entities}',
@@ -1694,6 +1698,8 @@ export const xrmEn = {
   fieldInput: {
     // B17-T7 — the call and WhatsApp buttons of a phone field.
     checkIn: 'Use my location', checkInFailed: 'Your location could not be read.',
+    // A2-T5 — an encrypted value, masked until revealed.
+    showValue: 'Show the value', hideValue: 'Hide the value',
     phone: { call: 'Call this number', whatsapp: 'Message on WhatsApp' },
     currency: 'Currency', baseAmount: 'In the base currency: {amount}',
     scan: {

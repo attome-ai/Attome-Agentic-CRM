@@ -193,4 +193,7 @@ export { Customer360Component, SECTION_ROWS, sectionsFor } from './customer-360/
 export type { Customer360Filter, Customer360Section } from './customer-360/customer-360.component';
 // A8-T5: the polymorphic lookup picker.
 export { PolymorphicLookupComponent } from './field/polymorphic-lookup/polymorphic-lookup.component';
+// A2-T5: the multi-lookup chips over a many-to-many relationship.
+export { MultiLookupComponent, chipsChanged } from './field/multi-lookup/multi-lookup.component';
+export type { Chip } from './field/multi-lookup/multi-lookup.component';
 export type { PolymorphicValue } from './field/polymorphic-lookup/polymorphic-lookup.component';

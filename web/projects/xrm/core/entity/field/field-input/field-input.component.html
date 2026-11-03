@@ -41,6 +41,14 @@
              [attr.aria-invalid]="showRequiredError()"
              [formControlName]="field().name"
              [placeholder]="textPlaceholder()" />
+      @if (encrypted()) {
+        <!-- A2-T5: an encrypted value is masked until the person reveals it. -->
+        <button type="button" class="scan-btn" data-testid="reveal-button" [attr.aria-pressed]="revealed()"
+                [attr.aria-label]="(revealed() ? 'fieldInput.hideValue' : 'fieldInput.showValue') | translate"
+                (click)="toggleReveal()">
+          <i [class]="revealed() ? 'las la-eye-slash' : 'las la-eye'" aria-hidden="true"></i>
+        </button>
+      }
       @if (textType() === 'tel' && ctrl.value) {
         <!-- B17-T7: call or message the number, on a phone through its own apps. -->
         <button type="button" class="scan-btn" data-testid="phone-call"

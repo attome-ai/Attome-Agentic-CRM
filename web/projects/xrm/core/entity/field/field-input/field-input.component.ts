@@ -490,7 +490,21 @@ export class FieldInputComponent implements OnInit, OnDestroy {
    * explicitly through the field editor for any field, named however it
    * likes.
    */
+  /** A2-T5: an encrypted text field (`options.encryption`) is shown masked until revealed. */
+  encrypted(): boolean {
+    const options = this.field().options as { encryption?: unknown } | null;
+    return this.field().field_type === 'text' && !!options?.encryption;
+  }
+
+  /** Whether the person chose to see an encrypted value. */
+  readonly revealed = signal(false);
+
+  toggleReveal(): void {
+    this.revealed.update(r => !r);
+  }
+
   textType(): string {
+    if (this.encrypted() && !this.revealed()) return 'password';
     const configured = this.field().field_type === 'text'
       ? (this.field().options as TextOptions | null)?.text_type
       : null;

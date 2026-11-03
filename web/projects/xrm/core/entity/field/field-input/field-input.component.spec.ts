@@ -106,6 +106,15 @@ describe('FieldInputComponent — text input type (metadata over name heuristic)
     });
     expect(field.textType()).toBe('text');
   });
+
+  it('masks an encrypted text value until it is revealed (A2-T5)', () => {
+    const field = fieldInputFor(textField('national_id', { encryption: { mode: 'randomised' } } as never));
+    expect(field.encrypted()).toBe(true);
+    expect(field.textType()).toBe('password');
+    field.toggleReveal();
+    expect(field.textType()).toBe('text');
+    expect(fieldInputFor(textField('national_id')).encrypted()).toBe(false);
+  });
 });
 
 const SESSION_ID_36 = '00000000-0000-0000-0000-000000000000';

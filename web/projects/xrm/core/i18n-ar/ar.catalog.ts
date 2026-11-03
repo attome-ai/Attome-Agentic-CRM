@@ -71,6 +71,10 @@ export const xrmAr = {
     pathsTruncated: 'بلغ البحث حدًا؛ قد يوجد رابط أطول.',
   },
   // A8-T5: the polymorphic lookup picker.
+  multiLookup: {
+    linked: 'السجلات المرتبطة', none: 'لا سجلات مرتبطة بعد.', search: 'ابحث للإضافة',
+    results: 'السجلات المطابقة', remove: 'إزالة {name}', save: 'حفظ الروابط', saving: 'جارٍ الحفظ…',
+  },
   polymorphicLookup: {
     search: 'البحث في السجلات',
     placeholder: 'ابحث في {entities}',
@@ -1655,6 +1659,7 @@ export const xrmAr = {
   fieldInput: {
     // B17-T7 — the call and WhatsApp buttons of a phone field.
     checkIn: 'استخدم موقعي', checkInFailed: 'تعذّرت قراءة موقعك.',
+    showValue: 'إظهار القيمة', hideValue: 'إخفاء القيمة',
     phone: { call: 'اتصل بهذا الرقم', whatsapp: 'راسل عبر واتساب' },
     currency: 'العملة', baseAmount: 'بالعملة الأساسية: {amount}',
     scan: {
