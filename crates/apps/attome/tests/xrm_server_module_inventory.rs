@@ -264,6 +264,9 @@ const BASELINE: &[&str] = &[
     "validation_stats",
     "view_admin",
     "webcrawl_admin",
+    // T5-T2: Develop workspaces copy every engine's entity tables and, at
+    // publish, apply through the changeset engine: composition.
+    "workspace",
 ];
 
 fn workspace_root() -> PathBuf {

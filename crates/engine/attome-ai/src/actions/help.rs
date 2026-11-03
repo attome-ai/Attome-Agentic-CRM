@@ -435,6 +435,10 @@ pub const DOCS: &[(&str, &str)] = &[
         "docs/web-crawling.md",
         include_str!("../../../../../docs/web-crawling.md"),
     ),
+    (
+        "docs/workspaces.md",
+        include_str!("../../../../../docs/workspaces.md"),
+    ),
 ];
 
 const SCHEMA: &str = r#"{

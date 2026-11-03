@@ -312,6 +312,8 @@ pub mod validation_simulation;
 pub mod validation_stats;
 pub mod view_admin;
 mod webcrawl_admin;
+/// T5-T2: Develop workspaces inside the deployment.
+pub mod workspace;
 // A1-T5: a base's records across its entities, and the index rebuild.
 mod base_index_routes;
 

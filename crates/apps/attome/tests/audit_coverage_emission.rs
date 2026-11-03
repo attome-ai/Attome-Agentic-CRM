@@ -8360,6 +8360,29 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"changesets": [document]})),
             )
         }
+        // T5-T2: Develop workspaces.
+        "POST /api/v1/admin/workspaces" => request(
+            "POST",
+            "/api/v1/admin/workspaces",
+            t,
+            Some(json!({"name": "emission"})),
+        ),
+        "DELETE /api/v1/admin/workspaces/{id}" => {
+            // A registry row whose schema was never made: discarding drops
+            // a schema that is not there, which is fine.
+            let id = Uuid::now_v7();
+            sqlx::query(
+                "INSERT INTO develop_workspace (id, name, schema_name, owner_ref) \
+                 VALUES ($1, 'emission', $2, $3)",
+            )
+            .bind(id)
+            .bind(format!("ws_{}", id.simple()))
+            .bind(Uuid::now_v7())
+            .execute(&fx.base.db)
+            .await
+            .expect("seed a workspace");
+            request("DELETE", &format!("/api/v1/admin/workspaces/{id}"), t, None)
+        }
         _ => return None,
     };
     Some((req, None))

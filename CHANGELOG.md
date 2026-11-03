@@ -17,6 +17,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Develop workspaces (T5-T2): `POST`/`GET /api/v1/admin/workspaces`, `GET`/`DELETE .../{id}`; each is
+  its own schema with the live metadata and empty entity tables; migration 0386. `docs/workspaces.md`.
 - A rejected hook answer may carry a message key (`{"reject": {"key", "args"}}`); a caller sending
   `Accept-Language: ar` reads the extension's Arabic text in `message` and `detail` (Y10-T2).
 - Next-best actions (O5-T1): `GET`/`POST /api/v1/admin/predict/next-actions`, `DELETE .../{id}`,
