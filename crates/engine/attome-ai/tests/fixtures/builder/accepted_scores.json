@@ -1,0 +1,4 @@
+{
+  "note": "AD10-T2: the builder suite's last accepted score per model (percent of tasks passed) and the model.draft prompt version it was taken with. A live run (tests/builder_suite.rs with ATTOME_BUILDER_SUITE_DRAFTS) fails when a model scores more than 5 points below its entry here. Accept a new score by replacing the entry with the line the run prints, in the same change as the prompt or model change it measures.",
+  "accepted": []
+}

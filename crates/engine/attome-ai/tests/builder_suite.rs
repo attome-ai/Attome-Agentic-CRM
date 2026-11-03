@@ -10,6 +10,8 @@
 //!   `ATTOME_BUILDER_SUITE_DRAFTS` names) are graded and the per-task and
 //!   per-model report printed. Without the variable the live test does
 //!   nothing.
+//! - The gate (AD10-T2): a live run fails when a model scores more than five
+//!   points below its accepted score (`fixtures/builder/accepted_scores.json`).
 
 #![allow(
     clippy::expect_used,
@@ -19,7 +21,7 @@
 )]
 
 use attome_ai::builder::review::name_ok;
-use attome_ai::builder::suite::{BuildTask, grade, report};
+use attome_ai::builder::suite::{AcceptedScore, BuildTask, gate, grade, report, score};
 use serde_json::{Value, json};
 
 fn tasks() -> Vec<BuildTask> {
@@ -118,7 +120,35 @@ fn recorded_live_drafts_are_graded_when_given() {
             grades.push(graded);
         }
     }
-    for line in report(&grades) {
+    let summary = report(&grades);
+    for line in &summary {
         println!("{}: {} of {} passed", line.model, line.passed, line.graded);
+        println!(
+            "accepted entry: {}",
+            json!({
+                "model": line.model,
+                "score": (score(line) * 10.0).round() / 10.0,
+                "prompt_version": attome_ai::actions::draft_model::DRAFT_PROMPT_VERSION,
+            })
+        );
+    }
+    let blocked = gate(&summary, &accepted());
+    assert!(
+        blocked.is_empty(),
+        "the builder suite got worse: {blocked:#?}"
+    );
+}
+
+fn accepted() -> Vec<AcceptedScore> {
+    let fixture: Value =
+        serde_json::from_str(include_str!("fixtures/builder/accepted_scores.json"))
+            .expect("parses");
+    serde_json::from_value(fixture["accepted"].clone()).expect("the accepted scores parse")
+}
+
+#[test]
+fn the_accepted_scores_parse() {
+    for entry in accepted() {
+        assert!((0.0..=100.0).contains(&entry.score), "{entry:?}");
     }
 }

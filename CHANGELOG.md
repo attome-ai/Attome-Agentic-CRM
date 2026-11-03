@@ -17,6 +17,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- The builder suite's gate (AD10-T2): a live run of `tests/builder_suite.rs` fails when a model
+  scores more than 5 points below its last accepted score (`fixtures/builder/accepted_scores.json`),
+  so a prompt or model change that builds worse is blocked; the run prints the entry to accept.
 - One screen to review and publish a whole draft app (AD4-T2): `/xrm/admin/develop/review/{workspace}`
   groups the workspace's changes against live by kind, shows the checklist of every entity the draft
   touches (`GET /api/v1/admin/checklist?entities=...`, read inside the workspace) and publishes it,

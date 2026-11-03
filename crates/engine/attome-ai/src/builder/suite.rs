@@ -17,6 +17,11 @@
 //! and per model. The scripted mode grades recorded drafts (deterministic,
 //! in the unit tests); the live mode sends each description through
 //! `model.draft` with a configured model. Pure.
+//!
+//! AD10-T2: [`gate`] holds a change to the building prompts or models to
+//! the last accepted score per model (`fixtures/builder/accepted_scores.json`):
+//! a model whose score falls more than [`MAX_SCORE_DROP`] points blocks the
+//! change, which is how the live run of `tests/builder_suite.rs` fails.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -185,6 +190,51 @@ pub fn report(grades: &[TaskGrade]) -> Vec<ModelSummary> {
     out
 }
 
+/// The most a model's score (percent of tasks passed) may fall below its
+/// last accepted score before the change is blocked.
+pub const MAX_SCORE_DROP: f64 = 5.0;
+
+/// A model's last accepted score.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AcceptedScore {
+    pub model: String,
+    /// Percent of the suite's tasks passed, 0–100.
+    pub score: f64,
+    /// The `model.draft` prompt version the score was taken with.
+    #[serde(default)]
+    pub prompt_version: Option<String>,
+}
+
+/// A summary's score: percent of graded tasks passed, 0 when none was. Pure.
+pub fn score(summary: &ModelSummary) -> f64 {
+    if summary.graded == 0 {
+        return 0.0;
+    }
+    summary.passed as f64 * 100.0 / summary.graded as f64
+}
+
+/// Why a run blocks the change: each model whose score fell more than
+/// [`MAX_SCORE_DROP`] points below its accepted one. A model without an
+/// accepted score, or not in this run, is not judged. Pure.
+pub fn gate(run: &[ModelSummary], accepted: &[AcceptedScore]) -> Vec<String> {
+    let mut blocked = Vec::new();
+    for summary in run {
+        let Some(before) = accepted.iter().find(|a| a.model == summary.model) else {
+            continue;
+        };
+        let now = score(summary);
+        if before.score - now > MAX_SCORE_DROP {
+            blocked.push(format!(
+                "{}: the builder suite scores {now:.1}, {:.1} points below the accepted {:.1}",
+                summary.model,
+                before.score - now,
+                before.score
+            ));
+        }
+    }
+    blocked
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -268,6 +318,37 @@ mod tests {
                     graded: 1
                 },
             ]
+        );
+    }
+
+    #[test]
+    fn builder_gate_blocks_a_drop_over_five_points() {
+        let summary = |model: &str, passed| ModelSummary {
+            model: model.into(),
+            passed,
+            graded: 30,
+        };
+        let accepted = |model: &str, score| AcceptedScore {
+            model: model.into(),
+            score,
+            prompt_version: None,
+        };
+        let before = [accepted("a", 90.0), accepted("b", 90.0)];
+        // 25 of 30 is 83.3: 6.7 points down, blocked; 26 of 30 is 86.7, allowed.
+        let blocked = gate(&[summary("a", 25), summary("b", 26)], &before);
+        assert_eq!(blocked.len(), 1);
+        assert!(blocked[0].starts_with("a:"), "{blocked:?}");
+        // Better, or new to the suite: nothing to block.
+        assert!(gate(&[summary("a", 30), summary("new", 0)], &before).is_empty());
+        assert!((score(&summary("a", 15)) - 50.0).abs() < f64::EPSILON);
+        assert!(
+            score(&ModelSummary {
+                model: "x".into(),
+                passed: 0,
+                graded: 0
+            })
+            .abs()
+                < f64::EPSILON
         );
     }
 }
