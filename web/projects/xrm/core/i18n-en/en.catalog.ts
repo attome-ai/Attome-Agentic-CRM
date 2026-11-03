@@ -2117,6 +2117,7 @@ export const xrmEn = {
     shell: { loadFailed: 'Could not load the dashboard. Check your connection and reload.' },
     viewer: {
       noHomeDashboard: 'No home dashboard yet',
+      overQueryBudget: 'This page reads {reads} sources when it opens, more than 15: it may open slowly. Combine widgets or split the page.',
       goToDashboards: 'Create a dashboard',
       edit: 'Edit', back: 'Back', dashboardPickerLabel: 'Dashboard',
       noPagesYet: 'This dashboard has no pages yet.', noWidgetsYet: 'This page has no widgets yet.', openDesigner: 'Open the designer',

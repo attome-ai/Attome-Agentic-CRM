@@ -2071,6 +2071,7 @@ export const xrmAr = {
     shell: { loadFailed: 'تعذّر تحميل لوحة المعلومات. تحقق من اتصالك وأعد تحميل الصفحة.' },
     viewer: {
       noHomeDashboard: 'لا توجد لوحة معلومات رئيسية بعد',
+      overQueryBudget: 'تقرأ هذه الصفحة {reads} مصدرًا عند فتحها، أكثر من 15: قد يبطئ فتحها. اجمع الأدوات أو قسّم الصفحة.',
       goToDashboards: 'إنشاء لوحة معلومات',
       edit: 'تعديل', back: 'رجوع', dashboardPickerLabel: 'لوحة المعلومات',
       noPagesYet: 'لا توجد صفحات في لوحة المعلومات هذه بعد.', noWidgetsYet: 'لا توجد ودجات في هذه الصفحة بعد.', openDesigner: 'فتح المصمم',

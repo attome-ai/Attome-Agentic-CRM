@@ -165,6 +165,8 @@ export class DashboardViewerComponent implements OnInit {
   readonly refreshing = signal(false);
   /** A background refresh failed; the previous numbers are still shown. */
   readonly refreshFailed = signal(false);
+  /** P5-T2: the page reads more than the budget allows (the server says how many). */
+  readonly overQueryBudget = signal<number | null>(null);
   /** A coarse clock for the "updated" text and staleness. */
   readonly now = signal(Date.now());
 
@@ -197,6 +199,8 @@ export class DashboardViewerComponent implements OnInit {
         this.dataError.set(null);
         this.refreshFailed.set(false);
         this.results.set(new Map(outcome.res.widgets.map(w => [w.widget_id, w])));
+        const budget = outcome.res as { reads?: number; over_query_budget?: boolean };
+        this.overQueryBudget.set(budget.over_query_budget ? budget.reads ?? null : null);
         this.loadedAt.set(new Date());
         this.now.set(Date.now());
       } else if (outcome.background && this.results() !== null) {

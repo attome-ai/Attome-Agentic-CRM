@@ -126,3 +126,4 @@
     flex-direction: column;
   }
 }
+.xdv-budget { color: var(--color-warning, #8a5a00); margin-block: .5rem; }

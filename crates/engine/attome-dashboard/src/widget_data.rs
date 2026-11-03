@@ -54,6 +54,23 @@ use crate::widget_registry::{RenderKind, registry};
 
 /// D-522 — at most this many widgets of one page execute at once.
 const PAGE_CONCURRENCY: usize = 4;
+
+/// P5-T2: above this many reads a page opens slowly, and its answer says so.
+pub const PAGE_QUERY_BUDGET: usize = 15;
+
+/// P5-T2: how many of a page's widgets read data when it opens (a query, a
+/// view, a metric or structured data; text and buttons read nothing). Pure.
+pub fn page_reads(widgets: &[Value]) -> usize {
+    widgets
+        .iter()
+        .filter(|w| {
+            !matches!(
+                crate::execution::classify(w).0,
+                crate::execution::DataClass::None
+            )
+        })
+        .count()
+}
 /// Snapshots a trendline shows.
 const TRENDLINE_POINTS: i64 = 12;
 
@@ -215,6 +232,12 @@ pub struct PageDataResponse {
     pub published_version_number: Option<i64>,
     /// One entry per widget on the page, in layout order.
     pub widgets: Vec<PageWidgetResult>,
+    /// P5-T2: how many widgets read data; every one takes the page's
+    /// parameters and variables.
+    pub reads: usize,
+    /// P5-T2: more than [`PAGE_QUERY_BUDGET`] reads: the page may open
+    /// slowly; combine widgets or split the page.
+    pub over_query_budget: bool,
 }
 
 impl std::fmt::Debug for PageDataResponse {
@@ -1040,6 +1063,7 @@ pub(crate) async fn run_page(
     )?;
     let page = page.clone();
     let widgets: Vec<Value> = widgets.into_iter().cloned().collect();
+    let reads = page_reads(&widgets);
     let pending: Vec<_> = widgets
         .into_iter()
         .enumerate()
@@ -1058,6 +1082,8 @@ pub(crate) async fn run_page(
         definition_source: definition.source,
         published_version_number: definition.version_number,
         widgets: results.into_iter().map(|(_, result)| result).collect(),
+        reads,
+        over_query_budget: reads > PAGE_QUERY_BUDGET,
     })
 }
 
@@ -1079,4 +1105,26 @@ struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+#[cfg(test)]
+mod global_filters_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn global_filters_count_the_widgets_that_read_and_flag_the_budget() {
+        let query = json!({ "widget_type": "bar_chart", "query_id": "0190a0c2-0000-7000-8000-000000000001" });
+        let view = json!({ "widget_type": "entity_data_grid", "view_id": "0190a0c2-0000-7000-8000-000000000002" });
+        let text = json!({ "widget_type": "text", "config": { "text": "hello" } });
+        let structured =
+            json!({ "widget_type": "bar_chart", "config": { "data": { "entity": "deal" } } });
+        assert_eq!(
+            page_reads(&[query.clone(), view, text.clone(), structured]),
+            3
+        );
+        assert_eq!(page_reads(&[text]), 0);
+        let many: Vec<Value> = std::iter::repeat_n(query, PAGE_QUERY_BUDGET + 1).collect();
+        assert!(page_reads(&many) > PAGE_QUERY_BUDGET);
+    }
 }

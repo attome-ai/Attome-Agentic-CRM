@@ -121,6 +121,11 @@
     @if (dataError(); as dataErr) {
       <div class="xf-error-banner" role="alert"><i class="las la-exclamation-circle"></i> {{ dataErr }}</div>
     }
+    @if (overQueryBudget(); as reads) {
+      <p class="xdv-budget" role="status" data-testid="dashboard-query-budget">
+        {{ 'dashboard.viewer.overQueryBudget' | translate: { reads: reads } }}
+      </p>
+    }
 
     @if (pages().length === 0) {
       <div class="xf-empty" data-testid="dashboard-empty">
