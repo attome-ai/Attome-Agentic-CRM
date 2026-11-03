@@ -291,10 +291,15 @@ export abstract class EngineFormBase implements OnInit {
       const fg = this.form();
       untracked(() => this.applyAllowedValues(fg, allowed));
     });
-    // A11-T3: the rules' expressions, answered again on every change.
+    // A11-T3: the rules' expressions, answered again on every change. The
+    // record is read only when a rule has an expression, so a form without
+    // one schedules nothing as values change.
     effect(() => {
+      if (!this.ruleExpressionList().length) {
+        untracked(() => { if (this.expressionResults().size) this.expressionResults.set(new Map()); });
+        return;
+      }
       const record = this.recordValue();
-      this.ruleExpressionList();
       untracked(() => void this.evaluateRuleExpressions(record));
     });
   }

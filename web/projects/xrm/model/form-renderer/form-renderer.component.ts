@@ -114,8 +114,11 @@ export class FormRendererComponent {
     });
     // A11-T3: the rules' expressions, answered again on every change.
     effect(() => {
+      if (!this.expressions().length) {
+        untracked(() => { if (this.expressionResults().size) this.expressionResults.set(new Map()); });
+        return;
+      }
       const values = this.values();
-      this.expressions();
       untracked(() => void this.evaluateExpressions(values));
     });
   }
