@@ -2855,13 +2855,29 @@
               "null"
             ]
           },
+          "review_request_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "T1-T3: the owner's review a builder's publish waits on."
+          },
           "row_version": {
             "type": "integer",
             "format": "int64"
           },
           "status": {
             "type": "string",
-            "description": "`open`, `publishing`, `published` or `discarded`."
+            "description": "`open`, `in_review` (a builder's publish waits for the owner, T1-T3),\n`publishing`, `published` or `discarded`."
+          },
+          "team_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "T1-T3: the team whose builders work in it beside its owner."
           }
         }
       }

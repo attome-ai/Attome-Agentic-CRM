@@ -2698,6 +2698,84 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/admin/apps/{id}/checklist": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "An app's checklist",
+        "description": "For each entity the app names: whether it has fields, a form and a view,\nrules, roles that may read it, passing customer tests and an Arabic label,\neach with the screen that fixes it. Reads only.",
+        "operationId": "app_checklist",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The app",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppChecklist"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such app",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/archive/records": {
       "get": {
         "tags": [
@@ -54304,7 +54382,7 @@
           "admin"
         ],
         "summary": "Publish a workspace",
-        "description": "Applies the workspace's changes to live through the changeset engine:\ncloses its changeset, plans it against live, and queues the apply behind\nthe same customer-test, governance and approval gates as any changeset\napply. Refused when live changed the same objects since the workspace was\nmade. Calling it again resumes a publish that stopped after the close.\nAudited.",
+        "description": "Applies the workspace's changes to live through the changeset engine:\ncloses its changeset, plans it against live, and queues the apply behind\nthe same customer-test, governance and approval gates as any changeset\napply. Refused when live changed the same objects since the workspace was\nmade. Calling it again resumes a publish that stopped after the close.\nA builder's publish of a workspace someone else owns (or any, without\n`develop.publish`) waits for the owner's review instead: 202, the\nworkspace `in_review`; approved, it publishes as the owner. Audited.",
         "operationId": "publish_workspace",
         "parameters": [
           {
@@ -54339,6 +54417,16 @@
               }
             }
           },
+          "202": {
+            "description": "Waits for the owner's review",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewRequested"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Missing or invalid credentials",
             "content": {
@@ -54350,7 +54438,7 @@
             }
           },
           "403": {
-            "description": "Caller lacks system.admin and metadata.rollout",
+            "description": "Caller may not publish this workspace",
             "content": {
               "application/json": {
                 "schema": {
@@ -89658,6 +89746,31 @@
           }
         }
       },
+      "AppChecklist": {
+        "type": "object",
+        "description": "An app's checklist.",
+        "required": [
+          "app",
+          "entities",
+          "ready"
+        ],
+        "properties": {
+          "app": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntityChecklist"
+            }
+          },
+          "ready": {
+            "type": "boolean",
+            "description": "Every entity ready, and the app names at least one."
+          }
+        }
+      },
       "AppClash": {
         "type": "object",
         "description": "A property two apps set.",
@@ -95271,6 +95384,37 @@
               "null"
             ],
             "description": "`true` granted, `false` withdrawn, `null` never asked."
+          }
+        }
+      },
+      "ChecklistItem": {
+        "type": "object",
+        "description": "One checklist item.",
+        "required": [
+          "area",
+          "done",
+          "required",
+          "detail",
+          "fix"
+        ],
+        "properties": {
+          "area": {
+            "type": "string",
+            "description": "`data`, `screens`, `rules`, `access`, `tests` or `docs`."
+          },
+          "detail": {
+            "type": "string"
+          },
+          "done": {
+            "type": "boolean"
+          },
+          "fix": {
+            "type": "string",
+            "description": "The screen that fixes it."
+          },
+          "required": {
+            "type": "boolean",
+            "description": "`false` for an item an app may go without (rules)."
           }
         }
       },
@@ -101176,6 +101320,30 @@
           },
           "secret_base32": {
             "type": "string"
+          }
+        }
+      },
+      "EntityChecklist": {
+        "type": "object",
+        "description": "One entity's checklist.",
+        "required": [
+          "entity",
+          "items",
+          "ready"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChecklistItem"
+            }
+          },
+          "ready": {
+            "type": "boolean",
+            "description": "Every required item done."
           }
         }
       },
@@ -108639,6 +108807,14 @@
               "null"
             ],
             "description": "What it is for, at most 1,000 characters."
+          },
+          "team": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "T1-T3: a team whose builders work in it too; the caller's own team."
           }
         },
         "additionalProperties": false
@@ -125955,13 +126131,29 @@
                     "null"
                   ]
                 },
+                "review_request_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "T1-T3: the owner's review a builder's publish waits on."
+                },
                 "row_version": {
                   "type": "integer",
                   "format": "int64"
                 },
                 "status": {
                   "type": "string",
-                  "description": "`open`, `publishing`, `published` or `discarded`."
+                  "description": "`open`, `in_review` (a builder's publish waits for the owner, T1-T3),\n`publishing`, `published` or `discarded`."
+                },
+                "team_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "T1-T3: the team whose builders work in it beside its owner."
                 }
               }
             }
@@ -130699,6 +130891,29 @@
               "null"
             ],
             "description": "The amounts at that rate, in the base currency."
+          }
+        }
+      },
+      "ReviewRequested": {
+        "type": "object",
+        "description": "A publish waiting for the owner's review.",
+        "required": [
+          "workspace",
+          "status",
+          "review_request_id"
+        ],
+        "properties": {
+          "review_request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "`in_review`."
+          },
+          "workspace": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -138401,13 +138616,29 @@
               "null"
             ]
           },
+          "review_request_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "T1-T3: the owner's review a builder's publish waits on."
+          },
           "row_version": {
             "type": "integer",
             "format": "int64"
           },
           "status": {
             "type": "string",
-            "description": "`open`, `publishing`, `published` or `discarded`."
+            "description": "`open`, `in_review` (a builder's publish waits for the owner, T1-T3),\n`publishing`, `published` or `discarded`."
+          },
+          "team_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "T1-T3: the team whose builders work in it beside its owner."
           }
         }
       },

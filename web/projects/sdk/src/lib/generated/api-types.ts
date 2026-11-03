@@ -1642,6 +1642,28 @@ export interface paths {
         patch: operations["update_app"];
         trace?: never;
     };
+    "/api/v1/admin/apps/{id}/checklist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An app's checklist
+         * @description For each entity the app names: whether it has fields, a form and a view,
+         *     rules, roles that may read it, passing customer tests and an Arabic label,
+         *     each with the screen that fixes it. Reads only.
+         */
+        get: operations["app_checklist"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/archive/records": {
         parameters: {
             query?: never;
@@ -14303,7 +14325,9 @@ export interface paths {
          *     the same customer-test, governance and approval gates as any changeset
          *     apply. Refused when live changed the same objects since the workspace was
          *     made. Calling it again resumes a publish that stopped after the close.
-         *     Audited.
+         *     A builder's publish of a workspace someone else owns (or any, without
+         *     `develop.publish`) waits for the owner's review instead: 202, the
+         *     workspace `in_review`; approved, it publishes as the owner. Audited.
          */
         post: operations["publish_workspace"];
         delete?: never;
@@ -35951,6 +35975,14 @@ export interface components {
             /** Format: uuid */
             sidebar_root_ref?: string | null;
         };
+        /** @description An app's checklist. */
+        AppChecklist: {
+            /** Format: uuid */
+            app: string;
+            entities: components["schemas"]["EntityChecklist"][];
+            /** @description Every entity ready, and the app names at least one. */
+            ready: boolean;
+        };
         /** @description A property two apps set. */
         AppClash: {
             /** @description The entity's logical name, or `<entity>.<field>`. */
@@ -39466,6 +39498,17 @@ export interface components {
             order_id: string;
             /** @description What the order comes to after offers. */
             total: string;
+        };
+        /** @description One checklist item. */
+        ChecklistItem: {
+            /** @description `data`, `screens`, `rules`, `access`, `tests` or `docs`. */
+            area: string;
+            detail: string;
+            done: boolean;
+            /** @description The screen that fixes it. */
+            fix: string;
+            /** @description `false` for an item an app may go without (rules). */
+            required: boolean;
         };
         /** @description A person's marks for one run. */
         ChecklistRunBody: {
@@ -44494,6 +44537,13 @@ export interface components {
         EnrollResponseBody: {
             otpauth_uri: string;
             secret_base32: string;
+        };
+        /** @description One entity's checklist. */
+        EntityChecklist: {
+            entity: string;
+            items: components["schemas"]["ChecklistItem"][];
+            /** @description Every required item done. */
+            ready: boolean;
         };
         /** @description One target entity of a wave. */
         EntityCompare: {
@@ -51060,6 +51110,11 @@ export interface components {
             name: string;
             /** @description What it is for, at most 1,000 characters. */
             purpose?: string | null;
+            /**
+             * Format: uuid
+             * @description T1-T3: a team whose builders work in it too; the caller's own team.
+             */
+            team?: string | null;
         };
         NewWritePolicy: {
             /** @description A write action id, such as `record.update`. */
@@ -62106,10 +62161,23 @@ export interface components {
                 /** Format: uuid */
                 owner_ref: string;
                 purpose?: string | null;
+                /**
+                 * Format: uuid
+                 * @description T1-T3: the owner's review a builder's publish waits on.
+                 */
+                review_request_ref?: string | null;
                 /** Format: int64 */
                 row_version: number;
-                /** @description `open`, `publishing`, `published` or `discarded`. */
+                /**
+                 * @description `open`, `in_review` (a builder's publish waits for the owner, T1-T3),
+                 *     `publishing`, `published` or `discarded`.
+                 */
                 status: string;
+                /**
+                 * Format: uuid
+                 * @description T1-T3: the team whose builders work in it beside its owner.
+                 */
+                team_ref?: string | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -66372,6 +66440,15 @@ export interface components {
             file_name?: string | null;
             /** @description `comment` or `upload`. */
             kind: string;
+        };
+        /** @description A publish waiting for the owner's review. */
+        ReviewRequested: {
+            /** Format: uuid */
+            review_request_id: string;
+            /** @description `in_review`. */
+            status: string;
+            /** Format: uuid */
+            workspace: string;
         };
         /** @description The round opened. */
         ReviewShared: {
@@ -74114,10 +74191,23 @@ export interface components {
             /** Format: uuid */
             owner_ref: string;
             purpose?: string | null;
+            /**
+             * Format: uuid
+             * @description T1-T3: the owner's review a builder's publish waits on.
+             */
+            review_request_ref?: string | null;
             /** Format: int64 */
             row_version: number;
-            /** @description `open`, `publishing`, `published` or `discarded`. */
+            /**
+             * @description `open`, `in_review` (a builder's publish waits for the owner, T1-T3),
+             *     `publishing`, `published` or `discarded`.
+             */
             status: string;
+            /**
+             * Format: uuid
+             * @description T1-T3: the team whose builders work in it beside its owner.
+             */
+            team_ref?: string | null;
         };
         /** @description What the write-off did. */
         WriteOffOutcome: {
@@ -78485,6 +78575,56 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    app_checklist: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The app */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppChecklist"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such app */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -118367,6 +118507,15 @@ export interface operations {
                     "application/json": components["schemas"]["Published"];
                 };
             };
+            /** @description Waits for the owner's review */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewRequested"];
+                };
+            };
             /** @description Missing or invalid credentials */
             401: {
                 headers: {
@@ -118376,7 +118525,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Caller lacks system.admin and metadata.rollout */
+            /** @description Caller may not publish this workspace */
             403: {
                 headers: {
                     [name: string]: unknown;
