@@ -137,7 +137,7 @@ export { XrmTabDirective }             from './base/base-form/xrm-tab.directive'
 // provides to attome-field-input, and *xrmFieldVisible for a field rendered
 // outside attome-field-input.
 export {
-  evaluateBusinessRuleCondition, fieldKindResolver,
+  evaluateBusinessRuleCondition, fieldKindResolver, rulesTypesOf,
 } from './business-rules/business-rule-condition';
 export type { ConditionResult, FieldKindResolver } from './business-rules/business-rule-condition';
 // The condition/policy wire types and the operator table live in
@@ -145,7 +145,7 @@ export type { ConditionResult, FieldKindResolver } from './business-rules/busine
 // shared with the business-rule editor.
 export {
   XRM_FIELD_POLICY, computeFieldPolicies, fieldErrorsFromApiError, writeWarnings, ruleLabel,
-  FIELD_LOCKED_CODES,
+  FIELD_LOCKED_CODES, ruleExpressions,
 } from './business-rules/field-policy';
 export type {
   XrmFieldPolicy, FieldLockEffect, FieldLockState, FieldRuleMessage, FieldPolicyOutcome,

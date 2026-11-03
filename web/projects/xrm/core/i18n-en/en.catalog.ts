@@ -316,6 +316,7 @@ export const xrmEn = {
     loading: 'Loading the form…', required: 'Required',
     save: 'Save', saving: 'Saving…', saved: 'Saved',
     suggest: 'Suggest', suggesting: 'Suggesting…',
+    missing: 'This field is required.',
   },
   // N31-T2 — scoped AI switches.
   aiTrial: {

@@ -593,6 +593,15 @@ fn a_published_form_has_a_render_plan() {
             plan["sections"][0]["fields"][0]["attribute"],
             attribute_name
         );
+        // A12-T2: a form without tabs or columns: one column, no tabs, the
+        // main kind; an administrator may change every field.
+        assert_eq!(plan["form_kind"], "main", "{plan}");
+        assert_eq!(plan["sections"][0]["columns"], 1, "{plan}");
+        assert!(plan.get("tabs").is_none(), "{plan}");
+        assert!(
+            plan["sections"][0]["fields"][0].get("read_only").is_none(),
+            "{plan}"
+        );
 
         // Y14-T2: a client holding this plan gets a bodyless 304.
         let mut again = get_req(&format!("/api/v1/model/forms/{form_id}/plan"), &cookie);

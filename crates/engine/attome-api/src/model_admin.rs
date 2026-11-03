@@ -34,6 +34,7 @@ use attome_audit::{AuditOperation, audit_service};
 use attome_core::EngineState;
 use attome_model::store::{self, ObjectSpec};
 use attome_model::{Issue, Kind, KindRegistry, Layer, ObjectId, ObjectRef};
+use attome_security::SecurityContextExt;
 use attome_server::authz::{Authorized, Privilege, SelfService, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
@@ -1141,12 +1142,24 @@ struct CookedForm {
     entity: Uuid,
     name: String,
     sections: Vec<CookedSection>,
+    #[serde(default)]
+    form_kind: Option<String>,
+    #[serde(default)]
+    tabs: Vec<CookedTab>,
 }
 
 #[derive(Deserialize)]
 struct CookedSection {
     label: String,
     fields: Vec<Uuid>,
+    #[serde(default)]
+    columns: Option<u8>,
+}
+
+#[derive(Deserialize)]
+struct CookedTab {
+    label: String,
+    sections: usize,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -1155,12 +1168,28 @@ pub(crate) struct FormPlan {
     name: String,
     /// The entity's logical name, as the record API addresses it.
     entity: String,
+    /// A12-T2: `main`, `quick_create`, `quick_view` or `card`.
+    form_kind: String,
     sections: Vec<FormPlanSection>,
+    /// A12-T2: the tabs, in order, each holding the next `sections` of
+    /// `sections`; empty for a form without tabs.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    tabs: Vec<FormPlanTab>,
+}
+
+/// A12-T2: one tab of a form.
+#[derive(Serialize, ToSchema)]
+pub(crate) struct FormPlanTab {
+    label: String,
+    /// How many of the plan's sections, after the previous tabs', it holds.
+    sections: usize,
 }
 
 #[derive(Serialize, ToSchema)]
 pub(crate) struct FormPlanSection {
     label: String,
+    /// A12-T2: the columns its fields are laid out in, 1 to 4.
+    columns: u8,
     fields: Vec<FormPlanField>,
 }
 
@@ -1174,6 +1203,21 @@ pub(crate) struct FormPlanField {
     required: bool,
     /// An AI attribute (N11-T1): `record.ai_field` can suggest its value.
     ai: bool,
+    /// A12-T2: the caller may not change it (a field-write grant it lacks,
+    /// or a value it sees only masked); the form shows it disabled.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    read_only: bool,
+    /// A12-T2: its value reaches the caller masked.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    masked: bool,
+}
+
+/// A12-T2: what a caller may do with one attribute on a form.
+#[derive(Clone, Copy)]
+struct FieldAccess {
+    shown: bool,
+    masked: bool,
+    writable: bool,
 }
 
 #[derive(sqlx::FromRow)]
@@ -1191,7 +1235,10 @@ struct AttributeRow {
 /// The render plan of a published form: its sections and, for each field,
 /// the attribute's logical name, label, type and whether it is required.
 /// The form comes from the cooked registry in memory; the attribute details
-/// from one bounded query (a form holds at most 400 fields).
+/// from one bounded query (a form holds at most 400 fields). A12-T2: with its
+/// kind, its tabs and each section's columns, for a caller who may read the
+/// entity's records; a field the caller may not read is left out, and one
+/// it may not change, or sees only masked, is marked read-only.
 #[utoipa::path(
     get,
     path = "/api/v1/model/forms/{id}/plan",
@@ -1204,13 +1251,14 @@ struct AttributeRow {
         (status = 200, description = "The form's render plan, with a content ETag", body = FormPlan),
         (status = 304, description = "Unchanged since the ETag in If-None-Match"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "The caller may not read the form's entity", body = ErrorResponse),
         (status = 404, description = "No published form with this id", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
 async fn form_plan(
     State(state): State<EngineState>,
-    _ctx: Authorized<SelfService>,
+    ctx: Authorized<SelfService>,
     Path(id): Path<Uuid>,
     headers: HeaderMap,
 ) -> Result<Response, AppError> {
@@ -1237,6 +1285,46 @@ async fn form_plan(
         .map_err(AppError::internal)?
         .ok_or(AppError::NotFound)?,
     };
+    ctx.require(&entity, "read")?;
+    // A12-T2: what the caller may see and change of each attribute, decided
+    // as the record routes decide it. An entity not yet in the registry
+    // (just created) has no field security to apply.
+    let access: HashMap<String, FieldAccess> = {
+        let registry = state.entities.load();
+        registry
+            .get(&entity)
+            .map(|meta| {
+                meta.attrs
+                    .iter()
+                    .map(|attr| {
+                        let projection = attome_security::field_gate::projection(
+                            &ctx,
+                            &entity,
+                            attr,
+                            meta.primary_name_attribute.as_deref(),
+                            attome_security::field_gate::Surface::Interactive,
+                        );
+                        let writable = !attr.requires_field_write_grant()
+                            || ctx.has_field_write_grant(&entity, &attr.logicalname);
+                        (
+                            attr.logicalname.clone(),
+                            FieldAccess {
+                                shown: !matches!(
+                                    projection,
+                                    attome_core::field_mask::ColumnAccess::Hidden
+                                ),
+                                masked: matches!(
+                                    projection,
+                                    attome_core::field_mask::ColumnAccess::Masked(_)
+                                ),
+                                writable,
+                            },
+                        )
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
     let ids: Vec<Uuid> = form
         .sections
         .iter()
@@ -1258,17 +1346,31 @@ async fn form_plan(
         .iter()
         .map(|section| FormPlanSection {
             label: section.label.clone(),
-            // A field whose attribute has since been removed is left out.
+            columns: section.columns.unwrap_or(1).clamp(1, 4),
+            // A field whose attribute has since been removed, or that the
+            // caller may not read, is left out.
             fields: section
                 .fields
                 .iter()
                 .filter_map(|field| by_id.get(field))
-                .map(|row| FormPlanField {
-                    attribute: row.logicalname.clone(),
-                    label: row.name.clone().unwrap_or_else(|| row.logicalname.clone()),
-                    field_type: row.field_type.unwrap_or(0),
-                    required: row.required.unwrap_or(false),
-                    ai: row.ai.unwrap_or(false),
+                .filter_map(|row| {
+                    let access = access
+                        .get(&row.logicalname)
+                        .copied()
+                        .unwrap_or(FieldAccess {
+                            shown: true,
+                            masked: false,
+                            writable: true,
+                        });
+                    access.shown.then(|| FormPlanField {
+                        attribute: row.logicalname.clone(),
+                        label: row.name.clone().unwrap_or_else(|| row.logicalname.clone()),
+                        field_type: row.field_type.unwrap_or(0),
+                        required: row.required.unwrap_or(false),
+                        ai: row.ai.unwrap_or(false),
+                        read_only: access.masked || !access.writable,
+                        masked: access.masked,
+                    })
                 })
                 .collect(),
         })
@@ -1277,7 +1379,16 @@ async fn form_plan(
         id,
         name: form.name.clone(),
         entity,
+        form_kind: form.form_kind.clone().unwrap_or_else(|| "main".to_owned()),
         sections,
+        tabs: form
+            .tabs
+            .iter()
+            .map(|tab| FormPlanTab {
+                label: tab.label.clone(),
+                sections: tab.sections,
+            })
+            .collect(),
     };
     // Y14-T2: a content ETag, so a client that already holds this plan gets
     // a bodyless 304 instead of downloading it again.
@@ -1348,8 +1459,10 @@ async fn default_form_plan(
         id: Uuid::nil(),
         name: "default".to_owned(),
         entity,
+        form_kind: "main".to_owned(),
         sections: vec![FormPlanSection {
             label,
+            columns: 1,
             fields: rows
                 .iter()
                 .map(|row| FormPlanField {
@@ -1358,9 +1471,13 @@ async fn default_form_plan(
                     field_type: row.field_type.unwrap_or(0),
                     required: row.required.unwrap_or(false),
                     ai: row.ai.unwrap_or(false),
+                    // Administrators only: every field in full.
+                    read_only: false,
+                    masked: false,
                 })
                 .collect(),
         }],
+        tabs: Vec::new(),
     }))
 }
 

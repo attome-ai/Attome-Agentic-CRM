@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, defer, from, map, of, switchMap, tap } from 'rxjs';
 import { SdkService } from '@attome/base';
+import type { EntitySchema } from '@attome/xrm';
 
 import { PlanStore, StoredPlan } from './plan-store';
 
@@ -15,19 +16,47 @@ export interface FormPlanField {
   required:   boolean;
   /** An AI attribute: `record.ai_field` can suggest its value (N11-T1). */
   ai?:        boolean;
+  /** A12-T2: the caller may not change it (no write grant, or seen masked). */
+  read_only?: boolean;
+  /** A12-T2: its value reaches the caller masked. */
+  masked?:    boolean;
 }
 
 export interface FormPlanSection {
-  label:  string;
-  fields: FormPlanField[];
+  label:    string;
+  /** A12-T2: the columns its fields are laid out in, 1 to 4. */
+  columns?: number;
+  fields:   FormPlanField[];
+}
+
+/** A12-T2: one tab, holding the next `sections` of the plan's sections. */
+export interface FormPlanTab {
+  label:    string;
+  sections: number;
 }
 
 export interface FormPlan {
-  id:       string;
-  name:     string;
+  id:         string;
+  name:       string;
   /** The entity's logical name, as the record API addresses it. */
-  entity:   string;
-  sections: FormPlanSection[];
+  entity:     string;
+  /** A12-T2: `main`, `quick_create`, `quick_view` or `card`. */
+  form_kind?: string;
+  sections:   FormPlanSection[];
+  /** A12-T2: absent for a form without tabs. */
+  tabs?:      FormPlanTab[];
+}
+
+/**
+ * A12-T2: the plan's sections under tab `index`, or all of them for a form
+ * without tabs. Pure.
+ */
+export function tabSections(plan: FormPlan, index: number): FormPlanSection[] {
+  const tabs = plan.tabs ?? [];
+  if (!tabs.length) return plan.sections;
+  let start = 0;
+  for (let i = 0; i < index && i < tabs.length; i++) start += tabs[i].sections;
+  return plan.sections.slice(start, start + (tabs[index]?.sections ?? 0));
 }
 
 /** A record as the generic entity API returns it: values under `data`. */
@@ -223,6 +252,11 @@ export class ModelService {
   /** Drops the in-memory plans, so the next read revalidates each one. */
   forgetPlans(): void {
     this.plans.clear();
+  }
+
+  /** A12-T2: the entity's schema, for its fields' kinds and the caller's business rules. */
+  schema(entity: string): Observable<EntitySchema> {
+    return this.sdk.get<EntitySchema>(`/api/v1/schema/${encodeURIComponent(entity)}`);
   }
 
   record(entity: string, id: string): Observable<RecordView> {

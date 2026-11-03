@@ -293,6 +293,7 @@ export const xrmAr = {
     loading: 'جارٍ تحميل النموذج…', required: 'مطلوب',
     save: 'حفظ', saving: 'جارٍ الحفظ…', saved: 'تم الحفظ',
     suggest: 'اقتراح', suggesting: 'جارٍ الاقتراح…',
+    missing: 'هذا الحقل مطلوب.',
   },
   // N31-T2 — مفاتيح الذكاء الاصطناعي المحددة، انظر en.catalog.ts
   agentSessionsTree: { delegated: 'فُوِّض إلى' },

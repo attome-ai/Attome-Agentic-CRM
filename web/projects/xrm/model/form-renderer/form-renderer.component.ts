@@ -1,8 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { ApiError, SdkService, TranslatePipe } from '@attome/base';
+import { ApiError, RulesEvaluatorService, SdkService, TranslatePipe } from '@attome/base';
+import type { EntitySchema } from '@attome/xrm';
+import {
+  computeFieldPolicies, fieldKindResolver, ruleExpressions, rulesTypesOf,
+} from '@attome/xrm/core/entity';
 
 import { LiveService } from '../live.service';
-import { FormPlan, FormPlanField, ModelService, RecordView } from '../model.service';
+import { FormPlan, FormPlanField, ModelService, RecordView, tabSections } from '../model.service';
 
 /** How a field is edited, from its attribute's field type number. */
 export type FieldControl = 'text' | 'number' | 'date' | 'checkbox' | 'readonly';
@@ -28,6 +32,14 @@ export function controlFor(fieldType: number): FieldControl {
  * labelled fields, fills them from a record, and saves the fields that
  * changed with the record's row version. Layout uses logical CSS
  * properties only, so Arabic (right to left) needs nothing extra.
+ *
+ * A12-T2: the plan's tabs and each section's columns; the caller's business
+ * rules from the entity's schema applied live (a hidden field is not drawn,
+ * a disabled one is read-only, a firing error shows under its field, a
+ * firing `required` makes it required; expression conditions answered by
+ * the rules evaluator, A11-T3); a field the server marks read-only (no
+ * write grant, or seen masked) is drawn disabled. A field the caller may not
+ * read is never in the plan. The server decides every write.
  */
 @Component({
   selector:        'xrm-form-renderer',
@@ -49,12 +61,31 @@ export class FormRendererComponent {
   readonly recordId = input<string | null>(null);
 
   readonly plan    = signal<FormPlan | null>(null);
+  readonly schema  = signal<EntitySchema | null>(null);
   readonly record  = signal<RecordView | null>(null);
+  /** A12-T2: the tab shown, by index. */
+  readonly activeTab = signal(0);
+  /** The sections of the tab shown (all of them without tabs). */
+  readonly sections = computed(() => {
+    const plan = this.plan();
+    return plan ? tabSections(plan, this.activeTab()) : [];
+  });
   readonly values  = signal<Record<string, unknown>>({});
   readonly loading = signal(true);
   readonly saving  = signal(false);
   readonly saved   = signal(false);
   readonly error   = signal<string | null>(null);
+
+  // ── A12-T2: business rules, live ──────────────────────────────────────
+  private readonly rules = computed(() => this.schema()?.business_rules ?? []);
+  private readonly kinds = computed(() => fieldKindResolver(this.schema()?.fields ?? []));
+  private readonly expressions = computed(() => ruleExpressions(this.rules()), {
+    equal: (a, b) => a.length === b.length && a.every((x, i) => x === b[i]),
+  });
+  readonly expressionResults = signal<ReadonlyMap<string, boolean>>(new Map());
+  private expressionRun = 0;
+  readonly outcome = computed(() =>
+    computeFieldPolicies(this.rules(), this.values(), this.kinds(), this.expressionResults()));
 
   /** The fields whose value differs from the loaded record. */
   readonly changed = computed(() => {
@@ -71,6 +102,68 @@ export class FormRendererComponent {
       const recordId = this.recordId();
       untracked(() => this.load(formId, recordId));
     });
+    // A11-T3: the rules' expressions, answered again on every change.
+    effect(() => {
+      const values = this.values();
+      this.expressions();
+      untracked(() => void this.evaluateExpressions(values));
+    });
+  }
+
+  private async evaluateExpressions(values: Readonly<Record<string, unknown>>): Promise<void> {
+    const expressions = this.expressions();
+    const run = ++this.expressionRun;
+    const schema = this.schema();
+    if (!expressions.length || !schema) {
+      if (this.expressionResults().size) this.expressionResults.set(new Map());
+      return;
+    }
+    const evaluator = this.evaluator;
+    const types = rulesTypesOf(schema.fields ?? []);
+    const context = { now: new Date().toISOString(), fields: { ...values } };
+    const results = new Map<string, boolean>();
+    try {
+      for (const expression of expressions) {
+        const answer = await evaluator.evaluate(expression, types, context);
+        if (answer.ok && typeof answer.value === 'boolean') results.set(expression, answer.value);
+      }
+    } catch {
+      return; // No evaluator: those rules stay unknown and do not fire.
+    }
+    if (run === this.expressionRun) this.expressionResults.set(results);
+  }
+
+  private readonly evaluator = inject(RulesEvaluatorService);
+
+  /** A rule hides the field. */
+  hidden(field: FormPlanField): boolean {
+    return this.outcome().locks.get(field.attribute)?.effect === 'hidden';
+  }
+
+  /** Not editable here: read-only to the caller, locked by a rule, or a read-only type. */
+  disabled(field: FormPlanField): boolean {
+    return field.read_only === true
+      || this.outcome().locks.get(field.attribute)?.effect === 'disabled';
+  }
+
+  /** Required by the field, or by a firing `required` rule. */
+  required(field: FormPlanField): boolean {
+    return field.required || this.outcome().required.has(field.attribute);
+  }
+
+  /** The firing `error` rules' messages on the field. */
+  messages(field: FormPlanField): string[] {
+    return (this.outcome().errors.get(field.attribute) ?? []).map(m => m.message);
+  }
+
+  /** A required field left empty: shown under it. */
+  missing(field: FormPlanField): boolean {
+    const value = this.value(field);
+    return this.required(field) && (value === null || value === undefined || value === '');
+  }
+
+  pickTab(index: number): void {
+    this.activeTab.set(index);
   }
 
   private load(formId: string, recordId: string | null): void {
@@ -80,6 +173,14 @@ export class FormRendererComponent {
     this.model.formPlan(formId).subscribe({
       next: plan => {
         this.plan.set(plan);
+        this.activeTab.set(0);
+        // A12-T2: the caller's rules for the entity; without them the form
+        // still draws, with no live rules.
+        this.schema.set(null);
+        this.model.schema(plan.entity).subscribe({
+          next: schema => this.schema.set(schema),
+          error: () => this.schema.set(null),
+        });
         if (!recordId) {
           this.record.set(null);
           this.values.set({});

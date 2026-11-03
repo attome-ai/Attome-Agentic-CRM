@@ -3,45 +3,64 @@
 } @else if (plan(); as plan) {
   <form class="fr" data-testid="form-renderer" (submit)="$event.preventDefault(); save()">
     <h2 class="fr-title">{{ plan.name }}</h2>
-    @for (section of plan.sections; track $index) {
-      <fieldset class="fr-section">
+    @if (plan.tabs?.length) {
+      <div class="fr-tabs" role="tablist" data-testid="form-renderer-tabs">
+        @for (tab of plan.tabs; track $index) {
+          <button type="button" role="tab" class="fr-tab" [attr.aria-selected]="activeTab() === $index"
+                  [class.fr-tab-active]="activeTab() === $index" (click)="pickTab($index)">
+            {{ tab.label }}
+          </button>
+        }
+      </div>
+    }
+    @for (section of sections(); track $index) {
+      <fieldset class="fr-section" [style.--fr-columns]="section.columns ?? 1"
+                [attr.data-columns]="section.columns ?? 1">
         <legend>{{ section.label }}</legend>
         @for (field of section.fields; track field.attribute) {
+          @if (!hidden(field)) {
           <div class="fr-field" [attr.data-attribute]="field.attribute">
             <label class="fr-label" [for]="'fr-' + field.attribute">
               {{ field.label }}
-              @if (field.required) {
+              @if (required(field)) {
                 <span class="fr-required" [attr.aria-label]="'formRenderer.required' | translate">*</span>
               }
             </label>
             @switch (control(field)) {
               @case ('checkbox') {
                 <input #box type="checkbox" [id]="'fr-' + field.attribute" [checked]="value(field) === true"
-                       (change)="set(field, box.checked)" />
+                       [disabled]="disabled(field)" (change)="set(field, box.checked)" />
               }
               @case ('number') {
                 <input #num type="number" [id]="'fr-' + field.attribute" [value]="text(field)"
-                       [required]="field.required" (input)="set(field, num.value)" />
+                       [required]="required(field)" [disabled]="disabled(field)" (input)="set(field, num.value)" />
               }
               @case ('date') {
                 <input #day type="date" [id]="'fr-' + field.attribute" [value]="text(field)"
-                       [required]="field.required" (input)="set(field, day.value)" />
+                       [required]="required(field)" [disabled]="disabled(field)" (input)="set(field, day.value)" />
               }
               @case ('readonly') {
                 <output class="fr-readonly" [id]="'fr-' + field.attribute">{{ text(field) }}</output>
               }
               @default {
                 <input #txt type="text" [id]="'fr-' + field.attribute" [value]="text(field)"
-                       [required]="field.required" (input)="set(field, txt.value)" />
+                       [required]="required(field)" [disabled]="disabled(field)" (input)="set(field, txt.value)" />
               }
             }
-            @if (field.ai && record()) {
+            @for (message of messages(field); track $index) {
+              <span class="fr-rule" role="status">{{ message }}</span>
+            }
+            @if (missing(field) && record()) {
+              <span class="fr-rule fr-missing">{{ 'formRenderer.missing' | translate }}</span>
+            }
+            @if (field.ai && record() && !disabled(field)) {
               <button type="button" class="fr-suggest" [attr.data-suggest]="field.attribute"
                       [disabled]="suggesting() !== null" (click)="suggest(field)">
                 {{ (suggesting() === field.attribute ? 'formRenderer.suggesting' : 'formRenderer.suggest') | translate }}
               </button>
             }
           </div>
+          }
         }
       </fieldset>
     }
