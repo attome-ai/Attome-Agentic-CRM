@@ -822,7 +822,7 @@ pub(super) async fn decide_access_review_item(
     let mut revoked_at = None;
     let revoked = decided_request.status == ApprovalStatus::Rejected;
     if revoked {
-        execute_revoke(&mut *tx, &scope, item.grant_ref, item.subject_user_ref).await?;
+        execute_revoke(&mut tx, &scope, item.grant_ref, item.subject_user_ref).await?;
         sqlx::query(
             "UPDATE access_review_item SET revoked_at = NOW() \
              WHERE id = $1 AND revoked_at IS NULL",

@@ -172,8 +172,6 @@ pub mod field_changes;
 /// Solution 7 Phase 2 (D-788) — the field reference-hook registry.
 pub mod field_hooks;
 pub mod form_hooks;
-/// AK6-T1: capabilities that need setting up, and the sidebar's "Set up".
-pub mod setup;
 pub mod graphql;
 pub mod inbound_hooks;
 /// M18 Data Catalog Phase 1 (D-466) — idempotent `glossary_term`
@@ -296,6 +294,8 @@ mod schema;
 mod seed_support;
 mod service_public;
 pub mod settings_admin;
+/// AK6-T1: capabilities that need setting up, and the sidebar's "Set up".
+pub mod setup;
 /// `pub` for the service reconcile API (`reconcile_sidebar_item` & co.,
 /// P-environment-promotion §5 step 13) — the handlers stay module-private.
 pub mod sidebar;
