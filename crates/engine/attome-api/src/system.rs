@@ -378,6 +378,13 @@ impl EngineSystem {
                 "core",
             ))
             .merge(license_gate(
+                // S6-T1: the GraphQL read API over the record engine.
+                crate::graphql::routes(),
+                self.state.modules.clone(),
+                MODULE_CORE,
+                "core",
+            ))
+            .merge(license_gate(
                 attome_content::admin::routes(),
                 self.state.modules.clone(),
                 MODULE_CONTENT,
