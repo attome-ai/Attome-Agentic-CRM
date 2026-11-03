@@ -22,6 +22,15 @@
 //!   manifest and the bundle's content hash; [`sign`] signs it and
 //!   [`verify`] checks it against the publisher's trusted key, so neither
 //!   the manifest nor the bundle can change after signing.
+//! - [`managed_locks`] (T8-T2): what a managed package locks once installed.
+//!   Its own entities (named with its namespace) are `locked`, or
+//!   `add_only` when the manifest lists them in `extension_points` (the
+//!   customer may add fields there, as their own layer); the fields it adds
+//!   to entities it does not own are `locked`. The preview records them
+//!   against its plan ([`record_pending`]) and a successful apply of that
+//!   plan writes them to `metadata_lock` ([`install_locks`]), which the admin
+//!   metadata routes enforce (`attome_model::guard`). A newer version
+//!   arrives through a bundle apply, which those routes do not guard.
 
 use base64::Engine as _;
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
@@ -71,6 +80,11 @@ pub struct Manifest {
     #[serde(default)]
     pub contents: Vec<String>,
     pub mode: PackageMode,
+    /// T8-T2: its own entities the customer may add fields to (a managed
+    /// package's other entities take no customer change). Left out of the
+    /// signed form when empty, so earlier signatures still hold.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extension_points: Vec<String>,
 }
 
 /// A package document.
@@ -215,6 +229,134 @@ pub fn check_namespace(
     problems
 }
 
+/// One lock a managed package sets: `(object_kind, object_key, mode)`.
+pub type PackageLock = (String, String, String);
+
+/// The locks a managed package sets on install (an unmanaged one sets
+/// none), given which entities the target already has. Pure.
+pub fn managed_locks(
+    manifest: &Manifest,
+    bundle: &Bundle,
+    existing: &dyn Fn(&str) -> bool,
+) -> Vec<PackageLock> {
+    if manifest.mode != PackageMode::Managed {
+        return Vec::new();
+    }
+    let prefix = format!("{}_", manifest.namespace);
+    let mut locks = Vec::new();
+    for entity in &bundle.entities {
+        if existing(&entity.logicalname) {
+            for attr in &entity.attributes {
+                if attr.logicalname.starts_with(&prefix) {
+                    locks.push((
+                        "attribute".to_owned(),
+                        format!("{}.{}", entity.logicalname, attr.logicalname),
+                        "locked".to_owned(),
+                    ));
+                }
+            }
+        } else if entity.logicalname.starts_with(&prefix) {
+            let mode = if manifest.extension_points.contains(&entity.logicalname) {
+                "add_only"
+            } else {
+                "locked"
+            };
+            locks.push((
+                "entity".to_owned(),
+                entity.logicalname.clone(),
+                mode.to_owned(),
+            ));
+        }
+    }
+    locks
+}
+
+/// Problems with a manifest's extension points: each is an entity the
+/// package adds. Pure.
+pub fn check_extension_points(
+    manifest: &Manifest,
+    bundle: &Bundle,
+    existing: &dyn Fn(&str) -> bool,
+) -> Vec<String> {
+    manifest
+        .extension_points
+        .iter()
+        .filter(|point| {
+            !bundle
+                .entities
+                .iter()
+                .any(|e| &e.logicalname == *point && !existing(&e.logicalname))
+        })
+        .map(|point| format!("extension point {point} is not an entity this package adds"))
+        .collect()
+}
+
+/// Records what a managed package will lock once `plan_id` applies.
+pub async fn record_pending(
+    db: &attome_db::DbPool,
+    plan_id: uuid::Uuid,
+    manifest: &Manifest,
+    locks: &[PackageLock],
+) -> Result<(), attome_types::AppError> {
+    sqlx::query(
+        "INSERT INTO package_install (plan_ref, package_id, version, mode, locks) \
+         VALUES ($1, $2, $3, $4, $5) \
+         ON CONFLICT (plan_ref) DO UPDATE SET locks = EXCLUDED.locks",
+    )
+    .bind(plan_id)
+    .bind(&manifest.id)
+    .bind(&manifest.version)
+    .bind(match manifest.mode {
+        PackageMode::Managed => "managed",
+        PackageMode::Unmanaged => "unmanaged",
+    })
+    .bind(serde_json::to_value(locks).map_err(attome_types::AppError::internal)?)
+    .execute(db)
+    .await
+    .map_err(attome_types::AppError::internal)?;
+    Ok(())
+}
+
+/// After `plan_id` applied: writes its package's locks, once. A plan that
+/// is not a package's does nothing.
+pub async fn install_locks(
+    db: &attome_db::DbPool,
+    plan_id: uuid::Uuid,
+) -> Result<usize, attome_types::AppError> {
+    let mut tx = attome_db::tx::begin(db).await?;
+    let locks: Option<serde_json::Value> = sqlx::query_scalar(
+        "UPDATE package_install SET installed_at = now() \
+          WHERE plan_ref = $1 AND installed_at IS NULL RETURNING locks",
+    )
+    .bind(plan_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(attome_types::AppError::internal)?;
+    let Some(locks) = locks else {
+        return Ok(0);
+    };
+    let locks: Vec<PackageLock> =
+        serde_json::from_value(locks).map_err(attome_types::AppError::internal)?;
+    for (kind, key, mode) in &locks {
+        sqlx::query(
+            "INSERT INTO metadata_lock (object_kind, object_key, mode, set_by_layer) \
+             VALUES ($1, $2, $3, 'product') \
+             ON CONFLICT (object_kind, object_key) DO UPDATE SET mode = EXCLUDED.mode, \
+                 set_by_layer = EXCLUDED.set_by_layer",
+        )
+        .bind(kind)
+        .bind(key)
+        .bind(mode)
+        .execute(&mut *tx)
+        .await
+        .map_err(attome_types::AppError::internal)?;
+    }
+    tx.commit()
+        .await
+        .map_err(attome_types::AppError::internal)?;
+    Ok(locks.len())
+}
+
 /// The bytes a package's signature covers: the canonical JSON of its
 /// format, manifest and bundle hash.
 pub fn signing_payload(
@@ -314,6 +456,7 @@ mod tests {
             platform: ">=0.1.0".into(),
             contents: vec!["entities".into()],
             mode: PackageMode::Managed,
+            extension_points: Vec::new(),
         }
     }
 
@@ -377,5 +520,42 @@ mod tests {
         edited.bundle.entities[0].display_name = "Truck".into();
         assert!(verify(&edited, &trusted).is_err(), "bundle changed");
         assert!(verify(&package, &[]).is_err(), "untrusted publisher");
+    }
+
+    #[test]
+    fn a_managed_package_locks_its_own_and_opens_its_extension_points() {
+        let existing = |name: &str| name == "account";
+        let locks = managed_locks(&manifest(), &bundle(), &existing);
+        assert_eq!(
+            locks,
+            vec![
+                (
+                    "entity".to_owned(),
+                    "exf_vehicle".to_owned(),
+                    "locked".to_owned()
+                ),
+                (
+                    "attribute".to_owned(),
+                    "account.exf_fleet_size".to_owned(),
+                    "locked".to_owned()
+                ),
+            ]
+        );
+        let mut open = manifest();
+        open.extension_points = vec!["exf_vehicle".into()];
+        assert_eq!(managed_locks(&open, &bundle(), &existing)[0].2, "add_only");
+        assert!(check_extension_points(&open, &bundle(), &existing).is_empty());
+        open.extension_points = vec!["account".into()];
+        assert_eq!(check_extension_points(&open, &bundle(), &existing).len(), 1);
+        let mut unmanaged = manifest();
+        unmanaged.mode = PackageMode::Unmanaged;
+        assert!(managed_locks(&unmanaged, &bundle(), &existing).is_empty());
+        // An empty list stays out of the signed form.
+        assert!(
+            serde_json::to_value(manifest())
+                .unwrap()
+                .get("extension_points")
+                .is_none()
+        );
     }
 }

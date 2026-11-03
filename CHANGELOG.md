@@ -17,6 +17,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Managed packages lock what they install (T8-T2): once a managed package's plan applies, its own
+  entities are locked (or add-only when listed in the manifest's `extension_points`) and the
+  fields it adds to other entities are locked, through `metadata_lock` (migration 0393 records
+  each package install against its plan).
 - `attome test mutants --crate <package>` (AC5-T9): mutation testing one scoped crate per run, with
   `--write-baseline` replacing only that crate's part of the baseline.
 - Approvals of an agent principal's requests exclude the agent, the people in its session's chain

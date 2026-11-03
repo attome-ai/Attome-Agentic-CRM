@@ -61,3 +61,13 @@ permissions the package requests, its effects on records already there (records 
 it adds to existing entities, field changes), what it removes and what is blocked, with the
 persisted plan. Installing is applying that plan (`POST /api/v1/admin/metadata/import?mode=apply`
 with its `plan_id`). Administrators only.
+
+## Managed packages
+
+A package whose manifest says `"mode": "managed"` keeps its objects. Once its plan applies, its own
+entities (those named with its namespace) are locked: the admin metadata routes refuse changing or
+removing them or their fields (`409 metadata_locked`). An entity the manifest lists in
+`"extension_points"` is add-only instead: customers may add their own fields to it, but not change
+or remove the package's (`409 metadata_add_only`). The fields a package adds to entities it does not
+own are locked one by one. A newer version of the package changes them through its own apply. An
+unmanaged package locks nothing: its objects become the deployment's own.

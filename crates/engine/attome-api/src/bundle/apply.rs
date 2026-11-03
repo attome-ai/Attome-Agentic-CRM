@@ -172,6 +172,14 @@ pub async fn run_apply_job(state: &EngineState, plan_id: Uuid) -> Result<(), App
     let result = match result {
         Ok(()) => {
             ledger::mark_succeeded(&state.base.db, plan_id).await?;
+            // T8-T2: a managed package's locks, once its plan applied.
+            match super::package::install_locks(&state.base.db, plan_id).await {
+                Ok(0) => {}
+                Ok(locks) => tracing::info!(%plan_id, locks, "managed package locks set"),
+                Err(error) => {
+                    tracing::error!(%error, %plan_id, "managed package locks were not set");
+                }
+            }
             // P-environment-promotion §5 step 20 — recompute the
             // configuration hash now that this apply changed live metadata.
             // Best-effort, same posture as the boot-time computation in

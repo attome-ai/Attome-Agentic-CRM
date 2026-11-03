@@ -444,19 +444,31 @@ async fn preview_package(
         .map_err(|e| AppError::Validation(format!("the package does not read: {e}")))?;
     super::package::verify(&package, &trusted_publishers(&state)).map_err(AppError::Validation)?;
     let mut problems = super::package::check_manifest(&package.manifest);
-    {
+    let locks = {
         let entities = state.entities.load();
+        let existing = |name: &str| entities.get(name).is_some();
         problems.extend(super::package::check_namespace(
             &package.manifest,
             &package.bundle,
-            &|name| entities.get(name).is_some(),
+            &existing,
         ));
-    }
+        problems.extend(super::package::check_extension_points(
+            &package.manifest,
+            &package.bundle,
+            &existing,
+        ));
+        super::package::managed_locks(&package.manifest, &package.bundle, &existing)
+    };
     if !problems.is_empty() {
         return Err(AppError::Validation(problems.join("; ")));
     }
     let manifest = serde_json::to_value(&package.manifest).map_err(AppError::internal)?;
+    let manifest_doc = package.manifest.clone();
     let (plan, preview) = plan_and_persist(&state, package.bundle, false, ctx.user_id).await?;
+    // T8-T2: what it locks once this plan applies.
+    if !locks.is_empty() {
+        super::package::record_pending(&state.base.db, plan.plan_id, &manifest_doc, &locks).await?;
+    }
     Ok(Json(PackagePreviewResponse {
         manifest,
         plan,
