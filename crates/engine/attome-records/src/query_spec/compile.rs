@@ -1462,6 +1462,19 @@ mod tests {
             )),
             unknown
         );
+        // Q15-T3: sorting and grouping on it are refused the same way (D-607:
+        // hidden means absent, so the refusal never confirms the field).
+        for doc in [
+            json!({"entity": "account", "sort": [{"field": "tax_id"}]}),
+            json!({"entity": "account", "group_by": [{"field": "tax_id"}],
+                   "aggregates": [{"func": "count", "alias": "n"}]}),
+        ] {
+            let message = validation(run(doc.clone(), &reader(), &global()));
+            assert!(
+                message.contains("unknown") && message.contains("tax_id"),
+                "{doc}: {message}"
+            );
+        }
         let mut granted = reader();
         granted.field_grants.insert("account.tax_id".into());
         assert!(
