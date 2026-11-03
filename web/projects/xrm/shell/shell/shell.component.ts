@@ -26,6 +26,8 @@ import { ProfileMenuComponent } from '../profile-menu/profile-menu.component';
 import { ShellSidebarComponent } from '../shell-sidebar/shell-sidebar.component';
 import { StatusBannerComponent } from '../status-banner/status-banner.component';
 import { ImpersonationBannerComponent } from '../impersonation-banner/impersonation-banner.component';
+import { WorkspaceBannerComponent } from '../workspace-banner/workspace-banner.component';
+import { WorkspacePickerComponent } from '../workspace-picker/workspace-picker.component';
 import { FirstRunPromptComponent } from '../first-run-prompt/first-run-prompt.component';
 import { TourOverlayComponent } from '../tour-overlay/tour-overlay.component';
 import { PaletteUses, entityMatchesPrefix, isQuestion, parsePaletteQuery, rankByUse } from '../command-palette/palette';
@@ -119,7 +121,7 @@ const PALETTE_RECORDS = 8;
     ShellSidebarComponent, NotificationBellComponent, ProfileMenuComponent, AppSwitcherComponent,
     CopilotLauncherComponent, SoftphoneLauncherComponent, OmniSearchComponent, ChangesetIndicatorComponent, FavouritesComponent,
     StatusBannerComponent, ImpersonationBannerComponent, FirstRunPromptComponent, TourOverlayComponent, ScanFindComponent,
-    SyncStatusComponent, IdleWarningComponent,
+    SyncStatusComponent, IdleWarningComponent, WorkspacePickerComponent, WorkspaceBannerComponent,
   ],
   host: {
     '(window:keydown)': 'onKeydown($event)',

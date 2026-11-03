@@ -25,6 +25,11 @@ export type { ImpersonationSession } from './lib/impersonation.service';
 export type { Page } from './lib/api.service';
 export { ConditionalCache } from './lib/conditional-cache';
 export { ChangesetState } from './lib/changeset-state';
+// T5-T7: the Develop workspace this tab works in.
+export {
+  WORKSPACE_HEADER, WORKSPACE_ROUTES, WorkspaceState, workspaceHeaderApplies, workspaceInterceptor,
+} from './lib/workspace-state';
+export type { ChosenWorkspace } from './lib/workspace-state';
 export type { ConditionalEntry } from './lib/conditional-cache';
 // Solution 7 (D-785) — the changeset header and the 409 refusal codes.
 export { CHANGESET_HEADER, CHANGESET_REFUSAL_CODES, changesetRefusalCode } from './lib/api.service';

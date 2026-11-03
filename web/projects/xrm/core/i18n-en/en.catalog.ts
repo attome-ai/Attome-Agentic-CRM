@@ -2360,6 +2360,22 @@ export const xrmEn = {
     started: 'When',
     emailRequired: 'Enter the administrator’s email.',
   },
+  workspaces: {
+    picker: {
+      label: 'Workspace',
+      live: 'Live',
+      new: 'New workspace',
+      name: 'Workspace name',
+      create: 'Create',
+      cancel: 'Cancel',
+      failed: 'The workspaces could not be loaded.',
+      createFailed: 'The workspace could not be made.',
+    },
+    banner: {
+      inside: 'You are working in the workspace {name}. Changes stay here until it is published.',
+      leave: 'Back to live',
+    },
+  },
   impersonation: {
     viewing: 'Viewing as {name}. Nothing you do changes anything.',
     acting: 'Acting as {name}, with their consent. Everything you do is recorded with both your names.',

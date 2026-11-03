@@ -17,6 +17,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- A workspace picker in the web app's header (T5-T7): choose, make or leave a Develop workspace; while
+  inside one a band names it on every page and every request runs inside it.
 - Develop workspace life cycle (T5-T6): `POST /api/v1/admin/workspaces/{id}/refresh` brings in live's
   changes the workspace has not made its own. A daily job discards workspaces unused for the new
   `metadata.workspace_idle_days` (30 unset), warning the owner a week before; migration 0387.

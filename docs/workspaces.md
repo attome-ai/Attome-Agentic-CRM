@@ -109,4 +109,10 @@ A workspace nobody uses for `metadata.workspace_idle_days` (30 unset) is discard
 Its owner is told in the app a week before, or at once when the idle time is shorter. A workspace is
 discarded only a day or more after that warning, and using it clears the warning.
 
-The picker in the web app follows in the next release (roadmap T5-T7).
+## In the web app
+
+Administrators see a workspace picker in the header. It lists the open workspaces, makes a new one
+(with sample records) and leaves for live. While a tab works inside a workspace, a coloured band on
+every page names it and offers a way back to live. Every request from that tab names the workspace,
+except the workspace and sign-in routes, which always run on live. The choice lasts for the tab: a
+reload keeps it, and a new tab starts on live.
