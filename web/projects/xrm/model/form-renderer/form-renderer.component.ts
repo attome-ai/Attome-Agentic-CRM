@@ -14,7 +14,7 @@ export type FieldControl = 'text' | 'number' | 'date' | 'checkbox' | 'readonly';
 
 /** A form's tab or section label that names a catalog key (`xrmForm.tabs.details`), as pack forms do. Pure. */
 export function isLabelKey(label: string): boolean {
-  return /^[a-z][A-Za-z0-9]*(\.[A-Za-z0-9_]+)+$/.test(label);
+  return /^[a-z][A-Za-z0-9]*(\.[A-Za-z][A-Za-z0-9_]*)+$/.test(label);
 }
 
 /**
