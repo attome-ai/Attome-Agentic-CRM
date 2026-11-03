@@ -62,7 +62,7 @@ const TABBED = {
 };
 
 describe('tabSections', () => {
-  it('takes each tab's sections in turn, or all of them without tabs', () => {
+  it('takes each tab\'s sections in turn, or all of them without tabs', () => {
     expect(tabSections(TABBED, 0).map(s => s.label)).toEqual(['Main']);
     expect(tabSections(TABBED, 1).map(s => s.label)).toEqual(['Other']);
     expect(tabSections(PLAN, 0).map(s => s.label)).toEqual(['Main']);
@@ -137,7 +137,7 @@ describe('FormRendererComponent', () => {
     expect(el.querySelector('[data-attribute="active"]')).toBeNull();
   });
 
-  it('draws the tabs and a section's columns, and a read-only field disabled', () => {
+  it('draws the tabs and a section\'s columns, and a read-only field disabled', () => {
     svc.formPlan.mockReturnValue(of(TABBED));
     const fixture = render('r1');
     const el: HTMLElement = fixture.nativeElement;
