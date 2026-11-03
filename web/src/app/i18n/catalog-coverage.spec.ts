@@ -14,7 +14,7 @@ import {
   businessRulesAr, businessRulesEn, dataModelAr, dataModelEn, duplicatesManagerAr, duplicatesManagerEn,
 } from '@attome/xrm/core/admin';
 import { agentDesignerAr, agentDesignerEn } from '@attome/xrm/model';
-import { agentSessionsAr, agentSessionsEn } from '@attome/xrm/ai';
+import { agentPrincipalsAr, agentPrincipalsEn, agentSessionsAr, agentSessionsEn } from '@attome/xrm/ai';
 import { searchLabAr, searchLabEn } from '@attome/xrm/search';
 import { migrationAr, migrationEn } from '@attome/xrm/migration';
 import { portalAdminAr, portalAdminEn } from '@attome/xrm/portal';
@@ -107,6 +107,7 @@ const LAYERS = [
   ['agentDesigner', agentDesignerEn, agentDesignerAr],
   ['businessRules', businessRulesEn, businessRulesAr],
   ['agentSessions', agentSessionsEn, agentSessionsAr],
+  ['agentPrincipals', agentPrincipalsEn, agentPrincipalsAr],
   ['searchLab', searchLabEn, searchLabAr],
   ['migration', migrationEn, migrationAr],
   ['portalAdmin', portalAdminEn, portalAdminAr],
@@ -130,6 +131,7 @@ describe('i18n catalog coverage — all layers', () => {
         provideLayerCatalog(agentDesignerEn, () => Promise.resolve(agentDesignerAr)),
         provideLayerCatalog(businessRulesEn, () => Promise.resolve(businessRulesAr)),
         provideLayerCatalog(agentSessionsEn, () => Promise.resolve(agentSessionsAr)),
+        provideLayerCatalog(agentPrincipalsEn, () => Promise.resolve(agentPrincipalsAr)),
         provideLayerCatalog(searchLabEn, () => Promise.resolve(searchLabAr)),
         provideLayerCatalog(migrationEn, () => Promise.resolve(migrationAr)),
         provideLayerCatalog(portalAdminEn, () => Promise.resolve(portalAdminAr)),

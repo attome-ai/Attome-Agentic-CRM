@@ -1256,6 +1256,16 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/ai').then(m => m.AiAgentSessionsComponent),
           },
           {
+            // AH3-T8 — agent principals: identities, sponsors, state and keys.
+            path: 'ai/principals',
+            providers: [provideLayerCatalog(
+              () => import('@attome/xrm/ai').then(m => m.agentPrincipalsEn),
+              () => import('@attome/xrm/ai').then(m => m.agentPrincipalsAr),
+            )],
+            canActivate: [authGuard, layerCatalogsReady],
+            loadComponent: () => import('@attome/xrm/ai').then(m => m.AgentPrincipalsComponent),
+          },
+          {
             // AI8-T6 — agent performance from the nightly rollup; the admin
             // routes behind it answer 403 to anyone else.
             path: 'ai/agents/performance',

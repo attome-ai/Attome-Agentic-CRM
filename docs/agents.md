@@ -43,6 +43,10 @@ person who sponsors it. Administrators with the users area manage them at
 - `POST .../{id}/keys` issues an API key for an active agent; its secret is in that answer only.
   `DELETE .../{id}/keys/{key_id}` ends one.
 
+The web app's Agents screen (`/xrm/ai/principals`) does the same: make an agent, see its state and
+the reason, move it, change its sponsor, and issue a key whose secret shows once, until the dialog
+closes.
+
 An agent account never signs in interactively (no password, federated, refresh, reset or MFA
 step accepts it) and is never granted `system.admin`, directly or through a role.
 

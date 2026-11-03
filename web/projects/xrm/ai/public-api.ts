@@ -21,6 +21,7 @@ export { AiPlaygroundComponent } from './playground/ai-playground.component';
 // are not exported here — they are reached through the entity router, which
 // loads `registerAiEntityForms` and never needs a named import.
 export { AiAgentSessionsComponent } from './admin/agent-sessions/ai-agent-sessions.component';
+export { AgentPrincipalsComponent, movesFor, scopeOf } from './admin/agent-principals/agent-principals.component';
 export { AiScopeSwitchesComponent, SCOPE_KINDS } from './admin/scope-switches/ai-scope-switches.component';
 export { AiAgentAutonomyComponent, AUTONOMY_LEVELS, raisesConsequential } from './autonomy/agent-autonomy.component';
 export type { AutonomyEntry, AutonomyLevel, AutonomyRow } from './autonomy/agent-autonomy.component';
@@ -87,3 +88,4 @@ export type {
 } from './admin/agent-performance/ai-agent-performance.service';
 // Y14-T4: this screen's own catalogue.
 export { agentSessionsAr, agentSessionsEn } from './agent-sessions.i18n';
+export { agentPrincipalsAr, agentPrincipalsEn } from './agent-principals.i18n';

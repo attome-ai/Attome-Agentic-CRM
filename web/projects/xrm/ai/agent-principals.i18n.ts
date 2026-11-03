@@ -1,0 +1,68 @@
+/**
+ * AH3-T8: the agent principals screen's own catalogue, registered on its
+ * route (`provideLayerCatalog`). Its namespace, `agentPrincipals`, is owned
+ * by this layer only.
+ */
+export const agentPrincipalsEn = {
+  agentPrincipals: {
+    title: 'Agents',
+    subtitle: 'Agent identities: who sponsors each, what state it is in, and its keys.',
+    create: 'New agent',
+    name: 'Name',
+    sponsor: 'Sponsor',
+    sponsorDefault: 'You, unless you name another person',
+    scope: 'Entities it may act on',
+    scopeHint: 'account, sales_order (blank for all its sponsor may reach)',
+    createButton: 'Create agent',
+    sponsoredBy: 'Sponsored by',
+    scopeIs: 'Acts only on',
+    state_active: 'Active',
+    state_paused: 'Paused',
+    state_suspended: 'Suspended',
+    state_revoked: 'Revoked',
+    move_pause: 'Pause',
+    move_suspend: 'Suspend',
+    move_resume: 'Resume',
+    move_revoke: 'Revoke',
+    issueKey: 'Issue a key',
+    keyTitle: 'The new key',
+    keyOnce: 'Copy this secret now. It will not be shown again.',
+    copy: 'Copy',
+    close: 'Done',
+    newSponsor: 'Another sponsor',
+    reassign: 'Change sponsor',
+    none: 'No agents yet.',
+  },
+};
+
+export const agentPrincipalsAr = {
+  agentPrincipals: {
+    title: 'الوكلاء',
+    subtitle: 'هويات الوكلاء: من يكفل كلًّا منهم، وحالته، ومفاتيحه.',
+    create: 'وكيل جديد',
+    name: 'الاسم',
+    sponsor: 'الكفيل',
+    sponsorDefault: 'أنت، ما لم تسمِّ شخصًا آخر',
+    scope: 'الكيانات التي يعمل عليها',
+    scopeHint: 'account, sales_order (اتركه فارغًا لكل ما يصل إليه كفيله)',
+    createButton: 'إنشاء الوكيل',
+    sponsoredBy: 'يكفله',
+    scopeIs: 'يعمل فقط على',
+    state_active: 'نشط',
+    state_paused: 'موقوف مؤقتًا',
+    state_suspended: 'معلّق',
+    state_revoked: 'ملغى',
+    move_pause: 'إيقاف مؤقت',
+    move_suspend: 'تعليق',
+    move_resume: 'استئناف',
+    move_revoke: 'إلغاء',
+    issueKey: 'إصدار مفتاح',
+    keyTitle: 'المفتاح الجديد',
+    keyOnce: 'انسخ هذا السر الآن. لن يظهر مرة أخرى.',
+    copy: 'نسخ',
+    close: 'تم',
+    newSponsor: 'كفيل آخر',
+    reassign: 'تغيير الكفيل',
+    none: 'لا يوجد وكلاء بعد.',
+  },
+};

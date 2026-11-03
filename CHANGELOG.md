@@ -17,6 +17,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- The Agents screen (AH3-T8, `/xrm/ai/principals`): agent principals with their state and reason,
+  created with the signed-in person as sponsor by default, moved (pause, suspend, resume,
+  revoke), given another sponsor, and issued keys whose secret shows once; English and Arabic.
 - A sponsor's departure pauses their agents (AH3-T7, part): disabling a person (administrator,
   directory sync or SCIM) pauses every active agent principal they sponsor in the same transaction
   (`state_reason` `sponsor_lost`, epoch moved), and a daily reconciliation pauses any active agent
