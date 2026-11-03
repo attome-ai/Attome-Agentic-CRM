@@ -14204,6 +14204,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/workspaces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List workspaces
+         * @description The workspaces not discarded, newest first.
+         */
+        get: operations["list_workspaces"];
+        put?: never;
+        /**
+         * Create a workspace
+         * @description Makes a Develop workspace: its own schema with a copy of the metadata
+         *     (with its rows) and of every entity table (empty). Identity and access
+         *     tables stay shared with live. Audited.
+         */
+        post: operations["create_workspace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/workspaces/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Show a workspace
+         * @description One workspace not discarded: its status, owner and how many tables it copied.
+         */
+        get: operations["get_workspace"];
+        put?: never;
+        post?: never;
+        /**
+         * Discard a workspace
+         * @description Marks the workspace discarded and drops its schema with everything in it.
+         *     A published workspace is kept. Audited.
+         */
+        delete: operations["discard_workspace"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/agents/{id}/sessions": {
         parameters: {
             query?: never;
@@ -50872,6 +50923,13 @@ export interface components {
              */
             ttl_secs?: number | null;
         };
+        /** @description A new workspace. */
+        NewWorkspace: {
+            /** @description 1 to 100 characters. */
+            name: string;
+            /** @description What it is for, at most 1,000 characters. */
+            purpose?: string | null;
+        };
         NewWritePolicy: {
             /** @description A write action id, such as `record.update`. */
             action_id: string;
@@ -61876,6 +61934,51 @@ export interface components {
                  */
                 status: string;
                 target?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_Workspace: {
+            items: {
+                /**
+                 * Format: uuid
+                 * @description The changeset its changes record into (T5-T4); none yet.
+                 */
+                changeset_ref?: string | null;
+                /** Format: date-time */
+                created_at: string;
+                /**
+                 * Format: int32
+                 * @description Entity and join tables copied empty.
+                 */
+                entity_tables: number;
+                /** Format: uuid */
+                id: string;
+                /** Format: date-time */
+                last_used_at: string;
+                /**
+                 * Format: int32
+                 * @description Metadata tables copied with their rows.
+                 */
+                metadata_tables: number;
+                name: string;
+                /** Format: uuid */
+                owner_ref: string;
+                purpose?: string | null;
+                /** Format: int64 */
+                row_version: number;
+                /** @description `open`, `publishing`, `published` or `discarded`. */
+                status: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -73764,6 +73867,38 @@ export interface components {
         WorkforceSwapDecideBody: {
             approve: boolean;
             reason?: string | null;
+        };
+        /** @description One workspace. */
+        Workspace: {
+            /**
+             * Format: uuid
+             * @description The changeset its changes record into (T5-T4); none yet.
+             */
+            changeset_ref?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /**
+             * Format: int32
+             * @description Entity and join tables copied empty.
+             */
+            entity_tables: number;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            last_used_at: string;
+            /**
+             * Format: int32
+             * @description Metadata tables copied with their rows.
+             */
+            metadata_tables: number;
+            name: string;
+            /** Format: uuid */
+            owner_ref: string;
+            purpose?: string | null;
+            /** Format: int64 */
+            row_version: number;
+            /** @description `open`, `publishing`, `published` or `discarded`. */
+            status: string;
         };
         /** @description What the write-off did. */
         WriteOffOutcome: {
@@ -117645,6 +117780,213 @@ export interface operations {
             };
             /** @description The user holds no role in this portal */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_workspaces: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_Workspace"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_workspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewWorkspace"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Workspace"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The name or purpose is out of bounds */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_workspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The workspace */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Workspace"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such workspace */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    discard_workspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The workspace */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Discarded */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such workspace */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The workspace is being published or was published */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
