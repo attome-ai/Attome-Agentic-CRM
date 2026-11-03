@@ -31,3 +31,15 @@ largest content paints after 2.5 s (LCP) or whose interaction takes over 200 ms 
 go to `perf/results.json`. The release gate runs it with `attome release --check --web-vitals` and
 keeps the numbers as `target/release-gate/web-vitals.json`; the bundle budgets stay in
 `web/angular.json`, which every build checks.
+
+## Time to a working CRM
+
+`npx playwright test -c time-to-crm.config.ts` walks a new customer's first hour against a live
+deployment: install (until `/health/ready` answers; set `ATTOME_E2E_INSTALL_STARTED` to the
+installer's start in epoch milliseconds to count the install itself), the first-run country,
+describing an app (`model.app.plan`), drafting a model from a spreadsheet (`model.from_files`) and
+making its build calls, importing the sheet and opening the records. Point it at the deployment
+with `ATTOME_E2E_URL` and an administrator's `ATTOME_E2E_AUTH` header value (`ApiKey <id>:<secret>`);
+without the URL it is skipped. Run the deployment on the fake model so the answers are
+deterministic. Each step's time, and the model's share of it, goes to `results/time-to-crm.json`;
+the run fails above 60 minutes in all, model latency excluded.
