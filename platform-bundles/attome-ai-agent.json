@@ -64,7 +64,7 @@
               "model.environment_variable.edit", "model.environment_variable.list",
               "model.eval_suite.describe", "model.eval_suite.edit", "model.eval_suite.list",
               "model.flow_template.describe", "model.flow_template.edit", "model.flow_template.list",
-              "model.form.describe", "model.form.edit", "model.form.list", "model.macro.describe",
+              "model.form.describe", "model.form.draft", "model.form.edit", "model.form.list", "model.macro.describe",
               "model.macro.edit", "model.macro.list", "model.navigation.describe", "model.navigation.edit",
               "model.navigation.list", "model.option_set.describe", "model.option_set.edit",
               "model.option_set.list", "model.page.describe", "model.page.edit", "model.page.list",

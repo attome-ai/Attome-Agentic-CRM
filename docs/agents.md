@@ -196,6 +196,8 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   `plan` searches the entity library first: a drafted entity reuses one of the same name, extends
   `party` (a person) or a base already holding most of its fields, or waits on a question when its
   English name or Arabic label is near an existing one; a near-duplicate field is asked about too.
+  `model.form.draft` lays out an entity's form from a description (tabs, sections, related lists,
+  visibility rules to propose) and returns the `model.form.edit` call that saves it as a draft.
   `model.review` checks a draft against the existing model and returns findings. Both save nothing.
   Once an entity's fields are in, `POST /api/v1/admin/entities/{entity_id}/scaffold` gives it its
   starting set: a draft main form, a kanban view over its status choice, the import template's

@@ -17,6 +17,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- `model.form.draft` (AD2-T1): a building agent lays out an entity's form from a description, by its own
+  fields and the entities pointing at it, and returns the `model.form.edit` call that saves the draft.
 - The data model page reviews a building agent's draft (AD1-T2): the proposed entities on a diagram beside
   what they extend or reuse, accepted or rejected per entity and field, then the accepted changes made.
 - `model.draft` plans each drafted entity against the library (AD1-T1): reuse, extend a base, ask

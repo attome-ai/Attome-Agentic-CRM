@@ -60,6 +60,8 @@ pub mod extract_document;
 /// T6-T4: customer flags as agent tools.
 pub mod flags;
 pub mod followup;
+/// AD2-T1: model.form.draft, a form from a description.
+pub mod form_draft;
 /// L3-T8: governance.list_overdue, governance.propose_domains, governance.draft_policy.
 pub mod governance;
 pub mod graph;
@@ -190,6 +192,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(dashboard_explain::descriptor());
     all.extend(metric_draft::descriptors());
     all.extend(draft_model::descriptors());
+    all.extend(form_draft::descriptors());
     all.extend(review_model::descriptors());
     all.extend(rpa_draft::descriptors());
     all.extend(search_ask::descriptors());
@@ -312,6 +315,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(dashboard_explain::DashboardExplain));
     all.extend(metric_draft::executors());
     all.extend(draft_model::executors());
+    all.extend(form_draft::executors());
     all.extend(review_model::executors());
     all.extend(rpa_draft::executors());
     all.extend(search_ask::executors());
