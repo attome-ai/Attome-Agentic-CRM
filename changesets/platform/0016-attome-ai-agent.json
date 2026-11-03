@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:5f71acbdd4f2a065aae3b54dfd3818523662e1d3b5ca4f4ed024194103d25ad5",
+  "checksum": "sha256:d78822fc1fcfdf019776a45cb46d4d9515b2a5c4537c328a43cbbb5de4ca3f23",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-agent.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -435,6 +435,7 @@
               "model.eval_suite.describe",
               "model.eval_suite.edit",
               "model.eval_suite.list",
+              "model.flow.draft",
               "model.flow_template.describe",
               "model.flow_template.edit",
               "model.flow_template.list",
