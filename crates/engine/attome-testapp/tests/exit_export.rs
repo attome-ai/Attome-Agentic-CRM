@@ -86,7 +86,11 @@ fn export_then_delete_request() {
             "the reported hash"
         );
         let mut archive = zip::ZipArchive::new(std::io::Cursor::new(bytes.to_vec())).unwrap();
-        let names: Vec<String> = archive.file_names().map(str::to_owned).collect();
+        let names: Vec<String> = archive
+            .file_names()
+            .map(|name| name.map(|n| n.into_owned()))
+            .collect::<Result<_, _>>()
+            .unwrap();
         for needed in ["README.txt", "metadata/bundle.json", "data/account.csv"] {
             assert!(names.iter().any(|n| n == needed), "{needed} in {names:?}");
         }
