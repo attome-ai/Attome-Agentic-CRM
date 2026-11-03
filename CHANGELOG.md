@@ -17,6 +17,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- `model.score` (AD7-T1): an entity's model scored with evidence (data profile fill rates and
+  distinct values, use on forms and views, slow statements) and a draft fix per issue; it writes
+  nothing. The builder suite carries a scripted case for it.
 - The builder suite's gate (AD10-T2): a live run of `tests/builder_suite.rs` fails when a model
   scores more than 5 points below its last accepted score (`fixtures/builder/accepted_scores.json`),
   so a prompt or model change that builds worse is blocked; the run prints the entry to accept.

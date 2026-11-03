@@ -1,0 +1,26 @@
+{
+  "note": "AD7-T1: the builder suite's scripted case for model.score. The evidence read about a clinic visit entity (profile, usage, slow statements) and the issues a sound review finds, most costly first.",
+  "entity": "visit",
+  "attributes": [
+    { "name": "visit_date", "rows": 2000, "filled": 2000, "distinct": 640, "on_forms": 1, "on_views": 2 },
+    { "name": "fax", "text": true, "rows": 2000, "filled": 12, "distinct": 12, "on_forms": 1, "on_views": 0 },
+    { "name": "patient_number", "text": true, "rows": 2000, "filled": 1990, "distinct": 1900, "on_forms": 1, "on_views": 1 },
+    { "name": "visit_kind", "text": true, "rows": 2000, "filled": 1980, "distinct": 4,
+      "top_values": ["checkup", "follow_up", "emergency", "vaccination"], "on_forms": 1, "on_views": 1 },
+    { "name": "notes", "text": true, "rows": 2000, "filled": 1500, "distinct": 1500, "distinct_capped": true, "on_forms": 1, "on_views": 0 },
+    { "name": "legacy_code_2019", "text": true, "rows": 2000, "filled": 300, "distinct": 300, "on_forms": 0, "on_views": 0 },
+    { "name": "doctor_ref", "rows": 2000, "filled": 2000, "distinct": 14, "filterable": true, "on_forms": 1, "on_views": 1 }
+  ],
+  "slow": [
+    { "attribute": "visit_date", "statements": 3, "calls": 1200, "worst_mean_ms": 340.0 },
+    { "attribute": "doctor_ref", "statements": 1, "calls": 90, "worst_mean_ms": 150.0 }
+  ],
+  "expected": [
+    ["slow_filter", "visit_date"],
+    ["rarely_filled", "fax"],
+    ["duplicate_values", "patient_number"],
+    ["few_values", "visit_kind"],
+    ["unused", "legacy_code_2019"]
+  ],
+  "expected_score": 75
+}

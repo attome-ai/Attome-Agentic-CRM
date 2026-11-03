@@ -207,6 +207,11 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   automate and its roles, written out first; called again with `confirmed: true` it returns the
   ordered building steps (entities, each new entity's starting set and form, then the flows).
   `model.review` checks a draft against the existing model and returns findings. Both save nothing.
+  `model.score` scores a built entity from 100 with evidence: slow statements filtering on an
+  attribute without an index, attributes filled in under 5% of profiled rows, repeated values in an
+  identifier (code, number, email, phone), text holding a handful of values, attributes on no form
+  or view. Each issue carries a draft fix (the route and body to send in a Develop workspace:
+  make it filterable, a match rule, the option-set preview, a form draft); it applies none.
   Once an entity's fields are in, `POST /api/v1/admin/entities/{entity_id}/scaffold` gives it its
   starting set: a draft main form, a kanban view over its status choice, the import template's
   columns and its digest entry.

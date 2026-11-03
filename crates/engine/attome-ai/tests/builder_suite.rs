@@ -10,6 +10,8 @@
 //!   `ATTOME_BUILDER_SUITE_DRAFTS` names) are graded and the per-task and
 //!   per-model report printed. Without the variable the live test does
 //!   nothing.
+//! - `model.score` (AD7-T1): a scripted case's evidence yields the issues a
+//!   sound review finds (`fixtures/builder/model_score.json`).
 //! - The gate (AD10-T2): a live run fails when a model scores more than five
 //!   points below its accepted score (`fixtures/builder/accepted_scores.json`).
 
@@ -20,7 +22,7 @@
     reason = "test code: a failed step should panic with its message; the live report prints"
 )]
 
-use attome_ai::builder::review::name_ok;
+use attome_ai::builder::review::{AttributeEvidence, SlowFilter, name_ok, score_model};
 use attome_ai::builder::suite::{AcceptedScore, BuildTask, gate, grade, report, score};
 use serde_json::{Value, json};
 
@@ -144,6 +146,34 @@ fn accepted() -> Vec<AcceptedScore> {
         serde_json::from_str(include_str!("fixtures/builder/accepted_scores.json"))
             .expect("parses");
     serde_json::from_value(fixture["accepted"].clone()).expect("the accepted scores parse")
+}
+
+#[test]
+fn the_model_score_case_finds_its_issues() {
+    let case: Value =
+        serde_json::from_str(include_str!("fixtures/builder/model_score.json")).expect("parses");
+    let attributes: Vec<AttributeEvidence> =
+        serde_json::from_value(case["attributes"].clone()).expect("the evidence parses");
+    let slow: Vec<SlowFilter> =
+        serde_json::from_value(case["slow"].clone()).expect("the slow statements parse");
+    let scored = score_model(
+        case["entity"].as_str().unwrap(),
+        Some(uuid::Uuid::nil()),
+        &attributes,
+        &slow,
+    );
+    let found: Vec<Value> = scored
+        .issues
+        .iter()
+        .map(|i| json!([i.code, i.attribute]))
+        .collect();
+    assert_eq!(Value::Array(found), case["expected"]);
+    assert_eq!(json!(scored.score), case["expected_score"]);
+    // Every issue carries evidence and a draft fix naming a route.
+    for issue in &scored.issues {
+        assert!(!issue.evidence.is_empty(), "{issue:?}");
+        assert!(issue.fix["route"].as_str().is_some(), "{issue:?}");
+    }
 }
 
 #[test]

@@ -57,7 +57,7 @@ fn draft_model_cases_are_well_formed() {
 #[test]
 fn drafting_and_reviewing_are_read_tools() {
     let registry = ActionRegistry::new();
-    for id in ["model.draft", "model.review"] {
+    for id in ["model.draft", "model.review", "model.score"] {
         let descriptor = registry
             .resolve(id)
             .unwrap_or_else(|| panic!("{id} is registered"));

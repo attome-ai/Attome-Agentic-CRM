@@ -144,6 +144,8 @@ pub mod sales_team;
 pub mod scan;
 /// N12-T1: model.entity.create and model.attribute.create.
 pub mod schema_build;
+/// AD7-T1: model.score, a built model's score with evidence and draft fixes.
+pub mod score_model;
 /// A25-T7: search.parse_filter and search.answer_records, and the search seam.
 pub mod search_ask;
 pub mod search_records;
@@ -203,6 +205,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(flow_draft::descriptors());
     all.extend(import_config::descriptors());
     all.extend(review_model::descriptors());
+    all.extend(score_model::descriptors());
     all.extend(rpa_draft::descriptors());
     all.extend(search_ask::descriptors());
     all.extend(catalog::descriptors());
@@ -329,6 +332,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(flow_draft::executors());
     all.extend(import_config::executors());
     all.extend(review_model::executors());
+    all.extend(score_model::executors());
     all.extend(rpa_draft::executors());
     all.extend(search_ask::executors());
     all.extend(catalog::executors());

@@ -14,10 +14,26 @@
 //!   draft nor in the deployment;
 //! - `relationship_direction`: a one-to-many declared on the parent; the
 //!   lookup belongs on the child, as many-to-one.
+//!
+//! AD7-T1: [`score_model`] scores a built entity from evidence read about it
+//! (its data profile, where its attributes are used, slow statements) and
+//! proposes fixes as drafts, never applying one:
+//!
+//! - `slow_filter`: slow statements filter on an attribute no index leads
+//!   on; the fix makes it filterable, which builds the index;
+//! - `rarely_filled`: an attribute filled in under 5% of profiled rows;
+//! - `duplicate_values`: an identifier-like attribute (code, number, email,
+//!   phone, reference) with repeated values; the fix is a duplicate rule;
+//! - `few_values`: a text attribute holding a handful of values; the fix is
+//!   an option set with them;
+//! - `unused`: an attribute on no form and no view.
+//!
+//! Each issue costs points from 100 ([`ModelIssue::cost`]).
 
 use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
 
 /// One drafted attribute.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -183,6 +199,197 @@ pub fn review(draft: &[DraftEntity], existing: &HashSet<String>) -> Vec<Finding>
     out
 }
 
+/// What [`score_model`] reads about one attribute.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+#[serde(default)]
+pub struct AttributeEvidence {
+    pub name: String,
+    pub id: Option<uuid::Uuid>,
+    pub text: bool,
+    pub filterable: bool,
+    /// Profiled rows and how many had a value; `None` without a profile.
+    pub rows: Option<i64>,
+    pub filled: i64,
+    /// Distinct values, and whether that count stopped at the profiler's cap.
+    pub distinct: i64,
+    pub distinct_capped: bool,
+    /// The most common values, most common first.
+    pub top_values: Vec<String>,
+    /// Forms and views that show it.
+    pub on_forms: i64,
+    pub on_views: i64,
+}
+
+/// A slow statement group filtering on one attribute (the index advisor's).
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct SlowFilter {
+    pub attribute: String,
+    pub statements: i64,
+    pub calls: i64,
+    pub worst_mean_ms: f64,
+}
+
+/// One scored issue with its evidence and a fix to draft.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct ModelIssue {
+    pub code: &'static str,
+    pub attribute: String,
+    pub evidence: String,
+    /// The change to draft in a Develop workspace; never applied here.
+    pub fix: Value,
+    pub cost: u32,
+}
+
+/// An entity's score, 0–100, and its issues, most costly first.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct ModelScore {
+    pub entity: String,
+    pub score: u32,
+    pub issues: Vec<ModelIssue>,
+    /// Whether a data profile was read (without one, only usage and slow
+    /// statements are judged).
+    pub profiled: bool,
+}
+
+/// Rows a profile needs before fill and value counts are judged.
+const MIN_ROWS: i64 = 50;
+/// An attribute filled in under this share of rows is rarely filled.
+const RARE_SHARE: f64 = 0.05;
+/// A text attribute with at most this many values is an option set.
+const FEW_VALUES: i64 = 12;
+
+fn identifier_like(name: &str) -> bool {
+    [
+        "code",
+        "number",
+        "email",
+        "phone",
+        "reference",
+        "_no",
+        "_ref_no",
+        "national_id",
+    ]
+    .iter()
+    .any(|k| name == k.trim_start_matches('_') || name.ends_with(k))
+}
+
+/// Scores one entity from what was read about it. Pure.
+pub fn score_model(
+    entity: &str,
+    entity_id: Option<uuid::Uuid>,
+    attributes: &[AttributeEvidence],
+    slow: &[SlowFilter],
+) -> ModelScore {
+    let field_route = |a: &AttributeEvidence| match (entity_id, a.id) {
+        (Some(e), Some(f)) => format!("/api/v1/admin/entities/{e}/fields/{f}"),
+        _ => format!("/api/v1/admin/entities ({entity}.{})", a.name),
+    };
+    let mut issues = Vec::new();
+    for s in slow {
+        let Some(a) = attributes.iter().find(|a| a.name == s.attribute) else {
+            continue;
+        };
+        if a.filterable {
+            continue;
+        }
+        issues.push(ModelIssue {
+            code: "slow_filter",
+            attribute: a.name.clone(),
+            evidence: format!(
+                "{} slow statement(s), {} call(s), up to {:.0} ms on average, filter on it without an index",
+                s.statements, s.calls, s.worst_mean_ms
+            ),
+            fix: json!({ "method": "PATCH", "route": field_route(a), "body": { "is_filterable": true } }),
+            cost: 10,
+        });
+    }
+    for a in attributes {
+        if let Some(rows) = a.rows.filter(|r| *r >= MIN_ROWS) {
+            let share = a.filled as f64 / rows as f64;
+            if share < RARE_SHARE {
+                issues.push(ModelIssue {
+                    code: "rarely_filled",
+                    attribute: a.name.clone(),
+                    evidence: format!("filled in {} of {rows} profiled rows", a.filled),
+                    fix: json!({ "method": "PATCH", "route": field_route(a), "body": { "is_required": false },
+                                 "note": "take it off the forms, or retire it if nobody needs it" }),
+                    cost: 5,
+                });
+            }
+            let duplicates = a.filled - a.distinct;
+            if identifier_like(&a.name) && !a.distinct_capped && duplicates > 0 {
+                issues.push(ModelIssue {
+                    code: "duplicate_values",
+                    attribute: a.name.clone(),
+                    evidence: format!(
+                        "{} filled value(s), {} distinct: {duplicates} repeat",
+                        a.filled, a.distinct
+                    ),
+                    fix: json!({
+                        "method": "POST",
+                        "route": "/api/v1/admin/data/match-rules",
+                        "body": {
+                            "entity": entity,
+                            "name": format!("{entity} {} repeats", a.name),
+                            "fields": [{ "field": a.name, "comparator": "normalized", "weight": 1.0 }],
+                            "threshold": 1.0,
+                            "on_save": "warn",
+                        },
+                    }),
+                    cost: 5,
+                });
+            } else if a.text
+                && !a.distinct_capped
+                && (2..=FEW_VALUES).contains(&a.distinct)
+                && a.filled >= a.distinct * 10
+            {
+                issues.push(ModelIssue {
+                    code: "few_values",
+                    attribute: a.name.clone(),
+                    evidence: format!(
+                        "{} filled value(s) hold only {} distinct: {}",
+                        a.filled,
+                        a.distinct,
+                        a.top_values.join(", ")
+                    ),
+                    fix: json!({
+                        "method": "POST",
+                        "route": entity_id.map_or_else(
+                            || format!("/api/v1/admin/entities ({entity})"),
+                            |e| format!("/api/v1/admin/entities/{e}/refactor/option-set-preview"),
+                        ),
+                        "body": { "source": a.name },
+                        "note": "preview the options, then change the field's type to choice with the preview's conversion map",
+                    }),
+                    cost: 3,
+                });
+            }
+        }
+        if a.on_forms == 0 && a.on_views == 0 {
+            issues.push(ModelIssue {
+                code: "unused",
+                attribute: a.name.clone(),
+                evidence: "on no form and no view".to_owned(),
+                fix: json!({ "method": "POST", "route": "/api/v1/actions/model.form.draft/invoke",
+                             "body": { "entity": entity } }),
+                cost: 2,
+            });
+        }
+    }
+    issues.sort_by(|a, b| {
+        b.cost
+            .cmp(&a.cost)
+            .then_with(|| a.attribute.cmp(&b.attribute))
+    });
+    let lost: u32 = issues.iter().map(|i| i.cost).sum();
+    ModelScore {
+        entity: entity.to_owned(),
+        score: 100u32.saturating_sub(lost),
+        issues,
+        profiled: attributes.iter().any(|a| a.rows.is_some()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -249,6 +456,95 @@ mod tests {
         }
         assert!(
             name_ok("work_order_2") && !name_ok("WorkOrder") && !name_ok("a__b") && !name_ok("_x")
+        );
+    }
+
+    #[test]
+    fn builder_review_scores_a_model_with_evidence() {
+        let base = AttributeEvidence {
+            rows: Some(1000),
+            filled: 900,
+            distinct: 900,
+            on_forms: 1,
+            on_views: 1,
+            ..AttributeEvidence::default()
+        };
+        let attrs = vec![
+            AttributeEvidence {
+                name: "visit_date".into(),
+                ..base.clone()
+            },
+            AttributeEvidence {
+                name: "fax".into(),
+                text: true,
+                filled: 10,
+                distinct: 10,
+                ..base.clone()
+            },
+            AttributeEvidence {
+                name: "patient_code".into(),
+                text: true,
+                distinct: 850,
+                ..base.clone()
+            },
+            AttributeEvidence {
+                name: "status_text".into(),
+                text: true,
+                distinct: 3,
+                top_values: vec!["open".into(), "closed".into(), "held".into()],
+                ..base.clone()
+            },
+            AttributeEvidence {
+                name: "legacy_note".into(),
+                on_forms: 0,
+                on_views: 0,
+                ..base.clone()
+            },
+        ];
+        let slow = [SlowFilter {
+            attribute: "visit_date".into(),
+            statements: 2,
+            calls: 400,
+            worst_mean_ms: 250.0,
+        }];
+        let entity = uuid::Uuid::now_v7();
+        let scored = score_model("visit", Some(entity), &attrs, &slow);
+        let codes: Vec<(&str, &str)> = scored
+            .issues
+            .iter()
+            .map(|i| (i.code, i.attribute.as_str()))
+            .collect();
+        assert_eq!(
+            codes,
+            vec![
+                ("slow_filter", "visit_date"),
+                ("rarely_filled", "fax"),
+                ("duplicate_values", "patient_code"),
+                ("few_values", "status_text"),
+                ("unused", "legacy_note"),
+            ]
+        );
+        assert_eq!(scored.score, 100 - 10 - 5 - 5 - 3 - 2);
+        assert!(scored.profiled);
+        assert!(scored.issues[1].evidence.contains("10 of 1000"));
+        assert!(scored.issues[3].evidence.ends_with("open, closed, held"));
+        assert_eq!(scored.issues[3].fix["body"]["source"], json!("status_text"));
+        assert_eq!(
+            scored.issues[2].fix["route"],
+            json!("/api/v1/admin/data/match-rules")
+        );
+
+        // A small or missing profile judges only usage and slow statements.
+        let unprofiled = AttributeEvidence {
+            name: "fax".into(),
+            rows: None,
+            filled: 0,
+            ..base
+        };
+        let scored = score_model("visit", None, &[unprofiled], &[]);
+        assert_eq!(
+            (scored.score, scored.issues.len(), scored.profiled),
+            (100, 0, false)
         );
     }
 }
