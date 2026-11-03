@@ -17,6 +17,12 @@ install: `@entity:account`, `@attribute:account.industry`, `@view:account/Active
 `@query:account/Open Pipeline` (`@query:/<name>` for a query of no entity), `@role:Sales Manager` and
 `@<kind>:<app>/<name>` for another model object, this pack's own included (`@component:crm/kpi_tile`).
 
+Ten packs ship a **metadata form** per entity they create (`model/form/<pack>/<entity>.json`, A12-T5),
+generated from the entity's hand-written form: its tabs, sections, columns and fields, with tab and
+section labels as catalog keys (`xrmForm.tabs.details`) that the form renderer translates. The
+hand-written form stays the one shown until the entity is listed in `forms.runtime_entities` with its
+published form's id (`docs/pages.md`).
+
 A pack may also keep **golden workflows** in `golden/golden.json` (`attome-pack-golden/v1`): `packs`,
 the packs to install first, in order (itself included), and `tests`, customer tests (`name`,
 `description`, `definition`, as `docs/testing.md` describes them) over bilingual sample records. A
