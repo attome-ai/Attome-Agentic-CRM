@@ -20958,6 +20958,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/esign/envelopes/{id}/documents/{document_id}/sealed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download a sealed document
+         * @description K4-T2: the PAdES-sealed copy of one of a completed envelope's PDFs.
+         */
+        get: operations["get_esign_sealed_document"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/esign/envelopes/{id}/seal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Seal a completed envelope again
+         * @description K4-T2: queues the seal of the documents not sealed yet (after the
+         *     signing certificate was set, say). Audited.
+         */
+        post: operations["post_esign_envelope_seal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/esign/envelopes/{id}/send": {
         parameters: {
             query?: never;
@@ -45814,6 +45855,8 @@ export interface components {
             events: components["schemas"]["EnvelopeEvent"][];
             /** Format: uuid */
             id: string;
+            /** @description K4-T2: each document's sealed copy, once the envelope is completed. */
+            seals: components["schemas"]["SealedDocument"][];
             /** Format: date-time */
             sent_at?: string | null;
             signers: components["schemas"]["EnvelopeSigner"][];
@@ -48892,6 +48935,11 @@ export interface components {
             context: unknown;
             /** Format: uuid */
             correlation_entity_id?: string | null;
+            /**
+             * Format: uuid
+             * @description M2-T3: the flow the run belongs to, to open the graph it ran.
+             */
+            definition_id: string;
             /** Format: uuid */
             definition_version_id: string;
             /** Format: uuid */
@@ -69494,6 +69542,17 @@ export interface components {
             /** Format: uuid */
             id: string;
             name?: string | null;
+        };
+        /** @description A document's seal, as the envelope's owner sees it. */
+        SealedDocument: {
+            /** Format: uuid */
+            document_id: string;
+            /** @description Why the document was not sealed (not a PDF, encrypted, unreadable). */
+            seal_error?: string | null;
+            /** Format: date-time */
+            sealed_at?: string | null;
+            /** @description The sealed copy's SHA-256, once sealed. */
+            sealed_sha256?: string | null;
         };
         SearchAttributeSetting: {
             attribute: string;
@@ -137173,6 +137232,97 @@ export interface operations {
             };
             /** @description No envelope of the caller's */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_esign_sealed_document: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The envelope */
+                id: string;
+                /** @description The document in the envelope */
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The sealed PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": number[];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No envelope of the caller's, or the document is not sealed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_esign_envelope_seal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The envelope */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The seal is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No envelope of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The envelope is not completed */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

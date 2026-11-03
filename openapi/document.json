@@ -338,6 +338,169 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/esign/envelopes/{id}/documents/{document_id}/sealed": {
+      "get": {
+        "tags": [
+          "document"
+        ],
+        "summary": "Download a sealed document",
+        "description": "K4-T2: the PAdES-sealed copy of one of a completed envelope's PDFs.",
+        "operationId": "get_esign_sealed_document",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The envelope",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "document_id",
+            "in": "path",
+            "description": "The document in the envelope",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The sealed PDF",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No envelope of the caller's, or the document is not sealed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "document",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/esign/envelopes/{id}/seal": {
+      "post": {
+        "tags": [
+          "document"
+        ],
+        "summary": "Seal a completed envelope again",
+        "description": "K4-T2: queues the seal of the documents not sealed yet (after the\nsigning certificate was set, say). Audited.",
+        "operationId": "post_esign_envelope_seal",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The envelope",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "The seal is queued"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No envelope of the caller's",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The envelope is not completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "document",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/esign/envelopes/{id}/send": {
       "post": {
         "tags": [
@@ -910,7 +1073,8 @@
           "documents",
           "signers",
           "events",
-          "chain_intact"
+          "chain_intact",
+          "seals"
         ],
         "properties": {
           "certificate": {
@@ -955,6 +1119,13 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "seals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SealedDocument"
+            },
+            "description": "K4-T2: each document's sealed copy, once the envelope is completed."
           },
           "sent_at": {
             "type": [
@@ -1368,6 +1539,40 @@
             "items": {
               "$ref": "#/components/schemas/RuleFailure"
             }
+          }
+        }
+      },
+      "SealedDocument": {
+        "type": "object",
+        "description": "A document's seal, as the envelope's owner sees it.",
+        "required": [
+          "document_id"
+        ],
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seal_error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why the document was not sealed (not a PDF, encrypted, unreadable)."
+          },
+          "sealed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "sealed_sha256": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The sealed copy's SHA-256, once sealed."
           }
         }
       },
