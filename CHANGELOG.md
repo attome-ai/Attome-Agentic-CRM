@@ -17,6 +17,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Agent sessions run as their agent principal (AH3-T6): an agent definition may name the principal
+  it runs as (`ai_agent.principal_ref`, platform changeset 0092); a session started from it is
+  bound to that principal (`agent_session.agent_principal_ref`, `actor_chain` naming the person
+  who started it), its actions are authorized as the principal (within its sponsor's grants) and
+  the records it makes are the principal's; it stops being live while the principal is paused or
+  suspended and ends when it is revoked. Only the sponsor or an administrator may start one.
 - An agent principal holds no more than its sponsor (AH3-T5): resolving an agent account keeps only
   the privileges and field grants its sponsor also holds (never a union), adds the sponsor's field
   masks, never `system.admin`, and only the entities in its scope when it has one; it fails closed

@@ -99,6 +99,10 @@ pub const PLATFORM_BUNDLES: &[(&str, &str)] = &[
         include_str!("../../../../../platform-bundles/attome-develop.json"),
     ),
     (
+        "attome-ai-agent-principal",
+        include_str!("../../../../../platform-bundles/attome-ai-agent-principal.json"),
+    ),
+    (
         "attome-records-bulk-quiet",
         include_str!("../../../../../platform-bundles/attome-records-bulk-quiet.json"),
     ),

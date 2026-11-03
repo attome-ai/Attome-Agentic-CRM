@@ -403,6 +403,8 @@ pub async fn start_session(
 ) -> Result<AgentSession, AppError> {
     let resolved = resolve_start(state, ctx, definition_id, constraints).await?;
     let trial = resolved.trial;
+    // AH3-T6: a definition with a principal runs its sessions as that agent.
+    let principal = definition_principal(state, ctx, definition_id).await?;
     let mut session = session::start(
         &state.base.db,
         &attome_audit::audit_service(state),
@@ -418,6 +420,20 @@ pub async fn start_session(
         },
     )
     .await?;
+    if let Some(principal) = principal
+        && let Err(error) =
+            session::bind_principal(&state.base.db, session.id, principal, ctx.user_id).await
+    {
+        // Never leave the session running as the person instead.
+        let _ = session::revoke(
+            &state.base.db,
+            session.id,
+            ctx.user_id,
+            "agent principal not bound",
+        )
+        .await;
+        return Err(error);
+    }
     if trial {
         session::mark_trial(
             &state.base.db,
@@ -427,6 +443,36 @@ pub async fn start_session(
         .await?;
     }
     Ok(session)
+}
+
+/// AH3-T6: the agent principal a definition runs as (`ai_agent.principal_ref`,
+/// platform changeset 0092), checked for a session start: it must be an
+/// active agent with an active sponsor, and only its sponsor or an
+/// administrator may start a session as it, so nobody gains its grants by
+/// starting one.
+async fn definition_principal(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    definition_id: Uuid,
+) -> Result<Option<Uuid>, AppError> {
+    let principal: Option<Option<Uuid>> =
+        sqlx::query_scalar("SELECT principal_ref FROM ai_agent WHERE id = $1")
+            .bind(definition_id)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    let Some(principal) = principal.flatten() else {
+        return Ok(None);
+    };
+    let facts = attome_security::agent_scope::agent_facts(&state.base.db, principal)
+        .await?
+        .ok_or_else(|| {
+            AppError::Validation("the definition's principal is not an agent principal".into())
+        })?;
+    if facts.sponsor != ctx.user_id && !ctx.is_admin {
+        return Err(AppError::Forbidden);
+    }
+    Ok(Some(principal))
 }
 
 /// What a definition resolves to at session start: the effective ceiling and

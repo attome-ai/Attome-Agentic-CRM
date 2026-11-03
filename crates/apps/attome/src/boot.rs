@@ -1289,6 +1289,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-service-quality-review",
         // T1-T3: the builder and publisher privileges of Develop workspaces.
         "attome-develop",
+        // AH3-T6: an agent definition's principal.
+        "attome-ai-agent-principal",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

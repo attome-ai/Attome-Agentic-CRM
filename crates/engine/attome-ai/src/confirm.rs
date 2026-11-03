@@ -248,7 +248,14 @@ async fn admit_and_execute(
     //    taken unlocked; T takes it again under the lock and records the
     //    verdict, so it is carried into T as "no snapshot" rather than
     //    escaping as an error.
-    let security = match attome_security::resolve_uncached(db, conversation.owner_user_id).await {
+    // AH3-T6: a session bound to an agent principal runs as it.
+    let acting = crate::session::acts_as(
+        db,
+        conversation.agent_session_id,
+        conversation.owner_user_id,
+    )
+    .await?;
+    let security = match attome_security::resolve_uncached(db, acting).await {
         Ok(security) => Some(Arc::new(security)),
         Err(attome_types::AppError::Forbidden) => None,
         Err(e) => return Err(e),

@@ -433,8 +433,9 @@ pub async fn run_deferred(
                 ));
             }
         };
-        let security =
-            attome_security::resolve_uncached(&state.base.db, row.acting_user_id).await?;
+        // AH3-T6: a session bound to an agent principal runs as it.
+        let acting = session::acts_as(&state.base.db, session.id, row.acting_user_id).await?;
+        let security = attome_security::resolve_uncached(&state.base.db, acting).await?;
         let mut ctx = ActionContext::for_session(std::sync::Arc::new(security), &session);
         ctx.idempotency_key = row.tool_call_id.clone();
         ctx.autonomy = crate::autonomy::resolve(state, &ctx, descriptor, &row.args)
@@ -962,8 +963,9 @@ pub async fn dispatch_approved_agent_action_under(
         ));
     }
 
-    let security =
-        attome_security::resolve_uncached(&state.base.db, request.acting_user_id).await?;
+    // AH3-T6: a session bound to an agent principal runs as it.
+    let acting = session::acts_as(&state.base.db, session.id, request.acting_user_id).await?;
+    let security = attome_security::resolve_uncached(&state.base.db, acting).await?;
     let mut ctx = ActionContext::for_session(std::sync::Arc::new(security), &session);
     ctx.approval_request_id = approval_request_id;
     attome_core::ai_runtime_switch::refresh(&state.base.db).await;

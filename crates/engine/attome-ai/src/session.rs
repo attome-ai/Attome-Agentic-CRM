@@ -269,7 +269,9 @@ macro_rules! session_live {
     () => {
         concat!(
             "ended_at IS NULL AND revoked_at IS NULL AND paused_at IS NULL AND NOT ",
-            session_expired!()
+            session_expired!(),
+            " AND (agent_principal_ref IS NULL OR EXISTS (SELECT 1 FROM agent_principal ap \
+               WHERE ap.user_ref = agent_principal_ref AND ap.lifecycle_state = 'active'))"
         )
     };
 }
@@ -351,6 +353,49 @@ impl From<SessionRow> for AgentSession {
                 persona: row.persona_snapshot,
             },
         }
+    }
+}
+
+/// AH3-T6: the agent principal a session runs as, if it was bound to one.
+pub async fn principal_of(db: &PgPool, session_id: Uuid) -> Result<Option<Uuid>, AppError> {
+    let row: Option<Option<Uuid>> =
+        sqlx::query_scalar("SELECT agent_principal_ref FROM agent_session WHERE id = $1")
+            .bind(session_id)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?;
+    Ok(row.flatten())
+}
+
+/// AH3-T6: whom a session's actions are authorized as: its agent principal
+/// when it has one (that principal's permissions, narrowed to its sponsor,
+/// AH3-T5), otherwise `owner`. The owner stays the accountable person.
+pub async fn acts_as(db: &PgPool, session_id: Uuid, owner: Uuid) -> Result<Uuid, AppError> {
+    Ok(principal_of(db, session_id).await?.unwrap_or(owner))
+}
+
+/// AH3-T6: binds a just-started session to the agent principal it runs as,
+/// with the person who started it as the chain it acts for. Once only.
+pub async fn bind_principal(
+    db: &PgPool,
+    session_id: Uuid,
+    principal: Uuid,
+    owner: Uuid,
+) -> Result<(), AppError> {
+    let bound = sqlx::query(
+        "UPDATE agent_session SET agent_principal_ref = $2, actor_chain = ARRAY[$3]::uuid[] \
+          WHERE id = $1 AND agent_principal_ref IS NULL",
+    )
+    .bind(session_id)
+    .bind(principal)
+    .bind(owner)
+    .execute(db)
+    .await
+    .map_err(AppError::internal)?;
+    if bound.rows_affected() == 1 {
+        Ok(())
+    } else {
+        Err(AppError::Conflict("the agent session is already bound"))
     }
 }
 
@@ -472,7 +517,11 @@ pub async fn load_governance(
         session_columns!(),
         ", (ended_at IS NOT NULL OR revoked_at IS NOT NULL OR ",
         session_expired!(),
-        ") AS dead, paused_at IS NOT NULL AS paused \
+        " OR (agent_principal_ref IS NOT NULL AND COALESCE((SELECT ap.lifecycle_state \
+           FROM agent_principal ap WHERE ap.user_ref = agent_principal_ref), 'revoked') = 'revoked')) \
+           AS dead, (paused_at IS NOT NULL OR (agent_principal_ref IS NOT NULL AND (SELECT ap.lifecycle_state \
+           FROM agent_principal ap WHERE ap.user_ref = agent_principal_ref) IN ('paused', 'suspended'))) \
+           AS paused \
            FROM agent_session \
           WHERE id = $1",
     ))
@@ -505,7 +554,11 @@ pub async fn lock_for_confirmation(
         session_columns!(),
         ", (ended_at IS NOT NULL OR revoked_at IS NOT NULL OR ",
         session_expired!(),
-        ") AS dead, paused_at IS NOT NULL AS paused \
+        " OR (agent_principal_ref IS NOT NULL AND COALESCE((SELECT ap.lifecycle_state \
+           FROM agent_principal ap WHERE ap.user_ref = agent_principal_ref), 'revoked') = 'revoked')) \
+           AS dead, (paused_at IS NOT NULL OR (agent_principal_ref IS NOT NULL AND (SELECT ap.lifecycle_state \
+           FROM agent_principal ap WHERE ap.user_ref = agent_principal_ref) IN ('paused', 'suspended'))) \
+           AS paused \
            FROM agent_session \
           WHERE id = $1 \
           FOR SHARE",
@@ -540,7 +593,11 @@ pub async fn load_for_execution(
         session_columns!(),
         ", (ended_at IS NOT NULL OR revoked_at IS NOT NULL OR ",
         session_expired!(),
-        ") AS dead, paused_at IS NOT NULL AS paused \
+        " OR (agent_principal_ref IS NOT NULL AND COALESCE((SELECT ap.lifecycle_state \
+           FROM agent_principal ap WHERE ap.user_ref = agent_principal_ref), 'revoked') = 'revoked')) \
+           AS dead, (paused_at IS NOT NULL OR (agent_principal_ref IS NOT NULL AND (SELECT ap.lifecycle_state \
+           FROM agent_principal ap WHERE ap.user_ref = agent_principal_ref) IN ('paused', 'suspended'))) \
+           AS paused \
            FROM agent_session \
           WHERE id = $1",
     ))

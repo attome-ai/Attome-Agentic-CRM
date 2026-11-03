@@ -343,7 +343,13 @@ pub async fn classify_dispatch_error(
         // visible action, so this is the dark refusal if it happens at all.
         return Ok(DispatchFailure::WorldChanged(TerminalState::KillSwitch));
     };
-    let security = Arc::new(attome_security::resolve_uncached(db, session.owner_user_id).await?);
+    let security = Arc::new(
+        attome_security::resolve_uncached(
+            db,
+            crate::session::acts_as(db, session.id, session.owner_user_id).await?,
+        )
+        .await?,
+    );
     let mut ctx = context_for(security, &session);
     if tainted {
         ctx = ctx.tainted();
@@ -878,8 +884,13 @@ pub async fn run(
         let Some(session_now) = crate::session::load_live(db, inputs.session.id).await? else {
             finish!(TerminalState::SessionRevoked, String::new());
         };
-        let security_now =
-            Arc::new(attome_security::resolve_uncached(db, session_now.owner_user_id).await?);
+        let security_now = Arc::new(
+            attome_security::resolve_uncached(
+                db,
+                crate::session::acts_as(db, session_now.id, session_now.owner_user_id).await?,
+            )
+            .await?,
+        );
         let mut ctx = context_for(security_now, &session_now);
         if tainted {
             ctx = ctx.tainted();
@@ -1173,7 +1184,16 @@ pub async fn run(
                 finish!(TerminalState::SessionRevoked, String::new());
             };
             let security_for_call = Arc::new(
-                attome_security::resolve_uncached(db, session_for_call.owner_user_id).await?,
+                attome_security::resolve_uncached(
+                    db,
+                    crate::session::acts_as(
+                        db,
+                        session_for_call.id,
+                        session_for_call.owner_user_id,
+                    )
+                    .await?,
+                )
+                .await?,
             );
             let mut call_ctx = context_for(security_for_call, &session_for_call);
             if tainted {
@@ -1462,7 +1482,13 @@ async fn pre_retrieve(
         close(crate::tool_call::Status::Invalidated).await?;
         return Ok(false);
     };
-    let security = Arc::new(attome_security::resolve_uncached(db, session.owner_user_id).await?);
+    let security = Arc::new(
+        attome_security::resolve_uncached(
+            db,
+            crate::session::acts_as(db, session.id, session.owner_user_id).await?,
+        )
+        .await?,
+    );
     let mut ctx = context_for(security, &session);
     if tainted {
         ctx = ctx.tainted();
