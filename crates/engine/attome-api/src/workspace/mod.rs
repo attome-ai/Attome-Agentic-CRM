@@ -36,7 +36,8 @@ use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_ev
 use attome_audit::{AuditOperation, audit_service};
 use attome_core::EngineState;
 use attome_core::changeset::{Layer, NewChangeset, store};
-use attome_server::authz::{Authorized, Privilege, area};
+use attome_server::authz::{AdminArea, Authorized, SelfService};
+use attome_server::security::SecurityContext;
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -55,7 +56,8 @@ pub struct Workspace {
     pub id: Uuid,
     pub name: String,
     pub purpose: Option<String>,
-    /// `open`, `publishing`, `published` or `discarded`.
+    /// `open`, `in_review` (a builder's publish waits for the owner, T1-T3),
+    /// `publishing`, `published` or `discarded`.
     pub status: String,
     pub owner_ref: Uuid,
     /// The changeset its metadata writes record into (T5-T4).
@@ -67,6 +69,10 @@ pub struct Workspace {
     pub created_at: DateTime<Utc>,
     pub last_used_at: DateTime<Utc>,
     pub row_version: i64,
+    /// T1-T3: the team whose builders work in it beside its owner.
+    pub team_ref: Option<Uuid>,
+    /// T1-T3: the owner's review a builder's publish waits on.
+    pub review_request_ref: Option<Uuid>,
 }
 
 /// A new workspace.
@@ -82,6 +88,9 @@ pub struct NewWorkspace {
     /// live's, or none.
     #[serde(default)]
     pub data: Option<data::DataRequest>,
+    /// T1-T3: a team whose builders work in it too; the caller's own team.
+    #[serde(default)]
+    pub team: Option<Uuid>,
 }
 
 /// A workspace just made, with what its data came to.
@@ -93,7 +102,39 @@ pub struct CreatedWorkspace {
 }
 
 const COLUMNS: &str = "id, name, purpose, status, owner_ref, changeset_ref, metadata_tables, \
-                       entity_tables, created_at, last_used_at, row_version";
+                       entity_tables, created_at, last_used_at, row_version, team_ref, \
+                       review_request_ref";
+
+/// T1-T3: the privilege that lets a person build in Develop workspaces (make
+/// one, work in their own or their team's) without the data-model area.
+pub const BUILD_PRIVILEGE: &str = "develop.build";
+/// T1-T3: the privilege that lets a builder publish a workspace; without it
+/// (or when owner review is on) a builder's publish waits for the owner.
+pub const PUBLISH_PRIVILEGE: &str = "develop.publish";
+
+/// Whether `ctx` builds in workspaces at all: the data-model area, or the
+/// builder privilege. Pure.
+pub(crate) fn is_builder(ctx: &SecurityContext) -> bool {
+    AdminArea::DataModel.held_by(ctx) || ctx.privileges.contains(BUILD_PRIVILEGE)
+}
+
+/// Whether `ctx` may work in a workspace owned by `owner` and shared with
+/// `team`: the data-model area, its owner, or a builder of its team. Pure.
+pub(crate) fn may_enter(ctx: &SecurityContext, owner: Uuid, team: Option<Uuid>) -> bool {
+    AdminArea::DataModel.held_by(ctx)
+        || ctx.user_id == owner
+        || (ctx.privileges.contains(BUILD_PRIVILEGE)
+            && team.is_some_and(|t| ctx.team_ids.contains(&t)))
+}
+
+/// The refusal for a caller who does not build.
+fn require_builder(ctx: &SecurityContext) -> Result<(), AppError> {
+    if is_builder(ctx) {
+        Ok(())
+    } else {
+        Err(AppError::Forbidden)
+    }
+}
 
 fn checked(body: NewWorkspace) -> Result<(String, Option<String>, data::DataPlan), AppError> {
     let plan = data::checked(&body.data.unwrap_or_default())?;
@@ -138,9 +179,18 @@ fn checked(body: NewWorkspace) -> Result<(String, Option<String>, data::DataPlan
 )]
 async fn create(
     State(state): State<EngineState>,
-    ctx: Authorized<Privilege<area::DataModel>>,
+    ctx: Authorized<SelfService>,
     Json(body): Json<NewWorkspace>,
 ) -> Result<(StatusCode, Json<CreatedWorkspace>), AppError> {
+    require_builder(&ctx)?;
+    let team = body.team;
+    if let Some(team) = team
+        && !(AdminArea::DataModel.held_by(&ctx) || ctx.team_ids.contains(&team))
+    {
+        return Err(AppError::Validation(
+            "team: a workspace is shared with one of your own teams".into(),
+        ));
+    }
     let (name, purpose, plan) = checked(body)?;
     let estimated = data::check_storage(&state, plan).await?;
     let id = Uuid::now_v7();
@@ -184,6 +234,24 @@ async fn create(
             made
         }
         Err(error) => Err(error),
+    };
+    let made = match (made, team) {
+        (Ok(mut workspace), Some(team)) => {
+            let shared = sqlx::query("UPDATE develop_workspace SET team_ref = $2 WHERE id = $1")
+                .bind(workspace.id)
+                .bind(team)
+                .execute(&state.base.db)
+                .await
+                .map_err(AppError::internal);
+            match shared {
+                Ok(_) => {
+                    workspace.team_ref = Some(team);
+                    Ok(workspace)
+                }
+                Err(error) => Err(error),
+            }
+        }
+        (other, _) => other,
     };
     match made {
         Ok(workspace) => Ok((
@@ -308,19 +376,31 @@ async fn record_created(
 )]
 async fn list(
     State(state): State<EngineState>,
-    _ctx: Authorized<Privilege<area::DataModel>>,
+    ctx: Authorized<SelfService>,
     Query(q): Query<OnePageQuery>,
 ) -> Result<Json<PaginatedResponse<Workspace>>, AppError> {
+    require_builder(&ctx)?;
     let window = q.window();
-    let total: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM develop_workspace WHERE status <> 'discarded'")
-            .fetch_one(&state.base.db)
-            .await
-            .map_err(AppError::internal)?;
-    let items: Vec<Workspace> = sqlx::query_as(&format!(
-        "SELECT {COLUMNS} FROM develop_workspace WHERE status <> 'discarded' \
-         ORDER BY created_at DESC, id DESC LIMIT $1 OFFSET $2"
+    // T1-T3: a builder sees their own workspaces and their teams'.
+    let everything = AdminArea::DataModel.held_by(&ctx);
+    const VISIBLE: &str = "status <> 'discarded' \
+        AND ($1 OR owner_ref = $2 OR team_ref = ANY($3))";
+    let total: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM develop_workspace WHERE {VISIBLE}"
     ))
+    .bind(everything)
+    .bind(ctx.user_id)
+    .bind(&ctx.team_ids)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let items: Vec<Workspace> = sqlx::query_as(&format!(
+        "SELECT {COLUMNS} FROM develop_workspace WHERE {VISIBLE} \
+         ORDER BY created_at DESC, id DESC LIMIT $4 OFFSET $5"
+    ))
+    .bind(everything)
+    .bind(ctx.user_id)
+    .bind(&ctx.team_ids)
     .bind(window.page_size)
     .bind(window.offset)
     .fetch_all(&state.base.db)
@@ -364,10 +444,26 @@ async fn find(state: &EngineState, id: Uuid) -> Result<Workspace, AppError> {
 )]
 async fn show(
     State(state): State<EngineState>,
-    _ctx: Authorized<Privilege<area::DataModel>>,
+    ctx: Authorized<SelfService>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Workspace>, AppError> {
-    Ok(Json(find(&state, id).await?))
+    Ok(Json(find_for(&state, &ctx, id).await?))
+}
+
+/// The workspace `id` when `ctx` may work in it; another person's is not
+/// found, as one that does not exist.
+pub(crate) async fn find_for(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    id: Uuid,
+) -> Result<Workspace, AppError> {
+    require_builder(ctx)?;
+    let workspace = find(state, id).await?;
+    if may_enter(ctx, workspace.owner_ref, workspace.team_ref) {
+        Ok(workspace)
+    } else {
+        Err(AppError::NotFound)
+    }
 }
 
 /// Discard a workspace
@@ -392,10 +488,14 @@ async fn show(
 )]
 async fn discard(
     State(state): State<EngineState>,
-    ctx: Authorized<Privilege<area::DataModel>>,
+    ctx: Authorized<SelfService>,
     Path(id): Path<Uuid>,
 ) -> Result<StatusCode, AppError> {
-    let workspace = find(&state, id).await?;
+    let workspace = find_for(&state, &ctx, id).await?;
+    // A team builder works in it; only its owner or the data-model area throws it away.
+    if !(AdminArea::DataModel.held_by(&ctx) || ctx.user_id == workspace.owner_ref) {
+        return Err(AppError::Forbidden);
+    }
     discard_workspace(
         &state,
         ctx.user_id,
@@ -417,7 +517,7 @@ pub(crate) async fn discard_workspace(
     comment: &str,
 ) -> Result<(), AppError> {
     let id = workspace.id;
-    if workspace.status != "open" {
+    if !matches!(workspace.status.as_str(), "open" | "in_review") {
         return Err(AppError::Conflict(
             "only an open workspace can be discarded",
         ));
@@ -425,7 +525,7 @@ pub(crate) async fn discard_workspace(
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let schema_name: Option<String> = sqlx::query_scalar(
         "UPDATE develop_workspace SET status = 'discarded', row_version = row_version + 1 \
-          WHERE id = $1 AND status = 'open' RETURNING schema_name",
+          WHERE id = $1 AND status IN ('open', 'in_review') RETURNING schema_name",
     )
     .bind(id)
     .fetch_optional(&mut *tx)
@@ -502,11 +602,41 @@ mod tests {
     use super::*;
 
     #[test]
+    fn builders_enter_their_own_and_their_teams_workspaces() {
+        let owner = Uuid::now_v7();
+        let team = Uuid::now_v7();
+        let mut builder =
+            SecurityContext::human(Uuid::now_v7(), [BUILD_PRIVILEGE.to_owned()].into());
+        assert!(is_builder(&builder));
+        assert!(!may_enter(&builder, owner, Some(team)), "not on the team");
+        builder.team_ids = vec![team];
+        assert!(may_enter(&builder, owner, Some(team)));
+        assert!(
+            !may_enter(&builder, owner, None),
+            "an unshared workspace stays the owner's"
+        );
+        assert!(may_enter(&builder, builder.user_id, None), "their own");
+
+        let mut member = SecurityContext::human(Uuid::now_v7(), Default::default());
+        member.team_ids = vec![team];
+        assert!(!is_builder(&member));
+        assert!(
+            !may_enter(&member, owner, Some(team)),
+            "a team member who does not build"
+        );
+
+        let modeller =
+            SecurityContext::human(Uuid::now_v7(), ["admin.data_model".to_owned()].into());
+        assert!(is_builder(&modeller) && may_enter(&modeller, owner, None));
+    }
+
+    #[test]
     fn names_and_purposes_are_bounded() {
         let ok = checked(NewWorkspace {
             name: "  Sales rework ".into(),
             purpose: Some("   ".into()),
             data: None,
+            team: None,
         })
         .unwrap();
         assert_eq!((ok.0, ok.1), ("Sales rework".to_owned(), None));
@@ -515,7 +645,8 @@ mod tests {
             checked(NewWorkspace {
                 name: " ".into(),
                 purpose: None,
-                data: None
+                data: None,
+                team: None
             })
             .is_err()
         );
@@ -523,7 +654,8 @@ mod tests {
             checked(NewWorkspace {
                 name: "x".repeat(101),
                 purpose: None,
-                data: None
+                data: None,
+                team: None
             })
             .is_err()
         );
@@ -531,7 +663,8 @@ mod tests {
             checked(NewWorkspace {
                 name: "ok".into(),
                 purpose: Some("p".repeat(1_001)),
-                data: None
+                data: None,
+                team: None
             })
             .is_err()
         );

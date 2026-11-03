@@ -469,6 +469,7 @@ Solution 7 Phase 1 (D-785) — how metadata admin writes are recorded as changes
 | `metadata.storage_tuning_enabled` | boolean | `false` |  | Y2-T9: the daily table-health job also sets each entity table's fill factor from its measured updates (80 for a table whose updates miss heap-only updates, 100 for an append-only one). Off by default. |
 | `metadata.workspace_data_max_mb` | integer, optional | `null` |  | T5-T5: the most storage a Develop workspace's sample or masked data may take, in megabytes; a larger estimate is refused before anything is copied. Unset is 1,024. |
 | `metadata.workspace_idle_days` | integer, optional | `null` |  | T5-T6: days a Develop workspace may go unused before it is discarded; its owner is warned a week before. Unset is 30. |
+| `metadata.workspace_owner_review` | boolean, optional | `null` |  | T1-T3: a builder's publish of a Develop workspace someone else owns waits for the owner's review. Unset is on. |
 
 ## `notification`
 

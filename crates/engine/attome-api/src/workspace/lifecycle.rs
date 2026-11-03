@@ -21,7 +21,7 @@ use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_ev
 use attome_audit::{AuditOperation, audit_service};
 use attome_core::{EngineState, quote_ident};
 use attome_db::DbPool;
-use attome_server::authz::{Authorized, Privilege, area};
+use attome_server::authz::{Authorized, SelfService};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json,
@@ -32,7 +32,7 @@ use serde::Serialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use super::{COLUMNS, Workspace, discard_workspace, find, proxy, schema};
+use super::{COLUMNS, Workspace, discard_workspace, proxy, schema};
 
 /// Days a workspace may stay unused when `metadata.workspace_idle_days` is
 /// unset.
@@ -362,10 +362,11 @@ async fn refresh_columns(
 )]
 pub(super) async fn refresh(
     State(state): State<EngineState>,
-    ctx: Authorized<Privilege<area::DataModel>>,
+    ctx: Authorized<SelfService>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<RefreshReport>, AppError> {
-    let workspace = find(&state, id).await?;
+    // T1-T3: whoever may work in it: the data-model area, its owner or a team builder.
+    let workspace = super::find_for(&state, &ctx, id).await?;
     if workspace.status != "open" {
         return Err(AppError::Conflict(
             "only an open workspace can be refreshed",

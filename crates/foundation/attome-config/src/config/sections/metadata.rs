@@ -59,6 +59,10 @@ pub struct MetadataSection {
     /// discarded; its owner is warned a week before. Unset is 30.
     #[serde(default)]
     pub workspace_idle_days: Option<i64>,
+    /// T1-T3: a builder's publish of a Develop workspace someone else owns
+    /// waits for the owner's review. Unset is on.
+    #[serde(default)]
+    pub workspace_owner_review: Option<bool>,
 }
 
 /// Y12-T11: the host, port and database a PostgreSQL URL names

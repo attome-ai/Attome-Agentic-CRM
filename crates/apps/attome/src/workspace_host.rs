@@ -131,13 +131,26 @@ pub fn token_matches(expected: &str, given: &str) -> bool {
 
 /// The workspace process's outermost layer: a request without the live
 /// server's token is refused.
-pub async fn require_token(expected: Arc<String>, request: Request, next: Next) -> Response {
+pub async fn require_token(expected: Arc<String>, mut request: Request, next: Next) -> Response {
     let given = request
         .headers()
         .get(TOKEN_HEADER)
         .and_then(|v| v.to_str().ok())
         .unwrap_or_default();
     if token_matches(&expected, given) {
+        // T1-T3: a builder live admitted to this workspace edits its model
+        // here with the data-model area, for this request only.
+        let builder = request
+            .headers()
+            .get(attome_api::workspace::proxy::BUILDER_HEADER)
+            .is_some_and(|v| v.as_bytes() == b"1");
+        if builder {
+            request
+                .extensions_mut()
+                .insert(attome_server::security::WorkspaceGrant(
+                    attome_api::workspace::proxy::BUILDER_GRANT,
+                ));
+        }
         next.run(request).await
     } else {
         StatusCode::FORBIDDEN.into_response()

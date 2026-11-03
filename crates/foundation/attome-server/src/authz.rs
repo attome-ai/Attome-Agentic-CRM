@@ -104,6 +104,18 @@ impl AuthorizedContext {
     /// business-rule `hidden`/`disabled` policies. The mark is per request;
     /// the cached context is never changed.
     pub fn for_request(extensions: &axum::http::Extensions, ctx: Arc<SecurityContext>) -> Self {
+        let attached = Self::attach(extensions, ctx);
+        // T1-T3: inside a Develop workspace's own process, a builder the
+        // live server admitted holds the workspace's grant for this request.
+        match extensions.get::<crate::security::WorkspaceGrant>() {
+            Some(grant) if !attached.1 => {
+                Self(Arc::new(attached.0.with_privileges(grant.0)), false)
+            }
+            _ => attached,
+        }
+    }
+
+    fn attach(extensions: &axum::http::Extensions, ctx: Arc<SecurityContext>) -> Self {
         let service = extensions
             .get::<crate::middleware::auth::CookieSession>()
             .is_none();

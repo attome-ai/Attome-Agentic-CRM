@@ -109,9 +109,25 @@ A workspace nobody uses for `metadata.workspace_idle_days` (30 unset) is discard
 Its owner is told in the app a week before, or at once when the idle time is shorter. A workspace is
 discarded only a day or more after that warning, and using it clears the warning.
 
+## Builders and owner review
+
+Two privileges let people build without administering the data model:
+
+- `develop.build`: make workspaces and work in one's own and in those shared with one's team (make a
+  workspace with `"team": "<team id>"`, one of your own teams). Inside a workspace a builder changes
+  entities, fields and views as the data-model area would, there only.
+- `develop.publish`: publish a workspace one owns at once.
+
+A builder's publish of a workspace someone else owns (or any publish without `develop.publish`)
+waits for the owner's review: the answer is `202` with the review request, and the workspace is
+`in_review`, taking no more changes. When the owner approves the request, the workspace publishes
+as the owner, through the same checks. `metadata.workspace_owner_review: false` turns the review
+off; a builder then publishes only with `develop.publish`. The metadata rollout privilege (or
+system administration) always publishes at once.
+
 ## In the web app
 
-Administrators see a workspace picker in the header. It lists the open workspaces, makes a new one
+Builders see a workspace picker in the header. It lists the open workspaces, makes a new one
 (with sample records) and leaves for live. While a tab works inside a workspace, a coloured band on
 every page names it and offers a way back to live. Every request from that tab names the workspace,
 except the workspace and sign-in routes, which always run on live. The choice lasts for the tab: a

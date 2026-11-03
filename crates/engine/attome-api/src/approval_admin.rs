@@ -145,6 +145,8 @@ pub const KNOWN_ACTION_TYPES: &[&str] = &[
     attome_content::versions::ACTION_CONTENT_PUBLISH,
     // G3-T2: an order item waiting for its approval.
     attome_service::order::ACTION_SERVICE_ORDER_ITEM,
+    // T1-T3: a builder's workspace publish, reviewed by its owner.
+    crate::workspace::publish::ACTION_WORKSPACE_PUBLISH,
 ];
 
 /// Whether [`execute_approved`] has a dispatch arm for `action_type`.
@@ -996,6 +998,28 @@ async fn dispatch_approved(
             let accepted =
                 crate::changeset::apply_routes::do_apply(state, &body, Some(request.id)).await?;
             serde_json::to_value(&accepted).map_err(AppError::internal)?
+        }
+        crate::workspace::publish::ACTION_WORKSPACE_PUBLISH => {
+            // T1-T3: the owner approved the builder's publish; it publishes
+            // as the owner, through the route's own path (conflicts checked
+            // again, the changeset gates and approvals still apply).
+            #[derive(serde::Deserialize)]
+            struct WorkspacePublishPayload {
+                workspace: Uuid,
+                #[serde(default)]
+                backup_ref: Option<String>,
+            }
+            let payload: WorkspacePublishPayload =
+                serde_json::from_value(request.payload.clone()).map_err(AppError::internal)?;
+            let ctx = state.base.security.resolve(approver_id).await?;
+            let published = crate::workspace::publish::publish_core(
+                state,
+                &ctx,
+                payload.workspace,
+                payload.backup_ref,
+            )
+            .await?;
+            serde_json::to_value(&published).map_err(AppError::internal)?
         }
         ACTION_DASHBOARD_PUBLISH => {
             // `approver_id`, not `request.requested_by`: `do_publish_dashboard`

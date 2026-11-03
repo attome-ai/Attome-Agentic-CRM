@@ -356,7 +356,7 @@ async fn apply_changesets(
 /// workspace (T5-T4) goes through it too.
 pub(crate) async fn gated_apply(
     state: &EngineState,
-    ctx: &Authorized<Privilege<MetadataRollout>>,
+    ctx: &attome_server::security::SecurityContext,
     body: ApplyChangesetsBody,
 ) -> Result<ApplyChangesetsAccepted, AppError> {
     check_apply(state, &body).await?;

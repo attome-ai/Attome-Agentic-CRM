@@ -5,7 +5,8 @@ import { SdkService, TranslatePipe, WORKSPACE_ROUTES, WorkspaceState } from '@at
 import { AccessService } from '@attome/xrm/core/access/data';
 import { EMPTY, switchMap } from 'rxjs';
 
-const ADMIN_PRIVILEGE = 'system.admin';
+/** Who builds in workspaces (T1-T3): administrators, data modellers and builders. */
+const BUILDER_PRIVILEGES = ['system.admin', 'admin.data_model', 'develop.build'];
 
 /** One workspace, as `GET /api/v1/admin/workspaces` lists it. */
 interface WorkspaceRow {
@@ -24,9 +25,8 @@ let nextId = 0;
  * T5-T7 — the header's workspace picker: work on live or inside one of the
  * open Develop workspaces, or make a new one and enter it. Choosing sets
  * `WorkspaceState` (every later request names it) and reloads the page so
- * every screen reads from where it now works. Administrators only: the
- * workspace routes need the data-model area, so a non-administrator never
- * asks.
+ * every screen reads from where it now works. Builders only (T1-T3): the
+ * workspace routes refuse anyone else, so nobody else asks.
  */
 @Component({
   selector: 'xrm-workspace-picker',
@@ -99,12 +99,12 @@ export class WorkspacePickerComponent {
   readonly busy = signal(false);
   readonly draftName = signal('');
 
-  readonly visible = computed(() => this.loaded() && this.access.hasPrivilege(ADMIN_PRIVILEGE));
+  readonly visible = computed(() => this.loaded() && this.builds());
   readonly open = computed(() => this.rows().filter(w => w.status === 'open'));
 
   constructor() {
     this.access.ready().pipe(
-      switchMap(() => (this.access.hasPrivilege(ADMIN_PRIVILEGE)
+      switchMap(() => (this.builds()
         ? this.sdk.get<WorkspacePage>(WORKSPACE_ROUTES, { query: { page_size: 100 } })
         : EMPTY)),
       takeUntilDestroyed(this.destroyRef),
@@ -121,6 +121,10 @@ export class WorkspacePickerComponent {
         this.loaded.set(true);
       },
     });
+  }
+
+  private builds(): boolean {
+    return BUILDER_PRIVILEGES.some(p => this.access.hasPrivilege(p));
   }
 
   onPick(event: Event): void {

@@ -31,12 +31,15 @@ use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_ev
 use attome_audit::{AuditOperation, audit_service};
 use attome_core::EngineState;
 use attome_core::changeset::{ChangesetStatus, store};
-use attome_security::MetadataRollout;
-use attome_server::authz::{Authorized, Privilege, area};
+use attome_security::METADATA_ROLLOUT_PRIVILEGE_KEY;
+use attome_server::authz::{Authorized, SelfService};
+use attome_server::security::SecurityContext;
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json,
     extract::{Path, State},
+    http::StatusCode,
+    response::{IntoResponse, Response},
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -49,6 +52,53 @@ use crate::changeset::apply_routes::{ApplyChangesetsAccepted, ApplyChangesetsBod
 use crate::changeset::close;
 use crate::changeset::ledger::{ApplyPhase, ApplySource};
 use crate::changeset::plan::{self, ChangesetPlan, PlanContext};
+
+/// T1-T3: the approval a builder's publish waits on, decided by the
+/// workspace's owner; approved, it publishes as the owner.
+pub const ACTION_WORKSPACE_PUBLISH: &str = "develop.workspace_publish";
+
+/// How a caller may publish a workspace.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PublishRight {
+    /// At once (the metadata rollout privilege, or a builder allowed to
+    /// publish their own work).
+    Direct,
+    /// Through the owner's review.
+    OwnerReview,
+    Refused,
+}
+
+/// T1-T3: who publishes how. The metadata rollout privilege (or system
+/// administration) publishes at once. A builder holding `develop.publish`
+/// publishes at once their own workspace, or any when owner review is off;
+/// otherwise a builder's publish of someone else's workspace waits for its
+/// owner. Anyone else is refused. Pure.
+pub fn publish_right(ctx: &SecurityContext, owner: Uuid, review_on: bool) -> PublishRight {
+    if ctx.is_admin || ctx.privileges.contains(METADATA_ROLLOUT_PRIVILEGE_KEY) {
+        return PublishRight::Direct;
+    }
+    if !super::is_builder(ctx) {
+        return PublishRight::Refused;
+    }
+    let owner_reviews = review_on && ctx.user_id != owner;
+    match (
+        ctx.privileges.contains(super::PUBLISH_PRIVILEGE),
+        owner_reviews,
+    ) {
+        (_, true) => PublishRight::OwnerReview,
+        (true, false) => PublishRight::Direct,
+        (false, false) => PublishRight::Refused,
+    }
+}
+
+/// A publish waiting for the owner's review.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ReviewRequested {
+    pub workspace: Uuid,
+    /// `in_review`.
+    pub status: String,
+    pub review_request_id: Uuid,
+}
 
 /// The refusal when live changed what the workspace changes.
 pub const WORKSPACE_CONFLICTS: &str = "workspace_conflicts: live changed objects this workspace \
@@ -390,11 +440,12 @@ async fn set_status(state: &EngineState, id: Uuid, from: &str, to: &str) -> Resu
 )]
 pub(super) async fn preview(
     State(state): State<EngineState>,
-    ctx: Authorized<Privilege<area::DataModel>>,
+    ctx: Authorized<SelfService>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<PublishPreview>, AppError> {
+    super::find_for(&state, &ctx, id).await?;
     let (workspace, schema_name, changeset) = publishing_parts(&state, id).await?;
-    if workspace.status != "open" {
+    if !matches!(workspace.status.as_str(), "open" | "in_review") {
         return Err(AppError::Conflict(
             "only an open workspace can be previewed",
         ));
@@ -411,7 +462,9 @@ pub(super) async fn preview(
 /// the same customer-test, governance and approval gates as any changeset
 /// apply. Refused when live changed the same objects since the workspace was
 /// made. Calling it again resumes a publish that stopped after the close.
-/// Audited.
+/// A builder's publish of a workspace someone else owns (or any, without
+/// `develop.publish`) waits for the owner's review instead: 202, the
+/// workspace `in_review`; approved, it publishes as the owner. Audited.
 #[utoipa::path(
     post,
     path = "/api/v1/admin/workspaces/{id}/publish",
@@ -422,8 +475,9 @@ pub(super) async fn preview(
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
     responses(
         (status = 200, description = "Published: the apply is queued, or waits on an approval", body = Published),
+        (status = 202, description = "Waits for the owner's review", body = ReviewRequested),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
-        (status = 403, description = "Caller lacks system.admin and metadata.rollout", body = ErrorResponse),
+        (status = 403, description = "Caller may not publish this workspace", body = ErrorResponse),
         (status = 404, description = "No such workspace", body = ErrorResponse),
         (status = 409, description = "workspace_conflicts, or the workspace is not open, or records no changeset", body = ErrorResponse),
         (status = 422, description = "Nothing to publish, a blocked plan, or backup_ref_required on the production profile", body = ErrorResponse),
@@ -432,18 +486,114 @@ pub(super) async fn preview(
 )]
 pub(super) async fn publish(
     State(state): State<EngineState>,
-    ctx: Authorized<Privilege<MetadataRollout>>,
+    ctx: Authorized<SelfService>,
     Path(id): Path<Uuid>,
     Json(body): Json<PublishBody>,
-) -> Result<Json<Published>, AppError> {
+) -> Result<Response, AppError> {
+    let workspace = super::find_for(&state, &ctx, id).await?;
+    let review_on = state
+        .base
+        .config
+        .metadata
+        .workspace_owner_review
+        .unwrap_or(true);
+    match publish_right(&ctx, workspace.owner_ref, review_on) {
+        PublishRight::Refused => Err(AppError::Forbidden),
+        PublishRight::Direct => {
+            let published = publish_core(&state, &ctx, id, body.backup_ref).await?;
+            Ok((StatusCode::OK, Json(published)).into_response())
+        }
+        PublishRight::OwnerReview => {
+            let requested = request_review(&state, &ctx, &workspace, body.backup_ref).await?;
+            Ok((StatusCode::ACCEPTED, Json(requested)).into_response())
+        }
+    }
+}
+
+/// T1-T3: checks the workspace would publish, then opens an approval only
+/// its owner decides and moves it to `in_review` (no write lands inside
+/// while it waits).
+async fn request_review(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    workspace: &Workspace,
+    backup_ref: Option<String>,
+) -> Result<ReviewRequested, AppError> {
+    if workspace.status != "open" {
+        return Err(AppError::Conflict(
+            "only an open workspace can be sent for review",
+        ));
+    }
+    let (_, schema_name, changeset) = publishing_parts(state, workspace.id).await?;
+    let preview = preview_of(state, ctx.user_id, workspace, &schema_name, changeset).await?;
+    if !preview.conflicts.is_empty() {
+        return Err(AppError::Conflict(WORKSPACE_CONFLICTS));
+    }
+    if !preview.publishable {
+        return Err(AppError::Validation(
+            "nothing to publish, or the plan against live has blocked operations; see the \
+             publish preview"
+                .into(),
+        ));
+    }
+    let plan: attome_approval::ApprovalPlan = serde_json::from_value(serde_json::json!({
+        "steps": [{
+            "mode": "any",
+            "approvers": [format!("user:{}", workspace.owner_ref)],
+            "sla_minutes": null,
+        }],
+    }))
+    .map_err(AppError::internal)?;
+    let request = attome_audit::approval::gate_with_plan_regarding(
+        state,
+        ACTION_WORKSPACE_PUBLISH,
+        serde_json::json!({ "workspace": workspace.id, "backup_ref": backup_ref }),
+        ctx.user_id,
+        plan,
+        None,
+    )
+    .await?;
+    let moved = sqlx::query(
+        "UPDATE develop_workspace SET status = 'in_review', review_request_ref = $2, \
+             row_version = row_version + 1 \
+          WHERE id = $1 AND status = 'open'",
+    )
+    .bind(workspace.id)
+    .bind(request.id)
+    .execute(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if moved.rows_affected() != 1 {
+        return Err(AppError::Conflict(
+            "the workspace changed while its review was being opened",
+        ));
+    }
+    tracing::info!(workspace = %workspace.id, review = %request.id, "workspace sent for the owner's review");
+    super::proxy::stop(workspace.id).await;
+    Ok(ReviewRequested {
+        workspace: workspace.id,
+        status: "in_review".to_owned(),
+        review_request_id: request.id,
+    })
+}
+
+/// Publishes workspace `id` as `ctx`: the route's direct path, and an owner's
+/// approved review (`approval_admin::execute_approved`). The caller decided
+/// `ctx` may publish.
+pub(crate) async fn publish_core(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    id: Uuid,
+    backup_ref: Option<String>,
+) -> Result<Published, AppError> {
     let (workspace, schema_name, changeset) = publishing_parts(&state, id).await?;
     let row = store::get(&state.base.db, changeset)
         .await?
         .ok_or_else(|| AppError::internal(format!("workspace {id}: its changeset is gone")))?;
 
     let document = match (workspace.status.as_str(), row.status) {
-        ("open", ChangesetStatus::Open) => {
-            if !set_status(&state, id, "open", "publishing").await? {
+        (from @ ("open" | "in_review"), ChangesetStatus::Open) => {
+            if !set_status(&state, id, from, "publishing").await? {
                 return Err(AppError::Conflict(
                     "the workspace is already being published",
                 ));
@@ -451,7 +601,7 @@ pub(super) async fn publish(
             match close_checked(&state, ctx.user_id, &workspace, &schema_name, &row).await {
                 Ok(document) => document,
                 Err(error) => {
-                    if let Err(revert) = set_status(&state, id, "publishing", "open").await {
+                    if let Err(revert) = set_status(&state, id, "publishing", from).await {
                         tracing::warn!(workspace = %id, error = %revert, "workspace: not returned to open after a refused publish");
                     }
                     return Err(error);
@@ -504,11 +654,11 @@ pub(super) async fn publish(
     }
     let apply = gated_apply(
         &state,
-        &ctx,
+        ctx,
         ApplyChangesetsBody {
             apply_ids,
             phase,
-            backup_ref: body.backup_ref,
+            backup_ref,
         },
     )
     .await?;
@@ -551,12 +701,12 @@ pub(super) async fn publish(
     tracing::info!(workspace = %id, changeset = %changeset, "workspace published");
     // Nothing more runs inside a published workspace.
     super::proxy::stop(id).await;
-    Ok(Json(Published {
+    Ok(Published {
         workspace: published,
         plan,
         apply,
         contract_apply_ids,
-    }))
+    })
 }
 
 /// Steps 2 and 3: refuse on conflicts, an empty workspace or a blocked
@@ -671,6 +821,55 @@ mod tests {
                 &[live("retire_entity", json!({"entity": "lead"}))],
             )
             .is_empty()
+        );
+    }
+
+    fn person(keys: &[&str]) -> SecurityContext {
+        SecurityContext::human(
+            Uuid::now_v7(),
+            keys.iter().map(|k| (*k).to_owned()).collect(),
+        )
+    }
+
+    #[test]
+    fn who_publishes_how() {
+        let owner = Uuid::now_v7();
+        // Rollout publishes at once, review or not.
+        let rollout = person(&[METADATA_ROLLOUT_PRIVILEGE_KEY]);
+        assert_eq!(publish_right(&rollout, owner, true), PublishRight::Direct);
+        // A builder with the publish privilege: their own at once, another's
+        // through its owner while review is on.
+        let publisher = person(&[
+            super::super::BUILD_PRIVILEGE,
+            super::super::PUBLISH_PRIVILEGE,
+        ]);
+        assert_eq!(
+            publish_right(&publisher, publisher.user_id, true),
+            PublishRight::Direct
+        );
+        assert_eq!(
+            publish_right(&publisher, owner, true),
+            PublishRight::OwnerReview
+        );
+        assert_eq!(
+            publish_right(&publisher, owner, false),
+            PublishRight::Direct
+        );
+        // A builder without it: another's through its owner, never their own.
+        let builder = person(&[super::super::BUILD_PRIVILEGE]);
+        assert_eq!(
+            publish_right(&builder, owner, true),
+            PublishRight::OwnerReview
+        );
+        assert_eq!(
+            publish_right(&builder, builder.user_id, true),
+            PublishRight::Refused
+        );
+        assert_eq!(publish_right(&builder, owner, false), PublishRight::Refused);
+        // Anyone else is refused.
+        assert_eq!(
+            publish_right(&person(&[]), owner, true),
+            PublishRight::Refused
         );
     }
 

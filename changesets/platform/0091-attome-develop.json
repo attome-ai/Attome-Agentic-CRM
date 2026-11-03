@@ -1,0 +1,52 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:5d60610dc3549b4a677f961941d3131678ebc39b208c5d1da415db5f6b3e5e23",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-develop.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "8a38ac21-5ad0-7ad2-bce3-160c3f49ec52",
+  "layer": "platform",
+  "name": "attome-develop",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Makes Develop workspaces and changes the model inside one's own and one's team's workspaces, without administering the data model.",
+          "key": "develop.build",
+          "name": "Build in Develop Workspaces"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "develop.build"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Publishes a Develop workspace one built; a workspace someone else owns still waits for its owner's review when owner review is on.",
+          "key": "develop.publish",
+          "name": "Publish Develop Workspaces"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "privilege": "develop.publish"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "platform",
+  "seq": 91,
+  "title": "Platform definitions: attome-develop"
+}

@@ -2479,6 +2479,14 @@
             "integer",
             "null"
           ]
+        },
+        "workspace_owner_review": {
+          "default": null,
+          "description": "T1-T3: a builder's publish of a Develop workspace someone else owns\nwaits for the owner's review. Unset is on.",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "type": "object"

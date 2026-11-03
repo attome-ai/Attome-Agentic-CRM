@@ -530,6 +530,32 @@ impl SecurityContext {
             .collect()
     }
 
+    /// T1-T3: a copy also holding `extra` privileges. Only
+    /// [`AuthorizedContext::for_request`](crate::authz::AuthorizedContext::for_request)
+    /// calls it, for a request carrying a [`WorkspaceGrant`]. Deep-copies.
+    pub fn with_privileges(&self, extra: &[&str]) -> SecurityContext {
+        let mut privileges = self.privileges.clone();
+        privileges.extend(extra.iter().map(|k| (*k).to_owned()));
+        SecurityContext {
+            user_id: self.user_id,
+            is_admin: self.is_admin,
+            privileges,
+            field_grants: self.field_grants.clone(),
+            field_write_grants: self.field_write_grants.clone(),
+            field_masks: self.field_masks.clone(),
+            bulk_fields: self.bulk_fields.clone(),
+            epoch: self.epoch,
+            accessible_org_ids: self.accessible_org_ids.clone(),
+            team_ids: self.team_ids.clone(),
+            position_hierarchy_enabled: self.position_hierarchy_enabled,
+            subordinate_user_ids: self.subordinate_user_ids.clone(),
+            condition_grants: self.condition_grants.clone(),
+            role_ids: self.role_ids.clone(),
+            unit_scope: self.unit_scope.clone(),
+            service_principal: self.service_principal,
+        }
+    }
+
     /// A copy of this context marked as a service principal (D-791 rule 3).
     /// Deep-copies, as [`EntityCeiling::apply`] does; only API-key and S2S
     /// requests pay it.
@@ -554,6 +580,16 @@ impl SecurityContext {
         }
     }
 }
+
+/// T1-T3: privileges a Develop workspace's own process grants for one
+/// request, inserted as a request extension before authentication and applied
+/// by [`AuthorizedContext::for_request`](crate::authz::AuthorizedContext::for_request).
+/// Only the workspace process inserts it, and only on a request the live
+/// server forwarded (its per-process token checked): live has already
+/// checked the caller is a builder the workspace admits. Never inserted on
+/// live, so it never widens a live request.
+#[derive(Clone, Copy, Debug)]
+pub struct WorkspaceGrant(pub &'static [&'static str]);
 
 /// The reserved privilege key a resolver maps to [`SecurityContext::is_admin`].
 pub const ADMIN_PRIVILEGE_KEY: &str = "system.admin";
@@ -1041,6 +1077,20 @@ mod tests {
         let handle = SecurityResolverHandle::default_deny();
         handle.store(Arc::new(AllowAllResolver));
         assert!(handle.invalidate_sync(Uuid::now_v7()).await.is_ok());
+    }
+
+    #[test]
+    fn a_workspace_grant_adds_only_its_keys() {
+        let reader = SecurityContext::human(Uuid::now_v7(), ["case.read".to_owned()].into());
+        let builder = reader.with_privileges(&["admin.data_model"]);
+        assert!(builder.privileges.contains("admin.data_model"));
+        assert!(builder.privileges.contains("case.read"));
+        assert!(!builder.is_admin, "a grant never makes an administrator");
+        assert_eq!(builder.user_id, reader.user_id);
+        assert!(
+            !reader.privileges.contains("admin.data_model"),
+            "the original is unchanged"
+        );
     }
 
     #[test]

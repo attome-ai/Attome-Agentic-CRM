@@ -1,0 +1,22 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=0.1.0",
+    "schema_version": 1,
+    "modules": [
+      "core"
+    ]
+  },
+  "privileges": [
+    {
+      "key": "develop.build",
+      "name": "Build in Develop Workspaces",
+      "description": "Makes Develop workspaces and changes the model inside one's own and one's team's workspaces, without administering the data model."
+    },
+    {
+      "key": "develop.publish",
+      "name": "Publish Develop Workspaces",
+      "description": "Publishes a Develop workspace one built; a workspace someone else owns still waits for its owner's review when owner review is on."
+    }
+  ]
+}

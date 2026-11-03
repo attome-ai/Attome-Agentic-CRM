@@ -4,8 +4,9 @@
 //! process (`attome serve --workspace <id>`), never by live: the engine keeps
 //! process-wide caches a workspace must not share. [`to_workspace`] runs in
 //! the core routes after authentication and before any route: it checks the
-//! workspace is open and the caller may enter it (the data-model area, or the
-//! workspace's owner), then hands the request to the installed
+//! workspace is open and the caller may enter it (the data-model area, the
+//! workspace's owner, or a builder of its team, T1-T3), then hands the
+//! request to the installed
 //! [`WorkspaceForwarder`], which `attome serve` provides on live. A
 //! workspace's own process installs none, so there the layer serves the
 //! request itself.
@@ -29,6 +30,15 @@ use uuid::Uuid;
 
 /// The request header naming the workspace a request runs in.
 pub const WORKSPACE_HEADER: &str = "x-attome-workspace";
+
+/// T1-T3: set by live on a request it forwards for a caller without the
+/// data-model area (an owner or a team builder); the workspace process grants
+/// [`BUILDER_GRANT`] for it. A caller's own copy is always removed first.
+pub const BUILDER_HEADER: &str = "x-attome-workspace-builder";
+
+/// What a builder holds inside a workspace's own process: the data-model
+/// area, so the admin entity, field and view routes accept their drafts.
+pub const BUILDER_GRANT: &[&str] = &["admin.data_model"];
 
 /// What forwards a request to a workspace's process.
 pub trait WorkspaceForwarder: Send + Sync {
@@ -110,16 +120,24 @@ async fn route(
         .get::<AuthorizedContext>()
         .map(AuthorizedContext::to_inner)
         .ok_or(AppError::Unauthorized)?;
-    let (owner, changeset): (Uuid, Option<Uuid>) = sqlx::query_as(
-        "SELECT owner_ref, changeset_ref FROM develop_workspace WHERE id = $1 AND status = 'open'",
+    let (owner, changeset, team): (Uuid, Option<Uuid>, Option<Uuid>) = sqlx::query_as(
+        "SELECT owner_ref, changeset_ref, team_ref FROM develop_workspace \
+          WHERE id = $1 AND status = 'open'",
     )
     .bind(id)
     .fetch_optional(&state.base.db)
     .await
     .map_err(AppError::internal)?
     .ok_or(AppError::NotFound)?;
-    if !(AdminArea::DataModel.held_by(&ctx) || ctx.user_id == owner) {
+    if !super::may_enter(&ctx, owner, team) {
         return Err(AppError::Forbidden);
+    }
+    // Only live decides who builds inside: a caller's own claim is dropped.
+    request.headers_mut().remove(BUILDER_HEADER);
+    if !AdminArea::DataModel.held_by(&ctx) {
+        request
+            .headers_mut()
+            .insert(BUILDER_HEADER, HeaderValue::from_static("1"));
     }
     if let Err(error) =
         // T5-T6: use clears an idle-expiry warning.

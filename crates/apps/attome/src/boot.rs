@@ -1287,6 +1287,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-callintel-trends",
         // G1-T4: quality reviews of sampled closed cases.
         "attome-service-quality-review",
+        // T1-T3: the builder and publisher privileges of Develop workspaces.
+        "attome-develop",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

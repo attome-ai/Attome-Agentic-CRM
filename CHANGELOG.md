@@ -17,6 +17,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Builders and owner review for Develop workspaces (T1-T3): privileges `develop.build` and
+  `develop.publish` (platform changeset 0091), workspaces shared with a team (`team` on create;
+  migration 0388), and a builder's publish of someone else's workspace waiting for the owner's
+  approval (`202`, status `in_review`; `metadata.workspace_owner_review`).
 - The Develop start screen (T1-T1, `/xrm/admin/develop`): a blank app in a new workspace, an app from a
   description (planned first), the installed apps and flow templates, and recent workspaces.
 - `model.app.plan` (AD4-T1): a whole-app build planned in writing first, then, once confirmed, the
