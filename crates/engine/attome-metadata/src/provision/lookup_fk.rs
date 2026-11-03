@@ -10,6 +10,17 @@
 //! ([`create_scan_run_in_tx`]), a batch per transaction with its cursor and
 //! running counts in the run row, so a restarted worker resumes where it
 //! stopped.
+//!
+//! Y2-T5 (V2-D1367's recommendation): a lookup whose `on_target_delete` is
+//! `restrict` or `cascade-deactivate` also gets a database foreign key,
+//! `fk_<entity>_<field>`, `ON DELETE NO ACTION` (never cascade or set null:
+//! the engine owns those rules and refuses or handles the delete first). It
+//! is added `NOT VALID` (no scan; every later write is held to it) and then
+//! validated: inline on a table at or under the size gate, by the durable
+//! `ValidateLookupForeignKey` job above it. An `orphan` lookup keeps no key
+//! (a hard-deleted target leaves its value), and the orphan scan is its
+//! check. A table with orphan values refuses validation and keeps the key
+//! `NOT VALID`.
 
 use attome_core::{EntityMeta, EntityMetaRegistry, FieldType, quote_ident};
 use attome_db::{DbPool, ident::is_identifier};
@@ -285,9 +296,194 @@ pub async fn scan_running(db: &DbPool, entity: &str) -> Result<Option<Uuid>, App
     .map_err(AppError::internal)
 }
 
+/// The rows a table may hold for its lookup key to be validated inline; a
+/// bigger table validates through the `ValidateLookupForeignKey` job.
+pub const FK_VALIDATE_INLINE_ROW_LIMIT: i64 = 10_000;
+
+/// Whether a lookup with this delete rule keeps a database foreign key. Pure.
+pub fn keyed(on_target_delete: &str) -> bool {
+    matches!(on_target_delete, "restrict" | "cascade-deactivate")
+}
+
+/// The constraint name for `entity.field`, at most 63 bytes (PostgreSQL's
+/// identifier limit): `fk_<entity>_<field>`, or a cut of it with a stable
+/// hash when longer. Pure.
+pub fn fk_name(entity: &str, field: &str) -> String {
+    let full = format!("fk_{entity}_{field}");
+    if full.len() <= 63 {
+        return full;
+    }
+    // FNV-1a: stable across builds, unlike the standard library's hasher.
+    let mut hash: u32 = 0x811c_9dc5;
+    for b in full.bytes() {
+        hash ^= u32::from(b);
+        hash = hash.wrapping_mul(0x0100_0193);
+    }
+    let cut: String = full.chars().take(54).collect();
+    format!("{cut}_{hash:08x}")
+}
+
+/// A lookup's foreign key, as the database has it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FkState {
+    None,
+    NotValid,
+    Valid,
+}
+
+/// The state of `entity.field`'s foreign key.
+pub async fn fk_state(db: &DbPool, entity: &str, field: &str) -> Result<FkState, AppError> {
+    let validated: Option<bool> = sqlx::query_scalar(
+        "SELECT c.convalidated FROM pg_catalog.pg_constraint c \
+           JOIN pg_catalog.pg_class t ON t.oid = c.conrelid \
+           JOIN pg_catalog.pg_namespace n ON n.oid = t.relnamespace AND n.nspname = current_schema() \
+          WHERE t.relname = $1 AND c.conname = $2 AND c.contype = 'f'",
+    )
+    .bind(entity)
+    .bind(fk_name(entity, field))
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(match validated {
+        None => FkState::None,
+        Some(false) => FkState::NotValid,
+        Some(true) => FkState::Valid,
+    })
+}
+
+fn checked(entity: &str, field: &str, target: &str) -> Result<(), AppError> {
+    if [entity, field, target].iter().all(|s| is_identifier(s)) {
+        Ok(())
+    } else {
+        Err(AppError::internal(format!(
+            "invalid identifier for a lookup key: {entity}.{field} -> {target}"
+        )))
+    }
+}
+
+/// Adds `entity.field`'s foreign key to `target`, `NOT VALID`, when it has
+/// none. No scan.
+pub async fn add_lookup_fk(
+    db: &DbPool,
+    entity: &str,
+    field: &str,
+    target: &str,
+) -> Result<(), AppError> {
+    checked(entity, field, target)?;
+    if fk_state(db, entity, field).await? != FkState::None {
+        return Ok(());
+    }
+    super::ddl::exec_ddl_locked(
+        db,
+        &[],
+        &format!(
+            "ALTER TABLE {} ADD CONSTRAINT {} FOREIGN KEY ({}) REFERENCES {} (id) \
+             ON DELETE NO ACTION NOT VALID",
+            quote_ident(entity),
+            quote_ident(&fk_name(entity, field)),
+            quote_ident(field),
+            quote_ident(target)
+        ),
+    )
+    .await
+    .map_err(AppError::internal)
+}
+
+/// Validates `entity.field`'s foreign key now: a scan of the table. A value
+/// that points at no record refuses it (`Conflict`), and the key stays
+/// `NOT VALID`.
+pub async fn validate_lookup_fk(db: &DbPool, entity: &str, field: &str) -> Result<(), AppError> {
+    if !is_identifier(entity) || !is_identifier(field) {
+        return Err(AppError::internal("invalid identifier for a lookup key"));
+    }
+    let sql = format!(
+        "ALTER TABLE {} VALIDATE CONSTRAINT {}",
+        quote_ident(entity),
+        quote_ident(&fk_name(entity, field))
+    );
+    match super::ddl::exec_ddl_locked(db, &[], &sql).await {
+        Ok(()) => Ok(()),
+        Err(e)
+            if e.as_database_error()
+                .and_then(|d| d.code())
+                .is_some_and(|c| c == "23503") =>
+        {
+            Err(AppError::Conflict("lookup has orphan values"))
+        }
+        Err(e) => Err(AppError::internal(e)),
+    }
+}
+
+/// What asking for a lookup's key did.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FkRequest {
+    /// Added (if missing) and validated inline.
+    Valid,
+    /// Added `NOT VALID`; validation is queued (a table over the size gate).
+    Queued,
+}
+
+/// Adds `entity.field`'s key to `target` `NOT VALID` and validates it:
+/// inline when the table holds at most `inline_row_limit` rows, else by
+/// queueing `ValidateLookupForeignKey` (dedup-keyed on the field).
+pub async fn request_lookup_fk(
+    db: &DbPool,
+    entity: &str,
+    field: &str,
+    target: &str,
+    inline_row_limit: i64,
+) -> Result<FkRequest, AppError> {
+    add_lookup_fk(db, entity, field, target).await?;
+    if fk_state(db, entity, field).await? == FkState::Valid {
+        return Ok(FkRequest::Valid);
+    }
+    if super::table_row_count_exceeds(db, entity, inline_row_limit).await? {
+        attome_jobs::enqueue_dedup(
+            db,
+            attome_core::jobs::EngineJob::ValidateLookupForeignKey {
+                entity_logicalname: entity.to_owned(),
+                field_logicalname: field.to_owned(),
+            },
+            &format!("lookup-fk:{entity}.{field}"),
+        )
+        .await
+        .map_err(AppError::internal)?;
+        return Ok(FkRequest::Queued);
+    }
+    validate_lookup_fk(db, entity, field).await?;
+    Ok(FkRequest::Valid)
+}
+
+/// The `ValidateLookupForeignKey` job: validates the key if it is still
+/// there and not valid. Orphan values fail the job with the reason; the key
+/// stays `NOT VALID`.
+pub async fn run_validate_lookup_fk(
+    db: &DbPool,
+    entity: &str,
+    field: &str,
+) -> Result<(), AppError> {
+    if fk_state(db, entity, field).await? != FkState::NotValid {
+        return Ok(());
+    }
+    validate_lookup_fk(db, entity, field).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn lookup_keys_name_and_rule() {
+        assert!(keyed("restrict") && keyed("cascade-deactivate"));
+        assert!(!keyed("orphan"));
+        assert_eq!(fk_name("deal", "account_ref"), "fk_deal_account_ref");
+        let long = fk_name(&"e".repeat(40), &"f".repeat(40));
+        assert_eq!(long.len(), 63);
+        assert_eq!(long, fk_name(&"e".repeat(40), &"f".repeat(40)), "stable");
+        assert_ne!(long, fk_name(&"e".repeat(40), &"g".repeat(40)));
+    }
 
     #[test]
     fn spec_round_trips_and_adds() {

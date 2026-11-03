@@ -30,6 +30,8 @@ pub(crate) mod fill_steps;
 mod index_proposals;
 /// A1-T4: entity inheritance by copy-down.
 mod inheritance;
+/// Y2-T5: a lookup's database foreign key.
+mod lookup_key;
 /// Y2-T4: lookup values that point at no record.
 pub(crate) mod orphans;
 /// Solution 7 Phase 2 (D-788 rule 9) — the 30-day recovery archive routes.
@@ -176,6 +178,7 @@ pub(crate) fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(data_step_runs::openapi_fragment());
     doc.merge(change_plan::openapi_fragment());
     doc.merge(orphans::openapi_fragment());
+    doc.merge(lookup_key::openapi_fragment());
     doc.merge(refactor::openapi_fragment());
     doc.merge(refactor_child::openapi_fragment());
     doc.merge(release_report::openapi_fragment());
@@ -252,6 +255,7 @@ pub fn routes() -> Router<EngineState> {
         .merge(data_step_runs::routes())
         .merge(change_plan::routes())
         .merge(orphans::routes())
+        .merge(lookup_key::routes())
         .merge(refactor::routes())
         .merge(refactor_child::routes())
         .merge(release_report::routes());

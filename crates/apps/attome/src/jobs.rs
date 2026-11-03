@@ -678,6 +678,19 @@ async fn dispatch_platform_job(
         EngineJob::ApplySchemaChangePlan { plan_id } => {
             attome_metadata::provision::apply_schema_change_plan(&db_migrator.0, plan_id).await?;
         }
+        // Y2-T5: a lookup's foreign key validated above the size gate. DDL,
+        // so the migrator pool, like `ApplySchemaChangePlan`.
+        EngineJob::ValidateLookupForeignKey {
+            entity_logicalname,
+            field_logicalname,
+        } => {
+            attome_metadata::provision::lookup_fk::run_validate_lookup_fk(
+                &db_migrator.0,
+                &entity_logicalname,
+                &field_logicalname,
+            )
+            .await?;
+        }
         // P-environment-promotion §5 step 12: the bundle apply job. Same
         // identity note as `ApplySchemaChangePlan` above — entity/attribute
         // objects reach the database through attome-metadata's provisioning

@@ -836,7 +836,8 @@ pub(super) async fn ensure_hierarchy_path(
 /// Adds the physical column backing an attribute, if it doesn't already exist.
 /// Idempotent and self-healing, same rationale as `provision_table`.
 /// `generated` (Y2-T11) is the SQL of a generated formula: the column is
-/// then `GENERATED ALWAYS AS (<sql>) STORED`.
+/// then `GENERATED ALWAYS AS (<sql>) STORED`. Answers whether it added the
+/// column (Y2-T5: a new lookup column has no orphans to check).
 pub(super) async fn provision_column(
     db: &DbPool,
     entity_logicalname: &str,
@@ -844,7 +845,7 @@ pub(super) async fn provision_column(
     field_type: &str,
     is_multi: bool,
     generated: Option<&str>,
-) -> Result<(), AppError> {
+) -> Result<bool, AppError> {
     if !valid_identifier(entity_logicalname) || !valid_identifier(field_logicalname) {
         return Err(AppError::internal(format!(
             "invalid identifier (lowercase/digits/underscore, max {MAX_IDENTIFIER_LEN} chars): entity={entity_logicalname}, field={field_logicalname}"
@@ -856,7 +857,7 @@ pub(super) async fn provision_column(
     // `provision_table` (IF NOT EXISTS below remains the TOCTOU-race
     // correctness backstop, not the skip mechanism).
     if column_exists(db, entity_logicalname, field_logicalname).await? {
-        return Ok(());
+        return Ok(false);
     }
 
     // A19-T1: a stored money amount has a fixed precision.
@@ -892,7 +893,7 @@ pub(super) async fn provision_column(
         AppError::internal(e)
     })?;
 
-    Ok(())
+    Ok(true)
 }
 
 /// Permanently drops the physical table backing an entity, if it exists.

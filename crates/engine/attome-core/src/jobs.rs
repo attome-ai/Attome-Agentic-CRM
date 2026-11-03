@@ -133,6 +133,16 @@ pub enum EngineJob {
     /// dedup-keyed `business-key-index:<entity>`
     /// (`attome_metadata::provision::business_key::ensure_business_key_index`).
     BuildBusinessKeyIndex { entity_logicalname: String },
+    /// Y2-T5: validates a lookup's foreign key (added `NOT VALID`) on a table
+    /// above the size gate: one `VALIDATE CONSTRAINT`, which does not block
+    /// writes. The worker re-reads the key's state first, so a key already
+    /// valid or gone is a no-op; orphan values fail the job with the reason.
+    /// Enqueued dedup-keyed `lookup-fk:<entity>.<field>`
+    /// (`attome_metadata::provision::lookup_fk::request_lookup_fk`).
+    ValidateLookupForeignKey {
+        entity_logicalname: String,
+        field_logicalname: String,
+    },
     /// F024 (P2.2) — chunked bulk create/update/delete against a provisioned
     /// entity table. `records` is pure JSON (attome-jobs cannot depend on
     /// xrm-*'s `AttrInfo`/validation types) — `crates/server`'s job handler maps
@@ -1115,7 +1125,8 @@ impl EngineJob {
             | Self::ReportRun { .. }
             | Self::LegalMatterCollect { .. }
             | Self::LegalMatterRelease { .. }
-            | Self::DataMatchScan { .. } => true,
+            | Self::DataMatchScan { .. }
+            | Self::ValidateLookupForeignKey { .. } => true,
 
             // Everything else: bounded work, latency-sensitive, or cheap.
             Self::SendEmail(_)
@@ -1265,6 +1276,7 @@ impl EngineJob {
             EngineJob::BackfillRecipientForNewUser { .. } => "BackfillRecipientForNewUser",
             EngineJob::BuildAttributeIndex { .. } => "BuildAttributeIndex",
             EngineJob::BuildBusinessKeyIndex { .. } => "BuildBusinessKeyIndex",
+            EngineJob::ValidateLookupForeignKey { .. } => "ValidateLookupForeignKey",
             EngineJob::BulkEntityOperation(_) => "BulkEntityOperation",
             EngineJob::ApplyStagedImport(_) => "ApplyStagedImport",
             EngineJob::RewrapSecrets { .. } => "RewrapSecrets",
@@ -1562,6 +1574,7 @@ impl EngineJob {
             | Self::AuditV1CutoverCheckpoint
             | Self::BuildAttributeIndex { .. }
             | Self::BuildBusinessKeyIndex { .. }
+            | Self::ValidateLookupForeignKey { .. }
             | Self::FleetPoll => JobPriority::Low,
 
             // Normal — background work that is neither urgent nor idle
@@ -1751,6 +1764,7 @@ impl EngineJob {
             | Self::BackfillRecipientForNewUser { .. }
             | Self::BuildAttributeIndex { .. }
             | Self::BuildBusinessKeyIndex { .. }
+            | Self::ValidateLookupForeignKey { .. }
             | Self::DataMatchScan { .. }
             | Self::BulkEntityOperation(_)
             | Self::ApplyStagedImport(_)
@@ -2026,6 +2040,10 @@ mod tests {
         });
         assert_round_trips(EngineJob::BuildBusinessKeyIndex {
             entity_logicalname: "country".to_string(),
+        });
+        assert_round_trips(EngineJob::ValidateLookupForeignKey {
+            entity_logicalname: "deal".to_string(),
+            field_logicalname: "account_ref".to_string(),
         });
     }
 

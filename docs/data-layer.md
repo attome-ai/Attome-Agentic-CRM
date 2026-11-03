@@ -91,3 +91,16 @@ Tests that read the source and fail when a rule is broken:
 | `pooled_session_state_census` | no session-level SQL (`SET`, `LISTEN`, session advisory locks, `PREPARE`) outside reviewed files, so pgbouncer transaction mode is safe |
 | `query_budget` (attome-testapp) | statement counts of hot record paths, and a list's count not growing with its page size |
 | `audit_coverage_emission` | every mutating route writes the audit event it declares |
+
+## Lookup keys
+
+A lookup whose delete rule is `restrict` or `cascade-deactivate` is also a database foreign key,
+`fk_<entity>_<field>`, `ON DELETE NO ACTION` (the engine refuses or handles the target's delete
+first; the key never cascades or clears). A new lookup column is keyed when it is created. An older
+one is keyed with `POST /api/v1/admin/entities/{entity_id}/fields/{field_id}/foreign-key`: the key
+is added `NOT VALID` (no scan; every later write is held to it) and validated against the existing
+rows inline on a table of up to 10,000 rows, or by the durable `ValidateLookupForeignKey` job above
+that (202). A value that points at no record refuses the validation (409) and the key stays
+`NOT VALID`; `GET /api/v1/admin/entities/{entity_id}/orphans` finds such values.
+`GET …/foreign-key` answers the key's state (`none`, `not_valid`, `valid`). An `orphan` lookup keeps
+no key: a hard-deleted target leaves its value, and the orphan scan is its check.

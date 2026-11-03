@@ -1663,6 +1663,38 @@ async fn apply_inline_contract_change(
 /// connections for its `exec_ddl_locked` transaction, which self-deadlocks a
 /// small pool if it runs while this function's own transaction already
 /// holds one.
+/// Y2-T5: keys a just-created lookup column to its target, validating it
+/// inline under the size gate or queueing the validation above it.
+async fn key_new_lookup(db: &DbPool, entity: &str, field: &str, target_id: Uuid) {
+    let target: Option<String> = match sqlx::query_scalar(
+        "SELECT logicalname FROM entity_info WHERE id = $1",
+    )
+    .bind(target_id)
+    .fetch_optional(db)
+    .await
+    {
+        Ok(target) => target,
+        Err(error) => {
+            tracing::warn!(%error, %entity, %field, "lookup key: target not read; left unkeyed");
+            return;
+        }
+    };
+    let Some(target) = target else {
+        return;
+    };
+    if let Err(error) = super::lookup_fk::request_lookup_fk(
+        db,
+        entity,
+        field,
+        &target,
+        super::lookup_fk::FK_VALIDATE_INLINE_ROW_LIMIT,
+    )
+    .await
+    {
+        tracing::warn!(%error, %entity, %field, %target, "lookup key not added; the lookup stays unkeyed");
+    }
+}
+
 #[allow(clippy::too_many_arguments)] // positional, matches attribute.rs:237's precedent for this same provisioning shape
 async fn write_attribute_row(
     db: &DbPool,
@@ -1685,7 +1717,7 @@ async fn write_attribute_row(
         field_type,
         physical_type,
     } = key;
-    provision_column(
+    let created = provision_column(
         db,
         entity_logicalname,
         logicalname,
@@ -1694,6 +1726,17 @@ async fn write_attribute_row(
         generated,
     )
     .await?;
+    // Y2-T5: a new lookup that refuses or handles its target's delete gets
+    // its foreign key at once (no orphans yet). Best effort: a key the
+    // database will not take (a partitioned target, say) leaves the lookup
+    // unkeyed, as before, with a warning.
+    if created
+        && field_type == "lookup"
+        && super::lookup_fk::keyed(&desired.on_target_delete)
+        && let Some(target_id) = desired.lookup_entity_ref
+    {
+        key_new_lookup(db, entity_logicalname, logicalname, target_id).await;
+    }
 
     let mut tx = attome_db::tx::begin(db).await?;
     attome_core::acquire_metadata_write_lock(&mut tx).await?;

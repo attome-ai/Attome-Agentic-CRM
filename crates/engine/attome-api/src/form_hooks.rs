@@ -20,7 +20,7 @@ use axum::{
     routing::post,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value, json};
+use serde_json::{Map, Value};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -189,6 +189,7 @@ pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     #[test]
     fn form_events_run_their_hook_points() {

@@ -174,3 +174,91 @@ fn orphan_scan_counts_missing_targets() {
         assert_eq!(status, StatusCode::NOT_FOUND);
     });
 }
+
+/// Y2-T5: a source and a target entity, and the source's `target_ref`
+/// lookup with `rule`; answers the source's name and id and the field's id.
+async fn keyed_pair(app: &TestApp, rule: &str) -> (String, Uuid, String) {
+    let token = Uuid::now_v7().simple().to_string();
+    let target = format!("fk_tgt_{}", &token[..12]);
+    let source = format!("fk_src_{}", &token[..12]);
+    let target_id = create_entity(app, &target).await;
+    let source_id = create_entity(app, &source).await;
+    let (status, field) = app
+        .request(
+            Method::POST,
+            &format!("/api/v1/admin/entities/{source_id}/fields"),
+            Some(json!({
+                "logicalname": "target_ref", "name": "Target", "field_type": "lookup",
+                "lookup_entity_ref": target_id, "on_target_delete": rule,
+            })),
+        )
+        .await;
+    assert_eq!(status, StatusCode::CREATED, "{field}");
+    let registry = attome_core::build_registry(app.db()).await.unwrap();
+    app.state.entities.swap(registry);
+    (source, source_id, field["id"].as_str().unwrap().to_owned())
+}
+
+/// A record of `source` (through the record API), then its lookup pointed
+/// at a record that never existed (by hand, on the throwaway database).
+async fn orphan_row(app: &TestApp, source: &str) -> Result<(), sqlx::Error> {
+    let id = create_record(app, source, json!({})).await;
+    sqlx::query(&format!(
+        "UPDATE \"{source}\" SET target_ref = $1 WHERE id = $2"
+    ))
+    .bind(Uuid::now_v7())
+    .bind(id)
+    .execute(app.db())
+    .await
+    .map(|_| ())
+}
+
+// feature: Y2
+#[test]
+fn new_lookup_has_valid_fk() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        let (source, source_id, field_id) = keyed_pair(&app, "restrict").await;
+        let path = format!("/api/v1/admin/entities/{source_id}/fields/{field_id}/foreign-key");
+        let (status, key) = app.request(Method::GET, &path, None).await;
+        assert_eq!(status, StatusCode::OK, "{key}");
+        assert_eq!(key["state"], "valid", "{key}");
+        assert_eq!(key["keyed"], true, "{key}");
+        // The database itself now refuses a value naming no record.
+        assert!(orphan_row(&app, &source).await.is_err());
+    });
+}
+
+// feature: Y2
+#[test]
+fn orphan_blocks_validation() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        // An orphan lookup keeps no key, so a value naming nothing stays.
+        let (source, source_id, field_id) = keyed_pair(&app, "orphan").await;
+        let path = format!("/api/v1/admin/entities/{source_id}/fields/{field_id}/foreign-key");
+        let (status, key) = app.request(Method::GET, &path, None).await;
+        assert_eq!(status, StatusCode::OK, "{key}");
+        assert_eq!(key["state"], "none", "{key}");
+        let (status, body) = app.request(Method::POST, &path, None).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+
+        // Throwaway database: an orphan value, then the rule made restrict.
+        orphan_row(&app, &source).await.unwrap();
+        sqlx::query("UPDATE attribute_info SET on_target_delete = 'restrict' WHERE id = $1")
+            .bind(Uuid::parse_str(&field_id).unwrap())
+            .execute(app.db())
+            .await
+            .unwrap();
+
+        let (status, body) = app.request(Method::POST, &path, None).await;
+        assert_eq!(status, StatusCode::CONFLICT, "{body}");
+        assert!(body.to_string().contains("orphan"), "{body}");
+        let (_, key) = app.request(Method::GET, &path, None).await;
+        assert_eq!(key["state"], "not_valid", "{key}");
+    });
+}
