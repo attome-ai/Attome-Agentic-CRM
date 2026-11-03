@@ -3278,6 +3278,8 @@ export const xrmAr = {
     added: 'أُضيف إلى سلتك.',
     noProducts: 'لا توجد منتجات لعرضها.',
     noProduct: 'هذا المنتج غير معروض للبيع.',
+    options: '{count} خيارات',
+    variants: 'الخيارات',
     vatIncluded: 'يشمل ضريبة القيمة المضافة {vat}',
     priceBreakdown: '{net} مضافًا إليه ضريبة القيمة المضافة {vat}',
     quantity: 'الكمية',

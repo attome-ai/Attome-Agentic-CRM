@@ -1,0 +1,100 @@
+{
+  "author": "packs",
+  "checksum": "sha256:c0279e5c18433c143b28cec4ec363fd2c7f7a042e98d58f77159d7f3d854b589",
+  "closed_at": "2026-11-03T00:00:00Z",
+  "description": "Product variants (F8-T10): a product may be a variant of another (size, colour), named by its variant label; the store shows a product's variants together.",
+  "format": "attome-changeset/v1",
+  "id": "01a19c40-0000-7f08-8000-000000000034",
+  "layer": "product",
+  "name": "sales-product-variants",
+  "opened_at": "2026-11-03T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Variant of",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "variant_of_ref",
+          "lookup_entity": "product",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "product",
+        "field": "variant_of_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Variant",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "variant_label",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "product",
+        "field": "variant_label"
+      }
+    },
+    {
+      "args": {
+        "display_name": "\u0645\u062a\u063a\u064a\u0631 \u0645\u0646"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "locale": "ar",
+        "object_key": "product.variant_of_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "\u0627\u0644\u0645\u062a\u063a\u064a\u0631"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "product.variant_label",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 34,
+  "title": "Pack: product variants"
+}

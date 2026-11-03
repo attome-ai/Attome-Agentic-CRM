@@ -3357,6 +3357,8 @@ export const xrmEn = {
     added: 'Added to your basket.',
     noProducts: 'No products to show.',
     noProduct: 'This product is not on sale.',
+    options: '{count} options',
+    variants: 'Options',
     vatIncluded: 'Includes VAT of {vat}',
     priceBreakdown: '{net} plus VAT {vat}',
     quantity: 'Quantity',

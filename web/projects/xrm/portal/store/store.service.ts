@@ -15,6 +15,9 @@ export interface CatalogueItem {
   price_with_vat?: string;
   /** F8-T10: free stock at the shop's location; absent when not tracked. */
   stock?: StockBadge | null;
+  /** F8-T10: the product this one is a variant of, and what sets it apart. */
+  variant_of?: string | null;
+  variant_label?: string | null;
 }
 
 export type StockBadge = 'in_stock' | 'low' | 'sold_out';

@@ -259,6 +259,7 @@ fn guest_catalogue_shows_the_price_with_vat() {
         assert_eq!(lamp.vat.parse::<f64>().unwrap(), 15.0);
         assert_eq!(lamp.price_with_vat.parse::<f64>().unwrap(), 115.0);
         assert!(lamp.stock.is_none(), "no stock location is set");
+        assert!(lamp.variant_of.is_none());
 
         set(&app, "commerce.guest_account", Value::Null).await;
         assert!(matches!(

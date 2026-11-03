@@ -15,6 +15,24 @@ export function productName(item: Pick<CatalogueItem, 'name' | 'name_ar' | 'sku'
   return (arabic && item.name_ar) || item.name || item.sku || item.product_id;
 }
 
+/** The variants `item` belongs with (its parent and the parent's variants, on sale), or none. Pure. */
+export function variantGroup(items: readonly CatalogueItem[], item: CatalogueItem): CatalogueItem[] {
+  const root = item.variant_of ?? item.product_id;
+  const group = items.filter(i => i.product_id === root || i.variant_of === root);
+  return group.length > 1 ? group : [];
+}
+
+/** The grid's products: a variant whose parent is listed shows under the parent. Pure. */
+export function gridItems(items: readonly CatalogueItem[]): CatalogueItem[] {
+  const listed = new Set(items.map(i => i.product_id));
+  return items.filter(i => !i.variant_of || !listed.has(i.variant_of));
+}
+
+/** A variant's name: its label, else its product name. Pure. */
+export function variantName(item: CatalogueItem, arabic: boolean): string {
+  return item.variant_label?.trim() || productName(item, arabic);
+}
+
 /** A six-digit code, spaces ignored. Pure. */
 export function validCode(code: string): boolean {
   return /^\d{6}$/.test(code.replace(/\s+/g, ''));
@@ -109,7 +127,7 @@ abstract class StoreBlockDirective {
     <section class="sb" [attr.dir]="dir()" data-testid="store-product-grid">
       @if (error(); as e) { <p class="sb-error" role="alert">{{ e }}</p> }
       <ul class="sb-grid">
-        @for (item of items(); track item.product_id) {
+        @for (item of shownItems(); track item.product_id) {
           <li class="sb-card" [attr.data-product]="item.product_id">
             @if (detailLink(item); as href) {
               <a [href]="href"><h3 class="sb-name" dir="auto">{{ name(item) }}</h3></a>
@@ -119,6 +137,9 @@ abstract class StoreBlockDirective {
             <p class="sb-price" data-price>{{ money(shown(item), item.currency) }}</p>
             @if (item.vat) {
               <p class="sb-muted">{{ 'storeBlocks.vatIncluded' | translate: { vat: money(item.vat, item.currency) } }}</p>
+            }
+            @if (optionCount(item); as n) {
+              <p class="sb-muted" data-options>{{ 'storeBlocks.options' | translate: { count: n } }}</p>
             }
             @if (item.stock) {
               <span [class]="'sb-badge sb-badge-' + item.stock" data-stock>{{ 'storeBlocks.stock.' + item.stock | translate }}</span>
@@ -138,6 +159,11 @@ export class StoreProductGridComponent extends StoreBlockDirective {
   readonly items = signal<CatalogueItem[]>([]);
   readonly added = signal(false);
   protected readonly shown = shownPrice;
+  protected readonly shownItems = computed(() => gridItems(this.items()));
+
+  protected optionCount(item: CatalogueItem): number {
+    return variantGroup(this.items(), item).length;
+  }
 
   constructor() {
     super();
@@ -189,6 +215,18 @@ export class StoreProductGridComponent extends StoreBlockDirective {
         @if (p.stock) {
           <span [class]="'sb-badge sb-badge-' + p.stock" data-stock>{{ 'storeBlocks.stock.' + p.stock | translate }}</span>
         }
+        @if (group().length) {
+          <fieldset class="sb-row" data-variants>
+            <legend>{{ 'storeBlocks.variants' | translate }}</legend>
+            @for (v of group(); track v.product_id) {
+              <label class="sb-row">
+                <input type="radio" name="sb-variant" [checked]="v.product_id === p.product_id" [disabled]="v.stock === 'sold_out'"
+                       (change)="item.set(v)" />
+                <span dir="auto">{{ variantLabel(v) }}</span>
+              </label>
+            }
+          </fieldset>
+        }
         <div class="sb-row">
           <label for="sb-qty">{{ 'storeBlocks.quantity' | translate }}</label>
           <input id="sb-qty" class="sb-qty" type="number" min="1" step="1" [value]="quantity()"
@@ -207,6 +245,12 @@ export class StoreProductDetailComponent extends StoreBlockDirective {
   private readonly route = inject(ActivatedRoute, { optional: true });
 
   readonly item = signal<CatalogueItem | null>(null);
+  readonly all = signal<CatalogueItem[]>([]);
+  /** The variants the shown product is one of. */
+  readonly group = computed(() => {
+    const item = this.item();
+    return item ? variantGroup(this.all(), item) : [];
+  });
   readonly missing = signal(false);
   readonly quantity = signal(1);
   readonly added = signal(false);
@@ -226,6 +270,7 @@ export class StoreProductDetailComponent extends StoreBlockDirective {
         this.store.guestCatalogue(keyword).subscribe({
           next: items => {
             const found = items.find(i => i.product_id === wanted) ?? null;
+            this.all.set(items);
             this.item.set(found);
             this.missing.set(!found);
           },
@@ -235,8 +280,13 @@ export class StoreProductDetailComponent extends StoreBlockDirective {
     });
   }
 
+  protected variantLabel(item: CatalogueItem): string {
+    return variantName(item, this.arabic());
+  }
+
   add(item: CatalogueItem): void {
-    this.basket.add(item, this.name(item), this.quantity());
+    const label = item.variant_label?.trim();
+    this.basket.add(item, label ? `${this.name(item)} (${label})` : this.name(item), this.quantity());
     this.added.set(true);
   }
 }

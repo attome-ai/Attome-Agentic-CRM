@@ -126,10 +126,16 @@ left) or English:
 | Block | Shows |
 |---|---|
 | `store.product_grid` | The guest catalogue: each product's price with VAT, the VAT in it and its stock badge, and an add to the basket (not when sold out). `props.search` narrows it; `props.detail_page` links each name to that page with `?product=`. |
-| `store.product_detail` | One product (`?product=` in the address, else `props.product_id`): the price with VAT, the net price and the VAT, the stock badge and a quantity to add. |
+| `store.product_detail` | One product (`?product=` in the address, else `props.product_id`): the price with VAT, the net price and the VAT, the stock badge, its variants to choose from and a quantity to add. |
 | `store.cart` | The basket: quantities, removal and the total with VAT. |
 | `store.checkout` | Guest checkout: the phone gets a code; with the code, name, address, a delivery option and cash on delivery or paying online, the order is placed once. Paying online opens the order's payment page. |
 | `store.order_status` | The order this browser tab placed, and a signed-in member's orders. |
 
 The basket lives in the browser tab (session storage) and holds products and quantities only; the
-server prices the order again at checkout. Product variants are not shown yet.
+server prices the order again at checkout.
+
+A product can be a variant of another (`product.variant_of_ref` and `product.variant_label`, sales
+pack changeset 0034), such as a size or a colour; each variant is its own product with its own SKU,
+price and stock. Catalogue items carry `variant_of` and `variant_label`. The grid shows a parent once
+with its number of options, and the product detail lets the shopper pick a variant (a sold-out one
+cannot be picked).

@@ -101,6 +101,26 @@ pub struct CatalogueItem {
     /// F8-T10: free stock at the shop's stock location; absent when the
     /// shop tracks no stock or the product is not stocked there.
     pub stock: Option<StockBadge>,
+    /// F8-T10: the product this one is a variant of, and what sets it apart
+    /// (sales pack changeset 0034); the store shows a product's variants
+    /// together.
+    pub variant_of: Option<Uuid>,
+    pub variant_label: Option<String>,
+}
+
+/// Each listed product's variant parent and label.
+async fn variants_of(
+    state: &EngineState,
+    ids: &[Uuid],
+) -> Result<Vec<(Uuid, Option<Uuid>, Option<String>)>, AppError> {
+    sqlx::query_as(
+        "SELECT id, (to_jsonb(p) ->> 'variant_of_ref')::uuid, to_jsonb(p) ->> 'variant_label' \
+           FROM product p WHERE id = ANY($1)",
+    )
+    .bind(ids)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)
 }
 
 /// How much of a product the shop has, as the store shows it.
@@ -268,10 +288,18 @@ pub async fn catalogue(
     let currency = currency(state);
     let rate = crate::guest_checkout::vat_rate(state);
     let stock = stock_settings(state);
+    let products = visible_products(state, search, None).await?;
+    let ids: Vec<Uuid> = products.iter().map(|p| p.0).collect();
+    let variants = variants_of(state, &ids).await?;
     let mut out = Vec::new();
-    for (id, name, name_ar, sku) in visible_products(state, search, None).await? {
+    for (id, name, name_ar, sku) in products {
         if let Some(p) = price(state, Some(account), id, &currency, Decimal::ONE).await? {
             let (vat, gross) = with_vat(p, rate);
+            let (variant_of, variant_label) = variants
+                .iter()
+                .find(|v| v.0 == id)
+                .map(|v| (v.1, v.2.clone()))
+                .unwrap_or_default();
             out.push(CatalogueItem {
                 product_id: id,
                 name,
@@ -282,6 +310,8 @@ pub async fn catalogue(
                 vat: vat.to_string(),
                 price_with_vat: gross.to_string(),
                 stock: badge_of(state, stock, id).await?,
+                variant_of,
+                variant_label,
             });
         }
     }

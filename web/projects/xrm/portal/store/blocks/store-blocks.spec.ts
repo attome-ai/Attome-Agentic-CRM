@@ -7,7 +7,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { StoreService } from '../store.service';
 import { StoreBasket, basketTotal, cents } from './store-basket';
 import {
-  StoreCartComponent, StoreCheckoutComponent, StoreProductDetailComponent, StoreProductGridComponent, checkoutMissing, validCode,
+  StoreCartComponent, StoreCheckoutComponent, StoreProductDetailComponent, StoreProductGridComponent, checkoutMissing, gridItems,
+  validCode, variantGroup, variantName,
 } from './store-blocks';
 
 const LAMP = {
@@ -129,5 +130,18 @@ describe('store blocks (F8-T10)', () => {
     expect(validCode('12a456')).toBe(false);
     expect(checkoutMissing({ code: '', name: '', address: '', country: 'S', rate: null })).toHaveLength(5);
     expect(cents('0.1') + cents('0.2')).toBe(30);
+  });
+
+  it('shows the variants of a product together', () => {
+    const shirt = { ...LAMP, product_id: 's', name: 'Shirt', stock: 'in_stock' as const };
+    const small = { ...shirt, product_id: 's-s', variant_of: 's', variant_label: 'Small' };
+    const large = { ...shirt, product_id: 's-l', variant_of: 's', variant_label: 'Large', stock: 'sold_out' as const };
+    const items = [shirt, small, large, LAMP];
+    expect(gridItems(items).map(i => i.product_id)).toEqual(['s', 'p1']);
+    expect(variantGroup(items, small).map(i => i.product_id)).toEqual(['s', 's-s', 's-l']);
+    expect(variantGroup(items, LAMP)).toEqual([]);
+    expect(variantName(large, false)).toBe('Large');
+    // A variant whose parent is not on sale shows on its own.
+    expect(gridItems([small]).map(i => i.product_id)).toEqual(['s-s']);
   });
 });

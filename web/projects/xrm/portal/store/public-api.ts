@@ -14,7 +14,7 @@ export type {
 // shell and loaded with this entry point only when a page shows one.
 export {
   StoreCartComponent, StoreCheckoutComponent, StoreOrderStatusComponent, StoreProductDetailComponent, StoreProductGridComponent,
-  checkoutMissing, productName, validCode,
+  checkoutMissing, gridItems, productName, validCode, variantGroup, variantName,
 } from './blocks/store-blocks';
 export { StoreBasket, basketTotal, cents, fromCents, shownPrice } from './blocks/store-basket';
 export type { BasketLine } from './blocks/store-basket';
