@@ -305,3 +305,42 @@ async fn decide_rejects_a_stale_row_version_even_while_still_pending() {
     );
     assert_eq!(grant_count(&pool, request.id).await, 2);
 }
+
+/// AH3-T7: a payload's `excluded_deciders` (an agent's sponsor, the agent
+/// and its chain) may not decide the request, as the requester may not;
+/// anyone else may.
+#[tokio::test]
+async fn sponsor_cannot_decide_agent_request() {
+    let pool: PgPool = migrated_pool_or_skip!(10);
+    let (requested_by, sponsor, other) = (Uuid::now_v7(), Uuid::now_v7(), Uuid::now_v7());
+    let request = submit(
+        &pool,
+        "test.agent_request",
+        json!({ "action_id": "record.delete", "excluded_deciders": [sponsor.to_string()] }),
+        requested_by,
+        1,
+        Duration::hours(1),
+    )
+    .await
+    .expect("submit");
+    let refused = decide(
+        &pool,
+        request.id,
+        sponsor,
+        Decision::Approve,
+        request.row_version,
+    )
+    .await;
+    assert!(matches!(refused, Err(AppError::Forbidden)), "{refused:?}");
+    assert_eq!(grant_count(&pool, request.id).await, 0);
+    let decided = decide(
+        &pool,
+        request.id,
+        other,
+        Decision::Approve,
+        request.row_version,
+    )
+    .await
+    .expect("someone else decides");
+    assert_eq!(decided.status, ApprovalStatus::Approved);
+}

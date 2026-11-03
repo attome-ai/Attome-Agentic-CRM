@@ -1297,6 +1297,19 @@ pub async fn decide_with(
     .await
 }
 
+/// AH3-T7: the people a request's payload names as unable to decide it
+/// (`excluded_deciders`, a list of ids), beside its requester. The caller
+/// that submits the request decides who they are; this crate only refuses
+/// them, directly or through a delegation. Pure.
+pub fn excluded_deciders(payload: &Value) -> Vec<Uuid> {
+    payload["excluded_deciders"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|v| v.as_str().and_then(|s| Uuid::parse_str(s).ok()))
+        .collect()
+}
+
 /// [`decide_with`] storing `grant`'s attachments and evidence on the grant
 /// row (Z10-T9).
 #[allow(clippy::too_many_arguments)]
@@ -1366,7 +1379,9 @@ pub async fn decide_with_evidence(
     // impossible to skip. Checked before the row_version CAS so a
     // same-user attempt is always rejected as Forbidden rather than
     // sometimes surfacing as a version conflict depending on request body.
-    if approver_id == current.requested_by {
+    if approver_id == current.requested_by
+        || excluded_deciders(&current.payload).contains(&approver_id)
+    {
         return Err(AppError::Forbidden);
     }
     if current.row_version != expected_row_version {
@@ -1770,11 +1785,12 @@ async fn decide_in_stage(
     // person who actually clicked nor whoever they clicked *for* may be the
     // request's own requester. Checked before the row_version CAS, same
     // ordering rationale as decide()'s own version of this check.
-    if decider_id == current.requested_by {
+    let excluded = excluded_deciders(&current.payload);
+    if decider_id == current.requested_by || excluded.contains(&decider_id) {
         return Err(AppError::Forbidden);
     }
     if let Some(principal) = on_behalf_of
-        && principal == current.requested_by
+        && (principal == current.requested_by || excluded.contains(&principal))
     {
         return Err(AppError::Forbidden);
     }
@@ -3176,6 +3192,15 @@ pub async fn stale_executing_count(pool: &PgPool) -> Result<i64, AppError> {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn excluded_deciders_are_read_from_the_payload() {
+        let id = Uuid::now_v7();
+        let payload = serde_json::json!({ "excluded_deciders": [id.to_string(), "not-a-uuid"] });
+        assert_eq!(excluded_deciders(&payload), vec![id]);
+        assert!(excluded_deciders(&serde_json::json!({})).is_empty());
+    }
+
     use super::*;
 
     #[test]

@@ -2026,6 +2026,14 @@
     },
     "InferenceSection": {
       "properties": {
+        "agent_approvals_exclude_sponsor": {
+          "default": null,
+          "description": "AH3-T7: an agent principal's sponsor may not decide its approval\nrequests (the agent and the person who started its session never\nmay). Unset is on; a deployment with too few administrators to\napprove otherwise turns it off.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
         "ai": {
           "$ref": "#/$defs/AiEnablement",
           "description": "The kill-switch. See [`AiEnablement`]."

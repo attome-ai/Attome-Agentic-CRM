@@ -330,16 +330,20 @@ pub async fn dispatch(
                 Some(Claim::Acquired(id)) => Some(id),
                 None => None,
             };
-            let pending =
-                match crate::approval::request_approval(&state.base.db, descriptor.id, &request)
-                    .await
-                {
-                    Ok(pending) => pending,
-                    Err(e) => {
-                        release_claim(state, claim).await;
-                        return Err(e);
-                    }
-                };
+            let pending = match crate::approval::request_approval_with(
+                &state.base.db,
+                descriptor.id,
+                &request,
+                exclude_sponsor(state),
+            )
+            .await
+            {
+                Ok(pending) => pending,
+                Err(e) => {
+                    release_claim(state, claim).await;
+                    return Err(e);
+                }
+            };
             if let Some(id) = claim {
                 let recorded = serde_json::json!({ "approval_id": pending.approval_id });
                 finish_claim(state, id, session::OUTCOME_REQUIRES_APPROVAL, &recorded).await;
@@ -460,7 +464,12 @@ pub async fn run_deferred(
             }
             Ok(GateDecision::RequiresApproval) => {
                 let pending =
-                    crate::approval::request_approval(&state.base.db, descriptor.id, &request)
+                    crate::approval::request_approval_with(
+                    &state.base.db,
+                    descriptor.id,
+                    &request,
+                    exclude_sponsor(state),
+                )
                         .await?;
                 Ok(DeferredRun::ApprovalRequired(pending.approval_id))
             }
@@ -1126,10 +1135,11 @@ pub async fn dispatch_confirmed_agent_action(
             agent_rationale: None,
             target: capture_target(state, ctx, args).await,
         };
-        let pending = match crate::approval::request_approval(
+        let pending = match crate::approval::request_approval_with(
             &state.base.db,
             descriptor.id,
             &request,
+            exclude_sponsor(state),
         )
         .await
         {
@@ -1407,6 +1417,16 @@ impl Default for Executors {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// AH3-T7: whether an agent's sponsor is kept from deciding its requests.
+fn exclude_sponsor(state: &EngineState) -> bool {
+    state
+        .base
+        .config
+        .inference
+        .agent_approvals_exclude_sponsor
+        .unwrap_or(true)
 }
 
 #[cfg(test)]

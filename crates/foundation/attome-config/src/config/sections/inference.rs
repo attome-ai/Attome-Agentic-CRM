@@ -233,6 +233,13 @@ pub struct InferenceSection {
     #[serde(default)]
     pub allow_external_provider: bool,
 
+    /// AH3-T7: an agent principal's sponsor may not decide its approval
+    /// requests (the agent and the person who started its session never
+    /// may). Unset is on; a deployment with too few administrators to
+    /// approve otherwise turns it off.
+    #[serde(default)]
+    pub agent_approvals_exclude_sponsor: Option<bool>,
+
     /// BIN-D7 — deprecated: accepted and ignored, nothing enforces it (the
     /// per-caller budget lives in `xrm-ai`'s budget guard). Kept for one
     /// release so an existing config still loads; boot warns when it is set
@@ -410,6 +417,7 @@ impl Default for InferenceSection {
             embedding_query_prefix: None,
             embedding_document_prefix: None,
             allow_external_provider: false,
+            agent_approvals_exclude_sponsor: None,
             provider_credential_key: KeyRing::default(),
             caller_token_budget_per_min: None,
             max_output_tokens: default_max_output_tokens(),

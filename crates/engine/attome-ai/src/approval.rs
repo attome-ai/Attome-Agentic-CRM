@@ -155,7 +155,58 @@ pub async fn request_approval(
     action: ActionId,
     request: &AgentActionRequest,
 ) -> Result<PendingApproval, AppError> {
-    let payload = serde_json::to_value(request).map_err(AppError::internal)?;
+    request_approval_with(db, action, request, true).await
+}
+
+/// AH3-T7: who may not decide a request from `session`: for a session bound
+/// to an agent principal, the agent, every person in its chain and, when
+/// `exclude_sponsor`, its sponsor. Empty for any other session.
+pub async fn excluded_for_session(
+    db: &PgPool,
+    session: Uuid,
+    exclude_sponsor: bool,
+) -> Result<Vec<Uuid>, AppError> {
+    let row: Option<(Option<Uuid>, Option<Vec<Uuid>>, Option<Uuid>)> = sqlx::query_as(
+        "SELECT s.agent_principal_ref, s.actor_chain, a.sponsor_user_ref \
+           FROM agent_session s \
+           LEFT JOIN agent_principal a ON a.user_ref = s.agent_principal_ref \
+          WHERE s.id = $1",
+    )
+    .bind(session)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some((Some(principal), chain, sponsor)) = row else {
+        return Ok(Vec::new());
+    };
+    let mut out = vec![principal];
+    out.extend(chain.unwrap_or_default());
+    if exclude_sponsor {
+        out.extend(sponsor);
+    }
+    out.sort_unstable();
+    out.dedup();
+    Ok(out)
+}
+
+/// [`request_approval`], with the deployment's sponsor rule
+/// (`inference.agent_approvals_exclude_sponsor`).
+pub async fn request_approval_with(
+    db: &PgPool,
+    action: ActionId,
+    request: &AgentActionRequest,
+    exclude_sponsor: bool,
+) -> Result<PendingApproval, AppError> {
+    let mut payload = serde_json::to_value(request).map_err(AppError::internal)?;
+    let excluded = excluded_for_session(db, request.agent_session_id, exclude_sponsor).await?;
+    if !excluded.is_empty()
+        && let Some(map) = payload.as_object_mut()
+    {
+        map.insert(
+            "excluded_deciders".to_owned(),
+            serde_json::to_value(&excluded).map_err(AppError::internal)?,
+        );
+    }
     let submitted = attome_approval::submit(
         db,
         &action_type_for(action),

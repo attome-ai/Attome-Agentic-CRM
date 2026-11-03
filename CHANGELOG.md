@@ -17,6 +17,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Approvals of an agent principal's requests exclude the agent, the people in its session's chain
+  and its sponsor (AH3-T7): the request's payload names them as `excluded_deciders`, and
+  `attome_approval` refuses them as it refuses the requester, directly or through a delegation.
+  `inference.agent_approvals_exclude_sponsor: false` lets the sponsor decide, for deployments with
+  too few administrators.
 - Digital workers (O13-T1): an agent principal with a profile (`PUT
   /api/v1/admin/ai/digital-workers/{id}`: its agent definition, supervisor and working hours;
   migration 0392) works service queues: the router offers it items while on duty and under
