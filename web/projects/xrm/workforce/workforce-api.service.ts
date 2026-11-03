@@ -84,6 +84,14 @@ export function coverageDays(raw: unknown): DayCoverage[] {
  * G17-T13: the workforce routes (G17-T7..T11) and the generic lists the screens read,
  * through the generated SDK (Y9-T3).
  */
+/** G17-T12: one KPI (`GET /api/v1/workforce/groups/{id}/kpis`). */
+export interface KpiRow {
+  key: string;
+  value: number | null;
+  target: number | null;
+  drill: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class WorkforceApiService {
   private readonly sdk = inject(SdkService);
@@ -212,6 +220,13 @@ export class WorkforceApiService {
   /** G17-T14: take an offer; the first to accept gets it. */
   acceptOffer(id: string): Observable<OfferState> {
     return this.sdk.post<OfferState>(`/api/v1/workforce/offers/${encodeURIComponent(id)}/accept`, { body: {} });
+  }
+
+  /** G17-T12: the group's KPIs over `from`..`to` (at most 31 days). */
+  kpis(groupId: string, from: string, to: string): Observable<KpiRow[]> {
+    return this.sdk
+      .get<{ kpis: KpiRow[] }>(`/api/v1/workforce/groups/${encodeURIComponent(groupId)}/kpis`, { query: { from, to } })
+      .pipe(map(r => r.kpis));
   }
 
   live(groupId: string): Observable<LiveRow[]> {

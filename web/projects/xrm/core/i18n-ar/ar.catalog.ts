@@ -4138,7 +4138,14 @@ export const xrmAr = {
     workforce: {
       title: 'القوى العاملة',
       group: 'مجموعة التخطيط',
-      tabs: { schedules: 'الجداول', swaps: 'التبديلات', intraday: 'خلال اليوم', adherence: 'الالتزام' },
+      tabs: { schedules: 'الجداول', swaps: 'التبديلات', intraday: 'خلال اليوم', adherence: 'الالتزام', kpis: 'المؤشرات' },
+      kpiName: 'المقياس', kpiValue: 'آخر ٧ أيام', kpiTarget: 'المستهدف',
+      noKpis: 'اختر مجموعة تخطيط لعرض مؤشراتها.',
+      kpi: {
+        forecast_accuracy: 'دقة التنبؤ', service_level: 'مستوى الخدمة (لا يُقاس بعد)',
+        occupancy: 'نسبة الإشغال', shrinkage: 'نسبة الانكماش', adherence: 'الالتزام',
+        coverage: 'التغطية', overtime: 'العمل الإضافي',
+      },
       from: 'من', to: 'إلى', build: 'إنشاء مسودة',
       buildNeedsDates: 'اختر مجموعة التخطيط وأول يوم وآخر يوم.',
       buildQueued: 'بدأ الإنشاء؛ تظهر المسودة هنا عند اكتمالها.',

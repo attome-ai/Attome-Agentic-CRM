@@ -17,6 +17,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Workforce KPIs (G17-T12): `GET /api/v1/workforce/groups/{id}/kpis` answers forecast accuracy,
+  service level against plan (not measured yet), occupancy, shrinkage, adherence, coverage and
+  overtime over up to 31 days, each with its records' screen; the workforce page's KPIs tab shows
+  the last seven days.
 - Batched after-commit hooks for bulk and import (Y10-T4): each write's after-commit payload goes to
   `record_hook_outbox` (migration 0394) in its own transaction, and a drain (when the operation
   finishes, and every minute) hands each hook up to 500 records of one entity per call

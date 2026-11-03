@@ -4,7 +4,7 @@ import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WorkforceApiService } from './workforce-api.service';
 import type { ScheduleDetail } from './workforce-api.service';
-import { WorkforcePageComponent, writeErrorKey } from './workforce-page.component';
+import { WorkforcePageComponent, kpiText, lastDays, writeErrorKey } from './workforce-page.component';
 
 const DETAIL: ScheduleDetail = {
   id: 's-1',
@@ -68,5 +68,17 @@ describe('WorkforcePageComponent (G17-T13)', () => {
     publish();
     expect(api['publish']).toHaveBeenCalledWith('s-1', 4);
     expect(el.querySelector('[data-testid="workforce-error"]')?.textContent).toContain('xrm.workforce.conflict');
+  });
+});
+
+describe('workforce KPIs (G17-T12)', () => {
+  it('shows hours for overtime, a percentage otherwise, and a dash when unmeasured', () => {
+    expect(kpiText({ key: 'overtime', value: 2.5, target: null, drill: '' })).toBe('2.5 h');
+    expect(kpiText({ key: 'coverage', value: 75, target: 100, drill: '' })).toBe('75%');
+    expect(kpiText({ key: 'service_level', value: null, target: 80, drill: '' })).toBe('—');
+  });
+
+  it('asks for the last seven days', () => {
+    expect(lastDays(new Date('2026-11-03T10:00:00Z'), 7)).toEqual({ from: '2026-10-28', to: '2026-11-03' });
   });
 });

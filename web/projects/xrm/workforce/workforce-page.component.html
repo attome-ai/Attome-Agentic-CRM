@@ -132,5 +132,26 @@
         </tbody>
       </table>
     }
+    @case ('kpis') {
+      <table class="wf-table" data-testid="workforce-kpis">
+        <thead>
+          <tr>
+            <th scope="col">{{ 'xrm.workforce.kpiName' | translate }}</th>
+            <th scope="col">{{ 'xrm.workforce.kpiValue' | translate }}</th>
+            <th scope="col">{{ 'xrm.workforce.kpiTarget' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (k of kpis(); track k.key) {
+            <tr [attr.data-kpi]="k.key">
+              <td><a [href]="k.drill">{{ kpiKey(k.key) | translate }}</a></td>
+              <td>{{ kpiText(k) }}</td>
+              <td>{{ k.target ?? '' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      @if (!kpis().length) { <p class="wf-note">{{ 'xrm.workforce.noKpis' | translate }}</p> }
+    }
   }
 </section>

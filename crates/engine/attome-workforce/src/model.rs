@@ -37,6 +37,7 @@ impl EngineModel for WorkforceModel {
             .merge(crate::what_if::routes())
             .merge(crate::self_service::routes())
             .merge(crate::intraday::routes())
+            .merge(crate::kpis::routes())
             .merge(crate::adherence::routes())
     }
 }

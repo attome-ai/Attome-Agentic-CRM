@@ -4216,7 +4216,14 @@ export const xrmEn = {
     workforce: {
       title: 'Workforce',
       group: 'Planning group',
-      tabs: { schedules: 'Schedules', swaps: 'Swaps', intraday: 'Intraday', adherence: 'Adherence' },
+      tabs: { schedules: 'Schedules', swaps: 'Swaps', intraday: 'Intraday', adherence: 'Adherence', kpis: 'KPIs' },
+      kpiName: 'Measure', kpiValue: 'Last 7 days', kpiTarget: 'Target',
+      noKpis: 'Choose a planning group to see its KPIs.',
+      kpi: {
+        forecast_accuracy: 'Forecast accuracy', service_level: 'Service level (not measured yet)',
+        occupancy: 'Occupancy', shrinkage: 'Shrinkage', adherence: 'Adherence',
+        coverage: 'Coverage', overtime: 'Overtime',
+      },
       from: 'From', to: 'To', build: 'Build a draft',
       buildNeedsDates: 'Choose a planning group and the first and last day.',
       buildQueued: 'The build has started; the draft appears here when it is done.',

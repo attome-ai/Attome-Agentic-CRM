@@ -3,10 +3,23 @@ import { ApiError, LangService, LocalDatePipe, TranslatePipe } from '@attome/bas
 import { forkJoin } from 'rxjs';
 import { ScheduleGridComponent } from './schedule-grid/schedule-grid.component';
 import {
-  AssignmentView, LiveRow, OfferRow, PickOption, ScheduleDetail, ScheduleSummary, SwapRow, WorkforceApiService,
+  AssignmentView, KpiRow, LiveRow, OfferRow, PickOption, ScheduleDetail, ScheduleSummary, SwapRow, WorkforceApiService,
 } from './workforce-api.service';
 
-export type WorkforceTab = 'schedules' | 'swaps' | 'intraday' | 'adherence';
+export type WorkforceTab = 'schedules' | 'swaps' | 'intraday' | 'adherence' | 'kpis';
+
+/** A KPI's value as shown: hours for overtime, a percentage otherwise. Pure. */
+export function kpiText(k: KpiRow): string {
+  if (k.value === null) return '—';
+  return k.key === 'overtime' ? `${k.value} h` : `${k.value}%`;
+}
+
+/** The last `days` days up to `today`, as `YYYY-MM-DD`. Pure. */
+export function lastDays(today: Date, days: number): { from: string; to: string } {
+  const to = today.toISOString().slice(0, 10);
+  const from = new Date(today.getTime() - (days - 1) * 86_400_000).toISOString().slice(0, 10);
+  return { from, to };
+}
 
 /** The message for a failed write: a 409 is "changed since you loaded it". Pure. */
 export function writeErrorKey(error: Pick<ApiError, 'status'> | null | undefined): string | null {
@@ -34,7 +47,7 @@ export class WorkforcePageComponent implements OnInit {
   private readonly api = inject(WorkforceApiService);
   private readonly lang = inject(LangService);
 
-  readonly tabs: readonly WorkforceTab[] = ['schedules', 'swaps', 'intraday', 'adherence'];
+  readonly tabs: readonly WorkforceTab[] = ['schedules', 'swaps', 'intraday', 'adherence', 'kpis'];
   readonly tab = signal<WorkforceTab>('schedules');
 
   readonly groups = signal<PickOption[]>([]);
@@ -45,6 +58,7 @@ export class WorkforcePageComponent implements OnInit {
   readonly swaps = signal<SwapRow[]>([]);
   readonly proposals = signal<OfferRow[]>([]);
   readonly live = signal<LiveRow[]>([]);
+  readonly kpis = signal<KpiRow[]>([]);
 
   readonly buildFrom = signal('');
   readonly buildTo = signal('');
@@ -76,12 +90,21 @@ export class WorkforcePageComponent implements OnInit {
       case 'swaps': return 'xrm.workforce.tabs.swaps';
       case 'intraday': return 'xrm.workforce.tabs.intraday';
       case 'adherence': return 'xrm.workforce.tabs.adherence';
+      case 'kpis': return 'xrm.workforce.tabs.kpis';
       default: return 'xrm.workforce.tabs.schedules';
     }
   }
 
   userName(id: string | null | undefined): string {
     return (id && this.names().get(id)) ?? id ?? '';
+  }
+
+  kpiKey(key: string): string {
+    return `xrm.workforce.kpi.${key}`;
+  }
+
+  kpiText(k: KpiRow): string {
+    return kpiText(k);
   }
 
   pickTab(tab: WorkforceTab): void {
@@ -91,6 +114,10 @@ export class WorkforcePageComponent implements OnInit {
     if (tab === 'intraday') this.api.proposals().subscribe({ next: p => this.proposals.set(p), error: (e: ApiError) => this.fail(e) });
     if (tab === 'adherence' && this.group()) {
       this.api.live(this.group()).subscribe({ next: l => this.live.set(l), error: (e: ApiError) => this.fail(e) });
+    }
+    if (tab === 'kpis' && this.group()) {
+      const { from, to } = lastDays(new Date(), 7);
+      this.api.kpis(this.group(), from, to).subscribe({ next: k => this.kpis.set(k), error: (e: ApiError) => this.fail(e) });
     }
   }
 
