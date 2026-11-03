@@ -1,0 +1,76 @@
+{
+  "app": "sales",
+  "doc": {
+    "description_en": "Win rate by quarter and against each competitor, and why deals were lost.",
+    "page_type": "custom",
+    "root": {
+      "children": [
+        {
+          "binding": {
+            "query": "@query:/Sales: Win Rate Percent by Quarter"
+          },
+          "id": "win_rate",
+          "props": {
+            "title_ar": "نسبة الفوز حسب الربع (%)",
+            "title_en": "Win rate by quarter (%)"
+          },
+          "type": "chart"
+        },
+        {
+          "binding": {
+            "query": "@query:/Sales: Win Rate by Competitor"
+          },
+          "id": "by_competitor",
+          "props": {
+            "title_ar": "نسبة الفوز حسب المنافس",
+            "title_en": "Win rate by competitor"
+          },
+          "type": "list"
+        },
+        {
+          "binding": {
+            "query": "@query:/Sales: Lost on Price by Discount Band"
+          },
+          "id": "price_band",
+          "props": {
+            "title_ar": "الخسارة بسبب السعر حسب شريحة الخصم",
+            "title_en": "Lost on price by discount band"
+          },
+          "type": "list"
+        },
+        {
+          "binding": {
+            "entity": "opportunity",
+            "where": [
+              {
+                "field": "stage",
+                "op": "eq",
+                "value": "closed_lost"
+              }
+            ]
+          },
+          "events": [
+            {
+              "do": "navigate",
+              "on": "select",
+              "target": "/xrm/opportunity/{id}"
+            }
+          ],
+          "id": "lost",
+          "props": {
+            "title_ar": "الصفقات الخاسرة",
+            "title_en": "Lost deals"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "الفوز والخسارة",
+    "title_en": "Win and loss"
+  },
+  "kind": "page",
+  "name": "sales-win-loss",
+  "schema_version": 1
+}

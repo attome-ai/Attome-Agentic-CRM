@@ -1,0 +1,65 @@
+{
+  "app": "sales",
+  "doc": {
+    "description_en": "This period's forecast by category, and the weighted pipeline behind it.",
+    "page_type": "custom",
+    "root": {
+      "children": [
+        {
+          "binding": {
+            "query": "@query:/Sales: Forecast by Category"
+          },
+          "id": "by_category",
+          "props": {
+            "title_ar": "التوقعات حسب الفئة",
+            "title_en": "Forecast by category"
+          },
+          "type": "chart"
+        },
+        {
+          "binding": {
+            "query": "@query:/Sales: Weighted Pipeline by Close Month"
+          },
+          "id": "weighted",
+          "props": {
+            "title_ar": "خط المبيعات المرجّح حسب شهر الإغلاق",
+            "title_en": "Weighted pipeline by close month"
+          },
+          "type": "chart"
+        },
+        {
+          "binding": {
+            "entity": "forecast_period",
+            "where": [
+              {
+                "field": "status",
+                "op": "eq",
+                "value": "open"
+              }
+            ]
+          },
+          "events": [
+            {
+              "do": "navigate",
+              "on": "select",
+              "target": "/xrm/forecast_period/{id}"
+            }
+          ],
+          "id": "periods",
+          "props": {
+            "title_ar": "فترات التوقعات المفتوحة",
+            "title_en": "Open forecast periods"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "التوقعات",
+    "title_en": "Forecast"
+  },
+  "kind": "page",
+  "name": "sales-forecast",
+  "schema_version": 1
+}

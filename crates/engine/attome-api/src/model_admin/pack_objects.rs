@@ -22,6 +22,7 @@
 //! - `@attribute:<entity>.<field>`
 //! - `@view:<entity>/<view name>`
 //! - `@query:<entity>/<query name>` (`@query:/<name>` for a query of no entity)
+//! - `@role:<role name>` (D28-T1: a menu's `roles` and `landing`)
 //! - `@<kind>:<app>/<name>`, another model object, this pack's own included
 
 use std::collections::HashMap;
@@ -340,7 +341,7 @@ async fn resolve_names(
 }
 
 /// The kinds of reference a pack file may name besides model objects.
-const NAMED: [&str; 4] = ["entity", "attribute", "view", "query"];
+const NAMED: [&str; 5] = ["entity", "attribute", "view", "query", "role"];
 
 /// `(prefix, rest)` of a string that is a name reference.
 fn split_reference(text: &str) -> Option<(&str, &str)> {
@@ -469,6 +470,11 @@ async fn resolve(
             .await
             .map_err(AppError::internal)
         }
+        "role" => sqlx::query_scalar("SELECT id FROM role WHERE name = $1 AND is_deleted = false")
+            .bind(rest)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal),
         kind => {
             let Some((app, name)) = rest.split_once('/') else {
                 return Ok(None);

@@ -14,7 +14,7 @@ kept, and an object a newer pack no longer ships is left in place. Both are list
 Ids differ per deployment, so a pack file names what its document refers to; a string that is
 exactly one of these is replaced by the id at install, and a name that matches nothing stops the
 install: `@entity:account`, `@attribute:account.industry`, `@view:account/Active Accounts`,
-`@query:account/Open Pipeline` (`@query:/<name>` for a query of no entity) and
+`@query:account/Open Pipeline` (`@query:/<name>` for a query of no entity), `@role:Sales Manager` and
 `@<kind>:<app>/<name>` for another model object, this pack's own included (`@component:crm/kpi_tile`).
 
 A pack may also keep **golden workflows** in `golden/golden.json` (`attome-pack-golden/v1`): `packs`,
@@ -183,6 +183,16 @@ adds product-mix reports and `0013` the team calling metrics); the crm pack's
 `0003` adds the contact org chart, enrichment fields and ISIC sections; the marketing pack's `0003`
 adds events, its `0004` nurture programmes, tracks and content with a lifecycle stage on leads
 and contacts, and its `0005` the website tracking sites, visit summaries and watched pages.
+
+`0034` makes a product a variant of another (`variant_of_ref`, `variant_label`) for the store (F8-T10).
+`0035` adds the report queries behind the **sales dashboards** (D28-T1), which the pack ships as
+pages under `model/page/sales/`: `sales-pipeline` (open and won deals, value by stage, weighted
+pipeline by close month), `sales-forecast` (this period by category), `sales-activities` (the last 30
+days), `sales-win-loss` (win rate by quarter and competitor, losses on price) and `sales-team` (the
+deals the viewer's role reaches, at risk and open). Every list opens the record a row is (drill-down).
+The pack's **Sales** menu (`model/navigation/sales/sales.json`) lists them and lands Sales
+Representatives and Territory Sales Reps on the pipeline and Sales Managers on the team page; a pack
+file names a role as `@role:<role name>`.
 
 ## community
 

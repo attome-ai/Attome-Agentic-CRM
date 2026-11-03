@@ -1,0 +1,106 @@
+{
+  "author": "packs",
+  "checksum": "sha256:01442f2e5e0d269afa7074dd141307b34dcc585803cd452617967ed3c1a7dadb",
+  "closed_at": "2026-11-03T00:00:00Z",
+  "description": "Sales dashboards (D28-T1): the report queries the pipeline, forecast, activities and win/loss dashboard pages chart.",
+  "format": "attome-changeset/v1",
+  "id": "01a19c40-0000-7f08-8000-000000000035",
+  "layer": "product",
+  "name": "sales-dashboard-queries",
+  "opened_at": "2026-11-03T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Sales: Weighted Pipeline by Close Month",
+          "required_privilege": "opportunity.read",
+          "sql": "SELECT to_char(date_trunc('month', close_date), 'YYYY-MM') AS close_month, SUM(amount * COALESCE(probability, 0) / 100) AS weighted_pipeline, SUM(amount) AS pipeline FROM opportunity WHERE (is_active IS NULL OR is_active = true) AND stage NOT IN ('closed_won', 'closed_lost') AND close_date IS NOT NULL GROUP BY 1 ORDER BY 1",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Sales: Weighted Pipeline by Close Month"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Sales: Forecast by Category",
+          "required_privilege": "forecast_cell.read",
+          "sql": "SELECT COALESCE(k.name, 'Uncategorised') AS category, SUM(COALESCE(c.adjusted_amount, c.pipeline_amount, 0)) AS forecast, SUM(COALESCE(c.quota, 0)) AS quota FROM forecast_cell c JOIN forecast_period p ON p.id = c.period_ref LEFT JOIN forecast_category k ON k.id = c.category_ref WHERE (c.is_active IS NULL OR c.is_active = true) AND p.status = 'open' GROUP BY k.name, k.rank ORDER BY k.rank NULLS LAST, k.name",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Sales: Forecast by Category"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Sales: Activities per Day",
+          "required_privilege": "activity.read",
+          "sql": "SELECT activity_date::date::text AS day, COUNT(*)::bigint AS activities FROM activity WHERE (is_active IS NULL OR is_active = true) AND activity_date >= NOW() - INTERVAL '30 days' GROUP BY 1 ORDER BY 1",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Sales: Activities per Day"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Sales: Win Rate Percent by Quarter",
+          "required_privilege": "opportunity.read",
+          "sql": "SELECT to_char(date_trunc('quarter', close_date), 'YYYY-\"Q\"Q') AS quarter, ROUND(100.0 * COUNT(*) FILTER (WHERE stage = 'closed_won') / NULLIF(COUNT(*), 0), 1) AS win_rate_percent FROM opportunity WHERE stage IN ('closed_won', 'closed_lost') AND close_date IS NOT NULL AND (is_active IS NULL OR is_active = true) GROUP BY 1 ORDER BY 1",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Sales: Win Rate Percent by Quarter"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 35,
+  "title": "Pack: sales dashboard queries"
+}

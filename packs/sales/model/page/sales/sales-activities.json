@@ -1,0 +1,99 @@
+{
+  "app": "sales",
+  "doc": {
+    "description_en": "Calls, meetings, tasks and emails over the last 30 days.",
+    "page_type": "custom",
+    "root": {
+      "children": [
+        {
+          "children": [
+            {
+              "binding": {
+                "entity": "activity",
+                "where": [
+                  {
+                    "field": "is_completed",
+                    "op": "eq",
+                    "value": false
+                  }
+                ]
+              },
+              "id": "open_activities",
+              "props": {
+                "title_ar": "الأنشطة المفتوحة",
+                "title_en": "Open activities"
+              },
+              "type": "metric"
+            },
+            {
+              "binding": {
+                "entity": "activity",
+                "where": [
+                  {
+                    "field": "activity_type",
+                    "op": "eq",
+                    "value": "meeting"
+                  }
+                ]
+              },
+              "id": "meetings",
+              "props": {
+                "title_ar": "الاجتماعات",
+                "title_en": "Meetings"
+              },
+              "type": "metric"
+            }
+          ],
+          "id": "activity_kpis",
+          "props": {
+            "layout": "row"
+          },
+          "type": "container"
+        },
+        {
+          "binding": {
+            "query": "@query:/Sales: Activities per Day"
+          },
+          "id": "per_day",
+          "props": {
+            "title_ar": "الأنشطة يوميًا",
+            "title_en": "Activities per day"
+          },
+          "type": "chart"
+        },
+        {
+          "binding": {
+            "entity": "activity",
+            "where": [
+              {
+                "field": "is_completed",
+                "op": "eq",
+                "value": false
+              }
+            ]
+          },
+          "events": [
+            {
+              "do": "navigate",
+              "on": "select",
+              "target": "/xrm/activity/{id}"
+            }
+          ],
+          "id": "open_list",
+          "props": {
+            "title_ar": "الأنشطة المفتوحة",
+            "title_en": "Open activities"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "الأنشطة",
+    "title_en": "Activities"
+  },
+  "kind": "page",
+  "name": "sales-activities",
+  "schema_version": 1
+}

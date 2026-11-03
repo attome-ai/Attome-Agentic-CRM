@@ -1,0 +1,120 @@
+{
+  "app": "sales",
+  "doc": {
+    "description_en": "Open deals by stage and close month; select a deal to open it.",
+    "page_type": "custom",
+    "root": {
+      "children": [
+        {
+          "children": [
+            {
+              "binding": {
+                "entity": "opportunity",
+                "where": [
+                  {
+                    "field": "stage",
+                    "op": "in",
+                    "value": [
+                      "prospecting",
+                      "qualification",
+                      "proposal",
+                      "negotiation"
+                    ]
+                  }
+                ]
+              },
+              "id": "open_deals",
+              "props": {
+                "title_ar": "الصفقات المفتوحة",
+                "title_en": "Open deals"
+              },
+              "type": "metric"
+            },
+            {
+              "binding": {
+                "entity": "opportunity",
+                "where": [
+                  {
+                    "field": "stage",
+                    "op": "eq",
+                    "value": "closed_won"
+                  }
+                ]
+              },
+              "id": "won_deals",
+              "props": {
+                "title_ar": "الصفقات المكسوبة",
+                "title_en": "Won deals"
+              },
+              "type": "metric"
+            }
+          ],
+          "id": "pipeline_kpis",
+          "props": {
+            "layout": "row"
+          },
+          "type": "container"
+        },
+        {
+          "binding": {
+            "query": "@query:/Sales: Pipeline Value by Stage"
+          },
+          "id": "by_stage",
+          "props": {
+            "title_ar": "قيمة خط المبيعات حسب المرحلة",
+            "title_en": "Pipeline value by stage"
+          },
+          "type": "chart"
+        },
+        {
+          "binding": {
+            "query": "@query:/Sales: Weighted Pipeline by Close Month"
+          },
+          "id": "by_month",
+          "props": {
+            "title_ar": "خط المبيعات المرجّح حسب شهر الإغلاق",
+            "title_en": "Weighted pipeline by close month"
+          },
+          "type": "chart"
+        },
+        {
+          "binding": {
+            "entity": "opportunity",
+            "where": [
+              {
+                "field": "stage",
+                "op": "in",
+                "value": [
+                  "prospecting",
+                  "qualification",
+                  "proposal",
+                  "negotiation"
+                ]
+              }
+            ]
+          },
+          "events": [
+            {
+              "do": "navigate",
+              "on": "select",
+              "target": "/xrm/opportunity/{id}"
+            }
+          ],
+          "id": "open_list",
+          "props": {
+            "title_ar": "الصفقات المفتوحة",
+            "title_en": "Open deals"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "خط المبيعات",
+    "title_en": "Pipeline"
+  },
+  "kind": "page",
+  "name": "sales-pipeline",
+  "schema_version": 1
+}

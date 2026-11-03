@@ -1,0 +1,116 @@
+{
+  "app": "sales",
+  "doc": {
+    "description_en": "The deals you and your team can see: open, at risk and won.",
+    "page_type": "custom",
+    "root": {
+      "children": [
+        {
+          "children": [
+            {
+              "binding": {
+                "entity": "opportunity",
+                "where": [
+                  {
+                    "field": "stage",
+                    "op": "in",
+                    "value": [
+                      "prospecting",
+                      "qualification",
+                      "proposal",
+                      "negotiation"
+                    ]
+                  }
+                ]
+              },
+              "id": "open_deals",
+              "props": {
+                "title_ar": "الصفقات المفتوحة",
+                "title_en": "Open deals"
+              },
+              "type": "metric"
+            },
+            {
+              "binding": {
+                "entity": "opportunity",
+                "where": [
+                  {
+                    "field": "stage",
+                    "op": "eq",
+                    "value": "closed_won"
+                  }
+                ]
+              },
+              "id": "won_deals",
+              "props": {
+                "title_ar": "الصفقات المكسوبة",
+                "title_en": "Won deals"
+              },
+              "type": "metric"
+            }
+          ],
+          "id": "team_kpis",
+          "props": {
+            "layout": "row"
+          },
+          "type": "container"
+        },
+        {
+          "binding": {
+            "query": "@query:opportunity/Deals: At Risk"
+          },
+          "events": [
+            {
+              "do": "navigate",
+              "on": "select",
+              "target": "/xrm/opportunity/{id}"
+            }
+          ],
+          "id": "at_risk",
+          "props": {
+            "title_ar": "الصفقات المعرّضة للخطر",
+            "title_en": "Deals at risk"
+          },
+          "type": "list"
+        },
+        {
+          "binding": {
+            "entity": "opportunity",
+            "where": [
+              {
+                "field": "stage",
+                "op": "in",
+                "value": [
+                  "prospecting",
+                  "qualification",
+                  "proposal",
+                  "negotiation"
+                ]
+              }
+            ]
+          },
+          "events": [
+            {
+              "do": "navigate",
+              "on": "select",
+              "target": "/xrm/opportunity/{id}"
+            }
+          ],
+          "id": "team_open",
+          "props": {
+            "title_ar": "الصفقات المفتوحة",
+            "title_en": "Open deals"
+          },
+          "type": "list"
+        }
+      ],
+      "id": "main",
+      "type": "container"
+    },
+    "title_ar": "الفريق",
+    "title_en": "Team"
+  },
+  "kind": "page",
+  "name": "sales-team",
+  "schema_version": 1
+}

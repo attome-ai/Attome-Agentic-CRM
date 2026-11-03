@@ -1,0 +1,62 @@
+{
+  "app": "sales",
+  "doc": {
+    "groups": [
+      {
+        "items": [
+          {
+            "kind": "page",
+            "label": "Pipeline",
+            "target": "@page:sales/sales-pipeline"
+          },
+          {
+            "kind": "page",
+            "label": "Forecast",
+            "target": "@page:sales/sales-forecast"
+          },
+          {
+            "kind": "page",
+            "label": "Activities",
+            "target": "@page:sales/sales-activities"
+          },
+          {
+            "kind": "page",
+            "label": "Win and loss",
+            "target": "@page:sales/sales-win-loss"
+          },
+          {
+            "kind": "page",
+            "label": "Team",
+            "target": "@page:sales/sales-team"
+          }
+        ],
+        "label": "Dashboards"
+      }
+    ],
+    "landing": [
+      {
+        "item": "Dashboards/Pipeline",
+        "role": "@role:Sales Representative"
+      },
+      {
+        "item": "Dashboards/Pipeline",
+        "role": "@role:Territory Sales Rep"
+      },
+      {
+        "item": "Dashboards/Team",
+        "role": "@role:Sales Manager"
+      }
+    ],
+    "settings": {
+      "icon": "las la-chart-line",
+      "languages": [
+        "en",
+        "ar"
+      ],
+      "name": "Sales"
+    }
+  },
+  "kind": "navigation",
+  "name": "sales",
+  "schema_version": 1
+}
