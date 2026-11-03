@@ -17,6 +17,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- The flow designer on the canvas (M2-T1): `/xrm/workflow/definitions/{id}/versions/{version}/design` places
+  steps freely, connects typed ports with the publish checks applied while dragging (types, trigger inputs,
+  duplicate connections, loops), keeps the step palette and each type's settings form, and adds groups,
+  notes and the jump into a sub-flow (`docs/flow-designer.md`). The canvas gains a graph mode
+  (`GraphCanvasComponent` in `@attome/xrm/canvas`).
 - A lookup's database key (Y2-T5): `GET` and `POST /api/v1/admin/entities/{entity_id}/fields/{field_id}/foreign-key`;
   the entity screen's table health shows each lookup's key, orphans, index proposals and partitioning
   (Y2-T15). `docs/data-layer.md` lists each field type's column (`date` is `DATE`, `date_time` is `TIMESTAMPTZ`).

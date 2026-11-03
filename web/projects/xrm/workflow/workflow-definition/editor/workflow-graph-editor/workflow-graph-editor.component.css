@@ -263,3 +263,6 @@
 .canvas.mirrored .type-menu,
 .canvas.mirrored .canvas-empty { transform: scaleX(-1); }
 .port-name { display: inline-block; }
+
+/* M2-T1: the way to the canvas designer. */
+.designer-link { margin-inline-start: 1rem; }

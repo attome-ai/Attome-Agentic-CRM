@@ -6,3 +6,12 @@ export type { CanvasNode, CanvasPresence, PlacedNode } from './canvas.component'
 export { CommandStack } from './command-stack';
 export { applyCommand, escapeSegment, inverseOf, valueAt } from './commands';
 export type { EditCommand } from './commands';
+// M2-T1 — graph mode: nodes placed freely, edges between typed ports.
+export { GraphCanvasComponent } from './graph-canvas.component';
+export {
+  CARD, ON_ERROR_PORT, cardHeight, checkConnection, connectCommand, droppableInputs, ensureLists, freshId,
+  groupBox, moveNodeCommand, outputsOf, portPoint, portsCompatible, reaches, removeNodeCommands, wirePath,
+} from './graph';
+export type {
+  GraphDoc, GraphDocEdge, GraphDocGroup, GraphDocNode, GraphDocNote, GraphNodeKind, GraphPortSpec, PortRef, Refusal,
+} from './graph';

@@ -571,6 +571,11 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/workflow').then(m => m.WorkflowTemplateGalleryComponent),
           },
           {
+            path: 'workflow/definitions/:definitionId/versions/:versionId/design',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/workflow').then(m => m.WorkflowDesignerComponent),
+          },
+          {
             path: 'workflow/definitions/:definitionId/versions/:versionId',
             canActivate: [authGuard],
             loadComponent: () => import('@attome/xrm/workflow').then(m => m.WorkflowGraphEditorComponent),

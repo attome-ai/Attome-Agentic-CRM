@@ -19,6 +19,7 @@
 - [Time travel](time-travel.md): keeping every earlier version of an entity's records, reading a record as it was and putting a version back.
 - [High-volume entities](high-volume-entities.md): entities partitioned by month for many records, their required date window and what they do not take.
 - [Master data](master-data.md): master entities, contributions, survivorship by source system, golden records, stewards, cross-references and distribution.
+- [Flow designer](flow-designer.md): building flows on the canvas, typed connections checked while dragging, groups, notes and sub-flows.
 - [Dashboard drill-down and explain](dashboard-drill.md): the records behind a number, parity, drill levels, drill-through, comparing periods and explanations in words.
 - [Metadata layers](metadata-layers.md): the platform, app and customer layers, upgrade conflicts, resets, reserved names, locks and retiring `is_customized`.
 - [The access model](access-model.md): privileges, levels per operation, child units, permission sets, sharing rules, masked fields, conflict rules and explaining access.

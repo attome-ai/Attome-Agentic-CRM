@@ -8,6 +8,8 @@
     <a [routerLink]="workflowFormRoute"
        [queryParams]="{ id: definitionId() }">&larr; Workflow</a>
     &rsaquo; v{{ version()!.version_number }} graph
+    <a class="designer-link" data-testid="wf-open-designer"
+       [routerLink]="['/xrm/workflow/definitions', definitionId(), 'versions', versionId(), 'design']">{{ 'workflowDesigner.open' | translate }}</a>
   </div>
 
   <div class="toolbar">
