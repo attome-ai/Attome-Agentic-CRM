@@ -14,6 +14,8 @@ mod api_usage_admin;
 /// self-service `/api/v1/apps` switcher read. `pub` for the same reason
 /// `view_admin`/`calendar_admin` are — `bundle` reconciles it.
 pub mod app_admin;
+/// T1-T2: an app's guided checklist before publish.
+pub mod app_checklist;
 mod approval_admin;
 /// M9-T1: approval processes, submit and recall.
 pub mod approval_email;

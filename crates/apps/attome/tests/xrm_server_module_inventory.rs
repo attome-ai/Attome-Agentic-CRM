@@ -97,6 +97,7 @@ const BASELINE: &[&str] = &[
     "admin_hooks",
     "api_usage_admin",
     "app_admin",
+    "app_checklist",
     "approval_admin",
     // M9-T1: approval processes sit on attome-approval like the policies
     // beside them, with the record engine's lock; no one engine owns both.

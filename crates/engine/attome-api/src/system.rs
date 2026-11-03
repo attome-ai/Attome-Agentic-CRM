@@ -183,6 +183,7 @@ impl EngineSystem {
             // immediately above — not wrapped in `license_gate` (core
             // platform capability, not a licensed module).
             .merge(crate::app_admin::routes())
+            .merge(crate::app_checklist::routes())
             // AA13-T8: SLO budgets and the deployment's own targets.
             .merge(crate::slo_admin::routes())
             // AA9-T6: every limit and its use; a caller's own limits.

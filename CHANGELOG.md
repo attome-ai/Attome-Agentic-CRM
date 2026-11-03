@@ -17,6 +17,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- An app's guided checklist (T1-T2): `GET /api/v1/admin/apps/{id}/checklist` lists, for each entity
+  the app names, its data, screens, rules, access, tests and Arabic label, what is missing and the
+  screen that fixes it; the Develop start screen shows it for each installed app.
 - Builders and owner review for Develop workspaces (T1-T3): privileges `develop.build` and
   `develop.publish` (platform changeset 0091), workspaces shared with a team (`team` on create;
   migration 0388), and a builder's publish of someone else's workspace waiting for the owner's

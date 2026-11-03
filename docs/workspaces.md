@@ -125,6 +125,23 @@ as the owner, through the same checks. `metadata.workspace_owner_review: false` 
 off; a builder then publishes only with `develop.publish`. The metadata rollout privilege (or
 system administration) always publishes at once.
 
+## Before publishing: the app checklist
+
+`GET /api/v1/admin/apps/{id}/checklist` reads, for each entity an app names, what it still needs:
+
+| Area | Done when | Required |
+|---|---|---|
+| data | the entity exists and has fields of its own | yes |
+| screens | a form and a list view | yes |
+| rules | an active rule | no |
+| access | a role holds its read privilege | yes |
+| tests | customer tests name it and none failed its last run | yes |
+| docs | an Arabic label | yes |
+
+Each item carries the screen that fixes it. The app is `ready` when every entity's required items
+are done. Inside a workspace the checklist reads the workspace's model, so it shows the work before
+it is published. The Develop start screen shows it for each installed app.
+
 ## In the web app
 
 Builders see a workspace picker in the header. It lists the open workspaces, makes a new one

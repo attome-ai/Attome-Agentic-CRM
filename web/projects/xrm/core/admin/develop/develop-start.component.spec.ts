@@ -3,7 +3,7 @@ import { LangService, SdkService, WorkspaceState } from '@attome/base';
 import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { DevelopStartComponent, recentWorkspaces } from './develop-start.component';
+import { type AppChecklist, DevelopStartComponent, openItems, recentWorkspaces } from './develop-start.component';
 
 const ws = (id: string, status: string, used: string) => ({ id, name: id, status, last_used_at: used });
 
@@ -19,6 +19,25 @@ describe('recentWorkspaces (T1-T1)', () => {
   });
 });
 
+const item = (area: 'data' | 'rules' | 'tests', done: boolean, required = true) =>
+  ({ area, done, required, detail: '', fix: '/xrm/admin/entities' });
+
+const checklist: AppChecklist = {
+  app: 'app1',
+  ready: false,
+  entities: [
+    { entity: 'visit', ready: false, items: [item('data', true), item('rules', false, false), item('tests', false)] },
+    { entity: 'clinic', ready: false, items: [item('data', false), item('tests', false)] },
+  ],
+};
+
+describe('openItems (T1-T2)', () => {
+  it('counts the required items not done', () => {
+    expect(openItems(checklist)).toBe(3);
+    expect(openItems({ ...checklist, entities: [] })).toBe(0);
+  });
+});
+
 describe('DevelopStartComponent', () => {
   beforeEach(() => sessionStorage.clear());
   afterEach(() => sessionStorage.clear());
@@ -27,6 +46,7 @@ describe('DevelopStartComponent', () => {
     const get = vi.fn((path: string) => {
       if (path.endsWith('/workspaces')) return of({ items: [ws('w1', 'open', '2026-11-03T10:00:00Z')] });
       if (path.endsWith('/apps')) return of({ items: [{ id: 'app1', name: 'Sales' }] });
+      if (path.endsWith('/checklist')) return of(checklist);
       return of({ items: [{ id: 't1', name: 'Welcome series' }] });
     });
     const post = vi.fn((path: string, _opts?: unknown) =>
@@ -72,5 +92,17 @@ describe('DevelopStartComponent', () => {
     expect(c.steps()).toBeNull();
     c.plan(true);
     expect(c.steps()).toBe(3);
+  });
+
+  it('shows an app\'s checklist with a fix link for each open item', () => {
+    const { fixture, get } = setup();
+    fixture.componentInstance.loadChecklist('app1');
+    fixture.detectChanges();
+    expect(get).toHaveBeenCalledWith('/api/v1/admin/apps/app1/checklist');
+    const root = fixture.nativeElement as HTMLElement;
+    const result = root.querySelector('[data-testid="ds-checklist-result"]');
+    expect(result).not.toBeNull();
+    expect(result?.querySelectorAll('li[data-done="false"] a')).toHaveLength(4);
+    expect(fixture.componentInstance.open()).toBe(3);
   });
 });

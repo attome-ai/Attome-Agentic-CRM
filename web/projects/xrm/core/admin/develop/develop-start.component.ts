@@ -1,5 +1,5 @@
 import { DOCUMENT } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiError, SdkService, TranslatePipe, WORKSPACE_ROUTES, WorkspaceState } from '@attome/base';
 
@@ -21,6 +21,36 @@ interface Page<T> {
 interface AppPlan {
   written_plan: string[];
   steps?: unknown[];
+}
+
+/** T1-T2: one checklist item (`GET /api/v1/admin/apps/{id}/checklist`). */
+export interface ChecklistItem {
+  area: 'data' | 'screens' | 'rules' | 'access' | 'tests' | 'docs';
+  done: boolean;
+  required: boolean;
+  detail: string;
+  fix: string;
+}
+
+export interface AppChecklist {
+  app: string;
+  ready: boolean;
+  entities: { entity: string; ready: boolean; items: ChecklistItem[] }[];
+}
+
+const AREA_KEYS: Record<ChecklistItem['area'], string> = {
+  data: 'dataModel.area_data',
+  screens: 'dataModel.area_screens',
+  rules: 'dataModel.area_rules',
+  access: 'dataModel.area_access',
+  tests: 'dataModel.area_tests',
+  docs: 'dataModel.area_docs',
+};
+
+/** The items still to do before publish: required and not done. Pure. */
+export function openItems(checklist: AppChecklist): number {
+  return checklist.entities.reduce(
+    (n, e) => n + e.items.filter(i => i.required && !i.done).length, 0);
 }
 
 /** The most recent workspaces the screen lists. */
@@ -91,11 +121,34 @@ export function recentWorkspaces(rows: readonly WorkspaceRow[], limit = RECENT):
         <article class="ds-card" data-testid="ds-templates">
           <h3>{{ 'dataModel.templates' | translate }}</h3>
           <ul class="ds-list">
-            @for (a of apps(); track a.id) { <li>{{ a.name }}</li> }
+            @for (a of apps(); track a.id) {
+              <li>{{ a.name }}
+                <button type="button" data-testid="ds-checklist" (click)="loadChecklist(a.id)">
+                  {{ 'dataModel.checklistOpen' | translate }}</button>
+              </li>
+            }
             @for (t of templates(); track t.id) { <li>{{ t.name }}</li> }
           </ul>
           @if (!apps().length && !templates().length) { <p>{{ 'dataModel.noTemplates' | translate }}</p> }
         </article>
+        @if (checklist(); as c) {
+          <article class="ds-card" data-testid="ds-checklist-result">
+            <h3>{{ 'dataModel.checklistTitle' | translate }}</h3>
+            <p>{{ (c.ready ? 'dataModel.checklistReady' : 'dataModel.checklistOpenItems') | translate: { n: open() } }}</p>
+            @for (e of c.entities; track e.entity) {
+              <h4><bdi dir="ltr">{{ e.entity }}</bdi></h4>
+              <ul class="ds-list">
+                @for (i of e.items; track i.area) {
+                  <li [attr.data-area]="i.area" [attr.data-done]="i.done">
+                    <i [class]="i.done ? 'las la-check' : 'las la-times'" aria-hidden="true"></i>
+                    {{ areaKey(i.area) | translate }}: {{ i.detail }}
+                    @if (!i.done) { <a [href]="i.fix">{{ 'dataModel.fixIt' | translate }}</a> }
+                  </li>
+                }
+              </ul>
+            }
+          </article>
+        }
         <article class="ds-card" data-testid="ds-recent">
           <h3>{{ 'dataModel.recentWork' | translate }}</h3>
           <ul class="ds-list">
@@ -123,6 +176,11 @@ export class DevelopStartComponent {
   readonly recent = signal<WorkspaceRow[]>([]);
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
+  readonly checklist = signal<AppChecklist | null>(null);
+  readonly open = computed(() => {
+    const c = this.checklist();
+    return c ? openItems(c) : 0;
+  });
 
   constructor() {
     this.sdk.get<Page<WorkspaceRow>>(WORKSPACE_ROUTES, { query: { page_size: 100 } }).subscribe({
@@ -136,6 +194,19 @@ export class DevelopStartComponent {
     this.sdk.get<Page<Named>>('/api/v1/admin/model/flow_template', { query: { page_size: 50 } }).subscribe({
       next: page => this.templates.set(page.items),
       error: () => this.templates.set([]),
+    });
+  }
+
+  areaKey(area: ChecklistItem['area']): string {
+    return AREA_KEYS[area];
+  }
+
+  /** T1-T2: what the app still needs before it is published. */
+  loadChecklist(app: string): void {
+    this.error.set(null);
+    this.sdk.get<AppChecklist>(`/api/v1/admin/apps/${app}/checklist`).subscribe({
+      next: c => this.checklist.set(c),
+      error: (e: ApiError) => this.error.set(e.message),
     });
   }
 
