@@ -17,6 +17,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- A sponsor's departure pauses their agents (AH3-T7, part): disabling a person (administrator,
+  directory sync or SCIM) pauses every active agent principal they sponsor in the same transaction
+  (`state_reason` `sponsor_lost`, epoch moved), and a daily reconciliation pauses any active agent
+  whose sponsor is no longer an active person.
 - Agent sessions run as their agent principal (AH3-T6): an agent definition may name the principal
   it runs as (`ai_agent.principal_ref`, platform changeset 0092); a session started from it is
   bound to that principal (`agent_session.agent_principal_ref`, `actor_chain` naming the person

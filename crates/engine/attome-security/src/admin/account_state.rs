@@ -113,6 +113,10 @@ async fn set_user_active(
     if !active {
         crate::ownership::queue_leaver(&mut tx, target_user_id, ctx.user_id).await?;
     }
+    // AH3-T7: the agents this person sponsors pause with them.
+    if !active {
+        crate::agent_scope::pause_sponsored(&mut tx, target_user_id).await?;
+    }
     if !active {
         sqlx::query(
             "UPDATE api_key SET is_active = false WHERE user_ref = $1 AND is_active = true",

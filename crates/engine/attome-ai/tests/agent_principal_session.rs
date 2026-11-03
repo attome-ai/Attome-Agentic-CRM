@@ -142,3 +142,89 @@ async fn session_runs_as_agent_principal_and_stops_when_paused() {
         SessionForExecution::Gone
     ));
 }
+
+/// An agent account sponsored by `sponsor`, active.
+async fn agent_of(db: &attome_db::DbPool, sponsor: Uuid) -> Uuid {
+    let agent = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO user_account (id, email, user_name, principal_kind) VALUES ($1, $2, 'agent', 2)",
+    )
+    .bind(agent)
+    .bind(format!("agent-{}@internal.attome", agent.simple()))
+    .execute(db)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO agent_principal (user_ref, sponsor_user_ref, created_by) VALUES ($1, $2, $2)",
+    )
+    .bind(agent)
+    .bind(sponsor)
+    .execute(db)
+    .await
+    .unwrap();
+    agent
+}
+
+async fn state_of(db: &attome_db::DbPool, agent: Uuid) -> (String, Option<String>) {
+    sqlx::query_as("SELECT lifecycle_state, state_reason FROM agent_principal WHERE user_ref = $1")
+        .bind(agent)
+        .fetch_one(db)
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn sponsor_deactivation_pauses_agent() {
+    let f = skip_if_no_db!(fixture().await);
+    let sponsor = Uuid::now_v7();
+    sqlx::query("INSERT INTO user_account (id, email, user_name) VALUES ($1, $2, 'sponsor')")
+        .bind(sponsor)
+        .bind(format!("sponsor-{}@example.invalid", sponsor.simple()))
+        .execute(f.db())
+        .await
+        .unwrap();
+    let first = agent_of(f.db(), sponsor).await;
+    let second = agent_of(f.db(), sponsor).await;
+    assert!(
+        attome_security::resolve_uncached(f.db(), first)
+            .await
+            .is_ok()
+    );
+
+    // The deactivation's own transaction pauses what the sponsor sponsors.
+    let mut tx = f.db().begin().await.unwrap();
+    sqlx::query("UPDATE user_account SET is_active = false WHERE id = $1")
+        .bind(sponsor)
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    let paused = attome_security::agent_scope::pause_sponsored(&mut tx, sponsor)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+    assert_eq!(paused.len(), 2);
+    assert_eq!(
+        state_of(f.db(), first).await,
+        ("paused".to_owned(), Some("sponsor_lost".to_owned()))
+    );
+    assert!(
+        attome_security::resolve_uncached(f.db(), first)
+            .await
+            .is_err(),
+        "the next agent request fails"
+    );
+
+    // The daily backstop catches one resumed while the sponsor is gone.
+    sqlx::query("UPDATE agent_principal SET lifecycle_state = 'active' WHERE user_ref = $1")
+        .bind(second)
+        .execute(f.db())
+        .await
+        .unwrap();
+    assert!(
+        attome_security::agent_scope::reconcile_sponsors(f.db())
+            .await
+            .unwrap()
+            >= 1
+    );
+    assert_eq!(state_of(f.db(), second).await.0, "paused");
+}

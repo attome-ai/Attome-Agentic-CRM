@@ -229,6 +229,8 @@ async fn disable(state: &EngineState, user_id: Uuid) -> Result<bool, AppError> {
         return Ok(false);
     }
     attome_auth::epoch::bump_in_tx(&mut tx, user_id).await?;
+    // AH3-T7: the agents this person sponsors pause with them.
+    crate::agent_scope::pause_sponsored(&mut tx, user_id).await?;
     sqlx::query("UPDATE api_key SET is_active = false WHERE user_ref = $1 AND is_active = true")
         .bind(user_id)
         .execute(&mut *tx)

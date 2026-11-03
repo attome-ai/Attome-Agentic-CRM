@@ -141,6 +141,64 @@ pub async fn narrow(
     Ok(())
 }
 
+/// The reason a principal paused for its sponsor carries.
+pub const SPONSOR_LOST: &str = "sponsor_lost";
+
+/// AH3-T7: pauses every active agent `sponsor` sponsors, in the caller's
+/// transaction (the sponsor's deactivation): `paused`, `sponsor_lost`, its
+/// epoch moved. Returns the agents paused.
+pub async fn pause_sponsored(
+    tx: &mut sqlx::PgConnection,
+    sponsor: Uuid,
+) -> Result<Vec<Uuid>, AppError> {
+    let paused: Vec<Uuid> = sqlx::query_scalar(
+        "WITH paused AS ( \
+             UPDATE agent_principal SET lifecycle_state = 'paused', state_reason = $2, \
+                    row_version = row_version + 1 \
+              WHERE sponsor_user_ref = $1 AND lifecycle_state = 'active' \
+              RETURNING user_ref) \
+         UPDATE user_account SET auth_epoch = auth_epoch + 1 \
+          WHERE id IN (SELECT user_ref FROM paused) RETURNING id",
+    )
+    .bind(sponsor)
+    .bind(SPONSOR_LOST)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    if !paused.is_empty() {
+        tracing::info!(%sponsor, agents = paused.len(), "agent principals paused: sponsor lost");
+    }
+    Ok(paused)
+}
+
+/// AH3-T7: the daily backstop. Pauses every active agent whose sponsor is
+/// no longer an active person, however that came about. Returns how many.
+pub async fn reconcile_sponsors(db: &DbPool) -> Result<u64, AppError> {
+    let paused: Vec<Uuid> = sqlx::query_scalar(
+        "WITH paused AS ( \
+             UPDATE agent_principal a SET lifecycle_state = 'paused', state_reason = $1, \
+                    row_version = a.row_version + 1 \
+              WHERE a.lifecycle_state = 'active' \
+                AND NOT EXISTS (SELECT 1 FROM user_account s \
+                                 WHERE s.id = a.sponsor_user_ref AND s.is_active \
+                                   AND s.principal_kind = 0) \
+              RETURNING a.user_ref) \
+         UPDATE user_account SET auth_epoch = auth_epoch + 1 \
+          WHERE id IN (SELECT user_ref FROM paused) RETURNING id",
+    )
+    .bind(SPONSOR_LOST)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    if !paused.is_empty() {
+        tracing::warn!(
+            agents = paused.len(),
+            "agent principals paused by the sponsor reconciliation"
+        );
+    }
+    Ok(u64::try_from(paused.len()).unwrap_or(u64::MAX))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

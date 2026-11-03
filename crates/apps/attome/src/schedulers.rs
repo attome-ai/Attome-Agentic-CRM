@@ -118,6 +118,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_slo_burn_check_scheduler(db.clone(), std::time::Duration::from_secs(300));
     // AA9-T7: limits near their value, daily.
     crate::jobs::spawn_limit_warning_scheduler(db.clone(), std::time::Duration::from_secs(86_400));
+    // AH3-T7: agent principals whose sponsor left, daily.
+    crate::jobs::spawn_agent_sponsor_reconcile_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(86_400),
+    );
     // T5-T6: idle Develop workspaces, daily.
     crate::jobs::spawn_workspace_expiry_scheduler(
         db.clone(),

@@ -801,6 +801,8 @@ async fn write_user(
             .await
             .map_err(AppError::internal)?;
         crate::ownership::queue_leaver(&mut tx, user_id, token.created_by).await?;
+        // AH3-T7: the agents this person sponsors pause with them.
+        crate::agent_scope::pause_sponsored(&mut tx, user_id).await?;
     }
     let (operation, name) = if created {
         (AuditOperation::Create, "scim.user_created")

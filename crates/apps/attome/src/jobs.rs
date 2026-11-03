@@ -3460,6 +3460,7 @@ const DEDUP_KEY_SOCIAL_MENTIONS_SYNC: &str = "social-mentions-sync";
 const DEDUP_KEY_SOCIAL_PUBLISH: &str = "social-publish";
 /// AA10-T5: mass-operation undo values past retention (a registered job type).
 const DEDUP_KEY_HEAVY_OP_UNDO_RETENTION: &str = "heavy-op-undo-retention";
+const DEDUP_KEY_AGENT_SPONSOR_RECONCILE: &str = "agent-sponsor-reconcile";
 const DEDUP_KEY_TIME_FORMULA_RECOMPUTE: &str = "time-formula-recompute";
 
 /// Z1-T8: reminds administrators of secrets older than
@@ -4101,6 +4102,11 @@ pub const TIME_FORMULA_RECOMPUTE: attome_jobs::JobType = attome_jobs::JobType {
     ..attome_jobs::JobType::new("time_formula_recompute", 1)
 };
 
+/// AH3-T7: daily, agent principals whose sponsor is no longer an active
+/// person are paused (the backstop behind the in-transaction pause).
+pub const AGENT_SPONSOR_RECONCILE: attome_jobs::JobType =
+    attome_jobs::JobType::new("agent_sponsor_reconcile", 1);
+
 /// AA10-T5: daily, the values mass operations replaced are cleared once
 /// past `limits.heavy_op.undo_retention_days`.
 pub const HEAVY_OP_UNDO_RETENTION: attome_jobs::JobType =
@@ -4272,6 +4278,17 @@ pub fn register_job_types() {
                 .await
                 .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 tracing::info!(role_id = %payload.role_id, ended, "role sessions ended");
+                Ok(())
+            },
+        ) {
+            tracing::error!(%error, "job type registration failed");
+        }
+        if let Err(error) = attome_core::jobs::JOB_TYPES.register(
+            AGENT_SPONSOR_RECONCILE,
+            |state: EngineState, _job: attome_jobs::RegisteredJob| async move {
+                attome_security::agent_scope::reconcile_sponsors(&state.base.db)
+                    .await
+                    .map_err(|e| Box::new(e) as attome_jobs::registry::BoxError)?;
                 Ok(())
             },
         ) {
@@ -6980,6 +6997,9 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::Registered(job) if job.name == HEAVY_OP_UNDO_RETENTION.name => {
             DEDUP_KEY_HEAVY_OP_UNDO_RETENTION
         }
+        EngineJob::Registered(job) if job.name == AGENT_SPONSOR_RECONCILE.name => {
+            DEDUP_KEY_AGENT_SPONSOR_RECONCILE
+        }
         EngineJob::Registered(job) if job.name == TIME_FORMULA_RECOMPUTE.name => {
             DEDUP_KEY_TIME_FORMULA_RECOMPUTE
         }
@@ -7786,6 +7806,25 @@ pub fn spawn_heavy_op_undo_retention_scheduler(db: DbPool, interval: std::time::
         job,
         DEDUP_KEY_HEAVY_OP_UNDO_RETENTION,
         "mass undo retention",
+    );
+}
+
+/// AH3-T7: daily, the agent sponsor reconciliation.
+pub fn spawn_agent_sponsor_reconcile_scheduler(db: DbPool, interval: std::time::Duration) {
+    register_job_types();
+    let job = match attome_core::jobs::JOB_TYPES.job(AGENT_SPONSOR_RECONCILE.name, &()) {
+        Ok(job) => EngineJob::Registered(job),
+        Err(error) => {
+            tracing::error!(%error, "agent sponsor reconciliation: not scheduled");
+            return;
+        }
+    };
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        job,
+        DEDUP_KEY_AGENT_SPONSOR_RECONCILE,
+        "agent sponsor reconciliation",
     );
 }
 
