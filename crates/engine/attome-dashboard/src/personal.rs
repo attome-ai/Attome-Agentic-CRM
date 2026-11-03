@@ -80,7 +80,7 @@ async fn require_personal(state: &EngineState, id: Uuid, user: Uuid) -> Result<(
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/{id}/publish-personal",
-    extensions(("x-audit" = serde_json::json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Activated)])))),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Activated)])))),
     tag = "dashboard",
     params(("id" = Uuid, Path, description = "The dashboard")),
     request_body = PersonalBody,
@@ -162,7 +162,7 @@ async fn publish_personal(
 #[utoipa::path(
     post,
     path = "/api/v1/attome-dashboard/{id}/share",
-    extensions(("x-audit" = serde_json::json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
     tag = "dashboard",
     params(("id" = Uuid, Path, description = "The dashboard")),
     request_body = PersonalBody,
