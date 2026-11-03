@@ -1420,6 +1420,9 @@ impl EngineSystemBuilder {
         attome_server::impersonation::install(std::sync::Arc::new(
             attome_security::impersonation::PgImpersonationStore::new(state.base.db.clone()),
         ));
+        // N12-T1: the agent's entity and field build tools run the admin
+        // create paths. Once per process; a second system finds them set.
+        let _ = crate::workspace::build_tools::install();
 
         // Hourly reload — fully re-verifies from license every tick
         // (rather than only checking expiry against the cached value), so

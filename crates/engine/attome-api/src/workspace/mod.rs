@@ -24,6 +24,8 @@
 //! the metadata rollout privilege, as any changeset apply); creating,
 //! discarding and publishing are audited as configuration changes.
 
+/// N12-T1: the entity and field build tools for agents.
+pub mod build_tools;
 pub mod data;
 pub mod lifecycle;
 pub mod proxy;

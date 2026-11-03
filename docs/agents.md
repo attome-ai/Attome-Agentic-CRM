@@ -186,7 +186,10 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   an undo window. It is consequential: an agent's send needs approval unless its level allows more. `text.translate`
   translates text keeping names, numbers and the deployment's terms (`inference.translation.glossary`).
 - Building: `model.<kind>.describe|list|edit` for every metadata kind, found over MCP with
-  `tools.search`; edits are drafts a person confirms.
+  `tools.search`; edits are drafts a person confirms. `model.entity.create` and
+  `model.attribute.create` make an entity or a field (its table or column) through the admin API's
+  own create path; they are consequential, so a person confirms each. Called in a Develop workspace
+  (`X-Attome-Workspace`), they land in the workspace and its changeset, not in live.
 - Outages: `system.status` lists the services (object storage, email, the job queues) and which are
   down. A call refused because one is down names it under `degraded` with `retryable`: `true` for a
   short outage, `false` once it has lasted five minutes, so the agent stops and tells the person.

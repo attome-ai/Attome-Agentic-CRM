@@ -130,6 +130,8 @@ pub mod sales_orgchart;
 pub mod sales_team;
 /// B16-T13: scan.lookup and code.generate.
 pub mod scan;
+/// N12-T1: model.entity.create and model.attribute.create.
+pub mod schema_build;
 /// A25-T7: search.parse_filter and search.answer_records, and the search seam.
 pub mod search_ask;
 pub mod search_records;
@@ -237,6 +239,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(workflow::descriptors());
     all.extend(memory::descriptors());
     all.extend(model_edit::descriptors());
+    all.extend(schema_build::descriptors());
     all.push(route_classify::descriptor());
     all.extend(agent_supervise::descriptors());
     all.push(agent_playground::descriptor());
@@ -356,6 +359,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(workflow::executors());
     all.extend(memory::executors());
     all.extend(model_edit::executors());
+    all.extend(schema_build::executors());
     all.push(Box::new(route_classify::RouteClassify));
     all.extend(agent_supervise::executors());
     all.push(Box::new(agent_playground::AgentPlaygroundComplete));

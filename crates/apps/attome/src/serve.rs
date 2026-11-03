@@ -86,6 +86,10 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         Some((id, port)) => attome::workspace_host::prepare(config, id, port).await?,
         None => config,
     };
+    // N12-T1: the agent's build tools record into this workspace's changeset.
+    if let Some((id, _)) = workspace {
+        attome_api::workspace::build_tools::serve_workspace(id);
+    }
     // Z5-T3: the per-route policy table, from the same document the API
     // publishes; the body-limit layer reads it by matched route.
     let policy_table = attome_server::route_policy::RoutePolicyTable::from_document(
