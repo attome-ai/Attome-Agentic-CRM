@@ -530,6 +530,8 @@ pub async fn enroll_with(
     user_id: Uuid,
     hook: &dyn attome_db::BeforeCommit<Uuid>,
 ) -> Result<EnrollResponse, AppError> {
+    // AH3-T3: a service or agent account has no second factor to enrol.
+    crate::principal::ensure_person(db, user_id, "mfa_enroll").await?;
     let already_confirmed = is_enrolled(db, user_id).await?;
     if already_confirmed {
         return Err(AppError::Conflict(

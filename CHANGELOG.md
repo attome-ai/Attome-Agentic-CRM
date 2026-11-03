@@ -17,6 +17,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Service and agent accounts never sign in interactively (AH3-T3): an account whose
+  `principal_kind` is not a person is refused at the password and directory sign-ins (before any
+  second factor), at every new session, every refresh, a password reset (no token is issued) and
+  MFA enrolment, with the same `401` a wrong password gets and a warning naming
+  `machine_principal_interactive_login`.
 - Agent principals, schema (AH3-T2): every account has an immutable `principal_kind` (0 person,
   1 service, 2 agent; migration 0389, a trigger refuses a change), and `agent_principal` holds an
   agent account's sponsor, lifecycle state and scope, with `agent_session` gaining

@@ -535,8 +535,8 @@ pub async fn login_with_policy(
     remembered: Option<RememberedDevice<'_>>,
 ) -> Result<LoginOutcome, AppError> {
     let email = crate::email_identity::normalize_email(email);
-    let row: Option<(Uuid, String, bool)> = sqlx::query_as(
-        "SELECT id, password_hash, email_verified
+    let row: Option<(Uuid, String, bool, i16)> = sqlx::query_as(
+        "SELECT id, password_hash, email_verified, principal_kind
          FROM user_account
          WHERE email = $1
            AND is_active = true
@@ -551,10 +551,15 @@ pub async fn login_with_policy(
     // doesn't leak whether the email exists (timing/enumeration oracle).
     let password = password.to_owned();
     let (user_id, email_verified) = match row {
-        Some((user_id, stored_hash, email_verified)) => {
+        Some((user_id, stored_hash, email_verified, kind)) => {
             let ok = crate::password::verify_password_async(&password, &stored_hash).await?;
             if !ok {
                 return Err(AppError::Unauthorized);
+            }
+            // AH3-T3: a service or agent account never signs in with a
+            // password, even one somebody set.
+            if kind != crate::principal::PERSON {
+                return Err(crate::principal::refuse_machine(user_id, "password"));
             }
             if crate::password::needs_rehash(&stored_hash) {
                 rehash_after_login(db, user_id, &password, &stored_hash).await;
@@ -602,6 +607,9 @@ pub async fn second_factor_outcome(
     audience: &str,
     remembered: Option<RememberedDevice<'_>>,
 ) -> Result<LoginOutcome, AppError> {
+    // AH3-T3: no challenge or enrolment for a service or agent account (the
+    // directory sign-in reaches here without the password lookup's check).
+    crate::principal::ensure_person(db, user_id, "second_factor").await?;
     // BAU-12e: `last_login` is stamped by `refresh::issue_with` when a
     // session is actually issued, never here before a second factor.
     let requirement = policy.policy_for(user_id).await?;
@@ -984,6 +992,8 @@ pub async fn issue_access_token(
     audience: &str,
     access_token_expiry_secs: i64,
 ) -> Result<String, AppError> {
+    // AH3-T3: a refresh never renews a service or agent account's session.
+    crate::principal::ensure_person(db, user_id, "refresh").await?;
     let epoch = crate::epoch::current_epoch(db, user_id).await?;
     mint_access_token(
         user_id,

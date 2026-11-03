@@ -84,7 +84,8 @@ pub async fn request_in_tx(
         "SELECT id, email FROM user_account
          WHERE email = $1
            AND is_active = true
-           AND password_hash IS NOT NULL",
+           AND password_hash IS NOT NULL
+           AND principal_kind = 0",
     )
     .bind(&email)
     .fetch_optional(&mut **tx)
@@ -276,15 +277,21 @@ async fn confirm_inner(
     let mut tx = attome_db::tx::begin(db).await?;
 
     // 1. The account row first (D-509 rules 3.1 and 6).
-    let is_active: Option<bool> =
-        sqlx::query_scalar("SELECT is_active FROM user_account WHERE id = $1 FOR UPDATE")
-            .bind(user_id)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(AppError::internal)?;
-    if is_active != Some(true) {
+    let account: Option<(bool, i16)> = sqlx::query_as(
+        "SELECT is_active, principal_kind FROM user_account WHERE id = $1 FOR UPDATE",
+    )
+    .bind(user_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    if account.is_none_or(|(active, _)| !active) {
         tx.rollback().await.map_err(AppError::internal)?;
         return Err(AppError::Unauthorized);
+    }
+    // AH3-T3: a service or agent account's password is never reset.
+    if account.is_some_and(|(_, kind)| kind != crate::principal::PERSON) {
+        tx.rollback().await.map_err(AppError::internal)?;
+        return Err(crate::principal::refuse_machine(user_id, "reset"));
     }
 
     // 2. Single-use enforcement: guarded UPDATE + rows_affected, same

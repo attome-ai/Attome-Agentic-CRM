@@ -300,14 +300,20 @@ async fn issue_inner(
     // BAU-12e (F11): `last_login` is stamped only when a session is issued,
     // after any second factor. The account row is written before the token
     // row (D-509 rule 6's order), and the epoch comes from the same row.
-    let epoch: Option<i32> = sqlx::query_scalar(
-        "UPDATE user_account SET last_login = now() WHERE id = $1 RETURNING auth_epoch",
+    let row: Option<(i32, i16)> = sqlx::query_as(
+        "UPDATE user_account SET last_login = now() WHERE id = $1 \
+         RETURNING auth_epoch, principal_kind",
     )
     .bind(user_id)
     .fetch_optional(&mut *tx)
     .await
     .map_err(AppError::internal)?;
-    let epoch = epoch.ok_or(AppError::Unauthorized)?;
+    let (epoch, kind) = row.ok_or(AppError::Unauthorized)?;
+    // AH3-T3: no interactive session for a service or agent account; the
+    // transaction rolls back unwritten.
+    if kind != crate::principal::PERSON {
+        return Err(crate::principal::refuse_machine(user_id, "session"));
+    }
     if let Some(limit) = limit {
         enforce_limit(&mut tx, user_id, limit).await?;
     }

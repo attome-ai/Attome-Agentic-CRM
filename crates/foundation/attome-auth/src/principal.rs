@@ -4,7 +4,53 @@
 //! one kind is never accepted as another. S2S callers and API keys are not
 //! JWT principals: they authenticate per request through their own schemes.
 
+//!
+//! AH3-T3: an account's own kind (`user_account.principal_kind`, migration
+//! 0389: 0 a person, 1 a service, 2 an agent) decides whether it may sign in
+//! interactively. Only a person may: a service or agent account is refused
+//! at every interactive step (the password and directory sign-ins before any
+//! second factor, every new session, every refresh, a password reset) with
+//! the same `Unauthorized` a wrong password gets, and a warning naming
+//! [`MACHINE_REFUSAL`].
+
+use attome_db::DbPool;
+use attome_types::AppError;
+use uuid::Uuid;
+
 use crate::session::TokenType;
+
+/// `user_account.principal_kind` of a person.
+pub const PERSON: i16 = 0;
+
+/// The reason logged when a machine principal tries an interactive flow.
+pub const MACHINE_REFUSAL: &str = "machine_principal_interactive_login";
+
+/// The masked refusal for a machine principal: `Unauthorized`, as for a
+/// wrong password, with a warning naming the account and the flow.
+pub fn refuse_machine(user_id: Uuid, flow: &'static str) -> AppError {
+    tracing::warn!(
+        reason = MACHINE_REFUSAL,
+        %user_id,
+        flow,
+        "a service or agent account tried an interactive sign-in step"
+    );
+    AppError::Unauthorized
+}
+
+/// Refuses `user_id` unless it is a person. An unknown account passes: the
+/// caller's own lookup refuses it.
+pub async fn ensure_person(db: &DbPool, user_id: Uuid, flow: &'static str) -> Result<(), AppError> {
+    let kind: Option<i16> =
+        sqlx::query_scalar("SELECT principal_kind FROM user_account WHERE id = $1")
+            .bind(user_id)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?;
+    match kind {
+        Some(kind) if kind != PERSON => Err(refuse_machine(user_id, flow)),
+        _ => Ok(()),
+    }
+}
 
 /// The kinds of principal the platform authenticates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
