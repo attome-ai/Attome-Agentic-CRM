@@ -4,6 +4,9 @@
 //! grants to re-certify: every direct role holder of one role
 //! (`scope = "role"`), every member of one team (`scope = "team"`), or every
 //! user-principal record share on one entity (`scope = "entity_share"`).
+//! Q11-T2 adds machine identities: every S2S client (`scope = "s2s_client"`)
+//! and every agent principal (`scope = "agent"`), served by
+//! [`crate::access_review_populations`].
 //! Creating a campaign snapshots that population into one
 //! `access_review_item` row per grant — the population is resolved
 //! once, at creation time, never re-derived later, so an item's meaning
@@ -62,7 +65,8 @@ const MAX_CAMPAIGN_ITEMS: i64 = 2_000;
 #[derive(Deserialize, ToSchema)]
 pub(super) struct CreateAccessReviewBody {
     name: String,
-    /// `"role"`, `"team"`, or `"entity_share"`.
+    /// `"role"`, `"team"`, `"entity_share"`, `"s2s_client"` or `"agent"` (Q11-T2: every
+    /// S2S client, every agent principal; no other scope field).
     scope: String,
     #[serde(default)]
     scope_role_id: Option<Uuid>,
@@ -202,9 +206,10 @@ async fn resolve_population(
             .await
             .map_err(AppError::internal)
         }
-        other => Err(AppError::Validation(format!(
-            "scope must be 'role', 'team', or 'entity_share', got '{other}'"
-        ))),
+        other if crate::access_review_populations::is_machine_scope(other) => {
+            crate::access_review_populations::population(db, other).await
+        }
+        other => Err(crate::access_review_populations::unknown_scope(other)),
     }
 }
 
@@ -651,15 +656,12 @@ struct ItemForDecide {
 /// for the same item, which is exactly what happens if a caller retries a
 /// decide request after a network timeout whose first attempt actually
 /// landed.
-async fn execute_revoke<'c, E>(
-    db: E,
+async fn execute_revoke(
+    db: &mut sqlx::PgConnection,
     scope: &str,
     grant_ref: Uuid,
     subject_user_ref: Uuid,
-) -> Result<(), AppError>
-where
-    E: sqlx::PgExecutor<'c>,
-{
+) -> Result<(), AppError> {
     match scope {
         "role" => {
             sqlx::query(
@@ -687,6 +689,9 @@ where
                 .execute(db)
                 .await
                 .map_err(AppError::internal)?;
+        }
+        other if crate::access_review_populations::is_machine_scope(other) => {
+            crate::access_review_populations::revoke(db, other, grant_ref).await?;
         }
         other => {
             return Err(AppError::internal(format!(

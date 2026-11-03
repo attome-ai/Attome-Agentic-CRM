@@ -17,6 +17,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Access reviews of machine identities (Q11-T2): a campaign's `scope` may be `s2s_client` (every
+  active or suspended S2S client, reviewed under its service user) or `agent` (every agent
+  principal not yet revoked); revoking an item revokes the client and its keys, or the agent
+  (migration 0391 widens the scope check).
 - The Agents screen (AH3-T8, `/xrm/ai/principals`): agent principals with their state and reason,
   created with the signed-in person as sponsor by default, moved (pause, suspend, resume,
   revoke), given another sponsor, and issued keys whose secret shows once; English and Arabic.
