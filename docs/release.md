@@ -14,7 +14,9 @@ cargo run -p attome-release --target-dir target/gate -- --check --web
 
 The steps are format, clippy, tests, the plan guards (`perf_plans`: the EXPLAIN tests of
 `attome-audit` and `attome-records`, which fail when a query stops using its index; they need the
-test database `DATABASE_URL` names), the API contract, the waivers (every `deny.toml`,
+test database `DATABASE_URL` names), the pack golden workflows (`packs`: every pack with
+`packs/<pack>/golden/golden.json` installed on a fresh test deployment and its golden workflows run;
+a skip for want of `DATABASE_URL` fails it there), the API contract, the waivers (every `deny.toml`,
 `web/audit-waivers.yaml` and `.trivyignore.yaml` entry owned and in date), `cargo deny check`
 (install `cargo-deny`), dependency intake (a crate or production npm package added since the
 previous tag needs an entry in `docs/dependencies/intake.json`: reason, licence, maintenance, and

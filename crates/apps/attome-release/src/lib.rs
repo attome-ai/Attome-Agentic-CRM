@@ -35,6 +35,7 @@ pub mod chaos;
 mod contract;
 pub mod intake;
 pub mod notes;
+pub mod packs;
 pub mod parity;
 pub mod perf;
 /// AC4-T7: the previous release upgraded by this commit must boot.
@@ -168,6 +169,7 @@ pub fn check_with(options: &Options) -> ExitCode {
         ("clippy", clippy as Step),
         ("tests", tests as Step),
         ("perf_plans", perf_plans as Step),
+        ("packs", packs::step as Step),
         ("contract", contract_step as Step),
         ("waivers", waivers as Step),
         ("cargo_deny", cargo_deny as Step),
