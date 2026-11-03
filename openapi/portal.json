@@ -9034,6 +9034,72 @@
         "x-risk": "low"
       }
     },
+    "/{keyword}/api/v1/shop/guest/catalogue": {
+      "get": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "The store's catalogue for guests",
+        "description": "F8-T10: the products a guest may buy, priced for the shop's guest account, each with its VAT, its\nprice with VAT and, when the shop tracks stock, its stock badge. 404 while guests cannot check out.",
+        "operationId": "portal_shop_guest_catalogue",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Part of a product's name or SKU.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The products on sale",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogueItem"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The shop is closed to guests, or no such portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/{keyword}/api/v1/shop/guest/confirm": {
       "post": {
         "tags": [
@@ -9985,7 +10051,9 @@
         "required": [
           "product_id",
           "price",
-          "currency"
+          "currency",
+          "vat",
+          "price_with_vat"
         ],
         "properties": {
           "currency": {
@@ -10007,6 +10075,9 @@
             "type": "string",
             "description": "The unit price for one, a decimal in text."
           },
+          "price_with_vat": {
+            "type": "string"
+          },
           "product_id": {
             "type": "string",
             "format": "uuid"
@@ -10016,6 +10087,21 @@
               "string",
               "null"
             ]
+          },
+          "stock": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/StockBadge",
+                "description": "F8-T10: free stock at the shop's stock location; absent when the\nshop tracks no stock or the product is not stocked there."
+              }
+            ]
+          },
+          "vat": {
+            "type": "string",
+            "description": "F8-T10: the VAT on one at `commerce.vat_rate`, and the price with it."
           }
         }
       },
@@ -12934,27 +13020,29 @@
       },
       "ReviewBody": {
         "type": "object",
+        "description": "Body of `POST /api/v1/admin/packages/catalogue/{id}/review`.",
         "required": [
-          "product_id",
-          "rating"
+          "decision"
         ],
         "properties": {
-          "body": {
+          "decision": {
+            "$ref": "#/components/schemas/ReviewDecision"
+          },
+          "note": {
             "type": [
               "string",
               "null"
             ]
-          },
-          "product_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "rating": {
-            "type": "integer",
-            "format": "int32",
-            "description": "1 to 5."
           }
         }
+      },
+      "ReviewDecision": {
+        "type": "string",
+        "description": "A review's decision.",
+        "enum": [
+          "approved",
+          "rejected"
+        ]
       },
       "ReviewTaken": {
         "type": "object",
@@ -13311,6 +13399,15 @@
             "format": "date-time"
           }
         }
+      },
+      "StockBadge": {
+        "type": "string",
+        "description": "How much of a product the shop has, as the store shows it.",
+        "enum": [
+          "in_stock",
+          "low",
+          "sold_out"
+        ]
       },
       "TokenPasswordBody": {
         "type": "object",

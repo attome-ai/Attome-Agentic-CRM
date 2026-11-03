@@ -29149,6 +29149,229 @@
         "x-risk": "high"
       }
     },
+    "/api/v1/admin/entities/{entity_id}/fields/{field_id}/foreign-key": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A lookup's foreign key",
+        "description": "Y2-T5: whether lookup field `field_id` has its database foreign key, and whether that key has\nbeen checked against the existing rows. Administrators only.",
+        "operationId": "get_lookup_key",
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "field_id",
+            "in": "path",
+            "description": "The lookup field",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The key's state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupKey"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the data-model area",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such field",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a lookup, or no target entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Key a lookup",
+        "description": "Y2-T5: adds lookup field `field_id`'s database foreign key (`ON DELETE NO ACTION`, `NOT VALID`)\nand validates it: inline when the table holds at most 10,000 rows (200), else by a queued job\n(202). A value that points at no record refuses the validation (409) and the key stays\n`NOT VALID`. Only for a lookup whose delete rule is `restrict` or `cascade-deactivate`.\nAdministrators only.",
+        "operationId": "key_lookup",
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "field_id",
+            "in": "path",
+            "description": "The lookup field",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Keyed and valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupKey"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Keyed NOT VALID; the validation is queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupKey"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the data-model area",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such field",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The lookup has orphan values",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a lookup, no target, or its delete rule keeps no key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/admin/entities/{entity_id}/fields/{field_id}/index-status": {
       "get": {
         "tags": [
@@ -48394,6 +48617,495 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/admin/packages/catalogue": {
+      "get": {
+        "tags": [
+          "admin-metadata"
+        ],
+        "summary": "The private catalogue",
+        "description": "S13-T1: the signed package versions added to this deployment's catalogue, newest first, with\nwhat each asks of the deployment and its review status. Administrators only.",
+        "operationId": "list_package_catalogue",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The catalogue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_CatalogueEntry"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "admin-metadata"
+        ],
+        "summary": "Add a package to the catalogue",
+        "description": "S13-T1: adds a signed package version for review: pushed as `package` (signed by a trusted\npublisher), or taken from partner catalogue `partner` by `package_id` and `version` (signed with\nthat partner's key). Its manifest must be valid; a version already in the catalogue is a\nconflict. It waits for review by another administrator. Administrators only.",
+        "operationId": "add_to_package_catalogue",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddToCatalogueBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Added, pending review",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogueEntry"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such partner catalogue, or it does not offer that version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "That version is already in the catalogue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The package does not read, is not signed by a trusted publisher, or its manifest is wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/packages/catalogue/{id}/install": {
+      "post": {
+        "tags": [
+          "admin-metadata"
+        ],
+        "summary": "Install a catalogue package",
+        "description": "S13-T1: previews the install of an approved catalogue version through the T8 package path:\nthe same checks and persisted plan as `POST /api/v1/admin/packages/preview`. Installing is\napplying that plan (`POST /api/v1/admin/metadata/import?mode=apply`). Administrators only.",
+        "operationId": "install_catalogue_package",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The catalogue entry",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The preview and the persisted plan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackagePreviewResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The version is not approved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The package no longer verifies, or its namespace is wrong for this deployment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "only computes and persists a proposal, as packages/preview does; installing applies that plan through mode=apply, whose job audits every schema change",
+          "reason": "delegated",
+          "via": "EngineJob::ApplyMetadataBundle (bundle/apply.rs::audit_entity_change)"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/packages/catalogue/{id}/review": {
+      "post": {
+        "tags": [
+          "admin-metadata"
+        ],
+        "summary": "Review a catalogue package",
+        "description": "S13-T1: approves or rejects a pending package version. The administrator who added it cannot\nreview it. Only an approved version installs. Administrators only.",
+        "operationId": "review_catalogue_package",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The catalogue entry",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Reviewed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogueEntry"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already reviewed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The reviewer added it, or the note is too long",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/packages/partner-catalogues/{name}": {
+      "get": {
+        "tags": [
+          "admin-metadata"
+        ],
+        "summary": "A partner catalogue",
+        "description": "S13-T1: fetches partner catalogue `name` (`packages.partner_catalogues`) and lists its packages,\neach checked against the partner's publisher key: what it asks of the deployment and whether it\nverifies. Read-only; add one to the private catalogue to review and install it. Administrators\nonly.",
+        "operationId": "get_partner_catalogue",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "description": "The partner catalogue's name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The partner's packages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartnerCatalogue"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such partner catalogue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The catalogue could not be fetched or does not read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/admin/packages/preview": {
       "post": {
         "tags": [
@@ -48466,6 +49178,300 @@
           "note": "only computes and persists a proposal, as metadata import mode=plan does; installing applies that plan through mode=apply, whose job audits every schema change",
           "reason": "delegated",
           "via": "EngineJob::ApplyMetadataBundle (bundle/apply.rs::audit_entity_change)"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/packages/upgrade": {
+      "post": {
+        "tags": [
+          "admin-metadata"
+        ],
+        "summary": "Plan a package upgrade",
+        "description": "T8-T3: checks a newer version of an installed managed package (sent as `package`, or pulled\nfrom `url`) like an install, then merges it three ways: the installed version, the new one and\nthe deployment's live metadata. A property only the customer changed keeps the customer's\nvalue; one both changed differently is a conflict, and while there are conflicts nothing is\nplanned unless `accept_package` takes the package's value for each. The plan is persisted like\na metadata import plan and upgrading is applying it; the apply replaces the old version's locks.\nAdministrators only.",
+        "operationId": "plan_package_upgrade",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackageUpgradeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The merge, and the persisted plan when there is one",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageUpgradeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The package is not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The installed version has no recorded manifest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The package does not read, is not signed by a trusted publisher, is not newer, or its manifest or namespace is wrong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "only computes and persists a proposal, as packages/preview does; upgrading applies that plan through mode=apply, whose job audits every schema change",
+          "reason": "delegated",
+          "via": "EngineJob::ApplyMetadataBundle (bundle/apply.rs::audit_entity_change)"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/packages/{id}/drift": {
+      "get": {
+        "tags": [
+          "admin-metadata"
+        ],
+        "summary": "A package's drift",
+        "description": "T8-T3: compares what the installed version of package `id` set with the live metadata and\nnames every managed property changed outside the package (through a bundle, a changeset or by\nhand) and every object of it gone. Additions on its extension points are the customer's own\nand not drift. Read-only. Administrators only.",
+        "operationId": "package_drift",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The package id, such as com.example.fleet",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The drift",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageDriftResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The package is not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/packages/{id}/uninstall": {
+      "post": {
+        "tags": [
+          "admin-metadata"
+        ],
+        "summary": "Uninstall a package",
+        "description": "T8-T3: lifts the locks of package `id`'s installed version and marks it uninstalled. With\n`data: keep` its objects and records stay as the deployment's own; with `delete` its entities\n(with their views and queries) and the fields it added to other entities are retired through a\nmetadata plan, queued like any apply (approval-gated where the deployment requires it); with\n`export` the same, once `exports` holds a completed record export of every entity it owns.\nAdministrators only.",
+        "operationId": "uninstall_package",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The package id, such as com.example.fleet",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackageUninstallBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Uninstalled; the retiring plan queued when the data goes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageUninstallResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The package is not installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Uninstalled meanwhile, or the installed version has no recorded manifest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An owned entity has no completed export, or the retiring plan is blocked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
         },
         "x-cache": "no-store",
         "x-idempotent": "key",
@@ -79381,6 +80387,123 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/attome-dashboard/{id}/publish-personal": {
+      "post": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Publish a personal dashboard",
+        "description": "P5-T1: the owner of a `private` dashboard publishes its working copy at once, without review or\nthe four-eyes gate (the dashboard health gate still applies), so the owner sees it as saved. Only\nits owner. Audited.",
+        "operationId": "publish_personal",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The dashboard",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonalBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Published",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such dashboard",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not the caller's personal dashboard, archived, or row_version is stale",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The dashboard health gate refuses it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "activated"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "dashboard",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/attome-dashboard/{id}/published": {
       "get": {
         "tags": [
@@ -79640,6 +80763,123 @@
           "note": "resolves declared variable/parameter defaults and embed/URL overrides for display; persists nothing",
           "reason": "read_only",
           "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "dashboard",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/attome-dashboard/{id}/share": {
+      "post": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Share a personal dashboard",
+        "description": "P5-T1: the owner makes a `private` dashboard `team`, `organization` or `public`. Its published\nversion is cleared and its working copy returns to draft, so what others see goes through review\nand publish. Only its owner. Audited.",
+        "operationId": "share",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The dashboard",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonalBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Shared, as a draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such dashboard",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not the caller's personal dashboard, or row_version is stale",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "visibility is not team, organization or public",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
         },
         "x-cache": "no-store",
         "x-idempotent": "key",
@@ -102088,6 +103328,113 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/graphql": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Run a GraphQL query",
+        "description": "S6-T1: reads records through a schema built from the metadata for the caller (see\n`GET /api/v1/graphql/schema`). Answers `{data}`, or `{data: null, errors: [{message}]}` for a\nquery that does not parse, breaks a limit (10 root fields, 6 levels, 10,000 records by\nestimate) or reads what the caller may not. Reads only; writes go through the record API.",
+        "operationId": "run_graphql",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GraphqlRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The answer, or its errors",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "a read: queries only, no mutations; every read runs through the query engine with the caller's access",
+          "reason": "read_only",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/graphql/schema": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "The GraphQL schema",
+        "description": "S6-T1: the schema `POST /api/v1/graphql` answers for the caller, in the GraphQL schema\nlanguage: the entities they may read, each with its readable fields, and lookups to readable\nentities as their types.",
+        "operationId": "graphql_schema",
+        "responses": {
+          "200": {
+            "description": "The schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphqlSchema"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/grc/assessments/{id}/start": {
       "post": {
         "tags": [
@@ -115937,13 +117284,90 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/model/entities/{entity}/runtime-form": {
+      "get": {
+        "tags": [
+          "model"
+        ],
+        "summary": "An entity's runtime form",
+        "description": "A12-T5: the published metadata form `entity`'s record pages open in place of the hand-written\none, when the deployment has switched the entity (`forms.runtime_entities`); 404 when it has\nnot. Anyone who may read the entity's records.",
+        "operationId": "runtime_form",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The form the entity is switched to",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuntimeForm"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not read the entity's records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The entity is not switched to a metadata form",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/api/v1/model/forms/{id}/plan": {
       "get": {
         "tags": [
           "model"
         ],
         "summary": "A form's render plan",
-        "description": "The render plan of a published form: its sections and, for each field,\nthe attribute's logical name, label, type and whether it is required.\nThe form comes from the cooked registry in memory; the attribute details\nfrom one bounded query (a form holds at most 400 fields).",
+        "description": "The render plan of a published form: its sections and, for each field,\nthe attribute's logical name, label, type and whether it is required.\nThe form comes from the cooked registry in memory; the attribute details\nfrom one bounded query (a form holds at most 400 fields). A12-T2: with its\nkind, its tabs and each section's columns, for a caller who may read the\nentity's records; a field the caller may not read is left out, and one\nit may not change, or sees only masked, is marked read-only.",
         "operationId": "form_plan",
         "parameters": [
           {
@@ -115985,6 +117409,16 @@
           },
           "401": {
             "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not read the form's entity",
             "content": {
               "application/json": {
                 "schema": {
@@ -150961,6 +152395,118 @@
         "x-risk": "low"
       }
     },
+    "/api/v1/{entity}/form-hooks": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Run form hooks",
+        "description": "A12-T4: runs the entity's published extensions on the form's state for one event: `load`\n(`form_load` hooks), `change` (`form_change`) or `before_save` (the write pipeline's\n`before_validation` and `before_save` hooks, ahead of the save). Each extension sees only the\nattributes its grants let it read and may set only those it may write; its changes carry to the\nnext. Nothing is saved; a refusal comes back as `rejection`. Every call is logged as the\nextension's run. Needs read access to the entity's records.",
+        "operationId": "run_form_hooks",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FormHookBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The extensions' answer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormHookAnswer"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The caller may not read the entity's records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An extension failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "An extension on this entity could not be loaded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "runs the entity's extensions on the form's unsaved values and returns their answer; nothing is saved (the save runs the write hooks again under its own audit)",
+          "reason": "dry_run",
+          "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "{entity}.create",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/{entity}/imports": {
       "get": {
         "tags": [
@@ -157371,6 +158917,122 @@
         "x-privilege": "{entity}.read",
         "x-rate-class": "api",
         "x-risk": "low"
+      },
+      "put": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "Replace related records",
+        "description": "A2-T4 (multi-lookup): `PUT /api/v1/{entity}/{id}/related/{relationship}` makes the anchor's\nlinks on the relationship exactly `ids`: the missing ones are linked (an earlier unlinked join\nrow reactivated) and the rest unlinked, in one transaction, with the same `update` access on\nboth sides, change-feed rows and one audit event as link and unlink. A form's multi-lookup\ncontrol saves through this. At most 500 ids.",
+        "operationId": "replace_related",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The record",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "relationship",
+            "in": "path",
+            "description": "The relationship's name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceLinksBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "The links are exactly `ids`"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Entity, record, relationship, or a linked record not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "More than 500 ids",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "{entity}.update",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       },
       "post": {
         "tags": [
@@ -165722,6 +167384,72 @@
         "x-risk": "low"
       }
     },
+    "/{keyword}/api/v1/shop/guest/catalogue": {
+      "get": {
+        "tags": [
+          "sales"
+        ],
+        "summary": "The store's catalogue for guests",
+        "description": "F8-T10: the products a guest may buy, priced for the shop's guest account, each with its VAT, its\nprice with VAT and, when the shop tracks stock, its stock badge. 404 while guests cannot check out.",
+        "operationId": "portal_shop_guest_catalogue",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "description": "The portal",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Part of a product's name or SKU.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The products on sale",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogueItem"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The shop is closed to guests, or no such portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "portal_session": []
+          }
+        ],
+        "x-cache": "no-store",
+        "x-idempotent": "natural",
+        "x-module": "portal",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      }
+    },
     "/{keyword}/api/v1/shop/guest/confirm": {
       "post": {
         "tags": [
@@ -167643,6 +169371,38 @@
           "role_id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "AddToCatalogueBody": {
+        "type": "object",
+        "description": "Body of `POST /api/v1/admin/packages/catalogue`: a pushed package, or a\npartner's package by id and version.",
+        "properties": {
+          "package": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "An `attome-package/v1` document."
+          },
+          "package_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "partner": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A partner catalogue's name, with `package_id` and `version`."
+          },
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -174930,7 +176690,7 @@
       },
       "BusinessRuleClient": {
         "type": "object",
-        "description": "One business rule as the form evaluates it (design §5): `set_value`\npolicies and advanced-expression conditions stay server-only. A6-T2:\nfield-attached `allowed_values` policies are sent, so the form offers\nonly the allowed choices.",
+        "description": "One business rule as the form evaluates it (design §5): `set_value`\npolicies stay server-only. A6-T2: field-attached `allowed_values`\npolicies are sent, so the form offers only the allowed choices. A11-T3:\nfield-attached `required` policies are sent, and so are rules whose\ncondition holds an expression (`needs_evaluator`).",
         "required": [
           "name",
           "condition",
@@ -174948,6 +176708,10 @@
           },
           "name": {
             "type": "string"
+          },
+          "needs_evaluator": {
+            "type": "boolean",
+            "description": "A11-T3: the condition holds an `expression` leaf, which the form\nevaluates with the rules evaluator (WebAssembly) before deciding it.\nSent only when true."
           },
           "policies": {
             "type": "array",
@@ -177108,13 +178872,84 @@
           }
         }
       },
+      "CatalogueEntry": {
+        "type": "object",
+        "description": "One version in the private catalogue.",
+        "required": [
+          "id",
+          "package_id",
+          "version",
+          "publisher",
+          "source",
+          "permissions",
+          "review_status",
+          "added_by",
+          "created_at"
+        ],
+        "properties": {
+          "added_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "package_id": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "object"
+          },
+          "publisher": {
+            "type": "string"
+          },
+          "review_note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "review_status": {
+            "type": "string",
+            "description": "`pending`, `approved` or `rejected`."
+          },
+          "reviewed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "reviewed_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "source": {
+            "type": "string",
+            "description": "Where it came from: `pushed`, or `partner:<name>`."
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
       "CatalogueItem": {
         "type": "object",
         "description": "A product on sale, priced for the account.",
         "required": [
           "product_id",
           "price",
-          "currency"
+          "currency",
+          "vat",
+          "price_with_vat"
         ],
         "properties": {
           "currency": {
@@ -177136,6 +178971,9 @@
             "type": "string",
             "description": "The unit price for one, a decimal in text."
           },
+          "price_with_vat": {
+            "type": "string"
+          },
           "product_id": {
             "type": "string",
             "format": "uuid"
@@ -177145,6 +178983,21 @@
               "string",
               "null"
             ]
+          },
+          "stock": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/StockBadge",
+                "description": "F8-T10: free stock at the shop's stock location; absent when the\nshop tracks no stock or the product is not stocked there."
+              }
+            ]
+          },
+          "vat": {
+            "type": "string",
+            "description": "F8-T10: the VAT on one at `commerce.vat_rate`, and the price with it."
           }
         }
       },
@@ -181159,65 +183012,36 @@
         "additionalProperties": false
       },
       "Conflict": {
-        "oneOf": [
-          {
-            "type": "object",
-            "description": "An open opportunity on the same customer account.",
-            "required": [
-              "id",
-              "kind"
-            ],
-            "properties": {
-              "id": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "kind": {
-                "type": "string",
-                "enum": [
-                  "opportunity"
-                ]
-              },
-              "name": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              }
-            }
-          },
-          {
-            "type": "object",
-            "description": "Another partner's live registration for the same customer.",
-            "required": [
-              "id",
-              "status",
-              "kind"
-            ],
-            "properties": {
-              "customer_name": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "id": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "kind": {
-                "type": "string",
-                "enum": [
-                  "registration"
-                ]
-              },
-              "status": {
-                "type": "string"
-              }
-            }
-          }
+        "type": "object",
+        "description": "T8-T3: one property an upgrade cannot merge on its own: the package's\nnew version and the customer both changed it, differently.",
+        "required": [
+          "object",
+          "property",
+          "installed",
+          "customer",
+          "package"
         ],
-        "description": "What a registration conflicts with."
+        "properties": {
+          "customer": {
+            "type": "object",
+            "description": "What the deployment has now."
+          },
+          "installed": {
+            "type": "object",
+            "description": "What the installed version set."
+          },
+          "object": {
+            "type": "string",
+            "description": "`entity` or `entity.attribute`."
+          },
+          "package": {
+            "type": "object",
+            "description": "What the new version sets."
+          },
+          "property": {
+            "type": "string"
+          }
+        }
       },
       "ConflictCount": {
         "type": "object",
@@ -185986,6 +187810,15 @@
           }
         }
       },
+      "DataChoice": {
+        "type": "string",
+        "description": "What happens to a package's data on uninstall.",
+        "enum": [
+          "keep",
+          "export",
+          "delete"
+        ]
+      },
       "DataClass": {
         "type": "string",
         "enum": [
@@ -190160,6 +191993,38 @@
           }
         }
       },
+      "DriftItem": {
+        "type": "object",
+        "description": "T8-T3: a managed property that differs live from what the package set.",
+        "required": [
+          "object",
+          "change",
+          "installed",
+          "live"
+        ],
+        "properties": {
+          "change": {
+            "type": "string",
+            "description": "`changed`, or `missing` when the object is gone."
+          },
+          "installed": {
+            "type": "object"
+          },
+          "live": {
+            "type": "object"
+          },
+          "object": {
+            "type": "string",
+            "description": "`entity` or `entity.attribute`."
+          },
+          "property": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "DriftReport": {
         "type": "object",
         "properties": {
@@ -191929,7 +193794,7 @@
             "items": {
               "$ref": "#/components/schemas/BusinessRuleClient"
             },
-            "description": "D-789 §5 (additive): the active business rules that apply to the\ncaller and carry a client-side policy (`hidden`, `disabled`, or an\n`error` attached to a field) under a structured condition. The form\nmirrors them for UX only; the server enforces every write."
+            "description": "D-789 §5 (additive): the active business rules that apply to the\ncaller and carry a client-side policy (`hidden`, `disabled`, or an\n`error`, `allowed_values` or (A11-T3) `required` attached to a field).\nA11-T3: a rule whose condition holds an expression is sent too, marked\n`needs_evaluator`; the form evaluates it with the rules evaluator. The\nform mirrors them for UX only; the server enforces every write."
           },
           "fields": {
             "type": "array",
@@ -195784,18 +197649,97 @@
           }
         }
       },
+      "FormEvent": {
+        "type": "string",
+        "description": "A form event.",
+        "enum": [
+          "load",
+          "change",
+          "before_save"
+        ]
+      },
+      "FormHookAnswer": {
+        "type": "object",
+        "description": "What the extensions answered.",
+        "required": [
+          "changes",
+          "rejection_translations",
+          "events"
+        ],
+        "properties": {
+          "changes": {
+            "type": "object",
+            "description": "Values the extensions set, for the form to fill in."
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The form events with an extension on this entity, so the form calls\nonly those."
+          },
+          "rejection": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A refusal, in English; the form shows it (on `before_save`, instead\nof saving)."
+          },
+          "rejection_translations": {
+            "type": "object",
+            "description": "The refusal in each language the extension wrote it in."
+          }
+        }
+      },
+      "FormHookBody": {
+        "type": "object",
+        "description": "Body of `POST /api/v1/{entity}/form-hooks`.",
+        "required": [
+          "event",
+          "values"
+        ],
+        "properties": {
+          "event": {
+            "$ref": "#/components/schemas/FormEvent"
+          },
+          "previous": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The record's values as loaded, when there is one."
+          },
+          "record_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The record the form shows; absent for a new one."
+          },
+          "values": {
+            "type": "object",
+            "description": "The form's values now."
+          }
+        }
+      },
       "FormPlan": {
         "type": "object",
         "required": [
           "id",
           "name",
           "entity",
+          "form_kind",
           "sections"
         ],
         "properties": {
           "entity": {
             "type": "string",
             "description": "The entity's logical name, as the record API addresses it."
+          },
+          "form_kind": {
+            "type": "string",
+            "description": "A12-T2: `main`, `quick_create`, `quick_view` or `card`."
           },
           "id": {
             "type": "string",
@@ -195809,6 +197753,13 @@
             "items": {
               "$ref": "#/components/schemas/FormPlanSection"
             }
+          },
+          "tabs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FormPlanTab"
+            },
+            "description": "A12-T2: the tabs, in order, each holding the next `sections` of\n`sections`; empty for a form without tabs."
           }
         }
       },
@@ -195838,6 +197789,14 @@
           "label": {
             "type": "string"
           },
+          "masked": {
+            "type": "boolean",
+            "description": "A12-T2: its value reaches the caller masked."
+          },
+          "read_only": {
+            "type": "boolean",
+            "description": "A12-T2: the caller may not change it (a field-write grant it lacks,\nor a value it sees only masked); the form shows it disabled."
+          },
           "required": {
             "type": "boolean"
           }
@@ -195847,9 +197806,16 @@
         "type": "object",
         "required": [
           "label",
+          "columns",
           "fields"
         ],
         "properties": {
+          "columns": {
+            "type": "integer",
+            "format": "int32",
+            "description": "A12-T2: the columns its fields are laid out in, 1 to 4.",
+            "minimum": 0
+          },
           "fields": {
             "type": "array",
             "items": {
@@ -195858,6 +197824,24 @@
           },
           "label": {
             "type": "string"
+          }
+        }
+      },
+      "FormPlanTab": {
+        "type": "object",
+        "description": "A12-T2: one tab of a form.",
+        "required": [
+          "label",
+          "sections"
+        ],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "sections": {
+            "type": "integer",
+            "description": "How many of the plan's sections, after the previous tabs', it holds.",
+            "minimum": 0
           }
         }
       },
@@ -196900,6 +198884,37 @@
           "to_id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "GraphqlRequest": {
+        "type": "object",
+        "description": "A GraphQL request.",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "variables": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "GraphqlSchema": {
+        "type": "object",
+        "description": "The caller's GraphQL schema.",
+        "required": [
+          "sdl"
+        ],
+        "properties": {
+          "sdl": {
+            "type": "string",
+            "description": "The schema in the GraphQL schema language."
           }
         }
       },
@@ -202639,6 +204654,33 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "LookupKey": {
+        "type": "object",
+        "description": "A lookup field's key.",
+        "required": [
+          "state",
+          "keyed",
+          "target_entity",
+          "queued"
+        ],
+        "properties": {
+          "keyed": {
+            "type": "boolean",
+            "description": "The lookup's delete rule allows a key (`restrict` or `cascade-deactivate`)."
+          },
+          "queued": {
+            "type": "boolean",
+            "description": "The validation is queued (a table over the size gate)."
+          },
+          "state": {
+            "type": "string",
+            "description": "`none`, `not_valid` (new writes are held to it, existing rows not yet\nchecked) or `valid`."
+          },
+          "target_entity": {
+            "type": "string"
           }
         }
       },
@@ -211107,6 +213149,35 @@
         },
         "additionalProperties": false
       },
+      "PackageDriftResponse": {
+        "type": "object",
+        "description": "A package's drift.",
+        "required": [
+          "package_id",
+          "version",
+          "items",
+          "clean"
+        ],
+        "properties": {
+          "clean": {
+            "type": "boolean",
+            "description": "`items` is empty."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DriftItem"
+            },
+            "description": "Every managed property that differs live from what the package set,\nand every object of it gone."
+          },
+          "package_id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
       "PackagePreviewBody": {
         "type": "object",
         "description": "A package to preview.",
@@ -211139,6 +213210,150 @@
           },
           "preview": {
             "$ref": "#/components/schemas/InstallPreview"
+          }
+        }
+      },
+      "PackageUninstallBody": {
+        "type": "object",
+        "description": "Body of `POST /api/v1/admin/packages/{id}/uninstall`.",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DataChoice"
+          },
+          "exports": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "With `export`: completed record exports (`POST /api/v1/{entity}/export`),\none for each entity the package owns."
+          }
+        }
+      },
+      "PackageUninstallResponse": {
+        "type": "object",
+        "description": "An uninstall's answer.",
+        "required": [
+          "package_id",
+          "version",
+          "data",
+          "unlocked"
+        ],
+        "properties": {
+          "apply": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ApplyAccepted",
+                "description": "With `export` or `delete`: the queued retiring plan, or its approval request."
+              }
+            ]
+          },
+          "data": {
+            "type": "string"
+          },
+          "package_id": {
+            "type": "string"
+          },
+          "unlocked": {
+            "type": "integer",
+            "description": "The locks lifted.",
+            "minimum": 0
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      },
+      "PackageUpgradeBody": {
+        "type": "object",
+        "description": "Body of `POST /api/v1/admin/packages/upgrade`: the new version, pushed\n(`package`) or pulled (`url`).",
+        "properties": {
+          "accept_package": {
+            "type": "boolean",
+            "description": "Plan even though properties conflict, taking the package's value for\neach."
+          },
+          "package": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "An `attome-package/v1` document."
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "An `https://` URL that serves the package."
+          }
+        }
+      },
+      "PackageUpgradeResponse": {
+        "type": "object",
+        "description": "What upgrading would do.",
+        "required": [
+          "manifest",
+          "from_version",
+          "conflicts",
+          "kept",
+          "removed"
+        ],
+        "properties": {
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Conflict"
+            },
+            "description": "Properties both the new version and the customer changed."
+          },
+          "from_version": {
+            "type": "string",
+            "description": "The version installed now."
+          },
+          "kept": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "`object.property` changes of the customer's the upgrade keeps."
+          },
+          "manifest": {
+            "type": "object",
+            "description": "The new version's manifest."
+          },
+          "plan": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PlanResponse",
+                "description": "The persisted plan: apply it with `POST /api/v1/admin/metadata/import?mode=apply`.\nAbsent while conflicts wait for `accept_package`."
+              }
+            ]
+          },
+          "preview": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/InstallPreview"
+              }
+            ]
+          },
+          "removed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Objects the new version drops; they stay, no longer the package's."
           }
         }
       },
@@ -211177,11 +213392,17 @@
         "required": [
           "page_id",
           "definition_source",
-          "widgets"
+          "widgets",
+          "reads",
+          "over_query_budget"
         ],
         "properties": {
           "definition_source": {
             "$ref": "#/components/schemas/DefinitionSource"
+          },
+          "over_query_budget": {
+            "type": "boolean",
+            "description": "P5-T2: more than [`PAGE_QUERY_BUDGET`] reads: the page may open\nslowly; combine widgets or split the page."
           },
           "page_id": {
             "type": "string",
@@ -211193,6 +213414,11 @@
               "null"
             ],
             "format": "int64"
+          },
+          "reads": {
+            "type": "integer",
+            "description": "P5-T2: how many widgets read data; every one takes the page's\nparameters and variables.",
+            "minimum": 0
           },
           "widgets": {
             "type": "array",
@@ -215659,6 +217885,109 @@
                 },
                 "requires_approval": {
                   "type": "boolean"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            },
+            "description": "Z14-T6: what the caller should know though the list succeeded;\nomitted when empty."
+          }
+        }
+      },
+      "PaginatedResponse_CatalogueEntry": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6).",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One version in the private catalogue.",
+              "required": [
+                "id",
+                "package_id",
+                "version",
+                "publisher",
+                "source",
+                "permissions",
+                "review_status",
+                "added_by",
+                "created_at"
+              ],
+              "properties": {
+                "added_by": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "package_id": {
+                  "type": "string"
+                },
+                "permissions": {
+                  "type": "object"
+                },
+                "publisher": {
+                  "type": "string"
+                },
+                "review_note": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "review_status": {
+                  "type": "string",
+                  "description": "`pending`, `approved` or `rejected`."
+                },
+                "reviewed_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "reviewed_by": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "source": {
+                  "type": "string",
+                  "description": "Where it came from: `pushed`, or `partner:<name>`."
+                },
+                "version": {
+                  "type": "string"
                 }
               }
             }
@@ -237613,6 +239942,29 @@
           }
         }
       },
+      "PartnerCatalogue": {
+        "type": "object",
+        "description": "A partner catalogue's offer.",
+        "required": [
+          "name",
+          "publisher",
+          "packages"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "packages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PartnerItem"
+            }
+          },
+          "publisher": {
+            "type": "string"
+          }
+        }
+      },
       "PartnerDecision": {
         "type": "string",
         "description": "A decision on a registration.",
@@ -237620,6 +239972,44 @@
           "approve",
           "reject"
         ]
+      },
+      "PartnerItem": {
+        "type": "object",
+        "description": "One package a partner catalogue offers.",
+        "required": [
+          "package_id",
+          "version",
+          "publisher",
+          "permissions",
+          "verified",
+          "problems"
+        ],
+        "properties": {
+          "package_id": {
+            "type": "string"
+          },
+          "permissions": {
+            "type": "object",
+            "description": "What it asks of the deployment ([`permissions`])."
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Why it is not verified."
+          },
+          "publisher": {
+            "type": "string"
+          },
+          "verified": {
+            "type": "boolean",
+            "description": "Signed with the partner's key and its manifest is valid."
+          },
+          "version": {
+            "type": "string"
+          }
+        }
       },
       "PartnerLead": {
         "type": "object",
@@ -238606,6 +240996,26 @@
           }
         }
       },
+      "PersonalBody": {
+        "type": "object",
+        "description": "Body of both routes: the dashboard's row version the caller holds.",
+        "required": [
+          "row_version"
+        ],
+        "properties": {
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "visibility": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`share` only: `team`, `organization` or `public`."
+          }
+        }
+      },
       "PersonalDataItem": {
         "type": "object",
         "description": "An attribute labelled personal, financial or health, and what reads it.",
@@ -238658,6 +241068,40 @@
           "whole_entity": {
             "type": "boolean",
             "description": "It reads the whole entity, not only this attribute."
+          }
+        }
+      },
+      "PersonalResponse": {
+        "type": "object",
+        "description": "What a personal publish or a share did.",
+        "required": [
+          "id",
+          "lifecycle_status",
+          "visibility",
+          "row_version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lifecycle_status": {
+            "type": "string"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "version_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The version viewers now see; none after a share."
+          },
+          "visibility": {
+            "type": "string"
           }
         }
       },
@@ -246757,6 +249201,23 @@
           }
         }
       },
+      "ReplaceLinksBody": {
+        "type": "object",
+        "description": "Body of `PUT /api/v1/{entity}/{id}/related/{relationship}`.",
+        "required": [
+          "ids"
+        ],
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Every record of the other side the anchor is to be linked to; the\nothers are unlinked. At most 500."
+          }
+        }
+      },
       "ReplayBody": {
         "type": "object",
         "required": [
@@ -248186,25 +250647,19 @@
       },
       "ReviewBody": {
         "type": "object",
+        "description": "Body of `POST /api/v1/admin/packages/catalogue/{id}/review`.",
         "required": [
-          "product_id",
-          "rating"
+          "decision"
         ],
         "properties": {
-          "body": {
+          "decision": {
+            "$ref": "#/components/schemas/ReviewDecision"
+          },
+          "note": {
             "type": [
               "string",
               "null"
             ]
-          },
-          "product_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "rating": {
-            "type": "integer",
-            "format": "int32",
-            "description": "1 to 5."
           }
         }
       },
@@ -248222,37 +250677,12 @@
         }
       },
       "ReviewDecision": {
-        "type": "object",
-        "description": "Which staged actions a review decision covers: one agent session's, or\nchosen ones (at most [`MAX_REVIEW_IDS`]).",
-        "properties": {
-          "agent_session_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-          },
-          "ids": {
-            "type": [
-              "array",
-              "null"
-            ],
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          "undo_window_seconds": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "int32",
-            "description": "Apply only: hold the applied actions this many seconds (30 to 86400)\nbefore they run, cancellable; omit to run them now.",
-            "minimum": 0
-          }
-        },
-        "additionalProperties": false
+        "type": "string",
+        "description": "A review's decision.",
+        "enum": [
+          "approved",
+          "rejected"
+        ]
       },
       "ReviewEntry": {
         "type": "object",
@@ -250559,6 +252989,20 @@
           "handoffs",
           "cost"
         ]
+      },
+      "RuntimeForm": {
+        "type": "object",
+        "description": "The form an entity is switched to.",
+        "required": [
+          "form_id"
+        ],
+        "properties": {
+          "form_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The published form to draw with `GET /api/v1/model/forms/{id}/plan`."
+          }
+        }
       },
       "RuntimeSwitchView": {
         "type": "object",
@@ -259490,6 +261934,15 @@
             "description": "`totp`, `recovery_code` or `password`."
           }
         }
+      },
+      "StockBadge": {
+        "type": "string",
+        "description": "How much of a product the shop has, as the store shows it.",
+        "enum": [
+          "in_stock",
+          "low",
+          "sold_out"
+        ]
       },
       "StoredSplit": {
         "type": "object",
@@ -268736,7 +271189,6 @@
       "description": "فحوص السلامة والجاهزية والإصدار"
     }
   ],
-  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -268789,5 +271241,6 @@
       }
     }
   },
+  "x-api-version": "2026-10",
   "x-version-adapters": []
 }

@@ -5722,6 +5722,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/entities/{entity_id}/fields/{field_id}/foreign-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A lookup's foreign key
+         * @description Y2-T5: whether lookup field `field_id` has its database foreign key, and whether that key has
+         *     been checked against the existing rows. Administrators only.
+         */
+        get: operations["get_lookup_key"];
+        put?: never;
+        /**
+         * Key a lookup
+         * @description Y2-T5: adds lookup field `field_id`'s database foreign key (`ON DELETE NO ACTION`, `NOT VALID`)
+         *     and validates it: inline when the table holds at most 10,000 rows (200), else by a queued job
+         *     (202). A value that points at no record refuses the validation (409) and the key stays
+         *     `NOT VALID`. Only for a lookup whose delete rule is `restrict` or `cascade-deactivate`.
+         *     Administrators only.
+         */
+        post: operations["key_lookup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/entities/{entity_id}/fields/{field_id}/index-status": {
         parameters: {
             query?: never;
@@ -9804,6 +9833,100 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/packages/catalogue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The private catalogue
+         * @description S13-T1: the signed package versions added to this deployment's catalogue, newest first, with
+         *     what each asks of the deployment and its review status. Administrators only.
+         */
+        get: operations["list_package_catalogue"];
+        put?: never;
+        /**
+         * Add a package to the catalogue
+         * @description S13-T1: adds a signed package version for review: pushed as `package` (signed by a trusted
+         *     publisher), or taken from partner catalogue `partner` by `package_id` and `version` (signed with
+         *     that partner's key). Its manifest must be valid; a version already in the catalogue is a
+         *     conflict. It waits for review by another administrator. Administrators only.
+         */
+        post: operations["add_to_package_catalogue"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/packages/catalogue/{id}/install": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Install a catalogue package
+         * @description S13-T1: previews the install of an approved catalogue version through the T8 package path:
+         *     the same checks and persisted plan as `POST /api/v1/admin/packages/preview`. Installing is
+         *     applying that plan (`POST /api/v1/admin/metadata/import?mode=apply`). Administrators only.
+         */
+        post: operations["install_catalogue_package"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/packages/catalogue/{id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Review a catalogue package
+         * @description S13-T1: approves or rejects a pending package version. The administrator who added it cannot
+         *     review it. Only an approved version installs. Administrators only.
+         */
+        post: operations["review_catalogue_package"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/packages/partner-catalogues/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A partner catalogue
+         * @description S13-T1: fetches partner catalogue `name` (`packages.partner_catalogues`) and lists its packages,
+         *     each checked against the partner's publisher key: what it asks of the deployment and whether it
+         *     verifies. Read-only; add one to the private catalogue to review and install it. Administrators
+         *     only.
+         */
+        get: operations["get_partner_catalogue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/packages/preview": {
         parameters: {
             query?: never;
@@ -9823,6 +9946,80 @@ export interface paths {
          *     (`POST /api/v1/admin/metadata/import?mode=apply` with its `plan_id`). Administrators only.
          */
         post: operations["preview_package_install"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/packages/upgrade": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Plan a package upgrade
+         * @description T8-T3: checks a newer version of an installed managed package (sent as `package`, or pulled
+         *     from `url`) like an install, then merges it three ways: the installed version, the new one and
+         *     the deployment's live metadata. A property only the customer changed keeps the customer's
+         *     value; one both changed differently is a conflict, and while there are conflicts nothing is
+         *     planned unless `accept_package` takes the package's value for each. The plan is persisted like
+         *     a metadata import plan and upgrading is applying it; the apply replaces the old version's locks.
+         *     Administrators only.
+         */
+        post: operations["plan_package_upgrade"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/packages/{id}/drift": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A package's drift
+         * @description T8-T3: compares what the installed version of package `id` set with the live metadata and
+         *     names every managed property changed outside the package (through a bundle, a changeset or by
+         *     hand) and every object of it gone. Additions on its extension points are the customer's own
+         *     and not drift. Read-only. Administrators only.
+         */
+        get: operations["package_drift"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/packages/{id}/uninstall": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Uninstall a package
+         * @description T8-T3: lifts the locks of package `id`'s installed version and marks it uninstalled. With
+         *     `data: keep` its objects and records stay as the deployment's own; with `delete` its entities
+         *     (with their views and queries) and the fields it added to other entities are retired through a
+         *     metadata plan, queued like any apply (approval-gated where the deployment requires it); with
+         *     `export` the same, once `exports` holds a completed record export of every entity it owns.
+         *     Administrators only.
+         */
+        post: operations["uninstall_package"];
         delete?: never;
         options?: never;
         head?: never;
@@ -15832,6 +16029,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/attome-dashboard/{id}/publish-personal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish a personal dashboard
+         * @description P5-T1: the owner of a `private` dashboard publishes its working copy at once, without review or
+         *     the four-eyes gate (the dashboard health gate still applies), so the owner sees it as saved. Only
+         *     its owner. Audited.
+         */
+        post: operations["publish_personal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/attome-dashboard/{id}/published": {
         parameters: {
             query?: never;
@@ -15888,6 +16107,28 @@ export interface paths {
          *     viewer, embed context and URL overrides. Writes nothing. Anyone who may read the dashboard.
          */
         post: operations["resolve_variables"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Share a personal dashboard
+         * @description P5-T1: the owner makes a `private` dashboard `team`, `organization` or `public`. Its published
+         *     version is cleared and its working copy returns to draft, so what others see goes through review
+         *     and publish. Only its owner. Audited.
+         */
+        post: operations["share"];
         delete?: never;
         options?: never;
         head?: never;
@@ -21252,6 +21493,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/graphql": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a GraphQL query
+         * @description S6-T1: reads records through a schema built from the metadata for the caller (see
+         *     `GET /api/v1/graphql/schema`). Answers `{data}`, or `{data: null, errors: [{message}]}` for a
+         *     query that does not parse, breaks a limit (10 root fields, 6 levels, 10,000 records by
+         *     estimate) or reads what the caller may not. Reads only; writes go through the record API.
+         */
+        post: operations["run_graphql"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/graphql/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The GraphQL schema
+         * @description S6-T1: the schema `POST /api/v1/graphql` answers for the caller, in the GraphQL schema
+         *     language: the entities they may read, each with its readable fields, and lookups to readable
+         *     entities as their types.
+         */
+        get: operations["graphql_schema"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/grc/assessments/{id}/start": {
         parameters: {
             query?: never;
@@ -24374,6 +24660,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/model/entities/{entity}/runtime-form": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An entity's runtime form
+         * @description A12-T5: the published metadata form `entity`'s record pages open in place of the hand-written
+         *     one, when the deployment has switched the entity (`forms.runtime_entities`); 404 when it has
+         *     not. Anyone who may read the entity's records.
+         */
+        get: operations["runtime_form"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/model/forms/{id}/plan": {
         parameters: {
             query?: never;
@@ -24386,7 +24694,10 @@ export interface paths {
          * @description The render plan of a published form: its sections and, for each field,
          *     the attribute's logical name, label, type and whether it is required.
          *     The form comes from the cooked registry in memory; the attribute details
-         *     from one bounded query (a form holds at most 400 fields).
+         *     from one bounded query (a form holds at most 400 fields). A12-T2: with its
+         *     kind, its tabs and each section's columns, for a caller who may read the
+         *     entity's records; a field the caller may not read is left out, and one
+         *     it may not change, or sees only masked, is marked read-only.
          */
         get: operations["form_plan"];
         put?: never;
@@ -32152,6 +32463,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/{entity}/form-hooks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run form hooks
+         * @description A12-T4: runs the entity's published extensions on the form's state for one event: `load`
+         *     (`form_load` hooks), `change` (`form_change`) or `before_save` (the write pipeline's
+         *     `before_validation` and `before_save` hooks, ahead of the save). Each extension sees only the
+         *     attributes its grants let it read and may set only those it may write; its changes carry to the
+         *     next. Nothing is saved; a refusal comes back as `rejection`. Every call is logged as the
+         *     extension's run. Needs read access to the entity's records.
+         */
+        post: operations["run_form_hooks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/imports": {
         parameters: {
             query?: never;
@@ -33291,7 +33627,15 @@ export interface paths {
          *     this phase — see `RelationshipCascade`'s doc comment).
          */
         get: operations["list_related"];
-        put?: never;
+        /**
+         * Replace related records
+         * @description A2-T4 (multi-lookup): `PUT /api/v1/{entity}/{id}/related/{relationship}` makes the anchor's
+         *     links on the relationship exactly `ids`: the missing ones are linked (an earlier unlinked join
+         *     row reactivated) and the rest unlinked, in one transaction, with the same `update` access on
+         *     both sides, change-feed rows and one audit event as link and unlink. A form's multi-lookup
+         *     control saves through this. At most 500 ids.
+         */
+        put: operations["replace_related"];
         /**
          * `POST /api/v1/{entity}/{id}/related/{relationship}` — links the anchor
          *     record to `body.id` on the relationship's other side. Idempotent
@@ -35067,6 +35411,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/{keyword}/api/v1/shop/guest/catalogue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The store's catalogue for guests
+         * @description F8-T10: the products a guest may buy, priced for the shop's guest account, each with its VAT, its
+         *     price with VAT and, when the shop tracks stock, its stock badge. 404 while guests cannot check out.
+         */
+        get: operations["portal_shop_guest_catalogue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/{keyword}/api/v1/shop/guest/confirm": {
         parameters: {
             query?: never;
@@ -35716,6 +36081,18 @@ export interface components {
         AddTeamRoleBody: {
             /** Format: uuid */
             role_id: string;
+        };
+        /**
+         * @description Body of `POST /api/v1/admin/packages/catalogue`: a pushed package, or a
+         *     partner's package by id and version.
+         */
+        AddToCatalogueBody: {
+            /** @description An `attome-package/v1` document. */
+            package?: Record<string, never> | null;
+            package_id?: string | null;
+            /** @description A partner catalogue's name, with `package_id` and `version`. */
+            partner?: string | null;
+            version?: string | null;
         };
         AddressCheckBody: {
             address: string;
@@ -38547,14 +38924,21 @@ export interface components {
         };
         /**
          * @description One business rule as the form evaluates it (design §5): `set_value`
-         *     policies and advanced-expression conditions stay server-only. A6-T2:
-         *     field-attached `allowed_values` policies are sent, so the form offers
-         *     only the allowed choices.
+         *     policies stay server-only. A6-T2: field-attached `allowed_values`
+         *     policies are sent, so the form offers only the allowed choices. A11-T3:
+         *     field-attached `required` policies are sent, and so are rules whose
+         *     condition holds an expression (`needs_evaluator`).
          */
         BusinessRuleClient: {
             condition: components["schemas"]["ConditionTree"];
             display_name?: string | null;
             name: string;
+            /**
+             * @description A11-T3: the condition holds an `expression` leaf, which the form
+             *     evaluates with the rules evaluator (WebAssembly) before deciding it.
+             *     Sent only when true.
+             */
+            needs_evaluator?: boolean;
             policies: components["schemas"]["PolicyDef"][];
         };
         /**
@@ -39373,6 +39757,28 @@ export interface components {
             /** @description L4-T5: no write in 90 days, no search in 30 and no reader. */
             unused: boolean;
         };
+        /** @description One version in the private catalogue. */
+        CatalogueEntry: {
+            /** Format: uuid */
+            added_by: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            package_id: string;
+            permissions: Record<string, never>;
+            publisher: string;
+            review_note?: string | null;
+            /** @description `pending`, `approved` or `rejected`. */
+            review_status: string;
+            /** Format: date-time */
+            reviewed_at?: string | null;
+            /** Format: uuid */
+            reviewed_by?: string | null;
+            /** @description Where it came from: `pushed`, or `partner:<name>`. */
+            source: string;
+            version: string;
+        };
         /** @description A product on sale, priced for the account. */
         CatalogueItem: {
             currency: string;
@@ -39380,9 +39786,13 @@ export interface components {
             name_ar?: string | null;
             /** @description The unit price for one, a decimal in text. */
             price: string;
+            price_with_vat: string;
             /** Format: uuid */
             product_id: string;
             sku?: string | null;
+            stock?: null | components["schemas"]["StockBadge"];
+            /** @description F8-T10: the VAT on one at `commerce.vat_rate`, and the price with it. */
+            vat: string;
         };
         Certification: {
             asset_kind: string;
@@ -40938,20 +41348,20 @@ export interface components {
         ConfirmToolCallRequest: {
             arguments_hash: string;
         };
-        /** @description What a registration conflicts with. */
+        /**
+         * @description T8-T3: one property an upgrade cannot merge on its own: the package's
+         *     new version and the customer both changed it, differently.
+         */
         Conflict: {
-            /** Format: uuid */
-            id: string;
-            /** @enum {string} */
-            kind: "opportunity";
-            name?: string | null;
-        } | {
-            customer_name?: string | null;
-            /** Format: uuid */
-            id: string;
-            /** @enum {string} */
-            kind: "registration";
-            status: string;
+            /** @description What the deployment has now. */
+            customer: Record<string, never>;
+            /** @description What the installed version set. */
+            installed: Record<string, never>;
+            /** @description `entity` or `entity.attribute`. */
+            object: string;
+            /** @description What the new version sets. */
+            package: Record<string, never>;
+            property: string;
         };
         /** @description A16-T7: the conflicts of the last `days` days, by entity and source. */
         ConflictCount: {
@@ -42840,6 +43250,11 @@ export interface components {
             /** Format: date-time */
             revoked_at?: string | null;
         };
+        /**
+         * @description What happens to a package's data on uninstall.
+         * @enum {string}
+         */
+        DataChoice: "keep" | "export" | "delete";
         /** @enum {string} */
         DataClass: "structured" | "kpi" | "query" | "none";
         /**
@@ -44460,6 +44875,16 @@ export interface components {
             retires: components["schemas"]["PlanEntry"][];
             summary: components["schemas"]["PlanSummary"];
         };
+        /** @description T8-T3: a managed property that differs live from what the package set. */
+        DriftItem: {
+            /** @description `changed`, or `missing` when the object is gone. */
+            change: string;
+            installed: Record<string, never>;
+            live: Record<string, never>;
+            /** @description `entity` or `entity.attribute`. */
+            object: string;
+            property?: string | null;
+        };
         DriftReport: {
             applied?: null | components["schemas"]["AppliedRef"];
             drift?: null | components["schemas"]["DriftDiff"];
@@ -45206,8 +45631,10 @@ export interface components {
             /**
              * @description D-789 §5 (additive): the active business rules that apply to the
              *     caller and carry a client-side policy (`hidden`, `disabled`, or an
-             *     `error` attached to a field) under a structured condition. The form
-             *     mirrors them for UX only; the server enforces every write.
+             *     `error`, `allowed_values` or (A11-T3) `required` attached to a field).
+             *     A11-T3: a rule whose condition holds an expression is sent too, marked
+             *     `needs_evaluator`; the form evaluates it with the rules evaluator. The
+             *     form mirrors them for UX only; the server enforces every write.
              */
             business_rules: components["schemas"]["BusinessRuleClient"][];
             fields: components["schemas"]["FieldSchemaDef"][];
@@ -46828,13 +47255,55 @@ export interface components {
             redirect_url?: string | null;
             thank_you?: string | null;
         };
+        /**
+         * @description A form event.
+         * @enum {string}
+         */
+        FormEvent: "load" | "change" | "before_save";
+        /** @description What the extensions answered. */
+        FormHookAnswer: {
+            /** @description Values the extensions set, for the form to fill in. */
+            changes: Record<string, never>;
+            /**
+             * @description The form events with an extension on this entity, so the form calls
+             *     only those.
+             */
+            events: string[];
+            /**
+             * @description A refusal, in English; the form shows it (on `before_save`, instead
+             *     of saving).
+             */
+            rejection?: string | null;
+            /** @description The refusal in each language the extension wrote it in. */
+            rejection_translations: Record<string, never>;
+        };
+        /** @description Body of `POST /api/v1/{entity}/form-hooks`. */
+        FormHookBody: {
+            event: components["schemas"]["FormEvent"];
+            /** @description The record's values as loaded, when there is one. */
+            previous?: Record<string, never> | null;
+            /**
+             * Format: uuid
+             * @description The record the form shows; absent for a new one.
+             */
+            record_id?: string | null;
+            /** @description The form's values now. */
+            values: Record<string, never>;
+        };
         FormPlan: {
             /** @description The entity's logical name, as the record API addresses it. */
             entity: string;
+            /** @description A12-T2: `main`, `quick_create`, `quick_view` or `card`. */
+            form_kind: string;
             /** Format: uuid */
             id: string;
             name: string;
             sections: components["schemas"]["FormPlanSection"][];
+            /**
+             * @description A12-T2: the tabs, in order, each holding the next `sections` of
+             *     `sections`; empty for a form without tabs.
+             */
+            tabs?: components["schemas"]["FormPlanTab"][];
         };
         FormPlanField: {
             /** @description An AI attribute (N11-T1): `record.ai_field` can suggest its value. */
@@ -46847,11 +47316,29 @@ export interface components {
              */
             field_type: number;
             label: string;
+            /** @description A12-T2: its value reaches the caller masked. */
+            masked?: boolean;
+            /**
+             * @description A12-T2: the caller may not change it (a field-write grant it lacks,
+             *     or a value it sees only masked); the form shows it disabled.
+             */
+            read_only?: boolean;
             required: boolean;
         };
         FormPlanSection: {
+            /**
+             * Format: int32
+             * @description A12-T2: the columns its fields are laid out in, 1 to 4.
+             */
+            columns: number;
             fields: components["schemas"]["FormPlanField"][];
             label: string;
+        };
+        /** @description A12-T2: one tab of a form. */
+        FormPlanTab: {
+            label: string;
+            /** @description How many of the plan's sections, after the previous tabs', it holds. */
+            sections: number;
         };
         /** @description The browser's submission. */
         FormSubmission: {
@@ -47240,6 +47727,16 @@ export interface components {
             to_entity: string;
             /** Format: uuid */
             to_id: string;
+        };
+        /** @description A GraphQL request. */
+        GraphqlRequest: {
+            query: string;
+            variables?: Record<string, never> | null;
+        };
+        /** @description The caller's GraphQL schema. */
+        GraphqlSchema: {
+            /** @description The schema in the GraphQL schema language. */
+            sdl: string;
         };
         /**
          * @description Whether a turn's answer is grounded in retrieved knowledge. Decided from
@@ -49490,6 +49987,19 @@ export interface components {
          */
         LogoutResponse: {
             redirect?: string | null;
+        };
+        /** @description A lookup field's key. */
+        LookupKey: {
+            /** @description The lookup's delete rule allows a key (`restrict` or `cascade-deactivate`). */
+            keyed: boolean;
+            /** @description The validation is queued (a table over the size gate). */
+            queued: boolean;
+            /**
+             * @description `none`, `not_valid` (new writes are held to it, existing rows not yet
+             *     checked) or `valid`.
+             */
+            state: string;
+            target_entity: string;
         };
         /**
          * @description The per-lookup-field value inside `EntityRecordResponse::lookups`. Declared
@@ -52693,6 +53203,18 @@ export interface components {
             /** Format: double */
             width_cm?: number | null;
         };
+        /** @description A package's drift. */
+        PackageDriftResponse: {
+            /** @description `items` is empty. */
+            clean: boolean;
+            /**
+             * @description Every managed property that differs live from what the package set,
+             *     and every object of it gone.
+             */
+            items: components["schemas"]["DriftItem"][];
+            package_id: string;
+            version: string;
+        };
         /** @description A package to preview. */
         PackagePreviewBody: {
             /** @description An `attome-package/v1` document. */
@@ -52706,6 +53228,54 @@ export interface components {
             plan: components["schemas"]["PlanResponse"];
             preview: components["schemas"]["InstallPreview"];
         };
+        /** @description Body of `POST /api/v1/admin/packages/{id}/uninstall`. */
+        PackageUninstallBody: {
+            data: components["schemas"]["DataChoice"];
+            /**
+             * @description With `export`: completed record exports (`POST /api/v1/{entity}/export`),
+             *     one for each entity the package owns.
+             */
+            exports?: string[];
+        };
+        /** @description An uninstall's answer. */
+        PackageUninstallResponse: {
+            apply?: null | components["schemas"]["ApplyAccepted"];
+            data: string;
+            package_id: string;
+            /** @description The locks lifted. */
+            unlocked: number;
+            version: string;
+        };
+        /**
+         * @description Body of `POST /api/v1/admin/packages/upgrade`: the new version, pushed
+         *     (`package`) or pulled (`url`).
+         */
+        PackageUpgradeBody: {
+            /**
+             * @description Plan even though properties conflict, taking the package's value for
+             *     each.
+             */
+            accept_package?: boolean;
+            /** @description An `attome-package/v1` document. */
+            package?: Record<string, never> | null;
+            /** @description An `https://` URL that serves the package. */
+            url?: string | null;
+        };
+        /** @description What upgrading would do. */
+        PackageUpgradeResponse: {
+            /** @description Properties both the new version and the customer changed. */
+            conflicts: components["schemas"]["Conflict"][];
+            /** @description The version installed now. */
+            from_version: string;
+            /** @description `object.property` changes of the customer's the upgrade keeps. */
+            kept: string[];
+            /** @description The new version's manifest. */
+            manifest: Record<string, never>;
+            plan?: null | components["schemas"]["PlanResponse"];
+            preview?: null | components["schemas"]["InstallPreview"];
+            /** @description Objects the new version drops; they stay, no longer the package's. */
+            removed: string[];
+        };
         /** @description What packing wrote. */
         Packed: {
             /** Format: uuid */
@@ -52717,10 +53287,20 @@ export interface components {
         };
         PageDataResponse: {
             definition_source: components["schemas"]["DefinitionSource"];
+            /**
+             * @description P5-T2: more than [`PAGE_QUERY_BUDGET`] reads: the page may open
+             *     slowly; combine widgets or split the page.
+             */
+            over_query_budget: boolean;
             /** Format: uuid */
             page_id: string;
             /** Format: int64 */
             published_version_number?: number | null;
+            /**
+             * @description P5-T2: how many widgets read data; every one takes the page's
+             *     parameters and variables.
+             */
+            reads: number;
             /** @description One entry per widget on the page, in layout order. */
             widgets: components["schemas"]["PageWidgetResult"][];
         };
@@ -54377,6 +54957,41 @@ export interface components {
                 id: string;
                 name: string;
                 requires_approval: boolean;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+            /**
+             * @description Z14-T6: what the caller should know though the list succeeded;
+             *     omitted when empty.
+             */
+            warnings?: components["schemas"]["Warning"][];
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. `warnings` is sent only when there is one (Z14-T6). */
+        PaginatedResponse_CatalogueEntry: {
+            items: {
+                /** Format: uuid */
+                added_by: string;
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                id: string;
+                package_id: string;
+                permissions: Record<string, never>;
+                publisher: string;
+                review_note?: string | null;
+                /** @description `pending`, `approved` or `rejected`. */
+                review_status: string;
+                /** Format: date-time */
+                reviewed_at?: string | null;
+                /** Format: uuid */
+                reviewed_by?: string | null;
+                /** @description Where it came from: `pushed`, or `partner:<name>`. */
+                source: string;
+                version: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -62736,11 +63351,29 @@ export interface components {
             /** @description Required to reject. */
             reason?: string | null;
         };
+        /** @description A partner catalogue's offer. */
+        PartnerCatalogue: {
+            name: string;
+            packages: components["schemas"]["PartnerItem"][];
+            publisher: string;
+        };
         /**
          * @description A decision on a registration.
          * @enum {string}
          */
         PartnerDecision: "approve" | "reject";
+        /** @description One package a partner catalogue offers. */
+        PartnerItem: {
+            package_id: string;
+            /** @description What it asks of the deployment ([`permissions`]). */
+            permissions: Record<string, never>;
+            /** @description Why it is not verified. */
+            problems: string[];
+            publisher: string;
+            /** @description Signed with the partner's key and its manifest is valid. */
+            verified: boolean;
+            version: string;
+        };
         /** @description The lead after an offer or an answer. */
         PartnerLead: {
             /** Format: uuid */
@@ -63082,6 +63715,13 @@ export interface components {
             status: string;
             steps: components["schemas"]["PathStep"][];
         };
+        /** @description Body of both routes: the dashboard's row version the caller holds. */
+        PersonalBody: {
+            /** Format: int64 */
+            row_version: number;
+            /** @description `share` only: `team`, `organization` or `public`. */
+            visibility?: string | null;
+        };
         /** @description An attribute labelled personal, financial or health, and what reads it. */
         PersonalDataItem: {
             attribute: string;
@@ -63099,6 +63739,20 @@ export interface components {
             ref: string;
             /** @description It reads the whole entity, not only this attribute. */
             whole_entity: boolean;
+        };
+        /** @description What a personal publish or a share did. */
+        PersonalResponse: {
+            /** Format: uuid */
+            id: string;
+            lifecycle_status: string;
+            /** Format: int64 */
+            row_version: number;
+            /**
+             * Format: uuid
+             * @description The version viewers now see; none after a share.
+             */
+            version_id?: string | null;
+            visibility: string;
         };
         /** @description One group of a pick list: a product and how many to pick. */
         PickGroup: {
@@ -66303,6 +66957,14 @@ export interface components {
             /** Format: uuid */
             id: string;
         };
+        /** @description Body of `PUT /api/v1/{entity}/{id}/related/{relationship}`. */
+        ReplaceLinksBody: {
+            /**
+             * @description Every record of the other side the anchor is to be linked to; the
+             *     others are unlinked. At most 500.
+             */
+            ids: string[];
+        };
         ReplayBody: {
             /**
              * Format: date-time
@@ -66845,15 +67507,10 @@ export interface components {
              */
             version_id?: string | null;
         };
+        /** @description Body of `POST /api/v1/admin/packages/catalogue/{id}/review`. */
         ReviewBody: {
-            body?: string | null;
-            /** Format: uuid */
-            product_id: string;
-            /**
-             * Format: int32
-             * @description 1 to 5.
-             */
-            rating: number;
+            decision: components["schemas"]["ReviewDecision"];
+            note?: string | null;
         };
         /**
          * @description Full replace, `null` clears — same convention as `SchedulePageBody`
@@ -66865,20 +67522,10 @@ export interface components {
             review_by?: string | null;
         };
         /**
-         * @description Which staged actions a review decision covers: one agent session's, or
-         *     chosen ones (at most [`MAX_REVIEW_IDS`]).
+         * @description A review's decision.
+         * @enum {string}
          */
-        ReviewDecision: {
-            /** Format: uuid */
-            agent_session_id?: string | null;
-            ids?: string[] | null;
-            /**
-             * Format: int32
-             * @description Apply only: hold the applied actions this many seconds (30 to 86400)
-             *     before they run, cancellable; omit to run them now.
-             */
-            undo_window_seconds?: number | null;
-        };
+        ReviewDecision: "approved" | "rejected";
         /** @description Something the counterparty sent through this link. */
         ReviewEntry: {
             body?: string | null;
@@ -67830,6 +68477,14 @@ export interface components {
          * @enum {string}
          */
         RunsMetric: "tasks" | "handoffs" | "cost";
+        /** @description The form an entity is switched to. */
+        RuntimeForm: {
+            /**
+             * Format: uuid
+             * @description The published form to draw with `GET /api/v1/model/forms/{id}/plan`.
+             */
+            form_id: string;
+        };
         RuntimeSwitchView: {
             surfaces: components["schemas"]["SurfaceSwitchView"][];
         };
@@ -71218,6 +71873,11 @@ export interface components {
             /** @description `totp`, `recovery_code` or `password`. */
             factor: string;
         };
+        /**
+         * @description How much of a product the shop has, as the store shows it.
+         * @enum {string}
+         */
+        StockBadge: "in_stock" | "low" | "sold_out";
         StoredSplit: {
             amount?: string | null;
             /** Format: uuid */
@@ -92430,6 +93090,146 @@ export interface operations {
             };
         };
     };
+    get_lookup_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity_id: string;
+                /** @description The lookup field */
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The key's state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LookupKey"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the data-model area */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such field */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a lookup, or no target entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    key_lookup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity_id: string;
+                /** @description The lookup field */
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Keyed and valid */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LookupKey"];
+                };
+            };
+            /** @description Keyed NOT VALID; the validation is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LookupKey"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the data-model area */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such field */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The lookup has orphan values */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a lookup, no target, or its delete rule keeps no key */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     attribute_index_status: {
         parameters: {
             query?: never;
@@ -104173,6 +104973,323 @@ export interface operations {
             };
         };
     };
+    list_package_catalogue: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The catalogue */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_CatalogueEntry"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    add_to_package_catalogue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddToCatalogueBody"];
+            };
+        };
+        responses: {
+            /** @description Added, pending review */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueEntry"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such partner catalogue, or it does not offer that version */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description That version is already in the catalogue */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The package does not read, is not signed by a trusted publisher, or its manifest is wrong */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    install_catalogue_package: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The catalogue entry */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The preview and the persisted plan */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackagePreviewResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entry */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The version is not approved */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The package no longer verifies, or its namespace is wrong for this deployment */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    review_catalogue_package: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The catalogue entry */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewBody"];
+            };
+        };
+        responses: {
+            /** @description Reviewed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueEntry"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entry */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already reviewed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The reviewer added it, or the note is too long */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_partner_catalogue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The partner catalogue's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The partner's packages */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerCatalogue"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such partner catalogue */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The catalogue could not be fetched or does not read */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     preview_package_install: {
         parameters: {
             query?: never;
@@ -104214,6 +105331,197 @@ export interface operations {
                 };
             };
             /** @description The package does not read, is not signed by a trusted publisher, or its manifest or namespace is wrong */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    plan_package_upgrade: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PackageUpgradeBody"];
+            };
+        };
+        responses: {
+            /** @description The merge, and the persisted plan when there is one */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageUpgradeResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The package is not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The installed version has no recorded manifest */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The package does not read, is not signed by a trusted publisher, is not newer, or its manifest or namespace is wrong */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    package_drift: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The package id, such as com.example.fleet */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The drift */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageDriftResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The package is not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    uninstall_package: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The package id, such as com.example.fleet */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PackageUninstallBody"];
+            };
+        };
+        responses: {
+            /** @description Uninstalled; the retiring plan queued when the data goes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PackageUninstallResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The package is not installed */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Uninstalled meanwhile, or the installed version has no recorded manifest */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An owned entity has no completed export, or the retiring plan is blocked */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -123139,6 +124447,78 @@ export interface operations {
             };
         };
     };
+    publish_personal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The dashboard */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonalBody"];
+            };
+        };
+        responses: {
+            /** @description Published */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not the caller's personal dashboard, archived, or row_version is stale */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The dashboard health gate refuses it */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     published: {
         parameters: {
             query?: never;
@@ -123288,6 +124668,78 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    share: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The dashboard */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonalBody"];
+            };
+        };
+        responses: {
+            /** @description Shared, as a draft */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not the caller's personal dashboard, or row_version is stale */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description visibility is not team, organization or public */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -137080,6 +138532,68 @@ export interface operations {
             };
         };
     };
+    run_graphql: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GraphqlRequest"];
+            };
+        };
+        responses: {
+            /** @description The answer, or its errors */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    graphql_schema: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The schema */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphqlSchema"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     start_assessment_route: {
         parameters: {
             query?: never;
@@ -145309,6 +146823,56 @@ export interface operations {
             };
         };
     };
+    runtime_form: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The form the entity is switched to */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuntimeForm"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not read the entity's records */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The entity is not switched to a metadata form */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     form_plan: {
         parameters: {
             query?: never;
@@ -145342,6 +146906,15 @@ export interface operations {
             };
             /** @description Missing or invalid credentials */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not read the form's entity */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -166602,6 +168175,78 @@ export interface operations {
             };
         };
     };
+    run_form_hooks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FormHookBody"];
+            };
+        };
+        responses: {
+            /** @description The extensions' answer */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormHookAnswer"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The caller may not read the entity's records */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An extension failed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An extension on this entity could not be loaded */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_imports: {
         parameters: {
             query?: {
@@ -170284,6 +171929,71 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    replace_related: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name */
+                entity: string;
+                /** @description The record */
+                id: string;
+                /** @description The relationship's name */
+                relationship: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceLinksBody"];
+            };
+        };
+        responses: {
+            /** @description The links are exactly `ids` */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Entity, record, relationship, or a linked record not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description More than 500 ids */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -175179,6 +176889,41 @@ export interface operations {
                 };
             };
             /** @description The shop is off, or the person has no account */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    portal_shop_guest_catalogue: {
+        parameters: {
+            query?: {
+                /** @description Part of a product's name or SKU. */
+                search?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The portal */
+                keyword: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The products on sale */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueItem"][];
+                };
+            };
+            /** @description The shop is closed to guests, or no such portal */
             404: {
                 headers: {
                     [name: string]: unknown;

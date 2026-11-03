@@ -14119,37 +14119,12 @@
         }
       },
       "ReviewDecision": {
-        "type": "object",
-        "description": "Which staged actions a review decision covers: one agent session's, or\nchosen ones (at most [`MAX_REVIEW_IDS`]).",
-        "properties": {
-          "agent_session_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-          },
-          "ids": {
-            "type": [
-              "array",
-              "null"
-            ],
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          "undo_window_seconds": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "int32",
-            "description": "Apply only: hold the applied actions this many seconds (30 to 86400)\nbefore they run, cancellable; omit to run them now.",
-            "minimum": 0
-          }
-        },
-        "additionalProperties": false
+        "type": "string",
+        "description": "A review's decision.",
+        "enum": [
+          "approved",
+          "rejected"
+        ]
       },
       "RiskTier": {
         "type": "string",

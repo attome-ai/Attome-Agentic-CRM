@@ -1428,6 +1428,123 @@
         "x-risk": "medium"
       }
     },
+    "/api/v1/attome-dashboard/{id}/publish-personal": {
+      "post": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Publish a personal dashboard",
+        "description": "P5-T1: the owner of a `private` dashboard publishes its working copy at once, without review or\nthe four-eyes gate (the dashboard health gate still applies), so the owner sees it as saved. Only\nits owner. Audited.",
+        "operationId": "publish_personal",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The dashboard",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonalBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Published",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such dashboard",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not the caller's personal dashboard, archived, or row_version is stale",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The dashboard health gate refuses it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "activated"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "dashboard",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
     "/api/v1/attome-dashboard/{id}/published": {
       "get": {
         "tags": [
@@ -1687,6 +1804,123 @@
           "note": "resolves declared variable/parameter defaults and embed/URL overrides for display; persists nothing",
           "reason": "read_only",
           "via": null
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "dashboard",
+        "x-privilege": "authenticated",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/attome-dashboard/{id}/share": {
+      "post": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Share a personal dashboard",
+        "description": "P5-T1: the owner makes a `private` dashboard `team`, `organization` or `public`. Its published\nversion is cleared and its working copy returns to draft, so what others see goes through review\nand publish. Only its owner. Audited.",
+        "operationId": "share",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The dashboard",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonalBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Shared, as a draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonalResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such dashboard",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not the caller's personal dashboard, or row_version is stale",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "visibility is not team, organization or public",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
         },
         "x-cache": "no-store",
         "x-idempotent": "key",
@@ -7309,11 +7543,17 @@
         "required": [
           "page_id",
           "definition_source",
-          "widgets"
+          "widgets",
+          "reads",
+          "over_query_budget"
         ],
         "properties": {
           "definition_source": {
             "$ref": "#/components/schemas/DefinitionSource"
+          },
+          "over_query_budget": {
+            "type": "boolean",
+            "description": "P5-T2: more than [`PAGE_QUERY_BUDGET`] reads: the page may open\nslowly; combine widgets or split the page."
           },
           "page_id": {
             "type": "string",
@@ -7325,6 +7565,11 @@
               "null"
             ],
             "format": "int64"
+          },
+          "reads": {
+            "type": "integer",
+            "description": "P5-T2: how many widgets read data; every one takes the page's\nparameters and variables.",
+            "minimum": 0
           },
           "widgets": {
             "type": "array",
@@ -7742,6 +7987,60 @@
           "rounding",
           "not_comparable"
         ]
+      },
+      "PersonalBody": {
+        "type": "object",
+        "description": "Body of both routes: the dashboard's row version the caller holds.",
+        "required": [
+          "row_version"
+        ],
+        "properties": {
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "visibility": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`share` only: `team`, `organization` or `public`."
+          }
+        }
+      },
+      "PersonalResponse": {
+        "type": "object",
+        "description": "What a personal publish or a share did.",
+        "required": [
+          "id",
+          "lifecycle_status",
+          "visibility",
+          "row_version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lifecycle_status": {
+            "type": "string"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "version_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The version viewers now see; none after a share."
+          },
+          "visibility": {
+            "type": "string"
+          }
+        }
       },
       "PinnedDependencyStatus": {
         "type": "object",
