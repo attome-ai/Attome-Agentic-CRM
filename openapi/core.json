@@ -53860,7 +53860,7 @@
           "admin"
         ],
         "summary": "Create a workspace",
-        "description": "Makes a Develop workspace: its own schema with a copy of the metadata\n(with its rows) and of every entity table (empty). Identity and access\ntables stay shared with live. Audited.",
+        "description": "Makes a Develop workspace: its own schema with a copy of the metadata\n(with its rows) and of every entity table, holding generated sample\nrecords (the default), a masked share of live's, or none; every labelled\nfield is masked. The data's storage is estimated first and refused past\n`metadata.workspace_data_max_mb`. Identity and access\ntables stay shared with live. Audited.",
         "operationId": "create_workspace",
         "requestBody": {
           "content": {
@@ -53878,7 +53878,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Workspace"
+                  "$ref": "#/components/schemas/CreatedWorkspace"
                 }
               }
             }
@@ -53904,7 +53904,7 @@
             }
           },
           "422": {
-            "description": "The name or purpose is out of bounds",
+            "description": "The name, purpose or data is out of bounds, or the data would pass the storage limit",
             "content": {
               "application/json": {
                 "schema": {
@@ -54103,6 +54103,316 @@
         "x-privilege": "admin",
         "x-rate-class": "api",
         "x-risk": "high"
+      }
+    },
+    "/api/v1/admin/workspaces/{id}/publish": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Preview publishing a workspace",
+        "description": "What publishing the workspace would change live: the plan of its changes\nagainst live, and the live changes made since the workspace was made that\ntouch the same objects (publish is refused while there are any). Writes\nnothing.",
+        "operationId": "preview_workspace_publish",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The workspace",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishPreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The workspace is not open, or records no changeset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The workspace's changes do not make a valid changeset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Publish a workspace",
+        "description": "Applies the workspace's changes to live through the changeset engine:\ncloses its changeset, plans it against live, and queues the apply behind\nthe same customer-test, governance and approval gates as any changeset\napply. Refused when live changed the same objects since the workspace was\nmade. Calling it again resumes a publish that stopped after the close.\nAudited.",
+        "operationId": "publish_workspace",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The workspace",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Published: the apply is queued, or waits on an approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Published"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks system.admin and metadata.rollout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "workspace_conflicts, or the workspace is not open, or records no changeset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Nothing to publish, a blocked plan, or backup_ref_required on the production profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
+      }
+    },
+    "/api/v1/admin/workspaces/{id}/refresh": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Refresh a workspace",
+        "description": "Brings in what live changed that the workspace has not made its own:\nmetadata rows live added or changed (except those the workspace's\nchangeset names), entity tables live added (empty) and columns live\nadded. The workspace's process restarts on its next request. Audited.",
+        "operationId": "refresh_workspace",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The workspace",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Refreshed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshReport"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The workspace is not open",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/approval-processes/requests/{request_id}/recall": {
@@ -97529,6 +97839,25 @@
           }
         }
       },
+      "CreatedWorkspace": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Workspace"
+          },
+          {
+            "type": "object",
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/DataReport"
+              }
+            }
+          }
+        ],
+        "description": "A workspace just made, with what its data came to."
+      },
       "CursorPage_ChangeFeedEntry": {
         "type": "object",
         "description": "The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only.",
@@ -98689,6 +99018,15 @@
           }
         }
       },
+      "DataMode": {
+        "type": "string",
+        "description": "Which records a workspace starts with.",
+        "enum": [
+          "none",
+          "sample",
+          "masked"
+        ]
+      },
       "DataProfileRow": {
         "type": "object",
         "required": [
@@ -98760,6 +99098,83 @@
             "type": "string"
           }
         }
+      },
+      "DataReport": {
+        "type": "object",
+        "description": "What a workspace's data came to.",
+        "required": [
+          "mode",
+          "estimated_bytes",
+          "records",
+          "entities",
+          "skipped",
+          "masked_fields"
+        ],
+        "properties": {
+          "entities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntityRecords"
+            },
+            "description": "Entities holding records."
+          },
+          "estimated_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The storage estimated before copying."
+          },
+          "masked_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Labelled fields masked, as `entity.field`."
+          },
+          "mode": {
+            "$ref": "#/components/schemas/DataMode"
+          },
+          "records": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Records in the workspace, every entity together."
+          },
+          "skipped": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SkippedEntity"
+            },
+            "description": "Entities sample data could not fill."
+          }
+        }
+      },
+      "DataRequest": {
+        "type": "object",
+        "description": "`data` on a new workspace.",
+        "properties": {
+          "mode": {
+            "$ref": "#/components/schemas/DataMode",
+            "description": "`sample` (the default), `masked` or `none`."
+          },
+          "per_entity": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "`sample`: records per entity, 1 to 200 (20 unset).",
+            "minimum": 0
+          },
+          "percent": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "`masked`: the share of live records kept, 1 to 100 (10 unset).",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
       },
       "DataStepRunStatus": {
         "type": "object",
@@ -101188,6 +101603,23 @@
               "$ref": "#/components/schemas/RuleWarning"
             },
             "description": "D-791 rule 6: the `warning`-severity business-rule `error` policies\nthat fired on this create, update or upsert — the write succeeded;\nthe form shows them. Omitted when there are none (and on reads), so\nevery other response stays byte-identical."
+          }
+        }
+      },
+      "EntityRecords": {
+        "type": "object",
+        "description": "One entity's records in the workspace.",
+        "required": [
+          "entity",
+          "records"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "records": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -108089,6 +108521,17 @@
           "name"
         ],
         "properties": {
+          "data": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DataRequest",
+                "description": "Its records: generated samples (the default), a masked share of\nlive's, or none."
+              }
+            ]
+          },
           "name": {
             "type": "string",
             "description": "1 to 100 characters."
@@ -125378,7 +125821,7 @@
                     "null"
                   ],
                   "format": "uuid",
-                  "description": "The changeset its changes record into (T5-T4); none yet."
+                  "description": "The changeset its metadata writes record into (T5-T4)."
                 },
                 "created_at": {
                   "type": "string",
@@ -127093,6 +127536,126 @@
           }
         }
       },
+      "PublishBody": {
+        "type": "object",
+        "description": "`POST .../publish`.",
+        "properties": {
+          "backup_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The verified backup taken before this publish; required on the\nproduction profile, as for any changeset apply."
+          }
+        },
+        "additionalProperties": false
+      },
+      "PublishConflict": {
+        "type": "object",
+        "description": "A live change to an object the workspace also changes.",
+        "required": [
+          "op",
+          "target",
+          "live_op",
+          "live_changeset",
+          "live_at"
+        ],
+        "properties": {
+          "live_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "live_changeset": {
+            "type": "string",
+            "description": "The changeset that made the live change."
+          },
+          "live_op": {
+            "type": "string",
+            "description": "The live operation."
+          },
+          "op": {
+            "type": "string",
+            "description": "The workspace's operation, e.g. `add_field`."
+          },
+          "target": {
+            "type": "object",
+            "description": "The object both sides changed, e.g. `{\"entity\": \"deal\", \"field\": \"stage\"}`."
+          }
+        }
+      },
+      "PublishPreview": {
+        "type": "object",
+        "description": "What publishing would do.",
+        "required": [
+          "workspace",
+          "operations",
+          "conflicts",
+          "publishable"
+        ],
+        "properties": {
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublishConflict"
+            },
+            "description": "Live changes to the same objects; publish is refused while any."
+          },
+          "operations": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Recorded metadata operations in the workspace."
+          },
+          "plan": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ChangesetPlan",
+                "description": "The plan against live; `None` when the workspace changed nothing."
+              }
+            ]
+          },
+          "publishable": {
+            "type": "boolean",
+            "description": "No conflicts, something to publish, and nothing blocked."
+          },
+          "workspace": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "Published": {
+        "type": "object",
+        "description": "`POST .../publish`'s answer.",
+        "required": [
+          "workspace",
+          "plan",
+          "apply",
+          "contract_apply_ids"
+        ],
+        "properties": {
+          "apply": {
+            "$ref": "#/components/schemas/ApplyChangesetsAccepted",
+            "description": "The queued apply (or the approval it waits on)."
+          },
+          "contract_apply_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Contract rows (removals), applied with\n`POST /api/v1/admin/metadata/changesets/apply` once the expand rows\nsucceeded; empty when there are none or they were queued here."
+          },
+          "plan": {
+            "$ref": "#/components/schemas/ChangesetPlan"
+          },
+          "workspace": {
+            "$ref": "#/components/schemas/Workspace"
+          }
+        }
+      },
       "PurposePreferences": {
         "type": "object",
         "description": "One purpose and its channels.",
@@ -128560,6 +129123,49 @@
           "resolution": {
             "type": "string",
             "description": "What was corrected, or why the request was rejected."
+          }
+        }
+      },
+      "RefreshReport": {
+        "type": "object",
+        "description": "What a refresh brought in.",
+        "required": [
+          "workspace",
+          "metadata_rows_added",
+          "metadata_rows_updated",
+          "tables_added",
+          "columns_added"
+        ],
+        "properties": {
+          "columns_added": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Columns live added, as `entity.field`."
+          },
+          "metadata_rows_added": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Metadata rows live added, copied in.",
+            "minimum": 0
+          },
+          "metadata_rows_updated": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Metadata rows live changed, copied over.",
+            "minimum": 0
+          },
+          "tables_added": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Entity tables live added, created empty."
+          },
+          "workspace": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -133259,6 +133865,22 @@
           }
         }
       },
+      "SkippedEntity": {
+        "type": "object",
+        "description": "An entity sample data could not fill.",
+        "required": [
+          "entity",
+          "reason"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
       "SloClassStatus": {
         "type": "object",
         "description": "One SLO class as an administrator sees it.",
@@ -137591,7 +138213,7 @@
               "null"
             ],
             "format": "uuid",
-            "description": "The changeset its changes record into (T5-T4); none yet."
+            "description": "The changeset its metadata writes record into (T5-T4)."
           },
           "created_at": {
             "type": "string",

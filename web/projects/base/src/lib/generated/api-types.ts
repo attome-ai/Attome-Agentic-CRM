@@ -14220,7 +14220,10 @@ export interface paths {
         /**
          * Create a workspace
          * @description Makes a Develop workspace: its own schema with a copy of the metadata
-         *     (with its rows) and of every entity table (empty). Identity and access
+         *     (with its rows) and of every entity table, holding generated sample
+         *     records (the default), a masked share of live's, or none; every labelled
+         *     field is masked. The data's storage is estimated first and refused past
+         *     `metadata.workspace_data_max_mb`. Identity and access
          *     tables stay shared with live. Audited.
          */
         post: operations["create_workspace"];
@@ -14250,6 +14253,61 @@ export interface paths {
          *     A published workspace is kept. Audited.
          */
         delete: operations["discard_workspace"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/workspaces/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview publishing a workspace
+         * @description What publishing the workspace would change live: the plan of its changes
+         *     against live, and the live changes made since the workspace was made that
+         *     touch the same objects (publish is refused while there are any). Writes
+         *     nothing.
+         */
+        get: operations["preview_workspace_publish"];
+        put?: never;
+        /**
+         * Publish a workspace
+         * @description Applies the workspace's changes to live through the changeset engine:
+         *     closes its changeset, plans it against live, and queues the apply behind
+         *     the same customer-test, governance and approval gates as any changeset
+         *     apply. Refused when live changed the same objects since the workspace was
+         *     made. Calling it again resumes a publish that stopped after the close.
+         *     Audited.
+         */
+        post: operations["publish_workspace"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/workspaces/{id}/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh a workspace
+         * @description Brings in what live changed that the workspace has not made its own:
+         *     metadata rows live added or changed (except those the workspace's
+         *     changeset names), entity tables live added (empty) and columns live
+         *     added. The workspace's process restarts on its next request. Audited.
+         */
+        post: operations["refresh_workspace"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -41693,6 +41751,10 @@ export interface components {
             path: string;
             token: string;
         };
+        /** @description A workspace just made, with what its data came to. */
+        CreatedWorkspace: components["schemas"]["Workspace"] & {
+            data: components["schemas"]["DataReport"];
+        };
         /**
          * @description What applying an account's unapplied credit did: one entry per payment
          *     whose credit paid something.
@@ -42474,6 +42536,11 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /**
+         * @description Which records a workspace starts with.
+         * @enum {string}
+         */
+        DataMode: "none" | "sample" | "masked";
         DataProfileRow: {
             /** Format: date-time */
             completed_at?: string | null;
@@ -42500,6 +42567,41 @@ export interface components {
              */
             sample_size?: number | null;
             status: string;
+        };
+        /** @description What a workspace's data came to. */
+        DataReport: {
+            /** @description Entities holding records. */
+            entities: components["schemas"]["EntityRecords"][];
+            /**
+             * Format: int64
+             * @description The storage estimated before copying.
+             */
+            estimated_bytes: number;
+            /** @description Labelled fields masked, as `entity.field`. */
+            masked_fields: string[];
+            mode: components["schemas"]["DataMode"];
+            /**
+             * Format: int64
+             * @description Records in the workspace, every entity together.
+             */
+            records: number;
+            /** @description Entities sample data could not fill. */
+            skipped: components["schemas"]["SkippedEntity"][];
+        };
+        /** @description `data` on a new workspace. */
+        DataRequest: {
+            /** @description `sample` (the default), `masked` or `none`. */
+            mode?: components["schemas"]["DataMode"];
+            /**
+             * Format: int32
+             * @description `sample`: records per entity, 1 to 200 (20 unset).
+             */
+            per_entity?: number | null;
+            /**
+             * Format: int32
+             * @description `masked`: the share of live records kept, 1 to 100 (10 unset).
+             */
+            percent?: number | null;
         };
         /** @description A run's progress. */
         DataStepRunStatus: {
@@ -44674,6 +44776,12 @@ export interface components {
              *     every other response stays byte-identical.
              */
             warnings?: components["schemas"]["RuleWarning"][];
+        };
+        /** @description One entity's records in the workspace. */
+        EntityRecords: {
+            entity: string;
+            /** Format: int64 */
+            records: number;
         };
         EntitySchemaDef: {
             /**
@@ -50925,6 +51033,7 @@ export interface components {
         };
         /** @description A new workspace. */
         NewWorkspace: {
+            data?: null | components["schemas"]["DataRequest"];
             /** @description 1 to 100 characters. */
             name: string;
             /** @description What it is for, at most 1,000 characters. */
@@ -61952,7 +62061,7 @@ export interface components {
             items: {
                 /**
                  * Format: uuid
-                 * @description The changeset its changes record into (T5-T4); none yet.
+                 * @description The changeset its metadata writes record into (T5-T4).
                  */
                 changeset_ref?: string | null;
                 /** Format: date-time */
@@ -63981,6 +64090,42 @@ export interface components {
             /** Format: double */
             rating?: number | null;
         };
+        /** @description `POST .../publish`. */
+        PublishBody: {
+            /**
+             * @description The verified backup taken before this publish; required on the
+             *     production profile, as for any changeset apply.
+             */
+            backup_ref?: string | null;
+        };
+        /** @description A live change to an object the workspace also changes. */
+        PublishConflict: {
+            /** Format: date-time */
+            live_at: string;
+            /** @description The changeset that made the live change. */
+            live_changeset: string;
+            /** @description The live operation. */
+            live_op: string;
+            /** @description The workspace's operation, e.g. `add_field`. */
+            op: string;
+            /** @description The object both sides changed, e.g. `{"entity": "deal", "field": "stage"}`. */
+            target: Record<string, never>;
+        };
+        /** @description What publishing would do. */
+        PublishPreview: {
+            /** @description Live changes to the same objects; publish is refused while any. */
+            conflicts: components["schemas"]["PublishConflict"][];
+            /**
+             * Format: int32
+             * @description Recorded metadata operations in the workspace.
+             */
+            operations: number;
+            plan?: null | components["schemas"]["ChangesetPlan"];
+            /** @description No conflicts, something to publish, and nothing blocked. */
+            publishable: boolean;
+            /** Format: uuid */
+            workspace: string;
+        };
         PublishResponse: {
             /**
              * @description `true` when `dashboard.publish` is in `approval.required_actions` and
@@ -64023,16 +64168,18 @@ export interface components {
              */
             version_number?: number | null;
         };
-        /** @description The published schedule. */
+        /** @description `POST .../publish`'s answer. */
         Published: {
-            /** Format: int64 */
-            bookings: number;
-            /** Format: int64 */
-            row_version: number;
-            /** Format: uuid */
-            schedule_id: string;
-            /** Format: int64 */
-            superseded: number;
+            /** @description The queued apply (or the approval it waits on). */
+            apply: components["schemas"]["ApplyChangesetsAccepted"];
+            /**
+             * @description Contract rows (removals), applied with
+             *     `POST /api/v1/admin/metadata/changesets/apply` once the expand rows
+             *     succeeded; empty when there are none or they were queued here.
+             */
+            contract_apply_ids: string[];
+            plan: components["schemas"]["ChangesetPlan"];
+            workspace: components["schemas"]["Workspace"];
         };
         /** @description D-521 — what a viewer of `dashboard_id` sees. */
         PublishedDashboard: {
@@ -65203,6 +65350,25 @@ export interface components {
             from_ref: string;
             mode: string;
             to: string;
+        };
+        /** @description What a refresh brought in. */
+        RefreshReport: {
+            /** @description Columns live added, as `entity.field`. */
+            columns_added: string[];
+            /**
+             * Format: int64
+             * @description Metadata rows live added, copied in.
+             */
+            metadata_rows_added: number;
+            /**
+             * Format: int64
+             * @description Metadata rows live changed, copied over.
+             */
+            metadata_rows_updated: number;
+            /** @description Entity tables live added, created empty. */
+            tables_added: string[];
+            /** Format: uuid */
+            workspace: string;
         };
         /** @description What a refund request did. */
         RefundOutcome: {
@@ -69338,6 +69504,11 @@ export interface components {
          * @enum {string}
          */
         SkipReason: "hours" | "do_not_contact" | "no_consent" | "max_attempts";
+        /** @description An entity sample data could not fill. */
+        SkippedEntity: {
+            entity: string;
+            reason: string;
+        };
         /** @description A member passed over on the way, with its reason. */
         SkippedMember: {
             /** Format: uuid */
@@ -73872,7 +74043,7 @@ export interface components {
         Workspace: {
             /**
              * Format: uuid
-             * @description The changeset its changes record into (T5-T4); none yet.
+             * @description The changeset its metadata writes record into (T5-T4).
              */
             changeset_ref?: string | null;
             /** Format: date-time */
@@ -117857,7 +118028,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Workspace"];
+                    "application/json": components["schemas"]["CreatedWorkspace"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -117878,7 +118049,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description The name or purpose is out of bounds */
+            /** @description The name, purpose or data is out of bounds, or the data would pass the storage limit */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -117986,6 +118157,205 @@ export interface operations {
                 };
             };
             /** @description The workspace is being published or was published */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_workspace_publish: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The workspace */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublishPreview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such workspace */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The workspace is not open, or records no changeset */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The workspace's changes do not make a valid changeset */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    publish_workspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The workspace */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishBody"];
+            };
+        };
+        responses: {
+            /** @description Published: the apply is queued, or waits on an approval */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Published"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks system.admin and metadata.rollout */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such workspace */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description workspace_conflicts, or the workspace is not open, or records no changeset */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Nothing to publish, a blocked plan, or backup_ref_required on the production profile */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    refresh_workspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The workspace */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Refreshed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefreshReport"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such workspace */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The workspace is not open */
             409: {
                 headers: {
                     [name: string]: unknown;
