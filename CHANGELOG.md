@@ -17,6 +17,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- The data model designer's refactor dialog (A1-T14): split a text field (preview first), move repeating
+  fields into a child entity, or turn a lookup into a many-to-many relationship, with what to move by hand.
 - `model.flow.draft` (AD3-T1): a building agent drafts a flow with its test cases and runs them through
   the flow simulation before anything is saved.
 - The builder suite (AD10-T1): 30 build tasks in Arabic and English with graders on the drafted model

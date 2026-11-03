@@ -49,4 +49,6 @@ export type { Diagram, DiagramEdge, DiagramNode, DiagramRole } from './entity-me
 export { dataModelAr, dataModelEn } from './entity-metadata/diagram/data-model.i18n';
 // AD1-T2: a building agent's draft, accepted or rejected per item.
 export { DraftReviewComponent, acceptedCalls, layoutDraft } from './entity-metadata/diagram/draft-review.component';
+// A1-T14 step 4: the designer's refactor dialog.
+export { RefactorDialogComponent, splitTargets } from './entity-metadata/diagram/refactor-dialog.component';
 export type { DraftCall, DraftResult, DraftStep } from './entity-metadata/diagram/draft-review.component';

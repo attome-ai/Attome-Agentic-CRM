@@ -6,6 +6,7 @@ import {
   RelationshipDef,
 } from '@attome/xrm/core/admin/data';
 import { DraftReviewComponent } from './draft-review.component';
+import { RefactorDialogComponent } from './refactor-dialog.component';
 
 /** Where a node sits relative to the entity in the middle. */
 export type DiagramRole = 'center' | 'lookup' | 'base' | 'derived' | 'related';
@@ -139,7 +140,7 @@ const CHANGE_KEYS: Record<Exclude<ImpactChange, 'other'>, string> = {
   selector: 'xrm-data-model-diagram',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, TranslatePipe, DraftReviewComponent],
+  imports: [FormsModule, TranslatePipe, DraftReviewComponent, RefactorDialogComponent],
   styleUrls: ['../../../../styles/admin-page.css'],
   styles: [`
     .dm { display: grid; grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr); gap: 1rem; }
@@ -202,7 +203,12 @@ const CHANGE_KEYS: Record<Exclude<ImpactChange, 'other'>, string> = {
             <div class="dm-actions">
               <button type="button" data-testid="dm-entity-uses" (click)="checkUses(null, 'delete')">
                 {{ 'dataModel.usesEntity' | translate }}</button>
+              <button type="button" data-testid="dm-refactor" (click)="refactoring.set(!refactoring())">
+                {{ 'dataModel.refactorOpen' | translate }}</button>
             </div>
+            @if (refactoring()) {
+              <xrm-refactor-dialog [entityId]="det.id" [entityName]="det.name" [attributes]="attributeNames()" />
+            }
             <p class="subtitle">{{ 'dataModel.readOnly' | translate }}</p>
             <table>
               <thead><tr>
@@ -269,6 +275,9 @@ export class DataModelDiagramComponent {
   readonly impact = signal<ImpactReport | null>(null);
   readonly impactTarget = signal('');
   readonly error = signal<string | null>(null);
+  /** A1-T14 step 4: the refactor dialog is open. */
+  readonly refactoring = signal(false);
+  readonly attributeNames = computed(() => this.attributes().map(a => a.logicalname));
 
   readonly center = computed(() => this.entities().find(e => e.logicalname === this.centerName()) ?? null);
   readonly attributes = computed(() => (this.detail()?.attributes ?? []).filter(a => a.is_active));
