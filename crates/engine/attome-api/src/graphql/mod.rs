@@ -143,7 +143,7 @@ pub fn type_name(entity: &str) -> String {
 }
 
 /// The GraphQL type of a scalar field. Pure.
-pub fn scalar_of(kind: FieldType) -> &'static str {
+pub fn scalar_of(kind: &FieldType) -> &'static str {
     match kind {
         FieldType::Number | FieldType::Currency | FieldType::Rollup => "Float",
         FieldType::Bool => "Boolean",
@@ -174,7 +174,7 @@ pub fn sdl(entities: &[EntityShape]) -> String {
             } else if let Some(target) = &f.target {
                 type_name(target)
             } else {
-                scalar_of(f.kind).to_owned()
+                scalar_of(&f.kind).to_owned()
             };
             out.push_str(&format!("  {}: {ty}\n", f.name));
         }
