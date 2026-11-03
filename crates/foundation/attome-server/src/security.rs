@@ -922,6 +922,7 @@ mod tests {
                     unit_scope: Default::default(),
                     field_masks: Default::default(),
                     service_principal: false,
+                    chain: Vec::new(),
                 }))
             })
         }
