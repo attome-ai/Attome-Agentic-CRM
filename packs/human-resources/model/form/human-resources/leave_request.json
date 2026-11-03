@@ -1,0 +1,30 @@
+{
+  "app": "human-resources",
+  "doc": {
+    "entity": "@entity:leave_request",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:leave_request.employee_ref",
+              "@attribute:leave_request.end_date",
+              "@attribute:leave_request.leave_type",
+              "@attribute:leave_request.reason",
+              "@attribute:leave_request.requested_by",
+              "@attribute:leave_request.start_date",
+              "@attribute:leave_request.status"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "leave_request",
+  "schema_version": 1
+}

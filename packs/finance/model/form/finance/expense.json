@@ -1,0 +1,31 @@
+{
+  "app": "finance",
+  "doc": {
+    "entity": "@entity:expense",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:expense.amount",
+              "@attribute:expense.budget_ref",
+              "@attribute:expense.cost_center_ref",
+              "@attribute:expense.description",
+              "@attribute:expense.expense_date",
+              "@attribute:expense.receipt",
+              "@attribute:expense.status",
+              "@attribute:expense.submitted_by"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "expense",
+  "schema_version": 1
+}

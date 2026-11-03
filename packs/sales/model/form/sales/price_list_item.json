@@ -1,0 +1,26 @@
+{
+  "app": "sales",
+  "doc": {
+    "entity": "@entity:price_list_item",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:price_list_item.price",
+              "@attribute:price_list_item.price_list_ref",
+              "@attribute:price_list_item.product_ref"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "price_list_item",
+  "schema_version": 1
+}

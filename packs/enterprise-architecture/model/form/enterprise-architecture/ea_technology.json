@@ -1,0 +1,29 @@
+{
+  "app": "enterprise-architecture",
+  "doc": {
+    "entity": "@entity:ea_technology",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:ea_technology.description",
+              "@attribute:ea_technology.end_of_support",
+              "@attribute:ea_technology.lifecycle_status",
+              "@attribute:ea_technology.name",
+              "@attribute:ea_technology.vendor",
+              "@attribute:ea_technology.version"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "ea_technology",
+  "schema_version": 1
+}

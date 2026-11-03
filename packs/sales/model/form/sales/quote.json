@@ -1,0 +1,30 @@
+{
+  "app": "sales",
+  "doc": {
+    "entity": "@entity:quote",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:quote.account_ref",
+              "@attribute:quote.currency",
+              "@attribute:quote.discount_percent",
+              "@attribute:quote.expires_on",
+              "@attribute:quote.name",
+              "@attribute:quote.opportunity_ref",
+              "@attribute:quote.status"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "quote",
+  "schema_version": 1
+}

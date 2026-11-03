@@ -1,0 +1,27 @@
+{
+  "app": "vendor-supplier",
+  "doc": {
+    "entity": "@entity:vendor_compliance_document",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:vendor_compliance_document.document_type",
+              "@attribute:vendor_compliance_document.expiry_date",
+              "@attribute:vendor_compliance_document.file",
+              "@attribute:vendor_compliance_document.vendor_ref"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "vendor_compliance_document",
+  "schema_version": 1
+}

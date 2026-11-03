@@ -1,0 +1,32 @@
+{
+  "app": "contract-management",
+  "doc": {
+    "entity": "@entity:contract",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:contract.contract_value",
+              "@attribute:contract.counterparty",
+              "@attribute:contract.currency",
+              "@attribute:contract.description",
+              "@attribute:contract.end_date",
+              "@attribute:contract.renewal_date",
+              "@attribute:contract.start_date",
+              "@attribute:contract.status",
+              "@attribute:contract.title"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "contract",
+  "schema_version": 1
+}

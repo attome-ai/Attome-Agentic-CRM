@@ -1,0 +1,26 @@
+{
+  "app": "sales",
+  "doc": {
+    "entity": "@entity:territory",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:territory.description",
+              "@attribute:territory.name",
+              "@attribute:territory.parent_territory_ref"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "territory",
+  "schema_version": 1
+}

@@ -1,0 +1,27 @@
+{
+  "app": "billing",
+  "doc": {
+    "entity": "@entity:invoice_schedule",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:invoice_schedule.template_invoice_ref",
+              "@attribute:invoice_schedule.frequency",
+              "@attribute:invoice_schedule.next_run",
+              "@attribute:invoice_schedule.is_enabled"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "invoice_schedule",
+  "schema_version": 1
+}

@@ -1,0 +1,28 @@
+{
+  "app": "asset-management",
+  "doc": {
+    "entity": "@entity:location",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:location.address_line1",
+              "@attribute:location.city",
+              "@attribute:location.country",
+              "@attribute:location.name",
+              "@attribute:location.parent_location_ref"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "location",
+  "schema_version": 1
+}

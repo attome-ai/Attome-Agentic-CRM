@@ -6,6 +6,7 @@
   "level": "standard",
   "depends": [],
   "contents": [
-    "changesets"
+    "changesets",
+    "model"
   ]
 }

@@ -1,0 +1,29 @@
+{
+  "app": "sales",
+  "doc": {
+    "entity": "@entity:order",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:order.account_ref",
+              "@attribute:order.currency",
+              "@attribute:order.name",
+              "@attribute:order.ordered_on",
+              "@attribute:order.quote_ref",
+              "@attribute:order.status"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "order",
+  "schema_version": 1
+}

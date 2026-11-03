@@ -1,0 +1,28 @@
+{
+  "app": "sales",
+  "doc": {
+    "entity": "@entity:quote_line",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:quote_line.line_total",
+              "@attribute:quote_line.product_ref",
+              "@attribute:quote_line.quantity",
+              "@attribute:quote_line.quote_ref",
+              "@attribute:quote_line.unit_price"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "quote_line",
+  "schema_version": 1
+}

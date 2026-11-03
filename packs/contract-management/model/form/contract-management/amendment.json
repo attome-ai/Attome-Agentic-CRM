@@ -1,0 +1,27 @@
+{
+  "app": "contract-management",
+  "doc": {
+    "entity": "@entity:amendment",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:amendment.contract_ref",
+              "@attribute:amendment.description",
+              "@attribute:amendment.effective_date",
+              "@attribute:amendment.title"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "amendment",
+  "schema_version": 1
+}

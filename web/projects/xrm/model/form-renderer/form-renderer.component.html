@@ -8,7 +8,7 @@
         @for (tab of plan.tabs; track $index) {
           <button type="button" role="tab" class="fr-tab" [attr.aria-selected]="activeTab() === $index"
                   [class.fr-tab-active]="activeTab() === $index" (click)="pickTab($index)">
-            {{ tab.label }}
+            {{ labelOf(tab.label) }}
           </button>
         }
       </div>
@@ -16,7 +16,7 @@
     @for (section of sections(); track $index) {
       <fieldset class="fr-section" [style.--fr-columns]="section.columns ?? 1"
                 [attr.data-columns]="section.columns ?? 1">
-        <legend>{{ section.label }}</legend>
+        <legend>{{ labelOf(section.label) }}</legend>
         @for (field of section.fields; track field.attribute) {
           @if (!hidden(field)) {
           <div class="fr-field" [attr.data-attribute]="field.attribute">

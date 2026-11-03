@@ -1,0 +1,33 @@
+{
+  "app": "human-resources",
+  "doc": {
+    "entity": "@entity:employee",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:employee.base_salary",
+              "@attribute:employee.date_of_birth",
+              "@attribute:employee.emergency_contact",
+              "@attribute:employee.employment_status",
+              "@attribute:employee.full_name",
+              "@attribute:employee.hire_date",
+              "@attribute:employee.job_title",
+              "@attribute:employee.medical_notes",
+              "@attribute:employee.national_id",
+              "@attribute:employee.user_ref"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "employee",
+  "schema_version": 1
+}

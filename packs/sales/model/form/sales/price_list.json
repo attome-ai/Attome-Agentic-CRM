@@ -1,0 +1,26 @@
+{
+  "app": "sales",
+  "doc": {
+    "entity": "@entity:price_list",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:price_list.currency",
+              "@attribute:price_list.is_active_list",
+              "@attribute:price_list.name"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "price_list",
+  "schema_version": 1
+}

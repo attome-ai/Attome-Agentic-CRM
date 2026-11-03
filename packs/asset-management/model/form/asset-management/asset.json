@@ -1,0 +1,35 @@
+{
+  "app": "asset-management",
+  "doc": {
+    "entity": "@entity:asset",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:asset.asset_tag",
+              "@attribute:asset.custodian_ref",
+              "@attribute:asset.depreciation_method",
+              "@attribute:asset.disposed_on",
+              "@attribute:asset.lifecycle_status",
+              "@attribute:asset.location_ref",
+              "@attribute:asset.name",
+              "@attribute:asset.parent_asset_ref",
+              "@attribute:asset.purchase_cost",
+              "@attribute:asset.purchased_on",
+              "@attribute:asset.salvage_value",
+              "@attribute:asset.warranty_expires_on"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "asset",
+  "schema_version": 1
+}

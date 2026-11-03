@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LiveService } from '../live.service';
 import { ModelService, tabSections } from '../model.service';
-import { FormRendererComponent, controlFor } from './form-renderer.component';
+import { FormRendererComponent, controlFor, isLabelKey } from './form-renderer.component';
 import { sdkFromApi } from '../../testing/sdk-from-api';
 
 const PLAN = {
@@ -158,5 +158,15 @@ describe('FormRendererComponent', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('[data-testid="form-renderer"]')).not.toBeNull();
     expect(el.querySelector('[data-testid="form-renderer-save"]')).toBeNull();
+  });
+});
+
+describe('pack form labels (A12-T5)', () => {
+  it('translates a label that names a catalog key and shows any other as written', () => {
+    expect(isLabelKey('xrmForm.tabs.details')).toBe(true);
+    expect(isLabelKey('invoiceForm.tax')).toBe(true);
+    expect(isLabelKey('General')).toBe(false);
+    expect(isLabelKey('Contact details')).toBe(false);
+    expect(isLabelKey('v1.2')).toBe(false);
   });
 });

@@ -1,0 +1,57 @@
+{
+  "app": "billing",
+  "doc": {
+    "entity": "@entity:invoice_line",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:invoice_line.invoice_ref",
+              "@attribute:invoice_line.product_ref",
+              "@attribute:invoice_line.description",
+              "@attribute:invoice_line.unit",
+              "@attribute:invoice_line.quantity",
+              "@attribute:invoice_line.unit_price",
+              "@attribute:invoice_line.discount"
+            ],
+            "label": "xrmForm.tabs.details"
+          },
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:invoice_line.vat_category",
+              "@attribute:invoice_line.vat_rate",
+              "@attribute:invoice_line.vat_amount",
+              "@attribute:invoice_line.line_total"
+            ],
+            "label": "invoiceForm.tax"
+          },
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:invoice_line.period_from",
+              "@attribute:invoice_line.period_to"
+            ],
+            "label": "invoiceForm.period"
+          },
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:invoice_line.source_kind",
+              "@attribute:invoice_line.source_ref",
+              "@attribute:invoice_line.is_locked"
+            ],
+            "label": "invoiceForm.source"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "invoice_line",
+  "schema_version": 1
+}

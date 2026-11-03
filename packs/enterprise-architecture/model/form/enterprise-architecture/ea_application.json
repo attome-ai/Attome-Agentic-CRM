@@ -1,0 +1,27 @@
+{
+  "app": "enterprise-architecture",
+  "doc": {
+    "entity": "@entity:ea_application",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:ea_application.capability_ref",
+              "@attribute:ea_application.description",
+              "@attribute:ea_application.lifecycle_status",
+              "@attribute:ea_application.name"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "ea_application",
+  "schema_version": 1
+}

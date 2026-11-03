@@ -12,6 +12,11 @@ import { CHANGE_DEBOUNCE_MS, FormHookAnswer, FormHookEvent, rejectionText, withC
 /** How a field is edited, from its attribute's field type number. */
 export type FieldControl = 'text' | 'number' | 'date' | 'checkbox' | 'readonly';
 
+/** A form's tab or section label that names a catalog key (`xrmForm.tabs.details`), as pack forms do. Pure. */
+export function isLabelKey(label: string): boolean {
+  return /^[a-z][A-Za-z0-9]*(\.[A-Za-z0-9_]+)+$/.test(label);
+}
+
 /**
  * The input a field type is edited with. Numbers and currency are numbers,
  * dates are dates, booleans are check boxes; formulas, lookups, files and
@@ -181,6 +186,11 @@ export class FormRendererComponent {
 
   // ── A12-T4: form hooks ─────────────────────────────────────────────────
   private readonly lang = inject(LangService);
+
+  /** A12-T5: a label that is a catalog key is shown translated; any other as written. */
+  protected labelOf(label: string): string {
+    return isLabelKey(label) ? this.lang.translate(label) : label;
+  }
   /** The form events with an extension on this entity (from the last answer). */
   readonly hookEvents = signal<readonly FormHookEvent[]>([]);
   /** The extensions' last refusal, in the person's language. */

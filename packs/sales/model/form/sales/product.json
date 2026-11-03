@@ -1,0 +1,27 @@
+{
+  "app": "sales",
+  "doc": {
+    "entity": "@entity:product",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:product.description",
+              "@attribute:product.is_orderable",
+              "@attribute:product.name",
+              "@attribute:product.sku"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "product",
+  "schema_version": 1
+}

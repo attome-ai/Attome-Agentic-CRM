@@ -1,0 +1,28 @@
+{
+  "app": "contract-management",
+  "doc": {
+    "entity": "@entity:obligation",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:obligation.completed_on",
+              "@attribute:obligation.contract_ref",
+              "@attribute:obligation.due_date",
+              "@attribute:obligation.is_complete",
+              "@attribute:obligation.title"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "obligation",
+  "schema_version": 1
+}

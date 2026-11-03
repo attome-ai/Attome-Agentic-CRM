@@ -1,0 +1,29 @@
+{
+  "app": "finance",
+  "doc": {
+    "entity": "@entity:budget",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:budget.budget_amount",
+              "@attribute:budget.cost_center_ref",
+              "@attribute:budget.name",
+              "@attribute:budget.period_end",
+              "@attribute:budget.period_start",
+              "@attribute:budget.project_ref"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "budget",
+  "schema_version": 1
+}

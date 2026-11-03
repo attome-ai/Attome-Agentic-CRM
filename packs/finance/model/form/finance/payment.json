@@ -1,0 +1,28 @@
+{
+  "app": "finance",
+  "doc": {
+    "entity": "@entity:payment",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:payment.amount",
+              "@attribute:payment.external_system_id",
+              "@attribute:payment.invoice_ref",
+              "@attribute:payment.paid_date",
+              "@attribute:payment.reference"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "payment",
+  "schema_version": 1
+}

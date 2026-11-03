@@ -1,0 +1,26 @@
+{
+  "app": "contract-management",
+  "doc": {
+    "entity": "@entity:clause",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:clause.body",
+              "@attribute:clause.category",
+              "@attribute:clause.title"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "clause",
+  "schema_version": 1
+}

@@ -11,6 +11,7 @@
     "sales"
   ],
   "contents": [
-    "changesets"
+    "changesets",
+    "model"
   ]
 }

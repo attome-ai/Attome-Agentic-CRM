@@ -1,0 +1,27 @@
+{
+  "app": "human-resources",
+  "doc": {
+    "entity": "@entity:attendance",
+    "form_kind": "main",
+    "tabs": [
+      {
+        "label": "xrmForm.tabs.details",
+        "sections": [
+          {
+            "columns": 2,
+            "fields": [
+              "@attribute:attendance.attendance_date",
+              "@attribute:attendance.attendance_status",
+              "@attribute:attendance.employee_ref",
+              "@attribute:attendance.hours_worked"
+            ],
+            "label": "xrmForm.tabs.details"
+          }
+        ]
+      }
+    ]
+  },
+  "kind": "form",
+  "name": "attendance",
+  "schema_version": 1
+}

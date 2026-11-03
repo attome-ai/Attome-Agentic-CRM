@@ -9,6 +9,7 @@
     "vendor-supplier"
   ],
   "contents": [
-    "changesets"
+    "changesets",
+    "model"
   ]
 }
