@@ -271,7 +271,7 @@ pub(super) async fn resume_data_step_run(
     tag = "admin",
     params(("id" = Uuid, Path, description = "The data step run")),
     responses(
-        (status = 200, description = "Stopped: an orphan scan or a split is abandoned (a split keeps the rows it wrote), a retype that has not swapped is undone at once (Y12-T7), any other field run is failed for its abandon route", body = DataStepRunStatus),
+        (status = 200, description = "Stopped: an orphan scan or a split is abandoned (a split keeps the rows it wrote), a partition run is abandoned and its partitioned copy dropped, a retype that has not swapped is undone at once (Y12-T7), any other field run is failed for its abandon route", body = DataStepRunStatus),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks system.admin", body = ErrorResponse),
         (status = 404, description = "No such run", body = ErrorResponse),
@@ -294,13 +294,13 @@ pub(super) async fn cancel_data_step_run(
     // A1-T8: a split has nothing to undo; the rows it wrote keep their values.
     let (to, error) = if matches!(
         run.kind.as_str(),
-        "orphan_scan" | "split" | "extract_child" | "link_copy"
+        "orphan_scan" | "split" | "extract_child" | "link_copy" | "partition"
     ) {
         ("abandoned", None)
     } else {
         ("failed", Some("cancelled by an administrator"))
     };
-    transition(
+    let stopped = transition(
         &state,
         ctx.user_id,
         id,
@@ -312,8 +312,12 @@ pub(super) async fn cancel_data_step_run(
             refused: "run_finished: the run already ended",
         },
     )
-    .await
-    .map(Json)
+    .await?;
+    // Y2-T12: a cancelled partition run takes its copy and trigger away.
+    if run.kind == "partition" {
+        super::partition::discard_after_cancel(&state, &run.entity).await?;
+    }
+    Ok(Json(stopped))
 }
 
 pub(super) fn routes() -> Router<EngineState> {

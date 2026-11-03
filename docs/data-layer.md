@@ -116,3 +116,25 @@ for each and one audit event. A record the other side does not have refuses the 
 form's multi-lookup control saves through it. Encrypted text is an ordinary text field with
 `options.encryption.mode = "randomised"` (sealed at rest, needs a sensitivity label, never filtered
 or sorted).
+
+## Partitioning a large table
+
+A standard entity whose table has grown past `records.partition_row_threshold` rows (50,000,000
+unless set) can be moved online to the high-volume shape, partitioned by month on `created_at`
+(Y2-T12). A builder starts it; nothing partitions on its own:
+`POST /api/v1/admin/entities/{entity_id}/partition` (data-model area). It is refused when the table
+has a unique index besides its primary key (a business key), a keyed lookup pointing at it, a
+trigger or a view over it, because a partitioned table's unique keys, and the keys pointing at it,
+must include `created_at`.
+
+It creates `<entity>__p` with the same columns, defaults, checks, indexes, foreign keys and grants,
+the primary key `(id, created_at)`, one partition for everything before this month and monthly
+partitions ahead, and a trigger that repeats every insert, update and delete on it. A data step run
+of kind `partition` copies the rows in batches of 10,000 by id, each batch locked for share while it
+is copied; pause, resume and cancel it through `/api/v1/admin/data-step-runs/{id}` (a cancel drops
+the copy and the trigger). When the copy is done the run swaps the tables in one transaction under a
+five-second lock timeout (retried a few times): the old table becomes `<entity>__old`, kept until a
+builder drops it, and the entity becomes `high_volume`. A row with no `created_at` takes the time it
+was copied. Adding or removing a field while the copy runs makes the swap refuse; cancel and start
+again. `GET` the same path shows the storage mode, the latest run and whether the old table is
+still kept.

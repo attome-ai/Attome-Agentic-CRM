@@ -58,6 +58,8 @@ pub mod master;
 mod money;
 /// Y12-T6 — backfill batch sizes that follow the load.
 pub mod pacing;
+/// Y2-T12: partitioning a large standard entity table online.
+pub mod partition;
 mod property_layer;
 mod reconcile;
 /// A27-T1 — the `record_type` attribute an entity gets with its first type.

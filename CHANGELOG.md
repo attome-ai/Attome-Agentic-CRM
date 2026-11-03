@@ -17,6 +17,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Partitioning a large entity table online (Y2-T12): `POST` and `GET /api/v1/admin/entities/{entity_id}/partition`,
+  the setting `records.partition_row_threshold`, and data step runs of kind `partition`.
 - The public store (F8-T10): `GET /{keyword}/api/v1/shop/guest/catalogue` lists what a guest may buy;
   every catalogue item gains `vat`, `price_with_vat`, `variant_of`, `variant_label` (sales pack
   changeset 0034 adds product variants) and `stock` (`in_stock`, `low`, `sold_out`, from

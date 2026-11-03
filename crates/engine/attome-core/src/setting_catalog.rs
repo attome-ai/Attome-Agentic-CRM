@@ -859,6 +859,16 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(0),
         ),
+        // Y2-T12: partitioning a table online.
+        SettingDescriptor::new(
+            "records.partition_row_threshold",
+            "The rows an entity table must exceed before a builder may partition it by created \
+         date (Y2-T12). 50,000,000 by default.",
+            || json!({"type": "integer", "minimum": 0}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(50_000_000),
+        ),
         // F8-T10: the store's stock badges.
         SettingDescriptor::new(
             "commerce.stock_location",

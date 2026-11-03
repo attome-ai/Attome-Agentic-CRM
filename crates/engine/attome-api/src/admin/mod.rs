@@ -34,11 +34,12 @@ mod inheritance;
 mod lookup_key;
 /// Y2-T4: lookup values that point at no record.
 pub(crate) mod orphans;
+/// A1-T9: repeating attributes extracted into a child entity.
+pub(crate) mod partition;
 /// Solution 7 Phase 2 (D-788 rule 9) — the 30-day recovery archive routes.
 mod recovery_archive;
 /// A1-T8: splitting one text attribute into several.
 pub(crate) mod refactor;
-/// A1-T9: repeating attributes extracted into a child entity.
 pub(crate) mod refactor_child;
 /// Solution 7 Phase 2 (D-788 Topic 14, D-791) — the release report routes.
 /// Y12-T11: rehearse a field change on the copy database.
@@ -181,6 +182,7 @@ pub(crate) fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(lookup_key::openapi_fragment());
     doc.merge(refactor::openapi_fragment());
     doc.merge(refactor_child::openapi_fragment());
+    doc.merge(partition::openapi_fragment());
     doc.merge(release_report::openapi_fragment());
     doc.merge(rehearse::openapi_fragment());
     doc.merge(scaffold::openapi_fragment());
@@ -258,6 +260,7 @@ pub fn routes() -> Router<EngineState> {
         .merge(lookup_key::routes())
         .merge(refactor::routes())
         .merge(refactor_child::routes())
+        .merge(partition::routes())
         .merge(release_report::routes());
 
     // Physically absent from release binaries — see dev_scaffold.rs's module
