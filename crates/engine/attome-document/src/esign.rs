@@ -22,6 +22,8 @@
 //! signer with when, from which address and how they were checked, the
 //! events, and the chain's last hash; the certificate's own hash is kept
 //! beside it. A decline ends the envelope (`declined`). Nothing is deleted.
+//! The completion also queues the seal of its PDFs (K4-T2,
+//! [`crate::esign_seal`]).
 
 use std::net::SocketAddr;
 
@@ -450,6 +452,8 @@ pub struct EnvelopeView {
     #[schema(value_type = Option<Object>)]
     pub certificate: Option<Value>,
     pub certificate_hash: Option<String>,
+    /// K4-T2: each document's sealed copy, once the envelope is completed.
+    pub seals: Vec<crate::esign_seal::SealedDocument>,
 }
 
 /// A stored file key from a record's file field (a key, or an object
@@ -765,6 +769,7 @@ async fn load_view(state: &EngineState, envelope: Uuid) -> Result<EnvelopeView, 
     .fetch_all(db)
     .await
     .map_err(AppError::internal)?;
+    let seals = crate::esign_seal::seals(state, envelope).await?;
     Ok(EnvelopeView {
         id: envelope,
         title: head.0,
@@ -778,6 +783,7 @@ async fn load_view(state: &EngineState, envelope: Uuid) -> Result<EnvelopeView, 
         events,
         certificate: head.5,
         certificate_hash: head.6,
+        seals,
     })
 }
 
@@ -1085,6 +1091,15 @@ async fn complete_in_tx(
     .bind(&cert)
     .bind(&cert_hash)
     .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    // K4-T2: the PDFs are sealed after commit, by the job.
+    attome_jobs::enqueue_in_tx(
+        tx,
+        attome_core::jobs::EngineJob::SealEnvelope {
+            envelope_id: envelope,
+        },
+    )
     .await
     .map_err(AppError::internal)?;
     for s in &signers {

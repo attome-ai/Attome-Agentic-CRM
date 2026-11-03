@@ -816,6 +816,10 @@ async fn dispatch_platform_job(
         EngineJob::FileThumbnail { session_id } => {
             attome_document::thumbnail::process(&attome_state, session_id).await?;
         }
+        // K4-T2 — see this variant's doc comment.
+        EngineJob::SealEnvelope { envelope_id } => {
+            attome_document::esign_seal::process(&attome_state, envelope_id).await?;
+        }
         // N22-T2 — see this variant's doc comment.
         EngineJob::TranscribeRecording { document_id } => {
             attome_document::transcribe::process(&attome_state, document_id).await?;

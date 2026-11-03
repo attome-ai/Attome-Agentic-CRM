@@ -44,6 +44,7 @@ pub mod checkout;
 pub mod documents_tree;
 pub mod engine;
 pub mod esign;
+pub mod esign_seal;
 pub mod files;
 pub mod files_scan;
 /// A23-T9: an import's row errors as a file to fix and send back.
@@ -60,6 +61,7 @@ pub mod import_stage;
 pub mod integrity;
 /// Z6-T2: resumable multipart uploads.
 pub mod multipart_routes;
+pub mod pades;
 pub mod share;
 /// K1-T4: document text for global search.
 pub mod text_extract;
@@ -91,6 +93,11 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     // K4-T1: e-signature envelopes, under the document module.
     doc.merge(attome_server::openapi::tag_module(
         esign::openapi_fragment(),
+        "document",
+    ));
+    // K4-T2: sealed copies of completed envelopes' PDFs.
+    doc.merge(attome_server::openapi::tag_module(
+        esign_seal::openapi_fragment(),
         "document",
     ));
     doc.merge(core(transcribe::openapi_fragment()));

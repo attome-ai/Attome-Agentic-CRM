@@ -72,6 +72,7 @@
 - [Opportunity lines](opportunity-lines.md): lines and the product picker, pricing order, the deal's amount, schedules, quote sync, undo and the feature flags.
 - [Web crawling into knowledge](web-crawling.md): website sources, their settings, crawls and runs, imports and review, watch-only sources and the safety rules.
 - [Contracts](contracts.md): the repository, renewal reminders, drafting, the playbook, approval, negotiation and signature.
+- [E-signature and the PDF seal](esign.md): envelopes, the completion certificate, and the PAdES seal of completed PDFs with the deployment's certificate.
 - [Procurement](procurement.md): requisitions, orders, receipts, vendor bills, budget checks and scorecards.
 - [Call analysis](call-analysis.md): what is analysed after a recorded call, the redacted copy it reads, speaker roles, and what makes a call skipped.
 - [Revenue recognition policy](revenue-recognition.md): every revenue setting, the SSP order, change treatments and the close, for finance and auditors.

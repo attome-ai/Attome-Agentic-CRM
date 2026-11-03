@@ -324,6 +324,15 @@ Required.
 | `email.test_mode_catch_all` | string, optional | `null` |  | Z8-T6: test mode. When set, every email goes to this one address instead of its recipients (named in an `X-Attome-Original-To` header), so a development or copied deployment never mails a real person. |
 | `email.tls_mode` | string, optional | `null` |  | The SMTP transport security mode (BEM-5, attome-email plan §4.3): `"implicit"` (SMTPS, the default), `"starttls"` (upgrade required — lettre aborts if the relay does not offer it), or `"none"` (plaintext, refused outside `APP_ENV=debug`). Validated by `validate()`. |
 
+## `esign`
+
+K4-T2 — the signing certificate completed e-signature envelopes are sealed with. Empty by default (no seal). See `EsignSection`'s doc comment.
+
+| Key | Type | Default | Secret | Description |
+|---|---|---|---|---|
+| `esign.seal_certificate_file` | string | `""` |  | Path to the PEM certificate chain the seal is made with, the signing certificate first (RSA or P-256). Empty: completed envelopes are not sealed. |
+| `esign.seal_key_file` | string | `""` |  | Path to the signing certificate's private key, PEM (PKCS #8, or PKCS #1 for RSA). Read when a seal is made; keep the file readable by the server only. |
+
 ## `events`
 
 M62 Phase 1 — Event Bus subscriptions/webhook delivery. Ships dark (`webhooks_enabled: false`). See `EventsSection`'s doc comment.
@@ -384,12 +393,12 @@ D-360 / P-inference — model endpoints and the AI kill-switch (TODO-055). Ships
 
 | Key | Type | Default | Secret | Description |
 |---|---|---|---|---|
+| `inference.agent_approvals_exclude_sponsor` | boolean, optional | `null` |  | AH3-T7: an agent principal's sponsor may not decide its approval requests (the agent and the person who started its session never may). Unset is on; a deployment with too few administrators to approve otherwise turns it off. |
 | `inference.ai.chat` | boolean | `false` |  | The conversational agent (`MODULE_BOT`). |
 | `inference.ai.enabled` | boolean | `false` |  | Master switch. `false` disables **every** AI surface regardless of the per-surface flags below — an operator reaching for the kill-switch during an incident must not have to reason about which of five flags they missed. |
 | `inference.ai.fields` | boolean | `false` |  | AI form fields and components (`MODULE_AI`) — summarise, draft, classify, translate. Read-only suggestions. |
 | `inference.ai.semantic_search` | boolean | `false` |  | Semantic/dense retrieval within search (`MODULE_SEARCH`). Turning this off leaves lexical search fully working — that degradation is a supported configuration, not an outage (P-inference §4.3). |
 | `inference.ai.workflow_nodes` | boolean | `false` |  | AI nodes inside workflows (`MODULE_AUTOMATION`). |
-| `inference.agent_approvals_exclude_sponsor` | boolean, optional | `null` |  | AH3-T7: an agent principal's sponsor may not decide its approval requests (the agent and the person who started its session never may). Unset is on; a deployment with too few administrators to approve otherwise turns it off. |
 | `inference.allow_external_provider` | boolean | `false` |  | Whether [`Self::generation`]/[`Self::embedding`] may point outside the data plane. |
 | `inference.caller_token_budget_per_min` | integer, optional | `null` |  | BIN-D7 — deprecated: accepted and ignored, nothing enforces it (the per-caller budget lives in `xrm-ai`'s budget guard). Kept for one release so an existing config still loads; boot warns when it is set (`AppConfig::deprecated_keys`), then the field goes. |
 | `inference.catalogue` | array of object |  |  | Z9-T3 — the model catalogue the router picks from: each model's capabilities, context size, cost and the data labels it may be sent. Empty by default: nothing is routed by catalogue, and every task runs on `generation` (or its `task_models` entry) as before. |

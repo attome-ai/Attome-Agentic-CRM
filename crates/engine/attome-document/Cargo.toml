@@ -28,6 +28,7 @@ attome-server.workspace   = true
 attome-storage.workspace  = true
 attome-types.workspace    = true
 axum.workspace            = true
+base64.workspace          = true
 bytes.workspace           = true
 chrono.workspace          = true
 encoding_rs.workspace     = true
@@ -39,6 +40,7 @@ infer.workspace           = true
 mail-parser.workspace     = true
 quick-xml.workspace       = true
 reqwest.workspace         = true
+ring.workspace            = true
 metrics.workspace         = true
 object_store.workspace    = true
 serde.workspace           = true
@@ -49,6 +51,7 @@ tokio.workspace           = true
 tracing.workspace         = true
 utoipa.workspace          = true
 uuid.workspace            = true
+x509-parser.workspace     = true
 
 [dev-dependencies]
 attome-testkit.workspace = true

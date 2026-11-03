@@ -40,6 +40,7 @@ pub use sections::database::{
 };
 pub use sections::docgen::DocgenSection;
 pub use sections::einvoice::EinvoiceSection;
+pub use sections::esign::EsignSection;
 pub use sections::events::EventsSection;
 pub use sections::extensions::ExtensionsSection;
 pub use sections::fleet::FleetSection;
@@ -223,6 +224,11 @@ pub struct AppConfig {
     /// `EinvoiceSection`'s doc comment.
     #[serde(default)]
     pub einvoice: EinvoiceSection,
+    /// K4-T2 — the signing certificate completed e-signature envelopes are
+    /// sealed with. Empty by default (no seal). See `EsignSection`'s doc
+    /// comment.
+    #[serde(default)]
+    pub esign: EsignSection,
     /// M57 Phase 1 — Document Generation. The isolated render sidecar's
     /// address plus its explicit timeout/size caps. See `DocgenSection`'s
     /// doc comment.

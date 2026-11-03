@@ -27,6 +27,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - A flow's test run lights its path on the designer's canvas, and test coverage shades the steps no test reached (M4-T4).
 - State models on the canvas (M8-T4): states as nodes and transitions as connections, drawn and deleted in place, with a
   record's stays and time in each state from its history.
+- Completed e-signature envelopes seal their PDFs with a PAdES signature under the deployment's certificate
+  (K4-T2): the configuration's `esign.seal_certificate_file` and `esign.seal_key_file` (PEM, RSA or P-256),
+  the sealed copy at `GET /api/v1/esign/envelopes/{id}/documents/{document_id}/sealed`, re-queuing with
+  `POST /api/v1/esign/envelopes/{id}/seal`, each document's seal in the envelope view (`seals`), and
+  migration 0397 (`docs/esign.md`).
 - The flow designer on the canvas (M2-T1): `/xrm/workflow/definitions/{id}/versions/{version}/design` places
   steps freely, connects typed ports with the publish checks applied while dragging (types, trigger inputs,
   duplicate connections, loops), keeps the step palette and each type's settings form, and adds groups,

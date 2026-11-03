@@ -58,7 +58,7 @@ pub use config::{
     AuthSection, AzureStorageSettings, BackupSection, CacheBackend, CacheRole, CacheRoleOverride,
     CacheRoles, CacheSection, CaptchaConfig, CaptchaProvider, CatalogueModel, ChangesetLayer,
     ChangesetMode, ChangesetsSection, ChaosSettings, ConfigError, DataLabel, DatabasePoolSize,
-    DatabasePools, DatabaseSection, DocgenSection, EinvoiceSection, EmailDomainCheck,
+    DatabasePools, DatabaseSection, DocgenSection, EinvoiceSection, EsignSection, EmailDomainCheck,
     EmailFeedback, EmailProviders, EmailRateLimits, EmailSection, EmailStreamRates, EventsSection,
     ExtensionsSection, FleetSection, GcsStorageSettings, GoogleAiSection, InferenceEndpoint,
     InferenceSection, IntegrationSection, KdfSection, LETS_ENCRYPT_DIRECTORY, LdapGroupRole,

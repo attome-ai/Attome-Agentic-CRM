@@ -1779,6 +1779,21 @@
       },
       "type": "object"
     },
+    "EsignSection": {
+      "properties": {
+        "seal_certificate_file": {
+          "default": "",
+          "description": "Path to the PEM certificate chain the seal is made with, the signing\ncertificate first (RSA or P-256). Empty: completed envelopes are not\nsealed.",
+          "type": "string"
+        },
+        "seal_key_file": {
+          "default": "",
+          "description": "Path to the signing certificate's private key, PEM (PKCS #8, or\nPKCS #1 for RSA). Read when a seal is made; keep the file readable by\nthe server only.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "EventsSection": {
       "properties": {
         "dispatch_batch_size": {
@@ -3953,6 +3968,10 @@
     },
     "email": {
       "$ref": "#/$defs/EmailSection"
+    },
+    "esign": {
+      "$ref": "#/$defs/EsignSection",
+      "description": "K4-T2 — the signing certificate completed e-signature envelopes are\nsealed with. Empty by default (no seal). See `EsignSection`'s doc\ncomment."
     },
     "events": {
       "$ref": "#/$defs/EventsSection",

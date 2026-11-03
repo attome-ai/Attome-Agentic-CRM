@@ -186,6 +186,11 @@ pub enum EngineJob {
     /// beside the original (`attome_document::thumbnail::process`). Enqueued
     /// in the scan's clean transaction for PNG, JPEG and WebP. Idempotent.
     FileThumbnail { session_id: Uuid },
+    /// K4-T2 — seals a completed e-signature envelope's PDFs with the
+    /// deployment's signing certificate (`attome_document::esign_seal::process`).
+    /// Enqueued in the completion's transaction, or by `POST …/seal`.
+    /// Idempotent: a sealed document is skipped.
+    SealEnvelope { envelope_id: Uuid },
     /// P-file-upload-pipeline — periodic sweep that expires abandoned upload
     /// sessions (presigned but never uploaded, uploaded but never
     /// finalized) past `attome_document::files::UPLOAD_SESSION_TTL_SECS` and
@@ -1139,6 +1144,7 @@ impl EngineJob {
             | Self::ScanUploadedFile { .. }
             | Self::DocumentTextExtract { .. }
             | Self::FileThumbnail { .. }
+            | Self::SealEnvelope { .. }
             | Self::PruneExpiredUploadSessions
             | Self::PruneApalisJobHistory
             | Self::RevalidateQueryPlans
@@ -1283,6 +1289,7 @@ impl EngineJob {
             EngineJob::ScanUploadedFile { .. } => "ScanUploadedFile",
             EngineJob::DocumentTextExtract { .. } => "DocumentTextExtract",
             EngineJob::FileThumbnail { .. } => "FileThumbnail",
+            EngineJob::SealEnvelope { .. } => "SealEnvelope",
             EngineJob::PruneExpiredUploadSessions => "PruneExpiredUploadSessions",
             EngineJob::PruneApalisJobHistory => "PruneApalisJobHistory",
             EngineJob::RevalidateQueryPlans => "RevalidateQueryPlans",
@@ -1444,6 +1451,7 @@ impl EngineJob {
             | Self::ScanUploadedFile { .. }
             | Self::DocumentTextExtract { .. }
             | Self::FileThumbnail { .. }
+            | Self::SealEnvelope { .. }
             | Self::WorkflowExecute { .. }
             | Self::TimerFire { .. }
             | Self::ReportScheduleFire { .. }
@@ -1771,6 +1779,7 @@ impl EngineJob {
             | Self::ScanUploadedFile { .. }
             | Self::DocumentTextExtract { .. }
             | Self::FileThumbnail { .. }
+            | Self::SealEnvelope { .. }
             | Self::WorkflowExecute { .. }
             | Self::TimerFire { .. }
             | Self::ReportScheduleFire { .. }

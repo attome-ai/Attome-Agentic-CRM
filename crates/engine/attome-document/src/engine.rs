@@ -56,7 +56,9 @@ impl EngineModel for DocumentModel {
     }
 
     fn routes(&self) -> Router<EngineState> {
-        crate::documents_tree::routes().merge(crate::esign::routes())
+        crate::documents_tree::routes()
+            .merge(crate::esign::routes())
+            .merge(crate::esign_seal::routes())
     }
 
     /// `attome_document` is provisioned by `platform-bundles/attome-document.json`,

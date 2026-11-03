@@ -14,6 +14,7 @@ pub(crate) mod database;
 pub(crate) mod deployment;
 pub(crate) mod docgen;
 pub(crate) mod einvoice;
+pub(crate) mod esign;
 pub(crate) mod events;
 pub(crate) mod extensions;
 pub(crate) mod fleet;
