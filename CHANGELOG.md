@@ -17,6 +17,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Egypt's ETA e-invoice (AG3-T1): `attome_einvoice::eta` writes the document (version 1.0, ETA's
+  line math), produces ETA's canonical serialization, has it signed (CAdES-BES) by a signer
+  service holding the taxpayer's USB token or HSM, and signs in, submits and polls ETA. The
+  e-invoice HTTP transport gains `get`, and a POST keeps a `Content-Type` its caller names.
 - `model.from_files` (AD5-T1): a data model drafted from several spreadsheets, with currency
   columns, each sheet's key, lookups between sheets and per sheet the import that loads it once
   built. `model.attribute.create` takes `lookup_entity` (a logical name or id) for a lookup's

@@ -1,0 +1,12 @@
+{
+  "uuid": "4HB9MZXBK6A0RYPWAR2T1XKJ10",
+  "submissionUUID": "B0RBH3YB1T6ZRK8P2XAH71KJ10",
+  "internalId": "INV-2026-001",
+  "status": "Invalid",
+  "validationResults": {
+    "status": "Invalid",
+    "validationSteps": [
+      { "name": "Signature validator", "status": "Invalid", "error": { "errorCode": "4043", "error": "Signature is not valid" } }
+    ]
+  }
+}

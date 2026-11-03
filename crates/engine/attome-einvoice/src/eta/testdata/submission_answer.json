@@ -1,0 +1,17 @@
+{
+  "submissionId": "B0RBH3YB1T6ZRK8P2XAH71KJ10",
+  "acceptedDocuments": [
+    { "uuid": "4HB9MZXBK6A0RYPWAR2T1XKJ10", "longId": "Y7M3GYN6TB4AJT8BAR2T1XKJ101668762318", "internalId": "INV-2026-001" }
+  ],
+  "rejectedDocuments": [
+    {
+      "internalId": "INV-2026-002",
+      "error": {
+        "code": "BadArgument",
+        "message": "Validation Error",
+        "target": "INV-2026-002",
+        "details": [{ "code": "BadArgumentValue", "message": "Value of this property must be one of the allowed values", "target": "taxpayerActivityCode", "propertyPath": "document.taxpayerActivityCode" }]
+      }
+    }
+  ]
+}

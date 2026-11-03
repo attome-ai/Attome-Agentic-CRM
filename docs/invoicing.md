@@ -63,6 +63,22 @@ are encrypted under `einvoice.key_encryption_key`. Buyers on standard (B2B) invo
 national address on the account (`billing_street`, `billing_building_number`, `billing_district`,
 `billing_city`, `billing_postal_zone`).
 
+### Egypt (ETA)
+
+`attome_einvoice::eta` writes Egypt's e-invoice (ETA document version 1.0: invoice `I`, credit note
+`C`, debit note `D` naming the documents it corrects) with ETA's line math at five decimals, signs
+it and submits it. ETA takes a CAdES-BES signature made with the taxpayer's certificate, which
+Egypt's certification authorities issue on a USB token or an HSM; the server never holds that key.
+A signer service runs where the token is and signs on request: `POST {signer}/sign` with
+`{"format": "cades-bes", "data": <base64 of the canonical text>, "digest": <SHA-256 hex>}`,
+bearer-authenticated, answers `{"signature": <base64 CMS>}`. The canonical text is ETA's
+serialization: each property's name upper-cased and quoted, then its value quoted, an array's name
+repeated before each element, `signatures` left out. Attome then signs in to ETA with the ERP's
+client id and secret (`/connect/token`, scope `InvoicingAPI`), submits up to 100 documents
+(`/api/v1/documentsubmissions`) and polls each document's status (`Submitted` until `Valid` or
+`Invalid` with ETA's validation results). Pre-production and production are ETA's two environments.
+The ETA module is a library for now: the billing issue step does not call it yet.
+
 ## Corrections
 
 - `POST …/{id}/credit-notes` (`billing.credit`) drafts a credit note for chosen lines of an issued

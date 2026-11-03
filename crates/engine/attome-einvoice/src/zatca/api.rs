@@ -42,12 +42,24 @@ pub struct TransportError(pub String);
 
 /// Sends one JSON POST to ZATCA.
 pub trait Transport: Send + Sync {
+    /// A POST; the body is JSON unless `headers` name another `Content-Type`.
     fn post<'a>(
         &'a self,
         url: &'a str,
         headers: &'a [(&'a str, String)],
         body: String,
     ) -> Pin<Box<dyn Future<Output = Result<HttpAnswer, TransportError>> + Send + 'a>>;
+
+    /// A GET (AG3-T1: Egypt's ETA reads a document's status this way). A
+    /// transport that only posts answers an error.
+    fn get<'a>(
+        &'a self,
+        url: &'a str,
+        headers: &'a [(&'a str, String)],
+    ) -> Pin<Box<dyn Future<Output = Result<HttpAnswer, TransportError>> + Send + 'a>> {
+        let _ = (url, headers);
+        Box::pin(async { Err(TransportError("this transport does not GET".into())) })
+    }
 }
 
 /// The real transport: the guarded client (Q21-T1: ZATCA's public API
@@ -75,27 +87,51 @@ impl Transport for HttpTransport {
         body: String,
     ) -> Pin<Box<dyn Future<Output = Result<HttpAnswer, TransportError>> + Send + 'a>> {
         Box::pin(async move {
-            let mut request = self
-                .client
-                .post(url)
-                .header("Content-Type", "application/json")
-                .header("Accept", "application/json")
-                .body(body);
+            let mut request = self.client.post(url).body(body);
+            for (default, value) in [
+                ("Content-Type", "application/json"),
+                ("Accept", "application/json"),
+            ] {
+                if !headers
+                    .iter()
+                    .any(|(name, _)| name.eq_ignore_ascii_case(default))
+                {
+                    request = request.header(default, value);
+                }
+            }
             for (name, value) in headers {
                 request = request.header(*name, value);
             }
-            let response = request
-                .send()
-                .await
-                .map_err(|e| TransportError(e.to_string()))?;
-            let status = response.status().as_u16();
-            let body = response
-                .text()
-                .await
-                .map_err(|e| TransportError(e.to_string()))?;
-            Ok(HttpAnswer { status, body })
+            answer(request).await
         })
     }
+
+    fn get<'a>(
+        &'a self,
+        url: &'a str,
+        headers: &'a [(&'a str, String)],
+    ) -> Pin<Box<dyn Future<Output = Result<HttpAnswer, TransportError>> + Send + 'a>> {
+        Box::pin(async move {
+            let mut request = self.client.get(url).header("Accept", "application/json");
+            for (name, value) in headers {
+                request = request.header(*name, value);
+            }
+            answer(request).await
+        })
+    }
+}
+
+async fn answer(request: reqwest::RequestBuilder) -> Result<HttpAnswer, TransportError> {
+    let response = request
+        .send()
+        .await
+        .map_err(|e| TransportError(e.to_string()))?;
+    let status = response.status().as_u16();
+    let body = response
+        .text()
+        .await
+        .map_err(|e| TransportError(e.to_string()))?;
+    Ok(HttpAnswer { status, body })
 }
 
 /// A message in ZATCA's validation results.

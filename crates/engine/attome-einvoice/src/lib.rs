@@ -7,6 +7,8 @@ pub mod asn1;
 pub mod crypto;
 pub mod device;
 pub mod document;
+/// AG3-T1: Egypt's ETA e-invoice: document, signature, submission.
+pub mod eta;
 pub mod model;
 pub(crate) mod routes;
 pub mod uae;
