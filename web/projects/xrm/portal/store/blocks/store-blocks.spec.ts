@@ -1,3 +1,4 @@
+import { Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { LangService } from '@attome/base';
 import { PageContext } from '@attome/xrm/core/page-runtime';
@@ -53,7 +54,7 @@ describe('store blocks (F8-T10)', () => {
     TestBed.inject(StoreBasket).open('shop');
   });
 
-  function render<T>(type: new (...args: never[]) => T, arabic = false, props: Record<string, unknown> = {}) {
+  function render<T>(type: Type<T>, arabic = false, props: Record<string, unknown> = {}) {
     const ctx = TestBed.inject(PageContext);
     ctx.site.set('shop');
     ctx.arabic.set(arabic);
