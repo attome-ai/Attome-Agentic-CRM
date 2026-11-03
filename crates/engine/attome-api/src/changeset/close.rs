@@ -237,6 +237,33 @@ pub(crate) async fn close(
     id: Uuid,
     expected_row_version: i64,
 ) -> Result<Closed, AppError> {
+    close_in(state, actor, id, expected_row_version, None).await
+}
+
+/// Points the transaction's unqualified names at `search_path` (T5-T4: a
+/// workspace's schema first, so translation reads the workspace's
+/// metadata; the changeset tables are not copied and stay live's). The
+/// bound `set_config` form, local to the transaction.
+pub(crate) async fn set_search_path(
+    conn: &mut PgConnection,
+    search_path: &str,
+) -> Result<(), AppError> {
+    sqlx::query("SELECT set_config('search_path', $1, true)")
+        .bind(search_path)
+        .execute(conn)
+        .await
+        .map_err(AppError::internal)?;
+    Ok(())
+}
+
+/// [`close`], translating against `search_path` when one is given.
+pub(crate) async fn close_in(
+    state: &EngineState,
+    actor: Uuid,
+    id: Uuid,
+    expected_row_version: i64,
+    search_path: Option<&str>,
+) -> Result<Closed, AppError> {
     let mut stx = SecurityTx::begin(
         state,
         SecurityEvent::new(
@@ -250,6 +277,9 @@ pub(crate) async fn close(
     )
     .await?;
     let tx = stx.tx();
+    if let Some(path) = search_path {
+        set_search_path(tx, path).await?;
+    }
 
     // The refusals come before any translation work.
     let row = store::lock(tx, id).await?.ok_or(AppError::NotFound)?;
@@ -293,6 +323,31 @@ pub(crate) async fn close(
         summary,
         warnings,
     })
+}
+
+/// The document closing `id` would produce now, translated against
+/// `search_path`, without closing it: the transaction is rolled back.
+/// `None` for an empty changeset.
+pub(crate) async fn draft(
+    state: &EngineState,
+    id: Uuid,
+    search_path: &str,
+) -> Result<Option<Value>, AppError> {
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    set_search_path(&mut tx, search_path).await?;
+    let row = store::get(&mut *tx, id).await?.ok_or(AppError::NotFound)?;
+    if row.op_count == 0 {
+        return Ok(None);
+    }
+    let now: DateTime<Utc> = sqlx::query_scalar("SELECT now()")
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    let ops = store::operations(&mut *tx, id).await?;
+    let built = build(&mut tx, &row, &ops, now).await?;
+    // Read only; dropping the transaction rolls it back.
+    drop(tx);
+    Ok(Some(built.seal.document))
 }
 
 /// Abandons an empty open changeset, writing its `Configuration / Cancelled`

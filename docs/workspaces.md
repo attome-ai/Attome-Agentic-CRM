@@ -22,9 +22,12 @@ PostgreSQL schema, so making one is a single call and needs no second server.
 | `GET /api/v1/admin/workspaces` | Lists the workspaces not discarded, newest first (paged). |
 | `GET /api/v1/admin/workspaces/{id}` | Shows one: its status, owner and how many tables it copied. |
 | `DELETE /api/v1/admin/workspaces/{id}` | Discards an open workspace and drops its schema. |
+| `GET /api/v1/admin/workspaces/{id}/publish` | Previews publishing: the plan against live and any conflicts. Writes nothing. |
+| `POST /api/v1/admin/workspaces/{id}/publish` | Publishes it to live: `{}`, or `{"backup_ref": "..."}` on the production profile. |
 
-Every call needs the data-model administration area. Making and discarding a workspace are audited
-as configuration changes.
+Every call needs the data-model administration area, except publish, which needs the metadata
+rollout privilege, as any changeset apply does. Making, discarding and publishing a workspace are
+audited as configuration changes.
 
 ## Working inside one
 
@@ -42,5 +45,30 @@ workspace.
   `403`. An unknown or discarded workspace is `404`, and a header that is not a workspace id is
   `422`.
 
-Publishing a workspace to live with conflicts checked, sample and masked data, and the picker in
-the web app follow in the next releases (roadmap T5-T4 to T5-T7).
+## Publishing
+
+Making a workspace opens a changeset for it. Every metadata change made inside the workspace records
+into that changeset, whatever changeset the request names.
+
+Publishing does this:
+
+1. It checks the live changes made since the workspace was made. A live change to an object the
+   workspace also changes is a conflict, and publish is refused with `409 workspace_conflicts`.
+   Retiring an entity counts as changing everything on it. The preview lists each conflict: the
+   workspace's operation, the object, and the live changeset that changed it.
+2. It closes the workspace's changeset.
+3. It plans the changeset against live. A blocked plan is refused with `422`.
+4. It queues the apply behind the same customer-test, governance and approval gates as any
+   changeset apply.
+5. It marks the workspace published.
+
+If publish is refused before the close, the workspace is open again. If publish stops after the
+close, call it again to resume.
+
+Removals (the contract phase) are returned as `contract_apply_ids`. Apply them with
+`POST /api/v1/admin/metadata/changesets/apply` once the rest has applied.
+
+Discarding a workspace also abandons its changeset if it is empty.
+
+Sample and masked data, idle expiry and the picker in the web app follow in the next releases
+(roadmap T5-T5 to T5-T7).

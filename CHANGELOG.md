@@ -17,6 +17,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Publishing a Develop workspace (T5-T4): `GET`/`POST /api/v1/admin/workspaces/{id}/publish` preview
+  and publish its changes to live through the changeset engine, refused when live changed the same
+  objects since the workspace was made. A request with `X-Attome-Workspace` runs inside the workspace,
+  in a process of its own (T5-T3).
 - Develop workspaces (T5-T2): `POST`/`GET /api/v1/admin/workspaces`, `GET`/`DELETE .../{id}`; each is
   its own schema with the live metadata and empty entity tables; migration 0386. `docs/workspaces.md`.
 - A rejected hook answer may carry a message key (`{"reject": {"key", "args"}}`); a caller sending

@@ -66,6 +66,13 @@ const PASSWORD: &str = "audit-emission-password-1";
 /// cannot silently outlive its route.
 const UNDRIVABLE: &[(&str, &str)] = &[
     (
+        "POST /api/v1/admin/workspaces/{id}/publish",
+        "needs a workspace whose changeset holds a change made inside the workspace's own schema \
+         (a request served with that schema first); the publish writes its Configuration event \
+         through write_security_event in the status transaction; attome-testapp's \
+         workspace_publish.rs publishing_applies_the_workspace_changes_live drives it",
+    ),
+    (
         "POST /api/v1/marketing/journeys/{id}/publish",
         "needs a journey (the marketing pack's marketing_journey) with a draft version and an \
          open changeset; it publishes through admin::publish_draft, the same function as \

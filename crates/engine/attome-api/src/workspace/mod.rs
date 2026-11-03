@@ -12,16 +12,23 @@
 //! - `GET /api/v1/admin/workspaces` and `.../{id}` list and show them;
 //! - `DELETE /api/v1/admin/workspaces/{id}` discards one and drops its schema.
 //!
-//! Running requests inside a workspace is T5-T3, publishing one T5-T4. Every
-//! route needs the data-model administration area; creating and discarding
-//! are audited as configuration changes.
+//! - `GET`/`POST /api/v1/admin/workspaces/{id}/publish` preview and publish
+//!   it to live through the changeset engine ([`publish`], T5-T4).
+//!
+//! Requests run inside a workspace through [`proxy`] (T5-T3). Making a
+//! workspace opens the changeset its metadata writes record into. Every
+//! route but publish needs the data-model administration area (publish needs
+//! the metadata rollout privilege, as any changeset apply); creating,
+//! discarding and publishing are audited as configuration changes.
 
 pub mod proxy;
+pub mod publish;
 pub mod schema;
 
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_audit::{AuditOperation, audit_service};
 use attome_core::EngineState;
+use attome_core::changeset::{Layer, NewChangeset, store};
 use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
@@ -44,7 +51,7 @@ pub struct Workspace {
     /// `open`, `publishing`, `published` or `discarded`.
     pub status: String,
     pub owner_ref: Uuid,
-    /// The changeset its changes record into (T5-T4); none yet.
+    /// The changeset its metadata writes record into (T5-T4).
     pub changeset_ref: Option<Uuid>,
     /// Metadata tables copied with their rows.
     pub metadata_tables: i32,
@@ -115,16 +122,34 @@ async fn create(
     let id = Uuid::now_v7();
     let schema_name = schema::schema_name(id);
     let copied = schema::create(&state.base.db_migrator, &schema_name).await?;
-    let made = record_created(
-        &state,
-        ctx.user_id,
-        id,
-        &name,
-        purpose,
-        &schema_name,
-        copied,
+    let opened = store::open(
+        &state.base.db,
+        &workspace_changeset(&state, id, &name, purpose.as_deref()),
     )
     .await;
+    let made = match opened {
+        Ok(changeset) => {
+            let made = record_created(
+                &state,
+                ctx.user_id,
+                id,
+                &name,
+                purpose,
+                &schema_name,
+                changeset.id,
+                copied,
+            )
+            .await;
+            if made.is_err()
+                && let Err(cleanup) =
+                    crate::changeset::close::abandon(&state, ctx.user_id, changeset.id, None).await
+            {
+                tracing::warn!(changeset = %changeset.id, error = %cleanup, "workspace: an unrecorded changeset was not abandoned");
+            }
+            made
+        }
+        Err(error) => Err(error),
+    };
     match made {
         Ok(workspace) => Ok((StatusCode::CREATED, Json(workspace))),
         Err(error) => {
@@ -137,6 +162,38 @@ async fn create(
     }
 }
 
+/// The changeset a workspace's metadata writes record into: the layer
+/// automatic changesets take, scope `workspace` (`platform` in the platform
+/// layer), named after the workspace id. It has no author, so it is never
+/// taken as anyone's one open changeset for a live write: only a request the
+/// proxy forwards names it.
+fn workspace_changeset(
+    state: &EngineState,
+    id: Uuid,
+    name: &str,
+    purpose: Option<&str>,
+) -> NewChangeset {
+    let layer = state.base.config.metadata.changesets.auto_layer;
+    NewChangeset {
+        layer,
+        scope: if layer == Layer::Platform {
+            "platform".into()
+        } else {
+            "workspace".into()
+        },
+        name: format!("workspace-{}", id.simple()),
+        title: format!("Workspace: {name}").chars().take(200).collect(),
+        description: purpose.unwrap_or_default().to_owned(),
+        requires: serde_json::json!({}),
+        author_ref: None,
+        author_label: format!("workspace {id}"),
+    }
+}
+
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the workspace row's fields, written once"
+)]
 async fn record_created(
     state: &EngineState,
     user_id: Uuid,
@@ -144,19 +201,22 @@ async fn record_created(
     name: &str,
     purpose: Option<String>,
     schema_name: &str,
+    changeset: Uuid,
     copied: schema::CopySummary,
 ) -> Result<Workspace, AppError> {
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let workspace: Workspace = sqlx::query_as(&format!(
         "INSERT INTO develop_workspace \
-            (id, name, purpose, schema_name, owner_ref, metadata_tables, entity_tables) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING {COLUMNS}"
+            (id, name, purpose, schema_name, owner_ref, changeset_ref, metadata_tables, \
+             entity_tables) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING {COLUMNS}"
     ))
     .bind(id)
     .bind(name)
     .bind(&purpose)
     .bind(schema_name)
     .bind(user_id)
+    .bind(changeset)
     .bind(copied.metadata_tables)
     .bind(copied.entity_tables)
     .fetch_one(&mut *tx)
@@ -328,6 +388,14 @@ async fn discard(
     if let Err(error) = schema::drop_schema(&state.base.db_migrator, &schema_name).await {
         tracing::warn!(workspace = %id, error = %error, "workspace: the discarded schema was not dropped");
     }
+    // An empty changeset goes with it; one holding operations stays open,
+    // as any changeset with recorded work does, until someone closes it.
+    if let Some(changeset) = workspace.changeset_ref
+        && let Err(error) =
+            crate::changeset::close::abandon(&state, ctx.user_id, changeset, None).await
+    {
+        tracing::info!(workspace = %id, %changeset, error = %error, "workspace: its changeset was not abandoned");
+    }
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -335,10 +403,14 @@ pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/workspaces", get(list).post(create))
         .route("/api/v1/admin/workspaces/{id}", get(show).delete(discard))
+        .route(
+            "/api/v1/admin/workspaces/{id}/publish",
+            get(publish::preview).post(publish::publish),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(create, list, show, discard))]
+#[openapi(paths(create, list, show, discard, publish::preview, publish::publish))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

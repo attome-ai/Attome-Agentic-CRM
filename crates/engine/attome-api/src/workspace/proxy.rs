@@ -15,6 +15,7 @@ use std::pin::Pin;
 use std::sync::{Arc, OnceLock};
 
 use attome_core::EngineState;
+use attome_core::changeset::CHANGESET_HEADER;
 use attome_server::authz::{AdminArea, AuthorizedContext};
 use attome_types::AppError;
 use axum::{
@@ -93,8 +94,8 @@ async fn route(
         .get::<AuthorizedContext>()
         .map(AuthorizedContext::to_inner)
         .ok_or(AppError::Unauthorized)?;
-    let owner: Uuid = sqlx::query_scalar(
-        "SELECT owner_ref FROM develop_workspace WHERE id = $1 AND status = 'open'",
+    let (owner, changeset): (Uuid, Option<Uuid>) = sqlx::query_as(
+        "SELECT owner_ref, changeset_ref FROM develop_workspace WHERE id = $1 AND status = 'open'",
     )
     .bind(id)
     .fetch_optional(&state.base.db)
@@ -113,6 +114,17 @@ async fn route(
         tracing::warn!(workspace = %id, %error, "workspace: last use not recorded");
     }
     request.headers_mut().remove(WORKSPACE_HEADER);
+    // T5-T4: every metadata write inside records into the workspace's
+    // changeset, whatever the caller named.
+    match changeset.map(|c| HeaderValue::from_str(&c.to_string())) {
+        Some(Ok(value)) => {
+            request.headers_mut().insert(CHANGESET_HEADER, value);
+        }
+        Some(Err(error)) => return Err(AppError::internal(error)),
+        None => {
+            request.headers_mut().remove(CHANGESET_HEADER);
+        }
+    }
     forwarder.forward(id, request).await
 }
 

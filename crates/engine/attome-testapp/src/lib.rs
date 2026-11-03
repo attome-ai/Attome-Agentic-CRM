@@ -25,6 +25,8 @@
 pub mod faults;
 pub mod fixtures;
 
+use std::str::FromStr;
+
 use attome_api::EngineSystem;
 use attome_config::{AppConfig, KeyRing};
 use attome_core::EngineState;
@@ -227,6 +229,10 @@ async fn build_with(config: AppConfig) -> Option<TestApp> {
     let db = attome_db::create_pool(&config)
         .await
         .expect("connect the test database");
+    Some(build_on(config, db).await)
+}
+
+async fn build_on(config: AppConfig, db: attome_db::DbPool) -> TestApp {
     let redis = attome_cache::create_redis_pool(&config)
         .await
         .expect("connect the test Redis");
@@ -300,11 +306,11 @@ async fn build_with(config: AppConfig) -> Option<TestApp> {
             .build(|r| attome_api::apply_s2s_layer(r, base_state.clone()));
     apply_platform_definitions(&state).await;
     let admin = seed_admin(&state.base.db).await;
-    Some(TestApp {
+    TestApp {
         router,
         state,
         admin,
-    })
+    }
 }
 
 /// The platform definitions the tests need, applied under the platform seed
@@ -376,6 +382,23 @@ impl TestApp {
         let mut config = test_config();
         edit(&mut config);
         build_with(config).await
+    }
+
+    /// An app of its own whose connections use `search_path` (T5-T4: a
+    /// workspace's schema first, as its own process runs). `None` when no
+    /// test database is configured.
+    pub async fn start_in_schema(search_path: &str) -> Option<TestApp> {
+        let url = attome_testkit::migrated_db_url()?;
+        // A later `-c search_path` overrides the one the URL carries.
+        let options = sqlx::postgres::PgConnectOptions::from_str(&url)
+            .expect("the test database URL parses")
+            .options([("search_path", search_path)]);
+        let db = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(5)
+            .connect_with(options)
+            .await
+            .expect("connect the test database in the workspace schema");
+        Some(build_on(test_config(), db).await)
     }
 
     /// The database pool.
