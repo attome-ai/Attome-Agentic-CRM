@@ -13,6 +13,8 @@ pub mod layout;
 pub mod lifecycle;
 pub mod model;
 pub mod pages;
+/// P5-T1: personal dashboards publish directly; sharing one starts review.
+pub mod personal;
 pub mod publish_gate;
 pub mod scenario;
 pub mod seed;
@@ -40,6 +42,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = lifecycle::openapi_fragment();
     doc.merge(layout::openapi_fragment());
     doc.merge(pages::openapi_fragment());
+    doc.merge(personal::openapi_fragment());
     doc.merge(widget_data::openapi_fragment());
     doc.merge(drill::openapi_fragment());
     doc.merge(widget_registry::openapi_fragment());

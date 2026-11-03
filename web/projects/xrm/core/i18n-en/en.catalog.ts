@@ -3474,6 +3474,11 @@ export const xrmEn = {
     tablet: 'Tablet',
     phone: 'Phone',
     emptyPage: 'This page has no widgets yet.',
+    shareWith: 'Share with',
+    share: 'Share',
+    team: 'My team',
+    organization: 'The organization',
+    public: 'Everyone',
   },
   formDesigner: {
     title: 'Form designer',

@@ -25,7 +25,8 @@ import type { SaveOp } from './dashboard-doc';
  * out the selected page at desktop, tablet and phone widths. Saving writes
  * the records that changed (creates, then updates with `If-Match`, then
  * deletes) and reloads the draft; what viewers see changes when the draft is
- * published, as before.
+ * published, as before, except for a personal (private) dashboard, which its
+ * owner publishes directly on save; Share makes it a draft for review.
  */
 @Component({
   selector: 'xrm-dashboard-designer',
@@ -42,6 +43,18 @@ import type { SaveOp } from './dashboard-doc';
       <p class="dd-muted" data-testid="dd-visibility">
         {{ (personal() ? 'dashboardDesigner.personal' : 'dashboardDesigner.shared') | translate }}
       </p>
+      @if (personal()) {
+        <div class="dd-share">
+          <label>{{ 'dashboardDesigner.shareWith' | translate }}
+            <select [ngModel]="shareTo()" (ngModelChange)="shareTo.set($event)">
+              <option value="team">{{ 'dashboardDesigner.team' | translate }}</option>
+              <option value="organization">{{ 'dashboardDesigner.organization' | translate }}</option>
+              <option value="public">{{ 'dashboardDesigner.public' | translate }}</option>
+            </select>
+          </label>
+          <button type="button" data-testid="dd-share" [disabled]="saving()" (click)="share()">{{ 'dashboardDesigner.share' | translate }}</button>
+        </div>
+      }
       @if (error(); as e) { <p class="dd-error" role="alert">{{ e }}</p> }
       @if (misplacedCount()) {
         <p class="dd-error" role="alert" data-testid="dd-misplaced">{{ 'dashboardDesigner.misplaced' | translate: { count: misplacedCount() } }}</p>
@@ -100,6 +113,8 @@ import type { SaveOp } from './dashboard-doc';
     .dd { display: grid; gap: .75rem; }
     .dd-head { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
     .dd-head h2 { margin: 0; }
+    .dd-share { display: flex; flex-wrap: wrap; align-items: end; gap: .5rem; }
+    .dd-share label { display: grid; gap: .25rem; font-size: .8125rem; }
     .dd-layout { display: grid; grid-template-columns: 12rem minmax(0, 1fr) minmax(16rem, 28rem); gap: .75rem; align-items: start; }
     @media (max-width: 64rem) { .dd-layout { grid-template-columns: minmax(0, 1fr); } }
     .dd-palette { display: grid; gap: .25rem; max-block-size: 40rem; overflow: auto; }
@@ -132,6 +147,9 @@ export class DashboardDesignerComponent {
   readonly saved = signal<DDoc | null>(null);
   readonly name = signal('');
   readonly personal = signal(false);
+  /** The dashboard record's row version, for the lifecycle calls. */
+  readonly rowVersion = signal(0);
+  readonly shareTo = signal<'team' | 'organization' | 'public'>('team');
   readonly widgetTypes = signal<readonly WidgetDescriptor[]>([]);
   readonly error = signal<string | null>(null);
   readonly saving = signal(false);
@@ -229,6 +247,10 @@ export class DashboardDesignerComponent {
     const created = new Map<string, string>();
     try {
       await lastValueFrom(from(plan.ops).pipe(concatMap(op => this.run(op, created)), toArray()));
+      // A personal dashboard is saved through at once: its owner sees it.
+      if (this.personal()) {
+        await lastValueFrom(this.dashboards.publishPersonal(this.id(), this.rowVersion()));
+      }
       this.savedAt.set(Date.now());
       this.load(this.id());
     } catch (e) {
@@ -236,6 +258,20 @@ export class DashboardDesignerComponent {
       this.error.set(err?.status === 409 || err?.status === 412
         ? this.lang.translate('dashboardDesigner.conflict')
         : this.lang.errorText(err));
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  /** Shares a personal dashboard: it becomes a draft that goes through review and publish. */
+  async share(): Promise<void> {
+    this.saving.set(true);
+    this.error.set(null);
+    try {
+      await lastValueFrom(this.dashboards.share(this.id(), this.shareTo(), this.rowVersion()));
+      this.load(this.id());
+    } catch (e) {
+      this.error.set(this.lang.errorText(e as ApiError));
     } finally {
       this.saving.set(false);
     }
@@ -309,6 +345,7 @@ export class DashboardDesignerComponent {
         const design = toDesign(tree);
         this.name.set(String(tree.dashboard.data['name'] ?? ''));
         this.personal.set(tree.dashboard.data['visibility'] === 'private');
+        this.rowVersion.set(tree.dashboard.row_version);
         this.initial.set(design);
         this.current.set(design);
         this.saved.set(design);

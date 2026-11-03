@@ -134,6 +134,7 @@ impl EngineModel for DashboardModel {
         crate::lifecycle::routes()
             .merge(crate::layout::routes())
             .merge(crate::pages::routes())
+            .merge(crate::personal::routes())
             .merge(crate::widget_data::routes())
             .merge(crate::drill::routes())
             .merge(crate::widget_registry::routes())

@@ -139,6 +139,15 @@ function groupWidgets(widgets: EntityRecord[]): Map<string, EntityRecord[]> {
   return bySection;
 }
 
+/** P5-T1: what a personal publish or a share did. */
+export interface PersonalResponse {
+  id:               string;
+  lifecycle_status: string;
+  visibility:       string;
+  row_version:      number;
+  version_id:       string | null;
+}
+
 /** `GET .../tree` -> the tree shape every dashboard screen already renders. */
 export function draftTreeToDashboardTree(tree: DraftTreeResponse): DashboardTree {
   const dashboard: EntityRecordResponse = {
@@ -318,6 +327,20 @@ export class DashboardService {
       `/api/v1/attome-dashboard/${id}/${action}`,
       { body: { row_version: rowVersion, ...body } },
     );
+  }
+
+  /** P5-T1: the owner publishes a personal dashboard directly (no review). */
+  publishPersonal(id: string, rowVersion: number): Observable<PersonalResponse> {
+    return this.sdk.post<PersonalResponse>(`/api/v1/attome-dashboard/${id}/publish-personal`, {
+      body: { row_version: rowVersion },
+    });
+  }
+
+  /** P5-T1: the owner shares a personal dashboard; it returns to draft for review. */
+  share(id: string, visibility: 'team' | 'organization' | 'public', rowVersion: number): Observable<PersonalResponse> {
+    return this.sdk.post<PersonalResponse>(`/api/v1/attome-dashboard/${id}/share`, {
+      body: { row_version: rowVersion, visibility },
+    });
   }
 
   /** `POST /api/v1/attome-dashboard/{id}/clone` — no request body; the clone is

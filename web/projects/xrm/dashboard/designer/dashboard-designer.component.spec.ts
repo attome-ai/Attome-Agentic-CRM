@@ -84,6 +84,7 @@ describe('DashboardDesignerComponent (P5-T1)', () => {
     dashboards = {
       loadTree: vi.fn().mockReturnValue(of(TREE)),
       widgetTypes: vi.fn().mockReturnValue(of([{ type_id: 'kpi_card', display_name: 'KPI card' }])),
+      publishPersonal: vi.fn().mockReturnValue(of({ id: 'd1', lifecycle_status: 'published', visibility: 'private', row_version: 3, version_id: 'v1' })),
     };
     records = {
       create: vi.fn().mockReturnValue(of(rec('w9', {}))),
@@ -114,6 +115,7 @@ describe('DashboardDesignerComponent (P5-T1)', () => {
       name: 'KPI card', widget_type: 'kpi_card', grid_col: 1, grid_row: 1, grid_col_span: 4, grid_row_span: 2,
       sequence: 1, section_id: 's1',
     });
+    expect(dashboards['publishPersonal']).toHaveBeenCalledWith('d1', 1);
     expect(dashboards['loadTree']).toHaveBeenCalledTimes(2);
   });
 });

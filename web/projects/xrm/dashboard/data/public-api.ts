@@ -11,7 +11,7 @@ export type {
   DashboardTree, PageWidgetTree, PublishedView, PublishedState, DashboardLifecycleAction,
   HealthCheckResponse, BrokenWidgetRef,
   TransitionResponse, PublishResponse, CloneResponse, RestoreResponse,
-  WidgetDescriptor, DuplicateResponse, ResolveVariablesResponse,
+  WidgetDescriptor, DuplicateResponse, ResolveVariablesResponse, PersonalResponse,
   DraftTreeResponse, TreeRecord, NewPageBody, CreatedPage, RepairedRootSection,
   PublishedDashboard, ActivateResponse,
   DashboardParameter, WidgetInputs, WidgetDataResponse, PageDataResponse, PageWidgetResult,

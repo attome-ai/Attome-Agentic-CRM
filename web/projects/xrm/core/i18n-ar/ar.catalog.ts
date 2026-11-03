@@ -3396,6 +3396,11 @@ export const xrmAr = {
     tablet: 'جهاز لوحي',
     phone: 'هاتف',
     emptyPage: 'لا أدوات في هذه الصفحة بعد.',
+    shareWith: 'المشاركة مع',
+    share: 'مشاركة',
+    team: 'فريقي',
+    organization: 'المؤسسة',
+    public: 'الجميع',
   },
   formDesigner: {
     title: 'مصمم النماذج',

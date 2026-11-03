@@ -70,7 +70,24 @@ pub(crate) async fn require_dashboard_access(
     dashboard_id: Uuid,
     action: RecordAction,
 ) -> Result<(), AppError> {
-    require_entity_access(state, ctx, "attome_dashboard", dashboard_id, action).await
+    require_entity_access(state, ctx, "attome_dashboard", dashboard_id, action).await?;
+    // P5-T1: a personal (private) dashboard is its owner's alone; anyone
+    // else is told it does not exist, as for a record they may not see.
+    if !ctx.is_admin {
+        let row: Option<(Option<String>, Option<Uuid>)> =
+            sqlx::query_as("SELECT visibility, owner_id FROM attome_dashboard WHERE id = $1")
+                .bind(dashboard_id)
+                .fetch_optional(&state.base.db)
+                .await
+                .map_err(AppError::internal)?;
+        if let Some((Some(visibility), owner)) = row
+            && visibility == crate::personal::PERSONAL
+            && owner != Some(ctx.user_id)
+        {
+            return Err(AppError::NotFound);
+        }
+    }
+    Ok(())
 }
 
 #[derive(sqlx::FromRow)]
