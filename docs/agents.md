@@ -192,7 +192,10 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   (`X-Attome-Workspace`), they land in the workspace and its changeset, not in live.
   `model.draft` drafts a data model from a description or a spreadsheet's CSV text (entities, typed
   fields, relationships, Arabic and English labels, up to 20 sample rows; a spreadsheet's cells never
-  reach the model, only its headers) and returns the build-tool calls that would make it.
+  reach the model, only its headers) and returns the build-tool calls that would make it. Its
+  `plan` searches the entity library first: a drafted entity reuses one of the same name, extends
+  `party` (a person) or a base already holding most of its fields, or waits on a question when its
+  English name or Arabic label is near an existing one; a near-duplicate field is asked about too.
   `model.review` checks a draft against the existing model and returns findings. Both save nothing.
   Once an entity's fields are in, `POST /api/v1/admin/entities/{entity_id}/scaffold` gives it its
   starting set: a draft main form, a kanban view over its status choice, the import template's

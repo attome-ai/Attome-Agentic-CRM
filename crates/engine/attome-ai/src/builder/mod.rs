@@ -4,6 +4,8 @@
 
 /// AD6-T2: documentation for every published metadata version.
 pub mod docs;
+/// AD1-T1: reuse, extend, ask or create for each drafted entity.
+pub mod entities;
 pub mod explain;
 /// A1-T13 (part): spreadsheet column types for a drafted model.
 pub mod infer;

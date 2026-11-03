@@ -17,6 +17,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- `model.draft` plans each drafted entity against the library (AD1-T1): reuse, extend a base, ask
+  about a near-duplicate name (English or Arabic), or create.
 - `POST /api/v1/admin/entities/{entity_id}/scaffold` (A1-T7): an entity's starting set, a draft main
   form (key fields first, the rest in lazy tabs of 12), a kanban view over its status choice, the
   import template's columns and its digest entry; a form tab may be marked `lazy`.

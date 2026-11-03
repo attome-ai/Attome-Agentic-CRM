@@ -4,8 +4,11 @@
 //! from a description or from a CSV's text; the draft is reviewed against the
 //! existing model ([`crate::builder::review`]) before it is returned.
 //!
-//! Nothing is saved. The answer carries the build-tool calls that would make
-//! the draft (`model.entity.create`, `model.attribute.create`, N12-T1); made
+//! Nothing is saved. The answer carries the plan (AD1-T1,
+//! [`crate::builder::entities`]: each drafted entity reuses a library entity
+//! of the same name, extends a base, waits on a question when it is near an
+//! existing one, or is created) and the build-tool calls that would carry it
+//! out (`model.entity.create`, `model.attribute.create`, N12-T1); made
 //! in a Develop workspace (`X-Attome-Workspace`), they land in its draft and
 //! changeset, and a person confirms each. For a spreadsheet the column types
 //! come from the cells ([`crate::builder::infer`]), and only the headers
@@ -227,6 +230,46 @@ pub fn build_calls(tables: &[DraftTable]) -> Vec<Value> {
     calls
 }
 
+/// The deployment's entity library: every entity with its attributes and
+/// its English and Arabic labels where it has them.
+async fn library(
+    state: &EngineState,
+) -> Result<Vec<crate::builder::entities::LibraryEntity>, AppError> {
+    let labels: Vec<(String, String, String)> = sqlx::query_as(
+        "SELECT object_ref, locale, display_name FROM metadata_label \
+          WHERE object_kind = 'entity' AND NOT is_deleted AND locale IN ('en', 'ar')",
+    )
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let label = |entity: &crate::builder::entities::LibraryEntity, locale: &str| {
+        labels
+            .iter()
+            .find(|(object, l, _)| {
+                l == locale && (object == &entity.name || object == &entity.id.to_string())
+            })
+            .map(|(_, _, text)| text.clone())
+            .unwrap_or_default()
+    };
+    let mut out: Vec<crate::builder::entities::LibraryEntity> = state
+        .entities
+        .load()
+        .iter()
+        .map(|m| crate::builder::entities::LibraryEntity {
+            id: m.entity_id,
+            name: m.logicalname.clone(),
+            label_en: String::new(),
+            label_ar: String::new(),
+            attributes: m.attrs.iter().map(|a| a.logicalname.clone()).collect(),
+        })
+        .collect();
+    for entity in &mut out {
+        entity.label_en = label(entity, "en");
+        entity.label_ar = label(entity, "ar");
+    }
+    Ok(out)
+}
+
 /// The model's tables, bounded and named by the naming rules. Pure.
 fn tidy(mut tables: Vec<DraftTable>) -> Vec<DraftTable> {
     tables.truncate(MAX_ENTITIES);
@@ -364,12 +407,17 @@ impl Action for DraftModel {
             };
 
             let findings = review(&review_view(&tables), &existing);
+            // AD1-T1: the library first: reuse, extend, ask or create.
+            let library = library(state).await?;
+            let steps = crate::builder::entities::plan(&tables, &library);
+            let calls = crate::builder::entities::build_plan_calls(&tables, &steps);
             Ok(ActionResult {
                 value: json!({
                     "draft": tables,
                     "duplicate_columns": duplicates,
                     "findings": findings,
-                    "calls": build_calls(&tables),
+                    "plan": steps,
+                    "calls": calls,
                     "saved": false,
                 }),
                 provenance,
