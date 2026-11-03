@@ -1327,6 +1327,9 @@ async fn get_sidebar(
     rows.retain(|row| module_visible(&active_license, &row.7));
     // Q10-T11: and the page behind the item must admit the caller.
     rows.retain(|row| route_visible(&ctx, &row.2));
+    // AK6-T1: a capability not set up yet shows only in "Set up".
+    let pending = crate::setup::pending(&state.base.config);
+    rows.retain(|row| !crate::setup::hidden(&pending, &row.2));
 
     struct RawNode {
         id: String,
@@ -1500,6 +1503,12 @@ async fn get_sidebar(
         })
         .collect();
     prune_empty_groups(&mut result);
+    if ctx.is_admin
+        && let Some(item) =
+            crate::setup::setup_item(&pending, requested_locale.unwrap_or(dep_locale.as_str()))
+    {
+        result.push(item);
+    }
     append_contributions(
         &mut result,
         contributions.as_ref().map(|Extension(c)| c),

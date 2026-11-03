@@ -172,6 +172,8 @@ pub mod field_changes;
 /// Solution 7 Phase 2 (D-788) — the field reference-hook registry.
 pub mod field_hooks;
 pub mod form_hooks;
+/// AK6-T1: capabilities that need setting up, and the sidebar's "Set up".
+pub mod setup;
 pub mod graphql;
 pub mod inbound_hooks;
 /// M18 Data Catalog Phase 1 (D-466) — idempotent `glossary_term`
