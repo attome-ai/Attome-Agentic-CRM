@@ -98,12 +98,6 @@ seen) and conformance (minutes working over minutes scheduled to work).
 Presence comes from a presence source; until the platform's presence events exist, a deployment
 plugs one in, and nothing is written without one.
 
-## Not built yet
-
-The workforce KPIs and their default dashboard, the planner screens (group setup, schedule grid with
-coverage chart, swaps queue, intraday proposals) and the staff mobile views come later. Until then the
-routes above are the interface.
-
 ## KPIs
 
 `GET /api/v1/workforce/groups/{id}/kpis?from=YYYY-MM-DD&to=YYYY-MM-DD` (at most 31 days,
@@ -119,3 +113,8 @@ records behind it, and the workforce page shows them for the last seven days on 
 | Adherence | the members' daily adherence, weighted by minutes |
 | Coverage | intervals needing people that the published schedule staffs to the requirement |
 | Overtime | hours of overtime offers taken |
+
+## Not built yet
+
+A seeded Workforce dashboard (a pack cannot ship one yet) and a measured service level (no answer
+times are stored) come later.
