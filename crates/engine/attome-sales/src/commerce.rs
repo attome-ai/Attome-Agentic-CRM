@@ -47,6 +47,10 @@ pub const ENABLED_SETTING: &str = "commerce.enabled";
 pub const CURRENCY_SETTING: &str = "commerce.currency";
 /// The order total above which checkout asks for approval (0: never).
 pub const APPROVAL_LIMIT_SETTING: &str = "commerce.approval_limit";
+/// F8-T10: the stock location the shop's stock badges read (unset: no badge).
+pub const STOCK_LOCATION_SETTING: &str = "commerce.stock_location";
+/// F8-T10: free stock at or below this shows as low.
+pub const LOW_STOCK_SETTING: &str = "commerce.low_stock";
 /// Products listed at most.
 const MAX_PRODUCTS: i64 = 200;
 /// Lines a cart holds at most.
@@ -91,6 +95,65 @@ pub struct CatalogueItem {
     /// The unit price for one, a decimal in text.
     pub price: String,
     pub currency: String,
+    /// F8-T10: the VAT on one at `commerce.vat_rate`, and the price with it.
+    pub vat: String,
+    pub price_with_vat: String,
+    /// F8-T10: free stock at the shop's stock location; absent when the
+    /// shop tracks no stock or the product is not stocked there.
+    pub stock: Option<StockBadge>,
+}
+
+/// How much of a product the shop has, as the store shows it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum StockBadge {
+    InStock,
+    Low,
+    SoldOut,
+}
+
+/// The badge for `free` units with `low` as the low mark. Pure.
+pub fn stock_badge(free: Decimal, low: Decimal) -> StockBadge {
+    if free <= Decimal::ZERO {
+        StockBadge::SoldOut
+    } else if free <= low {
+        StockBadge::Low
+    } else {
+        StockBadge::InStock
+    }
+}
+
+/// The VAT on `price` at `rate` and the price with it, to the cent. Pure.
+pub fn with_vat(price: Decimal, rate: Decimal) -> (Decimal, Decimal) {
+    let vat = (price * rate).round_dp(2);
+    (vat, price + vat)
+}
+
+/// The shop's stock location and low mark, when it tracks stock.
+fn stock_settings(state: &EngineState) -> Option<(Uuid, Decimal)> {
+    state.stock_source.as_ref()?;
+    let location = setting(state, STOCK_LOCATION_SETTING)
+        .as_str()
+        .and_then(|s| Uuid::parse_str(s.trim()).ok())?;
+    let low = setting(state, LOW_STOCK_SETTING)
+        .as_f64()
+        .and_then(|v| Decimal::from_str(&v.to_string()).ok())
+        .unwrap_or(Decimal::from(5));
+    Some((location, low))
+}
+
+async fn badge_of(
+    state: &EngineState,
+    stock: Option<(Uuid, Decimal)>,
+    product: Uuid,
+) -> Result<Option<StockBadge>, AppError> {
+    let (Some((location, low)), Some(source)) = (stock, state.stock_source.as_ref()) else {
+        return Ok(None);
+    };
+    Ok(source
+        .available(product, location)
+        .await?
+        .map(|a| stock_badge(a.free(), low)))
 }
 
 /// A cart line, priced now.
@@ -203,9 +266,12 @@ pub async fn catalogue(
     search: Option<&str>,
 ) -> Result<Vec<CatalogueItem>, AppError> {
     let currency = currency(state);
+    let rate = crate::guest_checkout::vat_rate(state);
+    let stock = stock_settings(state);
     let mut out = Vec::new();
     for (id, name, name_ar, sku) in visible_products(state, search, None).await? {
         if let Some(p) = price(state, Some(account), id, &currency, Decimal::ONE).await? {
+            let (vat, gross) = with_vat(p, rate);
             out.push(CatalogueItem {
                 product_id: id,
                 name,
@@ -213,6 +279,9 @@ pub async fn catalogue(
                 sku,
                 price: p.to_string(),
                 currency: currency.clone(),
+                vat: vat.to_string(),
+                price_with_vat: gross.to_string(),
+                stock: badge_of(state, stock, id).await?,
             });
         }
     }
@@ -568,4 +637,30 @@ pub async fn checkout(
         needs_approval: approval_id.is_some(),
         approval_id,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stock_badges_read_free_stock_against_the_low_mark() {
+        let low = Decimal::from(5);
+        assert_eq!(stock_badge(Decimal::ZERO, low), StockBadge::SoldOut);
+        assert_eq!(stock_badge(Decimal::from(-2), low), StockBadge::SoldOut);
+        assert_eq!(stock_badge(Decimal::from(5), low), StockBadge::Low);
+        assert_eq!(stock_badge(Decimal::from(6), low), StockBadge::InStock);
+    }
+
+    #[test]
+    fn vat_is_added_to_the_cent() {
+        let (vat, gross) = with_vat(
+            Decimal::from_str("99.99").unwrap_or_default(),
+            Decimal::from_str("0.15").unwrap_or_default(),
+        );
+        assert_eq!(vat.to_string(), "15.00");
+        assert_eq!(gross.to_string(), "114.99");
+        let (vat, gross) = with_vat(Decimal::from(100), Decimal::ZERO);
+        assert_eq!((vat, gross), (Decimal::ZERO, Decimal::from(100)));
+    }
 }

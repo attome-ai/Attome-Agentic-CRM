@@ -1,3 +1,4 @@
+import { Component, inject, input } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { LangService } from '@attome/base';
@@ -5,8 +6,10 @@ import { EntityService } from '@attome/xrm/core/entity';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { findBlock, providePageBlocks } from './page-blocks';
+import { PageContext } from './page-context';
 import { PageDataService, bindingFilters } from './page-data.service';
-import { PageDoc, fillTarget, isVisible } from './page-model';
+import { PageDoc, PageNode, fillTarget, isVisible } from './page-model';
 import { PageRuntimeComponent } from './page-runtime.component';
 
 const FLOW = '0190a8a0-0000-7000-8000-0000000000f2';
@@ -155,5 +158,50 @@ describe('PageRuntimeComponent (T2-T2)', () => {
     fixture.detectChanges();
     expect(data['page']).toHaveBeenCalledWith('p404');
     expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('pageRuntime.notFound');
+  });
+});
+
+@Component({ selector: 'xrm-test-block', standalone: true, template: `<p data-block>{{ node().props?.['text'] }} {{ ctx.site() }}</p>` })
+class TestBlockComponent {
+  readonly node = input.required<PageNode>();
+  protected readonly ctx = inject(PageContext);
+}
+
+describe('page blocks (F8-T10)', () => {
+  it('finds the last registration of a name', () => {
+    const a = { component: 'x.one', load: () => Promise.resolve(TestBlockComponent) };
+    const b = { component: 'x.one', load: () => Promise.resolve(TestBlockComponent) };
+    expect(findBlock([[a], [b]], 'x.one')).toBe(b);
+    expect(findBlock([[a]], 'x.two')).toBeNull();
+    expect(findBlock(null, 'x.one')).toBeNull();
+    expect(findBlock([[a]], undefined)).toBeNull();
+  });
+
+  it('renders a registered block, and the id of one that is not', async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [PageRuntimeComponent],
+      providers: [
+        { provide: PageDataService, useValue: { myRoles: () => of([]), page: vi.fn(), record: () => of(null) } },
+        { provide: Router, useValue: { navigateByUrl: vi.fn() } },
+        { provide: EntityService, useValue: { getSchema: () => of(null) } },
+        { provide: LangService, useValue: { translate: (k: string) => k, isRtl: () => false, errorText: () => 'failed', intlLocale: () => 'en-US' } },
+        providePageBlocks([{ component: 'test.block', load: () => Promise.resolve(TestBlockComponent) }]),
+      ],
+    });
+    const fixture = TestBed.createComponent(PageRuntimeComponent);
+    fixture.componentRef.setInput('site', 'shop');
+    fixture.componentRef.setInput('page', page([
+      { id: 'mine', type: 'custom', component: 'test.block', props: { text: 'Hello' } },
+      { id: 'other', type: 'custom', component: 'nobody.block' },
+    ]));
+    fixture.detectChanges();
+    TestBed.flushEffects();
+    // The block's import resolves on a later turn.
+    await new Promise(resolve => setTimeout(resolve, 0));
+    fixture.detectChanges();
+    const root: HTMLElement = fixture.nativeElement;
+    expect(root.querySelector('[data-node="mine"] [data-block]')?.textContent).toContain('Hello shop');
+    expect(root.querySelector('[data-node="other"]')?.textContent).toContain('pageRuntime.custom');
   });
 });

@@ -10,6 +10,52 @@ export interface CatalogueItem {
   sku?: string | null;
   price: string;
   currency: string;
+  /** F8-T10: the VAT on one and the price with it (absent before the API regeneration). */
+  vat?: string;
+  price_with_vat?: string;
+  /** F8-T10: free stock at the shop's location; absent when not tracked. */
+  stock?: StockBadge | null;
+}
+
+export type StockBadge = 'in_stock' | 'low' | 'sold_out';
+
+/** A way to ship (`attome_sales::shipping::ShippingOption`). */
+export interface ShippingOption {
+  rate_id: string;
+  zone: string;
+  method: string;
+  amount: string;
+  cod_fee: string;
+}
+
+/** A started guest checkout: a code was texted to the phone. */
+export interface GuestStarted {
+  checkout_id: string;
+  expires_at: string;
+}
+
+/** What a guest confirms (`attome_sales::guest_checkout::Confirm`). */
+export interface GuestConfirm {
+  checkout_id: string;
+  code: string;
+  name: string;
+  address: string;
+  country: string;
+  city?: string | null;
+  shipping_rate_id: string;
+  cash_on_delivery: boolean;
+  coupon?: string | null;
+}
+
+/** The order a guest placed. */
+export interface GuestOrder {
+  order_id: string;
+  subtotal: string;
+  discount_total: string;
+  shipping: string;
+  vat: string;
+  total: string;
+  payment_url?: string | null;
 }
 
 export interface CartLine {
@@ -72,6 +118,28 @@ export class StoreService {
   catalogue(keyword: string, search: string): Observable<CatalogueItem[]> {
     const query = search.trim() ? { search: search.trim() } : undefined;
     return this.sdk.get<CatalogueItem[]>(`${this.base(keyword)}/shop/catalogue`, { query });
+  }
+
+  /** F8-T10: the catalogue a guest sees, with VAT and stock badges. */
+  guestCatalogue(keyword: string, search = ''): Observable<CatalogueItem[]> {
+    const query = search.trim() ? { search: search.trim() } : undefined;
+    return this.sdk.get<CatalogueItem[]>(`${this.base(keyword)}/shop/guest/catalogue`, { query });
+  }
+
+  shipping(keyword: string, country: string, city: string, total: string): Observable<ShippingOption[]> {
+    return this.sdk.get<ShippingOption[]>(`${this.base(keyword)}/shop/shipping`, {
+      query: { country, city: city.trim() || undefined, total },
+    });
+  }
+
+  /** F8-T7: texts a code to `phone` for these lines. */
+  guestStart(keyword: string, phone: string, lines: { product_id: string; quantity: string }[]): Observable<GuestStarted> {
+    return this.sdk.post<GuestStarted>(`${this.base(keyword)}/shop/guest/start`, { body: { phone, lines } });
+  }
+
+  /** F8-T7: places the order; the same `key` returns the same order again. */
+  guestConfirm(keyword: string, body: GuestConfirm, key: string): Observable<GuestOrder> {
+    return this.sdk.post<GuestOrder>(`${this.base(keyword)}/shop/guest/confirm`, { body, idempotencyKey: key });
   }
 
   cart(keyword: string): Observable<Cart> {

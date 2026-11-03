@@ -859,6 +859,23 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(0),
         ),
+        // F8-T10: the store's stock badges.
+        SettingDescriptor::new(
+            "commerce.stock_location",
+            "The stock location (its id) whose free stock the store shows as in stock, low or sold out (F8-T10). Empty by default: no stock badge.",
+            || json!({"type": ["string", "null"], "format": "uuid"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(null),
+        ),
+        SettingDescriptor::new(
+            "commerce.low_stock",
+            "Free stock at or below this many units shows as low in the store (F8-T10). 5 by default.",
+            || json!({"type": "number", "minimum": 0}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(5),
+        ),
         // D22-T5: call analysis.
         SettingDescriptor::new(
             "callintel.enabled",

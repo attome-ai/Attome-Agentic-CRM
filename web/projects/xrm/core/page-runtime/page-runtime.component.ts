@@ -60,6 +60,8 @@ export class PageRuntimeComponent {
   /** On a record page: the record's entity (logical name) and id. */
   readonly entity = input<string | undefined>(undefined);
   readonly record = input<string | undefined>(undefined);
+  /** F8-T10: the site serving the page (a portal's keyword), for its blocks. */
+  readonly site = input<string | null>(null);
   /** T2-T3 preview: render as if the person held these roles, on this size, in this language. */
   readonly previewRoles = input<readonly string[] | null>(null);
   readonly previewDevice = input<Device | null>(null);
@@ -78,6 +80,7 @@ export class PageRuntimeComponent {
   constructor() {
     this.onResize();
     effect(() => this.ctx.arabic.set(this.arabic()));
+    effect(() => this.ctx.site.set(this.site()));
     const roles = this.data.myRoles().subscribe(r => {
       if (this.previewRoles() === null) this.ctx.roles.set(r);
     });

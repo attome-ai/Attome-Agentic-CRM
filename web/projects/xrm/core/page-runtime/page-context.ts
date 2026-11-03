@@ -18,6 +18,8 @@ export class PageContext {
   readonly roles = signal<readonly string[]>([]);
   readonly device = signal<Device>('desktop');
   readonly arabic = signal(false);
+  /** F8-T10: the site the page is served on (a portal's keyword), for blocks that call its API. */
+  readonly site = signal<string | null>(null);
 
   private readonly kinds = computed(() => fieldKindResolver(this.schema()?.fields ?? []));
 

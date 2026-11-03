@@ -2,12 +2,25 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, i
 import { ActivatedRoute, Router } from '@angular/router';
 import { ApiError, LangService, TranslatePipe } from '@attome/base';
 import { EntityService } from '@attome/xrm/core/entity';
-import { PageDataService, PageRuntimeComponent } from '@attome/xrm/core/page-runtime';
-import type { PageDoc } from '@attome/xrm/core/page-runtime';
+import { PageDataService, PageRuntimeComponent, providePageBlocks } from '@attome/xrm/core/page-runtime';
+import type { PageBlock, PageDoc } from '@attome/xrm/core/page-runtime';
 import { of } from 'rxjs';
 
 import { PortalCreateFormComponent, createOf } from './portal-create-form.component';
 import { PortalConsent, PortalMe, PortalPageData, PortalSiteService } from './portal-site.service';
+
+/**
+ * F8-T10: the store's block kinds a portal page may place
+ * (`{type: 'custom', component: 'store.product_grid'}` and so on), each
+ * imported from the store entry point only when a page shows it.
+ */
+export const STORE_PAGE_BLOCKS: readonly PageBlock[] = [
+  { component: 'store.product_grid', load: () => import('@attome/xrm/portal/store').then(m => m.StoreProductGridComponent) },
+  { component: 'store.product_detail', load: () => import('@attome/xrm/portal/store').then(m => m.StoreProductDetailComponent) },
+  { component: 'store.cart', load: () => import('@attome/xrm/portal/store').then(m => m.StoreCartComponent) },
+  { component: 'store.checkout', load: () => import('@attome/xrm/portal/store').then(m => m.StoreCheckoutComponent) },
+  { component: 'store.order_status', load: () => import('@attome/xrm/portal/store').then(m => m.StoreOrderStatusComponent) },
+];
 
 /** What a record page offers for replying: the entity a reply is, its lookup to the record, its text field. */
 export interface ReplyTarget {
@@ -44,13 +57,14 @@ export function replyOf(doc: PageDoc | null): ReplyTarget | null {
     { provide: PageDataService, useClass: PortalPageData },
     // The portal has no staff schema; the runtime shows field names instead.
     { provide: EntityService, useValue: { getSchema: () => of(null) } },
+    providePageBlocks(STORE_PAGE_BLOCKS),
   ],
   template: `
     @if (error(); as message) {
       <p class="pp-error" role="alert">{{ message }}</p>
     } @else if (doc(); as d) {
       @if (shown()) {
-        <xrm-page-runtime [page]="d" [entity]="entityName() ?? undefined" [record]="recordId() ?? undefined" />
+        <xrm-page-runtime [page]="d" [entity]="entityName() ?? undefined" [record]="recordId() ?? undefined" [site]="keyword()" />
       }
       @if (create(); as target) {
         <xrm-portal-create-form [target]="target" (created)="redraw()" />
@@ -86,6 +100,8 @@ export class PortalPageHostComponent {
 
   readonly doc = signal<PageDoc | null>(null);
   readonly entityName = signal<string | null>(null);
+  /** F8-T10: the portal, for the page's store blocks. */
+  readonly keyword = computed(() => this.site.keyword());
   readonly recordId = computed(() => this.id() ?? null);
   readonly reply = computed(() => replyOf(this.doc()));
   /** AC11-T2: what the page offers to create (`props.create`). */

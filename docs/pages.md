@@ -54,6 +54,13 @@ it asks for the listed fields the portal user's plan lets them write, as
 `GET /{keyword}/api/v1/metadata/{entity}` describes them (a choice as a list, a lookup as the
 records of its target the user can read), and creates the record through the portal's record API.
 
+A `custom` component renders the block kind registered under its `component` name. A feature entry
+point registers its blocks with `providePageBlocks([{component, load}])` on the injector that shows
+the pages, where `load` imports the block's component only when a page shows one. Each block
+receives the page node as its `node` input and reads the page (its record, language and
+`site`, the portal's keyword) through `PageContext`. An unregistered name shows its id. Portal pages
+register the store's blocks (`store.*`, `docs/portal-shop.md`).
+
 The customer-service pack ships `portal-home`, `portal-cases`, `portal-case` (with replies as
 `case_message` records, pack changeset 0004), `portal-knowledge` and `portal-catalog`. What each
 shows depends on the portal role's grants on `service_ticket`, `case_message`,

@@ -111,7 +111,7 @@ fn guest_account(state: &EngineState) -> Option<Uuid> {
         .and_then(|s| Uuid::parse_str(s.trim()).ok())
 }
 
-fn vat_rate(state: &EngineState) -> Decimal {
+pub(crate) fn vat_rate(state: &EngineState) -> Decimal {
     crate::commerce::setting(state, VAT_RATE_SETTING)
         .as_f64()
         .and_then(|v| Decimal::from_str(&v.to_string()).ok())
@@ -122,6 +122,18 @@ fn vat_rate(state: &EngineState) -> Decimal {
 /// Whether guests may check out.
 pub fn enabled(state: &EngineState) -> bool {
     crate::commerce::enabled(state) && guest_account(state).is_some()
+}
+
+/// F8-T10: the catalogue a guest sees, priced for the guest account; absent
+/// while guests cannot check out.
+pub async fn guest_catalogue(
+    state: &EngineState,
+    search: Option<&str>,
+) -> Result<Vec<crate::commerce::CatalogueItem>, AppError> {
+    let account = guest_account(state)
+        .filter(|_| crate::commerce::enabled(state))
+        .ok_or(AppError::NotFound)?;
+    crate::commerce::catalogue(state, account, search).await
 }
 
 /// The stored digest of `code` for checkout `id`. Pure.

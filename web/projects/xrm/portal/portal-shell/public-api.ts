@@ -11,7 +11,8 @@ import { PortalShellComponent } from './portal-shell.component';
 
 export { PortalShellComponent, navigation } from './portal-shell.component';
 export {
-  PortalConsentComponent, PortalHereComponent, PortalLoginComponent, PortalPageHostComponent, PortalProfileComponent, replyOf,
+  PortalConsentComponent, PortalHereComponent, PortalLoginComponent, PortalPageHostComponent, PortalProfileComponent, STORE_PAGE_BLOCKS,
+  replyOf,
 } from './portal-pages.component';
 export type { ReplyTarget } from './portal-pages.component';
 export { PortalCreateFormComponent, createOf, formFields, valueFor } from './portal-create-form.component';

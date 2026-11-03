@@ -237,3 +237,33 @@ fn wrong_code_is_401() {
         assert_eq!(orders, 0);
     });
 }
+
+// feature: F8
+#[test]
+fn guest_catalogue_shows_the_price_with_vat() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        install(&app).await;
+        shop(&app).await;
+
+        let items = attome_sales::guest_checkout::guest_catalogue(&app.state, Some("lamp"))
+            .await
+            .unwrap();
+        let lamp = items
+            .iter()
+            .find(|i| i.sku.as_deref() == Some("LAMP-1"))
+            .expect("the lamp is on sale to guests");
+        assert_eq!(lamp.price.parse::<f64>().unwrap(), 100.0);
+        assert_eq!(lamp.vat.parse::<f64>().unwrap(), 15.0);
+        assert_eq!(lamp.price_with_vat.parse::<f64>().unwrap(), 115.0);
+        assert!(lamp.stock.is_none(), "no stock location is set");
+
+        set(&app, "commerce.guest_account", Value::Null).await;
+        assert!(matches!(
+            attome_sales::guest_checkout::guest_catalogue(&app.state, None).await,
+            Err(AppError::NotFound)
+        ));
+    });
+}

@@ -102,9 +102,34 @@ itself.
 
 All take the account from the signed-in member's contact and answer 404 while the shop is off.
 
+- `GET /{keyword}/api/v1/shop/guest/catalogue?search=`: what a guest may buy, priced for the
+  `commerce.guest_account` account; no sign-in; 404 while guests cannot check out.
+
+Every catalogue item carries `vat` (the VAT on one at `commerce.vat_rate`) and `price_with_vat`, and,
+when the shop tracks stock, `stock`: `in_stock`, `low` or `sold_out` from the free stock (on hand less
+reserved) at the location `commerce.stock_location` names, `low` at or below `commerce.low_stock`
+units (5 by default). Without a stock location, or for a product not stocked there, `stock` is absent.
+
 ## The shop pages
 
 Members shop at `/shop/{keyword}` on the deployment's web app, in Arabic or English: the products on sale
 with their prices and a search, a **quick order** (one `SKU quantity` per line), the cart (change a
 quantity, remove a line, place the order; an order waiting for approval says so) and **My orders** with
 each order's shipped quantities and tracking numbers.
+
+### Store blocks on portal pages
+
+The public store is built from portal pages (see `docs/pages.md`): a page places the store's blocks
+as `{"type": "custom", "component": "<block>"}` nodes, and the portal renders them in Arabic (right to
+left) or English:
+
+| Block | Shows |
+|---|---|
+| `store.product_grid` | The guest catalogue: each product's price with VAT, the VAT in it and its stock badge, and an add to the basket (not when sold out). `props.search` narrows it; `props.detail_page` links each name to that page with `?product=`. |
+| `store.product_detail` | One product (`?product=` in the address, else `props.product_id`): the price with VAT, the net price and the VAT, the stock badge and a quantity to add. |
+| `store.cart` | The basket: quantities, removal and the total with VAT. |
+| `store.checkout` | Guest checkout: the phone gets a code; with the code, name, address, a delivery option and cash on delivery or paying online, the order is placed once. Paying online opens the order's payment page. |
+| `store.order_status` | The order this browser tab placed, and a signed-in member's orders. |
+
+The basket lives in the browser tab (session storage) and holds products and quantities only; the
+server prices the order again at checkout. Product variants are not shown yet.

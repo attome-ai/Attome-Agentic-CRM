@@ -5,4 +5,16 @@
 export { StoreComponent, parseQuickOrder } from './store.component';
 export type { QuickLine } from './store.component';
 export { StoreService } from './store.service';
-export type { Cart, CartLine, CatalogueItem, CheckedOut, OrderLine, ShopOrder } from './store.service';
+export type {
+  Cart, CartLine, CatalogueItem, CheckedOut, GuestConfirm, GuestOrder, GuestStarted, OrderLine, ShippingOption, ShopOrder,
+  StockBadge,
+} from './store.service';
+// F8-T10 — the store's page blocks (product grid, product detail, cart,
+// checkout, order status), registered with the page runtime by the portal
+// shell and loaded with this entry point only when a page shows one.
+export {
+  StoreCartComponent, StoreCheckoutComponent, StoreOrderStatusComponent, StoreProductDetailComponent, StoreProductGridComponent,
+  checkoutMissing, productName, validCode,
+} from './blocks/store-blocks';
+export { StoreBasket, basketTotal, cents, fromCents, shownPrice } from './blocks/store-basket';
+export type { BasketLine } from './blocks/store-basket';

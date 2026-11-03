@@ -17,6 +17,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- The public store (F8-T10): `GET /{keyword}/api/v1/shop/guest/catalogue` lists what a guest may buy;
+  every catalogue item gains `vat`, `price_with_vat` and `stock` (`in_stock`, `low`, `sold_out`, from
+  the new settings `commerce.stock_location` and `commerce.low_stock`); portal pages place the store's
+  blocks (`store.product_grid`, `store.product_detail`, `store.cart`, `store.checkout`,
+  `store.order_status`) as custom components, which the page runtime now loads from a block registry
+  (`providePageBlocks`).
 - Workforce KPIs (G17-T12): `GET /api/v1/workforce/groups/{id}/kpis` answers forecast accuracy,
   service level against plan (not measured yet), occupancy, shrinkage, adherence, coverage and
   overtime over up to 31 days, each with its records' screen; the workforce page's KPIs tab shows

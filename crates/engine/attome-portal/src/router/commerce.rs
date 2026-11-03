@@ -11,6 +11,9 @@
 //!   account, written as the portal's service user (V2-D1588 (1)), with an
 //!   approval request above the shop's limit.
 //!
+//! - `GET /{keyword}/api/v1/shop/guest/catalogue?search=`: the products a
+//!   guest may buy, priced for the guest account, with VAT and the stock
+//!   badge (F8-T10); 404 while guests cannot check out.
 //! - `GET /{keyword}/api/v1/shop/shipping?country=&city=&total=`: the ways
 //!   to ship an order of that total to an address (F8-T7).
 //! - `POST /{keyword}/api/v1/shop/guest/start` `{phone, lines}` and
@@ -266,6 +269,10 @@ pub(super) fn routes() -> Router<EngineState> {
         .route("/{keyword}/api/v1/shop/cart/checkout", post(checkout))
         .route("/{keyword}/api/v1/shop/orders", get(my_orders))
         .route("/{keyword}/api/v1/shop/shipping", get(shipping))
+        .route(
+            "/{keyword}/api/v1/shop/guest/catalogue",
+            get(guest_catalogue),
+        )
         .route("/{keyword}/api/v1/shop/guest/start", post(guest_start))
         .route("/{keyword}/api/v1/shop/guest/confirm", post(guest_confirm))
         .route("/{keyword}/api/v1/shop/reviews", post(submit_review))
@@ -410,6 +417,38 @@ async fn guest_portal(
     Ok(portal)
 }
 
+/// The store's catalogue for guests
+///
+/// F8-T10: the products a guest may buy, priced for the shop's guest account, each with its VAT, its
+/// price with VAT and, when the shop tracks stock, its stock badge. 404 while guests cannot check out.
+#[utoipa::path(
+    get,
+    path = "/{keyword}/api/v1/shop/guest/catalogue",
+    operation_id = "portal_shop_guest_catalogue",
+    tag = "sales",
+    params(("keyword" = String, Path, description = "The portal"), CatalogueQuery),
+    responses(
+        (status = 200, description = "The products on sale", body = Vec<CatalogueItem>),
+        (status = 404, description = "The shop is closed to guests, or no such portal", body = ErrorResponse),
+    ),
+)]
+async fn guest_catalogue(
+    State(state): State<EngineState>,
+    Path(keyword): Path<String>,
+    Query(q): Query<CatalogueQuery>,
+) -> Result<Json<Vec<CatalogueItem>>, AppError> {
+    if !state.modules.load().has(attome_modules::MODULE_SALES)
+        || !attome_sales::guest_checkout::enabled(&state)
+    {
+        return Err(AppError::NotFound);
+    }
+    let portal = portal_for(&state, &keyword).await?;
+    portal_budget(&state, &portal).await?;
+    Ok(Json(
+        attome_sales::guest_checkout::guest_catalogue(&state, q.search.as_deref()).await?,
+    ))
+}
+
 #[derive(Debug, Deserialize, IntoParams)]
 #[into_params(parameter_in = Query)]
 pub struct ShippingQuery {
@@ -551,6 +590,7 @@ async fn guest_confirm(
         checkout,
         my_orders,
         shipping,
+        guest_catalogue,
         guest_start,
         guest_confirm,
         submit_review,
@@ -567,6 +607,7 @@ async fn guest_confirm(
         Confirm,
         GuestOrder,
         CatalogueItem,
+        attome_sales::commerce::StockBadge,
         Cart,
         attome_sales::commerce::CartLine,
         CartQuantity,

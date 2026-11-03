@@ -1,5 +1,6 @@
+import { NgComponentOutlet } from '@angular/common';
 import {
-  ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, signal, untracked,
+  ChangeDetectionStrategy, Component, DestroyRef, Type, computed, effect, inject, input, signal, untracked,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { LangService, TranslatePipe } from '@attome/base';
@@ -8,6 +9,7 @@ import { DashboardChartComponent, SLICE_COLORS } from '@attome/xrm/dashboard/cha
 import type { ChartCategory, ChartSeries } from '@attome/xrm/dashboard/chart';
 import { Observable } from 'rxjs';
 
+import { PAGE_BLOCKS, findBlock } from './page-blocks';
 import { PageContext } from './page-context';
 import { PageDataService, PageRows } from './page-data.service';
 import { PageEvent, PageNode, fillTarget, isVisible, seriesOf, textProp } from './page-model';
@@ -20,14 +22,15 @@ const ROW_TYPES = new Set(['list', 'chart', 'metric', 'kanban', 'map', 'timeline
  * visibility holds. A component that reads data loads it itself and, if
  * that fails, says so in its own box: one broken component never takes the
  * page down. Kanban, map and timeline show their rows as a list until
- * their own renderers exist; a custom component shows its id (the T3
- * component host renders it).
+ * their own renderers exist. A custom component renders the block kind
+ * registered under its name (`providePageBlocks`, F8-T10), loaded when the
+ * page shows it, and shows its id when none is.
  */
 @Component({
   selector: 'xrm-page-node',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe, DashboardChartComponent],
+  imports: [TranslatePipe, DashboardChartComponent, NgComponentOutlet],
   template: `
     @if (visible()) {
       @switch (node().type) {
@@ -72,9 +75,19 @@ const ROW_TYPES = new Set(['list', 'chart', 'metric', 'kanban', 'map', 'timeline
           </section>
         }
         @case ('custom') {
-          <section class="pn-box pn-custom" [attr.data-node]="node().id">
-            <p class="pn-muted">{{ 'pageRuntime.custom' | translate: { id: node().component || '' } }}</p>
-          </section>
+          @if (block(); as type) {
+            <div class="pn-block" [attr.data-node]="node().id">
+              <ng-container *ngComponentOutlet="type; inputs: { node: node() }" />
+            </div>
+          } @else if (blockFailed()) {
+            <section class="pn-box" [attr.data-node]="node().id">
+              <p class="pn-error" role="alert" data-node-error>{{ 'pageRuntime.failed' | translate }}</p>
+            </section>
+          } @else {
+            <section class="pn-box pn-custom" [attr.data-node]="node().id">
+              <p class="pn-muted">{{ 'pageRuntime.custom' | translate: { id: node().component || '' } }}</p>
+            </section>
+          }
         }
         @default {
           <section class="pn-box" [attr.data-node]="node().id">
@@ -138,8 +151,13 @@ export class PageNodeComponent {
   private readonly router = inject(Router);
   private readonly lang = inject(LangService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly blocks = inject(PAGE_BLOCKS, { optional: true });
 
   readonly node = input.required<PageNode>();
+
+  /** F8-T10: a custom node's registered block, once loaded. */
+  protected readonly block = signal<Type<unknown> | null>(null);
+  protected readonly blockFailed = signal(false);
 
   protected readonly tab = signal(0);
   protected readonly rows = signal<PageRows | null>(null);
@@ -183,6 +201,13 @@ export class PageNodeComponent {
   });
 
   constructor() {
+    effect(() => {
+      const node = this.node();
+      const visible = this.visible();
+      untracked(() => {
+        if (visible && node.type === 'custom') this.loadBlock(node.component);
+      });
+    });
     effect(() => {
       const node = this.node();
       const visible = this.visible();
@@ -232,6 +257,19 @@ export class PageNodeComponent {
       next: () => this.busy.set(false),
       error: (e: ApiError) => { this.busy.set(false); this.error.set(this.lang.errorText(e)); },
     });
+  }
+
+  private loadBlock(name: string | undefined): void {
+    const found = findBlock(this.blocks, name);
+    this.block.set(null);
+    this.blockFailed.set(false);
+    if (!found) return;
+    found.load().then(
+      type => {
+        if (this.node().component === name) this.block.set(type);
+      },
+      () => this.blockFailed.set(true),
+    );
   }
 
   private load(node: PageNode, recordId: string | null): void {
