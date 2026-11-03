@@ -299,3 +299,11 @@ and opportunities its holder owns and those owned by everyone under them in the 
 (the owner subtree, A17-T3), and reads their activities. To give a group's global account manager
 its subsidiaries, put the subsidiaries' account managers in positions under the global manager's;
 nothing else widens, and being on an account's team still grants nothing by itself.
+
+## crm: industry codes
+
+`0013` ships the whole ISIC Rev.4 list as `isic_code` records (D24-T3): 21 sections, 88 divisions,
+238 groups and 419 classes, each with its parent. The English labels come from the UN Statistics
+Division structure file and the Arabic from the UN Arabic edition (ST/ESA/STAT/SER.M/4/Rev.4). It
+also upserts the sections from `0003` and the divisions from `0011`, so their Arabic matches the UN
+text. A group that the UN prints without a label of its own takes its division's label.
