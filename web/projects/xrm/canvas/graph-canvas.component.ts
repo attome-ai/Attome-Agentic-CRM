@@ -7,8 +7,8 @@ import { TranslatePipe } from '@attome/base';
 import { CommandStack } from './command-stack';
 import { EditCommand } from './commands';
 import {
-  CARD, GraphDoc, GraphDocEdge, GraphDocNode, GraphNodeKind, PortRef, Refusal,
-  cardHeight, checkConnection, connectCommand, ensureLists, freshId, groupBox, moveNodeCommand,
+  CARD, GraphDoc, GraphDocEdge, GraphDocNode, GraphNodeKind, GraphNodeMark, PortRef, Refusal,
+  cardHeight, checkConnection, connectCommand, edgeKey, ensureLists, freshId, groupBox, moveNodeCommand,
   outputsOf, portPoint, removeNodeCommands, wirePath,
 } from './graph';
 
@@ -38,6 +38,11 @@ interface Pending { from: PortRef; x: number; y: number }
  * Every change is an edit command on the shared `CommandStack`, so undo and
  * redo are unlimited and `save` hands over the commands since the last save.
  * In Arabic the whole diagram mirrors: inputs on the right, flow to the left.
+ *
+ * The designer around it can mark nodes (`nodeMarks`: a problem, a simulated
+ * run's result, a coverage gap, each with its note) and light edges
+ * (`litEdges`). A state model's canvas (M8-T4) passes `allowCycles`, and
+ * `edgesOnly` when the nodes are not the builder's to add or remove.
  */
 @Component({
   selector: 'xrm-graph-canvas',
@@ -49,7 +54,7 @@ interface Pending { from: PortRef; x: number; y: number }
       <div class="gc-toolbar" role="toolbar" [attr.aria-label]="'canvas.toolbar' | translate">
         <button type="button" data-testid="graph-undo" [disabled]="!stack().canUndo()" (click)="undo()">{{ 'canvas.undo' | translate }}</button>
         <button type="button" data-testid="graph-redo" [disabled]="!stack().canRedo()" (click)="redo()">{{ 'canvas.redo' | translate }}</button>
-        @if (!readonly()) {
+        @if (!readonly() && !edgesOnly()) {
           <button type="button" data-testid="graph-group" [disabled]="selectedNodes().length === 0" (click)="groupSelection()">{{ 'graphCanvas.group' | translate }}</button>
           <button type="button" data-testid="graph-note" (click)="addNote()">{{ 'graphCanvas.note' | translate }}</button>
           <button type="button" data-testid="graph-save" [disabled]="!stack().dirty()" (click)="emitSave()">{{ 'canvas.save' | translate }}</button>
@@ -72,7 +77,8 @@ interface Pending { from: PortRef; x: number; y: number }
           }
           <svg class="gc-wires" [attr.width]="extent().width" [attr.height]="extent().height" aria-hidden="true">
             @for (w of wires(); track w.key) {
-              <path class="gc-wire" [class.gc-wire--selected]="selectedEdge() === w.index" [attr.d]="w.d"
+              <path class="gc-wire" [class.gc-wire--selected]="selectedEdge() === w.index"
+                    [class.gc-wire--lit]="litEdges().includes(w.key)" [attr.d]="w.d"
                     data-testid="graph-wire" (click)="selectEdge(w.index, $event)" />
             }
             @if (pendingWire(); as d) { <path class="gc-wire gc-wire--pending" [attr.d]="d" /> }
@@ -80,16 +86,21 @@ interface Pending { from: PortRef; x: number; y: number }
           @for (n of cards(); track n.node.id) {
             <div class="gc-card" data-testid="graph-node" [attr.data-node]="n.node.id"
                  [class.gc-card--selected]="selectedNodes().includes(n.node.id)"
+                 [attr.data-marks]="tonesOf(n.node.id)"
                  [style.inset-inline-start.px]="n.x" [style.inset-block-start.px]="n.y"
                  [style.inline-size.px]="cardWidth" [style.block-size.px]="n.height"
-                 tabindex="0" [attr.aria-label]="n.kind?.label ?? n.node.type"
+                 tabindex="0" [attr.aria-label]="cardLabel(n.kind?.label ?? n.node.type, n.node.id)"
                  (click)="selectNode(n.node.id, $event)" (keydown.enter)="selectNode(n.node.id)">
               <div class="gc-card-head" (pointerdown)="startDrag($event, n.node.id)">
                 <span class="gc-type">{{ n.kind?.label ?? n.node.type }}</span>
                 @if (nodeTemplate(); as tpl) {
                   <ng-container [ngTemplateOutlet]="tpl" [ngTemplateOutletContext]="{ $implicit: n.node }" />
-                } @else {
+                } @else if (n.node.id !== n.kind?.label) {
                   <bdi class="gc-id" dir="ltr">{{ n.node.id }}</bdi>
+                }
+                @for (m of marksOf(n.node.id); track m.tone) {
+                  <span [class]="'gc-mark gc-mark--' + m.tone" data-testid="graph-mark"
+                        [attr.data-tone]="m.tone" [title]="m.note" aria-hidden="true">{{ symbol(m.tone) }}</span>
                 }
                 @if (subflowTypes().includes(n.node.type)) {
                   <button type="button" class="gc-open" data-testid="graph-open-subflow"
@@ -165,10 +176,24 @@ interface Pending { from: PortRef; x: number; y: number }
     :host-context([dir=rtl]) .gc-wires { transform: scaleX(-1); }
     .gc-wire { fill: none; stroke: var(--color-text-secondary, #888); stroke-width: 2; cursor: pointer; pointer-events: stroke; }
     .gc-wire--selected { stroke: var(--color-primary, #2b6cb0); stroke-width: 3; }
+    .gc-wire--lit { stroke: var(--color-success, #2f855a); stroke-width: 3; }
     .gc-wire--pending { stroke-dasharray: 6 4; pointer-events: none; }
     .gc-card { position: absolute; box-sizing: border-box; border: 1px solid var(--color-border, #ccc); border-radius: 8px;
                background: var(--color-bg, #fff); box-shadow: 0 1px 2px rgba(0,0,0,.06); }
     .gc-card--selected { border-color: var(--color-primary, #2b6cb0); box-shadow: 0 0 0 2px var(--color-primary-bg, #dbe8f7); }
+    .gc-card[data-marks~="problem"], .gc-card[data-marks~="failed"] { border-color: var(--color-danger, #c53030); border-width: 2px; }
+    .gc-card[data-marks~="ran"] { border-color: var(--color-success, #2f855a); border-width: 2px; }
+    .gc-card[data-marks~="active"] { border-color: var(--color-warning, #b7791f); border-width: 2px; }
+    .gc-card[data-marks~="initial"] { border-color: var(--color-primary, #2b6cb0); border-width: 2px; }
+    .gc-card[data-marks~="skipped"] { opacity: .55; }
+    .gc-card[data-marks~="uncovered"] { background: repeating-linear-gradient(45deg, var(--color-bg, #fff), var(--color-bg, #fff) 6px,
+                                        var(--color-warning-bg, #fdf3d7) 6px, var(--color-warning-bg, #fdf3d7) 12px); }
+    .gc-mark { font-size: .75rem; font-weight: 700; inline-size: 1rem; text-align: center; flex: none; }
+    .gc-mark--problem, .gc-mark--failed { color: var(--color-danger, #c53030); }
+    .gc-mark--ran { color: var(--color-success, #2f855a); }
+    .gc-mark--uncovered, .gc-mark--skipped { color: var(--color-text-secondary, #666); }
+    .gc-mark--active { color: var(--color-warning, #b7791f); }
+    .gc-mark--initial { color: var(--color-primary, #2b6cb0); }
     .gc-card-head { display: flex; align-items: center; gap: .375rem; block-size: 32px; padding-inline: .5rem;
                     border-block-end: 1px solid var(--color-border, #eee); cursor: grab; touch-action: none; }
     .gc-type { font-weight: 600; font-size: .8125rem; }
@@ -209,6 +234,14 @@ export class GraphCanvasComponent {
   readonly subflowTypes = input<readonly string[]>(['sub_workflow']);
   /** View only: no moves, connections or edits. */
   readonly readonly = input(false);
+  /** Marks on node cards, by node id. */
+  readonly nodeMarks = input<Readonly<Record<string, readonly GraphNodeMark[]>>>({});
+  /** The edges to light (`edgeKey`), a simulated path. */
+  readonly litEdges = input<readonly string[]>([]);
+  /** Connections may go back to an earlier node (a state model). */
+  readonly allowCycles = input(false);
+  /** Only connections are edited: no adding or removing nodes, groups or notes, no save. */
+  readonly edgesOnly = input(false);
 
   /** Save: the commands since the last save. */
   readonly save = output<EditCommand[]>();
@@ -259,7 +292,7 @@ export class GraphCanvasComponent {
         portPoint(a, this.kindMap().get(a.type), 'out', e.from_port),
         portPoint(b, this.kindMap().get(b.type), 'in', e.to_port),
       );
-      return [{ key: `${e.from_node}:${e.from_port}>${e.to_node}:${e.to_port}`, index, d }];
+      return [{ key: edgeKey(e), index, d }];
     });
   });
 
@@ -310,6 +343,29 @@ export class GraphCanvasComponent {
     return outputsOf(kind);
   }
 
+  marksOf(id: string): readonly GraphNodeMark[] {
+    return this.nodeMarks()[id] ?? [];
+  }
+
+  /** The tones as one attribute (`[data-marks~=…]`), null when none. */
+  tonesOf(id: string): string | null {
+    return this.marksOf(id).map(m => m.tone).join(' ') || null;
+  }
+
+  /** A card's accessible name: its label and what its marks say. */
+  cardLabel(label: string, id: string): string {
+    return [label, ...this.marksOf(id).map(m => m.note)].join('. ');
+  }
+
+  /** A mark is never colour alone. */
+  symbol(tone: GraphNodeMark['tone']): string {
+    return { problem: '!', ran: '✓', active: '…', failed: '✕', skipped: '–', uncovered: '○', initial: '▸' }[tone];
+  }
+
+  private connectionCheck(from: PortRef, to: PortRef): Refusal | null {
+    return checkConnection(this.stack().doc(), this.kinds(), from, to, { allowCycles: this.allowCycles() });
+  }
+
   /** Applies one command and reports the change. */
   exec(command: EditCommand): boolean {
     if (this.readonly() || !this.stack().exec(command)) return false;
@@ -334,11 +390,11 @@ export class GraphCanvasComponent {
   }
 
   undo(): void {
-    if (this.stack().undo()) this.afterHistory();
+    if (!this.readonly() && this.stack().undo()) this.afterHistory();
   }
 
   redo(): void {
-    if (this.stack().redo()) this.afterHistory();
+    if (!this.readonly() && this.stack().redo()) this.afterHistory();
   }
 
   emitSave(): void {
@@ -449,13 +505,13 @@ export class GraphCanvasComponent {
   /** Whether the pending connection may end on this input. */
   accepts(node: string, port: string): boolean {
     const p = this.pending();
-    return !!p && checkConnection(this.stack().doc(), this.kinds(), p.from, { node, port }) === null;
+    return !!p && this.connectionCheck(p.from, { node, port }) === null;
   }
 
   hoverInput(node: string, port: string): void {
     const p = this.pending();
     if (!p) return;
-    this.refusal.set(checkConnection(this.stack().doc(), this.kinds(), p.from, { node, port }));
+    this.refusal.set(this.connectionCheck(p.from, { node, port }));
   }
 
   /** Ends the pending connection on an input: made, or refused with the reason. */
@@ -463,7 +519,7 @@ export class GraphCanvasComponent {
     event.stopPropagation();
     const p = this.pending();
     if (!p) return;
-    const refusal = checkConnection(this.stack().doc(), this.kinds(), p.from, { node, port });
+    const refusal = this.connectionCheck(p.from, { node, port });
     this.pending.set(null);
     if (refusal) {
       this.refusal.set(refusal);
@@ -536,7 +592,7 @@ export class GraphCanvasComponent {
         return;
       }
       const nodes = this.selectedNodes();
-      if (nodes.length) {
+      if (nodes.length && !this.edgesOnly()) {
         event.preventDefault();
         for (const id of nodes) this.execAll(removeNodeCommands(this.stack().doc(), id));
         this.selectedNodes.set([]);

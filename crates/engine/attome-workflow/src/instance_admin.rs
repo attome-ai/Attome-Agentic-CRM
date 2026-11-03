@@ -22,6 +22,157 @@ use crate::model::{
 use attome_types::ErrorResponse;
 use utoipa::IntoParams;
 
+/// What a masked value reads as.
+const MASK: &str = "••••••";
+
+/// A key's words, lower case: `X-Api-Key`, `apiKey` and `api_key` all give
+/// `api`, `key`. A word's trailing digits go (`password1`).
+fn key_words(key: &str) -> Vec<String> {
+    let mut words: Vec<String> = Vec::new();
+    let mut word = String::new();
+    let mut last_lower = false;
+    for c in key.chars() {
+        if !c.is_alphanumeric() {
+            words.push(std::mem::take(&mut word));
+            last_lower = false;
+            continue;
+        }
+        if c.is_uppercase() && last_lower {
+            words.push(std::mem::take(&mut word));
+        }
+        last_lower = c.is_lowercase() || c.is_numeric();
+        word.extend(c.to_lowercase());
+    }
+    words.push(word);
+    words
+        .into_iter()
+        .map(|w| w.trim_end_matches(|c: char| c.is_ascii_digit()).to_owned())
+        .filter(|w| !w.is_empty())
+        .collect()
+}
+
+/// A key whose value is a credential, by its words: `password`, `client_secret`,
+/// `Authorization`, `api_key`, `signing_key`, `access_token`. A `token` must end
+/// the key, so `token_count` keeps its value; a bare `key` is not a credential.
+fn is_secret_key(key: &str) -> bool {
+    const ANY_WORD: [&str; 18] = [
+        "password",
+        "passwd",
+        "pwd",
+        "pass",
+        "passphrase",
+        "secret",
+        "secrets",
+        "authorization",
+        "auth",
+        "bearer",
+        "jwt",
+        "cookie",
+        "cookies",
+        "credential",
+        "credentials",
+        "apikey",
+        "pin",
+        "otp",
+    ];
+    const KEY_OF: [&str; 8] = [
+        "api",
+        "private",
+        "access",
+        "signing",
+        "encryption",
+        "secret",
+        "client",
+        "shared",
+    ];
+    let words = key_words(key);
+    words.iter().any(|w| ANY_WORD.contains(&w.as_str()))
+        || words.last().is_some_and(|w| w == "token")
+        || words
+            .windows(2)
+            .any(|p| p[1] == "key" && KEY_OF.contains(&p[0].as_str()))
+}
+
+/// `tokens` is a credential unless it counts something (`"tokens": 120`).
+fn is_secret_field(key: &str, value: &serde_json::Value) -> bool {
+    if value.is_null() {
+        return false;
+    }
+    is_secret_key(key)
+        || (key_words(key).last().is_some_and(|w| w == "tokens") && !value.is_number())
+}
+
+/// The credentials a text carries in itself: a URL's user and password, the
+/// value after `Bearer` or `Basic`, and `password=…` or `"api_key": "…"`. If a
+/// pattern could not be built, the whole text is withheld.
+fn masked_text(text: &str) -> std::borrow::Cow<'_, str> {
+    use regex::Regex;
+    use std::sync::LazyLock;
+    static URL: LazyLock<Option<Regex>> =
+        LazyLock::new(|| Regex::new(r"(?i)\b([a-z][a-z0-9+.-]*://)[^/\s:@]+:[^/\s@]+@").ok());
+    static SCHEME: LazyLock<Option<Regex>> =
+        LazyLock::new(|| Regex::new(r"\b(Bearer|bearer|Basic)\s+[A-Za-z0-9._~+/=-]{8,}").ok());
+    static PAIR: LazyLock<Option<Regex>> = LazyLock::new(|| {
+        Regex::new(
+            r#"(?i)\b([a-z0-9_-]*(?:password|passwd|pwd|secret|token|api[_-]?key|private[_-]?key|access[_-]?key)["']?\s*[=:]\s*)(?:"[^"]*"|'[^']*'|[^\s"'&,;}]+)"#,
+        )
+        .ok()
+    });
+    let (Some(url), Some(scheme), Some(pair)) = (&*URL, &*SCHEME, &*PAIR) else {
+        return std::borrow::Cow::Borrowed(MASK);
+    };
+    let out = url.replace_all(text, format!("${{1}}{MASK}@").as_str());
+    let out = scheme.replace_all(&out, format!("${{1}} {MASK}").as_str());
+    let out = pair.replace_all(&out, format!("${{1}}{MASK}").as_str());
+    if out == text {
+        std::borrow::Cow::Borrowed(text)
+    } else {
+        std::borrow::Cow::Owned(out.into_owned())
+    }
+}
+
+/// M2-T3: a run's values with every credential masked, however deep: a value
+/// under a credential's key; the `value` beside a `name` that names one (a
+/// header list); and what a text carries in itself. A step's input and output
+/// hold what it was given (a webhook's headers, a connector's parameters), and a
+/// run is read by whoever may inspect flows, not only by those who may see those
+/// credentials. Personal values stay: they are the run's own data, under the
+/// Automation privilege, and M3-T4 erases them.
+fn masked(mut value: serde_json::Value) -> serde_json::Value {
+    use serde_json::Value;
+    fn named_secret(fields: &serde_json::Map<String, Value>) -> bool {
+        ["name", "key", "header"].iter().any(|k| {
+            fields
+                .get(*k)
+                .and_then(Value::as_str)
+                .is_some_and(is_secret_key)
+        })
+    }
+    fn walk(value: &mut Value) {
+        match value {
+            Value::Object(fields) => {
+                let pair = named_secret(fields);
+                for (key, field) in fields.iter_mut() {
+                    if is_secret_field(key, field) || (pair && key == "value" && !field.is_null()) {
+                        *field = Value::String(MASK.to_owned());
+                    } else {
+                        walk(field);
+                    }
+                }
+            }
+            Value::Array(items) => items.iter_mut().for_each(walk),
+            Value::String(text) => {
+                if let std::borrow::Cow::Owned(clean) = masked_text(text) {
+                    *text = clean;
+                }
+            }
+            _ => {}
+        }
+    }
+    walk(&mut value);
+    value
+}
+
 #[derive(sqlx::FromRow)]
 struct InstanceListRow {
     id: Uuid,
@@ -35,6 +186,7 @@ struct InstanceListRow {
 #[derive(sqlx::FromRow)]
 struct InstanceDetailRow {
     id: Uuid,
+    definition_id: Uuid,
     definition_version_id: Uuid,
     status: String,
     started_at: chrono::DateTime<chrono::Utc>,
@@ -166,9 +318,12 @@ async fn get_instance(
     Path(instance_id): Path<Uuid>,
 ) -> Result<Json<InstanceDetail>, AppError> {
     let row: InstanceDetailRow = sqlx::query_as(
-        "SELECT id, definition_version_id, status, started_at, completed_at, started_by, \
-                correlation_entity_id, context, node_data, row_version \
-         FROM workflow_instance WHERE id = $1",
+        "SELECT i.id, v.definition_id, i.definition_version_id, i.status, i.started_at, \
+                i.completed_at, i.started_by, i.correlation_entity_id, i.context, i.node_data, \
+                i.row_version \
+         FROM workflow_instance i \
+         JOIN workflow_definition_version v ON v.id = i.definition_version_id \
+         WHERE i.id = $1",
     )
     .bind(instance_id)
     .fetch_optional(&state.base.db)
@@ -193,25 +348,26 @@ async fn get_instance(
             round: r.round,
             status: r.status,
             attempt_count: r.attempt_count,
-            last_error: r.last_error,
+            last_error: r.last_error.map(|e| masked_text(&e).into_owned()),
             started_at: r.started_at,
             completed_at: r.completed_at,
-            input: r.input,
-            output: r.output,
+            input: r.input.map(masked),
+            output: r.output.map(masked),
             payload_ref: r.payload_ref,
         })
         .collect();
 
     Ok(Json(InstanceDetail {
         id: row.id,
+        definition_id: row.definition_id,
         definition_version_id: row.definition_version_id,
         status: row.status,
         started_at: row.started_at,
         completed_at: row.completed_at,
         started_by: row.started_by,
         correlation_entity_id: row.correlation_entity_id,
-        context: row.context,
-        node_data: row.node_data,
+        context: masked(row.context),
+        node_data: masked(row.node_data),
         row_version: row.row_version,
         node_runs,
     }))
@@ -1054,9 +1210,135 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 
 #[cfg(test)]
 mod run_record_tests {
-    use super::run_record;
+    use super::{MASK, is_secret_key, masked, masked_text, run_record};
     use serde_json::json;
     use uuid::Uuid;
+
+    #[test]
+    fn a_run_masks_credentials_at_any_depth_and_keeps_the_rest() {
+        let run = masked(json!({
+            "url": "https://hooks.example.test",
+            "total_tokens": 120,
+            "token_count": 7,
+            "secret": "s",
+            "headers": { "Authorization": "x", "X-Api-Key": "k", "Accept": "json" },
+            "steps": [{ "apiKey": "k", "client_secret": "s", "access_token": "t", "name": "keep" }],
+            "password": null,
+            "user_password_hash": "h",
+            "session-cookie": "c",
+            "keys": ["a"],
+            "tokens": { "access": "x" },
+        }));
+        assert_eq!(
+            run,
+            json!({
+                "url": "https://hooks.example.test",
+                "total_tokens": 120,
+                "token_count": 7,
+                "secret": MASK,
+                "headers": { "Authorization": MASK, "X-Api-Key": MASK, "Accept": "json" },
+                "steps": [{ "apiKey": MASK, "client_secret": MASK, "access_token": MASK, "name": "keep" }],
+                "password": null,
+                "user_password_hash": MASK,
+                "session-cookie": MASK,
+                "keys": ["a"],
+                "tokens": MASK,
+            })
+        );
+    }
+
+    #[test]
+    fn a_header_list_masks_the_value_beside_a_secret_name() {
+        let run = masked(json!([
+            { "name": "Authorization", "value": "abc" },
+            { "name": "Accept", "value": "json" },
+            { "key": "x-api-key", "value": "k" },
+        ]));
+        assert_eq!(
+            run,
+            json!([
+                { "name": "Authorization", "value": MASK },
+                { "name": "Accept", "value": "json" },
+                { "key": "x-api-key", "value": MASK },
+            ])
+        );
+    }
+
+    #[test]
+    fn a_text_loses_the_credentials_it_carries() {
+        for (text, kept) in [
+            ("https://me:pw@host.test/a", "https://••••••@host.test/a"),
+            (
+                "call failed: Bearer abc.defgh",
+                "call failed: Bearer ••••••",
+            ),
+            ("Basic dXNlcjpwYXNz", "Basic ••••••"),
+            (
+                "https://h.test/a?api_key=k1&x=1",
+                "https://h.test/a?api_key=••••••&x=1",
+            ),
+            (r#"{"password":"p 1"}"#, r#"{"password":••••••}"#),
+            ("client_secret: s1 refused", "client_secret: •••••• refused"),
+        ] {
+            assert_eq!(masked_text(text), kept, "{text}");
+        }
+        for text in [
+            "https://host.test/a:b",
+            "a basic plan",
+            "ten tokens used",
+            "plain",
+        ] {
+            assert!(
+                matches!(masked_text(text), std::borrow::Cow::Borrowed(_)),
+                "{text}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_secret_key_is_known_by_its_words() {
+        for key in [
+            "password",
+            "PASSWORD",
+            "password1",
+            "pass",
+            "api_key",
+            "apiKey",
+            "X-API-Key",
+            "apikey",
+            "private_key",
+            "signing_key",
+            "encryption_key",
+            "access_key",
+            "refreshToken",
+            "id_token",
+            "credentials",
+            "client_secret",
+            "secrets",
+            "cookie",
+            "cookies",
+            "auth",
+            "bearer",
+            "jwt",
+        ] {
+            assert!(is_secret_key(key), "{key}");
+        }
+        for key in [
+            "tokens",
+            "token_count",
+            "key",
+            "public_key",
+            "monkey",
+            "secretary",
+            "name",
+            "keyword",
+            "author",
+            "passes",
+            "spinning",
+        ] {
+            assert!(!is_secret_key(key), "{key}");
+        }
+    }
 
     #[test]
     fn a_run_names_its_record_by_entity_and_id() {

@@ -13,6 +13,7 @@
     <div class="section-header">
       <h3>Instance</h3>
       <span class="badge">{{ inst.status }}</span>
+      <a data-testid="run-open-graph" [routerLink]="['/xrm/workflow/instances', inst.id, 'graph']">{{ 'workflowDesigner.run.open' | translate }}</a>
     </div>
     <div class="form-row-3">
       <div class="field"><span class="field-caption">Started</span><p class="cell-muted">{{ inst.started_at | date:'medium' }}</p></div>

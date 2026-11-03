@@ -485,15 +485,23 @@ export interface InstanceListItem {
 
 export interface NodeRunSummary {
   node_id:       string;
+  /** M3-T1: the loop round, 0 outside a loop. */
+  round?:        number;
   status:        string;
   attempt_count: number;
   last_error:    string | null;
   started_at:    string | null;
   completed_at:  string | null;
+  /** The node's input and output, credentials masked by the server; absent for a large pair (`payload_ref`). */
+  input?:        unknown;
+  output?:       unknown;
+  payload_ref?:  string | null;
 }
 
 export interface InstanceDetail {
   id:                    string;
+  /** M2-T3: the flow the run belongs to. */
+  definition_id:         string;
   definition_version_id: string;
   status:                string;
   started_at:            string;

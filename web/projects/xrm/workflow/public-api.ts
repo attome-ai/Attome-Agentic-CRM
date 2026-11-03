@@ -11,6 +11,7 @@ export { WorkflowAdminService }              from './services/workflow-admin.ser
 export { WorkflowCreatePageComponent }       from './workflow-definition/page/workflow-create-page/workflow-create-page.component';
 export { WorkflowGraphEditorComponent }      from './workflow-definition/editor/workflow-graph-editor/workflow-graph-editor.component';
 // M2-T1: the flow designer on the canvas engine's graph mode.
+export { WorkflowRunViewComponent } from './workflow-designer/run-view.component';
 export { WorkflowDesignerComponent, paletteMatches, placedGraph } from './workflow-designer/workflow-designer.component';
 export { WorkflowInstanceListComponent }     from './workflow-instance/list/workflow-instance-list/workflow-instance-list.component';
 export { WorkflowInstanceDetailComponent }   from './workflow-instance/detail/workflow-instance-detail/workflow-instance-detail.component';

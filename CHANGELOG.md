@@ -17,6 +17,16 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- The flow designer's data-mapping panel (M2-T2): a selected step's inputs and every earlier step's typed outputs,
+  mapped by dragging or from the keyboard; what publishing would refuse is checked on every change and marked on the
+  step (`docs/flow-designer.md`).
+- Runs on the flow's graph (M2-T3): `/xrm/workflow/instances/{id}/graph` marks each step by its state while the run goes
+  on, shows each step's input, output, time and error, and replays the run step by step. `GET /api/v1/workflow/instances/{id}`
+  adds `definition_id` and now masks credentials in `context`, `node_data` and each node run's `input` and `output`.
+- The flow designer compares two versions, steps and settings, and opens a step list on phones (M2-T4).
+- A flow's test run lights its path on the designer's canvas, and test coverage shades the steps no test reached (M4-T4).
+- State models on the canvas (M8-T4): states as nodes and transitions as connections, drawn and deleted in place, with a
+  record's stays and time in each state from its history.
 - The flow designer on the canvas (M2-T1): `/xrm/workflow/definitions/{id}/versions/{version}/design` places
   steps freely, connects typed ports with the publish checks applied while dragging (types, trigger inputs,
   duplicate connections, loops), keeps the step palette and each type's settings form, and adds groups,

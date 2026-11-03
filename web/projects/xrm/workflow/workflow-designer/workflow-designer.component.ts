@@ -5,12 +5,24 @@ import { Router, RouterLink } from '@angular/router';
 import { ApiError, LangService, TranslatePipe } from '@attome/base';
 import { AdminService } from '@attome/xrm/core/admin/data';
 import {
-  GraphCanvasComponent, type GraphDoc, type GraphDocNode, type GraphNodeKind,
+  GraphCanvasComponent, connectCommand, type GraphDoc, type GraphDocNode, type GraphNodeKind, type GraphNodeMark,
+  type PortRef,
 } from '@attome/xrm/canvas';
 
 import {
-  NODE_TYPES, type NodeConfigField, type VersionDetail, WorkflowAdminService, nodeConfigFields, nodeTypeSpec,
+  type FlowCoverage, NODE_TYPES, type NodeConfigField, type SimulateResponse, type VersionDetail, WorkflowAdminService,
+  nodeConfigFields, nodeTypeSpec,
 } from '../services/workflow-admin.service';
+import { MappingPanelComponent } from './mapping-panel.component';
+import { publishProblems } from './publish-check';
+import {
+  SimulationViewComponent, coverageMarks, simulatedPath, simulationMarks,
+} from './simulation-view.component';
+import { StepListComponent } from './step-list.component';
+import { VersionDiffComponent } from './version-diff.component';
+
+/** Where a phone starts on the step list rather than the canvas. */
+const PHONE = '(max-width: 40rem)';
 
 /** The graph as the designer loads it: every node placed. Pure. */
 export function placedGraph(graph: unknown): GraphDoc {
@@ -44,12 +56,20 @@ export function paletteMatches(kinds: readonly GraphNodeKind[], query: string, l
  * schema the classic editor uses). A sub-flow node opens the flow it runs.
  * Saving sends the whole graph (`PATCH …/versions/{id}`), as the classic
  * editor does; a published version is shown read-only.
+ *
+ * M2-T2: the settings pane carries the data-mapping panel, and the publish
+ * checks run on every change and mark the nodes they find a problem on.
+ * M2-T4: compare with another version; phones open a step list. M4-T4: a
+ * simulated run lights its path, and coverage shades the nodes no test reached.
  */
 @Component({
   selector: 'attome-workflow-designer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [GraphCanvasComponent, RouterLink, TranslatePipe],
+  imports: [
+    GraphCanvasComponent, MappingPanelComponent, RouterLink, SimulationViewComponent, StepListComponent, TranslatePipe,
+    VersionDiffComponent,
+  ],
   template: `
     <section class="wd">
       <header class="wd-head">
@@ -58,6 +78,11 @@ export function paletteMatches(kinds: readonly GraphNodeKind[], query: string, l
           <span class="wd-badge" data-testid="wd-status">{{ ('workflowDesigner.status.' + v.status) | translate }}</span>
           <span class="wd-muted">{{ 'workflowDesigner.versionN' | translate: { n: v.version_number } }}</span>
         }
+        <div class="wd-view" role="group" [attr.aria-label]="'workflowDesigner.steps.view' | translate">
+          <button type="button" data-testid="wd-view-canvas" [attr.aria-pressed]="view() === 'canvas'" (click)="view.set('canvas')">{{ 'workflowDesigner.steps.canvas' | translate }}</button>
+          <button type="button" data-testid="wd-view-steps" [attr.aria-pressed]="view() === 'steps'" (click)="view.set('steps')">{{ 'workflowDesigner.steps.list' | translate }}</button>
+        </div>
+        <button type="button" data-testid="wd-compare" [attr.aria-pressed]="comparing()" (click)="comparing.set(!comparing())">{{ 'workflowDesigner.diff.open' | translate }}</button>
         <a class="wd-classic" [routerLink]="['/xrm/workflow/definitions', definitionId(), 'versions', versionId()]">
           {{ 'workflowDesigner.classic' | translate }}</a>
       </header>
@@ -66,6 +91,10 @@ export function paletteMatches(kinds: readonly GraphNodeKind[], query: string, l
       } @else if (error(); as e) {
         <p class="wd-error" role="alert" data-testid="wd-error">{{ e }}</p>
       } @else {
+        @if (comparing()) {
+          <xrm-version-diff [definitionId]="definitionId()" [versionId]="versionId()" [doc]="current()"
+                            [labelOf]="labelOf" (closed)="comparing.set(false)" />
+        }
         <div class="wd-body">
           @if (!readonly()) {
             <aside class="wd-palette" [attr.aria-label]="'workflowDesigner.palette' | translate">
@@ -82,14 +111,48 @@ export function paletteMatches(kinds: readonly GraphNodeKind[], query: string, l
             </aside>
           }
           <div class="wd-canvas">
-            <xrm-graph-canvas [doc]="initial()" [kinds]="kinds" [readonly]="readonly()"
-                              (changed)="current.set($event)" (nodeSelected)="selected.set($event)"
-                              (save)="save()" (openSubflow)="openSubflow($event)" />
-            @if (!readonly()) {
-              <div class="wd-actions">
-                @if (saveError(); as e) { <p class="wd-error" role="alert" data-testid="wd-save-error">{{ e }}</p> }
+            @if (view() === 'steps') {
+              <xrm-step-list [doc]="current()" [selected]="selected()" [marks]="marks()" [labelOf]="labelOf" (picked)="pick($event)" />
+            }
+            <!-- Kept while the step list shows: it holds the graph and its undo history. -->
+            <div [class.wd-hidden]="view() === 'steps'">
+              <xrm-graph-canvas [doc]="initial()" [kinds]="kinds" [readonly]="readonly()"
+                                [nodeMarks]="marks()" [litEdges]="litEdges()"
+                                (changed)="onChanged($event)" (nodeSelected)="selected.set($event)"
+                                (save)="save()" (openSubflow)="openSubflow($event)" />
+            </div>
+            <div class="wd-actions">
+              @if (saveError(); as e) { <p class="wd-error" role="alert" data-testid="wd-save-error">{{ e }}</p> }
+              <button type="button" data-testid="wd-simulate" [disabled]="busy() || dirty()" (click)="simulate()">{{ 'workflowDesigner.simulation.run' | translate }}</button>
+              <button type="button" data-testid="wd-coverage" [disabled]="busy() || dirty()" (click)="loadCoverage()">{{ 'workflowDesigner.simulation.runCoverage' | translate }}</button>
+              @if (!readonly()) {
                 <button type="button" data-testid="wd-publish" [disabled]="busy() || dirty()" (click)="publish()">{{ 'workflowDesigner.publish' | translate }}</button>
-              </div>
+              }
+            </div>
+            @if (simulation() || coverage()) {
+              <xrm-simulation-view [result]="simulation()" [coverage]="coverage()" (closed)="clearSimulation()" (pickNode)="pick($event)" />
+            }
+            @if (!readonly()) {
+              <section class="wd-problems" aria-labelledby="wd-problems-title">
+                <h3 id="wd-problems-title" role="status" data-testid="wd-problem-count">
+                  {{ 'workflowDesigner.problem.count' | translate: { count: problems().length } }}
+                </h3>
+                @if (problems().length) {
+                  <ul data-testid="wd-problems">
+                    @for (p of problems(); track $index) {
+                      <li>
+                        @if (p.node; as id) {
+                          <button type="button" data-testid="wd-problem" [attr.data-node]="id" (click)="pick(id)">
+                            <bdi dir="ltr">{{ id }}</bdi>: {{ ('workflowDesigner.problem.' + p.key) | translate: p.params }}
+                          </button>
+                        } @else {
+                          <span data-testid="wd-problem">{{ ('workflowDesigner.problem.' + p.key) | translate: p.params }}</span>
+                        }
+                      </li>
+                    }
+                  </ul>
+                }
+              </section>
             }
           </div>
           <aside class="wd-settings" [attr.aria-label]="'workflowDesigner.settings' | translate" data-testid="wd-settings">
@@ -136,6 +199,8 @@ export function paletteMatches(kinds: readonly GraphNodeKind[], query: string, l
               } @empty {
                 <p class="wd-muted">{{ 'workflowDesigner.noSettings' | translate }}</p>
               }
+              <xrm-mapping-panel [doc]="current()" [kinds]="kinds" [nodeId]="sel.node.id" [readonly]="readonly()"
+                                 [labelOf]="labelOf" (connect)="connectPorts($event)" (disconnect)="removeEdge($event)" />
             } @else {
               <p class="wd-muted">{{ 'workflowDesigner.pick' | translate }}</p>
             }
@@ -151,6 +216,13 @@ export function paletteMatches(kinds: readonly GraphNodeKind[], query: string, l
     .wd-head { display: flex; align-items: baseline; gap: .75rem; flex-wrap: wrap; }
     .wd-head h2 { margin: 0; font-size: 1.25rem; }
     .wd-classic { margin-inline-start: auto; }
+    .wd-view { display: inline-flex; gap: .25rem; }
+    .wd-view [aria-pressed="true"] { font-weight: 600; text-decoration: underline; }
+    .wd-hidden { display: none; }
+    .wd-problems { display: grid; gap: .25rem; margin-block-start: .5rem; font-size: .8125rem; }
+    .wd-problems h3 { margin: 0; font-size: .875rem; }
+    .wd-problems ul { margin: 0; padding-inline-start: 1.25rem; color: var(--color-danger, #c53030); }
+    .wd-problems button { border: none; background: none; padding: 0; cursor: pointer; color: inherit; text-align: start; font: inherit; }
     .wd-badge { font-size: .75rem; padding-inline: .5rem; border-radius: 999px; background: var(--color-bg-alt, #eef2f7); }
     .wd-body { display: grid; grid-template-columns: minmax(10rem, 13rem) minmax(0, 1fr) minmax(14rem, 18rem); gap: .75rem; align-items: start; }
     @media (max-width: 64rem) { .wd-body { grid-template-columns: minmax(0, 1fr); } }
@@ -191,6 +263,12 @@ export class WorkflowDesignerComponent implements OnInit {
   readonly jsonErrors = signal<Record<string, boolean>>({});
   readonly entityNames = signal<string[]>([]);
   readonly workflowNames = signal<string[]>([]);
+  readonly view = signal<'canvas' | 'steps'>(
+    typeof window !== 'undefined' && window.matchMedia?.(PHONE)?.matches ? 'steps' : 'canvas',
+  );
+  readonly comparing = signal(false);
+  readonly simulation = signal<SimulateResponse | null>(null);
+  readonly coverage = signal<FlowCoverage | null>(null);
 
   readonly readonly = computed(() => this.version()?.status !== 'draft');
   readonly dirty = computed(() => JSON.stringify(this.current()) !== this.savedJson());
@@ -205,6 +283,30 @@ export class WorkflowDesignerComponent implements OnInit {
     const sel = this.selectedNode();
     return sel ? nodeConfigFields(sel.node.type) : [];
   });
+  /** M2-T2: what publishing would refuse, on every change. A published version has passed. */
+  readonly problems = computed(() => (this.readonly() ? [] : publishProblems(this.current(), this.kinds)));
+  readonly litEdges = computed(() => simulatedPath(this.simulation(), this.current()));
+  /** Every node's marks: its problems, then the run's result and the coverage gap. */
+  readonly marks = computed<Record<string, GraphNodeMark[]>>(() => {
+    const out: Record<string, GraphNodeMark[]> = {};
+    const add = (id: string, m: GraphNodeMark) => {
+      // One mark a tone: a node's problems read as one note on its card.
+      const list = (out[id] ??= []);
+      const same = list.find(x => x.tone === m.tone);
+      if (same) same.note = `${same.note}; ${m.note}`;
+      else list.push({ ...m });
+    };
+    for (const p of this.problems()) {
+      if (p.node) add(p.node, { tone: 'problem', note: this.lang.translate(`workflowDesigner.problem.${p.key}`, p.params) });
+    }
+    const status = (s: string) => this.lang.translate(`workflowDesigner.simulation.status.${s}`);
+    for (const [id, marks] of Object.entries(simulationMarks(this.simulation(), status))) marks.forEach(m => add(id, m));
+    const gap = this.lang.translate('workflowDesigner.simulation.uncovered');
+    for (const [id, marks] of Object.entries(coverageMarks(this.coverage(), gap))) marks.forEach(m => add(id, m));
+    return out;
+  });
+  /** A node type's name, for the panels beside the canvas. */
+  readonly labelOf = (type: string): string => this.typeLabel(type);
 
   ngOnInit(): void {
     this.svc.getVersion(this.definitionId(), this.versionId()).subscribe({
@@ -234,6 +336,56 @@ export class WorkflowDesignerComponent implements OnInit {
     const k = `workflowNodeType.${type}`;
     const label = this.lang.translate(k);
     return label === k ? (nodeTypeSpec(type)?.label ?? type) : label;
+  }
+
+  /** The graph changed: the result of an earlier run no longer describes it. */
+  onChanged(doc: GraphDoc): void {
+    this.current.set(doc);
+    this.clearSimulation();
+  }
+
+  /** Selects a node from a panel, on the canvas too. */
+  pick(id: string): void {
+    this.canvas()?.selectNode(id);
+    this.selected.set(id);
+  }
+
+  /** M2-T2: an edge from the mapping panel, already checked there. */
+  connectPorts(link: { from: PortRef; to: PortRef }): void {
+    this.canvas()?.exec(connectCommand(link.from, link.to));
+  }
+
+  removeEdge(index: number): void {
+    this.canvas()?.exec({ op: 'remove', path: `/edges/${index}` });
+  }
+
+  /** M4-T4: a dry run of the saved version, with an empty trigger payload as in the classic editor. */
+  simulate(): void {
+    const v = this.version();
+    if (!v || this.dirty()) return;
+    this.busy.set(true);
+    this.saveError.set(null);
+    this.svc.simulateVersion(this.definitionId(), v.id, { trigger_payload: {} }).subscribe({
+      next: result => { this.simulation.set(result); this.busy.set(false); },
+      error: (e: ApiError) => { this.saveError.set(e.message); this.busy.set(false); },
+    });
+  }
+
+  /** M4-T2's coverage of the saved version, by the flow's test cases. */
+  loadCoverage(): void {
+    const v = this.version();
+    if (!v || this.dirty()) return;
+    this.busy.set(true);
+    this.saveError.set(null);
+    this.svc.versionCoverage(this.definitionId(), v.id).subscribe({
+      next: c => { this.coverage.set(c); this.busy.set(false); },
+      error: (e: ApiError) => { this.saveError.set(e.message); this.busy.set(false); },
+    });
+  }
+
+  clearSimulation(): void {
+    this.simulation.set(null);
+    this.coverage.set(null);
   }
 
   /** Adds a node of `type` below the lowest one, selected. */

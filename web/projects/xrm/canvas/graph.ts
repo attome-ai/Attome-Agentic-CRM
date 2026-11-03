@@ -23,6 +23,8 @@ export interface GraphNodeKind {
   inputs: GraphPortSpec[];
   outputs: GraphPortSpec[];
   isEntry?: boolean;
+  /** No error output: a kind that is not a running step (a state of a state model). */
+  noErrorPort?: boolean;
 }
 
 export interface GraphDocNode {
@@ -34,6 +36,21 @@ export interface GraphDocNode {
 }
 
 export interface GraphDocEdge { from_node: string; from_port: string; to_node: string; to_port: string }
+
+/**
+ * A mark on a node card, from the designer around the canvas: a problem found
+ * while editing (M2-T2), a run's state (M2-T3), a simulated run's result or a
+ * test coverage gap (M4-T4). The note is the mark's translated text.
+ */
+export interface GraphNodeMark {
+  tone: 'problem' | 'ran' | 'active' | 'failed' | 'skipped' | 'uncovered' | 'initial';
+  note: string;
+}
+
+/** An edge's identity, as `litEdges` names it. Pure. */
+export function edgeKey(e: GraphDocEdge): string {
+  return `${e.from_node}:${e.from_port}>${e.to_node}:${e.to_port}`;
+}
 
 /** A frame around nodes, with a label. */
 export interface GraphDocGroup { id: string; label: string; nodes: string[] }
@@ -68,7 +85,7 @@ export function portsCompatible(out: string, input: string): boolean {
 /** The output ports of a node, the error port included for non-entry kinds. Pure. */
 export function outputsOf(kind: GraphNodeKind | undefined): GraphPortSpec[] {
   if (!kind) return [];
-  return kind.isEntry ? kind.outputs : [...kind.outputs, { name: ON_ERROR_PORT, portType: 'json' }];
+  return kind.isEntry || kind.noErrorPort ? kind.outputs : [...kind.outputs, { name: ON_ERROR_PORT, portType: 'json' }];
 }
 
 /** Whether `to` is reachable from `from` along the edges. Pure. */
@@ -90,13 +107,15 @@ export function reaches(edges: readonly GraphDocEdge[], from: string, to: string
  * dragged: `null` when it may be made, otherwise why not. The same rules the
  * engine applies at publish (`attome_workflow::graph::validate`): the ports
  * exist, their types meet, an entry node takes no input, no edge is made
- * twice and no cycle is closed. Pure.
+ * twice and no cycle is closed. A state model has no cycle rule (a record may
+ * go back to a state), so its canvas passes `allowCycles` (M8-T4). Pure.
  */
 export function checkConnection(
   doc: GraphDoc,
   kinds: readonly GraphNodeKind[],
   from: PortRef,
   to: PortRef,
+  options: { allowCycles?: boolean } = {},
 ): Refusal | null {
   const kindOf = (id: string) => {
     const node = doc.nodes.find(n => n.id === id);
@@ -117,7 +136,7 @@ export function checkConnection(
       && e.to_node === to.node && e.to_port === to.port)) {
     return { key: 'graphCanvas.refuse.duplicate' };
   }
-  if (reaches(doc.edges, to.node, from.node)) return { key: 'graphCanvas.refuse.cycle' };
+  if (!options.allowCycles && reaches(doc.edges, to.node, from.node)) return { key: 'graphCanvas.refuse.cycle' };
   return null;
 }
 

@@ -237,6 +237,8 @@ impl std::fmt::Debug for NodeRunSummary {
 #[derive(Serialize, ToSchema)]
 pub struct InstanceDetail {
     pub id: Uuid,
+    /// M2-T3: the flow the run belongs to, to open the graph it ran.
+    pub definition_id: Uuid,
     pub definition_version_id: Uuid,
     pub status: String,
     pub started_at: DateTime<Utc>,

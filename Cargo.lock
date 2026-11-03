@@ -2765,6 +2765,7 @@ dependencies = [
  "chrono",
  "chrono-tz",
  "metrics",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",
