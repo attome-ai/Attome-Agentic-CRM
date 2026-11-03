@@ -1081,3 +1081,94 @@ fn recreating_a_retired_relationship_with_swapped_endpoints_is_a_conflict() {
         );
     })
 }
+
+async fn put_links(app: &axum::Router, cookie: &str, path: &str, ids: &[Uuid]) -> StatusCode {
+    app.clone()
+        .oneshot(req("PUT", path, cookie, Some(&json!({ "ids": ids }))))
+        .await
+        .unwrap()
+        .status()
+}
+
+async fn linked_sorted(
+    app: &axum::Router,
+    cookie: &str,
+    entity: &str,
+    id: Uuid,
+    rel: &str,
+) -> Vec<Uuid> {
+    let mut ids = related_ids(app, cookie, entity, id, rel).await;
+    ids.sort();
+    ids
+}
+
+fn sorted(mut ids: Vec<Uuid>) -> Vec<Uuid> {
+    ids.sort();
+    ids
+}
+
+/// A2-T4 (multi-lookup): one `PUT` makes the anchor's links exactly the ids
+/// sent, linking the missing, unlinking the rest; the same set again changes
+/// nothing, and an empty set clears them.
+// op: PUT /api/v1/{entity}/{id}/related/{relationship}
+#[test]
+fn multi_lookup_replaces_the_linked_set() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let cookie = seed_admin(&system).await;
+        let app = full_app(system);
+
+        let entity_a = provision_entity(&app, &cookie, "mlk_a").await;
+        let entity_b = provision_entity(&app, &cookie, "mlk_b").await;
+        let rel = create_relationship(&app, &cookie, &entity_a, &entity_b).await;
+        let a_id = create_record(&app, &cookie, &entity_a, "a1").await;
+        let b1 = create_record(&app, &cookie, &entity_b, "b1").await;
+        let b2 = create_record(&app, &cookie, &entity_b, "b2").await;
+        let b3 = create_record(&app, &cookie, &entity_b, "b3").await;
+        let path = format!("/api/v1/{entity_a}/{a_id}/related/{rel}");
+
+        assert_eq!(
+            put_links(&app, &cookie, &path, &[b1, b2]).await,
+            StatusCode::NO_CONTENT
+        );
+        assert_eq!(
+            linked_sorted(&app, &cookie, &entity_a, a_id, &rel).await,
+            sorted(vec![b1, b2])
+        );
+        assert_eq!(
+            put_links(&app, &cookie, &path, &[b2, b3, b3]).await,
+            StatusCode::NO_CONTENT
+        );
+        assert_eq!(
+            linked_sorted(&app, &cookie, &entity_a, a_id, &rel).await,
+            sorted(vec![b2, b3])
+        );
+        assert_eq!(
+            put_links(&app, &cookie, &path, &[b3, b2]).await,
+            StatusCode::NO_CONTENT
+        );
+        assert_eq!(
+            linked_sorted(&app, &cookie, &entity_a, a_id, &rel).await,
+            sorted(vec![b2, b3])
+        );
+        assert_eq!(
+            put_links(&app, &cookie, &path, &[]).await,
+            StatusCode::NO_CONTENT
+        );
+        assert!(
+            linked_sorted(&app, &cookie, &entity_a, a_id, &rel)
+                .await
+                .is_empty()
+        );
+        // A record the other side does not have refuses the whole set.
+        assert_eq!(
+            put_links(&app, &cookie, &path, &[b1, Uuid::now_v7()]).await,
+            StatusCode::NOT_FOUND
+        );
+        assert!(
+            linked_sorted(&app, &cookie, &entity_a, a_id, &rel)
+                .await
+                .is_empty()
+        );
+    })
+}

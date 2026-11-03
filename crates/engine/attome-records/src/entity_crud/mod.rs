@@ -415,6 +415,7 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/{entity}/{id}/related/{relationship}",
             get(related::list_related)
                 .post(related::link_related)
+                .put(related::replace_related)
                 .delete(related::unlink_related),
         )
 }

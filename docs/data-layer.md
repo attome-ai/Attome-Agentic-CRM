@@ -104,3 +104,15 @@ that (202). A value that points at no record refuses the validation (409) and th
 `NOT VALID`; `GET /api/v1/admin/entities/{entity_id}/orphans` finds such values.
 `GET …/foreign-key` answers the key's state (`none`, `not_valid`, `valid`). An `orphan` lookup keeps
 no key: a hard-deleted target leaves its value, and the orphan scan is its check.
+
+## Many-to-many links (multi-lookup)
+
+A many-to-many relationship's links are read with `GET /api/v1/{entity}/{id}/related/{relationship}`
+(each linked record with its id and name), added with `POST` (`{"id"}`) and removed with `DELETE`
+(`?id=`). `PUT` with `{"ids": [...]}` (at most 500) makes the links exactly that set in one
+transaction: the missing ones are linked (an earlier unlinked one comes back), the rest unlinked,
+with `update` access needed on the record and on every record linked or unlinked, change-feed rows
+for each and one audit event. A record the other side does not have refuses the whole set. A
+form's multi-lookup control saves through it. Encrypted text is an ordinary text field with
+`options.encryption.mode = "randomised"` (sealed at rest, needs a sensitivity label, never filtered
+or sorted).

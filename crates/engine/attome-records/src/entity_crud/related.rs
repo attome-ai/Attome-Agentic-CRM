@@ -789,10 +789,198 @@ pub(super) async fn unlink_related(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// The most records one replace may name.
+pub const MAX_REPLACE_LINKS: usize = 500;
+
+/// Body of `PUT /api/v1/{entity}/{id}/related/{relationship}`.
+#[derive(Deserialize, utoipa::ToSchema)]
+pub(super) struct ReplaceLinksBody {
+    /// Every record of the other side the anchor is to be linked to; the
+    /// others are unlinked. At most 500.
+    ids: Vec<Uuid>,
+}
+
+/// The links to add and to remove for `wanted` over `current`, each in the
+/// order given and without repeats. Pure.
+pub fn link_changes(current: &[Uuid], wanted: &[Uuid]) -> (Vec<Uuid>, Vec<Uuid>) {
+    let mut seen = std::collections::HashSet::new();
+    let add = wanted
+        .iter()
+        .filter(|id| !current.contains(*id) && seen.insert(**id))
+        .copied()
+        .collect();
+    let remove = current
+        .iter()
+        .filter(|id| !wanted.contains(*id))
+        .copied()
+        .collect();
+    (add, remove)
+}
+
+/// Replace related records
+///
+/// A2-T4 (multi-lookup): `PUT /api/v1/{entity}/{id}/related/{relationship}` makes the anchor's
+/// links on the relationship exactly `ids`: the missing ones are linked (an earlier unlinked join
+/// row reactivated) and the rest unlinked, in one transaction, with the same `update` access on
+/// both sides, change-feed rows and one audit event as link and unlink. A form's multi-lookup
+/// control saves through this. At most 500 ids.
+#[utoipa::path(
+    put,
+    path = "/api/v1/{entity}/{id}/related/{relationship}",
+    tag = "entity",
+    params(
+        ("entity" = String, Path, description = "The entity's logical name"),
+        ("id" = Uuid, Path, description = "The record"),
+        ("relationship" = String, Path, description = "The relationship's name"),
+    ),
+    request_body = ReplaceLinksBody,
+    responses(
+        (status = 204, description = "The links are exactly `ids`"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "Entity, record, relationship, or a linked record not found", body = ErrorResponse),
+        (status = 422, description = "More than 500 ids", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Update)])))),
+)]
+pub(super) async fn replace_related(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped<Update>>,
+    Path((entity_input, record_id, relationship)): Path<(String, Uuid, String)>,
+    Json(body): Json<ReplaceLinksBody>,
+) -> Result<StatusCode, AppError> {
+    if body.ids.len() > MAX_REPLACE_LINKS {
+        return Err(AppError::Validation(format!(
+            "ids: at most {MAX_REPLACE_LINKS}"
+        )));
+    }
+    let (entity_id, entity_name, _, _) = resolve_entity(&state, &entity_input).await?;
+    require_record_access(
+        &state,
+        &ctx,
+        entity_id,
+        &entity_name,
+        record_id,
+        RecordAction::Update,
+    )
+    .await?;
+    let def = resolve_relationship(&state, &relationship, &entity_name)?;
+    let side = def.other_side(&entity_name).ok_or(AppError::NotFound)?;
+    let other_entity_name = side.other_entity.to_owned();
+    crate::entity_mutation::require_metadata_table_unlocked(&state, &ctx, &def.join_table).await?;
+
+    let join_table = quote_ident(&def.join_table);
+    let this_col = quote_ident(side.this_column);
+    let other_col = quote_ident(side.other_column);
+    let current: Vec<Uuid> = sqlx::query_scalar(&attome_db::tag_dynamic(
+        "entity.related",
+        &format!("SELECT {other_col} FROM {join_table} WHERE {this_col} = $1 AND is_active = true"),
+    ))
+    .bind(record_id)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let (add, remove) = link_changes(&current, &body.ids);
+    if add.is_empty() && remove.is_empty() {
+        return Ok(StatusCode::NO_CONTENT);
+    }
+    for other in add.iter().chain(remove.iter()) {
+        require_other_side_access(
+            &state,
+            &ctx,
+            side.other_entity,
+            *other,
+            RecordAction::Update,
+        )
+        .await?;
+    }
+
+    let (layer_col, layer_val) =
+        if attome_core::changeset::OWNER_LAYER_TABLES.contains(&def.join_table.as_str()) {
+            (", owner_layer", ", 'project'")
+        } else {
+            ("", "")
+        };
+    let link_sql = format!(
+        "INSERT INTO {join_table} ({this_col}, {other_col}, created_by{layer_col}) \
+         VALUES ($1, $2, $3{layer_val}) \
+         ON CONFLICT ({this_col}, {other_col}) \
+         DO UPDATE SET is_active = true, row_version = {join_table}.row_version + 1"
+    );
+    let unlink_sql = format!(
+        "UPDATE {join_table} SET is_active = false, row_version = row_version + 1 \
+         WHERE {this_col} = $1 AND {other_col} = ANY($2) AND is_active = true"
+    );
+
+    // Same orchestration as `link_related`: mutate -> change-feed (every
+    // record touched) -> audit -> commit -> rw-pin, in one transaction.
+    let actor = MutationActor::fetch(&state, ctx.user_id).await;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    for other in &add {
+        sqlx::query(&attome_db::tag_dynamic("entity.related", &link_sql))
+            .bind(record_id)
+            .bind(other)
+            .bind(ctx.user_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+    }
+    if !remove.is_empty() {
+        sqlx::query(&attome_db::tag_dynamic("entity.related", &unlink_sql))
+            .bind(record_id)
+            .bind(&remove)
+            .execute(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+    }
+    change_feed::emit_tx(&mut tx, &entity_name, record_id, ChangeOperation::Update).await?;
+    for other in add.iter().chain(remove.iter()) {
+        change_feed::emit_tx(&mut tx, &other_entity_name, *other, ChangeOperation::Update).await?;
+    }
+
+    let mut audit = MutationAudit::new();
+    audit.category = AuditCategory::Relationship;
+    audit.event_name = Some(relationship.clone());
+    audit.event_comment = Some(format!(
+        "set {entity_name}:{record_id}'s {other_entity_name} links: {} added, {} removed",
+        add.len(),
+        remove.len()
+    ));
+    MutationRing::new(&state)
+        .commit_mutation(
+            tx,
+            &ctx,
+            entity_id,
+            &entity_name,
+            &[],
+            &actor,
+            AuditOperation::Update,
+            MutationSideEffects {
+                grant_creator_share: false,
+                mirror_file_fields: false,
+            },
+            GrantInvalidation::Skip,
+            audit,
+            "replace links entity_input",
+            MutationResult {
+                record_id,
+                old_row: None,
+                new_row: None,
+                cascade_summary: Vec::new(),
+                approval: None,
+                held: None,
+                warnings: Vec::new(),
+            },
+        )
+        .await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
 /// document.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list_related, link_related, unlink_related))]
+#[openapi(paths(list_related, link_related, unlink_related, replace_related))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
@@ -819,5 +1007,18 @@ mod tests {
         assert!(check_link(None, day("2026-12-31"), day("2026-01-01"), None).is_err());
         assert!(check_link(None, None, None, Some(&serde_json::json!(["x"]))).is_err());
         assert!(check_link(None, None, None, Some(&serde_json::json!({ "weight": 3 }))).is_ok());
+    }
+}
+
+#[cfg(test)]
+mod multi_lookup_tests {
+    use super::*;
+
+    #[test]
+    fn multi_lookup_link_changes_add_the_missing_and_remove_the_rest() {
+        let [a, b, c] = [Uuid::from_u128(1), Uuid::from_u128(2), Uuid::from_u128(3)];
+        assert_eq!(link_changes(&[a, b], &[b, c, c]), (vec![c], vec![a]));
+        assert_eq!(link_changes(&[a], &[a]), (vec![], vec![]));
+        assert_eq!(link_changes(&[a, b], &[]), (vec![], vec![a, b]));
     }
 }
