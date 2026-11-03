@@ -153,7 +153,8 @@ export function recentWorkspaces(rows: readonly WorkspaceRow[], limit = RECENT):
           <h3>{{ 'dataModel.recentWork' | translate }}</h3>
           <ul class="ds-list">
             @for (w of recent(); track w.id) {
-              <li><button type="button" data-testid="ds-enter" (click)="enter(w)">{{ w.name }}</button></li>
+              <li><button type="button" data-testid="ds-enter" (click)="enter(w)">{{ w.name }}</button>
+                <a data-testid="ds-review" [href]="'/xrm/admin/develop/review/' + w.id">{{ 'dataModel.reviewOpen' | translate }}</a></li>
             }
           </ul>
           @if (!recent().length) { <p>{{ 'dataModel.noRecent' | translate }}</p> }

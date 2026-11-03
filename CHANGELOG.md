@@ -17,6 +17,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- One screen to review and publish a whole draft app (AD4-T2): `/xrm/admin/develop/review/{workspace}`
+  groups the workspace's changes against live by kind, shows the checklist of every entity the draft
+  touches (`GET /api/v1/admin/checklist?entities=...`, read inside the workspace) and publishes it,
+  saying when a builder's publish waits for the owner's review.
 - An app's guided checklist (T1-T2): `GET /api/v1/admin/apps/{id}/checklist` lists, for each entity
   the app names, its data, screens, rules, access, tests and Arabic label, what is missing and the
   screen that fixes it; the Develop start screen shows it for each installed app.

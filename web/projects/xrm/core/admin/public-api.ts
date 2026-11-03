@@ -51,6 +51,7 @@ export { dataModelAr, dataModelEn } from './entity-metadata/diagram/data-model.i
 export { DraftReviewComponent, acceptedCalls, layoutDraft } from './entity-metadata/diagram/draft-review.component';
 // T1-T1: the Develop start screen.
 export { DevelopStartComponent, openItems, recentWorkspaces } from './develop/develop-start.component';
+export { AppReviewComponent, draftEntities, groupOps, opKind } from './develop/app-review.component';
 // A1-T14 step 4: the designer's refactor dialog.
 export { RefactorDialogComponent, splitTargets } from './entity-metadata/diagram/refactor-dialog.component';
 export type { DraftCall, DraftResult, DraftStep } from './entity-metadata/diagram/draft-review.component';

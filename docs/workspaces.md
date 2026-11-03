@@ -142,6 +142,16 @@ Each item carries the screen that fixes it. The app is `ready` when every entity
 are done. Inside a workspace the checklist reads the workspace's model, so it shows the work before
 it is published. The Develop start screen shows it for each installed app.
 
+A draft app has no app record until it is installed, so its review screen asks
+`GET /api/v1/admin/checklist?entities=a,b` inside the workspace instead: the same items for the
+entities its changes touch.
+
+The review screen (`/xrm/admin/develop/review/{workspace}`, linked from recent work on the Develop
+start screen) shows on one page the workspace's changes against live grouped by kind (entities,
+fields, screens, access, processes, labels), any live changes that conflict, the checklist, and the
+publish button. Open checklist items warn but do not stop the publish; conflicts and a blocked plan
+do. A builder's publish answers that it waits for the owner's review.
+
 ## In the web app
 
 Builders see a workspace picker in the header. It lists the open workspaces, makes a new one

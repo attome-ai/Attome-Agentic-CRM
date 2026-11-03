@@ -208,6 +208,16 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin').then(m => m.DevelopStartComponent),
           },
           {
+            // AD4-T2 — review and publish a whole draft app.
+            path: 'develop/review/:id',
+            providers: [provideLayerCatalog(
+              () => import('@attome/xrm/core/admin').then(m => m.dataModelEn),
+              () => import('@attome/xrm/core/admin').then(m => m.dataModelAr),
+            )],
+            canActivate: [authGuard, layerCatalogsReady],
+            loadComponent: () => import('@attome/xrm/core/admin').then(m => m.AppReviewComponent),
+          },
+          {
             // A1-T14 — the data model as a diagram.
             path: 'data-model',
             providers: [provideLayerCatalog(

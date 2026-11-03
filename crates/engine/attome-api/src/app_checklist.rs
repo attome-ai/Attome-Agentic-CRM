@@ -13,18 +13,22 @@
 //! - **docs**: an Arabic label beside its English name.
 //!
 //! Each item carries the screen that fixes it. Reads only.
+//!
+//! AD4-T2: `GET /api/v1/admin/checklist?entities=a,b` answers the same for a
+//! list of entities, for a draft app that has no `app` row yet (its review
+//! screen asks it inside the draft's workspace).
 
 use attome_core::EngineState;
 use attome_server::authz::{Authorized, Privilege, area};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     routing::get,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 /// One checklist item.
@@ -227,6 +231,78 @@ async fn facts(state: &EngineState, entity: &str) -> Result<EntityFacts, AppErro
     })
 }
 
+/// Entities the checklist reads, at most this many.
+const MAX_ENTITIES: usize = 200;
+
+/// Each entity's checklist, in order.
+async fn entity_checklists(
+    state: &EngineState,
+    names: Vec<String>,
+) -> Result<Vec<EntityChecklist>, AppError> {
+    let mut out = Vec::with_capacity(names.len());
+    for name in names {
+        let facts = facts(state, &name).await?;
+        let items = items_for(&name, &facts);
+        let ready = items.iter().all(|i| i.done || !i.required);
+        out.push(EntityChecklist {
+            entity: name,
+            items,
+            ready,
+        });
+    }
+    Ok(out)
+}
+
+/// `entities=a,b,c` as names: trimmed, blanks and repeats dropped, capped.
+/// Pure.
+pub fn entity_names(list: &str) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for name in list.split(',').map(str::trim).filter(|n| !n.is_empty()) {
+        if !out.iter().any(|n| n == name) {
+            out.push(name.to_owned());
+        }
+        if out.len() == MAX_ENTITIES {
+            break;
+        }
+    }
+    out
+}
+
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct EntitiesQuery {
+    /// Entity logical names, comma-separated.
+    pub entities: String,
+}
+
+/// Entities' checklists
+///
+/// [`checklist`]'s answer for a list of entities rather than an app's, for
+/// a draft app without an app record: asked inside the draft's workspace it
+/// reads the workspace's model. Reads only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/checklist",
+    operation_id = "entities_checklist",
+    tag = "admin",
+    params(EntitiesQuery),
+    responses(
+        (status = 200, description = "Success", body = Vec<EntityChecklist>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn entities_checklist(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<area::DataModel>>,
+    Query(query): Query<EntitiesQuery>,
+) -> Result<Json<Vec<EntityChecklist>>, AppError> {
+    Ok(Json(
+        entity_checklists(&state, entity_names(&query.entities)).await?,
+    ))
+}
+
 /// An app's checklist
 ///
 /// For each entity the app names: whether it has fields, a form and a view,
@@ -264,19 +340,9 @@ async fn checklist(
         .into_iter()
         .flatten()
         .filter_map(|v| v.as_str().map(str::to_owned))
-        .take(200)
+        .take(MAX_ENTITIES)
         .collect();
-    let mut out = Vec::with_capacity(names.len());
-    for name in names {
-        let facts = facts(&state, &name).await?;
-        let items = items_for(&name, &facts);
-        let ready = items.iter().all(|i| i.done || !i.required);
-        out.push(EntityChecklist {
-            entity: name,
-            items,
-            ready,
-        });
-    }
+    let out = entity_checklists(&state, names).await?;
     let ready = !out.is_empty() && out.iter().all(|e| e.ready);
     Ok(Json(AppChecklist {
         app: id,
@@ -286,12 +352,14 @@ async fn checklist(
 }
 
 pub fn routes() -> Router<EngineState> {
-    Router::new().route("/api/v1/admin/apps/{id}/checklist", get(checklist))
+    Router::new()
+        .route("/api/v1/admin/apps/{id}/checklist", get(checklist))
+        .route("/api/v1/admin/checklist", get(entities_checklist))
 }
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(checklist),
+    paths(checklist, entities_checklist),
     components(schemas(AppChecklist, EntityChecklist, ChecklistItem))
 )]
 struct ApiDocFragment;
@@ -337,6 +405,10 @@ mod tests {
             tests_failing: 1,
             ..complete
         };
+        assert_eq!(
+            entity_names(" visit, ,clinic,visit "),
+            vec!["visit".to_owned(), "clinic".to_owned()]
+        );
         assert!(
             !items_for("visit", &failing)
                 .iter()
