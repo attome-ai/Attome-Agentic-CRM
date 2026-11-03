@@ -79,6 +79,13 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     // Z1-T12: a cloud secret store, when configured, is read once here.
     let config = crate::secret_sources::load_config().await?;
     config.validate()?;
+    // T5-T3: `attome serve --workspace <id> --workspace-port <port>` serves one
+    // Develop workspace, on the live configuration turned to its schema.
+    let workspace = attome::workspace_host::workspace_arg();
+    let config = match workspace {
+        Some((id, port)) => attome::workspace_host::prepare(config, id, port).await?,
+        None => config,
+    };
     // Z5-T3: the per-route policy table, from the same document the API
     // publishes; the body-limit layer reads it by matched route.
     let policy_table = attome_server::route_policy::RoutePolicyTable::from_document(
@@ -114,6 +121,11 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     // split deployment can never drift out of sync on anything security- or
     // correctness-relevant between the HTTP tier and the worker tier.
     let boot = attome::boot::init(&config).await?;
+    // T5-T3: the live server starts and proxies to workspace processes; a
+    // workspace process proxies to none.
+    if workspace.is_none() {
+        attome::workspace_host::install()?;
+    }
     // D-792 — the fleet console's gate (decided and logged in `boot::init`).
     #[cfg(feature = "fleet-console")]
     let fleet_console_open = boot.fleet_console_open;
@@ -321,6 +333,19 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = builder
         .add_audience_bundle(portal_bundle)
         .build(|r| attome_api::apply_s2s_layer(r, base_state.clone()));
+    // T5-T3: a workspace process answers only the live server, which holds
+    // its token; nothing reaches it by its port alone.
+    if workspace.is_some() {
+        let token = std::sync::Arc::new(
+            std::env::var(attome::workspace_host::TOKEN_VAR)
+                .map_err(|_| "a workspace process needs ATTOME_WORKSPACE_TOKEN")?,
+        );
+        app = app.layer(axum::middleware::from_fn(
+            move |request: axum::extract::Request, next: axum::middleware::Next| {
+                attome::workspace_host::require_token(std::sync::Arc::clone(&token), request, next)
+            },
+        ));
+    }
     // D-792 §7.2 — the Fleet sidebar group is contributed at serve time, only
     // with the gate open; nothing is ever stored in `sidebar`.
     #[cfg(feature = "fleet-console")]

@@ -79,3 +79,5 @@ pub mod tls;
 pub mod voice;
 /// J5-T2: WhatsApp conversations in.
 pub mod whatsapp_inbound;
+/// T5-T3: a Develop workspace served by a process of its own.
+pub mod workspace_host;

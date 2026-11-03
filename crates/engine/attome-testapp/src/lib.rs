@@ -477,12 +477,28 @@ impl TestApp {
         path: &str,
         body: Option<Value>,
     ) -> (StatusCode, Value) {
+        self.request_as_with(cookie, method, path, &[], body).await
+    }
+
+    /// Sends one request with `cookie` and extra `headers` (a workspace
+    /// header, say).
+    pub async fn request_as_with(
+        &self,
+        cookie: &str,
+        method: Method,
+        path: &str,
+        headers: &[(&str, &str)],
+        body: Option<Value>,
+    ) -> (StatusCode, Value) {
         let mut builder = Request::builder()
             .method(method)
             .uri(path)
             .header("cookie", cookie)
             .header("origin", "http://localhost:4200")
             .header("sec-fetch-site", "same-origin");
+        for (name, value) in headers {
+            builder = builder.header(*name, *value);
+        }
         let body = match body {
             Some(value) => {
                 builder = builder.header("content-type", "application/json");

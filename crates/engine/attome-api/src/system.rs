@@ -871,6 +871,13 @@ impl EngineSystem {
             .merge(crate::system_health::routes())
             .merge(crate::autonumber_admin::routes())
             .merge(authed)
+            // T5-T3: a request naming a Develop workspace is served by that
+            // workspace's own process, after authentication and before any
+            // route runs here.
+            .layer(middleware::from_fn_with_state(
+                self.state.clone(),
+                crate::workspace::proxy::to_workspace,
+            ))
             .with_state(self.state);
         attome_server::RouteBundle::new(router)
     }

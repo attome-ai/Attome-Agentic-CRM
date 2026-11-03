@@ -16,6 +16,7 @@
 //! route needs the data-model administration area; creating and discarding
 //! are audited as configuration changes.
 
+pub mod proxy;
 pub mod schema;
 
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
