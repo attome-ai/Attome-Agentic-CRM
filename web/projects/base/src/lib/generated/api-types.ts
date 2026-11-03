@@ -5968,6 +5968,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/entities/{entity_id}/partition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An entity's partitioning
+         * @description Y2-T12: whether entity `entity_id` is partitioned by created date, its latest partition run and
+         *     whether the table from before the swap is still kept. Administrators with the data-model area.
+         */
+        get: operations["get_entity_partition"];
+        put?: never;
+        /**
+         * Partition an entity by created date
+         * @description Y2-T12: starts partitioning entity `entity_id`'s table by month on `created_at`, online. Refused
+         *     (422) unless the table holds more rows than `records.partition_row_threshold` (50,000,000 unless
+         *     set) and has no unique business key, keyed lookup pointing at it, trigger or view; 409 while a
+         *     run's tables or the old table are still there. Creates the partitioned copy and its sync trigger,
+         *     then queues the copy (a data step run of kind `partition`); the run swaps the tables when the
+         *     copy is done. Administrators with the data-model area.
+         */
+        post: operations["partition_entity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/entities/{entity_id}/refactor": {
         parameters: {
             query?: never;
@@ -39791,6 +39821,14 @@ export interface components {
             product_id: string;
             sku?: string | null;
             stock?: null | components["schemas"]["StockBadge"];
+            variant_label?: string | null;
+            /**
+             * Format: uuid
+             * @description F8-T10: the product this one is a variant of, and what sets it apart
+             *     (sales pack changeset 0034); the store shows a product's variants
+             *     together.
+             */
+            variant_of?: string | null;
             /** @description F8-T10: the VAT on one at `commerce.vat_rate`, and the price with it. */
             vat: string;
         };
@@ -63323,6 +63361,33 @@ export interface components {
             part: number;
             /** @description PUT the part's bytes here. */
             upload_url: string;
+        };
+        /** @description A partition run. */
+        PartitionRun: {
+            /** Format: date-time */
+            created_at: string;
+            error_message?: string | null;
+            /** Format: date-time */
+            finished_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            rows_estimate?: number | null;
+            /** Format: int64 */
+            rows_scanned: number;
+            /** Format: int64 */
+            rows_written: number;
+            /** @description `queued`, `running`, `paused`, `succeeded`, `failed` or `abandoned`. */
+            status: string;
+        };
+        /** @description An entity's partitioning. */
+        PartitionStatus: {
+            entity: string;
+            /** @description `<entity>__old`, the table before the swap, is still kept. */
+            old_table_kept: boolean;
+            run?: null | components["schemas"]["PartitionRun"];
+            /** @description `standard` or `high_volume` (partitioned by month on `created_at`). */
+            storage_mode: string;
         };
         /** @description A public partner application, with the CAPTCHA token sign-up takes. */
         PartnerApplicationBody: components["schemas"]["Application"] & {
@@ -87972,7 +88037,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Stopped: an orphan scan or a split is abandoned (a split keeps the rows it wrote), a retype that has not swapped is undone at once (Y12-T7), any other field run is failed for its abandon route */
+            /** @description Stopped: an orphan scan or a split is abandoned (a split keeps the rows it wrote), a partition run is abandoned and its partitioned copy dropped, a retype that has not swapped is undone at once (Y12-T7), any other field run is failed for its abandon route */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -93858,6 +93923,124 @@ export interface operations {
             };
             /** @description orphan_scan_required: the table is over the inline limit and no scan has finished; POST /api/v1/admin/data-step-runs/orphan-scans */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_entity_partition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The entity's partitioning */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartitionStatus"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the data-model area */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    partition_entity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The copy is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartitionStatus"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the data-model area */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already partitioned, or an earlier run's tables are there */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too small, or something in the table keeps it from moving */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

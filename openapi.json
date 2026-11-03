@@ -20630,7 +20630,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Stopped: an orphan scan or a split is abandoned (a split keeps the rows it wrote), a retype that has not swapped is undone at once (Y12-T7), any other field run is failed for its abandon route",
+            "description": "Stopped: an orphan scan or a split is abandoned (a split keeps the rows it wrote), a partition run is abandoned and its partitioned copy dropped, a retype that has not swapped is undone at once (Y12-T7), any other field run is failed for its abandon route",
             "content": {
               "application/json": {
                 "schema": {
@@ -30439,6 +30439,189 @@
         "x-privilege": "admin",
         "x-rate-class": "api",
         "x-risk": "low"
+      }
+    },
+    "/api/v1/admin/entities/{entity_id}/partition": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "An entity's partitioning",
+        "description": "Y2-T12: whether entity `entity_id` is partitioned by created date, its latest partition run and\nwhether the table from before the swap is still kept. Administrators with the data-model area.",
+        "operationId": "get_entity_partition",
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The entity's partitioning",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartitionStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the data-model area",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-cache": "private-revalidate",
+        "x-idempotent": "natural",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "low"
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Partition an entity by created date",
+        "description": "Y2-T12: starts partitioning entity `entity_id`'s table by month on `created_at`, online. Refused\n(422) unless the table holds more rows than `records.partition_row_threshold` (50,000,000 unless\nset) and has no unique business key, keyed lookup pointing at it, trigger or view; 409 while a\nrun's tables or the old table are still there. Creates the partitioned copy and its sync trigger,\nthen queues the copy (a data step run of kind `partition`); the run swaps the tables when the\ncopy is done. Administrators with the data-model area.",
+        "operationId": "partition_entity",
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "description": "The entity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "The copy is queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PartitionStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the data-model area",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already partitioned, or an earlier run's tables are there",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Too small, or something in the table keeps it from moving",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        },
+        "x-cache": "no-store",
+        "x-idempotent": "key",
+        "x-module": "core",
+        "x-privilege": "admin",
+        "x-rate-class": "api",
+        "x-risk": "medium"
       }
     },
     "/api/v1/admin/entities/{entity_id}/refactor": {
@@ -178995,6 +179178,20 @@
               }
             ]
           },
+          "variant_label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "variant_of": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "F8-T10: the product this one is a variant of, and what sets it apart\n(sales pack changeset 0034); the store shows a product's variants\ntogether."
+          },
           "vat": {
             "type": "string",
             "description": "F8-T10: the VAT on one at `commerce.vat_rate`, and the price with it."
@@ -239868,6 +240065,92 @@
           }
         }
       },
+      "PartitionRun": {
+        "type": "object",
+        "description": "A partition run.",
+        "required": [
+          "id",
+          "status",
+          "rows_scanned",
+          "rows_written",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "error_message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rows_estimate": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "rows_scanned": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rows_written": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string",
+            "description": "`queued`, `running`, `paused`, `succeeded`, `failed` or `abandoned`."
+          }
+        }
+      },
+      "PartitionStatus": {
+        "type": "object",
+        "description": "An entity's partitioning.",
+        "required": [
+          "entity",
+          "storage_mode",
+          "old_table_kept"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "old_table_kept": {
+            "type": "boolean",
+            "description": "`<entity>__old`, the table before the swap, is still kept."
+          },
+          "run": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PartitionRun",
+                "description": "The latest partition run, if any."
+              }
+            ]
+          },
+          "storage_mode": {
+            "type": "string",
+            "description": "`standard` or `high_volume` (partitioned by month on `created_at`)."
+          }
+        }
+      },
       "PartnerApplicationBody": {
         "allOf": [
           {
@@ -271189,6 +271472,7 @@
       "description": "Health, readiness, and version probes"
     }
   ],
+  "x-api-version": "2026-10",
   "webhooks": {
     "entityChanged": {
       "post": {
@@ -271241,6 +271525,5 @@
       }
     }
   },
-  "x-api-version": "2026-10",
   "x-version-adapters": []
 }

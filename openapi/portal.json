@@ -10099,6 +10099,20 @@
               }
             ]
           },
+          "variant_label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "variant_of": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "F8-T10: the product this one is a variant of, and what sets it apart\n(sales pack changeset 0034); the store shows a product's variants\ntogether."
+          },
           "vat": {
             "type": "string",
             "description": "F8-T10: the VAT on one at `commerce.vat_rate`, and the price with it."
