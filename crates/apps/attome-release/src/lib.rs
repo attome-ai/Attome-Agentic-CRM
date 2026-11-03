@@ -397,13 +397,18 @@ pub fn dispatch(args: &[String]) -> Option<ExitCode> {
             )
         }
         Some("test") if args.get(1).map(String::as_str) == Some("mutants") => {
-            let write_baseline = match args.get(2..) {
-                Some([]) => false,
-                Some([flag]) if flag == "--write-baseline" => true,
-                _ => return None,
-            };
+            let mut write_baseline = false;
+            let mut package: Option<&str> = None;
+            let mut rest = args.get(2..).unwrap_or_default().iter();
+            while let Some(arg) = rest.next() {
+                match arg.as_str() {
+                    "--write-baseline" => write_baseline = true,
+                    "--crate" => package = Some(rest.next()?.as_str()),
+                    _ => return None,
+                }
+            }
             Some(match workspace_root() {
-                Ok(root) => test_mutants::run(&root, write_baseline),
+                Ok(root) => test_mutants::run(&root, write_baseline, package),
                 Err(error) => {
                     eprintln!("attome test mutants: {error}");
                     ExitCode::FAILURE

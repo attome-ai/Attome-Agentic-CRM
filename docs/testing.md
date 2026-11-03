@@ -150,6 +150,16 @@ To start from a real case, `POST /api/v1/admin/customer-tests/from-record` (or *
 on the screen) drafts a test that re-creates a record and checks each field still holds its value
 once saved, so a rule, default or flow that changes it shows; edit it from there.
 
+## Mutation testing
+
+`attome test mutants` runs `cargo mutants` (install it with `cargo install cargo-mutants --locked`)
+over the core engines' decision code, as `.cargo/mutants.toml` scopes it: the security engine, the
+rules engine and the record engine's access plan and query execution. It prints each crate's score
+(caught over caught plus missed) and exits 2 when a missed mutant is not in the baseline
+(`docs/testing/mutants-baseline.json`). The whole scope is about 35 hours, so run one crate at a
+time: `attome test mutants --crate attome-security` (or `attome-rules`, `attome-records`).
+`--write-baseline` records the run; with `--crate` it replaces only that crate's part.
+
 ## Fuzzing
 
 The parsers that read text or JSON from outside are fuzzed with cargo-fuzz. Each fuzz crate sits

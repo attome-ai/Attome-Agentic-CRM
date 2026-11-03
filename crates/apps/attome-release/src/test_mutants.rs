@@ -10,6 +10,12 @@
 //! mutants-baseline.json`) fails the command with exit code 2: a test got
 //! weaker, or new code arrived untested. `--write-baseline` records the run
 //! as the new baseline.
+//!
+//! `--crate <package>` runs one of the scoped crates ([`CRATES`]) alone, so
+//! each run fits a working day (the whole scope is about 35 hours): only
+//! that crate's mutants are judged, and `--write-baseline` replaces only its
+//! part of the baseline (its score and the accepted mutants under its
+//! directory), keeping the others.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -23,6 +29,43 @@ const OUTPUT_DIR: &str = "target/mutants";
 
 /// The baseline of accepted missed mutants.
 pub const BASELINE: &str = "docs/testing/mutants-baseline.json";
+
+/// The scoped crates and their directories (`.cargo/mutants.toml`).
+pub const CRATES: [(&str, &str); 3] = [
+    ("attome-security", "crates/engine/attome-security/"),
+    ("attome-rules", "crates/foundation/attome-rules/"),
+    ("attome-records", "crates/engine/attome-records/"),
+];
+
+/// The directory of a scoped crate. Pure.
+pub fn crate_dir(package: &str) -> Option<&'static str> {
+    CRATES.iter().find(|(p, _)| *p == package).map(|(_, d)| *d)
+}
+
+/// `baseline` with `package`'s part replaced by this run's `outcomes`
+/// (only that package's): its score, and the accepted missed mutants under
+/// its directory. Pure.
+pub fn merge(mut baseline: Baseline, package: &str, outcomes: &[Outcome]) -> Baseline {
+    let dir = crate_dir(package).unwrap_or("");
+    baseline
+        .missed
+        .retain(|name| dir.is_empty() || !name.starts_with(dir));
+    baseline.missed.extend(
+        outcomes
+            .iter()
+            .filter(|o| o.package == package && o.result == Kind::Missed)
+            .map(|o| o.name.clone()),
+    );
+    let only: Vec<Outcome> = outcomes
+        .iter()
+        .filter(|o| o.package == package)
+        .cloned()
+        .collect();
+    if let Some(score) = scores(&only).remove(package) {
+        baseline.scores.insert(package.to_owned(), score);
+    }
+    baseline
+}
 
 /// One mutant's result.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -143,13 +186,24 @@ fn outcomes_path(root: &Path) -> PathBuf {
         .join("outcomes.json")
 }
 
-/// `attome test mutants [--write-baseline]`: 0 when no new mutant survives,
-/// 2 when one does, 1 when the run itself fails.
-pub fn run(root: &Path, write_baseline: bool) -> ExitCode {
-    let status = Command::new("cargo")
-        .args(["mutants", "--output", OUTPUT_DIR])
-        .current_dir(root)
-        .status();
+/// `attome test mutants [--crate <package>] [--write-baseline]`: 0 when no
+/// new mutant survives, 2 when one does, 1 when the run itself fails.
+pub fn run(root: &Path, write_baseline: bool, package: Option<&str>) -> ExitCode {
+    if let Some(package) = package
+        && crate_dir(package).is_none()
+    {
+        eprintln!(
+            "attome test mutants: --crate is one of {}",
+            CRATES.map(|(p, _)| p).join(", ")
+        );
+        return ExitCode::from(2);
+    }
+    let mut command = Command::new("cargo");
+    command.args(["mutants", "--output", OUTPUT_DIR]);
+    if let Some(package) = package {
+        command.args(["--package", package]);
+    }
+    let status = command.current_dir(root).status();
     match status {
         Ok(_) => {}
         Err(e) => {
@@ -167,7 +221,10 @@ pub fn run(root: &Path, write_baseline: bool) -> ExitCode {
         }
     };
     let outcomes = match parse_outcomes(&text) {
-        Ok(outcomes) => outcomes,
+        Ok(outcomes) => outcomes
+            .into_iter()
+            .filter(|o| package.is_none_or(|p| o.package == p))
+            .collect::<Vec<_>>(),
         Err(e) => {
             eprintln!("attome test mutants: {e}");
             return ExitCode::FAILURE;
@@ -194,13 +251,22 @@ pub fn run(root: &Path, write_baseline: bool) -> ExitCode {
         ));
     }
     if write_baseline {
-        let baseline = Baseline {
-            scores,
-            missed: outcomes
-                .iter()
-                .filter(|o| o.result == Kind::Missed)
-                .map(|o| o.name.clone())
-                .collect(),
+        let baseline = match package {
+            Some(package) => match read_baseline(root) {
+                Ok(old) => merge(old, package, &outcomes),
+                Err(e) => {
+                    eprintln!("attome test mutants: {e}");
+                    return ExitCode::FAILURE;
+                }
+            },
+            None => Baseline {
+                scores,
+                missed: outcomes
+                    .iter()
+                    .filter(|o| o.result == Kind::Missed)
+                    .map(|o| o.name.clone())
+                    .collect(),
+            },
         };
         let path = root.join(BASELINE);
         let written = std::fs::create_dir_all(path.parent().unwrap_or(root))
@@ -286,5 +352,51 @@ mod tests {
             ..Baseline::default()
         };
         assert!(new_missed(&outcomes, &accepted).is_empty());
+    }
+
+    #[test]
+    fn one_crate_replaces_only_its_part_of_the_baseline() {
+        let outcome = |package: &str, file: &str, result| Outcome {
+            package: package.into(),
+            name: format!("{file}:1: FnValue in f -> 0"),
+            result,
+        };
+        let mut old = Baseline::default();
+        old.missed
+            .insert("crates/foundation/attome-rules/src/a.rs:1: FnValue in f -> 0".into());
+        old.missed
+            .insert("crates/engine/attome-security/src/old.rs:1: FnValue in f -> 0".into());
+        old.scores.insert(
+            "attome-rules".into(),
+            Score {
+                caught: 9,
+                missed: 1,
+                score: 0.9,
+                ..Score::default()
+            },
+        );
+        let run = [
+            outcome(
+                "attome-security",
+                "crates/engine/attome-security/src/new.rs",
+                Kind::Missed,
+            ),
+            outcome(
+                "attome-security",
+                "crates/engine/attome-security/src/ok.rs",
+                Kind::Caught,
+            ),
+        ];
+        let merged = merge(old, "attome-security", &run);
+        assert!(
+            merged
+                .missed
+                .contains("crates/foundation/attome-rules/src/a.rs:1: FnValue in f -> 0")
+        );
+        assert!(!merged.missed.iter().any(|m| m.contains("old.rs")));
+        assert!(merged.missed.iter().any(|m| m.contains("new.rs")));
+        assert_eq!(merged.scores["attome-rules"].caught, 9);
+        assert_eq!(merged.scores["attome-security"].caught, 1);
+        assert!(crate_dir("attome-ai").is_none());
     }
 }

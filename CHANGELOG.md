@@ -17,6 +17,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- `attome test mutants --crate <package>` (AC5-T9): mutation testing one scoped crate per run, with
+  `--write-baseline` replacing only that crate's part of the baseline.
 - Approvals of an agent principal's requests exclude the agent, the people in its session's chain
   and its sponsor (AH3-T7): the request's payload names them as `excluded_deciders`, and
   `attome_approval` refuses them as it refuses the requester, directly or through a delegation.
