@@ -1314,6 +1314,13 @@ export const xrmShellRoutes: Routes = [
               import('@attome/xrm/dashboard/registration').then(m => m.PAGE_EDITOR_ROUTES),
           },
           {
+            // P5-T1 — the dashboard designer on the shared canvas.
+            path: 'dashboard/:id/design',
+            canActivate: [authGuard],
+            loadComponent: () =>
+              import('@attome/xrm/dashboard/designer').then(m => m.DashboardDesignerComponent),
+          },
+          {
             // N9-T2: the agent designer (define, save as draft, publish).
             path: 'model/agents',
             providers: [provideLayerCatalog(
