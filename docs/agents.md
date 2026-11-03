@@ -203,6 +203,9 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   equivalent (a flow, a rule or an extension) of each automation; nothing is migrated.
   `model.flow.draft` drafts a flow with at least two test cases (the happy path and an edge case),
   runs each through the flow simulation, and returns the results and the requests that save it.
+  `model.app.plan` plans a whole app: its entities (through `model.draft`), the processes to
+  automate and its roles, written out first; called again with `confirmed: true` it returns the
+  ordered building steps (entities, each new entity's starting set and form, then the flows).
   `model.review` checks a draft against the existing model and returns findings. Both save nothing.
   Once an entity's fields are in, `POST /api/v1/admin/entities/{entity_id}/scaffold` gives it its
   starting set: a draft main form, a kanban view over its status choice, the import template's

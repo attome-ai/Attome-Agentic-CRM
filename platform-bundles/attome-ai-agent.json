@@ -53,7 +53,7 @@
               "mcp.call.reversible", "mcp.tools", "meeting.brief", "meeting.confirm_notes", "meeting.notes",
               "memory.forget", "memory.remember", "metadata.propose_conflict_resolution",
               "metric.draft_commentary", "metric.draft_definition", "model.agent.describe",
-              "model.agent.edit", "model.agent.list", "model.attribute.create", "model.attribute.describe",
+              "model.agent.edit", "model.agent.list", "model.app.plan", "model.attribute.create", "model.attribute.describe",
               "model.business_event.describe", "model.business_event.edit", "model.business_event.list",
               "model.component.describe", "model.component.edit", "model.component.list",
               "model.custom_action.describe", "model.custom_action.edit", "model.custom_action.list",

@@ -18,6 +18,8 @@ pub mod agent_playground;
 pub mod agent_stats;
 pub mod agent_supervise;
 pub mod ai_field;
+/// AD4-T1: model.app.plan, a whole-app build planned in writing first.
+pub mod app_draft;
 /// Z10-T11: read approvals and recommend, never decide.
 pub mod approvals;
 pub mod billing;
@@ -196,6 +198,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(dashboard_explain::descriptor());
     all.extend(metric_draft::descriptors());
     all.extend(draft_model::descriptors());
+    all.extend(app_draft::descriptors());
     all.extend(form_draft::descriptors());
     all.extend(flow_draft::descriptors());
     all.extend(import_config::descriptors());
@@ -321,6 +324,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(dashboard_explain::DashboardExplain));
     all.extend(metric_draft::executors());
     all.extend(draft_model::executors());
+    all.extend(app_draft::executors());
     all.extend(form_draft::executors());
     all.extend(flow_draft::executors());
     all.extend(import_config::executors());
