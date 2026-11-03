@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, input, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, OnInit, signal } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -19,6 +19,7 @@ import {
 } from '../../field-changes/field-change-dialog/field-change-dialog.component';
 import { RecoveryArchiveComponent } from '../../field-changes/recovery-archive/recovery-archive.component';
 import { BinSettingsComponent } from '../../bin-settings/bin-settings.component';
+import { TableHealthComponent } from '../../table-health/table-health.component';
 import { FillRateBadgeComponent } from './fill-rate-badge.component';
 
 type RelationshipCascade = 'restrict' | 'orphan' | 'cascade_deactivate';
@@ -151,7 +152,7 @@ const SYSTEM_FIELDS: SystemField[] = [
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports:    [
     OwnerLayerBadgeComponent, FormsModule, RouterLink, TranslatePipe,
-    FieldChangeDialogComponent, RecoveryArchiveComponent, BinSettingsComponent, FillRateBadgeComponent,
+    FieldChangeDialogComponent, RecoveryArchiveComponent, BinSettingsComponent, TableHealthComponent, FillRateBadgeComponent,
     FormulaEditorComponent, RollupEditorComponent,
   ],
   styleUrls:  ['../../../../../styles/admin-page.css', './entity-editor.component.css'],
@@ -285,6 +286,12 @@ export class EntityEditorComponent implements OnInit {
       error: (e: ApiError) => this.error.set(e.message),
     });
   }
+
+  /** Y2-T15: the lookup fields, for the table-health keys (one array per entity, so the section loads once). */
+  readonly lookupFields = computed(() =>
+    (this.entity()?.attributes ?? [])
+      .filter(a => a.field_type === 'lookup')
+      .map(a => ({ id: a.id, logicalname: a.logicalname })));
 
   /** Field names offered by the recovery-archive filter. */
   fieldNames(): string[] {

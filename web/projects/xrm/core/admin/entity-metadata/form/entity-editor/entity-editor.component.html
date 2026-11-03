@@ -222,6 +222,20 @@
     <xrm-bin-settings [entity]="entity()!.logicalname" />
   </div>
 
+  <!-- ── Table health (Y2-T15) ───────────────────────────────────────── -->
+  <div class="ee-fields-section">
+    <div class="ee-section-header">
+      <div>
+        <h2 class="ee-card-title">
+          <i class="las la-heartbeat" aria-hidden="true"></i>
+          {{ 'tableHealth.title' | translate }}
+        </h2>
+        <p class="ee-section-sub">{{ 'tableHealth.hint' | translate }}</p>
+      </div>
+    </div>
+    <xrm-table-health [entityId]="entity()!.id" [lookups]="lookupFields()" />
+  </div>
+
   <!-- ── Auto Value ──────────────────────────────────────────────────── -->
   <div class="ee-fields-section">
     <div class="ee-section-header">
