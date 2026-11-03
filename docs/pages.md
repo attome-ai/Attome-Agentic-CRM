@@ -84,3 +84,13 @@ objection or erasure, giving their password again to prove it is them
 (`POST /{keyword}/api/v1/me/privacy-requests`), and follows each request's status and deadline
 (`GET` there). A request is a data subject request about their verified email address, worked by
 staff with the others under the deployment's law.
+
+## Switching an entity to a metadata form
+
+A record page opens the entity's hand-written form unless the deployment switches the entity to a
+published metadata form: the setting `forms.runtime_entities` maps entity logical names to form ids
+(`{"deal": "<form id>"}`). A switched entity's record page draws that form with the runtime
+renderer (tabs, columns, live rules, field security, form hooks) and creates or saves records
+through it; `GET /api/v1/model/entities/{entity}/runtime-form` answers the form, or 404 when the
+entity keeps its own. The hand-written form stays in the code until the switch is verified; removing
+the entity from the setting brings it back.

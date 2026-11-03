@@ -272,6 +272,11 @@ export class ModelService {
   }
 
   /** Saves changed values; `rowVersion` guards against a lost update. */
+  /** A12-T5: a new record from a metadata form. */
+  createRecord(entity: string, values: Record<string, unknown>): Observable<RecordView> {
+    return this.sdk.post<RecordView>(`/api/v1/${encodeURIComponent(entity)}`, { body: values });
+  }
+
   updateRecord(entity: string, id: string, values: Record<string, unknown>, rowVersion: number): Observable<RecordView> {
     return this.sdk.patch<RecordView>(
       `/api/v1/${encodeURIComponent(entity)}/${encodeURIComponent(id)}`,

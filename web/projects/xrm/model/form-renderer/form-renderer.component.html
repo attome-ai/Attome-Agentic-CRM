@@ -70,7 +70,7 @@
     @if (error(); as error) {
       <p class="fr-error" role="alert">{{ error }}</p>
     }
-    @if (record()) {
+    @if (record() || creates()) {
       <div class="fr-actions">
         <button type="submit" [disabled]="saving() || changed().length === 0" data-testid="form-renderer-save">
           {{ (saving() ? 'formRenderer.saving' : 'formRenderer.save') | translate }}

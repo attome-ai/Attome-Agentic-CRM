@@ -1407,6 +1407,55 @@ async fn form_plan(
     Ok(([(header::ETAG, etag_header)], Json(plan)).into_response())
 }
 
+/// A12-T5: the setting naming, per entity, the published metadata form its
+/// record pages open in place of the hand-written one.
+pub const RUNTIME_FORMS_SETTING: &str = "forms.runtime_entities";
+
+/// The form `entity` is switched to, from `setting` (`{entity: form id}`).
+/// Pure.
+pub fn runtime_form_for(setting: &Value, entity: &str) -> Option<Uuid> {
+    setting.get(entity)?.as_str()?.parse().ok()
+}
+
+/// The form an entity is switched to.
+#[derive(Debug, Serialize, ToSchema)]
+pub(crate) struct RuntimeForm {
+    /// The published form to draw with `GET /api/v1/model/forms/{id}/plan`.
+    form_id: Uuid,
+}
+
+/// An entity's runtime form
+///
+/// A12-T5: the published metadata form `entity`'s record pages open in place of the hand-written
+/// one, when the deployment has switched the entity (`forms.runtime_entities`); 404 when it has
+/// not. Anyone who may read the entity's records.
+#[utoipa::path(
+    get,
+    path = "/api/v1/model/entities/{entity}/runtime-form",
+    tag = "model",
+    params(("entity" = String, Path, description = "The entity's logical name")),
+    responses(
+        (status = 200, description = "The form the entity is switched to", body = RuntimeForm),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "The caller may not read the entity's records", body = ErrorResponse),
+        (status = 404, description = "The entity is not switched to a metadata form", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn runtime_form(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(entity): Path<String>,
+) -> Result<Json<RuntimeForm>, AppError> {
+    ctx.require(&entity, "read")?;
+    let descriptor = attome_core::setting_registry()
+        .get(RUNTIME_FORMS_SETTING)
+        .ok_or(AppError::NotFound)?;
+    let (value, _) = state.settings.load().resolve(descriptor, None, None);
+    let form_id = runtime_form_for(&value, &entity).ok_or(AppError::NotFound)?;
+    Ok(Json(RuntimeForm { form_id }))
+}
+
 /// An entity's default form
 ///
 /// The render plan of the form an entity has when no form is published for
@@ -3318,6 +3367,10 @@ pub fn routes() -> Router<EngineState> {
             get(default_form_plan),
         )
         .route(
+            "/api/v1/model/entities/{entity}/runtime-form",
+            get(runtime_form),
+        )
+        .route(
             "/api/v1/model/entities/{entity}/record-page",
             get(record_page),
         )
@@ -3373,6 +3426,7 @@ pub fn routes() -> Router<EngineState> {
         menu,
         form_plan,
         default_form_plan,
+        runtime_form,
         tours,
         reply_suggestions,
         reply_template_used
@@ -3500,5 +3554,21 @@ mod menu_tests {
         assert_eq!(landing.as_deref(), Some("Support/Cases"));
         let (groups, _) = menu_for(&menu, &[], true);
         assert_eq!(groups.len(), 2, "an administrator sees everything");
+    }
+}
+
+#[cfg(test)]
+mod runtime_form_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn runtime_form_is_read_per_entity() {
+        let id = Uuid::now_v7();
+        let setting = json!({ "deal": id.to_string(), "lead": "not an id" });
+        assert_eq!(runtime_form_for(&setting, "deal"), Some(id));
+        assert_eq!(runtime_form_for(&setting, "lead"), None);
+        assert_eq!(runtime_form_for(&setting, "account"), None);
+        assert_eq!(runtime_form_for(&json!({}), "deal"), None);
     }
 }

@@ -7,6 +7,7 @@ import { combineLatest } from 'rxjs';
 import { EntityListPageComponent } from './pages/entity-list-page.component';
 import { MissingFormPageComponent } from './pages/missing-form-page.component';
 import { EntityRouteRegistry, resolveEntityUrlPath } from '@attome/xrm/core/entity';
+import { RuntimeFormSwitch } from './runtime-form-switch';
 
 type EntityAction = 'list' | 'form';
 
@@ -49,6 +50,7 @@ const warnedAmbiguousPaths = new Set<string>();
 export class EntityRouterComponent {
   private readonly route    = inject(ActivatedRoute);
   private readonly registry = inject(EntityRouteRegistry);
+  private readonly runtimeForms = inject(RuntimeFormSwitch);
 
   private readonly routeState = toSignal(
     combineLatest([this.route.url, this.route.queryParams]),
@@ -115,6 +117,18 @@ export class EntityRouterComponent {
       return {
         component: (override?.listComponent ?? EntityListPageComponent) as Type<unknown>,
         inputs:    { name: logicalname },
+      };
+    }
+    // A12-T5: an entity switched to a metadata form opens it in the runtime
+    // renderer; the hand-written form stays until the switch is verified.
+    const runtimeForm = this.runtimeForms.formFor(logicalname);
+    if (runtimeForm === undefined) return null;
+    if (runtimeForm) {
+      const renderer = this.runtimeForms.renderer();
+      if (!renderer) return null;
+      return {
+        component: renderer,
+        inputs:    { formId: runtimeForm, recordId: editId, creates: !editId },
       };
     }
     // No generic form fallback (SYSTEM-CHANGES.md Topic 14,

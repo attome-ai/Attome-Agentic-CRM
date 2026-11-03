@@ -225,6 +225,33 @@ export class FormRendererComponent {
     }, CHANGE_DEBOUNCE_MS);
   }
 
+  /**
+   * A12-T5: whether a form without a record creates one on save (a record
+   * page's new-record form); a designer's preview does not.
+   */
+  readonly creates = input(false);
+
+  /** Saves a new record from the form's values (A12-T5), then shows it. */
+  private async create(plan: FormPlan): Promise<void> {
+    const values = this.values();
+    if (!Object.keys(values).length) return;
+    if (this.hookEvents().includes('before_save')) {
+      const answer = await this.runHooks('before_save');
+      if (answer?.rejection) return;
+    }
+    this.saving.set(true);
+    this.error.set(null);
+    this.model.createRecord(plan.entity, this.values()).subscribe({
+      next: created => {
+        this.record.set(created);
+        this.values.set({ ...created.data });
+        this.saving.set(false);
+        this.saved.set(true);
+      },
+      error: (e: ApiError) => { this.error.set(e.message); this.saving.set(false); },
+    });
+  }
+
   /** A12-T3: draws `plan` empty, with the entity's live rules. */
   private showPreview(plan: FormPlan): void {
     const entityChanged = this.plan()?.entity !== plan.entity;
@@ -314,6 +341,10 @@ export class FormRendererComponent {
   async save(): Promise<void> {
     const plan = this.plan();
     const record = this.record();
+    if (plan && !record && this.creates()) {
+      await this.create(plan);
+      return;
+    }
     if (!plan || !record || this.changed().length === 0) return;
     if (this.hookEvents().includes('before_save')) {
       const answer = await this.runHooks('before_save');

@@ -1050,10 +1050,19 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!([]),
         ),
+        // A12-T5: entities whose record pages open a metadata form.
+        SettingDescriptor::new(
+            "forms.runtime_entities",
+            "Entities whose record pages open a published metadata form in place of their hand-written form, as `{\"deal\": \"<form id>\"}`; an entity not named keeps its own form (A12-T5).",
+            || json!({"type": "object", "additionalProperties": {"type": "string"}}),
+            &[SettingScope::Deployment],
+            false,
+            || json!({}),
+        ),
         // S13-T1: partner package catalogues, each trusted for its publisher.
         SettingDescriptor::new(
             "packages.partner_catalogues",
-            "Partner package catalogues, each `{name, url, publisher, key}`: an `https://` URL serving              an `attome-catalogue/v1` index, and the publisher and Ed25519 public key (base64) its              packages are signed with. A partner's key is trusted for its publisher's packages (S13-T1).",
+            "Partner package catalogues, each `{name, url, publisher, key}`: an `https://` URL serving an `attome-catalogue/v1` index, and the publisher and Ed25519 public key (base64) its packages are signed with. A partner's key is trusted for its publisher's packages (S13-T1).",
             || json!({"type": "array", "items": {"type": "object", "required": ["name", "url", "publisher", "key"], "properties": {"name": {"type": "string", "minLength": 1}, "url": {"type": "string", "pattern": "^https://"}, "publisher": {"type": "string", "minLength": 1}, "key": {"type": "string", "minLength": 1}}}}),
             &[SettingScope::Deployment],
             false,
