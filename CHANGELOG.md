@@ -17,6 +17,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Agent principals, administered (AH3-T4): `/api/v1/admin/agents` makes an agent account with its
+  sponsor (the creator by default), lists and shows them, pauses, suspends, resumes and revokes
+  them and reassigns the sponsor under `If-Match`, and issues and ends their API keys (the secret
+  shown once). Granting `system.admin` to an agent, directly or through a role, is refused.
 - Service and agent accounts never sign in interactively (AH3-T3): an account whose
   `principal_kind` is not a person is refused at the password and directory sign-ins (before any
   second factor), at every new session, every refresh, a password reset (no token is issued) and

@@ -27,6 +27,25 @@ ceiling) and `"persona": { "model": "<ai_model id>" }`, publish it, and start on
 Saving checks the tools exist, the limits are within the platform ceilings and each trigger's entity
 exists at publish.
 
+## Agent principals
+
+An agent can have an identity of its own: an account of kind agent (`principal_kind` 2) with a
+person who sponsors it. Administrators with the users area manage them at
+`/api/v1/admin/agents`:
+
+- `POST` makes one (`name`, optional `sponsor` (the caller by default; an active person),
+  `entity_scope`, `policy_ref`, `persona_ref`); `GET` lists them (`state` filters) and
+  `GET .../{id}` shows one.
+- `POST .../{id}/pause`, `/suspend`, `/resume` and `/revoke` (body `{"reason": ...}`, optional)
+  move it: pause from active; suspend from active or paused; resume back to active; revoke from
+  any state, finally, ending its keys, sessions and account. `PUT .../{id}/sponsor` names another
+  sponsor. Each takes `If-Match: "<row_version>"` and moves the agent's auth epoch.
+- `POST .../{id}/keys` issues an API key for an active agent; its secret is in that answer only.
+  `DELETE .../{id}/keys/{key_id}` ends one.
+
+An agent account never signs in interactively (no password, federated, refresh, reset or MFA
+step accepts it) and is never granted `system.admin`, directly or through a role.
+
 ## What an agent may do
 
 Effective authority is a conjunction, and nothing in a definition widens it: the person's own

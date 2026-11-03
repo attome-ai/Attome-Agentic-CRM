@@ -168,6 +168,8 @@ pub async fn do_assign_user_role(
     if !user_exists {
         return Err(AppError::NotFound);
     }
+    // AH3-T4: an agent principal never holds system.admin, through a role either.
+    super::agents::refuse_admin_grant(&state.base.db, user_id, None, Some(role_id)).await?;
 
     let role_name: Option<String> =
         sqlx::query_scalar("SELECT name FROM role WHERE id = $1 AND is_deleted = false")

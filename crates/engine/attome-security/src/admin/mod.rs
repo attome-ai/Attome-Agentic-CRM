@@ -19,6 +19,8 @@
 
 mod access_reviews;
 mod account_state;
+/// AH3-T4: agent principals, their lifecycle and keys.
+pub mod agents;
 /// Q1-T7: SSO-only roles and break-glass accounts.
 mod auth_policy;
 mod bulk_access;
@@ -108,6 +110,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
         mfa::openapi_fragment(),
         mfa_coverage::openapi_fragment(),
         account_state::openapi_fragment(),
+        agents::openapi_fragment(),
         invitations::openapi_fragment(),
         identity_links::openapi_fragment(),
         impersonation::openapi_fragment(),
@@ -149,6 +152,7 @@ pub fn routes() -> Router<EngineState> {
         .merge(mfa::routes())
         .merge(mfa_coverage::routes())
         .merge(account_state::routes())
+        .merge(agents::routes())
         .merge(invitations::routes())
         .merge(identity_links::routes())
         .merge(impersonation::routes())

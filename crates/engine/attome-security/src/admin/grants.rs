@@ -180,6 +180,8 @@ pub(super) async fn create_grant(
             .map_err(AppError::internal)?;
     let user_id = user_id
         .ok_or_else(|| AppError::Validation(format!("no user found with email '{email}'")))?;
+    // AH3-T4: an agent principal never holds system.admin.
+    super::agents::refuse_admin_grant(&state.base.db, user_id, Some(key), None).await?;
 
     let display_name = body.privilege_name.as_deref().unwrap_or(key);
     // Solution 7 (D-785): direct user grants are not recorded (design §1.3);

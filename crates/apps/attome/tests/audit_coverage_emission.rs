@@ -8404,9 +8404,122 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             .expect("seed a workspace");
             request("DELETE", &format!("/api/v1/admin/workspaces/{id}"), t, None)
         }
+        // AH3-T4: agent principals.
+        "POST /api/v1/admin/agents" => request(
+            "POST",
+            "/api/v1/admin/agents",
+            t,
+            Some(json!({"name": "emission agent"})),
+        ),
+        "POST /api/v1/admin/agents/{id}/pause" => {
+            let agent = seed_agent(fx, "active").await;
+            if_match(request(
+                "POST",
+                &format!("/api/v1/admin/agents/{agent}/pause"),
+                t,
+                None,
+            ))
+        }
+        "POST /api/v1/admin/agents/{id}/suspend" => {
+            let agent = seed_agent(fx, "active").await;
+            if_match(request(
+                "POST",
+                &format!("/api/v1/admin/agents/{agent}/suspend"),
+                t,
+                None,
+            ))
+        }
+        "POST /api/v1/admin/agents/{id}/resume" => {
+            let agent = seed_agent(fx, "paused").await;
+            if_match(request(
+                "POST",
+                &format!("/api/v1/admin/agents/{agent}/resume"),
+                t,
+                None,
+            ))
+        }
+        "POST /api/v1/admin/agents/{id}/revoke" => {
+            let agent = seed_agent(fx, "active").await;
+            if_match(request(
+                "POST",
+                &format!("/api/v1/admin/agents/{agent}/revoke"),
+                t,
+                None,
+            ))
+        }
+        "PUT /api/v1/admin/agents/{id}/sponsor" => {
+            let agent = seed_agent(fx, "active").await;
+            let (sponsor, _) = seed_user(&fx.base, "agent-sponsor").await;
+            if_match(request(
+                "PUT",
+                &format!("/api/v1/admin/agents/{agent}/sponsor"),
+                t,
+                Some(json!({"sponsor": sponsor})),
+            ))
+        }
+        "POST /api/v1/admin/agents/{id}/keys" => {
+            let agent = seed_agent(fx, "active").await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/agents/{agent}/keys"),
+                t,
+                Some(json!({"name": "emission key"})),
+            )
+        }
+        "DELETE /api/v1/admin/agents/{id}/keys/{key_id}" => {
+            let agent = seed_agent(fx, "active").await;
+            let key: Uuid = sqlx::query_scalar(
+                "INSERT INTO api_key (user_ref, name, public_key, secret_hash) \
+                 VALUES ($1, 'emission', $2, 'x') RETURNING id",
+            )
+            .bind(agent)
+            .bind(format!("atk_pub_{}", Uuid::now_v7().simple()))
+            .fetch_one(&fx.base.db)
+            .await
+            .expect("seed an agent key");
+            request(
+                "DELETE",
+                &format!("/api/v1/admin/agents/{agent}/keys/{key}"),
+                t,
+                None,
+            )
+        }
         _ => return None,
     };
     Some((req, None))
+}
+
+/// AH3-T4: an agent account (kind 2) with its principal row in `state`,
+/// sponsored by a seeded person, at row version 1.
+async fn seed_agent(fx: &Fx, state: &str) -> Uuid {
+    let (sponsor, _) = seed_user(&fx.base, "agent-owner").await;
+    let id = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO user_account (id, email, user_name, principal_kind) VALUES ($1, $2, 'agent', 2)",
+    )
+    .bind(id)
+    .bind(format!("agent-{}@internal.attome", id.simple()))
+    .execute(&fx.base.db)
+    .await
+    .expect("seed an agent account");
+    sqlx::query(
+        "INSERT INTO agent_principal (user_ref, sponsor_user_ref, lifecycle_state, created_by) \
+         VALUES ($1, $2, $3, $2)",
+    )
+    .bind(id)
+    .bind(sponsor)
+    .bind(state)
+    .execute(&fx.base.db)
+    .await
+    .expect("seed an agent principal");
+    id
+}
+
+/// `req` with `If-Match: "1"`, a seeded agent's first row version.
+fn if_match(mut req: Request<Body>) -> Request<Body> {
+    req.headers_mut()
+        .insert(header::IF_MATCH, header::HeaderValue::from_static("\"1\""));
+    req
 }
 
 /// A valid, checksummed `attome-changeset/v1` document (the format tooling's
