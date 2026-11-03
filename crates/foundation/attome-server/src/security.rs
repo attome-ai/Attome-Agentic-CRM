@@ -375,6 +375,12 @@ pub struct SecurityContext {
     /// `false`, which is the restrictive default (subject to locks).
     #[serde(skip)]
     pub service_principal: bool,
+    /// AH3-T5: for an agent principal, the principals its permissions are
+    /// narrowed by (its sponsor) and each one's authorization epoch when this
+    /// context was resolved; a cached context whose chain epoch moved is
+    /// resolved again. Empty for everyone else.
+    #[serde(default)]
+    pub chain: Vec<(Uuid, i64)>,
 }
 
 impl SecurityContext {
@@ -400,6 +406,7 @@ impl SecurityContext {
             role_ids: Some(Vec::new()),
             unit_scope: UnitScope::default(),
             service_principal: false,
+            chain: Vec::new(),
         }
     }
 
@@ -553,6 +560,7 @@ impl SecurityContext {
             role_ids: self.role_ids.clone(),
             unit_scope: self.unit_scope.clone(),
             service_principal: self.service_principal,
+            chain: self.chain.clone(),
         }
     }
 
@@ -577,6 +585,7 @@ impl SecurityContext {
             role_ids: self.role_ids.clone(),
             unit_scope: self.unit_scope.clone(),
             service_principal: true,
+            chain: self.chain.clone(),
         }
     }
 }
@@ -663,6 +672,7 @@ impl EntityCeiling {
             role_ids: ctx.role_ids.clone(),
             unit_scope: ctx.unit_scope.clone(),
             service_principal: ctx.service_principal,
+            chain: ctx.chain.clone(),
         }
     }
 }
@@ -840,6 +850,7 @@ mod tests {
             unit_scope: Default::default(),
             field_masks: Default::default(),
             service_principal: false,
+            chain: Vec::new(),
         }
     }
 
@@ -956,6 +967,7 @@ mod tests {
             unit_scope: Default::default(),
             field_masks: Default::default(),
             service_principal: false,
+            chain: Vec::new(),
         }
     }
 

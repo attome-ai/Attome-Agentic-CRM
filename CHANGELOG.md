@@ -17,6 +17,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- An agent principal holds no more than its sponsor (AH3-T5): resolving an agent account keeps only
+  the privileges and field grants its sponsor also holds (never a union), adds the sponsor's field
+  masks, never `system.admin`, and only the entities in its scope when it has one; it fails closed
+  unless the agent is active and its sponsor an active person. The security context records the
+  sponsor's epoch (`chain`), so a sponsor's grant change or disable re-resolves the agent.
 - Agent principals, administered (AH3-T4): `/api/v1/admin/agents` makes an agent account with its
   sponsor (the creator by default), lists and shows them, pauses, suspends, resumes and revokes
   them and reassigns the sponsor under `If-Match`, and issues and ends their API keys (the secret

@@ -1,5 +1,7 @@
 pub mod accounts;
 pub mod admin;
+/// AH3-T5: an agent principal narrowed to its sponsor and scope.
+pub mod agent_scope;
 pub mod api_keys;
 /// Q1-T7: who may sign in with a password.
 pub mod auth_policy;

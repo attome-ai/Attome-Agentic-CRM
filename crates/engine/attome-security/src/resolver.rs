@@ -150,6 +150,10 @@ pub async fn resolve_uncached(db: &DbPool, user_id: Uuid) -> Result<SecurityCont
     // D-789 §4.3: a resolved user is never a system writer.
     ctx.role_ids = Some(rlc.role_ids);
     ctx.unit_scope = rlc.unit_scope;
+    // AH3-T5: an agent holds no more than its sponsor.
+    if let Some(facts) = crate::agent_scope::agent_facts(db, user_id).await? {
+        crate::agent_scope::narrow(db, &mut ctx, &facts).await?;
+    }
     Ok(ctx)
 }
 

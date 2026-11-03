@@ -162,6 +162,13 @@ impl SecurityCache {
         let bulk_fields = crate::db::resolve_bulk_fields(&self.db, user_id).await?;
         let rlc = crate::resolver::resolve_record_level_context(&self.db, user_id).await?;
         let condition_grants = crate::db::resolve_condition_grants(&self.db, user_id).await?;
+        // AH3-T5: an agent's sponsor, read (with the sponsor's epoch, before
+        // its grants) so the cached context goes stale when the sponsor moves.
+        let agent = crate::agent_scope::agent_facts(&self.db, user_id).await?;
+        let sponsor_epoch = match &agent {
+            Some(facts) => Some(get_epoch_fail_open(&self.redis_coordination, facts.sponsor).await),
+            None => None,
+        };
         // `human` sets `is_admin` from the reserved admin key.
         let mut ctx = SecurityContext::human(user_id, privileges);
         ctx.field_grants = field_grants;
@@ -176,6 +183,10 @@ impl SecurityCache {
         ctx.condition_grants = condition_grants;
         ctx.role_ids = Some(rlc.role_ids);
         ctx.unit_scope = rlc.unit_scope;
+        if let (Some(facts), Some(epoch)) = (&agent, sponsor_epoch) {
+            crate::agent_scope::narrow(&self.db, &mut ctx, facts).await?;
+            ctx.chain = vec![(facts.sponsor, epoch)];
+        }
 
         if let Ok(json) = serde_json::to_string(&ctx) {
             let _ = tokio::time::timeout(
@@ -230,8 +241,17 @@ impl SecurityCache {
     pub async fn resolve_strict(&self, user_id: Uuid) -> Result<Arc<SecurityContext>, AppError> {
         let cached = self.resolve(user_id).await?;
         let live_epoch = get_epoch_fail_closed(&self.redis_coordination, user_id).await?;
+        // AH3-T5: an agent's context is also stale when its sponsor's epoch
+        // moved (a grant change, a disable).
+        let mut chain_moved = false;
+        for (principal, epoch) in &cached.chain {
+            if get_epoch_fail_closed(&self.redis_coordination, *principal).await? != *epoch {
+                chain_moved = true;
+                break;
+            }
+        }
 
-        if live_epoch == cached.epoch {
+        if live_epoch == cached.epoch && !chain_moved {
             return Ok(cached);
         }
 
