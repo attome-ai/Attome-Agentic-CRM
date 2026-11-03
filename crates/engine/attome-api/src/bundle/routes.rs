@@ -13,6 +13,10 @@
 //! | `GET  …/drift` | live metadata planned against the newest `succeeded` bundle |
 //! | `GET  …/manifest` | every bundle name ever `succeeded` here, at its highest applied version |
 //! | `POST …/bundles/{name}/rollback` | M92 Phase 1 — plan + gate + queue the ledger's own prior snapshot of a named bundle |
+//! | `POST /api/v1/admin/packages/preview` | T8-T2 — check and plan a package install |
+//! | `POST /api/v1/admin/packages/upgrade` | T8-T3 — three-way merge a newer version (pushed or pulled) and plan it |
+//! | `GET  /api/v1/admin/packages/{id}/drift` | T8-T3 — managed parts changed outside the package |
+//! | `POST /api/v1/admin/packages/{id}/uninstall` | T8-T3 — unlock, and keep, export-then-retire or retire its objects |
 //!
 //! Every handler is `system.admin`-gated (`Authorized<Admin>`, same as every
 //! neighbouring admin surface) and thin: parse, call `super::{export, plan,
@@ -29,6 +33,8 @@
 //! execution path per action); [`do_apply_plan`] is that pair for the
 //! ungated case.
 
+use attome_audit::AuditOperation;
+use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
 use attome_core::EngineState;
 use attome_server::authz::{Admin, Authorized};
 use attome_types::{AppError, ErrorResponse, PaginatedResponse};
@@ -440,9 +446,11 @@ async fn preview_package(
     ctx: Authorized<Admin>,
     Json(body): Json<PackagePreviewBody>,
 ) -> Result<Json<PackagePreviewResponse>, AppError> {
-    let package: super::package::Package = serde_json::from_value(body.package)
+    let mut package: super::package::Package = serde_json::from_value(body.package)
         .map_err(|e| AppError::Validation(format!("the package does not read: {e}")))?;
     super::package::verify(&package, &trusted_publishers(&state)).map_err(AppError::Validation)?;
+    // A package is a selection: it never retires what it does not carry.
+    package.bundle.partial = true;
     let mut problems = super::package::check_manifest(&package.manifest);
     let locks = {
         let entities = state.entities.load();
@@ -465,14 +473,431 @@ async fn preview_package(
     let manifest = serde_json::to_value(&package.manifest).map_err(AppError::internal)?;
     let manifest_doc = package.manifest.clone();
     let (plan, preview) = plan_and_persist(&state, package.bundle, false, ctx.user_id).await?;
-    // T8-T2: what it locks once this plan applies.
-    if !locks.is_empty() {
+    // T8-T2: what it locks once this plan applies (T8-T3: and the manifest
+    // an upgrade, drift or uninstall reads back).
+    if manifest_doc.mode == super::package::PackageMode::Managed {
         super::package::record_pending(&state.base.db, plan.plan_id, &manifest_doc, &locks).await?;
     }
     Ok(Json(PackagePreviewResponse {
         manifest,
         plan,
         preview,
+    }))
+}
+
+/// The installed version of a managed package.
+#[derive(sqlx::FromRow)]
+struct InstalledRow {
+    plan_ref: Uuid,
+    version: String,
+    manifest: Option<serde_json::Value>,
+    locks: serde_json::Value,
+    bundle: serde_json::Value,
+}
+
+/// A package's installed version, with the manifest and the bundle it
+/// applied.
+struct Installed {
+    plan_ref: Uuid,
+    version: String,
+    manifest: Option<super::package::Manifest>,
+    locks: Vec<super::package::PackageLock>,
+    bundle: Bundle,
+}
+
+/// T8-T3: the installed (applied, not since uninstalled or replaced)
+/// version of package `package_id`.
+async fn installed(state: &EngineState, package_id: &str) -> Result<Option<Installed>, AppError> {
+    let row: Option<InstalledRow> = sqlx::query_as(
+        "SELECT i.plan_ref, i.version, i.manifest, i.locks, p.bundle \
+           FROM package_install i JOIN metadata_bundle_plan p ON p.id = i.plan_ref \
+          WHERE i.package_id = $1 AND i.installed_at IS NOT NULL AND i.uninstalled_at IS NULL \
+          ORDER BY i.installed_at DESC LIMIT 1",
+    )
+    .bind(package_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(row) = row else {
+        return Ok(None);
+    };
+    let bundle: Bundle = serde_json::from_value(row.bundle).map_err(|e| {
+        AppError::internal(format!(
+            "stored bundle on plan {} does not parse: {e}",
+            row.plan_ref
+        ))
+    })?;
+    Ok(Some(Installed {
+        plan_ref: row.plan_ref,
+        version: row.version,
+        manifest: row.manifest.and_then(|m| serde_json::from_value(m).ok()),
+        locks: serde_json::from_value(row.locks).map_err(AppError::internal)?,
+        bundle,
+    }))
+}
+
+/// Body of `POST /api/v1/admin/packages/upgrade`: the new version, pushed
+/// (`package`) or pulled (`url`).
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct PackageUpgradeBody {
+    /// An `attome-package/v1` document.
+    #[serde(default)]
+    #[schema(value_type = Option<Object>)]
+    package: Option<serde_json::Value>,
+    /// An `https://` URL that serves the package.
+    #[serde(default)]
+    url: Option<String>,
+    /// Plan even though properties conflict, taking the package's value for
+    /// each.
+    #[serde(default)]
+    accept_package: bool,
+}
+
+/// What upgrading would do.
+#[derive(Serialize, ToSchema)]
+pub(crate) struct PackageUpgradeResponse {
+    /// The new version's manifest.
+    #[schema(value_type = Object)]
+    manifest: serde_json::Value,
+    /// The version installed now.
+    from_version: String,
+    /// Properties both the new version and the customer changed.
+    conflicts: Vec<super::package::Conflict>,
+    /// `object.property` changes of the customer's the upgrade keeps.
+    kept: Vec<String>,
+    /// Objects the new version drops; they stay, no longer the package's.
+    removed: Vec<String>,
+    /// The persisted plan: apply it with `POST /api/v1/admin/metadata/import?mode=apply`.
+    /// Absent while conflicts wait for `accept_package`.
+    plan: Option<PlanResponse>,
+    preview: Option<InstallPreview>,
+}
+
+/// Plan a package upgrade
+///
+/// T8-T3: checks a newer version of an installed managed package (sent as `package`, or pulled
+/// from `url`) like an install, then merges it three ways: the installed version, the new one and
+/// the deployment's live metadata. A property only the customer changed keeps the customer's
+/// value; one both changed differently is a conflict, and while there are conflicts nothing is
+/// planned unless `accept_package` takes the package's value for each. The plan is persisted like
+/// a metadata import plan and upgrading is applying it; the apply replaces the old version's locks.
+/// Administrators only.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/packages/upgrade",
+    operation_id = "plan_package_upgrade",
+    tag = "admin-metadata",
+    request_body = PackageUpgradeBody,
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(attome_audit::security::ExemptReason::Delegated, Some("EngineJob::ApplyMetadataBundle (bundle/apply.rs::audit_entity_change)"), "only computes and persists a proposal, as packages/preview does; upgrading applies that plan through mode=apply, whose job audits every schema change")))),
+    responses(
+        (status = 200, description = "The merge, and the persisted plan when there is one", body = PackageUpgradeResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "The package is not installed", body = ErrorResponse),
+        (status = 409, description = "The installed version has no recorded manifest", body = ErrorResponse),
+        (status = 422, description = "The package does not read, is not signed by a trusted publisher, is not newer, or its manifest or namespace is wrong", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn upgrade_package(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Json(body): Json<PackageUpgradeBody>,
+) -> Result<Json<PackageUpgradeResponse>, AppError> {
+    let raw = match (body.package, body.url.as_deref()) {
+        (Some(package), None) => package,
+        (None, Some(url)) => super::pull::fetch_package(url).await?,
+        _ => {
+            return Err(AppError::Validation(
+                "send the package or its url, one of them".to_owned(),
+            ));
+        }
+    };
+    let package: super::package::Package = serde_json::from_value(raw)
+        .map_err(|e| AppError::Validation(format!("the package does not read: {e}")))?;
+    super::package::verify(&package, &trusted_publishers(&state)).map_err(AppError::Validation)?;
+    let current = installed(&state, &package.manifest.id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    let old_manifest = current.manifest.as_ref().ok_or(AppError::Conflict(
+        "the installed version has no recorded manifest; reinstall it",
+    ))?;
+    let mut problems = super::package::check_manifest(&package.manifest);
+    if old_manifest.namespace != package.manifest.namespace {
+        problems.push(format!(
+            "namespace {} differs from the installed version's {}",
+            package.manifest.namespace, old_manifest.namespace
+        ));
+    }
+    if !super::package::is_newer(&package.manifest.version, &current.version) {
+        problems.push(format!(
+            "version {} is not above the installed {}",
+            package.manifest.version, current.version
+        ));
+    }
+    let owned = super::package::owned_entities(&current.bundle, &old_manifest.namespace);
+    let locks = {
+        let entities = state.entities.load();
+        // What the package itself installed is its own, not an entity it extends.
+        let existing =
+            |name: &str| entities.get(name).is_some() && !owned.iter().any(|o| o == name);
+        problems.extend(super::package::check_namespace(
+            &package.manifest,
+            &package.bundle,
+            &existing,
+        ));
+        problems.extend(super::package::check_extension_points(
+            &package.manifest,
+            &package.bundle,
+            &existing,
+        ));
+        super::package::managed_locks(&package.manifest, &package.bundle, &existing)
+    };
+    if !problems.is_empty() {
+        return Err(AppError::Validation(problems.join("; ")));
+    }
+    let live = export_bundle(&state.base.db_migrator).await?;
+    let merge = super::package::three_way(&current.bundle, &package.bundle, &live)
+        .map_err(AppError::internal)?;
+    let manifest = serde_json::to_value(&package.manifest).map_err(AppError::internal)?;
+    let (plan, preview) = if merge.conflicts.is_empty() || body.accept_package {
+        let (plan, preview) = plan_and_persist(&state, merge.bundle, false, ctx.user_id).await?;
+        super::package::record_pending(&state.base.db, plan.plan_id, &package.manifest, &locks)
+            .await?;
+        (Some(plan), Some(preview))
+    } else {
+        (None, None)
+    };
+    Ok(Json(PackageUpgradeResponse {
+        manifest,
+        from_version: current.version,
+        conflicts: merge.conflicts,
+        kept: merge.kept,
+        removed: merge.removed,
+        plan,
+        preview,
+    }))
+}
+
+/// A package's drift.
+#[derive(Serialize, ToSchema)]
+pub(crate) struct PackageDriftResponse {
+    package_id: String,
+    version: String,
+    /// Every managed property that differs live from what the package set,
+    /// and every object of it gone.
+    items: Vec<super::package::DriftItem>,
+    /// `items` is empty.
+    clean: bool,
+}
+
+/// A package's drift
+///
+/// T8-T3: compares what the installed version of package `id` set with the live metadata and
+/// names every managed property changed outside the package (through a bundle, a changeset or by
+/// hand) and every object of it gone. Additions on its extension points are the customer's own
+/// and not drift. Read-only. Administrators only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/packages/{id}/drift",
+    operation_id = "package_drift",
+    tag = "admin-metadata",
+    params(("id" = String, Path, description = "The package id, such as com.example.fleet")),
+    responses(
+        (status = 200, description = "The drift", body = PackageDriftResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "The package is not installed", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn package_drift(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path(id): Path<String>,
+) -> Result<Json<PackageDriftResponse>, AppError> {
+    let current = installed(&state, &id).await?.ok_or(AppError::NotFound)?;
+    let live = export_bundle(&state.base.db_migrator).await?;
+    let items = super::package::package_drift(&current.bundle, &live);
+    Ok(Json(PackageDriftResponse {
+        package_id: id,
+        version: current.version,
+        clean: items.is_empty(),
+        items,
+    }))
+}
+
+/// What happens to a package's data on uninstall.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum DataChoice {
+    /// Its objects and records stay, as the customer's own.
+    Keep,
+    /// As `delete`, once every entity it owns is exported (`exports`).
+    Export,
+    /// Its entities, their views and queries, and the fields it added are
+    /// retired.
+    Delete,
+}
+
+impl DataChoice {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Keep => "keep",
+            Self::Export => "export",
+            Self::Delete => "delete",
+        }
+    }
+}
+
+/// Body of `POST /api/v1/admin/packages/{id}/uninstall`.
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct PackageUninstallBody {
+    data: DataChoice,
+    /// With `export`: completed record exports (`POST /api/v1/{entity}/export`),
+    /// one for each entity the package owns.
+    #[serde(default)]
+    exports: Vec<Uuid>,
+}
+
+/// An uninstall's answer.
+#[derive(Serialize, ToSchema)]
+pub(crate) struct PackageUninstallResponse {
+    package_id: String,
+    version: String,
+    data: String,
+    /// The locks lifted.
+    unlocked: usize,
+    /// With `export` or `delete`: the queued retiring plan, or its approval request.
+    apply: Option<ApplyAccepted>,
+}
+
+/// Uninstall a package
+///
+/// T8-T3: lifts the locks of package `id`'s installed version and marks it uninstalled. With
+/// `data: keep` its objects and records stay as the deployment's own; with `delete` its entities
+/// (with their views and queries) and the fields it added to other entities are retired through a
+/// metadata plan, queued like any apply (approval-gated where the deployment requires it); with
+/// `export` the same, once `exports` holds a completed record export of every entity it owns.
+/// Administrators only.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/packages/{id}/uninstall",
+    operation_id = "uninstall_package",
+    tag = "admin-metadata",
+    params(("id" = String, Path, description = "The package id, such as com.example.fleet")),
+    request_body = PackageUninstallBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "Uninstalled; the retiring plan queued when the data goes", body = PackageUninstallResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "The package is not installed", body = ErrorResponse),
+        (status = 409, description = "Uninstalled meanwhile, or the installed version has no recorded manifest", body = ErrorResponse),
+        (status = 422, description = "An owned entity has no completed export, or the retiring plan is blocked", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn uninstall_package(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(id): Path<String>,
+    Json(body): Json<PackageUninstallBody>,
+) -> Result<Json<PackageUninstallResponse>, AppError> {
+    let current = installed(&state, &id).await?.ok_or(AppError::NotFound)?;
+    // The retiring plan first: it only writes a ledger row, so a refusal
+    // leaves the package installed.
+    let plan_id = if body.data == DataChoice::Keep {
+        None
+    } else {
+        let manifest = current.manifest.as_ref().ok_or(AppError::Conflict(
+            "the installed version has no recorded manifest",
+        ))?;
+        if body.data == DataChoice::Export {
+            let owned = super::package::owned_entities(&current.bundle, &manifest.namespace);
+            let exported: Vec<String> = sqlx::query_scalar(
+                "SELECT DISTINCT entity_logicalname FROM data_export \
+                  WHERE id = ANY($1) AND status = 'completed' AND NOT is_deleted",
+            )
+            .bind(&body.exports)
+            .fetch_all(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+            let missing: Vec<&str> = owned
+                .iter()
+                .filter(|e| !exported.contains(*e))
+                .map(String::as_str)
+                .collect();
+            if !missing.is_empty() {
+                return Err(AppError::Validation(format!(
+                    "export {} first (POST /api/v1/{{entity}}/export) and send the completed export ids",
+                    missing.join(", ")
+                )));
+            }
+        }
+        let live = export_bundle(&state.base.db_migrator).await?;
+        let rest = super::package::without_package(&live, &current.bundle, &manifest.namespace);
+        let (plan, _) = plan_and_persist(&state, rest, true, ctx.user_id).await?;
+        if !plan.applicable {
+            return Err(AppError::Validation(format!(
+                "retiring the package's objects is blocked by {} entr{}; see plan {}",
+                plan.blocked.len(),
+                if plan.blocked.len() == 1 { "y" } else { "ies" },
+                plan.plan_id
+            )));
+        }
+        Some(plan.plan_id)
+    };
+
+    let mut tx = SecurityTx::begin(
+        &state,
+        SecurityEvent::new(
+            MandatoryCategory::Configuration,
+            AuditOperation::Update,
+            ctx.user_id,
+            "package_install",
+            Some(current.plan_ref),
+        )
+        .named("package.uninstall")
+        .comment(format!(
+            "package {id} {} uninstalled, data {}",
+            current.version,
+            body.data.as_str()
+        )),
+    )
+    .await?;
+    let marked = sqlx::query(
+        "UPDATE package_install SET uninstalled_at = now(), data_choice = $2 \
+          WHERE plan_ref = $1 AND uninstalled_at IS NULL",
+    )
+    .bind(current.plan_ref)
+    .bind(body.data.as_str())
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    if marked.rows_affected() == 0 {
+        return Err(AppError::Conflict("the package was uninstalled meanwhile"));
+    }
+    for (kind, key, _) in &current.locks {
+        sqlx::query("DELETE FROM metadata_lock WHERE object_kind = $1 AND object_key = $2")
+            .bind(kind)
+            .bind(key)
+            .execute(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+    }
+    tx.commit().await?;
+
+    let apply = match plan_id {
+        Some(plan_id) => Some(apply_with_gate(&state, plan_id, ctx.user_id).await?),
+        None => None,
+    };
+    Ok(Json(PackageUninstallResponse {
+        package_id: id,
+        version: current.version,
+        data: body.data.as_str().to_owned(),
+        unlocked: current.locks.len(),
+        apply,
     }))
 }
 
@@ -937,6 +1362,12 @@ pub fn routes() -> Router<EngineState> {
             post(rollback),
         )
         .route("/api/v1/admin/packages/preview", post(preview_package))
+        .route("/api/v1/admin/packages/upgrade", post(upgrade_package))
+        .route("/api/v1/admin/packages/{id}/drift", get(package_drift))
+        .route(
+            "/api/v1/admin/packages/{id}/uninstall",
+            post(uninstall_package),
+        )
 }
 
 /// This file's slice of the workspace OpenAPI document (P-api-contract
@@ -951,7 +1382,10 @@ pub fn routes() -> Router<EngineState> {
     sync,
     manifest,
     rollback,
-    preview_package
+    preview_package,
+    upgrade_package,
+    package_drift,
+    uninstall_package
 ))]
 struct ApiDocFragment;
 

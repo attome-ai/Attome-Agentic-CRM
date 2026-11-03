@@ -31,11 +31,20 @@
 //!   plan writes them to `metadata_lock` ([`install_locks`]), which the admin
 //!   metadata routes enforce (`attome_model::guard`). A newer version
 //!   arrives through a bundle apply, which those routes do not guard.
+//! - T8-T3: [`three_way`] merges an upgrade (the installed version, the new
+//!   one and the customer's live metadata) property by property, keeping a
+//!   customer's change the package did not also make and naming each
+//!   property both changed as a [`Conflict`]; [`package_drift`] names every
+//!   managed property that differs live from what the package installed;
+//!   [`without_package`] is the live metadata minus what a package owns,
+//!   which an uninstall that removes its data plans with retiring allowed.
+//!   A package's bundle is always a selection (`partial`): installing or
+//!   upgrading it never retires what it does not carry.
 
 use base64::Engine as _;
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{Value, json};
 
 use super::canonical::bundle_hash;
 use super::model::Bundle;
@@ -117,6 +126,12 @@ fn semver(s: &str) -> Option<(u64, u64, u64)> {
     let minor = parts.next()?.parse().ok()?;
     let patch = parts.next()?.parse().ok()?;
     parts.next().is_none().then_some((major, minor, patch))
+}
+
+/// T8-T3: `candidate` is a higher `MAJOR.MINOR.PATCH` than `installed`.
+/// Pure.
+pub fn is_newer(candidate: &str, installed: &str) -> bool {
+    matches!((semver(candidate), semver(installed)), (Some(c), Some(i)) if c > i)
 }
 
 fn floor(s: &str) -> Option<(u64, u64, u64)> {
@@ -291,7 +306,8 @@ pub fn check_extension_points(
         .collect()
 }
 
-/// Records what a managed package will lock once `plan_id` applies.
+/// Records what a managed package will lock once `plan_id` applies, with
+/// its manifest (T8-T3: upgrade, drift and uninstall read it back).
 pub async fn record_pending(
     db: &attome_db::DbPool,
     plan_id: uuid::Uuid,
@@ -299,9 +315,9 @@ pub async fn record_pending(
     locks: &[PackageLock],
 ) -> Result<(), attome_types::AppError> {
     sqlx::query(
-        "INSERT INTO package_install (plan_ref, package_id, version, mode, locks) \
-         VALUES ($1, $2, $3, $4, $5) \
-         ON CONFLICT (plan_ref) DO UPDATE SET locks = EXCLUDED.locks",
+        "INSERT INTO package_install (plan_ref, package_id, version, mode, locks, manifest) \
+         VALUES ($1, $2, $3, $4, $5, $6) \
+         ON CONFLICT (plan_ref) DO UPDATE SET locks = EXCLUDED.locks, manifest = EXCLUDED.manifest",
     )
     .bind(plan_id)
     .bind(&manifest.id)
@@ -311,6 +327,7 @@ pub async fn record_pending(
         PackageMode::Unmanaged => "unmanaged",
     })
     .bind(serde_json::to_value(locks).map_err(attome_types::AppError::internal)?)
+    .bind(serde_json::to_value(manifest).map_err(attome_types::AppError::internal)?)
     .execute(db)
     .await
     .map_err(attome_types::AppError::internal)?;
@@ -318,25 +335,53 @@ pub async fn record_pending(
 }
 
 /// After `plan_id` applied: writes its package's locks, once. A plan that
-/// is not a package's does nothing.
+/// is not a package's does nothing. T8-T3: an upgrade's apply supersedes
+/// the version it replaces (`data_choice = 'upgraded'`) and drops the locks
+/// that version set and this one does not.
 pub async fn install_locks(
     db: &attome_db::DbPool,
     plan_id: uuid::Uuid,
 ) -> Result<usize, attome_types::AppError> {
     let mut tx = attome_db::tx::begin(db).await?;
-    let locks: Option<serde_json::Value> = sqlx::query_scalar(
+    let row: Option<(serde_json::Value, String)> = sqlx::query_as(
         "UPDATE package_install SET installed_at = now() \
-          WHERE plan_ref = $1 AND installed_at IS NULL RETURNING locks",
+          WHERE plan_ref = $1 AND installed_at IS NULL RETURNING locks, package_id",
     )
     .bind(plan_id)
     .fetch_optional(&mut *tx)
     .await
     .map_err(attome_types::AppError::internal)?;
-    let Some(locks) = locks else {
+    let Some((locks, package_id)) = row else {
         return Ok(0);
     };
     let locks: Vec<PackageLock> =
         serde_json::from_value(locks).map_err(attome_types::AppError::internal)?;
+    let replaced: Vec<serde_json::Value> = sqlx::query_scalar(
+        "UPDATE package_install SET uninstalled_at = now(), data_choice = 'upgraded' \
+          WHERE package_id = $1 AND plan_ref <> $2 \
+            AND installed_at IS NOT NULL AND uninstalled_at IS NULL \
+          RETURNING locks",
+    )
+    .bind(&package_id)
+    .bind(plan_id)
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(attome_types::AppError::internal)?;
+    for old in replaced {
+        let old: Vec<PackageLock> =
+            serde_json::from_value(old).map_err(attome_types::AppError::internal)?;
+        for (kind, key, _) in old
+            .iter()
+            .filter(|(k, key, _)| !locks.iter().any(|(nk, nkey, _)| nk == k && nkey == key))
+        {
+            sqlx::query("DELETE FROM metadata_lock WHERE object_kind = $1 AND object_key = $2")
+                .bind(kind)
+                .bind(key)
+                .execute(&mut *tx)
+                .await
+                .map_err(attome_types::AppError::internal)?;
+        }
+    }
     for (kind, key, mode) in &locks {
         sqlx::query(
             "INSERT INTO metadata_lock (object_kind, object_key, mode, set_by_layer) \
@@ -355,6 +400,304 @@ pub async fn install_locks(
         .await
         .map_err(attome_types::AppError::internal)?;
     Ok(locks.len())
+}
+
+/// T8-T3: one property an upgrade cannot merge on its own: the package's
+/// new version and the customer both changed it, differently.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, utoipa::ToSchema)]
+pub struct Conflict {
+    /// `entity` or `entity.attribute`.
+    pub object: String,
+    pub property: String,
+    /// What the installed version set.
+    #[schema(value_type = Object)]
+    pub installed: Value,
+    /// What the deployment has now.
+    #[schema(value_type = Object)]
+    pub customer: Value,
+    /// What the new version sets.
+    #[schema(value_type = Object)]
+    pub package: Value,
+}
+
+/// An upgrade's merge.
+#[derive(Debug, Clone)]
+pub struct Merge {
+    /// The new version with the customer's kept changes: a selection.
+    pub bundle: Bundle,
+    /// Properties both changed; the bundle carries the package's value.
+    pub conflicts: Vec<Conflict>,
+    /// `object.property` the customer changed and the package did not: kept.
+    pub kept: Vec<String>,
+    /// Objects the installed version had and the new one drops: left in
+    /// place, no longer the package's.
+    pub removed: Vec<String>,
+}
+
+/// T8-T3: a managed property that differs live from what the package set.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, utoipa::ToSchema)]
+pub struct DriftItem {
+    /// `entity` or `entity.attribute`.
+    pub object: String,
+    /// `changed`, or `missing` when the object is gone.
+    pub change: String,
+    pub property: Option<String>,
+    #[schema(value_type = Object)]
+    pub installed: Value,
+    #[schema(value_type = Object)]
+    pub live: Value,
+}
+
+/// The entity properties an upgrade merges and drift compares.
+const ENTITY_PROPERTIES: [&str; 4] = [
+    "display_name",
+    "primary_name_attribute",
+    "is_append_only",
+    "extends",
+];
+/// The attribute properties an upgrade merges and drift compares: what a
+/// package sets and provisioning does not fill in on its own.
+const ATTRIBUTE_PROPERTIES: [&str; 7] = [
+    "display_name",
+    "field_type",
+    "is_required",
+    "is_sensitive",
+    "lookup_entity",
+    "options",
+    "max_length",
+];
+
+fn as_value<T: Serialize>(item: &T) -> Value {
+    serde_json::to_value(item).unwrap_or(Value::Null)
+}
+
+/// Merges one object's `properties` into `package` (its new definition).
+fn merge_object(
+    object: &str,
+    properties: &[&str],
+    installed: Option<&Value>,
+    customer: Option<&Value>,
+    package: &mut Value,
+    out: &mut Merge,
+) {
+    let Some(customer) = customer else {
+        return;
+    };
+    for &property in properties {
+        let c = customer.get(property).cloned().unwrap_or(Value::Null);
+        let p = package.get(property).cloned().unwrap_or(Value::Null);
+        let i = installed.map(|i| i.get(property).cloned().unwrap_or(Value::Null));
+        // A property the installed version left unset is not compared:
+        // provisioning may have filled it in.
+        if i.as_ref().is_some_and(Value::is_null) {
+            continue;
+        }
+        let changed_by_customer = match &i {
+            Some(i) => c != *i,
+            None => c != p,
+        };
+        if !changed_by_customer || c == p {
+            continue;
+        }
+        if i.as_ref() == Some(&p) {
+            if let Some(slot) = package.get_mut(property) {
+                *slot = c;
+            }
+            out.kept.push(format!("{object}.{property}"));
+        } else {
+            out.conflicts.push(Conflict {
+                object: object.to_owned(),
+                property: property.to_owned(),
+                installed: i.unwrap_or(Value::Null),
+                customer: c,
+                package: p,
+            });
+        }
+    }
+}
+
+/// T8-T3: the three-way merge of an upgrade: `installed` (the version the
+/// deployment has), `package` (the new version) and `live` (the deployment
+/// now, the customer's layer included). Pure.
+pub fn three_way(installed: &Bundle, package: &Bundle, live: &Bundle) -> Result<Merge, String> {
+    let mut out = Merge {
+        bundle: package.clone(),
+        conflicts: Vec::new(),
+        kept: Vec::new(),
+        removed: Vec::new(),
+    };
+    let mut entities = Vec::with_capacity(package.entities.len());
+    for entity in &package.entities {
+        let name = &entity.logicalname;
+        let old = installed.entities.iter().find(|e| &e.logicalname == name);
+        let now = live.entities.iter().find(|e| &e.logicalname == name);
+        let mut merged = as_value(entity);
+        merge_object(
+            name,
+            &ENTITY_PROPERTIES,
+            old.map(as_value).as_ref(),
+            now.map(as_value).as_ref(),
+            &mut merged,
+            &mut out,
+        );
+        let mut attributes = Vec::with_capacity(entity.attributes.len());
+        for attr in &entity.attributes {
+            let object = format!("{name}.{}", attr.logicalname);
+            let old_attr = old.and_then(|o| {
+                o.attributes
+                    .iter()
+                    .find(|a| a.logicalname == attr.logicalname)
+            });
+            let live_attr = now.and_then(|n| {
+                n.attributes
+                    .iter()
+                    .find(|a| a.logicalname == attr.logicalname)
+            });
+            let mut value = as_value(attr);
+            merge_object(
+                &object,
+                &ATTRIBUTE_PROPERTIES,
+                old_attr.map(as_value).as_ref(),
+                live_attr.map(as_value).as_ref(),
+                &mut value,
+                &mut out,
+            );
+            attributes.push(value);
+        }
+        if let Some(old) = old {
+            for attr in &old.attributes {
+                if !entity
+                    .attributes
+                    .iter()
+                    .any(|a| a.logicalname == attr.logicalname)
+                {
+                    out.removed.push(format!("{name}.{}", attr.logicalname));
+                }
+            }
+        }
+        merged["attributes"] = Value::Array(attributes);
+        entities.push(
+            serde_json::from_value(merged).map_err(|e| format!("merging entity {name}: {e}"))?,
+        );
+    }
+    for entity in &installed.entities {
+        if !package
+            .entities
+            .iter()
+            .any(|e| e.logicalname == entity.logicalname)
+        {
+            out.removed.push(entity.logicalname.clone());
+        }
+    }
+    out.bundle.entities = entities;
+    out.bundle.partial = true;
+    Ok(out)
+}
+
+/// T8-T3: every managed property that differs live from what `installed`
+/// set, and every object of it gone. Pure.
+pub fn package_drift(installed: &Bundle, live: &Bundle) -> Vec<DriftItem> {
+    fn compare(
+        object: &str,
+        properties: &[&str],
+        installed: &Value,
+        live: &Value,
+        out: &mut Vec<DriftItem>,
+    ) {
+        for &property in properties {
+            let i = installed.get(property).cloned().unwrap_or(Value::Null);
+            let l = live.get(property).cloned().unwrap_or(Value::Null);
+            if !i.is_null() && i != l {
+                out.push(DriftItem {
+                    object: object.to_owned(),
+                    change: "changed".to_owned(),
+                    property: Some(property.to_owned()),
+                    installed: i,
+                    live: l,
+                });
+            }
+        }
+    }
+    let missing = |object: String| DriftItem {
+        object,
+        change: "missing".to_owned(),
+        property: None,
+        installed: Value::Bool(true),
+        live: Value::Null,
+    };
+    let mut out = Vec::new();
+    for entity in &installed.entities {
+        let name = &entity.logicalname;
+        let Some(now) = live.entities.iter().find(|e| &e.logicalname == name) else {
+            out.push(missing(name.clone()));
+            continue;
+        };
+        compare(
+            name,
+            &ENTITY_PROPERTIES,
+            &as_value(entity),
+            &as_value(now),
+            &mut out,
+        );
+        for attr in &entity.attributes {
+            let object = format!("{name}.{}", attr.logicalname);
+            match now
+                .attributes
+                .iter()
+                .find(|a| a.logicalname == attr.logicalname)
+            {
+                Some(live_attr) => compare(
+                    &object,
+                    &ATTRIBUTE_PROPERTIES,
+                    &as_value(attr),
+                    &as_value(live_attr),
+                    &mut out,
+                ),
+                None => out.push(missing(object)),
+            }
+        }
+    }
+    out
+}
+
+/// The entities a package owns: those of `installed` named with its
+/// namespace. Pure.
+pub fn owned_entities(installed: &Bundle, namespace: &str) -> Vec<String> {
+    let prefix = format!("{namespace}_");
+    installed
+        .entities
+        .iter()
+        .filter(|e| e.logicalname.starts_with(&prefix))
+        .map(|e| e.logicalname.clone())
+        .collect()
+}
+
+/// T8-T3: `live` without what the package owns: its entities, with their
+/// views and queries, and the attributes it added to entities it does not
+/// own. Planned with retiring allowed, it retires exactly those. Pure.
+pub fn without_package(live: &Bundle, installed: &Bundle, namespace: &str) -> Bundle {
+    let prefix = format!("{namespace}_");
+    let owned = owned_entities(installed, namespace);
+    let mut out = live.clone();
+    out.partial = false;
+    out.entities.retain(|e| !owned.contains(&e.logicalname));
+    for entity in &mut out.entities {
+        let added: Vec<&str> = installed
+            .entities
+            .iter()
+            .filter(|e| e.logicalname == entity.logicalname)
+            .flat_map(|e| e.attributes.iter())
+            .filter(|a| a.logicalname.starts_with(&prefix))
+            .map(|a| a.logicalname.as_str())
+            .collect();
+        entity
+            .attributes
+            .retain(|a| !added.contains(&a.logicalname.as_str()));
+    }
+    out.views.retain(|v| !owned.contains(&v.entity));
+    out.queries
+        .retain(|q| q.entity.as_ref().is_none_or(|e| !owned.contains(e)));
+    out
 }
 
 /// The bytes a package's signature covers: the canonical JSON of its
@@ -556,6 +899,90 @@ mod tests {
                 .unwrap()
                 .get("extension_points")
                 .is_none()
+        );
+    }
+
+    #[test]
+    fn an_upgrade_keeps_customer_changes_and_names_conflicts() {
+        let installed = bundle();
+        // The customer relabelled the plate and the fleet size, and added a
+        // field to the vehicle.
+        let mut live = bundle();
+        live.entities[0].attributes[0].display_name = "Number plate".into();
+        live.entities[1].attributes[0].display_name = "Fleet (vehicles)".into();
+        let mut colour = live.entities[0].attributes[0].clone();
+        colour.logicalname = "colour".into();
+        live.entities[0].attributes.push(colour);
+        // The new version relabels the fleet size too, adds a VIN and drops
+        // nothing on the vehicle.
+        let mut package = bundle();
+        package.entities[1].attributes[0].display_name = "Fleet size".into();
+        let mut vin = package.entities[0].attributes[0].clone();
+        vin.logicalname = "vin".into();
+        vin.display_name = "VIN".into();
+        package.entities[0].attributes.push(vin);
+
+        let merge = three_way(&installed, &package, &live).expect("merge");
+        assert!(
+            merge.bundle.partial,
+            "a package never retires what it leaves out"
+        );
+        assert_eq!(
+            merge.kept,
+            vec!["exf_vehicle.plate.display_name".to_owned()]
+        );
+        assert_eq!(
+            merge.bundle.entities[0].attributes[0].display_name,
+            "Number plate"
+        );
+        assert_eq!(merge.bundle.entities[0].attributes[1].logicalname, "vin");
+        assert_eq!(merge.conflicts.len(), 1, "{:?}", merge.conflicts);
+        assert_eq!(merge.conflicts[0].object, "account.exf_fleet_size");
+        assert_eq!(merge.conflicts[0].customer, json!("Fleet (vehicles)"));
+        assert_eq!(
+            merge.bundle.entities[1].attributes[0].display_name,
+            "Fleet size"
+        );
+        assert!(merge.removed.is_empty());
+
+        let mut smaller = bundle();
+        smaller.entities.truncate(1);
+        let merge = three_way(&installed, &smaller, &bundle()).expect("merge");
+        assert_eq!(merge.removed, vec!["account".to_owned()]);
+        assert!(merge.conflicts.is_empty() && merge.kept.is_empty());
+    }
+
+    #[test]
+    fn drift_names_changed_and_missing_managed_parts() {
+        assert!(package_drift(&bundle(), &bundle()).is_empty());
+        let mut live = bundle();
+        live.entities[0].attributes[0].field_type = "number".into();
+        live.entities[1].attributes.clear();
+        // Unset by the package: provisioning may fill it, so not drift.
+        live.entities[0].primary_name_attribute = Some("plate".into());
+        let drift = package_drift(&bundle(), &live);
+        assert_eq!(drift.len(), 2, "{drift:?}");
+        assert_eq!(drift[0].object, "exf_vehicle.plate");
+        assert_eq!(drift[0].property.as_deref(), Some("field_type"));
+        assert_eq!(drift[1].object, "account.exf_fleet_size");
+        assert_eq!(drift[1].change, "missing");
+    }
+
+    #[test]
+    fn uninstall_takes_out_only_what_the_package_owns() {
+        let mut live = bundle();
+        let mut own = live.entities[1].attributes[0].clone();
+        own.logicalname = "industry".into();
+        live.entities[1].attributes.push(own);
+        let rest = without_package(&live, &bundle(), "exf");
+        assert!(!rest.partial);
+        assert_eq!(rest.entities.len(), 1);
+        assert_eq!(rest.entities[0].logicalname, "account");
+        assert_eq!(rest.entities[0].attributes.len(), 1);
+        assert_eq!(rest.entities[0].attributes[0].logicalname, "industry");
+        assert_eq!(
+            owned_entities(&bundle(), "exf"),
+            vec!["exf_vehicle".to_owned()]
         );
     }
 }

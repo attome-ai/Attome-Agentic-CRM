@@ -71,3 +71,34 @@ removing them or their fields (`409 metadata_locked`). An entity the manifest li
 or remove the package's (`409 metadata_add_only`). The fields a package adds to entities it does not
 own are locked one by one. A newer version of the package changes them through its own apply. An
 unmanaged package locks nothing: its objects become the deployment's own.
+
+A package's bundle is always a selection: installing or upgrading it never retires an object it
+does not carry.
+
+## Upgrade, drift and uninstall
+
+`POST /api/v1/admin/packages/upgrade` takes a newer version of an installed managed package, pushed
+as `{"package": <document>}` or pulled from `{"url": "https://…"}` (a public host, at most 32 MB).
+It is checked like an install (signature, manifest, the installed version's namespace, a higher
+version), then merged three ways: the installed version, the new one, and the deployment's live
+metadata. A property only the customer changed (a label, a field type, required, sensitive, the
+lookup target, the options, the length) keeps the customer's value (`kept`); a property both
+changed differently is a conflict (`conflicts`, each with the installed, customer and package
+values). While there are conflicts nothing is planned; send `"accept_package": true` to take the
+package's value for each. Objects the new version drops stay in place, no longer the package's
+(`removed`). Upgrading is applying the returned plan; the apply replaces the old version's locks.
+
+`GET /api/v1/admin/packages/{id}/drift` names every managed property that differs live from what
+the installed version set, and every object of it gone: changes made around the package, through a
+bundle, a changeset or by hand. Fields customers add on extension points are their own, not drift.
+
+`POST /api/v1/admin/packages/{id}/uninstall` with `{"data": …}` lifts the package's locks and marks
+it uninstalled:
+
+| `data` | what happens |
+|---|---|
+| `keep` | its objects and records stay, as the deployment's own |
+| `export` | as `delete`, once `exports` lists a completed record export (`POST /api/v1/{entity}/export`) of every entity the package owns |
+| `delete` | its entities, their views and queries, and the fields it added to other entities are retired through a metadata plan, queued like any apply (approval-gated where the deployment requires it) |
+
+The uninstall writes a Configuration audit event. Every route here is for administrators only.

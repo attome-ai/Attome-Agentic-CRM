@@ -112,6 +112,44 @@ pub async fn fetch_and_verify(state: &EngineState) -> Result<Option<Bundle>, App
 /// refused: a bundle artifact is verified by signature, not transport, but
 /// accepting `http://` here would invite an operator to point a production
 /// deployment at an unencrypted endpoint by habit.
+/// The largest package [`fetch_package`] reads.
+const MAX_PACKAGE_BYTES: usize = 32 * 1024 * 1024;
+
+/// T8-T3: a package pulled from `url` for an upgrade: `https://` on a public
+/// host (an administrator's input, so no private address), at most
+/// [`MAX_PACKAGE_BYTES`], read as JSON.
+pub(crate) async fn fetch_package(url: &str) -> Result<serde_json::Value, AppError> {
+    if !url.starts_with("https://") {
+        return Err(AppError::Validation("a package url is https://".to_owned()));
+    }
+    let purpose = attome_outbound::http::Purpose::public("package-pull");
+    let client = attome_outbound::http::client(purpose, |b| b.timeout(FETCH_TIMEOUT))
+        .map_err(|e| AppError::internal(format!("building the package http client: {e}")))?;
+    let resp = client
+        .get(url)
+        .send()
+        .await
+        .map_err(|e| AppError::Validation(format!("fetching the package: {e}")))?;
+    if !resp.status().is_success() {
+        return Err(AppError::Validation(format!(
+            "fetching the package: HTTP {}",
+            resp.status()
+        )));
+    }
+    let bytes = resp
+        .bytes()
+        .await
+        .map_err(|e| AppError::Validation(format!("reading the package: {e}")))?;
+    if bytes.len() > MAX_PACKAGE_BYTES {
+        return Err(AppError::Validation(format!(
+            "the package is over {} MB",
+            MAX_PACKAGE_BYTES / (1024 * 1024)
+        )));
+    }
+    serde_json::from_slice(&bytes)
+        .map_err(|e| AppError::Validation(format!("the package does not read: {e}")))
+}
+
 async fn fetch_bytes(bundle_ref: &str) -> Result<Vec<u8>, AppError> {
     if let Some(scheme_rest) = bundle_ref.strip_prefix("http://") {
         let _ = scheme_rest;

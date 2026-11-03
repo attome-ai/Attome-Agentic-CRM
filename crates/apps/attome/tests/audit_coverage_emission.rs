@@ -66,6 +66,10 @@ const PASSWORD: &str = "audit-emission-password-1";
 /// cannot silently outlive its route.
 const UNDRIVABLE: &[(&str, &str)] = &[
     (
+        "POST /api/v1/admin/packages/{id}/uninstall",
+        "needs an installed managed package: a package signed by a trusted publisher whose          plan applied through the bundle apply job; writes its Configuration event through          SecurityTx in the uninstall's own transaction (attome-testapp tests/package_upgrade.rs          drives it)",
+    ),
+    (
         "PUT /api/v1/admin/ai/digital-workers/{id}",
         "needs an agent principal and an ai_agent definition whose principal_ref names it \
          (a definition needs a live model record); writes its Configuration event through \
