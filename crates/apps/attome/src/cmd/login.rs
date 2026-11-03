@@ -57,6 +57,47 @@ pub struct Target {
     /// T4-T5: a writing command here also needs `--confirm-target <name>`.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub production: bool,
+    /// T4-T3: the Develop workspace commands on this target run in
+    /// (`attome workspace switch`); none means live.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace: Option<ChosenWorkspace>,
+}
+
+/// T4-T3: a workspace a target works in.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ChosenWorkspace {
+    pub id: String,
+    pub name: String,
+}
+
+/// T4-T3: the request header naming the workspace a request runs in
+/// (`attome_api::workspace::proxy::WORKSPACE_HEADER`).
+pub const WORKSPACE_HEADER: &str = "x-attome-workspace";
+
+/// T4-T3: the workspace this command's requests run in, decided once by
+/// [`credentials`].
+static WORKSPACE: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+
+/// The workspace for a command: `ATTOME_WORKSPACE` when set (`live` or blank
+/// means none), else the one `attome workspace switch` chose for the named
+/// target.
+fn workspace_for(target: Option<&str>) -> Option<String> {
+    if let Ok(value) = std::env::var("ATTOME_WORKSPACE") {
+        let value = value.trim();
+        return (!value.is_empty() && value != "live").then(|| value.to_owned());
+    }
+    let target = target?;
+    let dir = config_dir().ok()?;
+    let (_, found) = Targets::load(&dir).ok()?.resolve(Some(target)).ok()?;
+    found.workspace.map(|w| w.id)
+}
+
+/// T4-T3: `request` with the chosen workspace's header, when there is one.
+pub fn in_workspace(request: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
+    match WORKSPACE.get().and_then(Option::as_deref) {
+        Some(id) => request.header(WORKSPACE_HEADER, id),
+        None => request,
+    }
 }
 
 /// A target's session, as the credential store keeps it.
@@ -467,6 +508,7 @@ pub fn run(verb: &str, args: &[String]) -> Result<(), String> {
                 Target {
                     url: url.clone(),
                     production,
+                    workspace: None,
                 },
             );
             if targets.default.is_none() {
@@ -611,6 +653,7 @@ pub async fn credentials(
     api_key: Option<String>,
     target: Option<String>,
 ) -> Result<(String, Auth), String> {
+    let _ = WORKSPACE.set(workspace_for(target.as_deref()));
     match target {
         Some(target) => {
             let (url, token) = target_bearer(Some(&target)).await?;
@@ -749,6 +792,7 @@ mod tests {
             Target {
                 url: "https://a".into(),
                 production: true,
+                workspace: None,
             },
         );
         targets.default = Some("prod".into());

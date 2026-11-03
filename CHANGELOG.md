@@ -17,6 +17,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- `attome workspace list|create|switch|preview|publish|refresh|rollback` (T4-T3): Develop workspaces from
+  the command line; after `switch`, a target's `config`, `data`, `flags` and `model` commands run inside
+  the workspace (or set `ATTOME_WORKSPACE`).
 - A workspace picker in the web app's header (T5-T7): choose, make or leave a Develop workspace; while
   inside one a band names it on every page and every request runs inside it.
 - Develop workspace life cycle (T5-T6): `POST /api/v1/admin/workspaces/{id}/refresh` brings in live's

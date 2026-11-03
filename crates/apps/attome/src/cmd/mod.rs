@@ -58,3 +58,5 @@ pub mod upgrade_apply;
 pub mod upgrade_check;
 pub mod verify_audit_chain;
 pub mod worker;
+/// T4-T3: `attome workspace list|create|switch|preview|publish|refresh|rollback`.
+pub mod workspace;

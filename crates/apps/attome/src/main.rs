@@ -46,6 +46,11 @@ Usage:
                 [--target <name> | --url <url> [--api-key <key>]]
                                 Move metadata objects as one text file each;
                                 import saves drafts and never publishes
+  attome workspace list|create <name>|switch <id>|live|preview <id>
+                |publish <id>|refresh <id>|rollback <id>
+                [--target <name> | --url <url>]
+                                Develop workspaces: make one, work in it from
+                                later commands, publish it or throw it away
   attome sovereignty report [--json]
                                 Where copies of data live and where data is
                                 sent, each marked inside or outside
@@ -234,6 +239,10 @@ fn main() -> ExitCode {
         ["model", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             outcome(attome::cmd::model_files::run(&rest).map_err(Into::into))
+        }
+        ["workspace", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            outcome(attome::cmd::workspace::run(&rest).map_err(Into::into))
         }
         ["sovereignty", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();

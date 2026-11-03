@@ -409,6 +409,7 @@ fn client(url: &str) -> Result<attome_outbound::http::Outbound, String> {
 }
 
 fn with_auth(request: reqwest::RequestBuilder, auth: &Auth) -> reqwest::RequestBuilder {
+    let request = crate::cmd::login::in_workspace(request);
     match auth {
         Some(value) => request.header("authorization", value),
         None => request,

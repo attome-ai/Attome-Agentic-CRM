@@ -186,8 +186,9 @@ async fn send(
     path: &str,
     body: Option<Value>,
 ) -> Result<Value, String> {
-    let mut request =
-        client(url)?.request(method, format!("{url}/api/v1/admin/customer-flags{path}"));
+    let mut request = crate::cmd::login::in_workspace(
+        client(url)?.request(method, format!("{url}/api/v1/admin/customer-flags{path}")),
+    );
     if let Some(value) = auth {
         request = request.header("authorization", value);
     }

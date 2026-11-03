@@ -163,6 +163,7 @@ pub(crate) fn authorised(
     request: reqwest::RequestBuilder,
     auth: Option<&str>,
 ) -> reqwest::RequestBuilder {
+    let request = crate::cmd::login::in_workspace(request);
     match auth {
         Some(value) => request.header("authorization", value),
         None => request,
