@@ -380,10 +380,14 @@ async fn plan_and_persist(
 /// installs, each with its Ed25519 public key (base64).
 pub const TRUSTED_PUBLISHERS_SETTING: &str = "packages.trusted_publishers";
 
-/// The trusted `(publisher, key)` pairs from [`TRUSTED_PUBLISHERS_SETTING`].
-fn trusted_publishers(state: &EngineState) -> Vec<(String, String)> {
+/// The trusted `(publisher, key)` pairs from [`TRUSTED_PUBLISHERS_SETTING`],
+/// and (S13-T1) each configured partner catalogue's publisher and key.
+pub(super) fn trusted_publishers(state: &EngineState) -> Vec<(String, String)> {
+    let partners = super::catalogue::partners(state)
+        .into_iter()
+        .map(|p| (p.publisher, p.key));
     let Some(descriptor) = attome_core::setting_registry().get(TRUSTED_PUBLISHERS_SETTING) else {
-        return Vec::new();
+        return partners.collect();
     };
     let (value, _) = state.settings.load().resolve(descriptor, None, None);
     value
@@ -396,6 +400,7 @@ fn trusted_publishers(state: &EngineState) -> Vec<(String, String)> {
                 entry.get("key")?.as_str()?.to_owned(),
             ))
         })
+        .chain(partners)
         .collect()
 }
 
@@ -446,9 +451,21 @@ async fn preview_package(
     ctx: Authorized<Admin>,
     Json(body): Json<PackagePreviewBody>,
 ) -> Result<Json<PackagePreviewResponse>, AppError> {
-    let mut package: super::package::Package = serde_json::from_value(body.package)
+    let package: super::package::Package = serde_json::from_value(body.package)
         .map_err(|e| AppError::Validation(format!("the package does not read: {e}")))?;
-    super::package::verify(&package, &trusted_publishers(&state)).map_err(AppError::Validation)?;
+    preview_document(&state, package, ctx.user_id)
+        .await
+        .map(Json)
+}
+
+/// A package's install preview, and its persisted plan: the checks
+/// `packages/preview` and (S13-T1) a catalogue install share.
+pub(super) async fn preview_document(
+    state: &EngineState,
+    mut package: super::package::Package,
+    requested_by: Uuid,
+) -> Result<PackagePreviewResponse, AppError> {
+    super::package::verify(&package, &trusted_publishers(state)).map_err(AppError::Validation)?;
     // A package is a selection: it never retires what it does not carry.
     package.bundle.partial = true;
     let mut problems = super::package::check_manifest(&package.manifest);
@@ -472,17 +489,17 @@ async fn preview_package(
     }
     let manifest = serde_json::to_value(&package.manifest).map_err(AppError::internal)?;
     let manifest_doc = package.manifest.clone();
-    let (plan, preview) = plan_and_persist(&state, package.bundle, false, ctx.user_id).await?;
+    let (plan, preview) = plan_and_persist(state, package.bundle, false, requested_by).await?;
     // T8-T2: what it locks once this plan applies (T8-T3: and the manifest
     // an upgrade, drift or uninstall reads back).
     if manifest_doc.mode == super::package::PackageMode::Managed {
         super::package::record_pending(&state.base.db, plan.plan_id, &manifest_doc, &locks).await?;
     }
-    Ok(Json(PackagePreviewResponse {
+    Ok(PackagePreviewResponse {
         manifest,
         plan,
         preview,
-    }))
+    })
 }
 
 /// The installed version of a managed package.
@@ -1368,6 +1385,7 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/packages/{id}/uninstall",
             post(uninstall_package),
         )
+        .merge(super::catalogue::routes())
 }
 
 /// This file's slice of the workspace OpenAPI document (P-api-contract
@@ -1390,5 +1408,7 @@ pub fn routes() -> Router<EngineState> {
 struct ApiDocFragment;
 
 pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
-    <ApiDocFragment as utoipa::OpenApi>::openapi()
+    let mut doc = <ApiDocFragment as utoipa::OpenApi>::openapi();
+    doc.merge(super::catalogue::openapi_fragment());
+    doc
 }

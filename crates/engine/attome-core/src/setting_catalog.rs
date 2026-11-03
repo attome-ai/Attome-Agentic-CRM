@@ -1050,6 +1050,15 @@ fn records_settings() -> Vec<SettingDescriptor> {
             false,
             || json!([]),
         ),
+        // S13-T1: partner package catalogues, each trusted for its publisher.
+        SettingDescriptor::new(
+            "packages.partner_catalogues",
+            "Partner package catalogues, each `{name, url, publisher, key}`: an `https://` URL serving              an `attome-catalogue/v1` index, and the publisher and Ed25519 public key (base64) its              packages are signed with. A partner's key is trusted for its publisher's packages (S13-T1).",
+            || json!({"type": "array", "items": {"type": "object", "required": ["name", "url", "publisher", "key"], "properties": {"name": {"type": "string", "minLength": 1}, "url": {"type": "string", "pattern": "^https://"}, "publisher": {"type": "string", "minLength": 1}, "key": {"type": "string", "minLength": 1}}}}),
+            &[SettingScope::Deployment],
+            false,
+            || json!([]),
+        ),
         // T1-T4: whether a form's or page's accessibility and performance
         // findings only warn at publish or refuse it.
         SettingDescriptor::new(

@@ -56,6 +56,7 @@
 pub mod apply;
 pub mod break_glass;
 pub mod canonical;
+pub mod catalogue;
 pub mod derived_id;
 pub mod export;
 /// T8-T2: what installing a package does, from its bundle plan.

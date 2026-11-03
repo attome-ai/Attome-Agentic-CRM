@@ -66,6 +66,14 @@ const PASSWORD: &str = "audit-emission-password-1";
 /// cannot silently outlive its route.
 const UNDRIVABLE: &[(&str, &str)] = &[
     (
+        "POST /api/v1/admin/packages/catalogue",
+        "needs a package signed by a trusted publisher (packages.trusted_publishers); writes its          Configuration event through SecurityTx in the insert's own transaction          (attome-testapp tests/package_catalogue.rs drives it)",
+    ),
+    (
+        "POST /api/v1/admin/packages/catalogue/{id}/review",
+        "needs a catalogue entry added by another administrator; writes its Configuration event          through SecurityTx in the review's own transaction (attome-testapp          tests/package_catalogue.rs drives it)",
+    ),
+    (
         "POST /api/v1/admin/packages/{id}/uninstall",
         "needs an installed managed package: a package signed by a trusted publisher whose          plan applied through the bundle apply job; writes its Configuration event through          SecurityTx in the uninstall's own transaction (attome-testapp tests/package_upgrade.rs          drives it)",
     ),

@@ -102,3 +102,25 @@ it uninstalled:
 | `delete` | its entities, their views and queries, and the fields it added to other entities are retired through a metadata plan, queued like any apply (approval-gated where the deployment requires it) |
 
 The uninstall writes a Configuration audit event. Every route here is for administrators only.
+
+## Catalogue
+
+Each deployment keeps a private catalogue of signed package versions (S13-T1).
+`POST /api/v1/admin/packages/catalogue` adds one for review: pushed as `{"package": <document>}`
+(signed by a trusted publisher), or taken from a partner catalogue as
+`{"partner": "<name>", "package_id": "…", "version": "…"}`. A version already there is a conflict.
+Each entry shows what the package asks of the deployment (its mode, contents, the entities it
+brings or extends with their field counts, its roles and dependencies) and its review status.
+`POST /api/v1/admin/packages/catalogue/{id}/review` with `{"decision": "approved" | "rejected",
+"note": …}` reviews a pending version; the administrator who added it cannot. Only an approved
+version installs: `POST /api/v1/admin/packages/catalogue/{id}/install` answers the same preview and
+persisted plan as `packages/preview`, and installing is applying that plan.
+`GET /api/v1/admin/packages/catalogue` lists the catalogue, newest first.
+
+Partner catalogues are set in `packages.partner_catalogues`
+(`[{"name", "url", "publisher", "key"}]`): an `https://` URL serving an index
+`{"format": "attome-catalogue/v1", "packages": [<package>, …]}` and the Ed25519 key the partner's
+packages are signed with. Configuring one trusts that key for its publisher.
+`GET /api/v1/admin/packages/partner-catalogues/{name}` fetches the index and lists each package
+with what it asks and whether it verifies against the partner's key. Adding and reviewing write a
+Configuration audit event. Every route is for administrators only.
