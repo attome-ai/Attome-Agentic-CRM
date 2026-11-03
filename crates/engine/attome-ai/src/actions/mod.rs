@@ -72,6 +72,8 @@ pub mod identity_assist;
 /// AI3-T1: filing an inbound email on the records made from it.
 /// A23-T11: agent tools for file imports.
 pub mod import;
+/// AD11-T1: model.import_config, a source CRM's model as a draft.
+pub mod import_config;
 pub mod inbox;
 /// E8-T12: drafting a journey, explaining a person's path and suggesting changes.
 pub mod journey;
@@ -193,6 +195,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(metric_draft::descriptors());
     all.extend(draft_model::descriptors());
     all.extend(form_draft::descriptors());
+    all.extend(import_config::descriptors());
     all.extend(review_model::descriptors());
     all.extend(rpa_draft::descriptors());
     all.extend(search_ask::descriptors());
@@ -316,6 +319,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(metric_draft::executors());
     all.extend(draft_model::executors());
     all.extend(form_draft::executors());
+    all.extend(import_config::executors());
     all.extend(review_model::executors());
     all.extend(rpa_draft::executors());
     all.extend(search_ask::executors());

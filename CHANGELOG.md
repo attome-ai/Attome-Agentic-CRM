@@ -17,6 +17,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- `model.import_config` (AD11-T1): a source CRM's model as an Attome draft, with what cannot be moved
+  and the equivalent of each automation. `model.draft` keeps to the field route's type names.
 - `model.form.draft` (AD2-T1): a building agent lays out an entity's form from a description, by its own
   fields and the entities pointing at it, and returns the `model.form.edit` call that saves the draft.
 - The data model page reviews a building agent's draft (AD1-T2): the proposed entities on a diagram beside

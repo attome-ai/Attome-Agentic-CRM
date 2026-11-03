@@ -232,7 +232,7 @@ pub fn build_calls(tables: &[DraftTable]) -> Vec<Value> {
 
 /// The deployment's entity library: every entity with its attributes and
 /// its English and Arabic labels where it has them.
-async fn library(
+pub(crate) async fn library(
     state: &EngineState,
 ) -> Result<Vec<crate::builder::entities::LibraryEntity>, AppError> {
     let labels: Vec<(String, String, String)> = sqlx::query_as(
@@ -270,7 +270,30 @@ async fn library(
     Ok(out)
 }
 
-/// The model's tables, bounded and named by the naming rules. Pure.
+/// A field type the field route accepts for `name`: one of
+/// `attome_core::FieldType`'s names as it is, a common other name mapped
+/// onto one (`boolean` to `bool`, `email` to `text`), anything else `text`.
+/// Pure.
+pub fn field_type_of(name: &str) -> &'static str {
+    let name = name.trim().to_ascii_lowercase();
+    match name.as_str() {
+        "number" | "integer" | "int" | "decimal" | "float" | "double" => "number",
+        "currency" | "money" | "amount" => "currency",
+        "date" => "date",
+        "date_time" | "datetime" | "timestamp" => "date_time",
+        "time" => "time",
+        "bool" | "boolean" | "yes_no" | "checkbox" => "bool",
+        "choice" | "option_set" | "picklist" | "enum" | "select" => "choice",
+        "lookup" | "reference" => "lookup",
+        "rich_text" | "html" => "rich_text",
+        "file" | "attachment" => "file",
+        "image" | "photo" => "image",
+        _ => "text",
+    }
+}
+
+/// The model's tables, bounded, named by the naming rules and typed with
+/// the field route's type names. Pure.
 fn tidy(mut tables: Vec<DraftTable>) -> Vec<DraftTable> {
     tables.truncate(MAX_ENTITIES);
     for t in &mut tables {
@@ -278,6 +301,7 @@ fn tidy(mut tables: Vec<DraftTable>) -> Vec<DraftTable> {
         t.sample_rows.truncate(MAX_SAMPLE_ROWS);
         for a in &mut t.attributes {
             a.name = snake(&a.name);
+            a.field_type = field_type_of(&a.field_type).to_owned();
         }
     }
     tables
@@ -321,8 +345,8 @@ impl Action for DraftModel {
                         "You draft a data model for a business app. Answer with one JSON array \
                          and nothing else, at most {MAX_ENTITIES} items: [{{\"name\" (lower \
                          snake case), \"label_en\", \"label_ar\", \"attributes\": [{{\"name\", \
-                         \"field_type\" (text, long_text, number, decimal, currency, date, \
-                         datetime, boolean, email, phone, url, choice, lookup), \"label_en\", \
+                         \"field_type\" (text, rich_text, number, currency, date, date_time, \
+                         time, bool, choice, lookup, file, image), \"label_en\", \
                          \"label_ar\"}}], \"relationships\": [{{\"target\", \"kind\" \
                          (many_to_one or one_to_many), \"attribute\" (the lookup, for \
                          many_to_one)}}], \"sample_rows\": [at most {MAX_SAMPLE_ROWS} objects \
@@ -457,6 +481,16 @@ mod tests {
             crate::actions::schema_build::ENTITY_CREATE
         );
         assert_eq!(calls[1]["args"]["entity"], "members");
+    }
+
+    #[test]
+    fn field_types_are_the_field_routes_own() {
+        assert_eq!(field_type_of("Boolean"), "bool");
+        assert_eq!(field_type_of("datetime"), "date_time");
+        assert_eq!(field_type_of("email"), "text");
+        assert_eq!(field_type_of("decimal"), "number");
+        assert_eq!(field_type_of("choice"), "choice");
+        assert_eq!(field_type_of("anything"), "text");
     }
 
     #[test]

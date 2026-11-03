@@ -198,6 +198,9 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   English name or Arabic label is near an existing one; a near-duplicate field is asked about too.
   `model.form.draft` lays out an entity's form from a description (tabs, sections, related lists,
   visibility rules to propose) and returns the `model.form.edit` call that saves it as a draft.
+  `model.import_config` maps a source CRM's model (as the migration connector describes it) into a
+  draft planned against the existing entities, reports what cannot be moved, and names the Attome
+  equivalent (a flow, a rule or an extension) of each automation; nothing is migrated.
   `model.review` checks a draft against the existing model and returns findings. Both save nothing.
   Once an entity's fields are in, `POST /api/v1/admin/entities/{entity_id}/scaffold` gives it its
   starting set: a draft main form, a kanban view over its status choice, the import template's

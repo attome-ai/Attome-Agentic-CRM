@@ -9,6 +9,8 @@ pub mod entities;
 pub mod explain;
 /// AD2-T1: a drafted form by names, as a form document by ids.
 pub mod forms;
+/// AD11-T1: a source CRM's model as a draft, and what cannot move.
+pub mod import_config;
 /// A1-T13 (part): spreadsheet column types for a drafted model.
 pub mod infer;
 /// A1-T13 (part): findings on a drafted model.
