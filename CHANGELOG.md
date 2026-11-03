@@ -17,6 +17,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- Agent principals, schema (AH3-T2): every account has an immutable `principal_kind` (0 person,
+  1 service, 2 agent; migration 0389, a trigger refuses a change), and `agent_principal` holds an
+  agent account's sponsor, lifecycle state and scope, with `agent_session` gaining
+  `agent_principal_ref` and `actor_chain` (migration 0390). Nothing uses them yet.
 - Egypt's ETA e-invoice (AG3-T1): `attome_einvoice::eta` writes the document (version 1.0, ETA's
   line math), produces ETA's canonical serialization, has it signed (CAdES-BES) by a signer
   service holding the taxpayer's USB token or HSM, and signs in, submits and polls ETA. The
