@@ -66,6 +66,8 @@ pub mod flags;
 pub mod flow_draft;
 pub mod followup;
 pub mod form_draft;
+/// AD5-T1: model.from_files, a model from several sheets and their import.
+pub mod from_files;
 /// L3-T8: governance.list_overdue, governance.propose_domains, governance.draft_policy.
 pub mod governance;
 pub mod graph;
@@ -206,6 +208,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(import_config::descriptors());
     all.extend(review_model::descriptors());
     all.extend(score_model::descriptors());
+    all.extend(from_files::descriptors());
     all.extend(rpa_draft::descriptors());
     all.extend(search_ask::descriptors());
     all.extend(catalog::descriptors());
@@ -333,6 +336,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(import_config::executors());
     all.extend(review_model::executors());
     all.extend(score_model::executors());
+    all.extend(from_files::executors());
     all.extend(rpa_draft::executors());
     all.extend(search_ask::executors());
     all.extend(catalog::executors());

@@ -12,6 +12,9 @@
 //!   nothing.
 //! - `model.score` (AD7-T1): a scripted case's evidence yields the issues a
 //!   sound review finds (`fixtures/builder/model_score.json`).
+//! - `model.from_files` (AD5-T1): a scripted case's sheets give the entities,
+//!   types, lookups and import order a sound draft has
+//!   (`fixtures/builder/from_files.json`).
 //! - The gate (AD10-T2): a live run fails when a model scores more than five
 //!   points below its accepted score (`fixtures/builder/accepted_scores.json`).
 
@@ -174,6 +177,38 @@ fn the_model_score_case_finds_its_issues() {
         assert!(!issue.evidence.is_empty(), "{issue:?}");
         assert!(issue.fix["route"].as_str().is_some(), "{issue:?}");
     }
+}
+
+#[test]
+fn the_from_files_case_drafts_its_model_and_import() {
+    let case: Value =
+        serde_json::from_str(include_str!("fixtures/builder/from_files.json")).expect("parses");
+    let sheets: Vec<attome_ai::builder::from_files::Sheet> =
+        serde_json::from_value(case["files"].clone()).expect("the sheets parse");
+    let draft = attome_ai::builder::from_files::from_files(&sheets);
+    let expected = &case["expected"];
+    let names: Vec<&str> = draft.tables.iter().map(|t| t.name.as_str()).collect();
+    assert_eq!(json!(names), expected["entities"]);
+    for (path, kind) in expected["types"].as_object().unwrap() {
+        let (entity, attribute) = path.split_once('.').unwrap();
+        let table = draft.tables.iter().find(|t| t.name == entity).unwrap();
+        let field = table
+            .attributes
+            .iter()
+            .find(|a| a.name == attribute)
+            .unwrap_or_else(|| panic!("{path} in {:?}", table.attributes));
+        assert_eq!(json!(field.field_type), *kind, "{path}");
+    }
+    let lookups: Vec<Value> = draft
+        .lookups
+        .iter()
+        .map(|l| json!([l.entity, l.attribute, l.target]))
+        .collect();
+    assert_eq!(Value::Array(lookups), expected["lookups"]);
+    assert_eq!(
+        draft.imports.last().unwrap()["entity"],
+        expected["import_order_last"]
+    );
 }
 
 #[test]

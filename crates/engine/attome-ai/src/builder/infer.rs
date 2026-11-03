@@ -127,7 +127,8 @@ fn is_gregorian(text: &str) -> bool {
     date_parts(head).is_some_and(|(y, _, _)| (1900..=2100).contains(&y))
 }
 
-fn is_number(text: &str) -> bool {
+/// Whether `text` is a number (Arabic-Indic digits and thousands commas too).
+pub fn is_number(text: &str) -> bool {
     let t = ascii_digits(text).replace(',', "");
     let t = t.trim().trim_start_matches(['+', '-']);
     !t.is_empty()

@@ -1,0 +1,14 @@
+{
+  "note": "AD5-T1: the builder suite's scripted case for model.from_files. Three sheets of a small clinic: the visits look up patients and doctors by their codes, fees are in riyals, visit dates are Hijri.",
+  "files": [
+    { "name": "Visits", "csv": "Visit No,Patient Code,Doctor Code,Fee,Visit Date\nV1,P1,D1,150 SAR,1446/03/15\nV2,P2,D1,200 SAR,1446/03/16\nV3,P1,D2,ر.س 90,1446/03/17\nV4,P3,D2,120 SAR,1446/03/18\n" },
+    { "name": "Patients", "csv": "Code,Name,Phone\nP1,Sara,+966500000001\nP2,Omar,+966500000002\nP3,Huda,+966500000003\n" },
+    { "name": "Doctors", "csv": "Code;Name;Specialty\nD1;Dr Ali;Cardiology\nD2;Dr Mona;Paediatrics\n" }
+  ],
+  "expected": {
+    "entities": ["visits", "patients", "doctors"],
+    "types": { "visits.fee": "currency", "visits.visit_date": "date", "visits.patients_ref": "lookup", "visits.doctors_ref": "lookup" },
+    "lookups": [["visits", "patients_ref", "patients"], ["visits", "doctors_ref", "doctors"]],
+    "import_order_last": "visits"
+  }
+}

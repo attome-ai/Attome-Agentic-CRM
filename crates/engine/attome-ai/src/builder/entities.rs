@@ -303,7 +303,7 @@ pub fn build_plan_calls(draft: &[DraftTable], steps: &[EntityStep]) -> Vec<Value
         let table = draft.iter().find(|t| t.name == step.entity);
         for attribute in &step.add_attributes {
             let field = table.and_then(|t| t.attributes.iter().find(|a| &a.name == attribute));
-            calls.push(json!({
+            let mut call = json!({
                 "action": crate::actions::schema_build::ATTRIBUTE_CREATE,
                 "args": {
                     "entity": target,
@@ -311,7 +311,16 @@ pub fn build_plan_calls(draft: &[DraftTable], steps: &[EntityStep]) -> Vec<Value
                     "name": field.map_or(attribute.as_str(), |f| if f.label_en.is_empty() { f.name.as_str() } else { f.label_en.as_str() }),
                     "field_type": field.map_or("text", |f| f.field_type.as_str()),
                 },
-            }));
+            });
+            // A lookup names the entity it points to (AD5-T1).
+            if let Some(r) = table.and_then(|t| {
+                t.relationships
+                    .iter()
+                    .find(|r| r.kind == "many_to_one" && r.attribute.as_deref() == Some(attribute))
+            }) {
+                call["args"]["lookup_entity"] = json!(r.target);
+            }
+            calls.push(call);
         }
     }
     calls

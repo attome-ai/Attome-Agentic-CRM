@@ -118,6 +118,15 @@ impl SchemaBuilder for ApiSchemaBuilder {
             let mut fields = args.clone();
             if let Value::Object(map) = &mut fields {
                 map.remove("entity");
+                // A lookup's target by name or id (AD5-T1): a plan creates the
+                // target first, so its id is known only now.
+                if let Some(Value::String(target)) = map.remove("lookup_entity") {
+                    let target = entity_id(state, &target).await?;
+                    map.insert(
+                        "lookup_entity_ref".to_owned(),
+                        Value::String(target.to_string()),
+                    );
+                }
             }
             let body: CreateAttributeBody = serde_json::from_value(fields.clone())
                 .map_err(|e| AppError::Validation(format!("invalid field: {e}")))?;

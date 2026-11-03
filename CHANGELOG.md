@@ -17,6 +17,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- `model.from_files` (AD5-T1): a data model drafted from several spreadsheets, with currency
+  columns, each sheet's key, lookups between sheets and per sheet the import that loads it once
+  built. `model.attribute.create` takes `lookup_entity` (a logical name or id) for a lookup's
+  target. The builder suite carries a scripted case for it.
 - `model.score` (AD7-T1): an entity's model scored with evidence (data profile fill rates and
   distinct values, use on forms and views, slow statements) and a draft fix per issue; it writes
   nothing. The builder suite carries a scripted case for it.

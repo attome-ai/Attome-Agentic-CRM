@@ -56,7 +56,7 @@ pub const ENTITY_CREATE: &str = "model.entity.create";
 pub const ATTRIBUTE_CREATE: &str = "model.attribute.create";
 
 const ENTITY_SCHEMA: &str = r#"{"type":"object","required":["logicalname","name"],"properties":{"logicalname":{"type":"string","description":"lowercase letters, digits and underscores"},"name":{"type":"string"}}}"#;
-const ATTRIBUTE_SCHEMA: &str = r#"{"type":"object","required":["entity","logicalname","name","field_type"],"properties":{"entity":{"type":"string","description":"the entity's logical name or id"},"logicalname":{"type":"string"},"name":{"type":"string"},"field_type":{"type":"string","description":"text, number, date, lookup, choice and the other field types"},"is_required":{"type":"boolean"},"sensitivity":{"type":"string"}}}"#;
+const ATTRIBUTE_SCHEMA: &str = r#"{"type":"object","required":["entity","logicalname","name","field_type"],"properties":{"entity":{"type":"string","description":"the entity's logical name or id"},"logicalname":{"type":"string"},"name":{"type":"string"},"field_type":{"type":"string","description":"text, number, date, lookup, choice and the other field types"},"lookup_entity":{"type":"string","description":"for a lookup: the entity it points to, by logical name or id"},"is_required":{"type":"boolean"},"sensitivity":{"type":"string"}}}"#;
 
 pub fn descriptors() -> Vec<ActionDescriptor> {
     let tool = |id: &'static str, description: &'static str, schema: &'static str| {

@@ -207,6 +207,14 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
   automate and its roles, written out first; called again with `confirmed: true` it returns the
   ordered building steps (entities, each new entity's starting set and form, then the flows).
   `model.review` checks a draft against the existing model and returns findings. Both save nothing.
+  `model.from_files` drafts a model from several sheets (CSV text each): one entity per sheet,
+  types from the cells (Hijri dates, amounts with a currency such as `SAR` or `ر.س` become
+  `currency`), each sheet's key (a column filled and distinct in every row), and a lookup
+  (`<target>_ref`) wherever nine in ten of a column's values are another sheet's keys. Only names
+  reach the model, for Arabic labels. It returns the build-tool calls and, per sheet, the
+  `POST /api/v1/{entity}/imports` options (columns to attributes, lookups matched on the target's
+  key, a dry run first) in load order, targets before the sheets that look them up. A lookup's
+  `model.attribute.create` call names its target as `lookup_entity` (a logical name or id).
   `model.score` scores a built entity from 100 with evidence: slow statements filtering on an
   attribute without an index, attributes filled in under 5% of profiled rows, repeated values in an
   identifier (code, number, email, phone), text holding a handful of values, attributes on no form
