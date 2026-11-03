@@ -8,8 +8,9 @@
 //!    earlier run's tables left, and nothing PostgreSQL could not carry over
 //!    to a table whose unique keys must include `created_at`: no unique index
 //!    besides the primary key (a business key), no foreign key from another
-//!    table pointing at it (a keyed lookup, Y2-T5), no trigger of its own and
-//!    no view over it.
+//!    table pointing at it (a keyed lookup, Y2-T5), no lookup key of its own
+//!    still unchecked (`NOT VALID`), no trigger of its own and no view over
+//!    it.
 //! 2. [`prepare`] creates `<entity>__p` in the high-volume shape (A1-T6): the
 //!    same columns, defaults and checks, `created_at` required, the primary
 //!    key `(id, created_at)`, partitioned by month on `created_at` with one
@@ -140,6 +141,23 @@ pub async fn plan_partition(
         blockers.push(format!(
             "keyed lookups point at it ({})",
             inbound.join(", ")
+        ));
+    }
+    // A key not yet checked against the rows may have values pointing at no
+    // record: the copy would refuse them. Validate it (or clear the orphans)
+    // first.
+    let unchecked: Vec<String> = sqlx::query_scalar(
+        "SELECT conname::text FROM pg_constraint \
+          WHERE contype = 'f' AND conrelid = to_regclass($1) AND NOT convalidated ORDER BY 1",
+    )
+    .bind(quote_ident(entity))
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    if !unchecked.is_empty() {
+        blockers.push(format!(
+            "lookup keys are not checked yet ({})",
+            unchecked.join(", ")
         ));
     }
     let triggers: Vec<String> = sqlx::query_scalar(

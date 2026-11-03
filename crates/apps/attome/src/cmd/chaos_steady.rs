@@ -166,6 +166,7 @@ impl RollingWindows {
 type Samples = Arc<Mutex<Vec<(bool, u64)>>>;
 
 /// The load: workers reading list pages until `stop` is set.
+#[derive(Debug)]
 pub struct Load {
     samples: Samples,
     stop: Arc<std::sync::atomic::AtomicBool>,

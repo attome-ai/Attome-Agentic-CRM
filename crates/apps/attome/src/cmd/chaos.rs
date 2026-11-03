@@ -376,6 +376,7 @@ pub trait Exec {
 }
 
 /// The real thing: the step's program, or the file operation.
+#[derive(Debug)]
 pub struct System;
 
 impl Exec for System {
@@ -412,6 +413,15 @@ pub struct UndoGuard<'a, E: Exec> {
     exec: &'a mut E,
     undo: Vec<Step>,
     done: bool,
+}
+
+impl<E: Exec> std::fmt::Debug for UndoGuard<'_, E> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UndoGuard")
+            .field("undo_steps", &self.undo.len())
+            .field("done", &self.done)
+            .finish_non_exhaustive()
+    }
 }
 
 impl<'a, E: Exec> UndoGuard<'a, E> {
@@ -455,7 +465,7 @@ pub fn inject<'a, E: Exec>(
     inject: &[Step],
     undo: Vec<Step>,
 ) -> Result<UndoGuard<'a, E>, String> {
-    let mut guard = UndoGuard::new(exec, undo);
+    let guard = UndoGuard::new(exec, undo);
     for step in inject {
         guard.exec.exec(step)?;
     }
