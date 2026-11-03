@@ -1291,6 +1291,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-develop",
         // AH3-T6: an agent definition's principal.
         "attome-ai-agent-principal",
+        // G1-T1: the knowledge article that resolved a ticket.
+        "attome-service-resolution-article",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

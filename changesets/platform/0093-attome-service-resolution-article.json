@@ -1,0 +1,61 @@
+{
+  "author": "attome-service (G1-T1)",
+  "checksum": "sha256:1a684b06f18b55668c36db88a069f15a1c23593b843d8f78201d50d9173581c4",
+  "closed_at": "2026-11-03T00:00:00Z",
+  "description": "G1-T1: a ticket names the knowledge article that resolved it (resolution_article_ref, a lookup to knowledge_data_item).",
+  "format": "attome-changeset/v1",
+  "id": "01a1a123-b6ed-760a-a9cd-c8fa3291185f",
+  "layer": "platform",
+  "name": "attome-service-resolution-article",
+  "opened_at": "2026-11-03T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Resolution Article",
+          "field_type": "lookup",
+          "is_customized": false,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "resolution_article_ref",
+          "lookup_entity": "knowledge_data_item",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "service_ticket",
+        "field": "resolution_article_ref"
+      }
+    },
+    {
+      "args": {
+        "display_name": "\u0645\u0642\u0627\u0644 \u0627\u0644\u062d\u0644"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "locale": "ar",
+        "object_key": "service_ticket.resolution_article_ref",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "platform",
+  "seq": 93,
+  "title": "Platform definitions: attome-service-resolution-article"
+}
