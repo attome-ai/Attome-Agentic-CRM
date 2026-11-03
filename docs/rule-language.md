@@ -120,3 +120,15 @@ writes only the records whose value changed, and those writes move each record's
 For a value that must be exact at every moment, use `read_time`: it never goes stale and
 the job leaves it alone. A generated formula is the database's to keep, and the job skips
 it too.
+
+## Rules live in the form
+
+The record form applies business rules as values change, for the person's guidance only; the
+server decides every write. The schema route (`GET /api/v1/schema/{entity}`) sends the caller's
+active rules that carry a lock (`hidden`, `disabled`) or a field-attached `error`,
+`allowed_values` or `required` policy (`set_value` stays on the server). A rule whose condition
+holds an expression is sent marked `needs_evaluator`: the form evaluates each such expression on
+the current values with the rules evaluator, the server's own compiled to WebAssembly, and the
+rule fires once the answer holds. Until the evaluator answers (or if it cannot load) such a rule
+does not fire in the form. A firing `required` policy on an empty field shows "This field is
+required." on it.

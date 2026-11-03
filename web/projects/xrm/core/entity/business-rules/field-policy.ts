@@ -36,6 +36,26 @@ export interface FieldPolicyOutcome {
   errors: ReadonlyMap<string, readonly FieldRuleMessage[]>;
   /** A6-T2: field to the values the firing `allowed_values` policies allow (their intersection). */
   allowed: ReadonlyMap<string, readonly string[]>;
+  /** A11-T3: field to the first rule whose `required` policy fires on it. */
+  required: ReadonlyMap<string, string>;
+}
+
+/**
+ * A11-T3: every expression the delivered rules' conditions hold, once each,
+ * for the rules evaluator to answer. Pure.
+ */
+export function ruleExpressions(rules: readonly BusinessRuleClient[]): string[] {
+  const out = new Set<string>();
+  const walk = (tree: unknown): void => {
+    if (!tree || typeof tree !== 'object') return;
+    const node = tree as { all?: unknown[]; any?: unknown[]; expression?: unknown };
+    if (typeof node.expression === 'string') out.add(node.expression);
+    for (const child of node.all ?? node.any ?? []) walk(child);
+  };
+  for (const rule of rules) {
+    if (rule.needs_evaluator) walk(rule.condition);
+  }
+  return [...out];
 }
 
 /** A6-T2: what to do with a field's value under its allowed list. Pure. */
@@ -65,18 +85,24 @@ export function ruleLabel(rule: Pick<BusinessRuleClient, 'name' | 'display_name'
 /**
  * Evaluates every delivered rule against `record` and combines the result.
  * A condition the client cannot decide (`null`) counts as true — fail
- * closed, as on the server (design §3.2).
+ * closed, as on the server (design §3.2) — except (A11-T3) a rule waiting
+ * for the rules evaluator (`needs_evaluator`): until `expressions` answers
+ * its expressions it does not fire, so the form shows nothing it cannot yet
+ * know; the server still decides the write.
  */
 export function computeFieldPolicies(
   rules: readonly BusinessRuleClient[],
   record: Readonly<Record<string, unknown>>,
   kindOf: FieldKindResolver,
+  expressions?: ReadonlyMap<string, boolean>,
 ): FieldPolicyOutcome {
   const locks = new Map<string, FieldLockState>();
   const errors = new Map<string, FieldRuleMessage[]>();
   const allowed = new Map<string, string[]>();
+  const required = new Map<string, string>();
   for (const rule of rules) {
-    if (evaluateBusinessRuleCondition(rule.condition, record, kindOf) === false) continue;
+    const holds = evaluateBusinessRuleCondition(rule.condition, record, kindOf, expressions);
+    if (holds === false || (holds === null && rule.needs_evaluator)) continue;
     const label = ruleLabel(rule);
     for (const p of rule.policies) {
       if (!p.field) continue;
@@ -93,10 +119,12 @@ export function computeFieldPolicies(
         const codes = Array.isArray(p.value) ? p.value.map(String) : [];
         const earlier = allowed.get(p.field);
         allowed.set(p.field, earlier ? earlier.filter(c => codes.includes(c)) : codes);
+      } else if (p.type === 'required') {
+        if (!required.has(p.field)) required.set(p.field, label);
       }
     }
   }
-  return { locks, errors, allowed };
+  return { locks, errors, allowed, required };
 }
 
 /**

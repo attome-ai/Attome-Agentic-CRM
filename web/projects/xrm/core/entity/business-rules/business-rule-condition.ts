@@ -57,18 +57,37 @@ export function fieldKindResolver(
 }
 
 /**
+ * A11-T3: the fields' types in the rule language, for the rules evaluator to
+ * check an expression condition against: a field as its condition kind, a
+ * multi-choice as a list of choices. Pure.
+ */
+export function rulesTypesOf(
+  fields: readonly Pick<FieldSchema, 'name' | 'field_type' | 'options'>[],
+): { fields: Record<string, string> } {
+  const out: Record<string, string> = {};
+  for (const f of fields) {
+    const kind = conditionFieldKind(f);
+    if (kind) out[f.name] = kind === 'multi_choice' ? 'list<choice>' : kind;
+  }
+  return { fields: out };
+}
+
+/**
  * Evaluates `tree` against `record` (the record as it will be saved: stored
- * values overlaid with the form's current values).
+ * values overlaid with the form's current values). A11-T3: an `expression`
+ * leaf is answered from `expressions` (expression text to its value on this
+ * record, from the rules evaluator); one not there yet is unknown.
  */
 export function evaluateBusinessRuleCondition(
   tree: ConditionTree,
   record: Readonly<Record<string, unknown>>,
   kindOf: FieldKindResolver,
+  expressions?: ReadonlyMap<string, boolean>,
 ): ConditionResult {
   if (isConditionAll(tree)) {
     let unknown = false;
     for (const child of tree.all) {
-      const r = evaluateBusinessRuleCondition(child, record, kindOf);
+      const r = evaluateBusinessRuleCondition(child, record, kindOf, expressions);
       if (r === false) return false;
       if (r === null) unknown = true;
     }
@@ -78,13 +97,13 @@ export function evaluateBusinessRuleCondition(
     if (tree.any.length === 0) return null; // refused by the server's validation
     let unknown = false;
     for (const child of tree.any) {
-      const r = evaluateBusinessRuleCondition(child, record, kindOf);
+      const r = evaluateBusinessRuleCondition(child, record, kindOf, expressions);
       if (r === true) return true;
       if (r === null) unknown = true;
     }
     return unknown ? null : false;
   }
-  if (isConditionExpression(tree)) return null; // server-only (attome-rules)
+  if (isConditionExpression(tree)) return expressions?.get(tree.expression) ?? null;
   if (isConditionLeaf(tree)) return evaluateLeaf(tree, record, kindOf);
   return null;
 }

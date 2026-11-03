@@ -4,13 +4,15 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Announcer, ApiError, CommandRegistry, LangService, MetadataVersion, VersionConflictState } from '@attome/base';
+import {
+  Announcer, ApiError, CommandRegistry, LangService, MetadataVersion, RulesEvaluatorService, VersionConflictState,
+} from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { firstValueFrom } from 'rxjs';
 import { BusinessRuleClient, ChoiceOptions, EntitySchema, FieldSchema } from '@attome/xrm';
-import { fieldKindResolver } from '../business-rules/business-rule-condition';
+import { fieldKindResolver, rulesTypesOf } from '../business-rules/business-rule-condition';
 import {
-  computeFieldPolicies, fieldErrorsFromApiError, isEmptyFieldValue, reconcileAllowed, writeWarnings,
+  computeFieldPolicies, fieldErrorsFromApiError, isEmptyFieldValue, reconcileAllowed, ruleExpressions, writeWarnings,
   type FieldLockState, type FieldRuleMessage, type RuleWriteWarning,
 } from '../business-rules/field-policy';
 import { withGoldenTab } from '../record-tabs/record-tabs';
@@ -169,8 +171,20 @@ export abstract class EngineFormBase implements OnInit {
    */
   readonly recordValue = signal<Readonly<Record<string, unknown>>>({});
 
+  /**
+   * A11-T3: the expressions the rules' conditions hold, and each one's value
+   * on the current record from the rules evaluator (the server's own,
+   * compiled to WebAssembly). Filled after each change; a rule waiting for
+   * an answer does not fire.
+   */
+  private readonly ruleExpressionList = computed(() => ruleExpressions(this.businessRules()), {
+    equal: (a, b) => a.length === b.length && a.every((x, i) => x === b[i]),
+  });
+  readonly expressionResults = signal<ReadonlyMap<string, boolean>>(new Map());
+  private expressionRun = 0;
+
   private readonly ruleOutcome = computed(() => computeFieldPolicies(
-    this.businessRules(), this.recordValue(), this.ruleFieldKinds()));
+    this.businessRules(), this.recordValue(), this.ruleFieldKinds(), this.expressionResults()));
 
   /** Field to the lock the rules put on it for this user (`hidden` beats `disabled`). */
   readonly fieldPolicies = computed<ReadonlyMap<string, FieldLockState>>(() =>
@@ -276,6 +290,12 @@ export abstract class EngineFormBase implements OnInit {
       const allowed = this.allowedValues();
       const fg = this.form();
       untracked(() => this.applyAllowedValues(fg, allowed));
+    });
+    // A11-T3: the rules' expressions, answered again on every change.
+    effect(() => {
+      const record = this.recordValue();
+      this.ruleExpressionList();
+      untracked(() => void this.evaluateRuleExpressions(record));
     });
   }
 
@@ -896,9 +916,47 @@ export abstract class EngineFormBase implements OnInit {
     return this.fieldLock(name)?.ruleName ?? null;
   }
 
-  /** Field-attached `error` policies firing on the current values. */
+  /**
+   * Field-attached `error` policies firing on the current values, and
+   * (A11-T3) a firing `required` policy on an empty field.
+   */
   ruleMessages(name: string): readonly FieldRuleMessage[] {
-    return this.fieldErrors().get(name) ?? NO_RULE_MESSAGES;
+    const messages = this.fieldErrors().get(name) ?? NO_RULE_MESSAGES;
+    const rule = this.ruleOutcome().required.get(name);
+    if (rule === undefined || !isEmptyFieldValue(this.recordValue()[name])) return messages;
+    const text = this.formInjector.get(LangService).translate('xrmForm.fieldError.required');
+    return [{ message: text, severity: 'error', ruleName: rule }, ...messages];
+  }
+
+  /**
+   * A11-T3: evaluates the rules' expressions on `record` and publishes the
+   * answers; an older run's answers are dropped. An expression that does not
+   * evaluate to a boolean is left out (unknown).
+   */
+  private async evaluateRuleExpressions(record: Readonly<Record<string, unknown>>): Promise<void> {
+    const expressions = this.ruleExpressionList();
+    const run = ++this.expressionRun;
+    if (!expressions.length) {
+      if (this.expressionResults().size) this.expressionResults.set(new Map());
+      return;
+    }
+    const schema = this.schema();
+    if (!schema) return;
+    const evaluator = this.formInjector.get(RulesEvaluatorService);
+    const types = rulesTypesOf(schema.fields ?? []);
+    const context = { now: new Date().toISOString(), fields: { ...record } };
+    const results = new Map<string, boolean>();
+    try {
+      for (const expression of expressions) {
+        const answer = await evaluator.evaluate(expression, types, context);
+        if (answer.ok && typeof answer.value === 'boolean') results.set(expression, answer.value);
+      }
+    } catch {
+      // No evaluator (the module failed to load): the rules stay unknown and
+      // do not fire; the server decides the write.
+      return;
+    }
+    if (run === this.expressionRun) this.expressionResults.set(results);
   }
 
   /** A required field a rule locks and that is empty: saving fails naming field and rule (section 3.4). */

@@ -77,8 +77,10 @@ struct EntitySchemaDef {
     relationships: Vec<RelationshipSchemaEntry>,
     /// D-789 §5 (additive): the active business rules that apply to the
     /// caller and carry a client-side policy (`hidden`, `disabled`, or an
-    /// `error` attached to a field) under a structured condition. The form
-    /// mirrors them for UX only; the server enforces every write.
+    /// `error`, `allowed_values` or (A11-T3) `required` attached to a field).
+    /// A11-T3: a rule whose condition holds an expression is sent too, marked
+    /// `needs_evaluator`; the form evaluates it with the rules evaluator. The
+    /// form mirrors them for UX only; the server enforces every write.
     business_rules: Vec<BusinessRuleClient>,
     /// Q10-T11: the operations the caller may perform on this entity
     /// (`read`, `create`, `update`, `delete`, `assign`, `share`, `export`,
@@ -94,15 +96,31 @@ struct EntitySchemaDef {
 }
 
 /// One business rule as the form evaluates it (design §5): `set_value`
-/// policies and advanced-expression conditions stay server-only. A6-T2:
-/// field-attached `allowed_values` policies are sent, so the form offers
-/// only the allowed choices.
+/// policies stay server-only. A6-T2: field-attached `allowed_values`
+/// policies are sent, so the form offers only the allowed choices. A11-T3:
+/// field-attached `required` policies are sent, and so are rules whose
+/// condition holds an expression (`needs_evaluator`).
 #[derive(Serialize, ToSchema)]
 struct BusinessRuleClient {
     name: String,
     display_name: Option<String>,
     condition: ConditionTree,
     policies: Vec<PolicyDef>,
+    /// A11-T3: the condition holds an `expression` leaf, which the form
+    /// evaluates with the rules evaluator (WebAssembly) before deciding it.
+    /// Sent only when true.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    needs_evaluator: bool,
+}
+
+/// A policy the form evaluates: a lock, or a field-attached `error`,
+/// `allowed_values` or `required` (A11-T3).
+fn client_policy(p: &PolicyDef) -> bool {
+    p.policy_type.is_lock()
+        || (matches!(
+            p.policy_type,
+            PolicyType::Error | PolicyType::AllowedValues | PolicyType::Required
+        ) && p.field.is_some())
 }
 
 /// The staff roles the caller holds, directly or through a team (D-789
@@ -138,15 +156,10 @@ async fn client_business_rules(
     let Some(entry) = registry.get(entity) else {
         return Ok(Vec::new());
     };
-    let client_policy = |p: &PolicyDef| {
-        p.policy_type.is_lock()
-            || (matches!(p.policy_type, PolicyType::Error | PolicyType::AllowedValues)
-                && p.field.is_some())
-    };
     let candidates: Vec<_> = entry
         .business
         .iter()
-        .filter(|r| r.is_active && !r.condition.has_expression())
+        .filter(|r| r.is_active)
         .filter(|r| r.policies.iter().any(client_policy))
         .collect();
     if candidates.is_empty() {
@@ -177,6 +190,7 @@ async fn client_business_rules(
                 .filter(|p| client_policy(p))
                 .cloned()
                 .collect(),
+            needs_evaluator: r.condition.has_expression(),
         })
         .collect())
 }

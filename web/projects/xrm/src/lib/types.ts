@@ -139,8 +139,13 @@ export interface BusinessRuleClient {
   name: string;
   display_name: string | null;
   condition: ConditionTree;
-  /** Only `hidden`, `disabled` and field-attached `error` policies are delivered. */
+  /**
+   * Only `hidden`, `disabled` and field-attached `error`, `allowed_values`
+   * and `required` policies are delivered.
+   */
   policies: PolicyDef[];
+  /** A11-T3: the condition holds an expression, answered by the rules evaluator. */
+  needs_evaluator?: boolean;
 }
 
 /**
