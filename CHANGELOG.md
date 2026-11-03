@@ -17,6 +17,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `attome_metric.certify`.
 
 ### Added
+- A lookup's database key (Y2-T5): `GET` and `POST /api/v1/admin/entities/{entity_id}/fields/{field_id}/foreign-key`;
+  the entity screen's table health shows each lookup's key, orphans, index proposals and partitioning
+  (Y2-T15). `docs/data-layer.md` lists each field type's column (`date` is `DATE`, `date_time` is `TIMESTAMPTZ`).
 - A ticket names the knowledge article that resolved it: `service_ticket.resolution_article_ref`, a lookup to
   `knowledge_data_item` (platform changeset 0093, G1-T1).
 - Partitioning a large entity table online (Y2-T12): `POST` and `GET /api/v1/admin/entities/{entity_id}/partition`,

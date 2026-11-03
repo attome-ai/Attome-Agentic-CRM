@@ -92,6 +92,36 @@ Tests that read the source and fail when a rule is broken:
 | `query_budget` (attome-testapp) | statement counts of hot record paths, and a list's count not growing with its page size |
 | `audit_coverage_emission` | every mutating route writes the audit event it declares |
 
+## Field types and their columns
+
+Each field type is stored in a native PostgreSQL column (`FieldType::pg_type`); nothing is kept as
+text that has a better type.
+
+| Field type | Column | Notes |
+|---|---|---|
+| `text`, `rich_text`, `icon`, `color` | `TEXT` | `max_length` is checked on write |
+| `number`, `currency` | `NUMERIC` | a currency field has a companion currency column |
+| `date` | `DATE` | a calendar day, with no time and no time zone |
+| `date_time` | `TIMESTAMPTZ` | an instant, stored in UTC and shown in the reader's zone |
+| `time` | `TIME` | a time of day |
+| `bool` | `BOOLEAN` | |
+| `choice` | `TEXT` (`TEXT[]` when multiple) | the option's value |
+| `lookup` | `UUID` | keyed to its target when the delete rule is `restrict` or `cascade-deactivate` (below) |
+| `file`, `image` | `TEXT` (`JSONB` when multiple) | the stored object's key |
+| `geolocation`, `json` | `JSONB` | |
+| `formula`, `rollup` | the result type's column | computed; never written by a client |
+
+Three storage rules sit under the table (Y2):
+
+- **Lookup keys.** A lookup whose delete rule is `restrict` or `cascade-deactivate` gets a database
+  foreign key `ON DELETE NO ACTION` (Y2-T5, "Lookup keys" above): the platform deletes softly, so the
+  key guards against a value pointing at no row and leaves the delete rule to the record engine. An
+  `orphan` lookup keeps no key; the orphan scan is its check.
+- **Compression.** New `TEXT` and `JSONB` columns use lz4 when the server offers it (Y2-T7); a server
+  without it logs one warning and keeps the default compression.
+- **The read-only role.** Reports and the SQL surfaces read through the read-only pool under the
+  caller's record access; no row-level security policy is added for it (Y2-T13 was not built).
+
 ## Lookup keys
 
 A lookup whose delete rule is `restrict` or `cascade-deactivate` is also a database foreign key,
