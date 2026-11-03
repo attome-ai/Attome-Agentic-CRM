@@ -277,6 +277,7 @@ pub async fn refuse_admin_grant(
 #[utoipa::path(
     post,
     path = "/api/v1/admin/agents",
+    operation_id = "create_agent_principal",
     tag = "admin-security",
     request_body = CreateAgentBody,
     extensions(("x-audit" = json!(x_audit(&[(AuditCategory::Access, AuditOperation::Create)])))),
@@ -352,6 +353,7 @@ async fn create_agent(
 #[utoipa::path(
     get,
     path = "/api/v1/admin/agents",
+    operation_id = "list_agent_principals",
     tag = "admin-security",
     params(AgentListQuery),
     responses(
@@ -400,6 +402,7 @@ async fn list_agents(
 #[utoipa::path(
     get,
     path = "/api/v1/admin/agents/{id}",
+    operation_id = "get_agent_principal",
     tag = "admin-security",
     params(("id" = Uuid, Path, description = "The agent's account id")),
     responses(
@@ -498,11 +501,12 @@ async fn move_state(
 }
 
 macro_rules! lifecycle_route {
-    ($fn:ident, $action:literal, $path:literal, $op:ident, $summary:literal) => {
+    ($fn:ident, $action:literal, $path:literal, $opid:literal, $op:ident, $summary:literal) => {
         #[doc = $summary]
         #[utoipa::path(
             post,
             path = $path,
+            operation_id = $opid,
             tag = "admin-security",
             params(("id" = Uuid, Path, description = "The agent's account id")),
             request_body = StateBody,
@@ -537,6 +541,7 @@ lifecycle_route!(
     pause_agent,
     "pause",
     "/api/v1/admin/agents/{id}/pause",
+    "pause_agent_principal",
     AccountDisabled,
     "Pause an agent principal\n\nAn active agent stops acting until resumed. Takes `If-Match`. Audited."
 );
@@ -544,6 +549,7 @@ lifecycle_route!(
     suspend_agent,
     "suspend",
     "/api/v1/admin/agents/{id}/suspend",
+    "suspend_agent_principal",
     AccountDisabled,
     "Suspend an agent principal\n\nAn active or paused agent is held, for review. Takes `If-Match`. Audited."
 );
@@ -551,6 +557,7 @@ lifecycle_route!(
     resume_agent,
     "resume",
     "/api/v1/admin/agents/{id}/resume",
+    "resume_agent_principal",
     AccountEnabled,
     "Resume an agent principal\n\nA paused or suspended agent acts again; its auth epoch moves (D-116). Takes `If-Match`. Audited."
 );
@@ -558,6 +565,7 @@ lifecycle_route!(
     revoke_agent,
     "revoke",
     "/api/v1/admin/agents/{id}/revoke",
+    "revoke_agent_principal",
     Revoke,
     "Revoke an agent principal\n\nFinal: its keys, sessions and account end. Takes `If-Match`. Audited."
 );
@@ -568,6 +576,7 @@ lifecycle_route!(
 #[utoipa::path(
     put,
     path = "/api/v1/admin/agents/{id}/sponsor",
+    operation_id = "set_agent_principal_sponsor",
     tag = "admin-security",
     params(("id" = Uuid, Path, description = "The agent's account id")),
     request_body = SponsorBody,
@@ -641,6 +650,7 @@ fn generate(prefix: &str) -> String {
 #[utoipa::path(
     post,
     path = "/api/v1/admin/agents/{id}/keys",
+    operation_id = "issue_agent_principal_key",
     tag = "admin-security",
     params(("id" = Uuid, Path, description = "The agent's account id")),
     request_body = CreateApiKeyBody,
@@ -725,6 +735,7 @@ async fn issue_key(
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/agents/{id}/keys/{key_id}",
+    operation_id = "revoke_agent_principal_key",
     tag = "admin-security",
     params(
         ("id" = Uuid, Path, description = "The agent's account id"),

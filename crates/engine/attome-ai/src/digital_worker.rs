@@ -132,6 +132,7 @@ const WORKER_COLUMNS: &str = "w.user_ref, w.agent_definition_ref, w.supervisor_r
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/digital-workers",
+    operation_id = "list_digital_workers",
     tag = "ai",
     params(OnePageQuery),
     responses(
@@ -174,6 +175,7 @@ async fn list_workers(
 #[utoipa::path(
     put,
     path = "/api/v1/admin/ai/digital-workers/{id}",
+    operation_id = "put_digital_worker",
     tag = "ai",
     params(("id" = Uuid, Path, description = "The agent principal's account id")),
     request_body = WorkerBody,
